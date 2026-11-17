@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Fi àlàyé sí i (àṣàyàn)',
   feedbackSubmit: 'Fi ìdáhùn ránṣẹ́',
   feedbackSubmitted: 'A ti fi ìdáhùn ránṣẹ́',
+  feedbackCommentTooLong: 'Lo lẹ́tà tí kò ju {max} lọ.',
+  feedbackSingleReasonDescription: 'O lè yan ìdí kan tàbí má yan èyíkéyìí.',
   suggestionsLabel: 'Àwọn prompt àbá',
   selectModel: 'Yan àwòṣe…',
   modelSelectNoModels: 'Kò sí àwòṣe',

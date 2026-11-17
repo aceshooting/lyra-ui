@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Bakisa détail mosusu (optionnel)',
   feedbackSubmit: 'Tinda retour',
   feedbackSubmitted: 'Retour etindami',
+  feedbackCommentTooLong: 'Salelá bilembo {max} to na nse na yango.',
+  feedbackSingleReasonDescription: 'Okoki kopona ntina moko kaka to ata moko te.',
   suggestionsLabel: 'Ba prompt oyo basengi',
   selectModel: 'Pona modèle…',
   modelSelectNoModels: 'Modèle ezali te',

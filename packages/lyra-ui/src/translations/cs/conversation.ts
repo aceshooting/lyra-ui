@@ -63,6 +63,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Doplňte podrobnosti (nepovinné)',
   feedbackSubmit: 'Odeslat zpětnou vazbu',
   feedbackSubmitted: 'Zpětná vazba odeslána',
+  feedbackCommentTooLong: 'Použijte nejvýše {max} znaků.',
+  feedbackSingleReasonDescription: 'Vyberte nejvýše jeden důvod.',
   suggestionsLabel: 'Navrhované prompty',
   selectModel: 'Vyberte model…',
   modelSelectNoModels: 'Žádné modely',

@@ -593,6 +593,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private async requestPermission(request: PendingCaptureRequest): Promise<boolean> {
+    if (!this.canStartRequest(request)) {
+      this.finishUnusableRequest(request);
+      return false;
+    }
     try {
       const stream = await request.owner.window.navigator.mediaDevices.getUserMedia(this.captureConstraints());
       if (!this.canStartRequest(request)) {
@@ -662,6 +666,12 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       this.recordingStartedAt = owner.performance.now();
       this.elapsedMs = 0;
       this.setState('recording');
+      // Native recording began even if a state listener has already retired this take.
+      if (
+        this.activeCapture !== active ||
+        !this.ownsCurrentLifecycle(active.owner) ||
+        this.recorderStopRequested
+      ) return true;
       this.emit('lr-record-start', { stream });
       this.announce(this.localize('pushToTalkStarted'));
       this.syncLevelMeter(owner);

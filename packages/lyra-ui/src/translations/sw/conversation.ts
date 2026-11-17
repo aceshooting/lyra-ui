@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Ongeza maelezo zaidi (si lazima)',
   feedbackSubmit: 'Wasilisha maoni',
   feedbackSubmitted: 'Maoni yamewasilishwa',
+  feedbackCommentTooLong: 'Tumia vibambo {max} au vichache zaidi.',
+  feedbackSingleReasonDescription: 'Chagua sababu moja tu au usichague yoyote.',
   suggestionsLabel: 'Mapendekezo ya maagizo',
   selectModel: 'Chagua muundo…',
   modelSelectNoModels: 'Hakuna miundo',

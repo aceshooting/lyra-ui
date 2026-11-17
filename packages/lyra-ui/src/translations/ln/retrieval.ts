@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Etape eyebani te',
   ingestionQueueLabel: 'Molongo ya ingestion',
   ingestionQueueEmpty: 'Ba document ezali na molongo te',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Tozali kolakisa misala {count} kati na {total} mpo na {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Meka liloba mosusu ya recherche to ba filtre mosusu.',
   groundingSummaryEvidenceSpan: 'Ba caractère {start}–{end}',

@@ -1610,6 +1610,12 @@ export type LyraInvalidEvent =
   | LyraVoicePickerEventMap['lr-invalid'];
 
 /**
+ * `lr-item-action` — dispatched by `<lr-ingestion-queue>`; detail
+ * `LyraIngestionQueueEventMap['lr-item-action']`.
+ */
+export type LyraItemActionEvent = LyraIngestionQueueEventMap['lr-item-action'];
+
+/**
  * `lr-item-activate` — dispatched by `<lr-sequence-strip>`; detail
  * `LyraSequenceStripEventMap['lr-item-activate']`.
  */
@@ -2355,10 +2361,12 @@ export type LyraPreviewRequestEvent =
 export type LyraPriorityColumnsVisibilityChangeEvent = LyraTableEventMap['lr-priority-columns-visibility-change'];
 
 /**
- * `lr-query-change` — dispatched by `<lr-thread-list>`; detail
- * `LyraThreadListEventMap['lr-query-change']`.
+ * `lr-query-change` — dispatched by 2 components: `<lr-document-library>`, `<lr-thread-list>`;
+ * detail union of 2, e.g. `LyraDocumentLibraryEventMap['lr-query-change']`.
  */
-export type LyraQueryChangeEvent = LyraThreadListEventMap['lr-query-change'];
+export type LyraQueryChangeEvent =
+  | LyraDocumentLibraryEventMap['lr-query-change']
+  | LyraThreadListEventMap['lr-query-change'];
 
 /**
  * `lr-query-delete` — dispatched by `<lr-graph-query-builder>`; detail
@@ -3762,6 +3770,7 @@ export interface LyraGlobalEventMap {
   'lr-intersect': LyraIntersectEvent;
   'lr-intersection': LyraIntersectionEvent;
   'lr-invalid': LyraInvalidEvent;
+  'lr-item-action': LyraItemActionEvent;
   'lr-item-activate': LyraItemActivateEvent;
   'lr-layout-change': LyraLayoutChangeEvent;
   'lr-lazy-change': LyraLazyChangeEvent;

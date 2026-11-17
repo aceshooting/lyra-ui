@@ -3,6 +3,7 @@ import { mkdir, readdir, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertCoverageTarget, assertToolingTarget, reportCoverage } from './report-coverage.mjs';
+import { assertDefaultCoverageOutput } from './lib/browser-output.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -26,14 +27,14 @@ export const TOOLING = Object.freeze({
   ],
   exclude: [
     { pattern: /\.test\.mjs$/u, reason: 'test' },
-    { pattern: /(?:-browser|^scripts\/browser-test|^scripts\/lib\/harness|^scripts\/engine-regressions|^scripts\/engine-regression-fixtures\/[^/]+)\.mjs$/u, reason: 'browser test suite/harness' },
+    { pattern: /(?:-browser|^scripts\/browser-test|^scripts\/lib\/(?:harness|browser-output)|^scripts\/engine-regressions|^scripts\/engine-regression-fixtures\/[^/]+)\.mjs$/u, reason: 'browser test suite/harness' },
   ],
 });
 
 /** Unit suites that run beside the compiled `src` suites: they need no built `dist` of their own. */
 const UNIT_SUITES = [
   'scripts/package.test.mjs', 'scripts/check-package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs',
-  'scripts/performance.test.mjs', 'scripts/source-preparation.test.mjs', 'scripts/static-files.test.mjs', 'scripts/build-engine.test.mjs',
+  'scripts/performance.test.mjs', 'scripts/source-preparation.test.mjs', 'scripts/static-files.test.mjs', 'scripts/browser-output.test.mjs', 'scripts/build-engine.test.mjs',
   'scripts/engine/source.test.mjs', 'scripts/engine/distribution.test.mjs', 'test/xml.test.mjs',
 ];
 
@@ -55,8 +56,9 @@ export function runCommand(root, command, arguments_, environment = {}) {
  */
 export async function runCoverage({
   root = packageRoot, run = runCommand, report = reportCoverage,
-  assertTarget = assertCoverageTarget, assertTooling = assertToolingTarget,
+  assertTarget = assertCoverageTarget, assertTooling = assertToolingTarget, environment = process.env,
 } = {}) {
+  assertDefaultCoverageOutput(environment);
   const coverage = resolve(root, 'coverage');
   const nodeV8 = resolve(coverage, 'node-v8');
   const scratch = resolve(coverage, 'tmp');

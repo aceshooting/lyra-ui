@@ -110,3 +110,25 @@ const reasonsForStory = [
   { id: 'wrong', label: 'Factually wrong' },
   { id: 'unhelpful', label: 'Not helpful' },
 ];
+
+/** Single selection remains optional. Comment bounds count the raw draft's UTF-16 code units. */
+export const SingleReasonWithBoundedComment: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Choose one reason or clear the selected reason. The native comment field accepts up to 240 UTF-16 code units. A draft exceeding a subsequently lowered limit remains intact and must be corrected before submission. Reassign a new detail record to change policy.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-message-feedback
+      detail-for="both"
+      .detail=${{
+        reasons: reasonsForStory,
+        reasonSelection: 'single',
+        commentable: true,
+        commentMaxLength: 240,
+      }}
+    ></lr-message-feedback>
+  `,
+};

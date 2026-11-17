@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Ukjent trinn',
   ingestionQueueLabel: 'Inntakskø',
   ingestionQueueEmpty: 'Ingen dokumenter i kø',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Viser {count} av {total} handlinger for {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Prøv et annet søkeord eller andre filtre.',
   groundingSummaryEvidenceSpan: 'Tegn {start}–{end}',

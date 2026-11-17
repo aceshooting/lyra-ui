@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Thêm chi tiết (không bắt buộc)',
   feedbackSubmit: 'Gửi phản hồi',
   feedbackSubmitted: 'Đã gửi phản hồi',
+  feedbackCommentTooLong: 'Dùng tối đa {max} ký tự.',
+  feedbackSingleReasonDescription: 'Chọn tối đa một lý do.',
   suggestionsLabel: 'Lời nhắc gợi ý',
   selectModel: 'Chọn mô hình…',
   modelSelectNoModels: 'Không có mô hình nào',

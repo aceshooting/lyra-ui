@@ -223,6 +223,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Neznana stopnja',
   ingestionQueueLabel: 'Čakalna vrsta za zajemanje',
   ingestionQueueEmpty: 'V čakalni vrsti ni dokumentov',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Prikazana dejanja za {label}: {count} od {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Poskusite z drugim iskalnim izrazom ali filtri.',
   groundingSummaryEvidenceSpan: 'Znaki {start}–{end}',

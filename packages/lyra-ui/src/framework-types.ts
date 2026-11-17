@@ -1740,7 +1740,8 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'strings'
       | 'unit'
-      | 'used',
+      | 'used'
+      | 'valueFormatter',
       {}
     >;
     events: {};
@@ -4337,6 +4338,7 @@ export interface LyraComponentTypeMap {
     element: LyraDocumentLibrary;
     properties: LyraElementProperties<
       LyraDocumentLibrary,
+      | 'cursorSource'
       | 'dataSource'
       | 'documents'
       | 'error'
@@ -4360,6 +4362,7 @@ export interface LyraComponentTypeMap {
     events: LyraDocumentLibraryEventMap;
     eventNames:       | 'lr-filter-change'
       | 'lr-open'
+      | 'lr-query-change'
       | 'lr-retry-request'
       | 'lr-selection-change'
       | 'lr-sort'
@@ -6630,6 +6633,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraIngestionQueueEventMap;
     eventNames:       | 'lr-cancel'
+      | 'lr-item-action'
       | 'lr-retry';
     cssNames:       | '--lr-ingestion-queue-max-height';
     attributeAliases: {

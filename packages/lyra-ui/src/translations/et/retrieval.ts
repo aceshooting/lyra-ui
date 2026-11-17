@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Teadmata etapp',
   ingestionQueueLabel: 'Sisselugemise järjekord',
   ingestionQueueEmpty: 'Järjekorras dokumente pole',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Kuvatakse {count} toimingut {total}-st: {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Proovige teist otsingusõna või filtreid.',
   groundingSummaryEvidenceSpan: 'Märgid {start}–{end}',

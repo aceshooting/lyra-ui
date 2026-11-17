@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'தெரியாத நிலை',
   ingestionQueueLabel: 'உள்வாங்கல் வரிசை',
   ingestionQueueEmpty: 'வரிசையில் ஆவணங்கள் இல்லை',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label}-க்கான {total} செயல்களில் {count} காட்டப்படுகின்றன.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'வேறு தேடல் சொல்லையோ வடிப்பான்களையோ முயற்சிக்கவும்.',
   groundingSummaryEvidenceSpan: 'எழுத்துகள் {start}–{end}',

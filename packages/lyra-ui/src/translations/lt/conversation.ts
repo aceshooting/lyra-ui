@@ -63,6 +63,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Pateikite daugiau informacijos (neprivaloma)',
   feedbackSubmit: 'Pateikti atsiliepimą',
   feedbackSubmitted: 'Atsiliepimas pateiktas',
+  feedbackCommentTooLong: 'Naudokite ne daugiau kaip {max} simbolių.',
+  feedbackSingleReasonDescription: 'Pasirinkite ne daugiau kaip vieną priežastį.',
   suggestionsLabel: 'Siūlomi raginimai',
   selectModel: 'Pasirinkite modelį…',
   modelSelectNoModels: 'Modelių nėra',

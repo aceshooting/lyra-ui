@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: '詳細を入力（任意）',
   feedbackSubmit: 'フィードバックを送信',
   feedbackSubmitted: 'フィードバックを送信しました',
+  feedbackCommentTooLong: '{max}文字以内で入力してください。',
+  feedbackSingleReasonDescription: '理由は最大1つ選択できます。',
   suggestionsLabel: 'おすすめのプロンプト',
   selectModel: 'モデルを選択…',
   modelSelectNoModels: 'モデルがありません',

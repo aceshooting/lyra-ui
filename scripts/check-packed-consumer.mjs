@@ -156,17 +156,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// The shared document-runtime diagnostic brings the graph to 5,699,985 raw bytes across 65 files;
-// the next 64-byte ceiling leaves 47 bytes of headroom.
+// Cursor-backed documents, ingestion presentation, feedback detail, quantity formatting and lifecycle
+// fixes bring the graph to 5,734,158 raw bytes across 65 files; the next 64-byte ceiling leaves 50 bytes.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The shared document-runtime diagnostic increases the complete packed core graph by 2,022 raw bytes to 5,699,985 bytes across 65 files. The immutable package comparison identifies only the six runtime module payload changes, with no dependency changes. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,700,032 bytes, with 47 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_699_985,
+  $comment: 'Cursor-backed documents, custom ingestion presentation and actions, feedback detail limits, quantity formatting and lifecycle fixes increase the complete packed core graph by 34,173 raw bytes to 5,734,158 bytes across 65 files. The immutable package comparison contains the reviewed runtime helpers, component changes, declarations, guides and generated metadata, with no dependency changes or accidental payload. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,734,208 bytes, with 50 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_734_158,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 47,
+  selectedRegressionHeadroomBytes: 50,
 };
 
 /**
@@ -321,15 +321,15 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // The shared document-runtime diagnostic adds 148 raw bytes to the MapLibre v6 graph:
-    // 2,527,705 bytes across the same 52 files; the next 64-byte boundary leaves 39 bytes.
-    maxRawBytes: 2_527_744,
+    // The complete MapLibre v6 graph measures 2,528,040 raw bytes across the same 52 files,
+    // up 335 bytes; the next 64-byte boundary leaves 24 bytes.
+    maxRawBytes: 2_528_064,
   },
   graph: {
     fixture: 'optional',
-    // The shared document-runtime diagnostic adds 1,795 raw bytes to the graph bundle:
-    // 462,858 bytes across the same 14 files; the next 64-byte boundary leaves 54 bytes.
-    maxRawBytes: 462_912,
+    // The complete graph bundle measures 463,780 raw bytes across the same 14 files,
+    // up 922 bytes; the next 64-byte boundary leaves 28 bytes.
+    maxRawBytes: 463_808,
   },
 };
 

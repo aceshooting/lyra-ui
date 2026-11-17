@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'ଅଧିକ ବିବରଣୀ ଯୋଡ଼ନ୍ତୁ (ବୈକଳ୍ପିକ)',
   feedbackSubmit: 'ମତାମତ ଦାଖଲ କରନ୍ତୁ',
   feedbackSubmitted: 'ମତାମତ ଦାଖଲ ହେଲା',
+  feedbackCommentTooLong: '{max} କିମ୍ବା ତାଠାରୁ କମ୍ ଅକ୍ଷର ବ୍ୟବହାର କରନ୍ତୁ।',
+  feedbackSingleReasonDescription: 'ଅତି ବେଶିରେ ଗୋଟିଏ କାରଣ ବାଛନ୍ତୁ।',
   suggestionsLabel: 'ପରାମର୍ଶିତ ପ୍ରମ୍ପ୍ଟ',
   selectModel: 'ଏକ ମଡେଲ୍ ଚୟନ କରନ୍ତୁ…',
   modelSelectNoModels: 'କୌଣସି ମଡେଲ୍ ନାହିଁ',

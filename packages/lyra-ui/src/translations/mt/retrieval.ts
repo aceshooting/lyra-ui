@@ -230,6 +230,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Stadju mhux magħruf',
   ingestionQueueLabel: 'Kju tal-inġestjoni',
   ingestionQueueEmpty: 'L-ebda dokument fil-kju',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Qed jintwerew {count} minn {total} azzjonijiet għal {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Ipprova terminu ta’ tfittxija jew filtri differenti.',
   groundingSummaryEvidenceSpan: 'Karattri {start}–{end}',

@@ -223,6 +223,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Неизвестный этап',
   ingestionQueueLabel: 'Очередь обработки',
   ingestionQueueEmpty: 'В очереди нет документов',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Действия для {label}: показано {count} из {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Измените поисковый запрос или фильтры.',
   groundingSummaryEvidenceSpan: 'Символы {start}–{end}',

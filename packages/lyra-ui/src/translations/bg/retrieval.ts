@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Неизвестен етап',
   ingestionQueueLabel: 'Опашка за приемане',
   ingestionQueueEmpty: 'Няма документи в опашката',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Показани са {count} от {total} действия за {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Опитайте с друга дума за търсене или други филтри.',
   groundingSummaryEvidenceSpan: 'Знаци {start}–{end}',

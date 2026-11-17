@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'ಅಜ್ಞಾತ ಹಂತ',
   ingestionQueueLabel: 'ಇನ್‌ಜೆಶನ್ ಸರದಿ',
   ingestionQueueEmpty: 'ಸರದಿಯಲ್ಲಿ ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳಿಲ್ಲ',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} ಗಾಗಿ {total} ಕ್ರಿಯೆಗಳಲ್ಲಿ {count} ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'ಬೇರೆ ಹುಡುಕಾಟ ಪದ ಅಥವಾ ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಪ್ರಯತ್ನಿಸಿ.',
   groundingSummaryEvidenceSpan: 'ಅಕ್ಷರಗಳು {start}–{end}',

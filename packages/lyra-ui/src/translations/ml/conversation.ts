@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'കൂടുതൽ വിശദാംശങ്ങൾ ചേർക്കുക (ഐച്ഛികം)',
   feedbackSubmit: 'ഫീഡ്ബാക്ക് സമർപ്പിക്കുക',
   feedbackSubmitted: 'ഫീഡ്ബാക്ക് സമർപ്പിച്ചു',
+  feedbackCommentTooLong: '{max} അല്ലെങ്കിൽ അതിൽ കുറവ് പ്രതീകങ്ങൾ ഉപയോഗിക്കുക.',
+  feedbackSingleReasonDescription: 'പരമാവധി ഒരു കാരണം തിരഞ്ഞെടുക്കുക.',
   suggestionsLabel: 'നിർദ്ദേശിച്ച പ്രോംപ്റ്റുകൾ',
   selectModel: 'ഒരു മോഡൽ തിരഞ്ഞെടുക്കുക…',
   modelSelectNoModels: 'മോഡലുകളില്ല',

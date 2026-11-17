@@ -228,6 +228,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Neznáma fáza',
   ingestionQueueLabel: 'Front príjmu údajov',
   ingestionQueueEmpty: 'Vo fronte nie sú žiadne dokumenty',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Zobrazené akcie pre {label}: {count} z {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Skúste iný hľadaný výraz alebo filtre.',
   groundingSummaryEvidenceSpan: 'Znaky {start}–{end}',

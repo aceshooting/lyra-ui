@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: '세부 정보 추가 (선택 사항)',
   feedbackSubmit: '피드백 제출',
   feedbackSubmitted: '피드백 제출 완료',
+  feedbackCommentTooLong: '{max}자 이하로 입력하세요.',
+  feedbackSingleReasonDescription: '이유를 최대 하나까지 선택하세요.',
   suggestionsLabel: '제안 프롬프트',
   selectModel: '모델 선택...',
   modelSelectNoModels: '모델 없음',

@@ -364,6 +364,8 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   /** Invalidates clipboard outcomes when another activation, source change, disconnect, or
    * adoption makes the pending write obsolete. */
   private copyGeneration = 0;
+  private scrollGeneration = 0;
+  private searchGeneration = 0;
 
   /** Canonical scalar text and grammar-map inputs. Every later diff/highlight read uses these
    * admitted values instead of re-reading caller-owned public properties. */
@@ -382,6 +384,12 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   private opIndexMap = new Map<LyraDiffOp, number>();
 
   protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('oldText') || changed.has('newText') || changed.has('maxLines')) {
+      this.scrollGeneration++;
+      this.searchGeneration++;
+      // Retire the old document before super starts any newly assigned declarative anchor.
+      this.cancelPendingAnchor();
+    }
     super.willUpdate(changed);
     if (!this.hasUpdated || changed.has('oldText') || changed.has('newText')) {
       const oldText = this.oldText;
@@ -488,6 +496,8 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   override disconnectedCallback(): void {
     this.highlightToken++;
+    this.scrollGeneration++;
+    this.searchGeneration++;
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry)
     this.resetCopyFeedback();
     this.copyAnnouncementSink?.release();
@@ -498,6 +508,8 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   override adoptedCallback(): void {
     this.highlightToken++;
+    this.scrollGeneration++;
+    this.searchGeneration++;
     super.adoptedCallback();
     // A disconnected node can be adopted without receiving another disconnect notification.
     this.resetCopyFeedback();
@@ -698,10 +710,26 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     return this.renderRoot.querySelector(`[data-op-index="${index}"]`);
   }
 
-  private async scrollOpIndexIntoView(index: number): Promise<boolean> {
+  /** Captures both rendered operations and same-task public source changes. */
+  private scrollAuthority(): () => boolean {
+    const generation = this.scrollGeneration;
+    const document = this.ownerDocument;
+    const ops = this.diffOps;
+    const oldText = this.oldText;
+    const newText = this.newText;
+    const maxLines = this.maxLines;
+    return () => (
+      this.isConnected && this.ownerDocument === document &&
+      this.scrollGeneration === generation && this.diffOps === ops &&
+      this.oldText === oldText && this.newText === newText && Object.is(this.maxLines, maxLines)
+    );
+  }
+
+  private async scrollOpIndexIntoView(index: number, isCurrent = this.scrollAuthority()): Promise<boolean> {
     const op = this.diffOps[index];
-    if (!op) return false;
+    if (!op || !isCurrent()) return false;
     await this.revealOp(op);
+    if (!isCurrent()) return false;
     const target = this.lineElementForOpIndex(index);
     if (!target) return false;
     target.scrollIntoView({
@@ -776,9 +804,12 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
 
   private emitSearchChange(): void {
+    const generation = this.searchGeneration;
+    const isCurrent = this.scrollAuthority();
     this.emit('lr-search-change', viewerSearchDetail(
       this.searchQuery, this.searchMatches.length, this.searchMatchCountExact, this.searchActiveIndex,
     ));
+    if (generation !== this.searchGeneration || !isCurrent()) return;
     announceSearchResult(
       (key, fallback, values) => this.localize(key, fallback, values),
       this.searchAnnouncer,
@@ -815,41 +846,55 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  contains a locale-aware case-insensitive substring of `query`, ordered by that line's
    *  `line-range` op index; an empty/whitespace query behaves like `clearSearch()` and resolves
    *  `0`. Inspect `lr-search-change.matchCountExact` to distinguish an exact total from a lower
-   *  bound once a resource ceiling is reached. */
+   *  bound once a resource ceiling is reached. A superseded search resolves `0`. */
   async search(query: string): Promise<number> {
+    const generation = ++this.searchGeneration;
+    const ownsSource = this.scrollAuthority();
+    const isCurrent = (): boolean => generation === this.searchGeneration && ownsSource();
     this.searchQuery = query;
     this.recomputeSearchMatches();
     this.searchActiveIndex = this.searchMatches.length > 0 ? 0 : -1;
-    this.emitSearchChange();
     const active = this.searchMatches[this.searchActiveIndex];
-    if (active) await this.scrollOpIndexIntoView(active.opIndex);
-    return this.searchMatches.length;
+    const count = this.searchMatches.length;
+    this.emitSearchChange();
+    if (!isCurrent()) return 0;
+    if (active && !(await this.scrollOpIndexIntoView(active.opIndex, isCurrent))) return 0;
+    return isCurrent() ? count : 0;
   }
 
   /** Advances to the next match, wrapping to the first after the last. Resolves `true` once the
-   *  active match moved, `false` when there are no matches -- the shape the shared
-   *  `LyraTextViewerTarget` search contract declares. */
+   *  active match moved, `false` when there are no matches or navigation is superseded -- the
+   *  shape the shared `LyraTextViewerTarget` search contract declares. */
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
+    const generation = ++this.searchGeneration;
+    const ownsSource = this.scrollAuthority();
+    const isCurrent = (): boolean => generation === this.searchGeneration && ownsSource();
     this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, 1);
+    const active = this.searchMatches[this.searchActiveIndex]!;
     this.emitSearchChange();
-    await this.scrollOpIndexIntoView(this.searchMatches[this.searchActiveIndex]!.opIndex);
-    return true;
+    if (!isCurrent()) return false;
+    return this.scrollOpIndexIntoView(active.opIndex, isCurrent);
   }
 
   /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
-   *  active match moved, `false` when there are no matches. */
+   *  active match moved, `false` when there are no matches or navigation is superseded. */
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
+    const generation = ++this.searchGeneration;
+    const ownsSource = this.scrollAuthority();
+    const isCurrent = (): boolean => generation === this.searchGeneration && ownsSource();
     this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, -1);
+    const active = this.searchMatches[this.searchActiveIndex]!;
     this.emitSearchChange();
-    await this.scrollOpIndexIntoView(this.searchMatches[this.searchActiveIndex]!.opIndex);
-    return true;
+    if (!isCurrent()) return false;
+    return this.scrollOpIndexIntoView(active.opIndex, isCurrent);
   }
 
   /** Clears the query, matches, and active index, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
+    this.searchGeneration++;
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchMatchCountExact = true;

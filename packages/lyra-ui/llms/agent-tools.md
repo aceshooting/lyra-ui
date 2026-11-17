@@ -5203,6 +5203,37 @@ its own localized accessible name.
 
 **Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 
+**Quantity formatting:** property-only `valueFormatter?: BudgetMeterValueFormatter` uses
+`BudgetMeterValueFormatter = (value: number, context: BudgetMeterFormatContext) => string`.
+`BudgetMeterFormatContext { readonly locale: string; }` contains only the effective locale and is
+frozen when passed to the callback. Both types are exported from
+`@aceshooting/lyra-ui/components/agent-tools/budget-meter/budget-meter.class.js`.
+The callback receives `used` and `limit`
+independently, each normalized to a finite nonnegative number; usage is not clamped to the limit
+before formatting. It must be synchronous and side-effect-free. Return nonblank plain text of at
+most 65,536 UTF-16 code units per quantity. Text is escaped normally, never interpreted as markup.
+
+The same accepted pair feeds visible value text and `aria-valuetext`. The localized
+`budgetMeterValue` sentence and optional `unit` still wrap those strings; omit `unit` when each
+formatted quantity already includes one. Numeric ARIA values, percentage, fill clamping and
+exceeded/unavailable state retain their numeric semantics. An unset formatter, throw, nonstring,
+blank or oversized result restores numeric formatting for **both** quantities. A callback that
+changes the meter or requests an update invalidates its pair and is not automatically retried in
+that render chain; a later external update can retry the same callback. Formatting adds no event
+or slot.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-budget-meter.js';
+import { formatBytes } from '@aceshooting/lyra-ui/utilities/format.js';
+
+const meter = document.querySelector('lr-budget-meter')!;
+meter.used = 10 * 1024 ** 3;
+meter.limit = 50 * 1024 ** 3;
+// formatBytes supplies the unit for each quantity.
+meter.unit = undefined;
+meter.valueFormatter = (value, { locale }) => formatBytes(value, locale) ?? '';
+```
+
 **CSS parts:**
 
 | Part | Purpose |

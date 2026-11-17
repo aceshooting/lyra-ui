@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Hatua isiyojulikana',
   ingestionQueueLabel: 'Foleni ya uingizaji',
   ingestionQueueEmpty: 'Hakuna nyaraka kwenye foleni',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Inaonyesha vitendo {count} kati ya {total} vya {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Jaribu neno tofauti la utafutaji au vichujio.',
   groundingSummaryEvidenceSpan: 'Herufi {start}–{end}',

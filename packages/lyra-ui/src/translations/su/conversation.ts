@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Tambahkeun rinci deui (opsional)',
   feedbackSubmit: 'Kirim eupan balik',
   feedbackSubmitted: 'Eupan balik geus dikirim',
+  feedbackCommentTooLong: 'Paké paling loba {max} karakter.',
+  feedbackSingleReasonDescription: 'Pilih paling loba hiji alesan.',
   suggestionsLabel: 'Saran prompt',
   selectModel: 'Pilih modél…',
   modelSelectNoModels: 'Teu aya modél',

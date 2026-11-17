@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'ہور تفصیل شامل کرو (اختیاری)',
   feedbackSubmit: 'رائے جمع کرو',
   feedbackSubmitted: 'رائے جمع ہو گئی',
+  feedbackCommentTooLong: '{max} یا اوہدے توں گھٹ اکھر ورتو۔',
+  feedbackSingleReasonDescription: 'ودھ توں ودھ اک وجہ چنو۔',
   suggestionsLabel: 'تجویز کیتے پرامپٹ',
   selectModel: 'ماڈل چنو…',
   modelSelectNoModels: 'کوئی ماڈل نئیں',

@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Mataki da ba a sani ba',
   ingestionQueueLabel: 'Jerin lodawa',
   ingestionQueueEmpty: 'Babu takardun da ke jiran lodawa',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Ana nuna ayyuka {count} cikin {total} na {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Gwada wani kalmar nema ko matatu dabam.',
   groundingSummaryEvidenceSpan: 'Haruffa {start}–{end}',

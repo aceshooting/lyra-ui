@@ -59,3 +59,29 @@ DOCX_BROWSERS=chromium,firefox,webkit DOCX_PERFORMANCE=1 pnpm --filter @aceshoot
 The performance report records hardware, browser, fixture size, and timing
 samples. Timings include browser startup and rendering work and are not latency
 guarantees.
+
+
+Separate ordinary browser invocations can share a completed, unchanged build by
+setting `DOCX_BROWSER_RUN_DIR` to a distinct new absolute directory for each run.
+Its parent must already exist outside the checkout and use its canonical path.
+The runner claims the directory exclusively and retains `output/` (the bundle and
+browser/engine-source evidence) and `evidence/` (screenshots), including on failure.
+It prints the artifact locations; collect them before removing the directory.
+Existing directories are rejected rather than cleared. With this option unset,
+the existing `.browser-output/` and `.browser-evidence/` behavior is unchanged.
+
+Use a short temporary parent on a filesystem with enough space for the bundles.
+For example, with `ARTIFACT_PARENT` set to an existing absolute directory:
+
+```sh
+DOCX_BROWSERS=firefox DOCX_BROWSER_RUN_DIR="$ARTIFACT_PARENT/firefox" pnpm --filter @aceshooting/lyra-docs test:browser
+DOCX_BROWSERS=webkit DOCX_BROWSER_RUN_DIR="$ARTIFACT_PARENT/webkit" pnpm --filter @aceshooting/lyra-docs test:browser
+```
+
+Those two commands may run concurrently with distinct roots. Neither may overlap
+a build or coverage command that rewrites their inputs. Browser selection, suite
+contents and assertions are unchanged. `DOCX_SCREENSHOTS`, when set, must name the
+isolated root's `evidence/` directory; leaving it unset keeps optional screenshots
+disabled. Coverage requires its canonical source-map paths and rejects
+`DOCX_BROWSER_RUN_DIR` before changing outputs. This option does not isolate
+coverage or the separate performance command.

@@ -220,6 +220,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Ìpele tí a kò mọ̀',
   ingestionQueueLabel: 'Ìlà ìgbéwọlé',
   ingestionQueueEmpty: 'Kò sí ìwé tó wà ní ìlà',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'A ń fi iṣẹ́ {count} nínú {total} hàn fún {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Gbìyànjú ọ̀rọ̀ ìwá mìíràn tàbí àwọn àlẹ̀mọ́ mìíràn.',
   groundingSummaryEvidenceSpan: 'Àwọn àmì {start}–{end}',

@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Tahap ora dingerteni',
   ingestionQueueLabel: 'Antrian panyerapan',
   ingestionQueueEmpty: 'Ora ana dokumen ing antrian',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Nuduhake {count} saka {total} tumindak kanggo {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Coba tembung panelusuran utawa saringan liyane.',
   groundingSummaryEvidenceSpan: 'Karakter {start}–{end}',

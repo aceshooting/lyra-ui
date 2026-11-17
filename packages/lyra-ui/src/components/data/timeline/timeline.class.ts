@@ -524,8 +524,9 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     });
   }
 
-  /** @internal Lets an item that upgrades after the last numbering pass read its step number. */
+  /** @internal Reconciles a late-upgraded item's time tracking and reads its step number. */
   [TIMELINE_ITEM_ORDINAL_OF](item: Element): number | undefined {
+    if (this.scale === 'time') this.onTimelineItemTimestampChange();
     if (!this.ordered) return undefined;
     const index = this.timelineItems().indexOf(item as LyraTimelineItem);
     if (index < 0) return undefined;

@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Engeza imininingwane (akudingeki)',
   feedbackSubmit: 'Thumela impendulo',
   feedbackSubmitted: 'Impendulo ithunyelwe',
+  feedbackCommentTooLong: 'Sebenzisa izinhlamvu ezingu-{max} noma ngaphansi.',
+  feedbackSingleReasonDescription: 'Khetha isizathu esisodwa noma ungakhethi.',
   suggestionsLabel: 'Imiyalo ephakanyisiwe',
   selectModel: 'Khetha imodeli…',
   modelSelectNoModels: 'Awekho amamodeli',

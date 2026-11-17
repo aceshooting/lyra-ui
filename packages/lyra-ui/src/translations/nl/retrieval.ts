@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Onbekende fase',
   ingestionQueueLabel: 'Innamewachtrij',
   ingestionQueueEmpty: 'Geen documenten in wachtrij',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Er worden {count} van {total} acties voor {label} weergegeven.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Probeer een andere zoekterm of andere filters.',
   groundingSummaryEvidenceSpan: 'Tekens {start}–{end}',

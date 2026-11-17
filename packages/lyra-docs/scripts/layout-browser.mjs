@@ -1,10 +1,10 @@
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { zipEntry } from '../test/zip.mjs';
 
-export async function runEditorLayout(page, check, { createEditor, saveEditor }) {
-  const evidence = name => fileURLToPath(new URL(`../.browser-evidence/${page.context().browser().browserType().name()}-${name}.png`, import.meta.url));
+export async function runEditorLayout(page, check, { createEditor, saveEditor, evidenceDirectory }) {
+  const evidence = name => resolve(evidenceDirectory, `${page.context().browser().browserType().name()}-${name}.png`);
   await page.evaluate(() => document.querySelector('#fixture').replaceChildren());
   await createEditor(page, 'layout');
   const editor = page.locator('#layout');

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,7 +20,7 @@ Controlled searchable and filterable document inventory with versions, tags, own
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
 collection stays reachable through pagination without mounting an unbounded grid.
 
-With `dataSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
+With both `dataSource` and `cursorSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
 note reports the omitted count. Search and a controlled `tagFilter` continue to match all admitted
 document tags, including tags outside the facet window. Matching rows, sorting, and folded search
 fields are reused when their inputs are unchanged; loading and selection updates reuse the current
@@ -65,7 +65,9 @@ the nested table.
 
 The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
-readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
+readonly sortDir: 'asc' | 'desc'; readonly filter:
+((document: LibraryDocument, query: string) => boolean) | undefined }`.
+The component's `filter` property uses this same callback contract.
 
 **Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
 (default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
@@ -102,17 +104,98 @@ User `lr-selection-change` carries the complete accepted ID list, and programmat
 remain silent. Page/query changes and page retry reuse the independent selected-record cache.
 `lr-filter-change.matchCount` reports the accepted global query total.
 
-A defined source takes display precedence over `documents`; it never overwrites that legacy
+A defined `dataSource` takes display precedence over `documents`; it never overwrites that legacy
 getter. Invalid defined sources fail visibly. Setting `dataSource = undefined` restores the
-current legacy documents and their existing limits. The source remains host-owned by identity;
+current legacy documents and their existing limits when `cursorSource` is also unset. The source remains host-owned by identity;
 after changing its contents or revision, reassign it (including the same object) or call unnamed
 `requestUpdate()`. Replacement, explicit refresh, locale change, disconnect and adoption revoke
 obsolete work. Named presentation updates reuse accepted data. Both source and legacy routes
 forward instance `strings` to the composed table.
 
+**Unknown-total cursor batches:** property-only `cursorSource: DocumentLibraryCursorSource | undefined`
+(default `undefined`) accepts
+`LyraCursorSource<LibraryDocument, DocumentLibrarySourceQuery>`. This is a separate route from
+counted `dataSource`: setting both fails visibly without invoking either provider or falling back
+to `documents`. With both unset, the legacy array route keeps its existing behavior.
+`DocumentLibraryCursorSource = LyraCursorSource<LibraryDocument, DocumentLibrarySourceQuery>` and
+`DocumentLibraryQueryChangeDetail { readonly searchTerm: string;
+readonly tags: readonly string[]; }` are exported by the component class entry. The generic cursor types
+come from `@aceshooting/lyra-ui/data-sources.js`; see the [provider guide](../shared/events-and-types.md#large-collection-sources).
+
+The provider supplies a nonempty identity `scope`, a `revision`, and
+`query({ scope, revision, locale, signal, query, cursor, limit })`, returning
+`{ rows: [{ key, value }], nextCursor }`. Each key must exactly equal its document's nonblank ID.
+There is no required total, numeric order, lookup or locate. `cursor: null` starts the query;
+`nextCursor: null` is the only end marker. Nonempty tokens are opaque: preserve them unchanged,
+without parsing, displaying or persisting them. An empty or short batch can still have a next
+token. The provider applies the complete search, AND tag filtering, optional custom filter and
+sort **before** paging, with the same query/callback semantics as the counted route. It must
+reject a query it cannot implement instead of silently ignoring it or filtering only loaded rows.
+
+The nested table renders only the current batch. `sourcePageSize` supplies the request limit
+(default 100, normalized to 1–500); `sourcePage` is inactive, and assigning it does not refetch.
+`sourceTotal` remains `null`, including at the end. No match count, facet catalogue or total is
+inferred from visited batches. The built-in tag picker and omitted-facet count are absent;
+document tags still render, and a host may bind `tagFilter` from an external control. Partial
+batches never prune that filter.
+
+Readonly frozen `cursorNavigation: LyraCursorNavigationState` contains `status` (`'idle' |
+'loading' | 'ready' | 'error'`), `canGoBack`, `canGoForward`, `atEnd`, and `historyTruncated` only:
+no rows, tokens, absolute positions or counts. End is reported only for a ready terminal result,
+never for a failure. `nextCursorPage(): Promise<boolean>`, `previousCursorPage(): Promise<boolean>`
+and `restartCursorSource(): Promise<boolean>` resolve `true` only for their own accepted commits;
+unavailable, externally blocked, failed or superseded actions resolve `false`.
+
+Previous refetches a visited request cursor, retaining at most 32 visited cursors including the
+current one. It discards the old forward branch; Next follows that newly accepted continuation.
+Earlier history can be evicted, which sets `historyTruncated`; Start over discards history and
+requests `null`. No previous batch rows or prefetch queue are retained. Retry repeats the exact
+failed cursor request; Start over is the explicit way to discard an expired token. Known cycles
+within retained history are rejected; global cycle detection across evicted history is not
+promised. Empty continuation batches stay navigable without automatic fetch/skip loops.
+
+Cursor selection is bounded **unverified selected-ID intent**, not proof of global membership.
+Selecting the page preserves off-page IDs; hosts validate membership before mutations. IDs
+survive query, revision, refresh, reconnect and same-scope provider replacement. A different
+scope clears the old selection immediately, including after temporary source removal. Reusing
+a scope asserts compatible document identity. When restoring selection for a new namespace,
+assign the new source first, then the IDs:
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-document-library.js';
+import type { DocumentLibraryCursorSource } from '@aceshooting/lyra-ui/components/data/document-library/document-library.class.js';
+
+declare const source: DocumentLibraryCursorSource; // Host-owned query implementation.
+declare const restoredIds: readonly string[];
+const library = document.querySelector('lr-document-library')!;
+library.cursorSource = source;
+library.selectedDocumentIds = restoredIds;
+```
+
+Cursor `tagFilter` and selected-ID assignments inspect at most 10,000 raw entries, deduplicate
+stably, then admit at most 500 unique tags or 10,000 unique selected IDs. Each nonblank ID is at
+most 65,536 UTF-16 units; owned unique text is at most 2,000,000 units per input. Query search is
+at most 65,536 units and shares the query text allowance with tag IDs. Malformed, sparse or
+oversized inputs fail atomically rather than truncating. Scope, nonnull token and string revision
+are nonempty and at most 8,192 units each. Replies contain at most the requested number of rows;
+duplicate/invalid keys or documents reject the whole batch. Documents retain the provider-row
+500-tag/65,536-display-unit limit, and combined keys plus display text are bounded to 2,000,000
+units per batch. None of these cursor admission rules changes the legacy array/counting limits.
+
+Source reassignment (including the same object), keyless `requestUpdate()`, query/locale/limit
+changes, explicit restart or reconnect starts at `null` and revokes old results. Named visual
+updates reuse accepted data; observe revision changes by reassigning or explicitly refreshing.
+Navigation/selection closures from an obsolete batch cannot act on a new same-ID row. A callback
+must settle promptly on `signal` abort: ignoring cancellation holds the physical page permit, so
+newer requests wait instead of overlapping it. The host owns callback cost and backend work.
+
 **Events:**
 
-- `lr-filter-change` — non-cancelable; fresh frozen readonly `{ searchTerm, tags, matchCount }`.
+- `lr-filter-change` — array/counted routes only; non-cancelable, with fresh frozen readonly
+  `{ searchTerm, tags, matchCount }` and the exact admitted/global match count.
+- `lr-query-change` — cursor route only; non-cancelable, with fresh frozen readonly
+  `{ searchTerm, tags }` after a user search edit. It is an immediate input notification, not a
+  result/total notification; programmatic assignments are silent and no `matchCount` is fabricated.
 - `lr-sort-request` — cancelable; proposes frozen readonly `{ phase: 'request', sortKey, sortDir }`.
 - `lr-sort` — non-cancelable; an accepted sort commits the same fields with `phase: 'commit'`.
 - `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
@@ -129,7 +212,9 @@ button, while a host or provider load error is shown.
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`, `error-row`, `error-cell`,
 `error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
 `error-description`, `error-actions`, `retry-button`, `limit` (the count of distinct tags omitted
-from the facet), `selection-status` (source selection loading/error), and `selection-retry`.
+from the facet), `selection-status` (counted-source selection loading/error), `selection-retry`,
+`cursor-navigation` (the named navigation region), `cursor-previous`, `cursor-next`,
+`cursor-restart`, and `cursor-status` (end/history-boundary text).
 
 `selection-bar` is visible ordinary content, not a shadow live region. `selectedDocumentIds`
 assignments stay silent; each selection change the user makes (row or select-all checkbox, "Clear

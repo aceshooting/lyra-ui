@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Tinye nkọwa ọzọ (nhọrọ)',
   feedbackSubmit: 'Nyefee nzaghachi',
   feedbackSubmitted: 'E nyefela nzaghachi',
+  feedbackCommentTooLong: 'Jiri mkpụrụedemede {max} ma ọ bụ ihe na-erughị ya.',
+  feedbackSingleReasonDescription: 'Họrọ ihe kpatara ya na-agaghị agafe otu.',
   suggestionsLabel: 'Arịrịọ ndị akwadoro',
   selectModel: 'Họrọ nlereanya…',
   modelSelectNoModels: 'Enweghị nlereanya',

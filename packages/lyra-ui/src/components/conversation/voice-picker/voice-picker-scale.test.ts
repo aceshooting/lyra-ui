@@ -15,8 +15,20 @@ it('keeps closed catalog rows unrendered', async () => {
   expect(rows).to.equal(0);
   el.open = true; await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.be.greaterThan(0);
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  await waitUntil(
+    () => !listbox.hidden && getComputedStyle(listbox).visibility === 'visible' &&
+      listbox.style.getPropertyValue('--lr-positioner-available-inline-size') !== '',
+    'the populated listbox never became visible with live positioner geometry',
+    { timeout: 3000 },
+  );
   el.open = false;
-  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="option"]').length === 0);
+  await el.updateComplete;
+  await waitUntil(
+    () => listbox.hidden && el.shadowRoot!.querySelectorAll('[part="option"]').length === 0,
+    'the closed listbox never left layout and released its catalog rows',
+    { timeout: 3000 },
+  );
   el.label = 'Closed update'; await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(0);
 });

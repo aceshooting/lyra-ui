@@ -232,6 +232,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'مرحلة غير معروفة',
   ingestionQueueLabel: 'قائمة انتظار الاستيعاب',
   ingestionQueueEmpty: 'لا توجد مستندات في قائمة الانتظار',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'الإجراءات المعروضة لـ{label}: {count} من {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'جرّب مصطلح بحث أو عوامل تصفية مختلفة.',
   groundingSummaryEvidenceSpan: 'الأحرف {start}–{end}',

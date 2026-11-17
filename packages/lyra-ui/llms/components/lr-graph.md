@@ -568,6 +568,11 @@ of the box with no host styling required); a host typically computes the set fro
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
 built-in. Empty (the default) renders every node/edge at full opacity, unchanged from today.
 
+An activation listener that replaces controlled selection, active graph data, view, renderer,
+selection mode, hidden types or the host connection retires the originating action: it emits no later selection proposal from that
+activation. A subsequent activation uses the current graph normally. This applies to both array
+and column inputs; it does not make selection uncontrolled.
+
 `nodes`, `edges`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
 layout, rendering, selection, or events. An edge uses its explicit `id`, or `source->target` when
 `id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,10 +30,42 @@ controls became disabled.
 
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
-`reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.
+`reasons?: readonly { id, label }[]`, `commentable?: boolean`,
+`reasonSelection?: MessageFeedbackReasonSelection`, and `commentMaxLength?: number`; omit it for
+thumbs-only feedback.
 The record and nested reasons are a bounded clone-owned frozen snapshot; malformed, empty, blank,
 and later duplicate reason ids are omitted first-wins before selection and submission. Create and
 reassign a new detail record after changes.
+`MessageFeedbackReasonSelection = 'multiple' | 'single'`; omitted or invalid selection mode uses
+`'multiple'`. Single mode permits zero or one selected reason: activating another chip replaces
+the selection, and activating the selected chip clears it. Chips retain optional pressed-button
+semantics in a named group with a localized description, rather than becoming required radio
+buttons. Replacing multiple mode with single mode retains the most recently selected still-valid
+reason; removed reasons are pruned silently. `reasonIds` remains an array in submitted details.
+
+`commentMaxLength` bounds the **raw draft** in UTF-16 code units, like native `maxlength`:
+fractions truncate, zero permits only an empty draft, and absent, negative, nonfinite or nonnumeric
+values impose no bound. An astral character counts as two units; whitespace counts before the
+existing submission trim. The normalized limit reaches the native textarea. A script-written
+oversized draft or a draft exceeding a newly reduced limit is preserved. Submission is refused
+before creating a transaction or emitting `lr-feedback-submit-request`, and a localized
+`comment-error` is linked to the actual textarea with `aria-describedby` and `aria-invalid`.
+Correcting the length or removing the limit/comment field clears that length error. Replacing
+`detail` also retires old pending submission IDs; stale settlement cannot apply the old policy.
+Reason labels and submitted comment text remain caller content. The library localizes the
+single-selection description and length error through `feedbackSingleReasonDescription` and
+`feedbackCommentTooLong`.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-message-feedback.js';
+
+const feedback = document.querySelector('lr-message-feedback')!;
+feedback.detail = {
+  reasonSelection: 'single', commentable: true, commentMaxLength: 500,
+  reasons: [{ id: 'incorrect', label: 'Incorrect' }, { id: 'unclear', label: 'Unclear' }],
+};
+```
+
 `detailFor: 'none' | 'up' | 'down' | 'both' = 'down'` (attribute `detail-for`) selects which rating
 owns that one detail panel. `disabled: boolean = false` (reflected) makes a recorded rating read-only, and
 `pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
@@ -58,6 +90,8 @@ supplies a nonblank, never-reused id; a later/current settlement must use that e
 no-argument settlement remains available only for the first transaction that has never been
 invalidated; stale or mismatched settlements return `false`.
 
+**Slots:** none.
+
 **Events:** `lr-feedback-change` — `detail: { rating: 'up' | 'down' | null }`, fired when a thumb's
 provisional rating changes or clears. `lr-feedback-submit-request` — cancelable
 `detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string; submissionId: string }`, fired for every
@@ -74,7 +108,8 @@ When uncanceled it retains the synchronous close/announce/focus behavior. The op
 toolbar actions change availability or order.
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
-`commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
+`commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`),
+`comment-error` (the localized oversized-comment error), and
 `submit-button`. The thumbs read the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
 their `-hover`/`-active` states), matching the `lr-icon-button` actions beside them in
 `lr-message-actions`.

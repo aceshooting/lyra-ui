@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'ਹੋਰ ਵੇਰਵਾ ਸ਼ਾਮਲ ਕਰੋ (ਵਿਕਲਪਿਕ)',
   feedbackSubmit: 'ਫੀਡਬੈਕ ਜਮ੍ਹਾਂ ਕਰੋ',
   feedbackSubmitted: 'ਫੀਡਬੈਕ ਜਮ੍ਹਾਂ ਹੋ ਗਿਆ',
+  feedbackCommentTooLong: '{max} ਜਾਂ ਇਸ ਤੋਂ ਘੱਟ ਅੱਖਰ ਵਰਤੋ।',
+  feedbackSingleReasonDescription: 'ਵੱਧ ਤੋਂ ਵੱਧ ਇੱਕ ਕਾਰਨ ਚੁਣੋ।',
   suggestionsLabel: 'ਸੁਝਾਏ ਪ੍ਰੌੰਪਟ',
   selectModel: 'ਮਾਡਲ ਚੁਣੋ…',
   modelSelectNoModels: 'ਕੋਈ ਮਾਡਲ ਨਹੀਂ',

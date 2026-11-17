@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Ƙara bayani (na zaɓi)',
   feedbackSubmit: 'Aika ra’ayi',
   feedbackSubmitted: 'An aika ra’ayi',
+  feedbackCommentTooLong: 'Yi amfani da haruffa {max} ko ƙasa da haka.',
+  feedbackSingleReasonDescription: 'Zaɓi dalili guda ɗaya ko kada ka zaɓi ko ɗaya.',
   suggestionsLabel: 'Shawarwarin umarni',
   selectModel: 'Zaɓi samfuri…',
   modelSelectNoModels: 'Babu samfura',

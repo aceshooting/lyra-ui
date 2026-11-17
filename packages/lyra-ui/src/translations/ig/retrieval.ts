@@ -223,6 +223,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Ọkwa amaghị',
   ingestionQueueLabel: 'Ahịrị ntinye data',
   ingestionQueueEmpty: 'Enweghị akwụkwọ nọ n’ahịrị',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'A na-egosi omume {count} n’ime {total} maka {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Nwaa okwu ọchụchọ ma ọ bụ nzacha ọzọ.',
   groundingSummaryEvidenceSpan: 'Mkpụrụedemede {start}–{end}',

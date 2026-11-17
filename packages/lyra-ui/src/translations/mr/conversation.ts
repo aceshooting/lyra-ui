@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'अधिक तपशील जोडा (पर्यायी)',
   feedbackSubmit: 'अभिप्राय सबमिट करा',
   feedbackSubmitted: 'अभिप्राय सबमिट केला',
+  feedbackCommentTooLong: '{max} किंवा त्यापेक्षा कमी अक्षरे वापरा.',
+  feedbackSingleReasonDescription: 'जास्तीत जास्त एक कारण निवडा.',
   suggestionsLabel: 'सुचवलेले प्रॉम्प्ट',
   selectModel: 'मॉडेल निवडा…',
   modelSelectNoModels: 'मॉडेल उपलब्ध नाहीत',

@@ -9,6 +9,13 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { captureComposedFocusRepair, applyComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
+import { tag } from '../../../internal/prefix.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
+import { projectIngestionPresentation, ingestionActionKey, type IngestionPresentationProjection,
+  type IngestionQueueAction, type IngestionQueueStagePresentation, type IngestionItemActionEventDetail } from './ingestion-queue-presentation.js';
+export type { IngestionQueueAction, IngestionQueueStagePresentation, IngestionItemActionEventDetail } from './ingestion-queue-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
@@ -47,7 +54,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueInputLimit, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_ingestionActionWithContext, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueActionLimit, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueInputLimit, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -64,7 +71,8 @@ export type IngestionStage =
   | 'indexing'
   | 'done'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'custom';
 
 type RenderedIngestionStage = IngestionStage | 'unknown';
 
@@ -78,6 +86,7 @@ const INGESTION_STAGES: ReadonlySet<IngestionStage> = new Set([
   'done',
   'failed',
   'cancelled',
+  'custom',
 ]);
 
 function normalizedStage(stage: unknown): RenderedIngestionStage {
@@ -101,6 +110,9 @@ const CANCELABLE_STAGES: readonly IngestionStage[] = [
   'queued',
   ...ACTIVE_STAGES,
 ];
+const DEFAULT_RETRY_ACTIONS: readonly IngestionQueueAction[] = Object.freeze([Object.freeze({ type: 'retry' })]);
+const DEFAULT_CANCEL_ACTIONS: readonly IngestionQueueAction[] = Object.freeze([Object.freeze({ type: 'cancel' })]);
+const NO_ACTIONS: readonly IngestionQueueAction[] = Object.freeze([]);
 
 function badgeVariantForStage(stage: RenderedIngestionStage): BadgeVariant {
   switch (stage) {
@@ -111,6 +123,7 @@ function badgeVariantForStage(stage: RenderedIngestionStage): BadgeVariant {
     case 'queued':
     case 'cancelled':
     case 'unknown':
+    case 'custom':
       return 'neutral';
     default:
       return 'brand';
@@ -139,6 +152,10 @@ export interface IngestionQueueItem {
   attempts?: number;
   /** Failure detail, rendered only while `stage === 'failed'`. */
   error?: string;
+  /** Caller-localized display for stage='custom'. Invalid metadata leaves an inert Unknown stage. */
+  customStage?: IngestionQueueStagePresentation;
+  /** Explicit replacement action list. Omit for existing stage-derived Retry/Cancel; [] hides all. */
+  actions?: readonly IngestionQueueAction[];
 }
 
 /** Provider query for the unfiltered, provider-ordered ingestion queue. */
@@ -166,6 +183,7 @@ export interface IngestionCancelEventDetail extends CancelEventDetail {
 export interface LyraIngestionQueueEventMap {
   'lr-retry': CustomEvent<IngestionRetryEventDetail>;
   'lr-cancel': CustomEvent<IngestionCancelEventDetail>;
+  'lr-item-action': CustomEvent<IngestionItemActionEventDetail>;
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -215,6 +233,10 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * becomes a blank or misleadingly actionable row.
  * Nonstring failure details use the localized failed-stage label before rendering and fresh
  * failure announcements. Omitted details stay omitted; historical failures remain silent on mount.
+ * stage='custom' uses bounded caller-supplied customStage text/tone/progress and derives no actions.
+ * An explicit actions list replaces defaults; built-ins retain lifecycle eligibility and custom
+ * actions emit requests only. Publish a new collection/source revision to change availability;
+ * the host remains responsible for every operation and server authorization.
  *
  * Input retains the first 10,000 queue items; the limit note reports the assigned source count.
  * Closed display fields are copied after identity admission, so nested records do not consume the
@@ -234,6 +256,9 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * @csspart source-retry - Retry the current provider page.
  * @csspart source-pagination - Provider page navigation.
  * @customElement lr-ingestion-queue
+ * @event lr-item-action - A current enabled custom action was activated. Frozen detail: { itemId, actionId }.
+ * @csspart item-action-button - A host-defined native row action; also forwarded when virtualized.
+ * @csspart item-action-limit - Visible notice when a row's action list exceeds the inspected prefix.
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
  *   rows). `detail: { itemId, attempt }` -- `attempt` is the attempt number about to be made.
  * @event lr-cancel - A row's cancel affordance was activated (rendered for every non-terminal
@@ -282,11 +307,13 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     cancel: LYRA_DEFAULT_cancel,
+    ingestionActionWithContext: LYRA_DEFAULT_ingestionActionWithContext,
     ingestionAttemptCount: LYRA_DEFAULT_ingestionAttemptCount,
     ingestionCancelWithContext: LYRA_DEFAULT_ingestionCancelWithContext,
     ingestionChunkCount: LYRA_DEFAULT_ingestionChunkCount,
     ingestionEmbeddedOfTotal: LYRA_DEFAULT_ingestionEmbeddedOfTotal,
     ingestionItemProgressLabel: LYRA_DEFAULT_ingestionItemProgressLabel,
+    ingestionQueueActionLimit: LYRA_DEFAULT_ingestionQueueActionLimit,
     ingestionQueueEmpty: LYRA_DEFAULT_ingestionQueueEmpty,
     ingestionQueueInputLimit: LYRA_DEFAULT_ingestionQueueInputLimit,
     ingestionQueueLabel: LYRA_DEFAULT_ingestionQueueLabel,
@@ -308,6 +335,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-item-action']);
   protected static override readonly identityCollectionProperties = Object.freeze(['items']);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
@@ -327,7 +355,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   private sourceSize?: number;
   private sourceResult?: LyraPageResult<IngestionQueueItem>;
   private sourceRows: readonly IngestionQueueItem[] = [];
-  private readonly sourceItemIdentities = new WeakSet<IngestionQueueItem>();
+  private readonly presentations = new WeakMap<IngestionQueueItem, IngestionPresentationProjection>();
+  private actionFocusRepair?: { snapshot: ComposedFocusRepairSnapshot; itemId: string; actionIndex: number; rowIndex: number };
+  private focusRepairGeneration = 0;
   @state() private sourceStateVersion = 0;
   private readonly sourcePages = new SourcePageController<IngestionQueueItem, IngestionQueueSourceQuery>(this, {
     normalizeRecord: (record, isCurrent) => this.projectSourceItem(record, isCurrent),
@@ -393,9 +423,13 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       const value = field(raw, key);
       if (value !== undefined) { if (typeof value !== 'number') throw new TypeError('Invalid source number'); numbers[key] = value; }
     }
-    const value = Object.freeze({ id, document, stage, error, ...numbers }) as IngestionQueueItem;
+    const presentation = projectIngestionPresentation(raw as object, stage, isCurrent, 65_536 - units);
+    const value = Object.freeze({ id, document, stage, error, ...numbers,
+      ...(presentation.customStage ? { customStage: presentation.customStage } : {}),
+      ...(presentation.actions === undefined ? {} : { actions: presentation.actions }),
+    }) as IngestionQueueItem;
+    this.presentations.set(value, presentation);
     assertCurrent();
-    this.sourceItemIdentities.add(value);
     if (errorValue != null && typeof errorValue !== 'string') this.fallbackFailureItems.add(value);
     assertCurrent();
     return { key: record.key, order: record.order, value };
@@ -488,6 +522,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   private previouslyInputTruncated = false;
 
   override adoptedCallback(): void {
+    this.focusRepairGeneration++;
+    this.actionFocusRepair = undefined;
     super.adoptedCallback();
     this.limitAnnouncements.adopted();
     this.sourcePages.adopted();
@@ -506,6 +542,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   private previousSourceStatus = '';
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.restoreActionFocus();
     if (this.sourceMode) {
       const status = this.sourceFailed ? this.localize('tableLoadFailed')
         : this.sourcePages.state.pending ? this.localize('loading') : '';
@@ -553,9 +590,13 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         const fields = Object.fromEntries(['stage', 'progress', 'chunkCount', 'embeddedChunkCount', 'attempts']
           .map(key => [key, readOwnDataValue(valueItem, key)]).filter(([, field]) => field !== undefined));
         const error = readOwnDataValue(valueItem, 'error');
+        const presentation = projectIngestionPresentation(valueItem, fields['stage'], () => this.items === value && !this.sourceMode);
         const row = Object.freeze({ ...fields, id, document,
           ...(error === undefined ? {} : { error: error === null || typeof error === 'string' ? error : this.localize('ingestionStageFailed') }),
+          ...(presentation.customStage ? { customStage: presentation.customStage } : {}),
+          ...(presentation.actions === undefined ? {} : { actions: presentation.actions }),
         }) as IngestionQueueItem;
+        this.presentations.set(row, presentation);
         if (error != null && typeof error !== 'string') this.fallbackFailureItems.add(row);
         rows.push(row);
       } catch { continue; }
@@ -609,6 +650,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   }
 
   override disconnectedCallback(): void {
+    this.focusRepairGeneration++;
+    this.actionFocusRepair = undefined;
     super.disconnectedCallback();
     this.failureLiveText = '';
     this.sourceStatusInitialized = false;
@@ -621,7 +664,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.syncSource();
-    if (this.sourceMode) { this.acceptSourcePage(); this.failureLiveText = ''; this.isMounting = true; return; }
+    if (this.sourceMode) { this.acceptSourcePage(); this.captureActionFocus(); this.failureLiveText = ''; this.isMounting = true; return; }
+    this.captureActionFocus();
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (wasMounting) {
@@ -694,6 +738,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       case 'cancelled':
         return this.localize('ingestionStageCancelled');
       case 'unknown':
+      case 'custom':
         return this.localize('ingestionStageUnknown');
     }
   }
@@ -715,31 +760,108 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     event.stopPropagation();
   };
 
-  private onRetryClick(item: IngestionQueueItem): void {
-    if ((this.sourceMode || this.sourceItemIdentities.has(item)) && (!this.sourceMode || this.sourceBlocked || !this.sourceRows.includes(item))) return;
-    this.emit('lr-retry', {
-      itemId: item.id,
-      attempt: this.normalizedAttempts(item) + 1,
+  private itemStage(item: IngestionQueueItem): RenderedIngestionStage {
+    const stage = normalizedStage(item.stage);
+    return stage === 'custom' && !item.customStage ? 'unknown' : stage;
+  }
+
+  private rowActions(item: IngestionQueueItem): readonly IngestionQueueAction[] {
+    const stage = this.itemStage(item);
+    if (stage === 'unknown') return NO_ACTIONS;
+    const actions = item.actions ?? (stage === 'failed' ? DEFAULT_RETRY_ACTIONS
+      : CANCELABLE_STAGES.includes(stage) ? DEFAULT_CANCEL_ACTIONS : NO_ACTIONS);
+    return actions.filter(action => action.type === 'custom' ||
+      (action.type === 'retry' ? stage === 'failed' : CANCELABLE_STAGES.includes(stage)));
+  }
+
+  private currentRows(): readonly IngestionQueueItem[] {
+    return this.sourceMode ? this.sourceRows : this.normalizedItems;
+  }
+
+  private activateRowAction(item: IngestionQueueItem, action: IngestionQueueAction): void {
+    if (!this.isConnected || (this.sourceMode && this.sourceBlocked) ||
+      !this.currentRows().includes(item) || !this.rowActions(item).includes(action) || action.disabled) return;
+    if (action.type === 'retry') this.emit('lr-retry', { itemId: item.id, attempt: this.normalizedAttempts(item) + 1 });
+    else if (action.type === 'cancel') this.emit('lr-cancel', { itemId: item.id });
+    else if (action.type === 'custom') this.emit('lr-item-action', Object.freeze({ itemId: item.id, actionId: action.id }));
+  }
+
+  private renderedActionButtons(): HTMLButtonElement[] {
+    const virtual = this.renderRoot.querySelector<HTMLElement>(tag('virtual-list'));
+    return [...this.renderRoot.querySelectorAll<HTMLButtonElement>('button[data-ingestion-action]'),
+      ...(virtual?.shadowRoot?.querySelectorAll<HTMLButtonElement>('button[data-ingestion-action]') ?? [])];
+  }
+
+  private captureActionFocus(): void {
+    const active = deepActiveElementIn(this.ownerDocument);
+    if (!active || !this.renderedActionButtons().includes(active as HTMLButtonElement)) return;
+    const itemId = active.getAttribute('data-ingestion-item')!;
+    const key = active.getAttribute('data-ingestion-action')!;
+    const rows = this.currentRows();
+    const current = rows.find(row => row.id === itemId);
+    if (current && this.rowActions(current).some(action => ingestionActionKey(action) === key && !action.disabled)) return;
+    const snapshot = captureComposedFocusRepair(this, active as HTMLElement);
+    if (!snapshot) return;
+    const siblings = this.renderedActionButtons().filter(button => button.getAttribute('data-ingestion-item') === itemId);
+    const renderedIds = [...new Set(this.renderedActionButtons().map(button => button.getAttribute('data-ingestion-item')))];
+    this.focusRepairGeneration++;
+    this.actionFocusRepair = { snapshot, itemId, actionIndex: Math.max(0, siblings.indexOf(active as HTMLButtonElement)),
+      rowIndex: Math.max(0, renderedIds.indexOf(itemId)) };
+  }
+
+  private restoreActionFocus(): void {
+    const pending = this.actionFocusRepair;
+    this.actionFocusRepair = undefined;
+    if (!pending) return;
+    const generation = this.focusRepairGeneration;
+    void this.updateComplete.then(async () => {
+      const virtual = this.renderRoot.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>(tag('virtual-list'));
+      if (virtual) await virtual.updateComplete;
+      if (!this.isConnected || generation !== this.focusRepairGeneration) return;
+      const available = this.renderedActionButtons().filter(button => !button.disabled);
+      const sameRow = available.filter(button => button.getAttribute('data-ingestion-item') === pending.itemId);
+      const target = sameRow[Math.min(pending.actionIndex, sameRow.length - 1)];
+      const ids = [...new Set(available.map(button => button.getAttribute('data-ingestion-item')))];
+      const nearId = ids[Math.min(pending.rowIndex, ids.length - 1)];
+      const nearby = available.filter(button => button.getAttribute('data-ingestion-item') === nearId);
+      const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
+      const virtualBase = virtual?.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+      applyComposedFocusRepair(pending.snapshot, [target, ...sameRow, ...nearby, virtualBase, list]);
     });
   }
 
-  private onCancelClick(item: IngestionQueueItem): void {
-    if ((this.sourceMode || this.sourceItemIdentities.has(item)) && (!this.sourceMode || this.sourceBlocked || !this.sourceRows.includes(item))) return;
-    this.emit('lr-cancel', { itemId: item.id });
+  private renderRowAction(item: IngestionQueueItem, action: IngestionQueueAction, name: string): TemplateResult {
+    const custom = action.type === 'custom';
+    const part = custom ? 'item-action-button' : action.type === 'retry' ? 'retry-button' : 'cancel-button';
+    const label = custom ? action.label : this.localize(action.type === 'retry' ? 'retry' : 'cancel');
+    const accessibleName = custom ? this.localize('ingestionActionWithContext', undefined, { action: label, label: name })
+      : this.localize(action.type === 'retry' ? 'ingestionRetryWithContext' : 'ingestionCancelWithContext', undefined, { label: name });
+    return html`<button part=${part} type="button" ?disabled=${action.disabled === true}
+      data-ingestion-item=${item.id} data-ingestion-action=${ingestionActionKey(action)}
+      aria-label=${accessibleName} @click=${() => this.activateRowAction(item, action)}
+      >${custom ? nothing : action.type === 'retry' ? retryIcon() : closeIcon()}<span>${label}</span></button>`;
+  }
+
+  private renderActionLimit(item: IngestionQueueItem, name: string): TemplateResult | typeof nothing {
+    const limit = this.presentations.get(item)?.actionLimit;
+    if (!limit) return nothing;
+    devWarnOnce(`lyra-ingestion-action-limit:${this.localName}`, `<${this.localName}>: a row retained ${limit.retained} of ${limit.source} actions; only the first 32 action positions are inspected.`);
+    const number = getNumberFormat(this.effectiveLocale);
+    return html`<p part="item-action-limit" role="note">${this.localize('ingestionQueueActionLimit', undefined,
+      { count: number.format(limit.retained), total: number.format(limit.source), label: name })}</p>`;
   }
 
   private itemTemplate = (
     item: IngestionQueueItem,
     ownRole: boolean
   ): TemplateResult => {
-    const stage = normalizedStage(item.stage);
-    const stageLabel = this.stageLabel(stage);
+    const stage = this.itemStage(item);
+    const stageLabel = stage === 'custom' ? item.customStage!.label : this.stageLabel(stage);
     const name = item.document.name.trim()
       ? item.document.name
       : this.localize('untitledSource');
-    const showProgress = stage !== 'unknown' && ACTIVE_STAGES.includes(stage);
-    const canRetry = stage === 'failed';
-    const canCancel = stage !== 'unknown' && CANCELABLE_STAGES.includes(stage);
+    const showProgress = stage === 'custom' ? item.customStage!.showProgress === true : ACTIVE_STAGES.includes(stage as IngestionStage);
+    const actions = this.rowActions(item);
     const attempts = this.normalizedAttempts(item);
     const hasMeta =
       item.chunkCount !== undefined ||
@@ -756,7 +878,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       >
         <div part="item-header">
           <span part="item-name" title=${name}>${name}</span>
-          <lr-badge part="item-stage" variant=${badgeVariantForStage(stage)}
+          <lr-badge part="item-stage" variant=${stage === 'custom' ? item.customStage!.variant ?? 'neutral' : badgeVariantForStage(stage)}
             >${stageLabel}</lr-badge
           >
         </div>
@@ -809,42 +931,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         ${stage === 'failed' && item.error
           ? html`<p part="item-error">${this.fallbackFailureItems.has(item) ? this.localize('ingestionStageFailed') : item.error}</p>`
           : nothing}
-        ${canRetry || canCancel
-          ? html`<div part="item-actions">
-              ${canRetry
-                ? html`<button
-                    part="retry-button"
-                    type="button"
-                    aria-label=${this.localize(
-                      'ingestionRetryWithContext',
-                      undefined,
-                      {
-                        label: name,
-                      }
-                    )}
-                    @click=${() => this.onRetryClick(item)}
-                  >
-                    ${retryIcon()}<span>${this.localize('retry')}</span>
-                  </button>`
-                : nothing}
-              ${canCancel
-                ? html`<button
-                    part="cancel-button"
-                    type="button"
-                    aria-label=${this.localize(
-                      'ingestionCancelWithContext',
-                      undefined,
-                      {
-                        label: name,
-                      }
-                    )}
-                    @click=${() => this.onCancelClick(item)}
-                  >
-                    ${closeIcon()}<span>${this.localize('cancel')}</span>
-                  </button>`
-                : nothing}
-            </div>`
+        ${actions.length
+          ? html`<div part="item-actions">${repeat(actions, ingestionActionKey, action => this.renderRowAction(item, action, name))}</div>`
           : nothing}
+        ${this.renderActionLimit(item, name)}
       </div>
     `;
   };
@@ -854,7 +944,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return virtualized
           ? html`<lr-virtual-list
               part="list"
-              exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
+              exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button, item-action-button:item-action-button, item-action-limit:item-action-limit"
               .items=${items}
               .renderItem=${(item: unknown) =>
                 this.itemTemplate(item as IngestionQueueItem, false)}
@@ -862,7 +952,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               @lr-virtual-scroll=${this.stopOwnedEvent}
               @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`
-          : html`<div part="list" role="list">
+          : html`<div part="list" role="list" tabindex="-1">
               ${repeat(
                 items,
                 (item) => item.id,
@@ -880,7 +970,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return html`<div part="base" role=${retrievalSemanticRole(this, 'region') ?? nothing} aria-label=${label ?? nothing} aria-busy=${pending ? 'true' : 'false'}>
       ${failed || pending ? html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>` : nothing}
       ${failed ? html`<button type="button" part="source-retry" @click=${() => this.onSourceRetry(retrySource, retryState)}>${this.localize('retry')}</button>` : nothing}
-      ${failed || pending ? nothing : this.sourceRows.length ? this.renderRows(this.sourceRows) : html`<div part="list"><lr-empty part="empty" heading=${this.localize('ingestionQueueEmpty')}></lr-empty></div>`}
+      ${failed || pending ? nothing : this.sourceRows.length ? this.renderRows(this.sourceRows) : html`<div part="list" tabindex="-1"><lr-empty part="empty" heading=${this.localize('ingestionQueueEmpty')}></lr-empty></div>`}
       <lr-pagination part="source-pagination" format="compact" .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
         .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null}
         .strings=${this.strings} @lr-page-change=${this.onSourcePage} @lr-before-page-change=${this.stopOwnedEvent} @lr-activate=${this.stopOwnedEvent}
@@ -907,7 +997,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         <div part="failure-live" class="sr-only" aria-hidden="true">
           ${this.failureLiveText}
         </div>
-        <div part="list">
+        <div part="list" tabindex="-1">
           <lr-empty
             part="empty"
             heading=${this.localize('ingestionQueueEmpty')}

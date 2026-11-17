@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'మరింత వివరంగా రాయండి (ఐచ్ఛికం)',
   feedbackSubmit: 'అభిప్రాయాన్ని సమర్పించండి',
   feedbackSubmitted: 'అభిప్రాయం సమర్పించారు',
+  feedbackCommentTooLong: '{max} లేదా అంతకంటే తక్కువ అక్షరాలను ఉపయోగించండి.',
+  feedbackSingleReasonDescription: 'గరిష్ఠంగా ఒక కారణాన్ని ఎంచుకోండి.',
   suggestionsLabel: 'సూచించిన ప్రాంప్ట్‌లు',
   selectModel: 'మోడల్‌ను ఎంచుకోండి…',
   modelSelectNoModels: 'మోడల్‌లు లేవు',

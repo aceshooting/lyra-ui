@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'مرحلهٔ نامعلوم',
   ingestionQueueLabel: 'صف ورود اطلاعات',
   ingestionQueueEmpty: 'سندی در صف نیست',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'از {total} اقدام برای {label}، تعداد {count} نمایش داده می‌شود.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'واژهٔ جست‌وجو یا پالایه‌های دیگری را بیازمایید.',
   groundingSummaryEvidenceSpan: 'نویسه‌های {start}–{end}',

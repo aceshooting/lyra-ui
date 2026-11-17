@@ -7,6 +7,12 @@
 export type {
   LyraSourceRevision,
   LyraSourceContext,
+  LyraCursorRecord,
+  LyraCursorRequest,
+  LyraCursorResult,
+  LyraCursorSource,
+  LyraCursorSourceStatus,
+  LyraCursorNavigationState,
   LyraSourceRecord,
   LyraSourceSearchRequest,
   LyraSourceSearchResult,
@@ -125,12 +131,17 @@ export type {
   MessageFeedbackDetailConfiguration,
   MessageFeedbackDetailFor,
   MessageFeedbackReason,
+  MessageFeedbackReasonSelection,
   MessageFeedbackRating,
   MessageFeedbackSubmitDetail,
   MessageFeedbackValue,
   MessageFeedbackWrap,
   LyraMessageFeedbackEventMap,
 } from './components/conversation/message-feedback/message-feedback.class.js';
+export type {
+  BudgetMeterFormatContext,
+  BudgetMeterValueFormatter,
+} from './components/agent-tools/budget-meter/budget-meter.class.js';
 export type {
   MessagePartRenderer,
   MessagePartsContentMode,
@@ -1764,6 +1775,8 @@ export type {
   LibraryDocument,
   LibraryDocumentSortKey,
   DocumentLibrarySource,
+  DocumentLibraryCursorSource,
+  DocumentLibraryQueryChangeDetail,
   DocumentLibrarySourceQuery,
   DocumentLibraryFilterChangeDetail,
   DocumentLibrarySortRequestDetail,
@@ -1866,6 +1879,9 @@ export type {
 export type {
   IngestionStage,
   IngestionQueueItem,
+  IngestionQueueAction,
+  IngestionQueueStagePresentation,
+  IngestionItemActionEventDetail,
   IngestionQueueSource,
   IngestionQueueSourceQuery,
   IngestionRetryEventDetail,

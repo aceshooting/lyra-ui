@@ -226,6 +226,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Étape inconnue',
   ingestionQueueLabel: 'File d’ingestion',
   ingestionQueueEmpty: 'Aucun document en file d’attente',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{count} actions sur {total} sont affichées pour {label}.',
   retrievalFilterChipLabel: '{key} : {value}',
   retrievalSearchEmptyDescription: 'Essayez un autre terme de recherche ou d’autres filtres.',
   groundingSummaryEvidenceSpan: 'Caractères {start}–{end}',

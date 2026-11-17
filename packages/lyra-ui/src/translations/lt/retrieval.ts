@@ -228,6 +228,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Nežinomas etapas',
   ingestionQueueLabel: 'Įtraukimo eilė',
   ingestionQueueEmpty: 'Eilėje dokumentų nėra',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Rodomi veiksmai, skirti {label}: {count} iš {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Pabandykite kitą paieškos terminą arba filtrus.',
   groundingSummaryEvidenceSpan: 'Simboliai {start}–{end}',

@@ -83,6 +83,45 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
+  [part='cursor-navigation'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-s);
+    min-inline-size: 0;
+  }
+  [part='cursor-status'] {
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
+  }
+  :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']) {
+    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    padding-block: var(--lr-space-xs);
+    padding-inline: var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-raised);
+    color: var(--lr-color-text);
+    font: inherit;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):hover:where([aria-disabled='false']) {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):active:where([aria-disabled='false']) {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):focus-visible {
+    ${focusRing}
+  }
+  :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):where([aria-disabled='true']) {
+    opacity: var(--lr-opacity-disabled);
+    cursor: default;
+  }
   [part='table'] {
     min-inline-size: 0;
   }

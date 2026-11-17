@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'ያልታወቀ ደረጃ',
   ingestionQueueLabel: 'የማስገቢያ ወረፋ',
   ingestionQueueEmpty: 'በወረፋ ላይ ሰነዶች የሉም',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'ለ{label} ከ{total} ድርጊቶች ውስጥ {count} እየታዩ ነው።',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'ሌላ የፍለጋ ቃል ወይም ማጣሪያዎችን ይሞክሩ።',
   groundingSummaryEvidenceSpan: 'ቁምፊዎች {start}–{end}',

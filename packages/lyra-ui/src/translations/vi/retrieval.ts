@@ -220,6 +220,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Giai đoạn không xác định',
   ingestionQueueLabel: 'Hàng đợi nạp dữ liệu',
   ingestionQueueEmpty: 'Không có tài liệu nào trong hàng đợi',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Đang hiển thị {count} trong tổng số {total} thao tác cho {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Hãy thử từ khóa tìm kiếm hoặc bộ lọc khác.',
   groundingSummaryEvidenceSpan: 'Ký tự {start}–{end}',

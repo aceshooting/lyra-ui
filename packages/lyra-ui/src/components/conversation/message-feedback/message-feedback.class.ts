@@ -1,4 +1,5 @@
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -35,7 +36,7 @@ import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackCommentTooLong, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSingleReasonDescription, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted } from '../../../internal/default-strings/conversation.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface MessageFeedbackReason {
@@ -48,9 +49,17 @@ export type MessageFeedbackValue = MessageFeedbackRating | null;
 
 export type MessageFeedbackDetailFor = 'none' | 'up' | 'down' | 'both';
 
+/** Optional toggle-chip cardinality; single mode still permits no selected reason. */
+export type MessageFeedbackReasonSelection = 'multiple' | 'single';
+
 export interface MessageFeedbackDetailConfiguration {
   readonly reasons?: readonly MessageFeedbackReason[];
   readonly commentable?: boolean;
+  /** Defaults to multiple; single keeps the latest selected reason and permits clearing it. */
+  readonly reasonSelection?: MessageFeedbackReasonSelection;
+  /** Raw UTF-16 draft limit, normalized to a nonnegative integer. Invalid/omitted is unbounded.
+   * Oversized drafts survive policy changes and must be corrected before submitting. */
+  readonly commentMaxLength?: number;
 }
 
 /** Native `<textarea wrap>` values accepted by the optional comment field. */
@@ -77,11 +86,15 @@ const MAX_PROJECTED_FEEDBACK_REASONS = 10_000;
 interface FeedbackDetailProjection {
   readonly reasons: readonly MessageFeedbackReason[];
   readonly commentable: boolean;
+  readonly reasonSelection: MessageFeedbackReasonSelection;
+  readonly commentMaxLength: number | undefined;
 }
 
 const EMPTY_FEEDBACK_DETAIL_PROJECTION: FeedbackDetailProjection = Object.freeze({
   reasons: Object.freeze([]),
   commentable: false,
+  reasonSelection: 'multiple',
+  commentMaxLength: undefined,
 });
 
 function isArrayValue(value: unknown): value is readonly unknown[] {
@@ -99,6 +112,13 @@ function isArrayValue(value: unknown): value is readonly unknown[] {
  */
 function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
   if (!isObjectValue(detail)) return EMPTY_FEEDBACK_DETAIL_PROJECTION;
+  const selectionDescriptor = getOwnDataDescriptor(detail, 'reasonSelection');
+  const limitDescriptor = getOwnDataDescriptor(detail, 'commentMaxLength');
+  const reasonSelection = selectionDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+    selectionDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR && selectionDescriptor.value === 'single'
+    ? 'single' : 'multiple';
+  const commentMaxLength = limitDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+    limitDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR ? normalizeLengthLimit(limitDescriptor.value) : undefined;
   const reasonsDescriptor = getOwnDataDescriptor(detail, 'reasons');
   const commentableDescriptor = getOwnDataDescriptor(detail, 'commentable');
   const commentable =
@@ -111,9 +131,7 @@ function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
       ? reasonsDescriptor.value
       : undefined;
   if (!isArrayValue(reasonsValue)) {
-    return commentable
-      ? Object.freeze({ reasons: Object.freeze([]), commentable })
-      : EMPTY_FEEDBACK_DETAIL_PROJECTION;
+    return Object.freeze({ reasons: Object.freeze([]), commentable, reasonSelection, commentMaxLength });
   }
   const lengthDescriptor = getOwnDataDescriptor(reasonsValue, 'length');
   if (
@@ -123,9 +141,7 @@ function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
     !Number.isSafeInteger(lengthDescriptor.value) ||
     lengthDescriptor.value < 0
   ) {
-    return commentable
-      ? Object.freeze({ reasons: Object.freeze([]), commentable })
-      : EMPTY_FEEDBACK_DETAIL_PROJECTION;
+    return Object.freeze({ reasons: Object.freeze([]), commentable, reasonSelection, commentMaxLength });
   }
   const reasons: MessageFeedbackReason[] = [];
   const seen = new Set<string>();
@@ -156,7 +172,7 @@ function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
     seen.add(id);
     reasons.push(Object.freeze({ id, label }));
   }
-  return Object.freeze({ reasons: Object.freeze(reasons), commentable });
+  return Object.freeze({ reasons: Object.freeze(reasons), commentable, reasonSelection, commentMaxLength });
 }
 
 type PendingSubmissionSettlement = 'finalize' | 'revert';
@@ -218,6 +234,7 @@ interface PendingMessageFeedbackSubmission {
  * @csspart panel - The inline detail disclosure. Only rendered for a non-empty `detail`.
  * @csspart reasons - The reason-chip group. Only rendered when `detail.reasons` is non-empty.
  * @csspart comment - The comment `<textarea>`. Only rendered when `detail.commentable` is true.
+ * @csspart comment-error - The localized oversized-comment error.
  * @csspart submit-button - The panel's submit button.
  *
  * @cssprop [--lr-message-feedback-up-active-color=var(--lr-color-success)] - Glyph color of the
@@ -243,9 +260,11 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     ...super.defaultStrings,
     feedbackCommentLabel: LYRA_DEFAULT_feedbackCommentLabel,
     feedbackCommentPlaceholder: LYRA_DEFAULT_feedbackCommentPlaceholder,
+    feedbackCommentTooLong: LYRA_DEFAULT_feedbackCommentTooLong,
     feedbackNegative: LYRA_DEFAULT_feedbackNegative,
     feedbackPositive: LYRA_DEFAULT_feedbackPositive,
     feedbackReasonsLabel: LYRA_DEFAULT_feedbackReasonsLabel,
+    feedbackSingleReasonDescription: LYRA_DEFAULT_feedbackSingleReasonDescription,
     feedbackSubmit: LYRA_DEFAULT_feedbackSubmit,
     feedbackSubmitted: LYRA_DEFAULT_feedbackSubmitted,
   };
@@ -310,6 +329,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   @state() private panelOpen = false;
   @state() private selectedReasonIds: string[] = [];
   @state() private commentDraft = '';
+  @state() private commentLengthError = false;
   private detailProjectionSource: unknown = Symbol('unprojected-feedback-detail');
   private detailProjection = EMPTY_FEEDBACK_DETAIL_PROJECTION;
   private pendingInternalRating: { rating: MessageFeedbackValue } | undefined;
@@ -328,6 +348,8 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   private sink?: AnnouncementSink;
 
   private readonly panelId = nextId('message-feedback-panel');
+  private readonly reasonDescriptionId = nextId('message-feedback-reason-description');
+  private readonly commentErrorId = nextId('message-feedback-comment-error');
   private readonly upToolbarAction = this.createToolbarAction('up');
   private readonly downToolbarAction = this.createToolbarAction('down');
 
@@ -477,8 +499,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     if (changed.has('detail')) {
       const validIds = new Set(this.detailReasons.map((reason) => reason.id));
       this.selectedReasonIds = this.selectedReasonIds.filter((id) => validIds.has(id));
+      if (this.currentDetailProjection.reasonSelection === 'single') {
+        this.selectedReasonIds = this.selectedReasonIds.slice(-1);
+      }
       if (!this.detailCommentable) this.commentDraft = '';
     }
+    if (!this.commentExceedsLimit) this.commentLengthError = false;
     if (this.panelOpen && (!this.rating || !this.detailApplies(this.rating) || !this.hasDetailContent)) {
       this.invalidatePendingSubmission();
       this.setPending(false);
@@ -559,18 +585,37 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     event.stopPropagation();
   };
 
-  private toggleReason(id: string, event: Event): void {
-    if (this.disabled || this.pending || event.defaultPrevented) {
+  private toggleReason(id: string, event: Event, detail: MessageFeedbackDetailConfiguration | undefined): void {
+    if (this.disabled || this.pending || event.defaultPrevented || detail !== this.detail || !this.panelOpen ||
+      !this.detailReasons.some(reason => reason.id === id)) {
       event.preventDefault();
       return;
     }
+    this.reconcileReasons();
     this.selectedReasonIds = this.selectedReasonIds.includes(id)
       ? this.selectedReasonIds.filter((r) => r !== id)
-      : [...this.selectedReasonIds, id];
+      : this.currentDetailProjection.reasonSelection === 'single' ? [id] : [...this.selectedReasonIds, id];
+  }
+
+  private reconcileReasons(): void {
+    const validIds = new Set(this.detailReasons.map(reason => reason.id));
+    const selected = this.selectedReasonIds.filter(id => validIds.has(id));
+    this.selectedReasonIds = this.currentDetailProjection.reasonSelection === 'single' ? selected.slice(-1) : selected;
+  }
+
+  private get commentExceedsLimit(): boolean {
+    const limit = this.currentDetailProjection.commentMaxLength;
+    return this.detailCommentable && limit !== undefined && this.commentDraft.length > limit;
+  }
+
+  private get commentErrorText(): string {
+    return this.localize('feedbackCommentTooLong', undefined, { max: this.currentDetailProjection.commentMaxLength ?? 0 });
   }
 
   private onCommentInput = (e: Event): void => {
+    if (this.disabled || this.pending || !this.panelOpen || !this.detailCommentable) return;
     this.commentDraft = (e.target as HTMLTextAreaElement).value;
+    if (!this.commentExceedsLimit) this.commentLengthError = false;
   };
 
   // Native `focus`/`blur` on the comment textarea neither bubble nor cross the shadow boundary --
@@ -762,6 +807,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   private onSubmit = (): void => {
     if (this.disabled || this.pending || !this.rating || !this.panelOpen) return;
+    if (this.commentExceedsLimit) {
+      this.commentLengthError = true;
+      this.sink?.announce(this.commentErrorText);
+      return;
+    }
+    this.reconcileReasons();
     const validReasonIds = new Set(this.detailReasons.map((reason) => reason.id));
     this.requestSubmission(
       {
@@ -795,6 +846,8 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   override render(): TemplateResult {
     const selectedReasons = new Set(this.selectedReasonIds);
+    const renderedDetail = this.detail;
+    const singleReason = this.currentDetailProjection.reasonSelection === 'single';
     return html`
       <div part="base">
         <div part="thumbs">${this.renderThumb('up')}${this.renderThumb('down')}</div>
@@ -812,16 +865,18 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                 <div class="panel-inner">
                   ${this.detailReasons.length > 0
                     ? html`
-                        <div part="reasons" role="group" aria-label=${this.localize('feedbackReasonsLabel')}>
+                        ${singleReason ? html`<span id=${this.reasonDescriptionId} class="reason-description">${this.localize('feedbackSingleReasonDescription')}</span>` : nothing}
+                        <div part="reasons" role="group" aria-label=${this.localize('feedbackReasonsLabel')}
+                          aria-describedby=${singleReason ? this.reasonDescriptionId : nothing}>
                           ${this.detailReasons.map(
                             (reason) => html`
                               <lr-chip
                                 toggleable
-                                ?selected=${selectedReasons.has(reason.id)}
+                                .selected=${selectedReasons.has(reason.id)}
                                 .disabled=${this.disabled || this.pending}
                                 @lr-chip-toggle-request=${(event: Event) => {
                                   event.stopPropagation();
-                                  this.toggleReason(reason.id, event);
+                                  this.toggleReason(reason.id, event, renderedDetail);
                                 }}
                                 @lr-chip-select=${this.stopChipAliasEvent}
                                 >${reason.label}</lr-chip
@@ -841,12 +896,16 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                           autocapitalize=${this.autocapitalize || nothing}
                           autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
                           wrap=${this.wrap}
+                          maxlength=${this.currentDetailProjection.commentMaxLength ?? nothing}
+                          aria-invalid=${this.commentLengthError ? 'true' : 'false'}
+                          aria-describedby=${this.commentLengthError ? this.commentErrorId : nothing}
                           .value=${this.commentDraft}
                           ?disabled=${this.disabled || this.pending}
                           @input=${this.onCommentInput}
                           @focus=${this.onCommentFocus}
                           @blur=${this.onCommentBlur}
                         ></textarea>
+                        ${this.commentLengthError ? html`<div part="comment-error" id=${this.commentErrorId}>${this.commentErrorText}</div>` : nothing}
                       `
                     : nothing}
                   <button

@@ -223,6 +223,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Невідомий етап',
   ingestionQueueLabel: 'Черга завантаження',
   ingestionQueueEmpty: 'У черзі немає документів',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Показані дії для {label}: {count} із {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Спробуйте інший пошуковий запит або змініть фільтри.',
   groundingSummaryEvidenceSpan: 'Символи {start}–{end}',

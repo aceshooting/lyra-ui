@@ -130,6 +130,17 @@ export const styles = css`
     flex-wrap: wrap;
     gap: var(--lr-space-2xs);
   }
+  .reason-description,
+  [part="comment-error"] {
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  .reason-description {
+    color: var(--lr-color-text-quiet);
+  }
+  [part="comment-error"] {
+    color: var(--lr-color-danger);
+  }
   [part="comment"] {
     box-sizing: border-box;
     inline-size: 100%;

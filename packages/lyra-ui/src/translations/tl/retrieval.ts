@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Hindi kilalang yugto',
   ingestionQueueLabel: 'Pila ng pag-ingest',
   ingestionQueueEmpty: 'Walang nakapilang dokumento',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Ipinapakita ang {count} sa {total} aksyon para sa {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Subukan ang ibang termino o mga filter sa paghahanap.',
   groundingSummaryEvidenceSpan: 'Mga character {start}–{end}',

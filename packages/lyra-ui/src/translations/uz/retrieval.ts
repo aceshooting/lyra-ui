@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Nomaʼlum bosqich',
   ingestionQueueLabel: 'Qabul qilish navbati',
   ingestionQueueEmpty: 'Navbatda hujjatlar yoʻq',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} uchun {total} ta amaldan {count} tasi ko‘rsatilmoqda.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Boshqa qidiruv soʻzi yoki filtrlarni sinab koʻring.',
   groundingSummaryEvidenceSpan: '{start}–{end} belgilar',

@@ -5764,11 +5764,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private reportMove(map: MapLibreMapCapability): void {
-    if (this._map !== map) return;
+    const generation = this._connectGeneration, document = this.ownerDocument;
+    const current = (): boolean => this.isConnected && this._map === map &&
+      this._connectGeneration === generation && this.ownerDocument === document;
+    if (!current()) return;
     this.syncAnchor();
+    if (!current()) return;
     const camera = readPeerCamera(map);
-    if (!camera) return;
+    if (!current() || !camera) return;
     const bounds = this.readVisibleBounds(map);
+    if (!current()) return;
     this.emit('lr-map-move', bounds ? { ...camera, bounds } : { ...camera });
   }
 
@@ -5812,8 +5817,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /** Writes the peer's settled camera into `center`/`zoom`, then reports it. */
   private reflectCamera(map: MapLibreMapCapability, source: LyraMapViewChangeSource): void {
+    const generation = this._connectGeneration, document = this.ownerDocument;
+    const current = (): boolean => this.isConnected && this._map === map &&
+      this._connectGeneration === generation && this.ownerDocument === document;
+    if (!current()) return;
     const camera = readPeerCamera(map);
-    if (!camera) return;
+    if (!current() || !camera) return;
     const center = Object.freeze(camera.center);
     const { zoom } = camera;
     this.reflectedCamera = { center, zoom };
@@ -5827,7 +5836,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } finally {
       this.reflectingCamera = false;
     }
+    if (!current()) return;
     const bounds = this.readVisibleBounds(map);
+    if (!current()) return;
     this.emit('lr-map-view-change', bounds ? { center, zoom, source, bounds } : { center, zoom, source });
   }
 

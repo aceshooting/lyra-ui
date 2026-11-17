@@ -86,6 +86,12 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 marks. `scrollToAnchor(target)` (inherited from `DocumentAnchorTarget`) resolves a `line-range`
 anchor or a `highlights` id string.
 
+Search/navigation work belongs to the compared inputs and current host lifecycle. If a
+`lr-search-change` listener clears or replaces the search, or the compared source, connection or
+document changes before scrolling, a superseded `search()` resolves zero and superseded
+`searchNext()`/`searchPrevious()` resolves `false`. Retired work does not scroll a revealed fold or
+borrow a newer search's active match. A fresh search can navigate the current source normally.
+
 **Events:**
 
 - `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — the frozen full

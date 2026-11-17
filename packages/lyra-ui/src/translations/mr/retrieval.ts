@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'अज्ञात टप्पा',
   ingestionQueueLabel: 'आयात रांग',
   ingestionQueueEmpty: 'रांगेत दस्तऐवज नाहीत',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} साठी {total} पैकी {count} क्रिया दाखवत आहे.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'वेगळा शोध शब्द किंवा फिल्टर वापरून पहा.',
   groundingSummaryEvidenceSpan: 'अक्षरे {start}–{end}',

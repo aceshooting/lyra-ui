@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'မသိသော အဆင့်',
   ingestionQueueLabel: 'ဒေတာသွင်းယူမှု တန်းစီစာရင်း',
   ingestionQueueEmpty: 'တန်းစီထားသော စာတမ်း မရှိပါ',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} အတွက် လုပ်ဆောင်ချက် {total} ခုအနက် {count} ခုကို ပြသနေသည်။',
   retrievalFilterChipLabel: '{key} — {value}',
   retrievalSearchEmptyDescription: 'အခြားရှာဖွေစကားလုံး သို့မဟုတ် စစ်ထုတ်မှုများကို စမ်းကြည့်ပါ။',
   groundingSummaryEvidenceSpan: 'အက္ခရာ {start}–{end}',

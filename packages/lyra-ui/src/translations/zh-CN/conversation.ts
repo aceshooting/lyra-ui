@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: '补充更多细节（可选）',
   feedbackSubmit: '提交反馈',
   feedbackSubmitted: '反馈已提交',
+  feedbackCommentTooLong: '请使用不超过{max}个字符。',
+  feedbackSingleReasonDescription: '最多选择一个原因。',
   suggestionsLabel: '建议的提示词',
   selectModel: '选择模型…',
   modelSelectNoModels: '无可用模型',

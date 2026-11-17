@@ -71,6 +71,11 @@ export const styles = css`
   lr-virtual-list::part(item-progress) {
     display: block;
   }
+  [part='item-stage'],
+  lr-virtual-list::part(item-stage) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
   [part="item-meta"],
   lr-virtual-list::part(item-meta) {
     display: flex;
@@ -108,7 +113,9 @@ export const styles = css`
   [part="retry-button"],
   lr-virtual-list::part(retry-button),
   [part="cancel-button"],
-  lr-virtual-list::part(cancel-button) {
+  lr-virtual-list::part(cancel-button),
+  [part='item-action-button'],
+  lr-virtual-list::part(item-action-button) {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-0-35em);
@@ -122,20 +129,25 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    transition: var(--lr-transition-interactive);
   }
-  [part="source-retry"]:hover,
-  [part="retry-button"]:hover,
-  lr-virtual-list::part(retry-button):hover {
+  [part="source-retry"]:hover:where(:not(:disabled)),
+  [part="retry-button"]:hover:where(:not(:disabled)),
+  lr-virtual-list::part(retry-button):hover:not(:disabled),
+  [part='item-action-button']:hover:where(:not(:disabled)),
+  lr-virtual-list::part(item-action-button):hover:not(:disabled) {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
   /* Pressed keeps the hover's retinted border and label and adds the fill the hover has none of --
      the button's own --lr-color-surface base mixed toward --lr-color-mix-partner. */
-  [part="source-retry"]:active,
-  [part="retry-button"]:active,
-  lr-virtual-list::part(retry-button):active {
+  [part="source-retry"]:active:where(:not(:disabled)),
+  [part="retry-button"]:active:where(:not(:disabled)),
+  lr-virtual-list::part(retry-button):active:not(:disabled),
+  [part='item-action-button']:active:where(:not(:disabled)),
+  lr-virtual-list::part(item-action-button):active:not(:disabled) {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
     background: color-mix(
@@ -144,13 +156,13 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part="cancel-button"]:hover,
-  lr-virtual-list::part(cancel-button):hover {
+  [part="cancel-button"]:hover:where(:not(:disabled)),
+  lr-virtual-list::part(cancel-button):hover:not(:disabled) {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
   }
-  [part="cancel-button"]:active,
-  lr-virtual-list::part(cancel-button):active {
+  [part="cancel-button"]:active:where(:not(:disabled)),
+  lr-virtual-list::part(cancel-button):active:not(:disabled) {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
     background: color-mix(
@@ -163,15 +175,28 @@ export const styles = css`
   [part="retry-button"]:focus-visible,
   lr-virtual-list::part(retry-button):focus-visible,
   [part="cancel-button"]:focus-visible,
-  lr-virtual-list::part(cancel-button):focus-visible {
+  lr-virtual-list::part(cancel-button):focus-visible,
+  [part='item-action-button']:focus-visible,
+  lr-virtual-list::part(item-action-button):focus-visible {
     ${focusRing}
+  }
+  [part='retry-button']:disabled,
+  [part='cancel-button']:disabled,
+  [part='item-action-button']:disabled,
+  lr-virtual-list::part(retry-button):disabled,
+  lr-virtual-list::part(cancel-button):disabled,
+  lr-virtual-list::part(item-action-button):disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
   }
   @media (prefers-reduced-motion: reduce) {
     [part="source-retry"],
   [part="retry-button"],
     lr-virtual-list::part(retry-button),
     [part="cancel-button"],
-    lr-virtual-list::part(cancel-button) {
+    lr-virtual-list::part(cancel-button),
+    [part='item-action-button'],
+    lr-virtual-list::part(item-action-button) {
       transition: none !important;
     }
   }
@@ -180,7 +205,9 @@ export const styles = css`
     margin-block-start: var(--lr-space-s);
   }
   [part='source-status'],
-  [part='limit'] {
+  [part='limit'],
+  [part='item-action-limit'],
+  lr-virtual-list::part(item-action-limit) {
     margin: 0;
     padding: var(--lr-space-s);
     color: var(--lr-color-text-quiet);

@@ -226,6 +226,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Nezināms posms',
   ingestionQueueLabel: 'Uzņemšanas rinda',
   ingestionQueueEmpty: 'Rindā nav dokumentu',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Parādītās darbības vienumam {label}: {count} no {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Izmēģiniet citu meklēšanas vārdu vai filtrus.',
   groundingSummaryEvidenceSpan: 'Rakstzīmes {start}–{end}',

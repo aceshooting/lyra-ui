@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'অজানা ধাপ',
   ingestionQueueLabel: 'ডেটা গ্রহণের সারি',
   ingestionQueueEmpty: 'সারিতে কোনো নথি নেই',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label}-এর জন্য {total}টি কাজের মধ্যে {count}টি দেখানো হচ্ছে।',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'অন্য কোনো শব্দ বা ফিল্টার দিয়ে খুঁজে দেখুন।',
   groundingSummaryEvidenceSpan: '{start}–{end} অক্ষর',

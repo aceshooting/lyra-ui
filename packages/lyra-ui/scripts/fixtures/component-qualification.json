@@ -6674,6 +6674,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
+              "test": "contains long custom quantities in a populated 320px RTL meter",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/agent-tools/budget-meter/budget-meter.test.ts",
               "test": "is accessible and stays within a narrow RTL allocation with a long unit",
               "target": "el",
@@ -6693,8 +6699,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/budget-meter/budget-meter.test.ts",
-              "test": "is accessible and stays within a narrow RTL allocation with a long unit",
+              "file": "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
+              "test": "contains long custom quantities in a populated 320px RTL meter",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6710,8 +6716,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/budget-meter/budget-meter.test.ts",
-              "test": "is accessible and stays within a narrow RTL allocation with a long unit",
+              "file": "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
+              "test": "contains long custom quantities in a populated 320px RTL meter",
               "kind": "320px allocation test signal"
             }
           ]
@@ -6769,10 +6775,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/budget-meter/budget-meter.class.ts",
+              "line": 105,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -6798,13 +6810,14 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
           "src/components/agent-tools/budget-meter/budget-meter.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -17477,6 +17490,7 @@
           "src/components/utility/diff-view/diff-line-diff.test.ts",
           "src/components/utility/diff-view/diff-view-highlight-resolution.test.ts",
           "src/components/utility/diff-view/diff-view-scale.test.ts",
+          "src/components/utility/diff-view/diff-view-search-ownership.test.ts",
           "src/components/utility/diff-view/diff-view.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18065,8 +18079,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/document-library/document-library-source-scale.test.ts",
-              "test": "keeps provider row activation keyboard accessible in RTL and forwards selection status overrides",
+              "file": "src/components/data/document-library/document-library-cursor-source.test.ts",
+              "test": "retains keyboard focus on the mounted Next control when it reaches the terminal batch in RTL",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -18076,8 +18090,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/document-library/document-library-source-scale.test.ts",
-              "test": "keeps provider row activation keyboard accessible in RTL and forwards selection status overrides",
+              "file": "src/components/data/document-library/document-library-cursor-source.test.ts",
+              "test": "retains keyboard focus on the mounted Next control when it reaches the terminal batch in RTL",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18189,6 +18203,9 @@
         "tests": [
           "src/components/data/document-library/document-library-boundaries.test.ts",
           "src/components/data/document-library/document-library-collection-boundaries.test.ts",
+          "src/components/data/document-library/document-library-cursor-lifecycle.test.ts",
+          "src/components/data/document-library/document-library-cursor-source.test.ts",
+          "src/components/data/document-library/document-library-cursor.property.test.ts",
           "src/components/data/document-library/document-library-record-projection.test.ts",
           "src/components/data/document-library/document-library-remediation.test.ts",
           "src/components/data/document-library/document-library-scale.test.ts",
@@ -25992,6 +26009,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/retrieval/graph/graph-accessibility.test.ts",
+          "src/components/retrieval/graph/graph-action-ownership.test.ts",
           "src/components/retrieval/graph/graph-aliases.test.ts",
           "src/components/retrieval/graph/graph-boundaries.test.ts",
           "src/components/retrieval/graph/graph-builtin-3d-engine.test.ts",
@@ -26009,6 +26027,7 @@
           "src/components/retrieval/graph/graph-curvature-admission.test.ts",
           "src/components/retrieval/graph/graph-curvature.property.test.ts",
           "src/components/retrieval/graph/graph-custom-nodes-glow.test.ts",
+          "src/components/retrieval/graph/graph-engine-failure-recovery.test.ts",
           "src/components/retrieval/graph/graph-engine.test.ts",
           "src/components/retrieval/graph/graph-fallbacks.test.ts",
           "src/components/retrieval/graph/graph-glow-visibility.test.ts",
@@ -28688,7 +28707,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "reducedMotion",
-          "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -28714,6 +28732,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/retrieval/ingestion-queue/ingestion-queue-item-actions.test.ts",
+              "test": "renders custom actions and forwards their public styling part through virtualized rows",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue-source-scale.test.ts",
               "test": "keeps source actions keyboard accessible in RTL and forwards pager strings without leaking child events",
@@ -28745,8 +28769,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/ingestion-queue/ingestion-queue-source-scale.test.ts",
-              "test": "keeps source actions keyboard accessible in RTL and forwards pager strings without leaking child events",
+              "file": "src/components/retrieval/ingestion-queue/ingestion-queue-custom-stage.test.ts",
+              "test": "keeps a populated custom stage contained and accessible at 320px in RTL",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28759,9 +28783,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/ingestion-queue/ingestion-queue-custom-stage.test.ts",
+              "test": "keeps a populated custom stage contained and accessible at 320px in RTL",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -28827,10 +28856,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+              "line": 820,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -28851,18 +28886,20 @@
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/ingestion-queue/ingestion-queue-custom-stage.test.ts",
+          "src/components/retrieval/ingestion-queue/ingestion-queue-item-actions.test.ts",
+          "src/components/retrieval/ingestion-queue/ingestion-queue-presentation.property.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-remediation.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-scale.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-source-scale.test.ts",
@@ -32173,6 +32210,7 @@
           "src/components/media/map/map-attribution-state.test.ts",
           "src/components/media/map/map-basemap-order.property.test.ts",
           "src/components/media/map/map-basemap-order.test.ts",
+          "src/components/media/map/map-camera-read-retirement.test.ts",
           "src/components/media/map/map-camera-session-component.test.ts",
           "src/components/media/map/map-camera-session-native.test.ts",
           "src/components/media/map/map-camera-session-recovery.test.ts",
@@ -32526,6 +32564,7 @@
           "src/components/media/map/map-attribution-state.test.ts",
           "src/components/media/map/map-basemap-order.property.test.ts",
           "src/components/media/map/map-basemap-order.test.ts",
+          "src/components/media/map/map-camera-read-retirement.test.ts",
           "src/components/media/map/map-camera-session-component.test.ts",
           "src/components/media/map/map-camera-session-native.test.ts",
           "src/components/media/map/map-camera-session-recovery.test.ts",
@@ -35359,9 +35398,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -35380,6 +35417,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/conversation/message-feedback/message-feedback-detail-policy.test.ts",
+              "test": "refuses an oversized raw draft without truncating or opening a pending transaction and recovers after correction",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/conversation/message-feedback/message-feedback.test.ts",
               "test": "is accessible in every configuration",
@@ -35400,17 +35443,22 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/message-feedback/message-feedback.test.ts",
-              "test": "closes the panel on Escape, keeps rating, and returns focus to the active thumb",
+              "file": "src/components/conversation/message-feedback/message-feedback-detail-policy.test.ts",
+              "test": "lets keyboard activation clear a single reason without making feedback required",
               "kind": "component keyboard exercise signal"
             }
           ]
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/message-feedback/message-feedback-detail-policy.test.ts",
+              "test": "refuses an oversized raw draft without truncating or opening a pending transaction and recovers after correction",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -35420,9 +35468,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/message-feedback/message-feedback-detail-policy.test.ts",
+              "test": "refuses an oversized raw draft without truncating or opening a pending transaction and recovers after correction",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -35500,9 +35553,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -35516,6 +35567,7 @@
         "tests": [
           "src/components/conversation/message-feedback/message-feedback-boundaries.test.ts",
           "src/components/conversation/message-feedback/message-feedback-chip-veto.test.ts",
+          "src/components/conversation/message-feedback/message-feedback-detail-policy.test.ts",
           "src/components/conversation/message-feedback/message-feedback-reason-cost.test.ts",
           "src/components/conversation/message-feedback/message-feedback-remediation.test.ts",
           "src/components/conversation/message-feedback/message-feedback.test.ts"
@@ -43403,6 +43455,7 @@
           "src/components/conversation/push-to-talk/push-to-talk-pending-cancel.test.ts",
           "src/components/conversation/push-to-talk/push-to-talk-permission-lifecycle.test.ts",
           "src/components/conversation/push-to-talk/push-to-talk-remediation.test.ts",
+          "src/components/conversation/push-to-talk/push-to-talk-state-reentry.test.ts",
           "src/components/conversation/push-to-talk/push-to-talk.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -56858,7 +56911,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 1027,
+              "line": 1028,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56896,6 +56949,7 @@
         "tests": [
           "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
+          "src/components/data/timeline/timeline-late-registration.test.ts",
           "src/components/data/timeline/timeline-ordered.test.ts",
           "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline-scale.test.ts",
@@ -57071,7 +57125,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 1027,
+              "line": 1028,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57109,6 +57163,7 @@
         "tests": [
           "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
+          "src/components/data/timeline/timeline-late-registration.test.ts",
           "src/components/data/timeline/timeline-ordered.test.ts",
           "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline-scale.test.ts",
@@ -59261,8 +59316,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog-lifecycle.test.ts",
-              "test": "stays modal and focus-trapped when an open dialog is moved to another parent",
+              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog-focus-retirement.test.ts",
+              "test": "retires pending Load more focus on ${retirement} and restores fresh keyboard loading",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -59383,6 +59438,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-select-dialog/tool-select-dialog-focus-retirement.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog-lifecycle.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog-remediation.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog-search-sizing.test.ts",
@@ -60641,6 +60697,7 @@
           "src/components/data/tree/tree-declarative.test.ts",
           "src/components/data/tree/tree-dirty-root-cost.test.ts",
           "src/components/data/tree/tree-dynamic-state.test.ts",
+          "src/components/data/tree/tree-inert-focus-handoff.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-interaction-edges.test.ts",
           "src/components/data/tree/tree-item-animation-target.test.ts",
@@ -60885,6 +60942,7 @@
           "src/components/data/tree/tree-declarative.test.ts",
           "src/components/data/tree/tree-dirty-root-cost.test.ts",
           "src/components/data/tree/tree-dynamic-state.test.ts",
+          "src/components/data/tree/tree-inert-focus-handoff.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-interaction-edges.test.ts",
           "src/components/data/tree/tree-item-animation-target.test.ts",
@@ -62079,6 +62137,7 @@
           "src/components/layout/virtual-list/virtual-list-smooth-measurement.test.ts",
           "src/components/layout/virtual-list/virtual-list-source-auto-demand-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-source-refresh-scale.test.ts",
+          "src/components/layout/virtual-list/virtual-list-sticky-lifecycle.test.ts",
           "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list.test.ts"
         ],

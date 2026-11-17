@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Ismeretlen szakasz',
   ingestionQueueLabel: 'Betöltési sor',
   ingestionQueueEmpty: 'Nincsenek sorban álló dokumentumok',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Megjelenített műveletek ehhez: {label}: {count} / {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Próbáljon másik keresőkifejezést vagy szűrőket.',
   groundingSummaryEvidenceSpan: 'Karakterek: {start}–{end}',

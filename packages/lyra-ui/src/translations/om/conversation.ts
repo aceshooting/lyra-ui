@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Bal\'ina dabalataa dabali (filannoo)',
   feedbackSubmit: 'Yaada dhiyeessi',
   feedbackSubmitted: 'Yaadni dhiyaateera',
+  feedbackCommentTooLong: 'Arfii {max} yookaan isaa gadi fayyadami.',
+  feedbackSingleReasonDescription: 'Sababa hanga tokkootti filadhu.',
   suggestionsLabel: 'Ajajoota yaadaman',
   selectModel: 'Moodeela filadhu…',
   modelSelectNoModels: 'Moodeelli hin jiru',

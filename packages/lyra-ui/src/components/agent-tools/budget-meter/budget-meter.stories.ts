@@ -1,4 +1,6 @@
 import { html } from 'lit';
+import { formatBytes } from '../../../utilities/format.js';
+import type { BudgetMeterValueFormatter } from './budget-meter.class.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './budget-meter.js';
 
@@ -31,4 +33,17 @@ export const Unavailable: Story = {
 
 export const NarrowRtl: Story = {
   render: () => html`<lr-budget-meter dir="rtl" style="inline-size: 320px" used="23000" limit="80000" .unit=${'وحدة طويلة '.repeat(8)}></lr-budget-meter>`,
+};
+
+const byteFormatter: BudgetMeterValueFormatter = (value, { locale }) =>
+  formatBytes(value, locale, { unitStep: 1024, decimals: 2 }) ?? String(value);
+
+/** Each quantity chooses its own byte scale; numeric ARIA remains in raw bytes. */
+export const ByteQuantities: Story = {
+  render: () => html`
+    <lr-budget-meter style="max-inline-size: 36rem" label="Storage" used="1536" limit="1048576"
+      .valueFormatter=${byteFormatter}></lr-budget-meter>
+    <lr-budget-meter style="max-inline-size: 36rem" label="Raw storage" used="1536" limit="1048576"
+      unit="bytes"></lr-budget-meter>
+  `,
 };

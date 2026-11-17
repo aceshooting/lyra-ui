@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'اضافه کردن جزئیات بیشتر (اختیاری)',
   feedbackSubmit: 'ارسال بازخورد',
   feedbackSubmitted: 'بازخورد ارسال شد',
+  feedbackCommentTooLong: 'از {max} نویسه یا کمتر استفاده کنید.',
+  feedbackSingleReasonDescription: 'حداکثر یک دلیل انتخاب کنید.',
   suggestionsLabel: 'درخواست‌های پیشنهادی',
   selectModel: 'انتخاب مدل…',
   modelSelectNoModels: 'مدلی وجود ندارد',

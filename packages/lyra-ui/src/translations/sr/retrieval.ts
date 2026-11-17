@@ -226,6 +226,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Непозната фаза',
   ingestionQueueLabel: 'Ред за унос',
   ingestionQueueEmpty: 'Нема докумената у реду чекања',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Приказане радње за {label}: {count} од {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Пробајте други појам за претрагу или друге филтере.',
   groundingSummaryEvidenceSpan: 'Знакови {start}–{end}',

@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'અજ્ઞાત તબક્કો',
   ingestionQueueLabel: 'ડેટા દાખલ કરવાની કતાર',
   ingestionQueueEmpty: 'કતારમાં કોઈ દસ્તાવેજ નથી',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} માટે {total}માંથી {count} ક્રિયાઓ બતાવવામાં આવી રહી છે.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'અલગ શોધ શબ્દ અથવા ફિલ્ટર અજમાવો.',
   groundingSummaryEvidenceSpan: 'અક્ષર {start}–{end}',

@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'نامعلوم مرحلہ',
   ingestionQueueLabel: 'مواد داخل کرن دی قطار',
   ingestionQueueEmpty: 'قطار وچ کوئی دستاویز نئیں',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} لئی {total} کارروائیاں وچوں {count} وکھائیاں جا رہیاں نیں۔',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'ہور تلاش دا لفظ یا فلٹر آزما کے ویکھو۔',
   groundingSummaryEvidenceSpan: 'حرف {start}–{end}',

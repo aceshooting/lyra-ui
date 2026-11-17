@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'ଅଜ୍ଞାତ ପର୍ଯ୍ୟାୟ',
   ingestionQueueLabel: 'ଗ୍ରହଣ ଧାଡ଼ି',
   ingestionQueueEmpty: 'ଧାଡ଼ିରେ କୌଣସି ଦଲିଲ ନାହିଁ',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} ପାଇଁ {total}ଟି କାର୍ଯ୍ୟରୁ {count}ଟି ଦେଖାଯାଉଛି।',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'ଅନ୍ୟ ସନ୍ଧାନ ଶବ୍ଦ କିମ୍ବା ଫିଲ୍ଟର୍ ଚେଷ୍ଟା କରନ୍ତୁ।',
   groundingSummaryEvidenceSpan: 'ଅକ୍ଷର {start}–{end}',

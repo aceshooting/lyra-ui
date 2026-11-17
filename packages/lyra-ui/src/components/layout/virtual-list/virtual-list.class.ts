@@ -2366,7 +2366,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  Deliberately *not* conditioned on a group being pinned right now: a scroll target must not
    *  depend on whether the band happens to be showing at the moment the scroll is requested. */
   private get stickyInset(): number {
-    return this.renderStickyGroup ? this.stickyHeight : 0;
+    return this.renderStickyGroup && this.normalizedGroups.length > 0 ? this.stickyHeight : 0;
   }
 
   private scrollActiveIntoView(): void {
@@ -2902,9 +2902,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private onStickyResized = (entries: ResizeObserverEntry[]): void => {
-    this.beginResizeDelivery();
-    const entry = entries[0];
+    const entry = entries.find(entry => entry.target === this.observedSticky);
     if (!entry) return;
+    this.beginResizeDelivery();
     const height =
       entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
     if (Math.abs(this.stickyHeight - height) > 0.5) this.stickyHeight = height;

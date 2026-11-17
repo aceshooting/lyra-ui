@@ -25,9 +25,16 @@ runtime module payload changes, with no dependency changes. Only the exceeded co
 advances to 5,700,032 bytes, the next 64-byte boundary with 47 bytes of allowance. Gzip limits,
 optional-peer exclusions and exact binary requirements remain unchanged.
 
-The same diagnostic adds 148 raw bytes to the optional MapLibre v6 map bundle, measuring
-2,527,705 bytes across 52 files, and 1,795 raw bytes to the optional graph bundle, measuring
-462,858 bytes across 14 files. Only their exceeded raw ceilings advance to the next 64-byte
-boundaries: 2,527,744 bytes with 39 bytes of allowance for map, and 462,912 bytes with 54 bytes
+With the runtime diagnostic and lifecycle fixes included, the optional MapLibre v6 map bundle
+measures 2,528,040 raw bytes across 52 files, up 335 bytes from 2,527,705. The optional graph
+bundle measures 463,780 raw bytes across 14 files, up 922 bytes from 462,858. These are complete
+emitted bundle measurements. Only their exceeded raw ceilings advance to the next 64-byte
+boundaries: 2,528,064 bytes with 24 bytes of allowance for map, and 463,808 bytes with 28 bytes
 for graph. The MapLibre v5 bundle remains below its existing ceiling. Gzip limits and peer-graph
 checks remain unchanged.
+
+Cursor-backed documents, custom ingestion presentation and actions, feedback detail limits,
+quantity formatting and lifecycle fixes increase the complete installed core graph by 34,173 raw
+bytes to 5,734,158 bytes across 65 files. Only the exceeded raw ceiling advances to 5,734,208
+bytes, the next 64-byte boundary with 50 bytes of allowance. Gzip limits, optional-peer
+exclusions and exact binary requirements remain unchanged.

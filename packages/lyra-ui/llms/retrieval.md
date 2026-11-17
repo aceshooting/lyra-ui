@@ -574,6 +574,11 @@ of the box with no host styling required); a host typically computes the set fro
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
 built-in. Empty (the default) renders every node/edge at full opacity, unchanged from today.
 
+An activation listener that replaces controlled selection, active graph data, view, renderer,
+selection mode, hidden types or the host connection retires the originating action: it emits no later selection proposal from that
+activation. A subsequent activation uses the current graph normally. This applies to both array
+and column inputs; it does not make selection uncontrolled.
+
 `nodes`, `edges`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
 layout, rendering, selection, or events. An edge uses its explicit `id`, or `source->target` when
 `id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow
@@ -2151,10 +2156,12 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   **`DocumentRef` from `@aceshooting/lyra-ui/ai`** (`{ id, name, mimeType?, uri?, version? }`), not a
   divergent name/mimeType pair, so a caller can reuse the same list a `DocumentRef`-typed
   knowledge-base view already holds. `IngestionStage = 'queued' | 'uploading' | 'extracting' |
-'chunking' | 'embedding' | 'indexing' | 'done' | 'failed' | 'cancelled'` — the first six are
-  in-flight (in pipeline order), the last three terminal. `progress` is 0–100 _within the current
-  stage_ (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
-  active non-`'queued'` stage). `embeddedChunkCount` renders only alongside a defined `chunkCount`.
+'chunking' | 'embedding' | 'indexing' | 'done' | 'failed' | 'cancelled' | 'custom'` — the first six are
+  in-flight (in pipeline order), `'done'`, `'failed'` and `'cancelled'` are terminal, and `'custom'`
+  opts into host presentation without implying a lifecycle state. `progress` is 0–100 _within the current
+  stage_ (omitted/non-finite renders an indeterminate indicator, and it is meaningful during an
+  active non-`'queued'` stage or when a valid custom stage opts into progress).
+  `embeddedChunkCount` renders only alongside a defined `chunkCount`.
   `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
   as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
   newer backend stage to fail safely. A blank `document.name` shows the localized "untitled source"
@@ -2185,6 +2192,65 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
+
+**Custom stages and row actions:** the item additionally accepts
+`customStage?: IngestionQueueStagePresentation` and `actions?: readonly IngestionQueueAction[]`.
+These types and `IngestionItemActionEventDetail` are exported from
+`@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+
+`customStage` is read only for `stage: 'custom'`. It contains nonblank caller-owned `id: string`
+and `label: string`, optional `variant?: LyraVariant` (default/fallback `'neutral'`), and
+`showProgress?: boolean` (default `false`). The label is escaped caller-localized text.
+`showProgress: true` uses the existing 0–100 `item.progress` indicator, indeterminate when omitted
+or nonfinite. Invalid custom metadata renders the existing inert localized **Unknown stage**
+with no progress or actions. Standard stages ignore `customStage` entirely. A valid custom stage
+does not imply failure, completion, cancellation, transport work or automatic announcements.
+Include `'custom'` when exhaustively switching on `IngestionStage`.
+
+Omit `actions` to retain the existing stage-derived Retry/Cancel buttons; set `[]` to hide them.
+An explicit list **replaces**, rather than extends, those defaults in list order:
+
+- `{ readonly type: 'retry' | 'cancel'; readonly disabled?: boolean }` keeps the built-in localized
+  label/icon and event. Retry still requires `'failed'`; Cancel still requires a known queued or
+  active stage. The descriptor cannot grant lifecycle eligibility.
+- `{ readonly type: 'custom'; readonly id: string; readonly label: string; readonly disabled?: boolean }`
+  renders a native button with caller-localized text and a localized document-context accessible
+  name. It emits only `lr-item-action`; a custom ID named `retry` does not emit `lr-retry`.
+
+`disabled: true` gates the native button and activation. Unknown/unconfigured stages stay
+actionless. Invalid explicit lists fail closed to no actions rather than restoring defaults;
+invalid entries are omitted while later valid entries inside the inspected prefix survive. A
+wrong-typed `disabled` value omits that descriptor instead of enabling it.
+Projection reads own data fields, copies/freezes the admitted presentation and actions, and
+inspects only the first 32 action positions. Built-ins deduplicate by type, custom actions by
+custom ID, with the first valid identity retained. Custom stage/action text shares a 65,536
+UTF-16-unit optional-presentation allowance; source rows share their existing total row-text
+allowance with these fields. Action-prefix truncation displays localized `item-action-limit`
+with retained/assigned counts and a development diagnostic.
+
+Hosts own authorization, confirmation, execution and publishing new availability through a new
+`items` array or source revision/result. Activation rechecks the current row occurrence, action,
+stage, disabled state, source and connection; stale same-ID replacements cannot emit an old
+action. Removing a focused action repairs focus to a surviving same-row action, a nearby row
+action or the list, while preserving a newer outside focus move. No new slot, callback,
+async-action protocol or menu/roving-key contract is introduced.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-ingestion-queue.js';
+import type { IngestionQueueItem } from '@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js';
+
+const item: IngestionQueueItem = {
+  id: 'document-1', document: { id: 'document-1', name: 'Notes.txt' }, stage: 'custom',
+  customStage: { id: 'paused', label: 'Paused' },
+  actions: [{ type: 'custom', id: 'resume', label: 'Resume' }],
+};
+const queue = document.querySelector('lr-ingestion-queue')!;
+queue.items = [item];
+queue.addEventListener('lr-item-action', ({ detail }) => {
+  // The host authorizes/executes this intent and publishes the resulting items.
+  console.log(detail.itemId, detail.actionId);
+});
+```
 
 **Provider pages:**
 
@@ -2222,7 +2288,8 @@ Only current settled source rows can emit the existing retry/cancel details belo
 replaced, removed or disconnected source controls cannot act on stale rows. Provider-load failure
 shows `source-status` with a `source-retry` button: it reloads only the current failed page, emits
 no row `lr-retry`, and obsolete load-retry controls are inert. `source-pagination` styles navigation.
-This route adds no public event, table or CSV export.
+Custom actions use the same `lr-item-action` contract in both routes. Provider mode adds no
+separate event, table or CSV export.
 
 **Events:**
 
@@ -2233,6 +2300,10 @@ This route adds no public event, table or CSV export.
 - `lr-cancel` (`detail: IngestionCancelEventDetail` = `CancelEventDetail & { itemId: string }` =
   `{ reason?: string; itemId: string }`) — this component never supplies `reason` itself. Only
   offered on non-terminal rows (`'queued'` plus the five active stages).
+- `lr-item-action` (`detail: IngestionItemActionEventDetail` = readonly
+  `{ itemId: string; actionId: string }`) — an enabled current custom action was activated.
+  Bubbling, composed and non-cancelable, with frozen detail; this is controlled host intent and
+  performs no default domain operation.
 
 Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/ai`.
 
@@ -2244,7 +2315,8 @@ per-item stage label), `item-progress`,
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
 `item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden,
 `aria-hidden` mirror of the last announced batch of fresh failures), `item-actions`,
-`retry-button`, `cancel-button`, `empty`, `limit` (the input-retention notice),
+`retry-button`, `cancel-button`, `item-action-button` (a custom native action), `item-action-limit`
+(the action-prefix truncation note), `empty`, `limit` (the input-retention notice),
 `source-status`, `source-retry`, `source-pagination`.
 
 `failure-live` is a styling and inspection surface and carries no live-region role of its own. The
@@ -2258,7 +2330,8 @@ visible without being re-announced. Read that document-level region rather than
 In virtualized mode (above `virtualizeAt`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,
 `item-meta`, `item-stage`, `item-chunk-count`, `item-embedding-status`, `item-attempts`, `item-error`,
-`item-actions`, `retry-button` and `cancel-button` are forwarded out through `exportparts`, so every
+`item-actions`, `retry-button`, `cancel-button`, `item-action-button` and `item-action-limit` are
+forwarded out through `exportparts`, so every
 documented row part remains reachable as `lr-ingestion-queue::part(...)` above and below the
 virtualization threshold.
 
@@ -4119,6 +4192,24 @@ These named interfaces and helper signatures are available to typed integrations
     embeddedChunkCount?: number;
     attempts?: number;
     error?: string;
+    customStage?: IngestionQueueStagePresentation;
+    actions?: readonly IngestionQueueAction[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `IngestionQueueStagePresentation {
+    readonly id: string;
+    readonly label: string;
+    readonly variant?: LyraVariant;
+    readonly showProgress?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `IngestionQueueAction =
+    | { readonly type: 'retry' | 'cancel'; readonly disabled?: boolean }
+    | { readonly type: 'custom'; readonly id: string; readonly label: string; readonly disabled?: boolean }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `IngestionItemActionEventDetail {
+    readonly itemId: string;
+    readonly actionId: string;
   }`
   Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
   `IngestionQueueSourceQuery {

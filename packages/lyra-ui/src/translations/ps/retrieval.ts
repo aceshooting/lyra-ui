@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'ناپېژندل شوی پړاو',
   ingestionQueueLabel: 'د راننویستلو کتار',
   ingestionQueueEmpty: 'په کتار کې سندونه نشته',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'د {label} لپاره له {total} کړنو څخه {count} ښودل کېږي.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'بل د لټون ټکی یا چاڼګرونه وازمویئ.',
   groundingSummaryEvidenceSpan: 'توري له {start} تر {end}',

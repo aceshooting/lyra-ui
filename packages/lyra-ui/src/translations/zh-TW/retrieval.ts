@@ -220,6 +220,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: '未知階段',
   ingestionQueueLabel: '攝取佇列',
   ingestionQueueEmpty: '沒有排隊的文件',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '正在顯示{label}的{total}項操作中的{count}項。',
   retrievalFilterChipLabel: '{key}：{value}',
   retrievalSearchEmptyDescription: '請嘗試其他搜尋詞或篩選條件。',
   groundingSummaryEvidenceSpan: '第{start}–{end}個字元',

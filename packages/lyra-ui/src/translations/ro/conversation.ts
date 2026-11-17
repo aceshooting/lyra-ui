@@ -62,6 +62,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Adaugă mai multe detalii (opțional)',
   feedbackSubmit: 'Trimite feedback-ul',
   feedbackSubmitted: 'Feedback trimis',
+  feedbackCommentTooLong: 'Folosește cel mult {max} caractere.',
+  feedbackSingleReasonDescription: 'Alege cel mult un motiv.',
   suggestionsLabel: 'Prompturi sugerate',
   selectModel: 'Selectează un model…',
   modelSelectNoModels: 'Niciun model',

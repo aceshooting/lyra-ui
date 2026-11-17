@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Isigaba esingaziwa',
   ingestionQueueLabel: 'Ulayini wokungenisa',
   ingestionQueueEmpty: 'Awekho amadokhumenti asemgqeni',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Kuboniswa izenzo ezingu-{count} kwezingu-{total} ze-{label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Zama elinye igama lokusesha noma izihlungi.',
   groundingSummaryEvidenceSpan: 'Izinhlamvu {start}–{end}',

@@ -220,6 +220,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'ขั้นตอนไม่ทราบ',
   ingestionQueueLabel: 'คิวการนำเข้าข้อมูล',
   ingestionQueueEmpty: 'ไม่มีเอกสารในคิว',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'แสดง {count} จาก {total} การดำเนินการสำหรับ {label}',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'ลองใช้คำค้นหาหรือตัวกรองอื่น',
   groundingSummaryEvidenceSpan: 'อักขระ {start}–{end}',

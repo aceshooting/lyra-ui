@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Legg til flere detaljer (valgfritt)',
   feedbackSubmit: 'Send tilbakemelding',
   feedbackSubmitted: 'Tilbakemelding sendt',
+  feedbackCommentTooLong: 'Bruk høyst {max} tegn.',
+  feedbackSingleReasonDescription: 'Velg høyst én årsak.',
   suggestionsLabel: 'Foreslåtte ledetekster',
   selectModel: 'Velg en modell …',
   modelSelectNoModels: 'Ingen modeller',

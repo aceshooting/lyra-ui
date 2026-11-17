@@ -241,3 +241,40 @@ const millionDocumentSource: import('./document-library.class.js').DocumentLibra
 export const MillionSource: Story = {
   render: () => html`<p>Browse one million generated documents. Search by an exact document number, from 0 to 999999.</p><lr-document-library .dataSource=${millionDocumentSource}></lr-document-library>`,
 };
+
+/** A host adapter returns opaque batches directly; it need not invent numeric page positions. */
+export const OpaqueCursorBatches: Story = {
+  parameters: { docs: { description: { story:
+    'Unknown totals stay unknown. Next follows an opaque continuation; Previous refetches a retained batch. The second batch fails once so Retry repeats it. Changing the listing scope clears selected-ID intent. No facet catalogue is inferred from rows.',
+  } } },
+  render: () => {
+    const providers = new Map<string, import('./document-library.class.js').DocumentLibraryCursorSource>();
+    for (const scope of ['handbook', 'reports']) {
+      let retry = true;
+      const first = { id: `${scope}-overview`, name: `${scope} overview`, tags: ['reference'] };
+      const final = { id: `${scope}-notes`, name: `${scope} notes`, tags: ['notes'] };
+      providers.set(scope, {
+        scope, revision: 'initial',
+        query: async ({ cursor, query, signal }) => {
+          if (signal.aborted) throw new Error('Request aborted');
+          if (cursor === ' continuation / + ? = ' && retry) { retry = false; throw new Error('Temporary load failure'); }
+          // This demonstration adapter supports the initial query only; unsupported query changes
+          // fail explicitly instead of filtering a partial batch as though it were the whole source.
+          if (query.searchTerm || query.tagFilter.length || query.filter || query.sortKey !== 'name' || query.sortDir !== 'asc') throw new Error('Unsupported demonstration query');
+          if (cursor === null) return { rows: [{ key: first.id, value: first }], nextCursor: ' continuation / + ? = ' };
+          if (cursor === ' continuation / + ? = ') return { rows: [], nextCursor: ' terminal / + ? = ' };
+          if (cursor === ' terminal / + ? = ') return { rows: [{ key: final.id, value: final }], nextCursor: null };
+          throw new Error('Unknown continuation');
+        },
+      });
+    }
+    return html`<div>
+      <label>Listing <select @change=${(event: Event) => {
+        const select = event.currentTarget as HTMLSelectElement;
+        const library = select.closest('div')?.querySelector<import('./document-library.class.js').LyraDocumentLibrary>('lr-document-library');
+        if (library) library.cursorSource = providers.get(select.value);
+      }}><option value="handbook">Handbook</option><option value="reports">Reports</option></select></label>
+      <lr-document-library .cursorSource=${providers.get('handbook')} .sourcePageSize=${2}></lr-document-library>
+    </div>`;
+  },
+};

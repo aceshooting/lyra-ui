@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Добавете още подробности (по избор)',
   feedbackSubmit: 'Изпрати обратна връзка',
   feedbackSubmitted: 'Обратната връзка е изпратена',
+  feedbackCommentTooLong: 'Използвайте най-много {max} знака.',
+  feedbackSingleReasonDescription: 'Изберете най-много една причина.',
   suggestionsLabel: 'Предложени промптове',
   selectModel: 'Изберете модел…',
   modelSelectNoModels: 'Няма модели',

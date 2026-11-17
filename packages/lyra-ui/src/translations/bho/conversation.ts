@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'आ अउरी ब्योरा जोड़ीं (वैकल्पिक)',
   feedbackSubmit: 'राय जमा करीं',
   feedbackSubmitted: 'राय जमा भइल',
+  feedbackCommentTooLong: '{max} भा ओकरा से कम अक्षर लिखीं।',
+  feedbackSingleReasonDescription: 'जादे से जादे एगो कारण चुनीं।',
   suggestionsLabel: 'सुझावल प्रॉम्प्ट',
   selectModel: 'मॉडल चुनीं…',
   modelSelectNoModels: 'कवनो मॉडल नइखे',

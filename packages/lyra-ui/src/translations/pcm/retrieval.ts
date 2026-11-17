@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Stage wey dem no know',
   ingestionQueueLabel: 'Queue for ingestion',
   ingestionQueueEmpty: 'No document dey queue',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'We dey show {count} out of {total} actions for {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Try another search word or filters.',
   groundingSummaryEvidenceSpan: 'Characters {start}–{end}',

@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Lisage üksikasju (valikuline)',
   feedbackSubmit: 'Saada tagasiside',
   feedbackSubmitted: 'Tagasiside saadetud',
+  feedbackCommentTooLong: 'Kasutage kuni {max} märki.',
+  feedbackSingleReasonDescription: 'Valige kuni üks põhjus.',
   suggestionsLabel: 'Soovitatud viibad',
   selectModel: 'Vali mudel…',
   modelSelectNoModels: 'Mudeleid pole',

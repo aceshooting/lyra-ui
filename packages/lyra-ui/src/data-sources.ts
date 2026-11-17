@@ -213,3 +213,41 @@ export interface LyraGraphSource<N, E> {
   scene(request: LyraGraphSceneRequest): Promise<LyraGraphScene<N, E>>;
   overview?(request: LyraSourceContext & { readonly limit: number }): Promise<LyraGraphOverview>;
 }
+
+/** One stable-key row in a bounded cursor result. */
+export interface LyraCursorRecord<T> {
+  readonly key: string;
+  readonly value: T;
+}
+
+/** A provider-owned query with an opaque continuation; null starts the query. */
+export interface LyraCursorRequest<Q> extends LyraSourceContext {
+  readonly scope: string;
+  readonly query: Q;
+  readonly cursor: string | null;
+  readonly limit: number;
+}
+
+export interface LyraCursorResult<T> {
+  readonly rows: readonly LyraCursorRecord<T>[];
+  /** Null is the only end marker; a token does not promise another row or an exact total. */
+  readonly nextCursor: string | null;
+}
+
+/** Bounded continuation navigation without a total, numeric order, or lookup requirement. */
+export interface LyraCursorSource<T, Q> {
+  readonly revision: LyraSourceRevision;
+  /** Identity namespace and listing scope; changing it invalidates retained row identity. */
+  readonly scope: string;
+  query(request: LyraCursorRequest<Q>): Promise<LyraCursorResult<T>>;
+}
+
+export type LyraCursorSourceStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export interface LyraCursorNavigationState {
+  readonly status: LyraCursorSourceStatus;
+  readonly canGoBack: boolean;
+  readonly canGoForward: boolean;
+  readonly atEnd: boolean;
+  readonly historyTruncated: boolean;
+}

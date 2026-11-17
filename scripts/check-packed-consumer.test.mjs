@@ -71,14 +71,14 @@ test('caps measured core and optional graphs without an implicit binary allowanc
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedCoreMeasurementBytes: 5_699_985,
+    reviewedCoreMeasurementBytes: 5_734_158,
     reviewedRequiredShikiAssetBytes: 466_610,
-    selectedRegressionHeadroomBytes: 47,
+    selectedRegressionHeadroomBytes: 50,
   });
   const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
   const ceiling = nonAssetCeiling;
-  assert.equal(nonAssetCeiling, 5_700_032);
-  assert.equal(ceiling, 5_700_032);
+  assert.equal(nonAssetCeiling, 5_734_208);
+  assert.equal(ceiling, 5_734_208);
   assert.equal(ceiling, Math.ceil(terms.reviewedCoreMeasurementBytes / 64) * 64,
     'the measured full graph receives only the next 64-byte boundary');
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
@@ -101,8 +101,8 @@ test('caps measured core and optional graphs without an implicit binary allowanc
   assert.match(overage[0], /exceeds budget/u);
 
   for (const [entry, measurement, expectedCeiling] of [
-    ['map', 2_527_705, 2_527_744],
-    ['graph', 462_858, 462_912],
+    ['map', 2_528_040, 2_528_064],
+    ['graph', 463_780, 463_808],
   ]) {
     const entryBlock = checkerSource.match(new RegExp(`^  ${entry}: \\{([\\s\\S]*?)^  \\},`, 'mu'))?.[1];
     assert.ok(entryBlock, `${entry} must retain its packed bundle canary`);

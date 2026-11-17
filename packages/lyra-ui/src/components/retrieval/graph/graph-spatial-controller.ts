@@ -189,20 +189,43 @@ export class GraphSpatialController {
     const node = this.world[index]?.node; if (node) return { kind: 'node', id: node.id, node };
     const edge = this.edges[index - this.world.length]; return edge ? { kind: 'link', id: graphLinkIdentity(edge), edge } : undefined;
   }
-  private snapshotEnginePositions(): void {
-    if (!this.engine || this.columnScene || this.engineDataKey !== this.world) return;
-    for (let row = 0; row < this.world.length; row++) { const position = this.engine.positionOf?.(row); if (!position) continue;
-      const entry = { ...this.world[row]!, position: Object.freeze({ ...position }) }; this.world[row] = entry; this.worldById.set(entry.node.id, entry); }
+  private snapshotEnginePositions(engine = this.engine): void {
+    if (!engine || this.columnScene || this.engineDataKey !== this.world) return;
+    const world = this.world, epoch = this.engineEpoch;
+    try {
+      for (let row = 0; row < world.length; row++) {
+        const position = engine.positionOf?.(row);
+        if (epoch !== this.engineEpoch || world !== this.world) return;
+        if (!position) continue;
+        const entry = { ...world[row]!, position: Object.freeze({ ...position }) };
+        if (epoch !== this.engineEpoch || world !== this.world) return;
+        world[row] = entry; this.worldById.set(entry.node.id, entry);
+      }
+    } catch { /* Keep the last known positions when a retiring renderer cannot supply them. */ }
     this.builtin?.invalidate();
   }
   retryEngine(): void { this.closeEngine(); this.selection.prefer(this.preference); this.fallback = undefined; this.contextFailed = false; this.options.repaint(); }
   private closeEngine(): void {
-    this.snapshotEnginePositions();
+    const engine = this.engine;
+    this.engineEpoch++; this.enginePending = false; this.engine = undefined;
+    this.snapshotEnginePositions(engine);
     this.meshAbort?.abort(); this.meshAbort = undefined; this.meshNext = undefined;
     this.meshEpoch++; if (this.meshPending || this.meshUnavailable) { this.meshPending = false; this.meshKey = undefined; this.meshUnavailable = false; }
     this.meshAppliedEngine = undefined; this.glowEpoch++; this.glowEngine = undefined; this.glowRequested = undefined;
     this.eligibility?.disconnect(); this.eligibility = undefined;
-    this.engineEpoch++; this.enginePending = false; this.engine = undefined; this.engineDataKey = this.enginePaintKey = undefined; this.engineStyleKey = this.engineSizeKey = ''; this.stateInputs = undefined; this.edgeRowsKey = undefined; this.adapter.close();
+    this.engineDataKey = this.enginePaintKey = undefined; this.engineStyleKey = this.engineSizeKey = ''; this.stateInputs = undefined; this.edgeRowsKey = undefined; this.adapter.close();
+  }
+  private engineOperation(engine: GraphComponentEngine, operation: (current: () => boolean) => void): boolean {
+    const epoch = this.engineEpoch, ownerDocument = this.host.ownerDocument;
+    const view = this.host.view, preference = this.host.engine;
+    const current = () => this.engine === engine && this.engineEpoch === epoch &&
+      this.host.ownerDocument === ownerDocument && this.host.isConnected && this.host.view === view && this.host.engine === preference;
+    try { operation(current); }
+    catch {
+      if (current()) { this.closeEngine(); this.failEngine('error'); this.options.repaint(); }
+      return false;
+    }
+    return current();
   }
   private failEngine(reason: Engine3dFallbackReason): void {
     this.snapshotEnginePositions();
@@ -238,20 +261,21 @@ export class GraphSpatialController {
       return;
     }
     this.eligibility?.disconnect(); this.eligibility = undefined;
-    this.enginePending = true; const epoch = ++this.engineEpoch;
+    this.enginePending = true; const epoch = ++this.engineEpoch, ownerDocument = this.host.ownerDocument;
+    const current = () => epoch === this.engineEpoch && this.host.ownerDocument === ownerDocument && this.host.isConnected;
     this.options.afterUpdate(() => this.options.repaint(), 'graph-engine-loading');
     void this.adapter.open({ preference: this.preference, eligible: !this.options.sourceMode?.(), visible: this.visible, container: surface,
       host: {
-        hover: (item) => { if (this.selection.renderer === 'webgl') this.setHover(this.engineHit(item)); },
+        hover: (item) => { if (current() && this.selection.renderer === 'webgl') this.setHover(this.engineHit(item)); },
         pick: (item, modifiers) => {
-          if (this.selection.renderer !== 'webgl') return;
+          if (!current() || this.selection.renderer !== 'webgl') return;
           const hit = this.engineHit(item); if (!hit) return;
           if (modifiers.double && hit.kind === 'node') { this.options.expand(hit.id); return; }
           const Mouse = this.host.ownerDocument.defaultView?.MouseEvent; if (Mouse) this.options.activate(hit, new Mouse('click', { ctrlKey: modifiers.ctrl, shiftKey: modifiers.shift }));
         },
-        camera: (value) => { if (this.selection.renderer !== 'webgl') return; this.currentCamera = graphWebglCamera(value, this.currentCamera); this.notifyCamera = true; this.schedule(); },
-        lost: (reason) => { if (this.selection.renderer !== 'webgl') return; if (reason === 'error') this.closeEngine(); this.failEngine(reason); },
-        restored: () => { if (this.selection.restore()) { this.fallback = undefined; this.enginePaintKey = undefined; this.options.repaint(); this.schedule(); } },
+        camera: (value) => { if (!current() || this.selection.renderer !== 'webgl') return; this.currentCamera = graphWebglCamera(value, this.currentCamera); this.notifyCamera = true; this.schedule(); },
+        lost: (reason) => { if (!current() || this.selection.renderer !== 'webgl') return; if (reason === 'error') this.closeEngine(); this.failEngine(reason); },
+        restored: () => { if (current() && this.selection.restore()) { this.fallback = undefined; this.enginePaintKey = undefined; this.options.repaint(); this.schedule(); } },
       }, failure: (reason) => { if (epoch === this.engineEpoch) this.failEngine(reason); },
     }).then((engine) => {
       if (epoch !== this.engineEpoch || !this.host.isConnected || this.engineSurface !== surface) return;
@@ -563,8 +587,16 @@ export class GraphSpatialController {
     if (this.authoredCamera !== this.host.camera) {
       this.authoredCamera = this.host.camera;
       this.pendingInitialFit = false;
-      this.currentCamera = this.authoredCamera ? this.normalizeCamera(this.authoredCamera) : this.engine?.fit ? this.normalizeCamera(this.engine.fit()) : fittedGraphCamera(this.world, this.viewport(), undefined, this.edges);
-      this.engine?.setCamera(this.currentCamera);
+      this.currentCamera = this.authoredCamera ? this.normalizeCamera(this.authoredCamera) : fittedGraphCamera(this.world, this.viewport(), undefined, this.edges);
+      const engine = this.engine;
+      if (engine && !this.engineOperation(engine, current => {
+        if (!this.authoredCamera && engine.fit) {
+          const camera = this.normalizeCamera(engine.fit());
+          if (!current()) return;
+          this.currentCamera = camera;
+        }
+        engine.setCamera(this.currentCamera);
+      })) return;
       this.builtin?.invalidate();
     }
   }
@@ -715,7 +747,12 @@ export class GraphSpatialController {
 
   fit(padding?: number): void {
     this.prepare();
-    if (this.selection.renderer === 'webgl' && this.engine?.fit) { const camera = this.engine.fit(padding); this.currentCamera = this.normalizeCamera(camera); this.fittedDistance = this.currentCamera.distance; this.changeCamera(this.currentCamera); return; }
+    const engine = this.engine;
+    if (this.selection.renderer === 'webgl' && engine) {
+      let camera: LyraGraphCamera | undefined;
+      if (!this.engineOperation(engine, () => { if (engine.fit) camera = this.normalizeCamera(engine.fit(padding)); })) return;
+      if (camera) { this.fittedDistance = camera.distance; this.changeCamera(camera); return; }
+    }
     if (!this.world.length) return;
     const camera = fittedGraphCamera(this.world, this.viewport(), padding, this.edges);
     this.fittedDistance = camera.distance;
@@ -752,7 +789,8 @@ export class GraphSpatialController {
   private changeCamera(camera: LyraGraphCamera): void {
     this.pendingInitialFit = false;
     this.currentCamera = this.normalizeCamera(camera);
-    this.engine?.setCamera(this.currentCamera);
+    const engine = this.engine;
+    if (engine && !this.engineOperation(engine, () => engine.setCamera(this.currentCamera))) return;
     this.builtin?.invalidate();
     this.notifyCamera = true;
     this.schedule();

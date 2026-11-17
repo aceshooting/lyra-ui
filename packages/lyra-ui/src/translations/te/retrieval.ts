@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'తెలియని దశ',
   ingestionQueueLabel: 'సేకరణ క్యూ',
   ingestionQueueEmpty: 'క్యూలో పత్రాలు లేవు',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} కోసం {total} చర్యలలో {count} చూపబడుతున్నాయి.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'మరో శోధన పదం లేదా ఫిల్టర్‌లను ప్రయత్నించండి.',
   groundingSummaryEvidenceSpan: 'అక్షరాలు {start}–{end}',

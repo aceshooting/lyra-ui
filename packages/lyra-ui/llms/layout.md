@@ -2329,7 +2329,9 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   the first frame.
 - A sticky band only appears when `renderStickyGroup` _and_ at least one valid `groups` entry are
   both present; `groups` alone renders positioned markers with nothing pinned, and
-  `renderStickyGroup` alone renders no overlay element at all.
+  `renderStickyGroup` alone renders no overlay element at all. Removing the last normalized group
+  also removes the measured sticky scroll inset, even while the renderer remains configured.
+  Restoring a valid group resumes sticky measurement.
 - **A row that renders a popup needs the active-row lift, and this is why `[part='row']` has one.**
   Each row carries `will-change: transform` (a compositor hint for the per-frame translate), which
   makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM

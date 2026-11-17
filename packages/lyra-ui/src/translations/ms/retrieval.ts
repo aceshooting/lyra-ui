@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Peringkat tidak diketahui',
   ingestionQueueLabel: 'Baris gilir pemerolehan',
   ingestionQueueEmpty: 'Tiada dokumen dalam baris gilir',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Memaparkan {count} daripada {total} tindakan untuk {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Cuba istilah carian atau penapis yang lain.',
   groundingSummaryEvidenceSpan: 'Aksara {start}–{end}',

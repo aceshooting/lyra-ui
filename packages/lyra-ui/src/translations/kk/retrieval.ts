@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Белгісіз кезең',
   ingestionQueueLabel: 'Жүктеу кезегі',
   ingestionQueueEmpty: 'Кезекте құжаттар жоқ',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} үшін {total} әрекеттің {count} әрекеті көрсетілуде.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Басқа іздеу сөзін немесе сүзгілерді қолданып көріңіз.',
   groundingSummaryEvidenceSpan: 'Таңбалар {start}–{end}',

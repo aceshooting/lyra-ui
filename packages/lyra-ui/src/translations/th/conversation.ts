@@ -60,6 +60,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'เพิ่มรายละเอียด (ไม่บังคับ)',
   feedbackSubmit: 'ส่งความคิดเห็น',
   feedbackSubmitted: 'ส่งความคิดเห็นแล้ว',
+  feedbackCommentTooLong: 'ใช้ไม่เกิน {max} อักขระ',
+  feedbackSingleReasonDescription: 'เลือกเหตุผลได้สูงสุดหนึ่งข้อ',
   suggestionsLabel: 'พรอมป์แนะนำ',
   selectModel: 'เลือกโมเดล…',
   modelSelectNoModels: 'ไม่มีโมเดล',

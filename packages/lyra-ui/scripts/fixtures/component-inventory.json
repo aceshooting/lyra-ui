@@ -16022,6 +16022,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "valueFormatter",
+            "attribute": null,
+            "type": "BudgetMeterValueFormatter | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -47649,6 +47658,24 @@
         ],
         "properties": [
           {
+            "name": "cursorNavigation",
+            "attribute": null,
+            "type": "LyraCursorNavigationState",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "cursorSource",
+            "attribute": null,
+            "type": "DocumentLibraryCursorSource | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "dataSource",
             "attribute": null,
             "type": "DocumentLibrarySource | undefined",
@@ -47698,7 +47725,7 @@
           {
             "name": "filter",
             "attribute": null,
-            "type": "( document: LibraryDocument, query: string ) => boolean | undefined",
+            "type": "DocumentLibrarySourceQuery['filter'] | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -47840,6 +47867,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-query-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<DocumentLibraryQueryChangeDetail>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-retry-request",
             "type": "CustomEvent<null>",
             "cancelable": "always",
@@ -47876,6 +47909,26 @@
           },
           {
             "name": "clear-selection",
+            "deprecated": null
+          },
+          {
+            "name": "cursor-navigation",
+            "deprecated": null
+          },
+          {
+            "name": "cursor-next",
+            "deprecated": null
+          },
+          {
+            "name": "cursor-previous",
+            "deprecated": null
+          },
+          {
+            "name": "cursor-restart",
+            "deprecated": null
+          },
+          {
+            "name": "cursor-status",
             "deprecated": null
           },
           {
@@ -47965,7 +48018,35 @@
         ],
         "cssProperties": [],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "nextCursorPage",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "previousCursorPage",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "restartCursorSource",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -72748,6 +72829,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-item-action",
+            "type": "CustomEvent<IngestionItemActionEventDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-retry",
             "type": "CustomEvent<IngestionRetryEventDetail>",
             "cancelable": "never",
@@ -72773,6 +72860,14 @@
           },
           {
             "name": "item",
+            "deprecated": null
+          },
+          {
+            "name": "item-action-button",
+            "deprecated": null
+          },
+          {
+            "name": "item-action-limit",
             "deprecated": null
           },
           {
@@ -88897,6 +88992,10 @@
           },
           {
             "name": "comment",
+            "deprecated": null
+          },
+          {
+            "name": "comment-error",
             "deprecated": null
           },
           {

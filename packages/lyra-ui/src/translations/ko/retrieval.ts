@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: '알 수 없는 단계',
   ingestionQueueLabel: '수집 대기열',
   ingestionQueueEmpty: '대기 중인 문서가 없습니다.',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label}의 작업 {total}개 중 {count}개를 표시합니다.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: '다른 검색어 또는 필터를 사용해 보세요.',
   groundingSummaryEvidenceSpan: '문자 {start}–{end}',

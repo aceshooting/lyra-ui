@@ -63,6 +63,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Опишите подробнее (необязательно)',
   feedbackSubmit: 'Отправить отзыв',
   feedbackSubmitted: 'Отзыв отправлен',
+  feedbackCommentTooLong: 'Используйте не более {max} символов.',
+  feedbackSingleReasonDescription: 'Выберите не более одной причины.',
   suggestionsLabel: 'Предлагаемые запросы',
   selectModel: 'Выберите модель…',
   modelSelectNoModels: 'Нет моделей',

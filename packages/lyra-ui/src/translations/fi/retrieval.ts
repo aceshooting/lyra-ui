@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Tuntematon vaihe',
   ingestionQueueLabel: 'Tuontijono',
   ingestionQueueEmpty: 'Ei asiakirjoja jonossa',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Näytetään {count}/{total} toimintoa kohteelle {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Kokeile toista hakusanaa tai muita suodattimia.',
   groundingSummaryEvidenceSpan: 'Merkit {start}–{end}',

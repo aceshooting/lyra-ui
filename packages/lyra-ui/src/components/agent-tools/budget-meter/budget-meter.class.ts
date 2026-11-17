@@ -12,6 +12,14 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_budgetMeterExceeded, LYRA_DEFAULT_budgetMeterLabel, LYRA_DEFAULT_budgetMeterPercent, LYRA_DEFAULT_budgetMeterUnavailable, LYRA_DEFAULT_budgetMeterValue } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+/** Locale supplied to a budget quantity display formatter. */
+export interface BudgetMeterFormatContext {
+  readonly locale: string;
+}
+
+/** Synchronous display hook; numeric meter semantics always use the original quantities. */
+export type BudgetMeterValueFormatter = (value: number, context: BudgetMeterFormatContext) => string;
+
 /**
  * `<lr-budget-meter>` — a presentation-only view of a host-supplied quantity and limit. Its visual
  * fill clamps at the limit while the localized value text retains the actual quantities. It does
@@ -56,6 +64,25 @@ export class LyraBudgetMeter extends LyraElement {
   /** Accessible group name and visible label. */
   @property() label?: string;
 
+  /**
+   * Optional synchronous, side-effect-free quantity formatter. Receives each normalized quantity
+   * and the effective locale. Return nonblank plain text of at most 65,536 UTF-16 code units;
+   * invalid results or throws restore numeric formatting for both quantities. The localized
+   * value sentence and optional unit still apply. Mutating the meter invalidates the custom pair.
+   */
+  @property({ attribute: false }) valueFormatter?: BudgetMeterValueFormatter;
+
+  private formatGeneration = 0;
+  private formatting = false;
+  private suppressFormatter = false;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    this.formatGeneration = (this.formatGeneration ?? 0) + 1;
+    // A callback's own update must not immediately invoke it again. An external refresh retries.
+    this.suppressFormatter = this.formatting === true;
+    super.requestUpdate(...args);
+  }
+
   private get safeUsed(): number {
     return Math.max(0, finiteNumber(this.used, 0));
   }
@@ -64,23 +91,63 @@ export class LyraBudgetMeter extends LyraElement {
     return Math.max(0, finiteNumber(this.limit, 0));
   }
 
-  private formatValue(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(value);
-  }
-
-  private valueText(): string {
-    return this.localize('budgetMeterValue', undefined, {
-      used: this.formatValue(this.safeUsed),
-      limit: this.formatValue(this.safeLimit),
-      unit: this.unit ?? '',
-    }).trim();
+  private valueProjection(): { used: number; limit: number; text: string } {
+    const formatter = this.valueFormatter;
+    const usedInput = this.used;
+    const limitInput = this.limit;
+    const unit = this.unit;
+    const locale = this.effectiveLocale;
+    const document = this.ownerDocument;
+    const connected = this.isConnected;
+    const generation = this.formatGeneration;
+    const used = this.safeUsed;
+    const limit = this.safeLimit;
+    const current = (): boolean => generation === this.formatGeneration &&
+      formatter === this.valueFormatter && Object.is(usedInput, this.used) &&
+      Object.is(limitInput, this.limit) && unit === this.unit && locale === this.effectiveLocale &&
+      document === this.ownerDocument && connected === this.isConnected;
+    const valid = (value: unknown): value is string =>
+      typeof value === 'string' && value.length <= 65_536 && value.trim().length > 0;
+    let formattedUsed: unknown;
+    let formattedLimit: unknown;
+    if (typeof formatter === 'function' && !this.suppressFormatter) {
+      const context: BudgetMeterFormatContext = Object.freeze({ locale });
+      this.formatting = true;
+      try {
+        formattedUsed = formatter(used, context);
+        if (current() && valid(formattedUsed)) formattedLimit = formatter(limit, context);
+      } catch {
+        // Both quantities retain the built-in formatter when either custom result fails.
+      } finally {
+        this.formatting = false;
+      }
+      if (!current()) this.suppressFormatter = true;
+    }
+    const coherent = current();
+    const finalUsed = coherent ? used : this.safeUsed;
+    const finalLimit = coherent ? limit : this.safeLimit;
+    const numberFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
+    let usedText = numberFormat.format(finalUsed);
+    let limitText = numberFormat.format(finalLimit);
+    if (coherent && valid(formattedUsed) && valid(formattedLimit)) {
+      usedText = formattedUsed;
+      limitText = formattedLimit;
+    }
+    return {
+      used: finalUsed,
+      limit: finalLimit,
+      text: this.localize('budgetMeterValue', undefined, {
+        used: usedText,
+        limit: limitText,
+        unit: this.unit ?? '',
+      }).trim(),
+    };
   }
 
   override render(): TemplateResult {
+    const { used, limit, text } = this.valueProjection();
     const visibleLabel = this.label == null ? this.localize('budgetMeterLabel') : this.label;
     const hostLabel = hostAriaLabel(this);
-    const used = this.safeUsed;
-    const limit = this.safeLimit;
     const available = limit > 0;
     const ratio = available ? finiteRatio(used, 0, limit) : 0;
     const percentage = available ? getNumberFormat(this.effectiveLocale, {
@@ -101,14 +168,14 @@ export class LyraBudgetMeter extends LyraElement {
                 aria-valuemin="0"
                 aria-valuemax=${String(limit)}
                 aria-valuenow=${String(ariaValueNow)}
-                aria-valuetext=${this.valueText()}
+                aria-valuetext=${text}
               >
                 <span part="track"><span part="fill" style=${styleMap({ inlineSize: `${ratio * 100}%` })}></span></span>
               </div>
               <span part="percent">${this.localize('budgetMeterPercent', undefined, { percent: percentage })}</span>
             `
           : html`<p part="unavailable">${this.localize('budgetMeterUnavailable')}</p>`}
-        <p part="value">${this.valueText()}</p>
+        <p part="value">${text}</p>
         ${available && used > limit ? html`<p part="exceeded">${this.localize('budgetMeterExceeded')}</p>` : nothing}
       </section>
     `;

@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Etapă necunoscută',
   ingestionQueueLabel: 'Coadă de ingestie',
   ingestionQueueEmpty: 'Niciun document în coadă',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Acțiuni afișate pentru {label}: {count} din {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Încearcă un alt termen de căutare sau alte filtre.',
   groundingSummaryEvidenceSpan: 'Caracterele {start}–{end}',

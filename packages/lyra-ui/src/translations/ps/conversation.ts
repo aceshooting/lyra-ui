@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'نور جزئیات ولیکئ (اختیاري)',
   feedbackSubmit: 'نظر لېږل',
   feedbackSubmitted: 'نظر ولېږل شو',
+  feedbackCommentTooLong: '{max} یا تر دې لږ توري وکاروئ.',
+  feedbackSingleReasonDescription: 'له یوه څخه زیات دلیلونه مه غوره کوئ.',
   suggestionsLabel: 'وړاندیز شوې غوښتنې',
   selectModel: 'یو ماډل وټاکئ…',
   modelSelectNoModels: 'ماډل نشته',

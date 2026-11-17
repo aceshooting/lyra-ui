@@ -220,6 +220,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: '未知阶段',
   ingestionQueueLabel: '摄取队列',
   ingestionQueueEmpty: '没有排队的文档',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '正在显示{label}的{total}项操作中的{count}项。',
   retrievalFilterChipLabel: '{key}：{value}',
   retrievalSearchEmptyDescription: '请尝试其他搜索词或筛选条件。',
   groundingSummaryEvidenceSpan: '第{start}–{end}个字符',

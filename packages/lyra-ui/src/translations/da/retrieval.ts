@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Ukendt fase',
   ingestionQueueLabel: 'Indlæsningskø',
   ingestionQueueEmpty: 'Ingen dokumenter i kø',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Viser {count} af {total} handlinger for {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Prøv et andet søgeord eller andre filtre.',
   groundingSummaryEvidenceSpan: 'Tegn {start}–{end}',

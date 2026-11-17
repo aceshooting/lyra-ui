@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'अज्ञात चरण',
   ingestionQueueLabel: 'ग्रहण कतार',
   ingestionQueueEmpty: 'कुनै कागजात कतारमा छैन',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} का लागि {total} मध्ये {count} कार्यहरू देखाइँदै छन्।',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'फरक खोज शब्द वा फिल्टरहरू प्रयास गर्नुहोस्।',
   groundingSummaryEvidenceSpan: 'अक्षर {start}–{end}',

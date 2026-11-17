@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Bilinmeyen aşama',
   ingestionQueueLabel: 'Veri alım kuyruğu',
   ingestionQueueEmpty: 'Sıraya alınan belge yok',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} için {total} eylemden {count} tanesi gösteriliyor.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Farklı bir arama terimi veya filtre deneyin.',
   groundingSummaryEvidenceSpan: '{start}–{end}. karakterler',

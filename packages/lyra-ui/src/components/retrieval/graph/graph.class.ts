@@ -4493,10 +4493,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private selectionActionAuthority(): () => boolean {
-    if (!this.sourceMode) { const columns = this.graphColumns; return columns === undefined ? () => true : () => !this.sourceMode && this.graphColumns === columns && !this.engineColumnsInvalid; }
     const current = this.sourceAuthority();
-    const nodes = this.selectedNodeIds, edges = this.selectedEdgeIds;
-    return () => current() && nodes === this.selectedNodeIds && edges === this.selectedEdgeIds;
+    const selectedNodes = this.selectedNodeIds, selectedEdges = this.selectedEdgeIds;
+    const nodes = this.nodes, edges = this.edges, columns = this.graphColumns;
+    const view = this.view, renderer = this.renderer, mode = this.selectionMode;
+    const hiddenTypes = this.hiddenTypes;
+    // Activation listeners own any replacement selection, data, or presentation immediately,
+    // before Lit updates the rendered controls. The connection epoch also retires an action
+    // when a listener removes and reconnects the same graph in one turn.
+    return () => current() && selectedNodes === this.selectedNodeIds && selectedEdges === this.selectedEdgeIds &&
+      view === this.view && renderer === this.renderer && mode === this.selectionMode && hiddenTypes === this.hiddenTypes &&
+      (this.sourceMode || (columns === this.graphColumns && !this.engineColumnsInvalid &&
+        (columns !== undefined || (nodes === this.nodes && edges === this.edges))));
   }
 
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {

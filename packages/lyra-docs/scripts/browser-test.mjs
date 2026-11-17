@@ -25,13 +25,12 @@ import { runTableFormatting } from './tables-formatting-browser.mjs';
 import { runImageExtensions } from './image-extensions-browser.mjs';
 import { filesUnder, serveStatic } from './lib/static-files.mjs';
 import { openFileChooser } from './lib/harness.mjs';
+import { prepareBrowserOutputPaths } from './lib/browser-output.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 import { staticModuleSpecifiers } from '../../lyra-ui/scripts/module-specifiers.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-const output = resolve(root, '.browser-output');
-const screenshots = resolve(root, '.browser-evidence');
 const browsers = (process.env.DOCX_BROWSERS ?? 'chromium,firefox,webkit').split(',').map(name => name.trim()).filter(Boolean);
 for (const name of browsers) assert.ok(['chromium', 'firefox', 'webkit'].includes(name), `Unknown browser ${name}`);
 assert.ok(browsers.length > 0, 'DOCX_BROWSERS names no browser');
@@ -50,6 +49,10 @@ const selection = Object.fromEntries(Object.entries(SELECTORS)
     return [variable, process.env[variable]];
   }));
 assert.ok(Object.keys(selection).length <= 1, `Choose one narrowing selector, not ${Object.keys(selection).join(' and ')}`);
+const paths = await prepareBrowserOutputPaths({ packageRoot: root, repositoryRoot: resolve(root, '../..') });
+const output = paths.outputDirectory;
+const screenshots = paths.evidenceDirectory;
+if (paths.isolated) console.log(JSON.stringify({ browserArtifacts: paths }));
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.json': 'application/json' };
 const require = createRequire(import.meta.url);
 const axePath = require.resolve('axe-core/axe.min.js');
@@ -1351,7 +1354,7 @@ async function runSharedSuites(page, check, { record }) {
     assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })), []);
   });
   await runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
-  await runEditorLayout(page, check, { createEditor, saveEditor });
+  await runEditorLayout(page, check, { createEditor, saveEditor, evidenceDirectory: screenshots });
   await runFormattingTools(page, check, { saveEditor });
   await runBasicEditing(page, check);
   await runEditorWorkflows(page, check);
@@ -1380,7 +1383,7 @@ async function runDocumentTools(page, check) {
 // A DOCX_*_ONLY selector narrows the run to one suite family.
 async function runSelectedSuite(page, check) {
   if (process.env.DOCX_LAYOUT_ONLY) {
-    await runEditorLayout(page, check, { createEditor, saveEditor });
+    await runEditorLayout(page, check, { createEditor, saveEditor, evidenceDirectory: screenshots });
   } else if (process.env.DOCX_DOCUMENT_TOOLS_ONLY) {
     await runDocumentTools(page, check);
   } else if (process.env.DOCX_FORMATTING_ONLY) {
@@ -1525,5 +1528,8 @@ try {
   console.error(evidence.failure);
 } finally {
   if (server) await new Promise(resolve => server.close(resolve));
-  await writeFile(resolve(output, 'browser-evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`).catch(() => {});
+  await writeFile(resolve(output, 'browser-evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`).catch(error => {
+    if (paths.isolated) { evidence.result = 'fail'; evidence.failure = String(error); process.exitCode = 1; console.error(error); }
+  });
+  if (paths.isolated) console.log(JSON.stringify({ browserArtifacts: paths, result: evidence.result }));
 }

@@ -56,6 +56,26 @@ export const Empty: Story = {
   render: () => html`<lr-ingestion-queue></lr-ingestion-queue>`,
 };
 
+export const HostStagesAndActions: Story = {
+  name: 'Host stages and replacement actions',
+  render: () => html`<div style="inline-size: 320px; max-inline-size: 100%">
+    <lr-ingestion-queue .items=${[
+      { id: 'paused', document: { id: 'paused-document', name: 'report.pdf' }, stage: 'custom',
+        customStage: { id: 'paused', label: 'Paused', variant: 'warning' },
+        actions: [{ type: 'custom', id: 'resume', label: 'Resume' }] },
+      { id: 'interrupted', document: { id: 'interrupted-document', name: 'notes.txt' }, stage: 'custom',
+        customStage: { id: 'interrupted', label: 'Choose the file again' },
+        actions: [{ type: 'custom', id: 'reselect', label: 'Reselect file' }] },
+      { id: 'active', document: { id: 'active-document', name: 'handbook.pdf' }, stage: 'indexing', progress: 75, actions: [] },
+    ] as IngestionQueueItem[]}
+    @lr-item-action=${(event: CustomEvent<{ itemId: string; actionId: string }>) => {
+      const output = (event.currentTarget as HTMLElement).parentElement!.querySelector('output');
+      if (output) output.textContent = `${event.detail.actionId}: ${event.detail.itemId}`;
+    }}></lr-ingestion-queue>
+    <output aria-label="Requested row action">Choose an action; the host owns its operation.</output>
+  </div>`,
+};
+
 export const AllStages: Story = {
   name: 'One row per stage',
   render: () => html`

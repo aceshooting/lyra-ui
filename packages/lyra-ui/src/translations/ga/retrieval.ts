@@ -230,6 +230,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Céim anaithnid',
   ingestionQueueLabel: 'Scuaine ionghabhála',
   ingestionQueueEmpty: 'Níl aon doiciméid sa scuaine',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Gníomhartha á dtaispeáint do {label}: {count} as {total}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Bain triail as téarma cuardaigh nó scagairí eile.',
   groundingSummaryEvidenceSpan: 'Carachtair {start}–{end}',

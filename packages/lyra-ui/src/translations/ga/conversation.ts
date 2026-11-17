@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Tabhair tuilleadh sonraí (roghnach)',
   feedbackSubmit: 'Seol aiseolas',
   feedbackSubmitted: 'Aiseolas seolta',
+  feedbackCommentTooLong: 'Úsáid {max} carachtar ar a mhéad.',
+  feedbackSingleReasonDescription: 'Roghnaigh cúis amháin ar a mhéad.',
   suggestionsLabel: 'Leideanna molta',
   selectModel: 'Roghnaigh samhail…',
   modelSelectNoModels: 'Gan samhlacha',

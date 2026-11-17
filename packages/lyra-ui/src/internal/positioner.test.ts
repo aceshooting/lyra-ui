@@ -46,6 +46,71 @@ it('positions the popup relative to the anchor', async () => {
   stop();
 });
 
+it('defaults an arrow to zero corner padding and honors an explicit positive inset', async () => {
+  const wrap = await fixture<HTMLElement>(html`<div>
+    <div id="anchor" style="position:fixed;left:140px;top:100px;width:4px;height:20px"></div>
+    <div id="popup" style="width:160px;height:60px;margin:0;padding:0;border:0">
+      <div id="arrow" style="position:absolute;left:0;top:-5px;width:10px;height:10px;margin:0;padding:0;border:0"></div>
+    </div>
+  </div>`);
+  const anchor = wrap.querySelector<HTMLElement>('#anchor')!;
+  const popup = wrap.querySelector<HTMLElement>('#popup')!;
+  const arrow = wrap.querySelector<HTMLElement>('#arrow')!;
+  const placements: { popupLeft: number; arrowInset: number }[] = [];
+  let stop: (() => void) | undefined;
+  try {
+    for (const arrowPadding of [undefined, 0, 20]) {
+      let first: {
+        placement: string;
+        arrowX: number | undefined;
+        popupLeft: number;
+        popupTop: number;
+        popupWidth: number;
+        arrowLeft: number;
+        arrowTop: number;
+        arrowWidth: number;
+        anchorCenter: number;
+        anchorBottom: number;
+      } | undefined;
+      stop = placePublic(anchor, popup, {
+        placement: 'bottom-start', flip: false, shift: false, offset: 0, arrow,
+        ...(arrowPadding === undefined ? {} : { arrowPadding }),
+        onPlaced(result) {
+          if (result.arrow?.x !== undefined) arrow.style.left = `${result.arrow.x}px`;
+          if (first) return;
+          const panel = popup.getBoundingClientRect();
+          const tip = arrow.getBoundingClientRect();
+          const reference = anchor.getBoundingClientRect();
+          first = {
+            placement: result.placement, arrowX: result.arrow?.x,
+            popupLeft: panel.left, popupTop: panel.top, popupWidth: panel.width,
+            arrowLeft: tip.left, arrowTop: tip.top, arrowWidth: tip.width,
+            anchorCenter: reference.left + reference.width / 2, anchorBottom: reference.bottom,
+          };
+        },
+      });
+      const bounds = await waitFor(() => first, value => value !== undefined);
+      if (!bounds) throw new Error('The arrow placement did not publish geometry');
+      const expectedInset = arrowPadding ?? 0;
+      expect(bounds.placement).to.equal('bottom-start');
+      expect(bounds.popupWidth).to.be.closeTo(160, 0.25);
+      expect(bounds.popupTop).to.be.closeTo(bounds.anchorBottom, 0.25);
+      expect(bounds.arrowWidth).to.be.closeTo(10, 0.25);
+      expect(bounds.arrowTop).to.be.closeTo(bounds.popupTop - 5, 0.25);
+      expect(bounds.arrowX).to.be.closeTo(expectedInset, 0.25);
+      expect(bounds.arrowLeft - bounds.popupLeft, `arrow padding ${String(arrowPadding)}`).to.be.closeTo(expectedInset, 0.25);
+      expect(bounds.arrowLeft + bounds.arrowWidth / 2).to.be.closeTo(bounds.anchorCenter, 0.25);
+      placements.push({ popupLeft: bounds.popupLeft, arrowInset: bounds.arrowLeft - bounds.popupLeft });
+      stop(); stop = undefined;
+    }
+    expect(placements[0]!.popupLeft).to.be.closeTo(placements[1]!.popupLeft, 0.25);
+    expect(placements[0]!.arrowInset).to.be.closeTo(placements[1]!.arrowInset, 0.25);
+    expect(placements[2]!.popupLeft).to.be.closeTo(placements[0]!.popupLeft - 20, 0.25);
+  } finally {
+    stop?.();
+  }
+});
+
 for (const placement of ['top', 'bottom', 'left', 'right'] as const) {
   it(`shifts across the ${placement} placement axis only when explicitly requested`, async () => {
     const wrap = await fixture(html`<div>
@@ -1773,6 +1838,34 @@ it('restores an earlier open journal owner after a foreign rollback', async () =
   expect(first.ownedValue(popup, 'width')).to.equal(undefined);
   first.rollback();
   expect(popup.style.width).to.equal('12px');
+});
+
+it('gives an identical width write to the newer journal and restores the earlier open owner', async () => {
+  const popup = await fixture<HTMLElement>(html`<div style="width:12px;height:25px!important"></div>`);
+  const first = createPlacementStyleTransaction();
+  const newer = createPlacementStyleTransaction();
+  try {
+    first.set(popup, 'width', '30px', 'important');
+    expect(first.ownedValue(popup, 'width')).to.deep.equal({ value: '30px', priority: 'important' });
+    expect(first.ownedValue(popup, 'height')).to.equal(undefined);
+    newer.set(popup, 'width', '30px', 'important');
+    expect(first.ownedValue(popup, 'width'), 'equal CSS does not confer ownership on an older live journal').to.equal(undefined);
+    expect(newer.ownedValue(popup, 'width')).to.deep.equal({ value: '30px', priority: 'important' });
+    expect(newer.ownedValue(popup, 'height')).to.equal(undefined);
+    expect([popup.style.width, popup.style.getPropertyPriority('width')]).to.deep.equal(['30px', 'important']);
+
+    newer.rollback();
+    expect(newer.ownedValue(popup, 'width')).to.equal(undefined);
+    expect(first.ownedValue(popup, 'width')).to.deep.equal({ value: '30px', priority: 'important' });
+    expect(first.ownedValue(popup, 'height')).to.equal(undefined);
+    expect([popup.style.width, popup.style.getPropertyPriority('width')]).to.deep.equal(['30px', 'important']);
+    first.rollback();
+    expect([popup.style.width, popup.style.getPropertyPriority('width')]).to.deep.equal(['12px', '']);
+    expect([popup.style.height, popup.style.getPropertyPriority('height')]).to.deep.equal(['25px', 'important']);
+  } finally {
+    newer.rollback();
+    first.rollback();
+  }
 });
 
 it('resolves the popup offset parent once per placement pass, not once per middleware', async () => {

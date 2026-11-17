@@ -2,24 +2,24 @@
   "locale": "mt",
   "direction": "ltr",
   "source": {
-    "keyCount": 1632,
-    "sha256": "sha256:176f8b74a682d2cbd3a94235f186114fa081fcd1fc663972e9235e051159b3ed"
+    "keyCount": 1642,
+    "sha256": "sha256:b68f4f04591912a29e1b5e4932a12e8e772906d829f7e5b40994307e05899b33"
   },
   "catalog": {
-    "keyCount": 1632,
-    "sha256": "sha256:7ef97fbe316bf3c41f6b97585ab107eb3e24e534e51b42bc4365a8d26735f117"
+    "keyCount": 1642,
+    "sha256": "sha256:7f2f2cf73de7510b8b11830a791f933e364d86384f77baba2db0d5ca8892dc69"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
-    "completedAt": "2026-11-02",
-    "evidence": "Original Maltese catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other, two). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed."
+    "completedAt": "2026-11-16",
+    "evidence": "Original Maltese catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other, two). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-11-02",
-    "evidence": "AI-assisted machine review limited to structural verification: complete key coverage in DEFAULT_STRINGS order, exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other, two) were checked, and each of the 95 English-identical messages was inspected and given an entry-specific rationale. No linguistic, human or native-speaker review is claimed; the catalog awaits native-speaker review.\n\n2026-11-02 incremental review: an AI-assisted check of the mapScenePartial addition covered key order, terminology consistency with the existing mapScene messages, placeholder shape and escaping, with limited semantic review. Excluding this addition reproduces the prior catalog snapshot, so earlier content is unchanged. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
+    "reviewedAt": "2026-11-16",
+    "evidence": "AI-assisted machine review limited to structural verification: complete key coverage in DEFAULT_STRINGS order, exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other, two) were checked, and each of the 95 English-identical messages was inspected and given an entry-specific rationale. No linguistic, human or native-speaker review is claimed; the catalog awaits native-speaker review.\n\n2026-11-02 incremental review: an AI-assisted check of the mapScenePartial addition covered key order, terminology consistency with the existing mapScene messages, placeholder shape and escaping, with limited semantic review. Excluding this addition reproduces the prior catalog snapshot, so earlier content is unchanged. This increment does not claim a full-catalog re-review or human/native-speaker qualification.\n\n2026-11-16 bounded independent AI-assisted review examined the ten additions across all 80 supported source locale IDs for inclusive limits, optional zero-or-one selection, displayed versus total actions, current versus earlier document batches, retention and restart meaning, locale script, neighboring terminology and placeholders. Reviewed corrections cover Irish noun number, Tagalog demonstrative scope, Burmese loading vocabulary, Tamil suffix attachment, Pashto maximum-bound wording, Sindhi earlier-history wording, and number-neutral Arabic and Russian phrases. Regional inheritance and the Portuguese overrides were inspected. Approval covers only this delta; earlier messages, plural branches and rendered mixed-direction behavior were not re-audited. Technical idiom remains subject to fluent-speaker refinement, especially in lower-resource languages. No human or native-speaker certification is claimed."
   },
   "englishIdenticalAllowlist": [
     {
@@ -229,6 +229,10 @@
     {
       "messagePath": "heatmapCalendarCellLabel",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "ingestionActionWithContext",
+      "rationale": "Formatting template joining the caller-supplied {action} and {label} values with a space; it contains no English words to translate."
     },
     {
       "messagePath": "ingestionItemProgressLabel",

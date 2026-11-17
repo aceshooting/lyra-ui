@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Adicione mais detalhes (opcional)',
   feedbackSubmit: 'Enviar feedback',
   feedbackSubmitted: 'Feedback enviado',
+  feedbackCommentTooLong: 'Utilize no máximo {max} caracteres.',
+  feedbackSingleReasonDescription: 'Escolha no máximo um motivo.',
   suggestionsLabel: 'Prompts sugeridos',
   selectModel: 'Selecione um modelo…',
   modelSelectNoModels: 'Nenhum modelo',

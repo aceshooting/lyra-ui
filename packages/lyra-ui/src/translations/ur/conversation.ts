@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'مزید تفصیل شامل کریں (اختیاری)',
   feedbackSubmit: 'رائے جمع کریں',
   feedbackSubmitted: 'رائے جمع ہو گئی',
+  feedbackCommentTooLong: '{max} یا اس سے کم حروف استعمال کریں۔',
+  feedbackSingleReasonDescription: 'زیادہ سے زیادہ ایک وجہ منتخب کریں۔',
   suggestionsLabel: 'تجویز کردہ پرومپٹس',
   selectModel: 'ماڈل منتخب کریں…',
   modelSelectNoModels: 'کوئی ماڈل نہیں',

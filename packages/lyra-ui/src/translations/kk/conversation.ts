@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'Толығырақ жазыңыз (міндетті емес)',
   feedbackSubmit: 'Кері байланыс жіберу',
   feedbackSubmitted: 'Кері байланыс жіберілді',
+  feedbackCommentTooLong: '{max} таңбадан асырмаңыз.',
+  feedbackSingleReasonDescription: 'Ең көбі бір себеп таңдаңыз.',
   suggestionsLabel: 'Ұсынылған промпттар',
   selectModel: 'Модельді таңдаңыз…',
   modelSelectNoModels: 'Модельдер жоқ',

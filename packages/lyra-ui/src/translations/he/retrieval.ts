@@ -226,6 +226,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'שלב לא ידוע',
   ingestionQueueLabel: 'תור קליטה',
   ingestionQueueEmpty: 'אין מסמכים בתור',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'מוצגות {count} מתוך {total} פעולות עבור {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'נסה מונח חיפוש או מסננים אחרים.',
   groundingSummaryEvidenceSpan: 'תווים {start}–{end}',

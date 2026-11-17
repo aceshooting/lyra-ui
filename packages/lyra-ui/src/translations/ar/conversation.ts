@@ -65,6 +65,8 @@ const strings: LyraLocaleStrings = {
   feedbackCommentPlaceholder: 'أضف مزيدًا من التفاصيل (اختياري)',
   feedbackSubmit: 'إرسال الملاحظات',
   feedbackSubmitted: 'تم إرسال الملاحظات',
+  feedbackCommentTooLong: 'الحد الأقصى لعدد الأحرف هو {max}.',
+  feedbackSingleReasonDescription: 'اختر سببًا واحدًا كحد أقصى.',
   suggestionsLabel: 'مُوجّهات مقترحة',
   selectModel: 'اختر نموذجًا…',
   modelSelectNoModels: 'لا توجد نماذج',

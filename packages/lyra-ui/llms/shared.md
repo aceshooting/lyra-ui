@@ -529,8 +529,9 @@ a capped prefix does not provide access to a million-record source.
 
 The host owns each source and its indexes, storage and query work. Keep its revision, counts,
 records and returned projections immutable for a request snapshot. Revisions are nonempty strings
-or finite numbers; counts, offsets and record orders are nonnegative safe integers. Nonempty keys
-identify logical records, and `order` is canonical source order independent of query sorting.
+or finite numbers; where present, counts, offsets and record orders are nonnegative safe integers.
+Nonempty keys identify logical records, and a counted record's `order` is canonical source order
+independent of query sorting. Cursor records instead carry only key/value identity.
 A provider can generate or fetch a requested window without allocating an array for the entire collection.
 Arbitrary work inside a host callback remains the host's responsibility.
 
@@ -553,6 +554,14 @@ Choose the access shape that matches the host's data:
   `total` describes every query match, not loaded rows; group ranges describe the globally
   ordered query and facets describe the full source catalogue. A declared `Summary` is required
   in each result, while the default `undefined` summary can be omitted.
+- `LyraCursorSource<T, Q>` supplies unknown-total continuation batches without `total`, `order`,
+  lookup or locate. Its nonempty `scope` is an identity namespace; a compatible scope keeps keys
+  meaningful across query/revision changes. `query(request: LyraCursorRequest<Q>)` receives
+  `{ scope, revision, locale, signal, query, cursor, limit }` and resolves `LyraCursorResult<T>`:
+  `{ rows: readonly LyraCursorRecord<T>[]; nextCursor: string | null }`, where each record is
+  readonly `{ key: string; value: T }`. `cursor: null` starts a query and `nextCursor: null` ends
+  continuation; nonempty string tokens remain opaque and may continue an empty/short batch. They do
+  not promise another record or a total. The provider applies the full query before paging.
 - `LyraTabularSource` has separate column metadata and zero-based body rows, using either
   `cellAt` or bounded rectangular `readCells`. `LyraWorkbookSource` names sheets separately.
   Search results use a bounded hit list, `total: null` when the global total is unknown, and
@@ -565,6 +574,26 @@ Choose the access shape that matches the host's data:
 - `LyraGraphSource<N, E>` separates full record paging from bounded scenes and optional overview
   bins. Global node/edge totals, scene coverage and displayed counts have distinct meanings;
   a neighborhood or aggregate scene is not a complete graph layout.
+
+Cursor binding is supported by **`lr-document-library.cursorSource` only**; the type declaration
+does not enable it on other provider components. Choose exactly one of that input and its
+counted `dataSource`. The table shows the current batch, `sourcePage` is inactive, and
+`sourceTotal` remains `null`, including at the end. No facet catalogue, match total, absolute
+membership or global selection is inferred from batches. Selected IDs are explicit unverified
+intent; page selection preserves off-page IDs and the host validates them before mutations. A
+different scope clears prior intent; assign the new `cursorSource` before restoring selected IDs.
+
+The document cursor adapter bounds requests to 1–500 rows (default 100), scope/string-revision/
+token text to 8,192 UTF-16 units, and visited request-cursor history to 32 entries including current.
+Previous refetches; Start over discards history. It retains no old page rows, persisted tokens or
+prefetch work. `LyraCursorSourceStatus` and the frozen `LyraCursorNavigationState` expose only
+`status`, `canGoBack`, `canGoForward`, `atEnd` and `historyTruncated`; tokens never enter public
+navigation state or events. User search edits emit `lr-query-change` without a match count;
+existing counted `lr-filter-change` keeps its numeric contract. Source reassignment, refresh,
+query/locale/limit change or reconnect starts at `null`; named visual paints do not refetch.
+Callbacks must settle promptly on abort because the physical query permit is held until actual
+settlement. See [document-library](./components/lr-document-library.md) for row/input admission bounds,
+retry semantics, method results, selection binding order and navigation parts.
 
 Numeric helpers inspect all source positions in bounded chunks. Preparation has total O(n)
 source-read work per pass, plus reducer work, even though each chunk and the retained result are
@@ -4772,6 +4801,36 @@ These named interfaces and helper signatures are available to typed integrations
   readonly records: LyraPageSource<LyraGraphRecord<N, E>, LyraGraphSourceQuery, LyraGraphSourceSummary>;
   scene(request: LyraGraphSceneRequest): Promise<LyraGraphScene<N, E>>;
   overview?(request: LyraSourceContext & { readonly limit: number }): Promise<LyraGraphOverview>;
+}`
+  `LyraCursorRecord<T> {
+  readonly key: string;
+  readonly value: T;
+}`
+  `LyraCursorRequest<Q> extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly scope: string;
+  readonly query: Q;
+  readonly cursor: string | null;
+  readonly limit: number;
+}`
+  `LyraCursorResult<T> {
+  readonly rows: readonly LyraCursorRecord<T>[];
+  readonly nextCursor: string | null;
+}`
+  `LyraCursorSource<T, Q> {
+  readonly revision: LyraSourceRevision;
+  readonly scope: string;
+  query(request: LyraCursorRequest<Q>): Promise<LyraCursorResult<T>>;
+}`
+  `LyraCursorSourceStatus = 'idle' | 'loading' | 'ready' | 'error'`
+  `LyraCursorNavigationState {
+  readonly status: LyraCursorSourceStatus;
+  readonly canGoBack: boolean;
+  readonly canGoForward: boolean;
+  readonly atEnd: boolean;
+  readonly historyTruncated: boolean;
 }`
 
 - **`utilities-data-preparation-contracts`** — Public staged numeric helpers and result contracts from `utilities/data-preparation.js`. Preparation reads the full immutable source in bounded chunks; retained summaries are distinct from source counts. Inherited fields are repeated for reference. Defaulted options may be omitted.

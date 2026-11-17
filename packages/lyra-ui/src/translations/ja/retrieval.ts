@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: '不明なステージ',
   ingestionQueueLabel: '取り込みキュー',
   ingestionQueueEmpty: 'キューにドキュメントがありません',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label}の操作{total}件中{count}件を表示しています。',
   retrievalFilterChipLabel: '{key}：{value}',
   retrievalSearchEmptyDescription: '別の検索語や絞り込み条件をお試しください。',
   groundingSummaryEvidenceSpan: '{start}–{end} 文字目',

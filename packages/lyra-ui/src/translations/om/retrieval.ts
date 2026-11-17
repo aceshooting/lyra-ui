@@ -221,6 +221,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Sadarkaa hin beekamne',
   ingestionQueueLabel: 'Tarree galchuu',
   ingestionQueueEmpty: 'Dokumantiin eeggataa hin jiru',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: '{label} irratti gochoota {total} keessaa {count} agarsiisaa jira.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Jechoota barbaachaa ykn calaltota biraa yaali.',
   groundingSummaryEvidenceSpan: 'Arfiilee {start}–{end}',

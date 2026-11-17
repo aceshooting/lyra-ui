@@ -224,6 +224,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Άγνωστο στάδιο',
   ingestionQueueLabel: 'Ουρά εισαγωγής',
   ingestionQueueEmpty: 'Δεν υπάρχουν έγγραφα στην ουρά',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Εμφανίζονται {count} από {total} ενέργειες για {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Δοκιμάστε διαφορετικό όρο αναζήτησης ή φίλτρα.',
   groundingSummaryEvidenceSpan: 'Χαρακτήρες {start}–{end}',

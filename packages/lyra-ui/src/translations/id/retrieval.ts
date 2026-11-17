@@ -222,6 +222,8 @@ const strings: LyraLocaleStrings = {
   ingestionStageUnknown: 'Tahap tidak diketahui',
   ingestionQueueLabel: 'Antrean penyerapan',
   ingestionQueueEmpty: 'Tidak ada dokumen dalam antrean',
+  ingestionActionWithContext: '{action} {label}',
+  ingestionQueueActionLimit: 'Menampilkan {count} dari {total} tindakan untuk {label}.',
   retrievalFilterChipLabel: '{key}: {value}',
   retrievalSearchEmptyDescription: 'Coba istilah pencarian atau filter lain.',
   groundingSummaryEvidenceSpan: 'Karakter {start}–{end}',

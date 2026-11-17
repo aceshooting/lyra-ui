@@ -592,7 +592,7 @@ test('started as a script, the entry point adopts the exit status of the run and
   const root = resolve(workspace, 'packages/lyra-docs');
   context.after(() => rm(workspace, { recursive: true, force: true }));
   const [entry] = stageScripts({ from: packageRoot, to: root, files: [
-    'scripts/coverage.mjs', 'scripts/report-coverage.mjs', 'scripts/lib/static-files.mjs',
+    'scripts/coverage.mjs', 'scripts/report-coverage.mjs', 'scripts/lib/static-files.mjs', 'scripts/lib/browser-output.mjs',
   ] });
   stageScripts({ from: resolve(packageRoot, '../..'), to: workspace, files: [
     'scripts/lib/coverage/node-coverage.mjs', 'scripts/lib/coverage/staged-script.mjs', 'scripts/lib/coverage/libraries.mjs',
@@ -612,4 +612,14 @@ test('started as a script, the entry point adopts the exit status of the run and
   assert.equal(await readFile(log, 'utf8'), 'run build\n', 'the run stopped at the failing build step');
   assert.equal(existsSync(resolve(root, 'coverage/stale.txt')), false, 'earlier output was cleared');
   assert.equal(existsSync(resolve(root, 'coverage/tmp')), false, 'the scratch directory was removed');
+});
+
+
+test('isolated browser output is rejected before coverage cleans outputs or runs commands', async context => {
+  const { root, calls, options } = await recordedRun(context);
+  const sentinel = resolve(root, 'coverage/stale.txt');
+  const before = await readFile(sentinel, 'utf8');
+  await assert.rejects(runCoverage({ ...options, environment: { DOCX_BROWSER_RUN_DIR: resolve(root, '../isolated') } }), /coverage/iu);
+  assert.deepEqual(calls, []);
+  assert.equal(await readFile(sentinel, 'utf8'), before);
 });
