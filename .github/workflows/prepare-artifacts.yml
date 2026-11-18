@@ -51,6 +51,8 @@ jobs:
       run:
         shell: bash
     env:
+      # Firefox requires a home directory owned by the container's current user.
+      HOME: ${{ inputs.mode == 'release' && '/root' || '/home/runner' }}
       PREPARATION_MODE: ${{ inputs.mode }}
       SOURCE_CONTRACTS_JSON: ${{ inputs.sourceContracts }}
       PREPARATION_CANDIDATE_SHA: ${{ inputs.candidateSha }}
@@ -157,6 +159,18 @@ jobs:
           fi
           command -v python3
           command -v unzip
+      - name: Verify provisioned browsers for release budgets
+        if: inputs.mode == 'release'
+        run: |
+          node --input-type=module <<'NODE'
+          import { accessSync, constants } from 'node:fs';
+          import { chromium, firefox, webkit } from 'playwright';
+          for (const browser of [chromium, firefox, webkit]) {
+            accessSync(browser.executablePath(), constants.X_OK);
+            const instance = await browser.launch({ headless: true });
+            await instance.close();
+          }
+          NODE
       - name: Prepare release source from pending changesets
         if: inputs.mode == 'release' && inputs.candidateSha == ''
         run: |
@@ -169,16 +183,6 @@ jobs:
             git branch main "$GITHUB_SHA"
           fi
           pnpm release:prepare
-      - name: Verify provisioned browsers for release budgets
-        if: inputs.mode == 'release'
-        run: |
-          node --input-type=module <<'NODE'
-          import { accessSync, constants } from 'node:fs';
-          import { chromium, firefox, webkit } from 'playwright';
-          for (const browser of [chromium, firefox, webkit]) {
-            accessSync(browser.executablePath(), constants.X_OK);
-          }
-          NODE
       - name: Verify release budgets on prepared package versions
         id: release_budgets
         if: inputs.mode == 'release'

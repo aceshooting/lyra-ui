@@ -195,18 +195,55 @@ test('hosted release preparation checks prepared budgets before handing off gene
   assert.ok(image);
   assert.equal(runInNewContext(image, { inputs: { mode: 'source' } }), '');
   assert.match(runInNewContext(image, { inputs: { mode: 'release' } }), /^mcr\.microsoft\.com\/playwright:v\d+\.\d+\.\d+-noble$/u);
+  const runtimeHome = steps.match(/^      HOME: \$\{\{ (.+) \}\}$/mu)?.[1];
+  assert.ok(runtimeHome);
+  assert.equal(runInNewContext(runtimeHome, { inputs: { mode: 'source' } }), '/home/runner');
+  assert.equal(runInNewContext(runtimeHome, { inputs: { mode: 'release' } }), '/root');
   assert.match(steps, /defaults:\n      run:\n        shell: bash/u);
   assert.match(steps, /- name: Ensure skill packaging tools are available\n        if: inputs\.mode == 'release'[\s\S]+for tool in python3 unzip/u);
   const prepare = steps.indexOf('run: |\n          set -euo pipefail\n          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"');
   const version = steps.indexOf('pnpm release:prepare', prepare);
-  const browsers = steps.indexOf('accessSync(browser.executablePath(), constants.X_OK)', version);
-  const budgets = steps.indexOf('pnpm release:budgets 2>&1 | tee', browsers);
+  const browsers = steps.indexOf('accessSync(browser.executablePath(), constants.X_OK)');
+  const budgets = steps.indexOf('pnpm release:budgets 2>&1 | tee', version);
   const bundle = steps.indexOf('node scripts/prepare-artifacts.mjs bundle', budgets);
-  assert.ok(prepare >= 0 && version > prepare && browsers > version && budgets > browsers && bundle > budgets);
+  assert.ok(browsers >= 0 && prepare > browsers && version > prepare && budgets > version && bundle > budgets);
   assert.match(steps, /- name: Verify provisioned browsers for release budgets\n        if: inputs\.mode == 'release'[\s\S]+\[chromium, firefox, webkit\]/u);
   assert.match(steps, /- name: Verify release budgets on prepared package versions\n        id: release_budgets\n        if: inputs\.mode == 'release'\n        run: \|\n          set -o pipefail\n          pnpm release:budgets/u);
   assert.match(steps, /steps\.release_budgets\.outcome == 'failure'[\s\S]+name: release-budget-measurements-/u);
   assert.doesNotMatch(steps, /continue-on-error|playwright install/u);
+});
+
+test('release browser preflight rejects launch failures even when executables are accessible', async () => {
+  const steps = job(read('.github/workflows/prepare-artifacts.yml'), 'prepare');
+  const preflight = steps.split(/\n(?= {6}- )/u).find(step => step.includes('name: Verify provisioned browsers for release budgets'));
+  const script = preflight.match(/node --input-type=module <<'NODE'\n([\s\S]+?)\n          NODE/u)?.[1]
+    .replace(/^ {10}/gmu, '').replace(/^import .+;\n/gmu, '');
+  assert.ok(script);
+  const engines = ['chromium', 'firefox', 'webkit'];
+  for (const failedEngine of [null, ...engines]) {
+    const calls = [];
+    const context = { constants: { X_OK: 1 }, accessSync: path => calls.push(`access:${path}`) };
+    for (const name of engines) {
+      context[name] = {
+        executablePath: () => name,
+        launch: async () => {
+          calls.push(`launch:${name}`);
+          if (name === failedEngine) throw new Error(`launch refused: ${name}`);
+          return { close: async () => calls.push(`close:${name}`) };
+        },
+      };
+    }
+    const result = runInNewContext(`(async () => { ${script} })()`, context);
+    if (failedEngine) await assert.rejects(result, new RegExp(`launch refused: ${failedEngine}`, 'u'));
+    else await result;
+    const expected = [];
+    for (const name of engines) {
+      expected.push(`access:${name}`, `launch:${name}`);
+      if (name === failedEngine) break;
+      expected.push(`close:${name}`);
+    }
+    assert.deepEqual(calls, expected);
+  }
 });
 
 test('hosted quick comparison uses immutable main inputs in one runner and retains its evidence', () => {
