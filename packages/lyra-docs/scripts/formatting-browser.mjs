@@ -178,6 +178,56 @@ export async function runFormattingTools(page, check, { saveEditor }) {
   });
 
 
+  await check('fit and numeric zoom render a synchronous selection change in one update', async () => {
+    const result = await page.evaluate(async () => {
+      const element = document.createElement('lr-docx-editor');
+      element.style.inlineSize = '420px';
+      document.querySelector('#fixture').append(element);
+      try {
+        const bytes = await window.__docxTest.fixture('mixed-formatting');
+        const opened = await element.open(Uint8Array.from(bytes));
+        if (!opened.ok) throw new Error(opened.code);
+        await element.updateComplete;
+        const engine = element.session.engine;
+        const setZoom = engine.setZoom.bind(engine);
+        // Some engines reattach the selection during zoom. Select real ranges with distinct
+        // formatting at that boundary so each zoom must render the new session snapshot.
+        engine.setZoom = zoom => {
+          const applied = setZoom(zoom);
+          const found = element.find(zoom === 'fit' ? 'Second' : 'First');
+          if (!found.ok || !element.selectMatch(found.value.matches[0].id).ok) throw new Error('Selection failed');
+          return applied;
+        };
+        const render = element.render.bind(element);
+        let renders = 0;
+        element.render = () => { renders++; return render(); };
+        const results = [];
+        for (const zoom of ['fit', 1.5]) {
+          const before = renders;
+          element.zoom = zoom;
+          const settled = await element.updateComplete;
+          await element.updateComplete;
+          results.push({ renders: renders - before, settled, zoom: element.shadowRoot.querySelector('[part="zoom"]').value,
+            points: element.shadowRoot.querySelector('[part="font-size"]').value });
+        }
+        const width = () => element.querySelector('.docx-page').getBoundingClientRect().width;
+        const previousWidth = width();
+        element.addEventListener('lr-change', () => { element.zoom = 2; }, { once: true });
+        element.zoom = 'fit';
+        await element.updateComplete;
+        await element.updateComplete;
+        return { results, redirectedZoom: element.shadowRoot.querySelector('[part="zoom"]').value,
+          paintedAtDoubleScale: Math.abs(width() - previousWidth * 2 / 1.5) < 2 };
+      } finally { element.remove(); }
+    });
+    assert.deepEqual(result.results, [
+      { renders: 1, settled: true, zoom: 'fit', points: '15' },
+      { renders: 1, settled: true, zoom: '1.5', points: '12' },
+    ]);
+    assert.equal(result.redirectedZoom, '2');
+    assert.equal(result.paintedAtDoubleScale, true, 'a zoom change from the snapshot listener reaches the engine');
+  });
+
   await check('zoom scales the painted pages without editing, reflects, and fit follows the width', async () => {
     await fresh('Zoom words');
     const width = () => host.evaluate(element => element.querySelector('.docx-page').getBoundingClientRect().width);

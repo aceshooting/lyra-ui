@@ -7,3 +7,5 @@ export const TableFormatting = { ...stories.TableFormatting };
 export const ImageReplacement = { ...stories.ImageReplacement };
 export const PaintedParagraphs = { ...stories.PaintedParagraphs };
 export const NarrowEditor = { ...stories.NarrowEditor };
+export const DocumentToolsFirstRow = { ...stories.DocumentToolsFirstRow };
+export const PageWideToolbar = { ...stories.PageWideToolbar };

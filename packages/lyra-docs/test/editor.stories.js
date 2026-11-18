@@ -66,4 +66,51 @@ export const NarrowEditor = {
   play: load(headings),
 };
 
-export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor };
+export const DocumentToolsFirstRow = {
+  render: () => html`<div style=${container}>
+    <p>Document tools follow insertion controls in the first toolbar row. Select document text, then use formatting or open Outline, Checks or Review. The optional border color keeps quiet icon tools visually compact without changing their focus indicators.</p>
+    <lr-docx-editor document-tools-placement="first-row" style="--lr-docx-editor-tool-border:transparent"></lr-docx-editor>
+  </div>`,
+  play: load(headings),
+};
+export const PageWideToolbar = {
+  render: () => html`<div style=${container}>
+    <p>The toolbar spans the application grid above the document and two host-owned sidebars. Resize the viewport to stack the workspace and sidebars. Fit zoom follows the document column. Press Alt+F10 to enter the toolbar.</p>
+    <div class="docx-page-toolbar-story">
+      <style>
+        .docx-page-toolbar-story {
+          display: grid;
+          grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 18rem);
+          grid-template-areas: "tools tools tools" "filters document results";
+          align-items: start;
+          gap: var(--lr-space-m);
+          min-inline-size: 0;
+        }
+        .docx-page-toolbar-story lr-docx-editor { --lr-docx-editor-tool-border: transparent; }
+        .docx-page-toolbar-story lr-docx-editor::part(toolbar-area) { grid-area: tools; }
+        .docx-page-toolbar-story lr-docx-editor::part(workspace) { grid-area: document; }
+        .docx-page-toolbar-story lr-docx-editor::part(toolbar-first-row) { gap: var(--lr-space-s); }
+        .docx-page-toolbar-story .filters { grid-area: filters; min-inline-size: 0; }
+        .docx-page-toolbar-story .results { grid-area: results; min-inline-size: 0; }
+        @media (max-width: 60rem) {
+          .docx-page-toolbar-story {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "tools" "document" "filters" "results";
+          }
+        }
+      </style>
+      <lr-docx-editor aria-label="Document editor" toolbar-placement="layout" document-tools-placement="first-row" zoom="fit"></lr-docx-editor>
+      <aside class="filters" aria-label="Document filters">
+        <h2>Document filters</h2>
+        <p>This sidebar belongs to the application. The editor remains responsible for its toolbar, selection and document.</p>
+      </aside>
+      <aside class="results" aria-label="Document results">
+        <h2>Document results</h2>
+        <p>Open Checks in the toolbar to inspect the fixture's skipped heading level. Application analysis can occupy this separate column.</p>
+      </aside>
+    </div>
+  </div>`,
+  play: load(headings),
+};
+
+export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor, DocumentToolsFirstRow, PageWideToolbar };

@@ -10,6 +10,9 @@ export const styles = css`
     font-family: var(--lr-font);
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
+    /* Preserve inherited button overrides; semantic defaults resolve on each tool. */
+    --_docx-tool-border: var(--lr-docx-editor-tool-border, var(--lr-button-border));
+    --_docx-tool-quiet-border: var(--lr-docx-editor-tool-border, var(--lr-button-quiet-border));
   }
 
   [part='base'] {
@@ -24,8 +27,33 @@ export const styles = css`
     overflow: hidden;
   }
 
-  [part='toolbar'] {
+  :host([toolbar-placement='layout']), :host([toolbar-placement='layout']) [part='base'] {
+    display: contents;
+    container-type: normal;
+  }
+  :host([hidden]) { display: none; }
+
+  [part='workspace'] { display: contents; }
+  :host([toolbar-placement='layout']) [part='workspace'] {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    min-inline-size: 0;
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    overflow: hidden;
+  }
+  [part='toolbar-area'] {
+    flex: none;
+    min-inline-size: 0;
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     --_docx-control-height: calc(max(var(--lr-icon-button-size), var(--lr-theme-form-control-height-s, var(--lr-icon-button-size))) + var(--lr-border-width-thin) * 2);
+  }
+  [part='toolbar'] {
     position: relative;
     flex: none;
     display: flex;
@@ -68,6 +96,13 @@ export const styles = css`
     max-inline-size: 100%;
   }
   .toolbar-row > * { flex-shrink: 0; }
+  .toolbar-row > [part='navigation-tools'] {
+    flex-wrap: nowrap;
+    padding: 0;
+    padding-inline-start: var(--lr-space-s);
+    border-block-end: 0;
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
   .toolbar-row :is(.insert-tools, [part='table-tools'], [part='table-actions'], [part='image-tools']) {
     flex-wrap: nowrap;
     flex-shrink: 0;
@@ -84,8 +119,11 @@ export const styles = css`
     min-inline-size: 0;
   }
 
-  [part='toolbar'] [data-tool-key], [part='file-actions'] > [part], [part='document-panel-toggle'] {
+  [part='toolbar'] [data-tool-key], [part='file-actions'] > [part],
+  [part='document-panel-toggle'], [part='commands-button'], [part='image-replace-trigger'] {
     --lr-button-size-s: var(--_docx-control-height);
+    --lr-button-border: var(--_docx-tool-border, var(--lr-color-border-normal));
+    --lr-button-quiet-border: var(--_docx-tool-quiet-border, var(--lr-color-border));
   }
   [part='paragraph-style'] { --lr-select-trigger-min-height: var(--_docx-control-height); }
   [part='font-family'] { --lr-combobox-trigger-min-height: var(--_docx-control-height); }

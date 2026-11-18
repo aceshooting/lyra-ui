@@ -1,11 +1,13 @@
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
+import { runToolbarPlacement } from './toolbar-placement-browser.mjs';
 import { zipEntry } from '../test/zip.mjs';
 
 export async function runEditorLayout(page, check, { createEditor, saveEditor, evidenceDirectory }) {
   const evidence = name => resolve(evidenceDirectory, `${page.context().browser().browserType().name()}-${name}.png`);
   await page.evaluate(() => document.querySelector('#fixture').replaceChildren());
+  await runToolbarPlacement(page, check, { createEditor, saveEditor });
   await createEditor(page, 'layout');
   const editor = page.locator('#layout');
   await editor.locator('.docx-pages').click();

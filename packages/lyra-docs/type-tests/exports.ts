@@ -1,5 +1,5 @@
 import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxImageDirection, type DocxImageAction, type DocxImageContext, type DocxImageDescription, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
-import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
+import type { DocxDocumentToolsPlacement, DocxToolbarPlacement, LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 import type { DocxImageSource, DocxInsertImageOptions, DocxRevision, DocxResult, DocxTableBorderStyle, DocxTableBorderTarget } from '@aceshooting/lyra-docs/docx';
 import { DOCX_REMOTE_LIMITS, fetchDocxBytes, type DocxFetchOptions } from '@aceshooting/lyra-docs/docx';
 import { DOCX_BATCH_LIMITS, DOCX_FRAGMENT_LIMITS, type DocxBatchEdit, type DocxBatchOptions, type DocxBatchResult, type DocxBatchStep,
@@ -121,6 +121,18 @@ function editingContracts(session: DocxSession): void {
   }
 }
 void editingContracts;
+
+function toolbarLayoutContracts(editor: HTMLElementTagNameMap['lr-docx-editor']): void {
+  const previousToolbar: DocxToolbarPlacement = editor.toolbarPlacement;
+  const previousTools: DocxDocumentToolsPlacement = editor.documentToolsPlacement;
+  editor.toolbarPlacement = 'layout';
+  editor.documentToolsPlacement = 'first-row';
+  editor.toolbarPlacement = previousToolbar;
+  editor.documentToolsPlacement = previousTools;
+  // @ts-expect-error The first-row option belongs to documentToolsPlacement.
+  editor.toolbarPlacement = 'first-row';
+}
+void toolbarLayoutContracts;
 
 async function remoteContracts(editor: LyraDocxEditor): Promise<void> {
   const fetched: DocxResult<Uint8Array> = await fetchDocxBytes('/files/report.docx', { signal: new AbortController().signal, baseUrl: 'https://example.test/' });

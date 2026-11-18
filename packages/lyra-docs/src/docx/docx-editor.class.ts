@@ -147,6 +147,8 @@ const highlightColors = [
 const lineSpacings = [1, 1.15, 1.5, 2, 2.5, 3] as const;
 const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 export type DocxEditorZoom = number | 'fit';
+export type DocxToolbarPlacement = 'inline' | 'layout';
+export type DocxDocumentToolsPlacement = 'separate' | 'first-row';
 /** `fit` or a factor from 0.25 to 4; anything else falls back to 100%. */
 const zoomConverter = {
   fromAttribute(value: string | null): DocxEditorZoom {
@@ -272,7 +274,11 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @slot table-delete-column-icon - Decorative icon for the table delete column action; the editor retains its accessible name.
  * @slot table-delete-table-icon - Decorative icon for the table delete table action; the editor retains its accessible name.
  * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. At a fixed zoom, pages keep their scale and scroll horizontally in narrower allocations; zoom="fit" follows the width.
+ * @cssprop --lr-docx-editor-tool-border - Border color for quiet and filled toolbar icon controls. Defaults to the inherited button theme. Mixed-state outlines and dialog or panel text actions keep their own borders.
  * @csspart base - The root editor surface.
+ * @csspart toolbar-area - Toolbar and navigation controls. A separately placeable grid or flex item in layout mode.
+ * @csspart workspace - Document panels, editing surface and status. A separately placeable grid or flex item in layout mode.
+ * @csspart toolbar-first-row - File, history and insertion tools, followed by navigation controls with first-row placement.
  * @csspart toolbar - File and formatting controls.
  * @csspart file-actions - New, Open and Save controls.
  * @csspart new-button - Creates a blank document.
@@ -454,6 +460,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   /** Applied when the next document is opened. The session fixes this value at creation. */
   @property({ type: Boolean, attribute: 'read-only', reflect: true }) readOnly = false;
 
+  /** Expose the toolbar area and workspace as items in the parent layout, or keep them together inline. */
+  @property({ attribute: 'toolbar-placement', reflect: true, useDefault: true }) toolbarPlacement: DocxToolbarPlacement = 'inline';
+
+  /** Place document navigation tools above the toolbar or after insertion tools in its first row. */
+  @property({ attribute: 'document-tools-placement', reflect: true, useDefault: true }) documentToolsPlacement: DocxDocumentToolsPlacement = 'separate';
+
   /** Page zoom: `fit` follows the available width, or a factor from 0.25 to 4. Presentation only. */
   @property({ reflect: true, converter: zoomConverter }) zoom: DocxEditorZoom = 1;
   private appliedZoom: { session: DocxSession; zoom: DocxEditorZoom } | null = null;
@@ -630,6 +642,27 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     super.disconnectedCallback();
   }
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    // Reflow can synchronously publish a selection snapshot. Render it in this update.
+    this.applyZoom();
+  }
+
+  protected override update(changed: PropertyValues<this>): void {
+    const focused = changed.has('documentToolsPlacement') ? this.ownFocus() : null;
+    const navigationTool = focused?.closest('[part="navigation-tools"]') ? focused : null;
+    super.update(changed);
+    // Switching rows recreates this control. Return focus only when nothing else claimed it.
+    if (navigationTool?.id && !navigationTool.isConnected) {
+      const replacement = this.shadowRoot?.getElementById(navigationTool.id) as LyraElement | null;
+      const owner = this.session, sequence = this.sourceReadSequence, document = this.ownerDocument;
+      if (replacement) void replacement.updateComplete.then(() => {
+        if (this.commandOwnerCurrent(owner, sequence) && this.ownerDocument === document &&
+            this.shadowRoot?.contains(replacement) && document.activeElement === document.body) replacement.focus();
+      });
+    }
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (this.commandsOpen && (changed.has('strings') || changed.has('locale'))) {
@@ -637,7 +670,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.requestUpdate();
     }
     this.refreshTableLabels();
-    this.applyZoom();
     const overlayOnly = [...(changed as Map<PropertyKey, unknown>).keys()].every(key => key === 'imageClip' || key === 'chartLayer');
     if (!overlayOnly) this.scheduleImageFrame();
     const current = this.renderRoot.querySelector<HTMLElement>(`[data-tool-key="${this.toolbarKey}"]`);
@@ -669,6 +701,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.unsubscribeSession = null;
     this.session?.destroy();
     this.session = null;
+    this.appliedZoom = null;
     this.lastUsable.clear();
     this.mount?.replaceChildren();
     this.clearEditingDrafts();
@@ -1211,7 +1244,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (!session || this.currentSnapshot?.status !== 'ready') return;
     const zoom = zoomConverter.fromAttribute(String(this.zoom));
     if (this.appliedZoom?.session === session && this.appliedZoom.zoom === zoom) return;
-    if (setInternalDocxZoom(session, zoom)) this.appliedZoom = { session, zoom };
+    if (!setInternalDocxZoom(session, zoom) || this.session !== session) return;
+    this.appliedZoom = { session, zoom };
+    // An lr-change listener may request another scale during the synchronous reflow.
+    if (zoomConverter.fromAttribute(String(this.zoom)) !== zoom) queueMicrotask(() => {
+      if (this.session === session) this.applyZoom();
+    });
   }
 
   private renderZoom(): TemplateResult {
@@ -3292,14 +3330,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   override render(): TemplateResult {
     const status = this.statusText();
+    const layout = this.toolbarPlacement === 'layout';
+    const firstRowTools = this.documentToolsPlacement === 'first-row';
     const hasError = this.currentSnapshot?.status === 'error' || this.currentSnapshot?.status === 'destroyed' || this.localError !== null;
     return html`
-      <section part="base" aria-label=${this.editorLabel()}>
-        ${this.renderNavigationTools()}
+      <section part="base" aria-label=${layout ? nothing : this.editorLabel()}>
+        <div part="toolbar-area">
+        ${firstRowTools ? nothing : this.renderNavigationTools()}
         <div part="toolbar" role="toolbar" aria-label=${this.localize('docxEditorToolbar')}
           @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}
           @lr-show=${this.onToolbarPanelShow} @lr-after-hide=${this.onToolbarPanelHidden}>
-          <div class="toolbar-row">
+          <div class="toolbar-row" part="toolbar-first-row">
           <div part="file-actions">
             <${buttonTag} part="new-button" id="tool-new" aria-label=${this.localize(toolIcons.new.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
               @click=${() => this.requestToolbarAction('new')}>${this.renderToolIcon('new')}</${buttonTag}>
@@ -3319,10 +3360,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
             ${this.renderTableTools()}
             ${this.renderImageTools()}
           </div>
+          ${firstRowTools ? this.renderNavigationTools() : nothing}
           </div>
           ${this.renderEditingTools()}
           ${this.renderTooltips()}
         </div>
+        </div>
+        <section part="workspace" aria-label=${layout ? this.editorLabel() : nothing}>
         ${this.pendingAction ? html`
           <div part="confirm" role="group" aria-label=${this.localize('docxEditorDiscardQuestion')}>
             <span>${this.localize('docxEditorDiscardQuestion')}</span>
@@ -3346,6 +3390,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           <span part="state">${status}</span>
           ${this.renderZoom()}
         </div>
+        </section>
       </section>
     `;
   }

@@ -370,15 +370,43 @@ mounts are unsupported. Render `<lr-docx-editor>` itself outside other component
 shadow roots too: there, every open is refused with `invalid-mount` and a message saying so.
 
 Common formatting, alignment, list, insertion and history actions use icons with localized
-accessible names and keyboard/hover tooltips. A compact document-tools group above the
-editing toolbar provides Commands, Outline, Checks, Review and Replace image. The
-replacement action stays present and disabled until an eligible image is selected.
+accessible names and keyboard/hover tooltips. Commands, Outline, Checks, Review and Replace
+image form the document-tools group. The replacement action stays present and disabled until
+an eligible image is selected. Document tools share the editing tools' control height.
+
+| Property | Attribute | Default | Placement |
+| --- | --- | --- | --- |
+| `documentToolsPlacement: 'separate' \| 'first-row'` | `document-tools-placement` | `'separate'` | Above the toolbar, or after insertion tools in the first row, in both DOM and keyboard order |
+| `toolbarPlacement: 'inline' \| 'layout'` | `toolbar-placement` | `'inline'` | Toolbar and document together, or independently allocated by the editor's parent layout |
+
+Both properties reflect to their attributes. This editor places the document tools in the first row.
+
+```html
+<lr-docx-editor document-tools-placement="first-row"></lr-docx-editor>
+```
+
 Wide allocations place file, history,
 insertion, font and paragraph formatting tools on one row; narrower allocations use
 two rows. Contextual image and table actions are compact icon buttons with localized
 tooltips, so they fit beside the file and insertion tools; only very narrow allocations
 scroll that row horizontally, keeping the toolbar height and document position stable.
 Formatting groups wrap within narrower widths; keyboard focus reveals offscreen actions.
+The `toolbar-first-row` part exposes the actual first-row container for styling and measurement.
+Its allocation, and the toolbar's responsive layout, follow the toolbar area's width.
+
+Set `--lr-docx-editor-tool-border` on the editor to change the resting border color of its
+quiet and filled icon tools, including the document tools.
+
+```css
+lr-docx-editor {
+  --lr-docx-editor-tool-border: transparent;
+}
+```
+
+Leaving the property unset preserves the inherited button theme. Hover, pressed and focus
+feedback remain active. Mixed-state outlines and text actions inside panels or dialogs keep
+their own borders.
+
 Replace a toolbar glyph with a decorative SVG or icon assigned to its named slot:
 
 ```html
@@ -405,6 +433,83 @@ slotted icons must not contain focusable or interactive content. History and ima
 navigation icons mirror with the reading direction; alignment icons remain physical. Import
 `@aceshooting/lyra-ui/components/lr-icon.js` when using the icon element separately.
 
+### Page-wide toolbar layout
+
+`toolbar-placement="layout"` makes `toolbar-area` and `workspace` independent items in the
+parent's grid or flex layout. This lets the toolbar span the page while the document sits between
+host-owned side panels. The editor keeps ownership of its controls, tooltips, retained selection
+and document mount. Alt+F10, toolbar navigation, icon slots and the normal event/save contracts
+continue to apply.
+
+Set the grid areas and any surrounding borders on the two exposed parts. The editor uses
+`display: contents` in this mode. The workspace carries the editor’s accessible name and the
+toolbar carries its localized name.
+
+Place the editor and side panels in the document’s light DOM. In this example, the editor
+comes first in source order so keyboard users reach its toolbar before the side panels.
+
+```html
+<div class="docx-analysis">
+  <lr-docx-editor
+    id="analysis-editor"
+    aria-label="Document editor"
+    toolbar-placement="layout"
+    document-tools-placement="first-row"
+    zoom="fit"
+  ></lr-docx-editor>
+  <aside class="filters" aria-label="Document filters">
+    <h2>Document filters</h2>
+    <p>Your application's filter controls go here.</p>
+  </aside>
+  <aside class="results" aria-label="Document results">
+    <h2>Document results</h2>
+    <p>Your application's document analysis goes here.</p>
+  </aside>
+</div>
+```
+
+```css
+.docx-analysis {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 18rem);
+  grid-template-areas: "tools tools tools" "filters document results";
+  align-items: start;
+  gap: var(--lr-space-m);
+  min-inline-size: 0;
+}
+.docx-analysis lr-docx-editor {
+  --lr-docx-editor-tool-border: transparent;
+}
+.docx-analysis lr-docx-editor::part(toolbar-area) { grid-area: tools; }
+.docx-analysis lr-docx-editor::part(workspace) { grid-area: document; }
+.docx-analysis lr-docx-editor::part(toolbar-first-row) { gap: var(--lr-space-s); }
+.docx-analysis .filters { grid-area: filters; min-inline-size: 0; }
+.docx-analysis .results { grid-area: results; min-inline-size: 0; }
+@media (max-width: 60rem) {
+  .docx-analysis {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "tools" "document" "filters" "results";
+  }
+}
+```
+
+```js
+import '@aceshooting/lyra-ui/theme.css';
+import '@aceshooting/lyra-docs/docx/editor';
+import '@aceshooting/lyra-docs/docx/editor.css';
+
+const editor = document.querySelector('#analysis-editor');
+if (!editor) throw new Error('DOCX editor is not mounted');
+const opened = await editor.newDocument();
+if (!opened.ok) console.error(opened.code);
+```
+
+The built-in New and Open controls work in this layout too. Use the existing `lr-save` receipt
+handler to persist changes. `zoom="fit"`
+follows the document workspace allocation independently of the wider toolbar.
+
+### Document allocation and zoom
+
 The document paper stays white in light and dark themes; authored text colors are preserved.
 
 Documents open at 100% scale. The status bar's **Zoom** select (and the reflected
@@ -424,6 +529,8 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | Parts | Purpose |
 | --- | --- |
 | `base`, `toolbar`, `file-actions`, `format-actions` | Editor surface and toolbar groups |
+| `toolbar-area`, `workspace` | Independently placeable toolbar and named document regions in layout mode |
+| `toolbar-first-row` | Actual file/history/insertion row, including document tools with first-row placement |
 | `new-button`, `open-button`, `save-button`, `format-button`, `file-input` | File and formatting controls; `format-button` identifies its command with `data-command` |
 | `confirm`, `discard-button`, `keep-button` | Dirty-document replacement confirmation |
 | `editing-tools`, `paragraph-style`, `alignment-actions`, `list-actions`, `edit-button` | Paragraph and text formatting controls; `edit-button` identifies its action with `data-edit` |
@@ -439,7 +546,7 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
 | `find-toggle`, `find`, `find-query`, `find-match-case`, `find-whole-word`, `find-submit`, `find-count`, `find-previous`, `find-next`, `find-replace`, `find-replace-button` | Demand-driven find and replace-one controls |
 | `commands-button`, `command-palette` | Command discovery trigger and searchable palette |
-| `navigation-tools` | Compact document-tools group above the editing toolbar |
+| `navigation-tools` | Compact document-tools group above the editing toolbar by default, or after insertion controls with first-row placement |
 | `find-results`, `find-match`, `find-current` | Clickable bounded excerpts and current result |
 | `document-panel-toggle`, `document-panel`, `document-panel-heading`, `document-panel-refresh`, `document-panel-close` | Outline, checks and review panel controls |
 | `outline-items`, `document-target`, `inspection-items`, `diagnostic-target` | Heading and diagnostic navigation |
