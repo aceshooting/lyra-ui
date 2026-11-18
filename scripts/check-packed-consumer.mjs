@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // The complete MapLibre v6 graph with canvas allocation measures 2,534,012 raw bytes
-    // across the same 52 files; the next 64-byte boundary leaves 4 bytes.
-    maxRawBytes: 2_534_016,
+    // MapLibre 6.19.0 changes the worker and main chunks. The complete Map graph measures
+    // 2,561,986 raw bytes across 52 files, with 62 bytes to the next 64-byte boundary.
+    maxRawBytes: 2_562_048,
   },
   graph: {
     fixture: 'optional',
@@ -605,7 +605,8 @@ async function writeFixture(
   packageTarball,
   flagsTarball,
   withOptionalPeers,
-  maplibreVersion = '^6.0.0',
+  // Keep the measured v6 graph on the exact engine resolved by the workspace.
+  maplibreVersion = '6.19.0',
   performanceBaselineTarball,
   translationsTarball,
   mapTarball,
@@ -1790,12 +1791,12 @@ async function main() {
       uiTarball,
       flagsTarball,
       false,
-      '^6.0.0',
+      undefined,
       performanceOptions?.baselineTarballPath,
       translationsTarball,
       mapTarball,
     );
-    await writeFixture(optionalFixture, uiTarball, flagsTarball, true, '^6.0.0', undefined, translationsTarball, mapTarball);
+    await writeFixture(optionalFixture, uiTarball, flagsTarball, true, undefined, undefined, translationsTarball, mapTarball);
     await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0', undefined, translationsTarball, mapTarball);
     await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], coreFixture, 'core fixture install');
     await run(

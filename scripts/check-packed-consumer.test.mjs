@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from '../packages/lyra-ui/scripts/compact-build-css.mjs';
@@ -62,6 +63,26 @@ test('the migrated consumer configures its modular worker without changing nativ
   }
 });
 
+test('the packed MapLibre v6 fixture resolves the exact qualified workspace engine', async () => {
+  const start = checkerSource.indexOf('async function writeFixture(');
+  const end = checkerSource.indexOf("  await writeFile(join(fixtureDir, '.npmrc')", start);
+  const optionalCall = checkerSource.match(/^    await (writeFixture\(optionalFixture,[^\n]+\));$/mu)?.[1];
+  assert.ok(start >= 0 && end > start && optionalCall);
+  let fixtureManifest;
+  const writeFixture = new Function('writeFile', 'join', 'relative', 'uiPackageJson', 'FIXTURE_OPTIONAL_PEERS',
+    `return (${checkerSource.slice(start, end)}});`
+  )(async (_file, content) => { fixtureManifest = JSON.parse(content); }, join, relative, { dependencies: { lit: '3.3.3' } }, {});
+  await new Function('writeFixture', 'optionalFixture', 'uiTarball', 'flagsTarball', 'translationsTarball', 'mapTarball',
+    `return ${optionalCall};`
+  )(writeFixture, '/fixture', '/ui.tgz', '/flags.tgz', '/translations.tgz', '/map.tgz');
+
+  const workspaceRequire = createRequire(new URL('../packages/lyra-ui/package.json', import.meta.url));
+  const { version: workspaceVersion } = workspaceRequire('maplibre-gl/package.json');
+  assert.match(workspaceVersion, /^6\.\d+\.\d+$/u);
+  assert.equal(fixtureManifest.devDependencies['maplibre-gl'], workspaceVersion,
+    'the measured packed graph must use the exact same engine as the frozen workspace');
+});
+
 test('caps measured core and optional graphs without an implicit binary allowance', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
@@ -101,7 +122,7 @@ test('caps measured core and optional graphs without an implicit binary allowanc
   assert.match(overage[0], /exceeds budget/u);
 
   for (const [entry, measurement, expectedCeiling] of [
-    ['map', 2_534_012, 2_534_016],
+    ['map', 2_561_986, 2_562_048],
     ['graph', 463_780, 463_808],
   ]) {
     const entryBlock = checkerSource.match(new RegExp(`^  ${entry}: \\{([\\s\\S]*?)^  \\},`, 'mu'))?.[1];
