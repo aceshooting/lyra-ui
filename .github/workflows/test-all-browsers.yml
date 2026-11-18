@@ -134,7 +134,7 @@ jobs:
         if: matrix.browser == 'chrome' || matrix.browser == 'edge'
         env:
           INSTALL_BROWSER: ${{ matrix.browser == 'edge' && 'msedge' || 'chrome' }}
-        run: ./scripts/ci-phase.sh channel-binary pnpm --filter @aceshooting/lyra-ui exec playwright install "$INSTALL_BROWSER"
+        run: ./scripts/ci-phase.sh channel-binary ./scripts/ci-install-browser.sh "$INSTALL_BROWSER"
       # One browser per job: --serial streams the existing lane and keeps its tuned concurrency,
       # deterministic port and complete four-way partition, against the build job's dist/.
       - name: Run complete browser shard

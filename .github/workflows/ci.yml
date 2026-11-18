@@ -1553,8 +1553,11 @@ jobs:
             sudo dpkg --configure -a 2>/dev/null || true
           done
           echo "::warning::install-deps did not succeed; continuing, since the runner image already provides these libraries"
-      - if: matrix.container == ''
-        run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.install_browser }}
+      - name: Install real browser channel
+        if: matrix.container == ''
+        env:
+          INSTALL_BROWSER: ${{ matrix.install_browser }}
+        run: ./scripts/ci-phase.sh channel-binary ./scripts/ci-install-browser.sh "$INSTALL_BROWSER"
       - name: Run platform contract suite
         if: matrix.browser != 'edge'
         env:

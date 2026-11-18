@@ -3852,7 +3852,7 @@ test('CI browser provisioning preserves requested rows, native engines and real 
   assert.match(testJob, /timeout-minutes: 60/u);
   assert.equal([...testJob.matchAll(/timeout-minutes:/gu)].length, 1);
   assert.match(testJob, /channel-os.*playwright install-deps "\$INSTALL_BROWSER"/u);
-  assert.match(testJob, /channel-binary.*playwright install "\$INSTALL_BROWSER"/u);
+  assert.match(testJob, /channel-binary.*ci-install-browser\.sh "\$INSTALL_BROWSER"/u);
   assert.match(testJob, /matrix.browser == 'chrome' \|\| matrix.browser == 'edge'/u);
   assert.match(testJob, /matrix.browser == 'edge' && 'msedge' \|\| 'chrome'/u);
   assert.match(testJob, /TEST_ALL_BROWSERS_SKIP_INSTALL: '1'/u);

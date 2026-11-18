@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import * as benchmarkCatalog from '../benchmarks/fixtures/catalog.mjs';
@@ -263,28 +264,90 @@ test('hosted quick comparison requires the complete Chromium profile and exact s
 test('real browser channels install independently of cache availability', () => {
   const ci = job(read('.github/workflows/ci.yml'), 'platform-contracts');
   const browsers = job(read('.github/workflows/test-all-browsers.yml'), 'test');
-  for (const source of [ci, browsers]) {
+  const [ciInstall, channel] = [ci, browsers].map(source => {
     assert.doesNotMatch(source, /actions\/cache(?:\/[^@\s]+)?@|playwright-cache|cache-hit/u);
     assert.match(source, /pnpm install --frozen-lockfile/u);
-  }
-  const install = ci.split(/\n(?= {6}- )/u)
-    .find(step => /run: pnpm --filter @aceshooting\/lyra-ui exec playwright install \$\{\{ matrix\.install_browser \}\}/u.test(step));
-  assert.ok(install);
-  const ciCondition = install.match(/^ {6}- if: (.+)$/mu)?.[1];
+    const install = source.split(/\n(?= {6}- )/u)
+      .find(step => step.startsWith('      - name: Install real browser channel\n'));
+    assert.ok(install);
+    assert.match(install, /run: \.\/scripts\/ci-phase\.sh channel-binary \.\/scripts\/ci-install-browser\.sh "\$INSTALL_BROWSER"/u);
+    return install;
+  });
+  const ciCondition = ciInstall.match(/^ {8}if: (.+)$/mu)?.[1];
   assert.ok(ciCondition);
   for (const container of ['', 'mcr.microsoft.com/playwright:v1.64.1-noble']) {
     assert.equal(runInNewContext(ciCondition, { matrix: { container } }), container === '');
   }
-  const channel = browsers.split(/\n(?= {6}- )/u)
-    .find(step => step.startsWith('      - name: Install real browser channel\n'));
-  assert.ok(channel);
+  assert.match(ciInstall, /INSTALL_BROWSER: \$\{\{ matrix\.install_browser \}\}/u);
   const condition = channel.match(/^ {8}if: (.+)$/mu)?.[1];
   assert.ok(condition);
   for (const browser of ['chromium', 'chrome', 'edge', 'firefox', 'safari']) {
     assert.equal(runInNewContext(condition, { matrix: { browser } }), ['chrome', 'edge'].includes(browser));
   }
   assert.match(channel, /INSTALL_BROWSER: \$\{\{ matrix\.browser == 'edge' && 'msedge' \|\| 'chrome' \}\}/u);
-  assert.match(channel, /run: \.\/scripts\/ci-phase\.sh channel-binary pnpm --filter @aceshooting\/lyra-ui exec playwright install "\$INSTALL_BROWSER"/u);
+});
+
+test('branded channel installation retries ordinary failures and preserves fatal exit statuses', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lyra-ci-install-browser-'));
+  const calls = join(root, 'calls');
+  try {
+    writeFileSync(join(root, 'timeout'), `#!/usr/bin/env bash
+set -euo pipefail
+[[ "$1" == --signal=TERM && "$2" == --kill-after=10s && "$3" == 180s ]]
+shift 3
+exec "$@"
+`, { mode: 0o755 });
+    writeFileSync(join(root, 'pnpm'), `#!/usr/bin/env bash
+set -euo pipefail
+channel="\${!#}"
+printf '%s\\n' "$*" >> "$INSTALL_TEST_CALLS"
+case "$INSTALL_TEST_OUTCOME" in
+  recover)
+    if [[ "$(wc -l < "$INSTALL_TEST_CALLS")" -eq 2 ]]; then
+      printf 'installed %s\\n' "$channel"
+      exit 0
+    fi
+    echo 'gpg: no valid OpenPGP data found.' >&2
+    exit 1
+    ;;
+  fail)
+    echo 'browser installer signature failure' >&2
+    exit 42
+    ;;
+  signal) kill -TERM "$$" ;;
+  timeout) exit 124 ;;
+esac
+`, { mode: 0o755 });
+    writeFileSync(join(root, 'sleep'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
+    const install = fileURLToPath(new URL('ci-install-browser.sh', import.meta.url));
+    const phase = fileURLToPath(new URL('ci-phase.sh', import.meta.url));
+    for (const { outcome, channel, status, attempts, output } of [
+      { outcome: 'recover', channel: 'msedge', status: 0, attempts: 2, output: 'gpg: no valid OpenPGP data found.' },
+      { outcome: 'fail', channel: 'chrome', status: 42, attempts: 3, output: 'browser installer signature failure' },
+      { outcome: 'signal', channel: 'msedge', status: 143, attempts: 1 },
+      { outcome: 'timeout', channel: 'msedge', status: 124, attempts: 1 },
+    ]) {
+      writeFileSync(calls, '');
+      const result = spawnSync('bash', [phase, 'channel-binary', install, channel], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, INSTALL_TEST_CALLS: calls, INSTALL_TEST_OUTCOME: outcome },
+        timeout: 5000,
+      });
+      assert.equal(result.status, status, `${outcome}\n${result.stdout}\n${result.stderr}`);
+      assert.deepEqual(readFileSync(calls, 'utf8').trim().split('\n'),
+        Array(attempts).fill(`--filter @aceshooting/lyra-ui exec playwright install ${channel}`));
+      assert.match(result.stdout, new RegExp(`phase-end.*channel-binary.*status=${status}`, 'u'));
+      if (output) {
+        const diagnostics = result.stderr.split('\n').filter(line => line === output);
+        assert.equal(diagnostics.length, attempts - Number(status === 0));
+      }
+      if (status === 0) assert.ok(result.stdout.includes(`installed ${channel}`));
+      else assert.match(result.stderr, /::error::/u);
+      assert.equal((result.stderr.match(/::warning::/gu) ?? []).length, attempts - 1);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('the coverage shard step runs under the strict console gate', () => {
