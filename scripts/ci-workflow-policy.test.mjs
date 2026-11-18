@@ -324,7 +324,7 @@ test('real browser channels install independently of cache availability', () => 
   assert.match(channel, /INSTALL_BROWSER: \$\{\{ matrix\.browser == 'edge' && 'msedge' \|\| 'chrome' \}\}/u);
 });
 
-test('branded channel installation retries ordinary failures and preserves fatal exit statuses', () => {
+test('Chrome installation retries ordinary failures and preserves fatal exit statuses', () => {
   const root = mkdtempSync(join(tmpdir(), 'lyra-ci-install-browser-'));
   const calls = join(root, 'calls');
   try {
@@ -344,7 +344,7 @@ case "$INSTALL_TEST_OUTCOME" in
       printf 'installed %s\\n' "$channel"
       exit 0
     fi
-    echo 'gpg: no valid OpenPGP data found.' >&2
+    echo 'browser installer download failure' >&2
     exit 1
     ;;
   fail)
@@ -359,10 +359,10 @@ esac
     const install = fileURLToPath(new URL('ci-install-browser.sh', import.meta.url));
     const phase = fileURLToPath(new URL('ci-phase.sh', import.meta.url));
     for (const { outcome, channel, status, attempts, output } of [
-      { outcome: 'recover', channel: 'msedge', status: 0, attempts: 2, output: 'gpg: no valid OpenPGP data found.' },
+      { outcome: 'recover', channel: 'chrome', status: 0, attempts: 2, output: 'browser installer download failure' },
       { outcome: 'fail', channel: 'chrome', status: 42, attempts: 3, output: 'browser installer signature failure' },
-      { outcome: 'signal', channel: 'msedge', status: 143, attempts: 1 },
-      { outcome: 'timeout', channel: 'msedge', status: 124, attempts: 1 },
+      { outcome: 'signal', channel: 'chrome', status: 143, attempts: 1 },
+      { outcome: 'timeout', channel: 'chrome', status: 124, attempts: 1 },
     ]) {
       writeFileSync(calls, '');
       const result = spawnSync('bash', [phase, 'channel-binary', install, channel], {
@@ -381,6 +381,83 @@ esac
       if (status === 0) assert.ok(result.stdout.includes(`installed ${channel}`));
       else assert.match(result.stderr, /::error::/u);
       assert.equal((result.stderr.match(/::warning::/gu) ?? []).length, attempts - 1);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Edge installation requires a fresh signed stable package and cleans its isolated APT data', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lyra-ci-edge-install-'));
+  const calls = join(root, 'calls');
+  try {
+    writeFileSync(join(root, 'sudo'), `#!/usr/bin/env bash
+set -euo pipefail
+[[ "$1" == -- ]]
+shift
+exec "$@"
+`, { mode: 0o755 });
+    writeFileSync(join(root, 'timeout'), `#!/usr/bin/env bash
+set -euo pipefail
+[[ "$1" == --signal=TERM && "$2" == --kill-after=10s && "$3" == 180s ]]
+shift 3
+exec "$@"
+`, { mode: 0o755 });
+    writeFileSync(join(root, 'apt-get'), `#!${process.execPath}
+const { appendFileSync, readFileSync, readdirSync } = require('node:fs');
+const args = process.argv.slice(2);
+const path = key => args.find(arg => arg.startsWith(key + '=')).slice(key.length + 1);
+const source = readFileSync(path('Dir::Etc::sourcelist'), 'utf8').trim();
+const key = readFileSync(source.match(/signed-by=([^,]+)/u)[1], 'utf8');
+const command = args.includes('update') ? 'update' : 'install';
+const lists = path('Dir::State::lists');
+appendFileSync(process.env.INSTALL_TEST_CALLS, JSON.stringify({
+  args, source, key, command, lists, entries: readdirSync(lists),
+  extraSources: readdirSync(path('Dir::Etc::sourceparts')),
+}) + '\\n');
+if (process.env.INSTALL_TEST_OUTCOME === command) {
+  console.error('APT could not verify ' + command);
+  process.exit(100);
+}
+if (process.env.INSTALL_TEST_OUTCOME === 'timeout') process.exit(124);
+if (process.env.INSTALL_TEST_OUTCOME === 'signal') process.kill(process.pid, 'SIGTERM');
+`, { mode: 0o755 });
+    writeFileSync(join(root, 'microsoft-edge-stable'), '#!/usr/bin/env bash\necho "Microsoft Edge 157.0.4341.60"\n', { mode: 0o755 });
+    writeFileSync(join(root, 'pnpm'), '#!/usr/bin/env bash\necho "unexpected Playwright reinstall" >&2\nexit 99\n', { mode: 0o755 });
+    const install = fileURLToPath(new URL('ci-install-browser.sh', import.meta.url));
+    const phase = fileURLToPath(new URL('ci-phase.sh', import.meta.url));
+    for (const [outcome, status, expectedCommands] of [
+      ['success', 0, ['update', 'install']],
+      ['update', 100, ['update']],
+      ['install', 100, ['update', 'install']],
+      ['timeout', 124, ['update']],
+      ['signal', 143, ['update']],
+    ]) {
+      writeFileSync(calls, '');
+      const result = spawnSync('bash', [phase, 'channel-binary', install, 'msedge'], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, TMPDIR: root, INSTALL_TEST_CALLS: calls, INSTALL_TEST_OUTCOME: outcome },
+        timeout: 5000,
+      });
+      assert.equal(result.status, status, `${outcome}\n${result.stdout}\n${result.stderr}`);
+      const apt = readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      assert.deepEqual(apt.map(({ command }) => command), expectedCommands);
+      for (const { args, source, key, command, lists, entries, extraSources } of apt) {
+        assert.match(source, /^deb \[arch=amd64 signed-by=[^,]+,BC528686B50D79E339D3721CEB3E94ADBE1229CF\] https:\/\/packages\.microsoft\.com\/repos\/edge stable main$/u);
+        assert.equal(key, read('scripts/fixtures/microsoft-edge-release-signing.asc'));
+        assert.deepEqual(extraSources, []);
+        if (command === 'update') {
+          assert.ok(args.includes('--error-on=any'));
+          assert.deepEqual(entries, []);
+        } else {
+          assert.ok(args.includes('--reinstall'));
+          assert.equal(args.at(-1), 'microsoft-edge-stable/stable');
+        }
+        assert.equal(existsSync(lists), false, 'temporary APT lists were removed');
+      }
+      assert.match(result.stdout, new RegExp(`phase-end.*channel-binary.*status=${status}`, 'u'));
+      assert.equal(result.stdout.includes('Microsoft Edge'), status === 0, 'report the installed version only on success');
+      if (outcome === 'update' || outcome === 'install') assert.ok(result.stderr.includes(`APT could not verify ${outcome}`));
     }
   } finally {
     rmSync(root, { recursive: true, force: true });

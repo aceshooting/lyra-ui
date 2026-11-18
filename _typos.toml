@@ -37,6 +37,9 @@ extend-exclude = [
   "docs/evidence/",
   "packages/lyra-flags/THIRD_PARTY_NOTICES.md",
 
+  # Public signing-key armor is cryptographic data.
+  "scripts/fixtures/microsoft-edge-release-signing.asc",
+
   # Seeds deliberately misspelled words to prove the spelling filter.
   "scripts/quality-tools.test.mjs",
 ]
