@@ -195,6 +195,22 @@ for (const stage of ['renderer-name', 'renderer-state', 'camera-state', 'host-re
 viewportCases['viewport-constructor-cleanup-preserves-original-error'] = () => constructorFailure('host-rendering', true);
 
 
+// Native context events are asynchronous and can arrive after several animation frames.
+async function waitForContextEvent(canvas, type, trigger) {
+  const controller = new AbortController();
+  let timeout;
+  try {
+    await new Promise((resolve, reject) => {
+      canvas.addEventListener(type, resolve, { once: true, signal: controller.signal });
+      timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${type}`)), 10000);
+      trigger();
+    });
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
+  }
+}
+
 viewportCases['viewport-resource-cache-context-epochs'] = async () => {
   cleanupViewport();
   const nativeContext = HTMLCanvasElement.prototype.getContext; const records = []; const seen = new WeakSet();
@@ -238,10 +254,12 @@ viewportCases['viewport-resource-cache-context-epochs'] = async () => {
     // The first material and its map have GPU bindings but are absent from the current scene.
     mesh.material = replacement; viewport.renderNow();
     for (let turn = 0; turn < 2; turn++) {
-      extension.loseContext(); await settle(); if (!viewport.lost) throw new Error('Expected native context loss');
-      await new Promise(resolve => setTimeout(resolve, 100)); extension.restoreContext();
-      const deadline = performance.now() + 10000; while (calls.restored <= turn && performance.now() < deadline) await settle();
-      if (calls.restored <= turn) throw new Error('Native restoration timed out');
+      await waitForContextEvent(viewport.canvas, 'webglcontextlost', () => extension.loseContext());
+      if (!viewport.lost || calls.lost[turn]?.[0] !== 'context-lost') throw new Error('Expected native context loss');
+      // Let the browser finish dispatching the canceled loss event before requesting restoration.
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await waitForContextEvent(viewport.canvas, 'webglcontextrestored', () => extension.restoreContext());
+      if (viewport.lost || calls.restored !== turn + 1) throw new Error('Expected native context restoration');
       mesh.material = original; viewport.renderNow(); picks.push(viewport.pickAt(240, 160)); viewport.renderNow();
       const rgba = new Uint8Array(4); gl.readPixels(gl.drawingBufferWidth / 2, gl.drawingBufferHeight / 2, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba); pixels.push(Array.from(rgba));
     }

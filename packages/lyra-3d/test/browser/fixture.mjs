@@ -402,13 +402,19 @@ Object.assign(cases, viewportCases, graphCases, graphSpatialCases, graphSpatialC
 Object.assign(performanceCases, pointsGpuCases);
 Object.assign(pointerCases, viewportPointerCases, graphPointerCases, pointsPointerCases, panoramaPointerCases);
 
+function describeFailure(error) {
+  const message = String(error);
+  const stack = error?.stack;
+  return typeof stack === 'string' && stack ? (stack.includes(message) ? stack : `${message}\n${stack}`) : message;
+}
+
 window.fixture = {
   async run(name) {
     try {
       cleanup();
       return { name, ...(await (cases[name] ?? performanceCases[name])()) };
     } catch (error) {
-      return { name, passed: false, error: String(error?.stack ?? error) };
+      return { name, passed: false, error: describeFailure(error) };
     } finally {
       cleanup();
     }
@@ -428,7 +434,7 @@ window.fixture = {
     try {
       return { name, ...(await pointerCases[`${name}:verify`](setup)) };
     } catch (error) {
-      return { name, passed: false, error: String(error?.stack ?? error) };
+      return { name, passed: false, error: describeFailure(error) };
     } finally {
       cleanup();
     }
