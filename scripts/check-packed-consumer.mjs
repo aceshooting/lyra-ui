@@ -320,9 +320,11 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // MapLibre 6.19.0 changes the worker and main chunks. The complete Map graph measures
-    // 2,561,986 raw bytes across 52 files, with 62 bytes to the next 64-byte boundary.
-    maxRawBytes: 2_562_048,
+    // MapLibre 6.19.0 geolocation controls retain their required camera and terrain math.
+    // With worker codecs and unused projection setup excluded from control imports, the
+    // complete graph measures 2,595,501 raw bytes across 52 files; initial gzip stays 439,972.
+    // The next 64-byte boundary leaves 19 bytes of raw headroom.
+    maxRawBytes: 2_595_520,
   },
   graph: {
     fixture: 'optional',

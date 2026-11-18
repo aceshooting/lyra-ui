@@ -122,7 +122,7 @@ test('caps measured core and optional graphs without an implicit binary allowanc
   assert.match(overage[0], /exceeds budget/u);
 
   for (const [entry, measurement, expectedCeiling] of [
-    ['map', 2_561_986, 2_562_048],
+    ['map', 2_595_501, 2_595_520],
     ['graph', 463_780, 463_808],
   ]) {
     const entryBlock = checkerSource.match(new RegExp(`^  ${entry}: \\{([\\s\\S]*?)^  \\},`, 'mu'))?.[1];
