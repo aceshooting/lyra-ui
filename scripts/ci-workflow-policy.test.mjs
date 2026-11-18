@@ -108,7 +108,8 @@ test('qualification and release Node setup never restores package-manager caches
     ['release.yml', 2],
     ['release-verification.yml', 1],
     ['prepare-artifacts.yml', 1],
-    ['publish.yml', 1],
+    ['publish.yml', 2],
+    ['verify-delayed-publication.yml', 1],
   ]);
   for (const [name, count] of workflows) {
     const source = read(`.github/workflows/${name}`);
