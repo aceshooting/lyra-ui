@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
+import { completeLocaleKeys } from '../test/locale-catalog-keys.js';
 import { loadLyraLocale } from './locale-loader.js';
-import { getLyraLocale, getLyraLocaleDirection, getRegisteredLyraLocaleKeys, getRegisteredLyraLocales, LYRA_DEFAULT_STRINGS } from './localization.js';
+import { getLyraLocale, getLyraLocaleDirection, getRegisteredLyraLocaleKeys, getRegisteredLyraLocales } from './localization.js';
 
 it('keeps catalogs absent until an exact supported locale is requested', async () => {
   expect(getRegisteredLyraLocales()).to.deep.equal(['en']);
@@ -10,7 +11,7 @@ it('keeps catalogs absent until an exact supported locale is requested', async (
   const first = loadLyraLocale('FR');
   expect(first === loadLyraLocale('fr')).to.equal(true);
   await first;
-  expect(getRegisteredLyraLocaleKeys('fr')).to.have.length(Object.keys(LYRA_DEFAULT_STRINGS).length);
+  expect([...getRegisteredLyraLocaleKeys('fr')].sort()).to.deep.equal(await completeLocaleKeys());
   expect(getRegisteredLyraLocaleKeys('de')).to.have.length(0);
   expect(getLyraLocale()).to.equal(previous);
 });
@@ -28,7 +29,7 @@ for (const [sourceTag, canonical] of [['tl', 'fil'], ['pnb', 'lah']] as const) {
     const first = loadLyraLocale(sourceTag);
     expect(first === loadLyraLocale(canonical)).to.equal(true);
     await first;
-    expect(getRegisteredLyraLocaleKeys(sourceTag)).to.have.length(Object.keys(LYRA_DEFAULT_STRINGS).length);
+    expect([...getRegisteredLyraLocaleKeys(sourceTag)].sort()).to.deep.equal(await completeLocaleKeys());
     expect(getRegisteredLyraLocales().filter((tag) => tag === sourceTag || tag === canonical)).to.deep.equal([canonical]);
     if (sourceTag === 'pnb') expect(getLyraLocaleDirection(sourceTag)).to.equal('rtl');
   });
@@ -47,7 +48,7 @@ for (const [tag, parent, sample] of [
     expect(own.length).to.be.lessThan(150);
     expect(own).to.include(sample);
     expect(getRegisteredLyraLocales()).to.include(tag);
-    if (parent) expect(getRegisteredLyraLocaleKeys(parent)).to.have.length(Object.keys(LYRA_DEFAULT_STRINGS).length);
+    if (parent) expect([...getRegisteredLyraLocaleKeys(parent)].sort()).to.deep.equal(await completeLocaleKeys());
     expect(getLyraLocaleDirection(tag)).to.equal('ltr');
   });
 }

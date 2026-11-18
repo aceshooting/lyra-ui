@@ -9,7 +9,7 @@ import {
   setLyraLocale,
   subscribeLyraLocale,
 } from './localization-runtime.js';
-import { LYRA_DEFAULT_STRINGS } from './localization.js';
+import { completeLocaleKeys } from '../../test/locale-catalog-keys.js';
 
 const regionalOverrideKeys = [
   'calendarViewerMissingParser',
@@ -23,6 +23,27 @@ const regionalOverrideKeys = [
   'dockPanelResize',
   'documentPreviewResourceTooLarge',
   'documentViewerMissingSanitizer',
+  'docxEditorCapabilityRefused',
+  'docxEditorCheckUnsupported',
+  'docxEditorClosePanel',
+  'docxEditorCommandIndentIncrease',
+  'docxEditorErrorTooLarge',
+  'docxEditorFindSelectMatch',
+  'docxEditorFontSize',
+  'docxEditorImageInsertLimit',
+  'docxEditorImageInsertRatioUnavailable',
+  'docxEditorImageInsertStale',
+  'docxEditorImageSizeHint',
+  'docxEditorImageStale',
+  'docxEditorIndentIncrease',
+  'docxEditorMatchCase',
+  'docxEditorReasonComposing',
+  'docxEditorReplaceImageHint',
+  'docxEditorResizeImage',
+  'docxEditorReviewSelectText',
+  'docxEditorReviewStale',
+  'docxEditorTableBorderOutside',
+  'docxEditorTableStale',
   'docxViewerMissingConverter',
   'emailViewerMissingParser',
   'fileInputRejectedMaxTotalSize',
@@ -65,8 +86,10 @@ it('loads the matching parent family before a sparse regional slice and lazily c
   expect(loadLyraLocale('DE-CH') === first).to.equal(true);
   await first;
   expect(getLyraLocale()).to.equal(active);
-  expect(getRegisteredLyraLocaleKeys('de').length).to.equal(Object.keys(LYRA_DEFAULT_STRINGS).length);
+  expect([...getRegisteredLyraLocaleKeys('de')].sort()).to.deep.equal(await completeLocaleKeys());
   expect([...getRegisteredLyraLocaleKeys('de-CH')].sort()).to.deep.equal(regionalOverrideKeys);
+  expect(resolveLyraString(host, 'docxEditorIndentIncrease')).to.equal('Einzug vergrössern');
+  expect(resolveLyraString(host, 'docxEditorSave')).to.equal('Speichern');
   expect(resolveLyraString(host, 'close')).to.equal('Schliessen');
   expect(getRegisteredLyraLocales().includes('de-AT')).to.equal(false);
 });
