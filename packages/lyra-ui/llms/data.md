@@ -3413,14 +3413,16 @@ if its expansion committed during the operation. Later responses use the regular
 Both bulk methods are no-ops in source mode, and `reorderable` has no source-mode effect. Expansion
 and selection use provider projection actions rather than legacy item/lazy lifecycle events.
 
-**Events:** source mode emits `lr-source-selection-change` only after a current user selection
+**Events:** `lr-source-selection-change`, `lr-selection-change`, `lr-reorder`,
+`lr-bulk-toggle` (bulk disclosure summary), and `lr-pointer-reorder` (pointer move request).
+Source mode emits `lr-source-selection-change` only after a current user selection
 projection commits: frozen readonly `detail: { key: string; selected: boolean;
 scope: 'item' | 'subtree'; state: string }`. It reports the accepted global-key intent and new
 opaque state, without constructing a DOM selection array. The following events are legacy-only:
 `lr-selection-change` (`detail: { selection }`, where both the detail and selection
 snapshot are frozen; fired for user selection and when a `data` refresh removes or re-seeds selected
 rows) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
-Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
+`lr-reorder` is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. The live region likewise announces a completed move only after the rendered sibling
 order confirms the exact requested swap. Ignored or rejected requests stay silent, and unrelated
