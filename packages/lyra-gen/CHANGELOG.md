@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.3
+
+### Patch Changes
+
+- 04b311b: Update the A2UI binding guide to the AG-UI 1.0.5 clients verified by the HTTP streaming compatibility tests.
+- Updated dependencies [28f1d9c]
+  - @aceshooting/lyra-ui@31.1.2
+
 ## 1.3.2
 
 ### Patch Changes
