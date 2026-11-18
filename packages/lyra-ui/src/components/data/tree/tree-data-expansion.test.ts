@@ -202,10 +202,13 @@ describe('tree data expansion', () => {
     expect(requests).to.have.length(1);
 
     host.appendChild(tree);
+    const reconnectUpdate = row.updateComplete;
     await tree.updateComplete;
+    expect(await reconnectUpdate).to.equal(true);
     expect(node(tree, 'lazy') === row).to.equal(true);
     expect(row.expanded).to.equal(false);
     expect(row.loading).to.equal(true);
+    expect(row.getAttribute('aria-busy')).to.equal('true');
     expect(requests.map((request) => request.connected)).to.deep.equal([true, true]);
     expect(requests[1]!.generation).to.be.greaterThan(requests[0]!.generation);
   });

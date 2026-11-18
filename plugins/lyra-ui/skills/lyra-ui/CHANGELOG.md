@@ -14,6 +14,7 @@ The quick Chromium comparison of the feature candidate with 31.1.1 flagged five 
 
 ### Patch Changes
 
+- Keep lazy tree loading and its accessible busy state in one render, including after reconnect.
 - fe6ba7d: Include document editor translations in full locale imports and expose a `docx-editor` family for applications that load editor messages separately.
 - fe6ba7d: Consume printable select typeahead keys so choosing an option in WebKit cannot also replace a retained text selection in an editor.
 - Updated dependencies [fe6ba7d]

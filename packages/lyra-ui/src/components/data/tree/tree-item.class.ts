@@ -628,6 +628,11 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     if (changed.has('lazy') && this._loading && !this.lazy) {
       this.finishLazyLoad(this.lazyGeneration, this.actualChildItems().length > 0);
     }
+    // An authored lazy request makes this row busy in the same render. Detached rows retry on reconnect.
+    if (this.isConnected && this.item && this.ownerContext.expansionVisible &&
+      this.expansionOwner?.read(this.item) === 'awaiting-children') {
+      this.expand();
+    }
     this.setAttribute('role', 'treeitem');
     const context = this.ownerContext;
     this.setAttribute('aria-level', String(context.depth + 1));
@@ -664,16 +669,10 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Lit can finish a scheduled update after disconnect. Wait for the connected update before
-    // restarting a pending authored lazy expansion or asking the tree to synchronize its rows.
     if (!this.isConnected) return;
     // Expanding (by any route, including a direct `expanded` write) or a refreshed `item` renders
     // new child rows that start without hierarchy context. The owning tree supplies it.
     if (changed.has('expanded') || changed.has('item')) this.ownerContext.syncOwner?.();
-    if (this.item && this.ownerContext.expansionVisible &&
-      this.expansionOwner?.read(this.item) === 'awaiting-children') {
-      this.expand();
-    }
   }
 
   private syncDataExpansion(changed: PropertyValues): void {

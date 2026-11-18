@@ -511,7 +511,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 22_844_800],
+    [9_999_999, 22_844_928],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
