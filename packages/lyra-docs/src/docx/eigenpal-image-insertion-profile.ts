@@ -291,7 +291,12 @@ function bodyParagraphs(body: OoxmlElement, cellParagraphs: Set<string>): OoxmlE
     attributes(node, ['w', 'type'], W); requireProfile(node.children.length === 0);
     requireProfile(['auto', 'dxa', 'pct'].includes(attribute(node, 'type', W) ?? '') && integer(attribute(node, 'w', W) ?? '', 0, 1000000));
   };
-  for (const block of elements(body)) {
+  const blocks = elements(body);
+  const lastBlock = blocks.length - (blocks.at(-1)?.localName === 'sectPr' ? 2 : 1);
+  for (const [blockIndex, block] of blocks.entries()) {
+    // The editor appends an empty body paragraph after a final table. Its cell remains the insertion target.
+    if (blockIndex === lastBlock && blockIndex > 0 && is(blocks[blockIndex - 1]!, W, 'tbl') &&
+      is(block, W, 'p') && block.attributes.length === 0 && block.children.length === 0) continue;
     if (!is(block, W, 'tbl')) { result.push(block); continue; }
     attributes(block, []); whitespace(block);
     const content = elements(block); let index = 0;

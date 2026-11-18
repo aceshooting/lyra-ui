@@ -25,9 +25,12 @@ test('append retains the final section and original blocks in one native package
   const current = store.currentPackage();
   const body = part.root.children.find(node => node.kind === 'body');
   assert(body?.kind === 'body');
+  // The canonical story includes a caret paragraph between the final table and section.
+  assert.deepEqual(body.children.map(node => node.localName),
+    ['p', 'p', 'tbl', 'p', 'sectPr']);
   assert.deepEqual(move(current, 0, 1, 0), { ok: true, value: null });
-  assert.deepEqual(move(current, 1, 3, 4), { ok: true, value: null });
-  const plan = move(current, 0, 1, 4);
+  assert.deepEqual(move(current, 1, 4, 5), { ok: true, value: null });
+  const plan = move(current, 0, 1, 5);
   assert(plan.ok && plan.value);
   const transform = plan.value;
   const trial = store.transact({ kind: 'body' }, transaction => {
@@ -42,8 +45,9 @@ test('append retains the final section and original blocks in one native package
   const updated = store.currentPackage();
   const next = updated.parts.get(pkg.mainDocumentPart)!.root.children.find(node => node.kind === 'body');
   assert(next?.kind === 'body');
-  const [a, b, table, section] = body.children;
-  assert(next.children[0] === b && next.children[1] === table && next.children[2] === a && next.children[3] === section);
+  const [a, b, table, caretParagraph, section] = body.children;
+  assert.equal(next.children.length, 5);
+  for (const [index, node] of [b, table, caretParagraph, a, section].entries()) assert.equal(next.children[index], node);
   assert.throws(() => transform(updated), 'a prepared move cannot be applied over changed main-part authority');
   assert(store.undo());
   assert.equal(store.currentPackage().parts.get(pkg.mainDocumentPart), part);

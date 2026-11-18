@@ -85,7 +85,7 @@ export function styledCell(table = false) {
   assert(parsed.ok); const part = structuredClone(parsed.part); (h.pkg.parts as Map<string, unknown>).set(MAIN, part);
   const nodes: OoxmlElement[] = [], stack: OoxmlNode[] = [part.root];
   while (stack.length) { const n = stack.pop()!; if (n.kind !== 'textValue') { nodes.push(n); stack.push(...n.children); } }
-  h.target.paragraphId = nodes.find(n => n.localName === 'p')!.id; if (table) h.target.offset = 0;
+  h.target.paragraphId = nodes.find(n => n.localName === 'p' && n.attributes.some(a => a.localName === 'paraId' && a.value === '00000001'))!.id; if (table) h.target.offset = 0;
   return { ...h, nodes };
 }
 

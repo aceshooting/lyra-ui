@@ -11174,8 +11174,8 @@
   "patches": [
     {
       "path": "engine/patches/01-semantic-features.patch",
-      "sha256": "6963f5c611a84dcf549df80afcc524bb6062424022c4b46b116862d5377db82a",
-      "bytes": 1856091
+      "sha256": "240b936e387b21bb488216d92a8ab64e21f81c6628117e506577f5842965ac3b",
+      "bytes": 1856768
     }
   ],
   "prepared": [
@@ -13026,8 +13026,8 @@
     },
     {
       "path": "packages/core/src/editor/inline-image-drag.ts",
-      "sha256": "9b597aa6507c324b698e462aa9cc3e270286044444026743b35b1c2b3bfb7fd4",
-      "bytes": 8672
+      "sha256": "64cbff77bb3985de9f86b0c8840316621eb6bd859b2c8e88fa8ec966d179290a",
+      "bytes": 8815
     },
     {
       "path": "packages/core/src/editor/inline-wrap-placement.ts",
@@ -20601,6 +20601,7 @@
     "packages/core/src/editor/docx-editor-prepared-open.ts",
     "packages/core/src/editor/docx-editor-types.ts",
     "packages/core/src/editor/docx-editor.ts",
+    "packages/core/src/editor/inline-image-drag.ts",
     "packages/core/src/editor/paginated-surface-contract.ts",
     "packages/core/src/editor/paginated-surface.prepared.ts",
     "packages/core/src/editor/paginated-surface.ts",

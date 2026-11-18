@@ -640,12 +640,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.append(mount, hint);
     }
     for (const type of innerEvents) this.renderRoot.addEventListener(type, stopEvent);
+    this.mount.addEventListener('pointerdown', this.onDocumentPress, true);
     this.addEventListener('keydown', this.onHostKeyDown, { capture: true });
     this.addEventListener('scroll', this.scheduleImageFrame, { capture: true, passive: true });
   }
 
   override disconnectedCallback(): void {
     this.supersedeSource();
+    this.mount?.removeEventListener('pointerdown', this.onDocumentPress, true);
     this.removeEventListener('keydown', this.onHostKeyDown, { capture: true });
     this.removeEventListener('scroll', this.scheduleImageFrame, { capture: true });
     this.cancelImageDrag();
@@ -1722,6 +1724,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       if (frame) view.cancelAnimationFrame(frame);
     }, 500);
   }
+
+  // A picture drag claims its press inside the document, before it can bubble to the popover.
+  private onDocumentPress = (): void => {
+    if (this.imageDialog) void this.imagePopover(this.imageDialog)?.hide({ focusTrigger: false });
+  };
 
   private onImageDialogHidden(kind: 'resize' | 'description'): void {
     if (this.imagePopover(kind)?.open || this.imageDialog !== kind) return;

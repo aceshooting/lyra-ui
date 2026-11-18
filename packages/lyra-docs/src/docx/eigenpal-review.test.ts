@@ -202,7 +202,7 @@ test('comment-only core edits invalidate combined queries while retaining the un
   session.redo(); const redone = module.collectReviewItems(input())[0]!; assert(redone.kind === 'comment'); assert.equal(redone.resolved, true);
 });
 
-function headless(body = `<w:p><w:r><w:t>Base </w:t></w:r>${revision()}</w:p>`) {
+function headless(body = `<w:p><w:r><w:t xml:space="preserve">Base </w:t></w:r>${revision()}</w:p>`) {
   const bytes = docxFixture({ 'word/document.xml': `<w:document xmlns:w="${W}"><w:body>${body}</w:body></w:document>`, 'customXml/opaque.xml': '<unrelated><value>keep</value></unrelated>' });
   const opened = openTreeSession(bytes, { reviewModel: createLyraReviewModule(store).review }); assert(opened.ok);
   return opened.session;
@@ -302,7 +302,7 @@ test('tracking eligibility refuses complex body structures and untouched default
   assert.equal(h.helper.setTracking(true, 'Writer').ok, false); assert.equal(h.state.calls.length, 0);
 });
 test('simple text revisions retain exact engine offsets and can be reviewed', () => {
-  const result = deriveLyraReview({ storyPart: part('<w:p><w:r><w:t>😀 </w:t></w:r><w:ins w:id="1" w:author="Writer"><w:r><w:t>added</w:t></w:r></w:ins></w:p>') }, store);
+  const result = deriveLyraReview({ storyPart: part('<w:p><w:r><w:t xml:space="preserve">😀 </w:t></w:r><w:ins w:id="1" w:author="Writer"><w:r><w:t>added</w:t></w:r></w:ins></w:p>') }, store);
   assert.equal(result.items.length, 1);
   const item = result.items[0]!; assert.equal(item.kind, 'revision');
   if (item.kind !== 'revision') return;

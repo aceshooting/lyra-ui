@@ -142,7 +142,6 @@ test('custom styles are paragraph or character styles with the matching property
     ['a character style with run properties', style('character', '<w:basedOn w:val="DefaultParagraphFont"/><w:rPr><w:b/></w:rPr>'), true],
     ['a character style with paragraph properties', style('character', '<w:pPr><w:jc w:val="left"/></w:pPr>'), false],
     ['a paragraph style with paragraph properties', style('paragraph', '<w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr>'), true],
-    ['paragraph properties out of order', style('paragraph', '<w:pPr><w:jc w:val="left"/><w:keepNext/></w:pPr>'), false],
     ['a table style', style('table', ''), false],
     ['a style without a type', '<w:style w:styleId="Custom"><w:name w:val="Custom"/></w:style>', false],
     ['a paragraph style based on a character style', style('paragraph', '<w:basedOn w:val="DefaultParagraphFont"/>'), false],
@@ -161,6 +160,17 @@ test('custom styles are paragraph or character styles with the matching property
     const h = styleFixture(definition);
     if (accepted) assert.equal(h.check().ok, true, label); else assert.deepEqual(h.check(), unsupported, label);
   }
+});
+
+test('custom styles refuse paragraph properties out of order in the live tree', () => {
+  const h = styleFixture('<w:style w:type="paragraph" w:styleId="Custom"><w:pPr><w:keepNext/><w:jc w:val="left"/></w:pPr></w:style>');
+  const style = children(h.pkg.parts.get('/word/styles.xml')!.root).at(-1)!;
+  assert(style.kind !== 'textValue');
+  const props = children(style)[0]!;
+  assert(props.kind !== 'textValue');
+  assert(h.check().ok);
+  children(props).reverse();
+  assert.deepEqual(h.check(), unsupported);
 });
 
 test('absolute relationship targets are resolved from the package root', () => {

@@ -2330,6 +2330,21 @@
        deferredRefreshBytes = null;
        openingRefreshBytes = null;
        openScheduler.cancel();
+--- a/packages/core/src/editor/inline-image-drag.ts
++++ b/packages/core/src/editor/inline-image-drag.ts
+@@ -1,3 +1,4 @@
++// Modified by Lyra UI: focus the document when an inline picture claims the press. See NOTICE.
+ import { noteScopeIdInLayout } from './surface-scope.ts';
+ import type { Editor } from '../contracts/editor.ts';
+ import type { DocxEditorInstance } from './docx-editor.ts';
+@@ -148,6 +149,7 @@
+     cancel();
+     event.preventDefault();
+     event.stopPropagation();
++    pagesLayer.focus({ preventScroll: true });
+     surface.selectDrawing(id, source.paragraphId);
+     const token = capturePointPosition(surface, {
+       paragraphId: source.paragraphId,
 --- a/packages/core/src/editor/paginated-surface-contract.ts
 +++ b/packages/core/src/editor/paginated-surface-contract.ts
 @@ -1,3 +1,5 @@

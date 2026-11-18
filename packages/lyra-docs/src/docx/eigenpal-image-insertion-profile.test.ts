@@ -242,3 +242,12 @@ test('plain cell insertion refuses an interior text-run caret without relocation
   assert.deepEqual(h.check(), unsupported); assert.deepEqual(h.pkg, before);
   h.target.offset = 5; assert(h.check().ok);
 });
+
+test('the trailing empty paragraph after a table is never a replacement insertion target', () => {
+  const h = styledCell(true);
+  const terminator = h.nodes.find(n => n.localName === 'p' && n.attributes.length === 0);
+  assert(terminator);
+  assert(h.check().ok);
+  h.target.paragraphId = terminator.id;
+  assert.deepEqual(h.check(), unsupported);
+});
