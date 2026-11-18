@@ -3440,8 +3440,7 @@ through the tree as well.
 toParentNodeId, toIndex, targetNodeId, position }`. A root parent is `null`. To apply the request,
 remove the source from its sibling list, then insert it at `toIndex` in the destination list.
 The anchor's `position` is `'before'` or `'after'`. The tree keeps its data and DOM order until
-the host applies the request. The `drop-indicator` part marks accepted targets while dragging.
-Set `--lr-tree-drop-indicator-color` to theme the line. The item exposes a `reorder-handle` part.
+the host applies the request.
 
 For keyboard access to the same outline, enable `reorderable` and apply `lr-reorder` through the
 same data update as pointer moves. For moves between parents, provide labeled controls to choose
@@ -3462,7 +3461,9 @@ icons; an item-level slot with the same name takes precedence.
 
 **CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
 empty-state message shown when neither child model has any items; `limit` is the localized
-retained-node cap notice when valid object-data nodes exceed `maxNodes`.
+retained-node cap notice when valid object-data nodes exceed `maxNodes`. The `drop-indicator`
+part marks the insertion position at an accepted pointer target. Set `--lr-tree-drop-indicator-color`
+to change the line color.
 Source mode adds `source-list`, `source-row`, `source-toggle` (branch and retry buttons),
 `source-label`, `source-status`, and `source-error`, retaining the `base`/`tree` aliases. Its tree
 root owns the accessible name, busy state and multiselectability; flat source rows own their
@@ -3571,7 +3572,8 @@ group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `gro
 `expand-button`, `spinner`, `spinner__base`, `children`, `checkbox`, `checkbox__base`,
 `checkbox__control`, `checkbox__control--checked`, `checkbox__control--indeterminate`,
 `checkbox__checked-icon`, `checkbox__indeterminate-icon`, and `checkbox__label`. `badge`
-is applied to every `item.badges` chip; chips carry
+is applied to every `item.badges` chip. The `reorder-handle` part is the touch drag grip shown
+when pointer reordering is enabled. Badge chips carry
 `data-tone="neutral|brand|success|warning|danger"`. `icon` is `aria-hidden="true"`; `content`
 groups the primary label and optional wrapping secondary description while preserving one
 interactive treeitem per row. `icon`, `description` and `badge` render only in the data model —

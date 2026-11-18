@@ -1,5 +1,33 @@
 # @aceshooting/lyra-docs
 
+## 0.8.0
+
+### Minor Changes
+
+- fe6ba7d: Use `exportBytes()` on the DOCX editor or headless session to serialize a revision to caller-owned bytes while preserving its dirty state and any existing save receipt.
+- fe6ba7d: Choose visible file buttons with `file-actions`. Intercept New and Open from the toolbar or command palette with cancelable `lr-new-request` and `lr-open-request` events, including when the document is clean.
+- fe6ba7d: Style the Outline, Checks and Review buttons independently with the `outline-toggle`, `checks-toggle` and `review-toggle` parts. Shared styles still apply through `document-panel-toggle`.
+- fe6ba7d: Place the DOCX editor toolbar across a page grid with `toolbar-placement="layout"`. Position the `toolbar-area` and `workspace` parts independently. Set `document-tools-placement="first-row"` to put the document tools after the insertion controls in visual and keyboard order.
+- fe6ba7d: Expose the current body block index on painted DOCX paragraph fragments and emit `lr-paint` when materialized pages change.
+- fe6ba7d: Read `outlineLevel` from the paragraph style catalog to identify heading levels from document-authored style metadata and inheritance.
+- fe6ba7d: Use `selectionBlock()` to locate the active end of a body selection and `blockIndex` on outline items to match headings to the same zero-based body block positions.
+- fe6ba7d: Fit toolbar groups to their actual available width with `toolbar-layout`, and size toolbar controls with `density="compact"` or dedicated tool properties without shrinking dialog content.
+- fe6ba7d: Set `--lr-docx-editor-tool-border` to style toolbar icon borders together. Dialog buttons and mixed-state outlines retain their own borders.
+- fe6ba7d: Use the `move-blocks` edit with `applyEdits()` to move a body block range by revision-scoped index in a single undoable step.
+
+### Patch Changes
+
+- fe6ba7d: Include document editor translations in full locale imports and expose a `docx-editor` family for applications that load editor messages separately.
+- fe6ba7d: Apply fit and numeric zoom during the pending editor update so a synchronous selection change can render in the same pass.
+- fe6ba7d: Preserve selected document text when using paragraph-style typeahead in WebKit.
+- fe6ba7d: Match the height of Commands, Outline, Checks, Review and Replace image to the other toolbar controls.
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+  - @aceshooting/lyra-ui@31.2.0
+
 ## 0.7.2
 
 ### Patch Changes

@@ -1,5 +1,24 @@
 # Changelog
 
+## 31.2.0
+
+The quick Chromium comparison of the feature candidate with 31.1.1 flagged five of 150 timing metrics as slower. For 1,000 chart points, total p95 rose from 93.7 to 114.8 ms; for 5,000 ingestion items, paint median rose from 23.2 to 27.9 ms; for sorting 10,000 table rows, settle p95 rose from 8.0 to 9.3 ms. A fixed A-B-B-A follow-up used 15 samples per workload per run. No metric was flagged in both candidate-versus-baseline pairs, and repeated runs of the same version also produced flags. The affected component implementations and dependencies were unchanged; their shared code differed only in package metadata and an unused size constant. Together, these observations point to timing variation without demonstrating a sustained slowdown.
+
+### Minor Changes
+
+- fe6ba7d: Set initial branch expansion with `LyraTreeNodeData.expanded`. The tree remembers expansion by stable ID across data updates and collapsed ancestor remounts. Use `lr-bulk-toggle` to read which branches changed, including branches currently out of view.
+- fe6ba7d: Enable `pointer-reorderable` to request a move before or after a visible tree row. Listen for `lr-pointer-reorder` to apply the move. Use `allow-cross-parent-reorder` to permit cross-parent moves and `canDrop` to validate drop candidates.
+
+  The tree additions and shared size/keyboard fixes increase the measured full registration bundle to 1,506,118 gzip bytes and the data bundle to 445,961 bytes. Only the ten exceeded entry limits advance to their next 64-byte boundary. Passing limits, initial-route budgets, optional-peer exclusions and the existing headroom policy remain unchanged.
+- fe6ba7d: Set `size` on data and declarative trees to choose a row density. Use `--lr-tree-row-height` and `--lr-tree-toggle-size` to size rows and controls independently while preserving minimum pointer targets.
+
+### Patch Changes
+
+- fe6ba7d: Include document editor translations in full locale imports and expose a `docx-editor` family for applications that load editor messages separately.
+- fe6ba7d: Consume printable select typeahead keys so choosing an option in WebKit cannot also replace a retained text selection in an editor.
+- Updated dependencies [fe6ba7d]
+  - @aceshooting/lyra-translations@31.2.0
+
 ## 31.1.1
 
 ### Patch Changes

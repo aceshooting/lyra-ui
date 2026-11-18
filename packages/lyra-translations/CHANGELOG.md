@@ -1,5 +1,17 @@
 # @aceshooting/lyra-translations
 
+## 31.2.0
+
+### Patch Changes
+
+- fe6ba7d: Include document editor translations in full locale imports and expose a `docx-editor` family for applications that load editor messages separately.
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+- Updated dependencies [fe6ba7d]
+  - @aceshooting/lyra-ui@31.2.0
+
 ## 31.1.1
 
 ### Patch Changes
