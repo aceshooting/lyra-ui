@@ -152,6 +152,42 @@ test('qualification and release Node setup never restores package-manager caches
   }
 });
 
+test('release container trusts only its checkout for later Git commands', () => {
+  const steps = job(read('.github/workflows/prepare-artifacts.yml'), 'prepare');
+  const trust = steps.split(/\n(?= {6}- )/u).find(step => step.includes('name: Trust the release checkout in the container'));
+  assert.ok(trust);
+  assert.match(trust, /if: inputs\.mode == 'release'/u);
+  assert.ok(steps.indexOf(trust) < steps.indexOf('name: Select immutable preparation source'));
+  const script = trust.split('run: |\n')[1]?.replace(/^ {10}/gmu, '');
+  assert.ok(script);
+  const root = mkdtempSync(join(tmpdir(), 'lyra-release-git-ownership-'));
+  try {
+    const home = join(root, 'home');
+    const checkout = join(root, 'checkout');
+    const unrelated = join(root, 'unrelated');
+    mkdirSync(home);
+    const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: home, GIT_CONFIG_GLOBAL: join(home, '.gitconfig'), GIT_CONFIG_NOSYSTEM: '1', GIT_TEST_ASSUME_DIFFERENT_OWNER: '1', GITHUB_WORKSPACE: checkout };
+    for (const directory of [checkout, unrelated]) {
+      const init = spawnSync('git', ['init', directory], { env, encoding: 'utf8' });
+      assert.equal(init.status, 0, init.stderr);
+    }
+    const git = (directory) => spawnSync('git', ['-C', directory, 'rev-parse', '--show-toplevel'], { env, encoding: 'utf8' });
+    const before = git(checkout);
+    assert.notEqual(before.status, 0);
+    assert.match(before.stderr, /dubious ownership/u);
+    const setup = spawnSync('bash', ['-euc', script], { cwd: checkout, env, encoding: 'utf8' });
+    assert.equal(setup.status, 0, setup.stderr);
+    const after = git(checkout);
+    assert.equal(after.status, 0, after.stderr);
+    assert.equal(after.stdout.trim(), checkout);
+    const other = git(unrelated);
+    assert.notEqual(other.status, 0);
+    assert.match(other.stderr, /dubious ownership/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('hosted release preparation checks prepared budgets before handing off generated source', () => {
   const steps = job(read('.github/workflows/prepare-artifacts.yml'), 'prepare');
   const image = steps.match(/^      image: \$\{\{ (.+) \}\}$/mu)?.[1];

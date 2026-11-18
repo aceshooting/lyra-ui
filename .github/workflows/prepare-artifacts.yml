@@ -61,6 +61,10 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Trust the release checkout in the container
+        if: inputs.mode == 'release'
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Select immutable preparation source using trusted main control
         env:
           CANDIDATE_SHA: ${{ inputs.candidateSha }}
