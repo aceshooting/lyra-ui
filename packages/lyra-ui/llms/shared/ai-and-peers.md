@@ -269,7 +269,10 @@ image tools. Set `document-tools-placement="first-row"` to put document tools af
 With `toolbar-placement="layout"`, a parent grid can place `::part(toolbar-area)` across the
 page and `::part(workspace)` between sidebars. The toolbar follows its own width, and
 `zoom="fit"` follows the document column. Set `--lr-docx-editor-tool-border` to style toolbar
-icon borders. [Page-wide toolbar example](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-docs/README.md#page-wide-toolbar-layout).
+icon borders. `toolbar-layout="auto"` fits the toolbar groups to their contents; `density="compact"`
+shrinks tools without changing dialog fields. `file-actions` selects toolbar file buttons, and
+cancelable `lr-new-request`/`lr-open-request` events let the host supply a template or file chooser.
+[Page-wide toolbar example](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-docs/README.md#page-wide-toolbar-layout).
 
 `createDocxSession({ mount })` supports a host-owned toolbar; it requires a
 connected empty light-DOM mount. Both routes expose `can()`/`execute()`, `find()`/

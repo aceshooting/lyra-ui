@@ -300,6 +300,7 @@ Apply. The exact scope and limits are in **Selected existing image actions** bel
 
 | Event | Detail and behavior |
 | --- | --- |
+| `lr-new-request`, `lr-open-request` | Cancelable; `{ source, currentRevision }` for New or Open from the toolbar or command palette. `source` is `'toolbar'` or `'command-palette'`. Fires before the dirty-document prompt or native picker, including for clean documents. |
 | `lr-before-open` | Cancelable; `{ kind, currentRevision }` before replacing a document with unsaved content. Call `preventDefault()` to veto a programmatic New or Open. |
 | `lr-paint` | `{ revision, pageIndexes }` after painted paragraph indexes are updated. |
 | `lr-ready` | `{ revision }` for the opened document. |
@@ -308,7 +309,19 @@ Apply. The exact scope and limits are in **Selected existing image actions** bel
 | `lr-error` | `{ code }`, a normalized refusal without document contents or engine error text; `destroyed` when the session is lost while the editor stays connected. |
 | `lr-save` | `{ receipt }`, including the bytes that the host must persist. |
 
-New and Open from the toolbar show an in-editor confirmation when the current
+New and Open from the toolbar or command palette first emit their request event. A host can
+call `preventDefault()` to show its own template chooser or file picker, then call `open()` or
+`newDocument()` when the user chooses. Those public methods do not emit request events, so
+they do not recursively invoke the chooser. A listener that replaces the document or disconnects
+the editor also prevents the old command from continuing.
+
+Set `file-actions="open save"` to keep only Open and Save in the toolbar, or `file-actions=""`
+to hide the whole group. Tokens are separated by whitespace; unknown and repeated tokens are
+ignored, and visible controls keep New, Open, Save order. Removing the attribute restores all
+three. This controls toolbar visibility; command-palette actions and programmatic methods remain
+available. The native file input remains available for an accepted Open request.
+
+Without a canceled request, New and Open show an in-editor confirmation when the current
 document has unsaved content. A new blank document starts clean, and an edited document
 reduced to one empty page is replaced without asking. Programmatic `newDocument()` and `open()` do not show that
 confirmation; use the cancelable `lr-before-open` event to apply a host policy.
@@ -377,22 +390,45 @@ an eligible image is selected. Document tools share the editing tools' control h
 | Property | Attribute | Default | Placement |
 | --- | --- | --- | --- |
 | `documentToolsPlacement: 'separate' \| 'first-row'` | `document-tools-placement` | `'separate'` | Above the toolbar, or after insertion tools in the first row, in both DOM and keyboard order |
+| `toolbarLayout: 'auto' \| 'single-row' \| 'two-rows'` | `toolbar-layout` | `'auto'` | Fit both tool groups on one row when their content fits, force a scrollable row, or keep two rows |
+| `density: 'default' \| 'compact'` | `density` | `'default'` | Normal toolbar sizes or compact tools, without shrinking dialog content |
+| `fileActions: string` | `file-actions` | `'new open save'` | Visible file controls in the toolbar |
 | `toolbarPlacement: 'inline' \| 'layout'` | `toolbar-placement` | `'inline'` | Toolbar and document together, or independently allocated by the editor's parent layout |
 
-Both properties reflect to their attributes. This editor places the document tools in the first row.
+These properties reflect to their attributes; removing an attribute restores its default. This editor places the document tools in the first row.
 
 ```html
 <lr-docx-editor document-tools-placement="first-row"></lr-docx-editor>
 ```
 
-Wide allocations place file, history,
-insertion, font and paragraph formatting tools on one row; narrower allocations use
-two rows. Contextual image and table actions are compact icon buttons with localized
-tooltips, so they fit beside the file and insertion tools; only very narrow allocations
-scroll that row horizontally, keeping the toolbar height and document position stable.
-Formatting groups wrap within narrower widths; keyboard focus reveals offscreen actions.
+The default `toolbar-layout="auto"` places both toolbar groups on one row whenever their
+content fits the allocated toolbar width. When it does not fit, formatting moves below the
+first row and its groups wrap. The decision follows the rendered tools, including density,
+font sizes and file-action visibility, instead of a fixed desktop breakpoint.
+`toolbar-layout="two-rows"` always separates the groups. `toolbar-layout="single-row"`
+keeps them together and scrolls horizontally when needed; keyboard focus reveals offscreen
+actions. Contextual image and table actions retain their localized names and tooltips.
 The `toolbar-first-row` part exposes the actual first-row container for styling and measurement.
-Its allocation, and the toolbar's responsive layout, follow the toolbar area's width.
+Its allocation follows the toolbar area's width, including in page-wide layout mode.
+
+Use `density="compact"` for smaller toolbar controls and gaps. Dialog fields and panel actions
+retain their normal sizes. The following host properties customize tools without overriding
+shared theme tokens throughout the editor:
+
+| CSS property | Controls |
+| --- | --- |
+| `--lr-docx-editor-tool-size` | Toolbar control height and width of icon-only tools |
+| `--lr-docx-editor-tool-icon-size` | Toolbar glyph size |
+| `--lr-docx-editor-tool-gap` | Space between adjacent tools |
+| `--lr-docx-editor-group-gap` | Space separating tool groups |
+| `--lr-docx-editor-paragraph-style-inline-size` | Paragraph-style field width |
+| `--lr-docx-editor-font-family-inline-size` | Font-family field width |
+| `--lr-docx-editor-font-size-inline-size` | Font-size field width |
+
+```html
+<lr-docx-editor density="compact" toolbar-layout="auto"
+  document-tools-placement="first-row" file-actions="open save"></lr-docx-editor>
+```
 
 Set `--lr-docx-editor-tool-border` on the editor to change the resting border color of its
 quiet and filled icon tools, including the document tools.

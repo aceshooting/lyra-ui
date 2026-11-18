@@ -79,7 +79,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor, e
           firstTop: firstBox.top, secondTop: secondBox.top,
           firstCenter: firstBox.top + firstBox.height / 2, secondCenter: secondBox.top + secondBox.height / 2,
           compactGap: getComputedStyle(element).direction === 'rtl' ? lastGroupBox.left - secondBox.right : secondBox.left - lastGroupBox.right,
-          separatorWidth: parseFloat(getComputedStyle(first).borderInlineEndWidth),
+          separatorWidth: parseFloat(getComputedStyle(second).borderInlineStartWidth),
           firstVisible: first.scrollWidth <= first.clientWidth + 1,
           ordinaryToolsVisible: [root.querySelector('[part="file-actions"]'), root.querySelector('.history-tools'),
             root.querySelector('.insert-tools'), root.querySelector('.font-tools'), root.querySelector('[part="format-actions"]'),
@@ -93,7 +93,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor, e
         assert.ok(Math.abs(layout.firstCenter - layout.secondCenter) <= 1, JSON.stringify({ width, ...layout }));
         assert.ok(layout.firstVisible && layout.ordinaryToolsVisible, JSON.stringify({ width, ...layout }));
         assert.ok(layout.compactGap >= 0 && layout.compactGap <= 32 && layout.separatorWidth >= 1, JSON.stringify({ width, ...layout }));
-      } else if (width === 1440) {
+      } else if (width <= 800) {
         assert.ok(layout.secondTop > layout.firstTop + 1, JSON.stringify({ width, ...layout }));
       }
       await editor.locator('.docx-pages').click();
@@ -117,7 +117,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor, e
       const second = element.shadowRoot.querySelector('[part="editing-tools"]');
       const lastGroup = first.lastElementChild;
       return { gap: lastGroup.getBoundingClientRect().left - second.getBoundingClientRect().right,
-        separatorWidth: parseFloat(getComputedStyle(first).borderInlineEndWidth),
+        separatorWidth: parseFloat(getComputedStyle(second).borderInlineStartWidth),
         firstVisible: first.scrollWidth <= first.clientWidth + 1 };
     });
     assert.ok(rtlGap.gap >= 0 && rtlGap.gap <= 32 && rtlGap.separatorWidth >= 1 && rtlGap.firstVisible, JSON.stringify(rtlGap));

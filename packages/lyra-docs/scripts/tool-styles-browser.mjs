@@ -93,14 +93,20 @@ export async function runToolStyles(page, check, { createEditor }) {
       return { background: style.backgroundColor, border: style.borderTopColor,
         focusVisible: base.matches(':focus-visible'), outline: style.outlineStyle, outlineWidth: parseFloat(style.outlineWidth) };
     });
+    const settledPaint = async hovered => {
+      await page.waitForFunction(({ id, hovered }) => {
+        const button = document.getElementById(id).shadowRoot.querySelector('#tool-new');
+        const base = button.shadowRoot.querySelector('[part~="base"]');
+        return base.matches(':hover') === hovered && !base.getAnimations().some(animation =>
+          animation.transitionProperty === 'background-color' && (animation.pending || animation.playState === 'running'));
+      }, { id, hovered });
+      return paint();
+    };
     await page.mouse.move(0, 0);
-    const resting = await paint();
+    const resting = await settledPaint(false);
+    assert.equal(resting.background, 'rgba(0, 0, 0, 0)', 'Quiet appearance has a transparent resting fill');
     await tool.hover();
-    await page.waitForFunction(id => {
-      const button = document.getElementById(id).shadowRoot.querySelector('#tool-new');
-      return button.shadowRoot.querySelector('[part~="base"]').matches(':hover');
-    }, id);
-    assert.notEqual((await paint()).background, resting.background, 'Hover still paints feedback');
+    assert.notEqual((await settledPaint(true)).background, resting.background, 'Hover still paints feedback');
     await tool.getByRole('button').press('Tab');
     await page.keyboard.press('Shift+Tab');
     const focused = await paint();
@@ -110,7 +116,7 @@ export async function runToolStyles(page, check, { createEditor }) {
     await page.mouse.move(0, 0);
     await tool.evaluate(async button => { button.appearance = 'filled'; button.pressed = true; await button.updateComplete; });
     assert.equal(await tool.getByRole('button').getAttribute('aria-pressed'), 'true');
-    const pressed = await paint();
+    const pressed = await settledPaint(false);
     assert.notEqual(pressed.background, resting.background, 'Pressed appearance retains its fill');
     assert.equal(pressed.border, 'rgba(0, 0, 0, 0)');
     await tool.evaluate(async button => { button.appearance = 'filled-outlined'; button.pressed = 'mixed'; await button.updateComplete; });

@@ -73,6 +73,24 @@ export const DocumentToolsFirstRow = {
   </div>`,
   play: load(headings),
 };
+export const CompactToolbar = {
+  render: () => html`<div style=${container}>
+    <p>Compact tools fit on one row whenever the available width allows it. Resize the viewport or open a formatting popover: its fields keep their normal sizes. This toolbar shows Open and Save; New remains available from Commands.</p>
+    <lr-docx-editor density="compact" toolbar-layout="auto" document-tools-placement="first-row" file-actions="open save" zoom="fit"></lr-docx-editor>
+  </div>`,
+  play: load(headings),
+};
+export const HostManagedNew = {
+  render: () => html`<div style=${container}>
+    <p>New uses the host's starter document, even when the current document is clean. A real application can open its template chooser before calling open().</p>
+    <lr-docx-editor @lr-new-request=${async event => {
+      event.preventDefault();
+      const result = await event.currentTarget.open(headings(), { name: 'Starter document.docx' });
+      if (!result.ok) throw new Error(`Starter document refused: ${result.code}`);
+    }}></lr-docx-editor>
+  </div>`,
+  play: load(null),
+};
 export const PageWideToolbar = {
   render: () => html`<div style=${container}>
     <p>The toolbar spans the application grid above the document and two host-owned sidebars. Resize the viewport to stack the workspace and sidebars. Fit zoom follows the document column. Press Alt+F10 to enter the toolbar.</p>
@@ -113,4 +131,4 @@ export const PageWideToolbar = {
   play: load(headings),
 };
 
-export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor, DocumentToolsFirstRow, PageWideToolbar };
+export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor, DocumentToolsFirstRow, CompactToolbar, HostManagedNew, PageWideToolbar };

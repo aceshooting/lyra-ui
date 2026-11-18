@@ -491,6 +491,7 @@ test('a coverage run clears earlier output, builds under coverage, runs both sui
   assert.deepEqual(browser.environment, {
     ...base, DOCX_COVERAGE: '1', DOCX_BROWSERS: 'chromium', DOCX_PERFORMANCE: '0',
     DOCX_LAYOUT_ONLY: '', DOCX_FORMATTING_ONLY: '', DOCX_INSERTION_ONLY: '', DOCX_IMAGES_ONLY: '', DOCX_DOCUMENT_TOOLS_ONLY: '',
+    DOCX_TOOL_STYLES_ONLY: '', DOCX_FILE_ACTIONS_ONLY: '', DOCX_TOOLBAR_DENSITY_ONLY: '',
   });
   const performance = calls[5];
   assert.deepEqual([performance.command, ...performance.args], [process.execPath, 'scripts/performance-browser.mjs']);

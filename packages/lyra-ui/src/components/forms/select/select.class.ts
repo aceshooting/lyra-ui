@@ -2619,6 +2619,8 @@ export class LyraSelect<
         break;
       default:
         if (this.typeBuffer.accepts(e)) {
+          // The character belongs to this trigger, even when an editable selection remains elsewhere.
+          e.preventDefault();
           this.typeAhead(e.key);
         }
         break;

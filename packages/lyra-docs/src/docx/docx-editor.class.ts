@@ -38,7 +38,15 @@ import { observeParagraphPaint } from './paragraph-paint.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
 
+/** Current document and the user interface that requested its replacement. */
+export interface DocxFileRequestDetail {
+  source: 'toolbar' | 'command-palette';
+  currentRevision: DocxRevision | null;
+}
+
 interface DocxEditorEvents {
+  'lr-new-request': CustomEvent<DocxFileRequestDetail>;
+  'lr-open-request': CustomEvent<DocxFileRequestDetail>;
   'lr-paint': CustomEvent<DocxPaintDetail>;
   'lr-before-open': CustomEvent<{ kind: DocxSource['kind']; currentRevision: DocxRevision | null }>;
   'lr-ready': CustomEvent<{ revision: DocxRevision }>;
@@ -129,6 +137,11 @@ interface ImageDrag {
   intent: NonNullable<ReturnType<typeof captureImageToolIntent>>;
 }
 type ToolIcon = keyof typeof toolIcons;
+const fileToolNames = ['new', 'open', 'save'] as const;
+type FileTool = typeof fileToolNames[number];
+const defaultFileActions = fileToolNames.join(' ');
+const permanentTooltipNames = (Object.keys(toolIcons) as ToolIcon[])
+  .filter(name => !contextualToolIcons.has(name) && !fileToolNames.some(fileTool => fileTool === name));
 const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript'];
 /** Word's standard text colors; the hex values are the document's own `w:color` vocabulary. */
 const textColors = [
@@ -148,6 +161,8 @@ const lineSpacings = [1, 1.15, 1.5, 2, 2.5, 3] as const;
 const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 export type DocxEditorZoom = number | 'fit';
 export type DocxToolbarPlacement = 'inline' | 'layout';
+export type DocxToolbarLayout = 'auto' | 'single-row' | 'two-rows';
+export type DocxToolbarDensity = 'default' | 'compact';
 export type DocxDocumentToolsPlacement = 'separate' | 'first-row';
 /** `fit` or a factor from 0.25 to 4; anything else falls back to 100%. */
 const zoomConverter = {
@@ -218,6 +233,8 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * callers reopen their own saved bytes after reconnect. Save returns bytes without persisting or
  * clearing dirty state; call `acknowledgeSaved()` after durable host persistence.
  *
+ * @event lr-new-request - Cancelable New from the toolbar or command palette. Fires before confirmation or blank document creation.
+ * @event lr-open-request - Cancelable Open from the toolbar or command palette. Fires before confirmation or the native file picker.
  * @event lr-before-open - Cancelable when a document with unsaved content would be replaced; an untouched or emptied single blank page is replaced without asking.
  * @event lr-paint - Materialized, repainted or evicted page indexes after painted body paragraphs receive their current data-lr-block-index.
  * @event lr-ready - A document finished opening.
@@ -275,6 +292,13 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @slot table-delete-table-icon - Decorative icon for the table delete table action; the editor retains its accessible name.
  * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. At a fixed zoom, pages keep their scale and scroll horizontally in narrower allocations; zoom="fit" follows the width.
  * @cssprop --lr-docx-editor-tool-border - Border color for quiet and filled toolbar icon controls. Defaults to the inherited button theme. Mixed-state outlines and dialog or panel text actions keep their own borders.
+ * @cssprop --lr-docx-editor-tool-size - Size of toolbar icon controls and target height of the three formatting fields.
+ * @cssprop --lr-docx-editor-tool-icon-size - Size of toolbar glyphs and their decorative slots.
+ * @cssprop --lr-docx-editor-tool-gap - Spacing between neighboring toolbar controls.
+ * @cssprop --lr-docx-editor-group-gap - Spacing between toolbar groups.
+ * @cssprop --lr-docx-editor-paragraph-style-inline-size - Width of the toolbar paragraph style picker.
+ * @cssprop --lr-docx-editor-font-family-inline-size - Width of the toolbar font family picker.
+ * @cssprop --lr-docx-editor-font-size-inline-size - Width of the toolbar font size field.
  * @csspart base - The root editor surface.
  * @csspart toolbar-area - Toolbar and navigation controls. A separately placeable grid or flex item in layout mode.
  * @csspart workspace - Document panels, editing surface and status. A separately placeable grid or flex item in layout mode.
@@ -463,6 +487,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   /** Expose the toolbar area and workspace as items in the parent layout, or keep them together inline. */
   @property({ attribute: 'toolbar-placement', reflect: true, useDefault: true }) toolbarPlacement: DocxToolbarPlacement = 'inline';
 
+  /** Fit both tool rows together when space permits, or explicitly choose one or two rows. */
+  @property({ attribute: 'toolbar-layout', reflect: true, useDefault: true }) toolbarLayout: DocxToolbarLayout = 'auto';
+
+  /** Spacing and sizing of toolbar and navigation controls. */
+  @property({ reflect: true, useDefault: true }) density: DocxToolbarDensity = 'default';
+
+  /** Space-separated toolbar buttons in the order New, Open, Save. An empty list hides the group. */
+  @property({ attribute: 'file-actions', reflect: true, useDefault: true }) fileActions = defaultFileActions;
+
   /** Place document navigation tools above the toolbar or after insertion tools in its first row. */
   @property({ attribute: 'document-tools-placement', reflect: true, useDefault: true }) documentToolsPlacement: DocxDocumentToolsPlacement = 'separate';
 
@@ -476,6 +509,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   @state() private openingFile = false;
   @state() private wasDisconnected = false;
   @state() private pendingAction: 'new' | 'open' | null = null;
+  private dispatchingFileRequest = false;
   @state() private toolbarKey = 'bold';
   @state() private paragraphStyleItems: readonly { id: string; label: string }[] = [];
   @state() private fontFamilyItems: readonly string[] = [];
@@ -485,6 +519,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private commandRows: readonly LyraCommand[] = [];
   private commandSources = new Map<LyraCommand, DocxCommandDescriptor>();
   private selectedCommand: DocxCommandDescriptor | null = null;
+  private selectedFileSequence = 0;
   private commandGeneration = 0;
   @state() private documentPanel: DocumentPanel | null = null;
   @state() private outlineReport: DocxOutline | null = null;
@@ -2039,6 +2074,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     event.stopPropagation();
     const item = this.commandSources.get(event.detail.command);
     if (!item || !this.commandAvailability(item).enabled) return;
+    if (item.intent === 'new' || item.intent === 'open') {
+      this.selectedCommand = null;
+      if (!this.acceptFileRequest(item.intent, 'command-palette') || !this.commandAvailability(item).enabled) return;
+      // A browser file picker needs the user's activation while the command selection is being dispatched.
+      if (item.intent === 'open' && !this.hasUnsavedContent()) { this.openFilePicker(); return; }
+      this.selectedFileSequence = this.sourceReadSequence;
+    }
     this.selectedCommand = item;
   };
 
@@ -2072,8 +2114,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.showDocumentPanel(item.intent, intent); return;
     }
     intent.lease?.release();
-    if (item.intent === 'new' || item.intent === 'open') this.requestToolbarAction(item.intent);
-    else if (item.intent === 'save') void this.save();
+    if (item.intent === 'new' || item.intent === 'open') {
+      if (this.selectedFileSequence === this.sourceReadSequence) this.performFileAction(item.intent);
+    } else if (item.intent === 'save') void this.save();
     else if (item.intent === 'find') this.showFind();
   };
 
@@ -2305,7 +2348,23 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.renderRoot.querySelector<HTMLInputElement>('[part="file-input"]')?.click();
   }
 
+  private acceptFileRequest(action: 'new' | 'open', source: DocxFileRequestDetail['source']): boolean {
+    if (this.dispatchingFileRequest || this.openInProgress || this.currentSnapshot?.activity || !this.isConnected) return false;
+    const owner = this.session, sequence = this.sourceReadSequence;
+    this.dispatchingFileRequest = true;
+    try {
+      const event = this.emit(action === 'new' ? 'lr-new-request' : 'lr-open-request',
+        { source, currentRevision: this.currentSnapshot?.revision ?? null }, { cancelable: true });
+      return !event.defaultPrevented && this.commandOwnerCurrent(owner, sequence) &&
+        !this.openInProgress && !this.currentSnapshot?.activity;
+    } finally { this.dispatchingFileRequest = false; }
+  }
+
   private requestToolbarAction(action: 'new' | 'open'): void {
+    if (this.acceptFileRequest(action, 'toolbar')) this.performFileAction(action);
+  }
+
+  private performFileAction(action: 'new' | 'open'): void {
     this.releaseToolbarSelection();
     if (this.hasUnsavedContent()) {
       this.pendingAction = action;
@@ -2374,9 +2433,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       ?disabled=${this.openPanelTrigger === `tool-${name}`}></${tooltipTag}>`;
   }
 
-  private renderTooltips(): TemplateResult {
-    return html`<div class="tooltips">${(Object.keys(toolIcons) as ToolIcon[])
-      .filter(name => !contextualToolIcons.has(name)).map(name => this.renderTooltip(name))}</div>`;
+  private renderTooltips(fileTools: readonly FileTool[]): TemplateResult {
+    return html`<div class="tooltips">${fileTools.map(name => this.renderTooltip(name))}
+      ${permanentTooltipNames.map(name => this.renderTooltip(name))}</div>`;
   }
 
   private renderCommand(command: DocxCommand): TemplateResult {
@@ -2435,7 +2494,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const swatches = this.swatchItems();
     return html`<div part="editing-tools" role="group" aria-label=${this.localize('docxEditorFormatting')}>
       <div class="font-tools">
-      <${selectTag} part="paragraph-style" data-edit="paragraph-style" size="s"
+      <${selectTag} part="paragraph-style" data-edit="paragraph-style" size="s" top-layer
         aria-label=${this.localize('docxEditorParagraphStyle')}
         placeholder=${this.localize('docxEditorParagraphStyle')}
         .value=${formatting?.paragraphStyleId ?? ''} ?disabled=${!editable}
@@ -2447,7 +2506,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           html`<${optionTag} value=${formatting.paragraphStyleId}>${formatting.paragraphStyleId}</${optionTag}>` : nothing}
         ${this.paragraphStyleItems.map(item => html`<${optionTag} value=${item.id}>${item.label}</${optionTag}>`)}
       </${selectTag}>
-      <${comboboxTag} part="font-family" data-edit="font-family" size="s" allow-custom-value
+      <${comboboxTag} part="font-family" data-edit="font-family" size="s" top-layer allow-custom-value
         aria-label=${this.localize('docxEditorFontFamily')}
         placeholder=${this.localize('docxEditorFontFamily')}
         .value=${formatting?.fontFamily ?? []} ?disabled=${!editable}
@@ -3330,6 +3389,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   override render(): TemplateResult {
     const status = this.statusText();
+    const requested = this.fileActions === defaultFileActions ? null : this.fileActions.split(/\s+/u);
+    const fileTools = requested ? fileToolNames.filter(name => requested.includes(name)) : fileToolNames;
     const layout = this.toolbarPlacement === 'layout';
     const firstRowTools = this.documentToolsPlacement === 'first-row';
     const hasError = this.currentSnapshot?.status === 'error' || this.currentSnapshot?.status === 'destroyed' || this.localError !== null;
@@ -3341,17 +3402,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}
           @lr-show=${this.onToolbarPanelShow} @lr-after-hide=${this.onToolbarPanelHidden}>
           <div class="toolbar-row" part="toolbar-first-row">
-          <div part="file-actions">
-            <${buttonTag} part="new-button" id="tool-new" aria-label=${this.localize(toolIcons.new.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
-              @click=${() => this.requestToolbarAction('new')}>${this.renderToolIcon('new')}</${buttonTag}>
-            <${buttonTag} part="open-button" id="tool-open" aria-label=${this.localize(toolIcons.open.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
-              @click=${() => this.requestToolbarAction('open')}>${this.renderToolIcon('open')}</${buttonTag}>
-            <${buttonTag} part="save-button" id="tool-save" aria-label=${this.localize(toolIcons.save.label)} size="s" appearance="quiet"
+          ${fileTools.length ? html`<div part="file-actions">
+            ${fileTools.includes('new') ? html`<${buttonTag} part="new-button" id="tool-new" aria-label=${this.localize(toolIcons.new.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
+              @click=${() => this.requestToolbarAction('new')}>${this.renderToolIcon('new')}</${buttonTag}>` : nothing}
+            ${fileTools.includes('open') ? html`<${buttonTag} part="open-button" id="tool-open" aria-label=${this.localize(toolIcons.open.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
+              @click=${() => this.requestToolbarAction('open')}>${this.renderToolIcon('open')}</${buttonTag}>` : nothing}
+            ${fileTools.includes('save') ? html`<${buttonTag} part="save-button" id="tool-save" aria-label=${this.localize(toolIcons.save.label)} size="s" appearance="quiet"
               ?disabled=${this.currentSnapshot?.status !== 'ready' || this.currentSnapshot.activity !== null}
-              @click=${() => { this.releaseToolbarSelection(); void this.save(); }}>${this.renderToolIcon('save')}</${buttonTag}>
-            <input part="file-input" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              tabindex="-1" aria-hidden="true" @change=${this.onFileSelected}>
-          </div>
+              @click=${() => { this.releaseToolbarSelection(); void this.save(); }}>${this.renderToolIcon('save')}</${buttonTag}>` : nothing}
+          </div>` : nothing}
           <div part="format-actions" class="history-tools">${this.renderCommand('undo')}${this.renderCommand('redo')}</div>
           ${this.renderDocumentTools()}
           <div class="insert-tools">
@@ -3363,8 +3422,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           ${firstRowTools ? this.renderNavigationTools() : nothing}
           </div>
           ${this.renderEditingTools()}
-          ${this.renderTooltips()}
+          ${this.renderTooltips(fileTools)}
         </div>
+        <input part="file-input" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          tabindex="-1" aria-hidden="true" @change=${this.onFileSelected}>
         </div>
         <section part="workspace" aria-label=${layout ? this.editorLabel() : nothing}>
         ${this.pendingAction ? html`

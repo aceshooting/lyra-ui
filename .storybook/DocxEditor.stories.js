@@ -9,3 +9,6 @@ export const PaintedParagraphs = { ...stories.PaintedParagraphs };
 export const NarrowEditor = { ...stories.NarrowEditor };
 export const DocumentToolsFirstRow = { ...stories.DocumentToolsFirstRow };
 export const PageWideToolbar = { ...stories.PageWideToolbar };
+
+export const CompactToolbar = { ...stories.CompactToolbar };
+export const HostManagedNew = { ...stories.HostManagedNew };

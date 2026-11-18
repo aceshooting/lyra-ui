@@ -58,3 +58,52 @@ describe('select input-method composition', () => {
     });
   }
 });
+
+describe('select printable type-ahead', () => {
+  for (const open of [false, true]) {
+    it(`consumes typed characters while ${open ? 'open' : 'closed'} and preserves neighboring editable text`, async () => {
+      const text = 'Selected text in the document';
+      const host = await fixture<HTMLElement>(html`
+        <section>
+          <div contenteditable="true">${text}</div>
+          <lr-select value="a" label="Fruit">
+            <lr-option value="a">Apple</lr-option>
+            <lr-option value="b">Banana</lr-option>
+          </lr-select>
+        </section>
+      `);
+      const editable = host.querySelector<HTMLElement>('[contenteditable]')!;
+      const select = host.querySelector<LyraSelect>('lr-select')!;
+      const trigger = select.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;
+      await focusByKeyboard(editable);
+      const selection = host.ownerDocument.getSelection()!;
+      selection.selectAllChildren(editable);
+      expect(selection.toString()).to.equal(text);
+      await sendKeys({ press: 'Tab' });
+      expect(select.shadowRoot!.activeElement === trigger).to.equal(true);
+      if (open) await select.show();
+      const consumed: boolean[] = [];
+      select.addEventListener('keydown', event => { consumed.push(event.defaultPrevented); });
+      try {
+        for (const modifier of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }]) {
+          trigger.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'b', bubbles: true, composed: true, cancelable: true, ...modifier,
+          }));
+        }
+        await sendKeys({ press: 'b' });
+        await select.updateComplete;
+        expect(editable.textContent).to.equal(text);
+        expect(consumed).to.deep.equal([false, false, false, true]);
+        expect(select.value).to.equal(open ? 'a' : 'b');
+        if (open) {
+          expect(select.shadowRoot!.querySelector('[part="option"][data-active]')?.getAttribute('data-value')).to.equal('b');
+          await sendKeys({ press: 'Enter' });
+          await select.updateComplete;
+          expect(select.value).to.equal('b');
+        }
+      } finally {
+        await select.hide();
+      }
+    });
+  }
+});

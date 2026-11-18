@@ -88,6 +88,7 @@ export async function runCoverage({
     const browserStatus = run(root, process.execPath, ['scripts/browser-test.mjs'], {
       ...base, DOCX_COVERAGE: '1', DOCX_BROWSERS: 'chromium', DOCX_PERFORMANCE: '0',
       DOCX_LAYOUT_ONLY: '', DOCX_FORMATTING_ONLY: '', DOCX_INSERTION_ONLY: '', DOCX_IMAGES_ONLY: '', DOCX_DOCUMENT_TOOLS_ONLY: '',
+      DOCX_TOOL_STYLES_ONLY: '', DOCX_FILE_ACTIONS_ONLY: '', DOCX_TOOLBAR_DENSITY_ONLY: '',
     }) || run(root, process.execPath, ['scripts/performance-browser.mjs'], base);
     const metadata = await report({ root, unitStatus, browserStatus, tooling: TOOLING });
     const exitCode = unitStatus || browserStatus;

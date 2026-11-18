@@ -1,5 +1,5 @@
 import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxImageDirection, type DocxImageAction, type DocxImageContext, type DocxImageDescription, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
-import type { DocxDocumentToolsPlacement, DocxToolbarPlacement, LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
+import type { DocxDocumentToolsPlacement, DocxToolbarPlacement, DocxToolbarLayout, DocxToolbarDensity, DocxFileRequestDetail, LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 import type { DocxImageSource, DocxInsertImageOptions, DocxRevision, DocxResult, DocxTableBorderStyle, DocxTableBorderTarget } from '@aceshooting/lyra-docs/docx';
 import { DOCX_REMOTE_LIMITS, fetchDocxBytes, type DocxFetchOptions } from '@aceshooting/lyra-docs/docx';
 import { DOCX_BATCH_LIMITS, DOCX_FRAGMENT_LIMITS, type DocxBatchEdit, type DocxBatchOptions, type DocxBatchResult, type DocxBatchStep,
@@ -127,6 +127,26 @@ function toolbarLayoutContracts(editor: HTMLElementTagNameMap['lr-docx-editor'])
   const previousTools: DocxDocumentToolsPlacement = editor.documentToolsPlacement;
   editor.toolbarPlacement = 'layout';
   editor.documentToolsPlacement = 'first-row';
+  const previousLayout: DocxToolbarLayout = editor.toolbarLayout;
+  const previousDensity: DocxToolbarDensity = editor.density;
+  editor.toolbarLayout = 'single-row';
+  editor.density = 'compact';
+  editor.fileActions = 'open save';
+  editor.toolbarLayout = previousLayout;
+  editor.density = previousDensity;
+  for (const type of ['lr-new-request', 'lr-open-request'] as const) {
+    editor.addEventListener(type, event => {
+      const detail: DocxFileRequestDetail = event.detail;
+      const source: 'toolbar' | 'command-palette' = detail.source;
+      const revision: DocxRevision | null = detail.currentRevision;
+      void source; void revision;
+      event.preventDefault();
+    });
+  }
+  // @ts-expect-error Layout accepts only the documented row policies.
+  editor.toolbarLayout = 'nowrap';
+  // @ts-expect-error Density is distinct from a generic component size.
+  editor.density = 'small';
   editor.toolbarPlacement = previousToolbar;
   editor.documentToolsPlacement = previousTools;
   // @ts-expect-error The first-row option belongs to documentToolsPlacement.

@@ -51,67 +51,117 @@ export const styles = css`
     min-inline-size: 0;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    --_docx-control-height: calc(max(var(--lr-icon-button-size), var(--lr-theme-form-control-height-s, var(--lr-icon-button-size))) + var(--lr-border-width-thin) * 2);
+    --_docx-default-control-height: calc(max(var(--lr-icon-button-size), var(--lr-theme-form-control-height-s, var(--lr-icon-button-size))) + var(--lr-border-width-thin) * 2);
+    --_docx-hit-floor: var(--lr-size-24px);
+    --_docx-custom-tool-size: var(--lr-docx-editor-tool-size, var(--_docx-compact-tool-size));
+    --_docx-control-height: max(
+      calc(var(--_docx-hit-floor) + var(--lr-border-width-thin) * 2),
+      var(--_docx-custom-tool-size, var(--_docx-default-control-height))
+    );
+    --_docx-tool-hit-size: max(var(--_docx-hit-floor), calc(var(--_docx-custom-tool-size) - var(--lr-border-width-thin) * 2));
+    --_docx-inherited-hit-scope: var(--lr-icon-button-size-scope);
+    --_docx-inherited-icon-size: var(--lr-icon-size);
+    --_docx-tool-icon-size: var(--lr-docx-editor-tool-icon-size, var(--_docx-compact-icon-size));
+    --_docx-tool-gap: var(--lr-docx-editor-tool-gap, var(--_docx-compact-gap, var(--lr-space-xs)));
+    --_docx-group-gap: var(--lr-docx-editor-group-gap, var(--_docx-compact-gap, var(--lr-space-xs)));
+    --_docx-group-padding: var(--lr-space-s);
+    --_docx-focus-gutter: calc(var(--lr-focus-ring-width) + max(0px, var(--lr-focus-ring-offset)));
   }
+  :host([density='compact']) [part='toolbar-area'] {
+    --_docx-compact-tool-size: var(--lr-size-1-75rem);
+    --_docx-compact-icon-size: var(--lr-size-1rem);
+    --_docx-compact-gap: var(--lr-space-2xs);
+    --_docx-group-padding: var(--lr-space-xs);
+    --_docx-font-name-width: var(--lr-size-6rem);
+  }
+  @media (hover: none), (pointer: coarse) {
+    [part='toolbar-area'] { --_docx-hit-floor: var(--lr-icon-button-size); }
+    :host([density='compact']) [part='toolbar-area'] {
+      --_docx-compact-tool-size: var(--_docx-default-control-height);
+    }
+  }
+
   [part='toolbar'] {
     position: relative;
     flex: none;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--_docx-group-gap);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
   }
 
-  [part='file-actions'], [part='format-actions'] {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--lr-space-xs);
-    min-inline-size: 0;
-  }
-
-  .history-tools, .insert-tools, [part='format-actions'], [part='alignment-actions'], [part='list-actions'], .color-tools {
-    padding-inline-start: var(--lr-space-s);
+  .insert-tools, [part='format-actions'], [part='alignment-actions'], [part='list-actions'], .color-tools,
+  .toolbar-row > [part='navigation-tools'], [part='editing-tools'] {
+    padding-inline-start: var(--_docx-group-padding);
     border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  .toolbar-row > :first-child {
+    padding-inline-start: 0;
+    border-inline-start: 0;
   }
 
   .toolbar-row, [part='editing-tools'] {
+    /* Fit the two groups at their natural widths. Each can still use a full line on its own. */
+    box-sizing: border-box;
     display: flex;
-    flex: 1 1 100%;
-    flex-wrap: wrap;
+    flex: none;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--_docx-group-gap);
+    inline-size: max-content;
     min-inline-size: 0;
-  }
-
-  .toolbar-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    block-size: calc(var(--_docx-control-height) + var(--lr-space-s));
-    scrollbar-width: thin;
     max-inline-size: 100%;
+  }
+  .toolbar-row {
+    overflow: auto hidden;
+    scrollbar-width: thin;
+    padding: var(--_docx-focus-gutter);
+    min-block-size: calc(var(--_docx-control-height) + var(--lr-space-s));
   }
   .toolbar-row > * { flex-shrink: 0; }
   .toolbar-row > [part='navigation-tools'] {
     flex-wrap: nowrap;
-    padding: 0;
-    padding-inline-start: var(--lr-space-s);
+    padding-block: 0;
+    padding-inline-end: 0;
     border-block-end: 0;
-    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    gap: var(--_docx-tool-gap);
   }
-  .toolbar-row :is(.insert-tools, [part='table-tools'], [part='table-actions'], [part='image-tools']) {
+  .toolbar-row :is([part='file-actions'], .insert-tools, [part='table-tools'], [part='table-actions'], [part='image-tools']) {
     flex-wrap: nowrap;
     flex-shrink: 0;
   }
+  [part='editing-tools'] {
+    flex-wrap: wrap;
+    padding-block: var(--_docx-focus-gutter);
+  }
+  :host([toolbar-layout='two-rows']) .toolbar-row {
+    flex-basis: 100%;
+  }
+  :host([toolbar-layout='single-row']) [part='toolbar'] {
+    flex-wrap: nowrap;
+    overflow: auto hidden;
+    scrollbar-width: thin;
+  }
+  :host([toolbar-layout='single-row']) :is(.toolbar-row, [part='editing-tools']) {
+    max-inline-size: none;
+    overflow: visible;
+  }
+  :host([toolbar-layout='single-row']) :is([part='editing-tools'], .font-tools, [part='format-actions']) {
+    flex-wrap: nowrap;
+  }
 
-  .history-tools, .font-tools, .color-tools, .insert-tools,
-  [part='alignment-actions'], [part='list-actions'], [part='link-actions'],
-  [part='table-tools'], [part='table-actions'], [part='table-dialog-actions'],
-  [part='image-insert-actions'], [part='image-tools'], [part='image-resize-actions'], [part='image-description-actions'] {
+  [part='file-actions'], [part='format-actions'], .font-tools, .color-tools, .insert-tools,
+  [part='alignment-actions'], [part='list-actions'], [part='table-tools'], [part='table-actions'], [part='image-tools'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--_docx-tool-gap);
+    min-inline-size: 0;
+  }
+  [part='link-actions'], [part='table-dialog-actions'], [part='image-insert-actions'],
+  [part='image-resize-actions'], [part='image-description-actions'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -119,62 +169,42 @@ export const styles = css`
     min-inline-size: 0;
   }
 
-  [part='toolbar'] [data-tool-key], [part='file-actions'] > [part],
-  [part='document-panel-toggle'], [part='commands-button'], [part='image-replace-trigger'] {
+  :where([part='toolbar-area']) :is([data-tool-key], [part='new-button'], [part='open-button'], [part='save-button'],
+    [part='document-panel-toggle'], [part='commands-button'], [part='image-replace-trigger']) {
     --lr-button-size-s: var(--_docx-control-height);
+    --lr-icon-button-size-scope: var(--_docx-tool-hit-size, var(--_docx-inherited-hit-scope));
+    --lr-icon-size: var(--_docx-tool-icon-size, var(--_docx-inherited-icon-size));
     --lr-button-border: var(--_docx-tool-border, var(--lr-color-border-normal));
     --lr-button-quiet-border: var(--_docx-tool-quiet-border, var(--lr-color-border));
   }
   [part='paragraph-style'] { --lr-select-trigger-min-height: var(--_docx-control-height); }
   [part='font-family'] { --lr-combobox-trigger-min-height: var(--_docx-control-height); }
-  [part='font-size'] { --lr-input-control-min-height: var(--_docx-control-height); }
-
-  [part='paragraph-style'], [part='font-family'] {
-    flex: 0 1 var(--lr-size-8rem);
-    inline-size: var(--lr-size-8rem);
-    min-inline-size: 0;
-    max-inline-size: 100%;
-  }
-
   [part='font-size'] {
-    flex: 0 0 var(--lr-size-8rem);
-    inline-size: var(--lr-size-8rem);
+    /* Its native steppers need the same target floor without shrinking steppers in dialog fields. */
+    --lr-input-control-min-height: var(--_docx-control-height);
+    --lr-icon-button-size-scope: var(--_docx-tool-hit-size, var(--_docx-inherited-hit-scope));
+  }
+
+  [part='paragraph-style'] { --_docx-field-width: var(--lr-docx-editor-paragraph-style-inline-size, var(--_docx-font-name-width, var(--lr-size-8rem))); }
+  [part='font-family'] { --_docx-field-width: var(--lr-docx-editor-font-family-inline-size, var(--_docx-font-name-width, var(--lr-size-8rem))); }
+  [part='font-size'] { --_docx-field-width: var(--lr-docx-editor-font-size-inline-size, var(--lr-size-8rem)); }
+  :is([part='paragraph-style'], [part='font-family'], [part='font-size']) {
+    flex: 0 0 auto;
+    inline-size: var(--_docx-field-width);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
 
-  .font-tools { flex: 0 1 auto; }
+  .font-tools { max-inline-size: 100%; }
   .color-tools, [part='alignment-actions'], [part='list-actions'] {
     flex-wrap: nowrap;
-  }
-  [part='editing-tools'] {
-    padding-block-start: var(--lr-space-xs);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
-  }
-  @container (min-width: 112rem) {
-    [part='toolbar'] {
-      display: grid;
-      grid-template-columns: minmax(0, max-content) max-content;
-      justify-content: start;
-    }
-    .toolbar-row, [part='editing-tools'] { flex: none; }
-    .toolbar-row {
-      padding-inline-end: var(--lr-space-xs);
-      border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    }
-    [part='editing-tools'], .font-tools, [part='format-actions'] { flex-wrap: nowrap; }
-    [part='editing-tools'] {
-      padding-block-start: 0;
-      border-block-start: 0;
-    }
-    .font-tools { flex: none; }
   }
   .tool-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-font-size-lg);
-    block-size: var(--lr-font-size-lg);
+    inline-size: var(--_docx-tool-icon-size, var(--lr-font-size-lg));
+    block-size: var(--_docx-tool-icon-size, var(--lr-font-size-lg));
   }
   :host(:dir(rtl)) :is(#tool-undo, #tool-redo, #tool-image-previous, #tool-image-next) .tool-icon {
     transform: scaleX(-1);
@@ -184,7 +214,7 @@ export const styles = css`
   [part='new-button'], [part='open-button'], [part='save-button'], [part='commands-button'], [part='document-panel-toggle'], [part='image-replace-trigger'], [part='table-format-trigger'],
   [part='format-button'], [part='edit-button'], [part='link-trigger'], [part='find-toggle'],
   [part='image-insert-trigger'], [part='table-insert-trigger'], [part='image-previous'], [part='image-next'] {
-    --lr-icon-size: var(--lr-font-size-lg);
+    --lr-icon-size: var(--_docx-tool-icon-size, var(--lr-font-size-lg));
   }
 
   .tool-glyph { position: relative; display: flex; }
@@ -312,6 +342,7 @@ export const styles = css`
   }
   [part='navigation-tools'] {
     flex: none;
+    gap: var(--_docx-tool-gap);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
@@ -540,17 +571,19 @@ export const styles = css`
   }
 
   @container (max-width: 35rem) {
-    [part='toolbar'] { gap: var(--lr-space-xs); }
     /* Phones keep both toolbar rows one control tall; each scrolls and keyboard focus reveals offscreen tools. */
-    [part='editing-tools'] {
+    :host(:not([toolbar-layout='single-row'])) [part='editing-tools'] {
       flex-wrap: nowrap;
-      overflow-x: auto;
-      overflow-y: hidden;
+      overflow: auto hidden;
       scrollbar-width: thin;
+      padding-inline-end: var(--_docx-focus-gutter);
     }
-    [part='editing-tools'] > * { flex-shrink: 0; }
-    .font-tools { flex-wrap: nowrap; }
-    [part='paragraph-style'], [part='font-family'] { flex: 0 0 var(--lr-size-6rem); inline-size: var(--lr-size-6rem); }
+    :host(:not([toolbar-layout='single-row'])) [part='editing-tools'] > * {
+      flex-shrink: 0;
+      max-inline-size: none;
+    }
+    :is(.font-tools, [part='format-actions']) { flex-wrap: nowrap; }
+    [part='editing-tools'] { --_docx-font-name-width: var(--lr-size-6rem); }
     [part='find-query'], [part='find-replace'] { flex-basis: 100%; }
   }
 `;

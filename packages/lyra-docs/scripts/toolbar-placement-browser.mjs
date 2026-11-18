@@ -42,13 +42,15 @@ export async function runToolbarPlacement(page, check, { createEditor, saveEdito
           const part = name => root.querySelector(`[part="${name}"]`);
           const box = node => node.getBoundingClientRect();
           const row = part('toolbar-first-row');
+          const first = box(row);
+          const editing = box(part('editing-tools'));
           const workspace = box(part('workspace'));
           const area = box(part('toolbar-area'));
           const sides = [...element.parentElement.querySelectorAll('aside')].map(box);
           return {
             areaWidth: area.width, workspaceWidth: workspace.width,
-            grid: getComputedStyle(part('toolbar')).display,
-            editingWrap: getComputedStyle(part('editing-tools')).flexWrap,
+            sameRow: Math.abs(first.top + first.height / 2 - editing.top - editing.height / 2) <= 1,
+            formattingBelow: editing.top >= first.bottom - 1,
             aligned: sides.every(side => Math.abs(side.top - workspace.top) <= 1 && side.top >= area.bottom - 1),
             adjacent: row.lastElementChild === part('navigation-tools') && row.lastElementChild.previousElementSibling.classList.contains('insert-tools'),
             navCount: root.querySelectorAll('[part="navigation-tools"]').length,
@@ -56,8 +58,7 @@ export async function runToolbarPlacement(page, check, { createEditor, saveEdito
         });
         assert.ok(layout.areaWidth > layout.workspaceWidth && layout.areaWidth > width - 64, JSON.stringify(layout));
         assert.ok(Math.abs(layout.workspaceWidth - 320) <= 1 && layout.aligned, JSON.stringify(layout));
-        assert.equal(layout.grid, width === 2000 ? 'grid' : 'flex');
-        assert.equal(layout.editingWrap, width === 900 ? 'wrap' : 'nowrap');
+        assert.ok(width === 2000 ? layout.sameRow : layout.formattingBelow, JSON.stringify(layout));
         assert.ok(layout.adjacent && layout.navCount === 1);
         if (width === 2000) {
           await editor.locator('[part="find-toggle"]').click();

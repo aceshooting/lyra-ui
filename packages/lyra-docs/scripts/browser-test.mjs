@@ -15,6 +15,8 @@ import { runImageInsertion } from './image-insertion-browser.mjs';
 import { runImageInsertionTools } from './image-insertion-tools-browser.mjs';
 import { runEditorLayout } from './layout-browser.mjs';
 import { runToolStyles } from './tool-styles-browser.mjs';
+import { runFileActions } from './file-actions-browser.mjs';
+import { runToolbarDensity } from './toolbar-density-browser.mjs';
 import { runFormattingTools } from './formatting-browser.mjs';
 import { runTableEditing } from './tables-browser.mjs';
 import { runEditorContracts } from './editor-contracts-browser.mjs';
@@ -39,6 +41,8 @@ assert.ok(browsers.length > 0, 'DOCX_BROWSERS names no browser');
 const SELECTORS = {
   DOCX_LAYOUT_ONLY: ['1'],
   DOCX_TOOL_STYLES_ONLY: ['1'],
+  DOCX_FILE_ACTIONS_ONLY: ['1'],
+  DOCX_TOOLBAR_DENSITY_ONLY: ['1'],
   DOCX_FORMATTING_ONLY: ['1'],
   DOCX_INSERTION_ONLY: ['core', 'ui', 'all'],
   DOCX_IMAGES_ONLY: ['core', 'ui', 'all'],
@@ -1388,6 +1392,8 @@ async function runSharedSuites(page, check, { record }) {
   await runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
   await runEditorLayout(page, check, { createEditor, saveEditor, evidenceDirectory: screenshots });
   await runToolStyles(page, check, { createEditor });
+  await runFileActions(page, check, { createEditor });
+  await runToolbarDensity(page, check, { createEditor, saveEditor });
   await runFormattingTools(page, check, { saveEditor });
   await runBasicEditing(page, check);
   await runEditorWorkflows(page, check);
@@ -1417,6 +1423,10 @@ async function runDocumentTools(page, check) {
 async function runSelectedSuite(page, check) {
   if (process.env.DOCX_LAYOUT_ONLY) {
     await runEditorLayout(page, check, { createEditor, saveEditor, evidenceDirectory: screenshots });
+  } else if (process.env.DOCX_TOOLBAR_DENSITY_ONLY) {
+    await runToolbarDensity(page, check, { createEditor, saveEditor });
+  } else if (process.env.DOCX_FILE_ACTIONS_ONLY) {
+    await runFileActions(page, check, { createEditor });
   } else if (process.env.DOCX_TOOL_STYLES_ONLY) {
     await runToolStyles(page, check, { createEditor });
   } else if (process.env.DOCX_DOCUMENT_TOOLS_ONLY) {
