@@ -6636,7 +6636,7 @@
       "module": "src/components/data/tree/tree-types.ts",
       "exportName": "LyraTreeNodeData",
       "kind": "interface",
-      "fingerprint": "e20c4671be6f5383131b",
+      "fingerprint": "52a080bcd374fb68cbc9",
       "routes": [
         "src/all.ts",
         "src/components/data/index.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "89b134a66d83efa91bb0",
+      "fingerprint": "0037b69fd2fb20a9de66",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "f81dc0e7e9681876d44d",
+      "fingerprint": "febced677867b37be860",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "9a325f280225641d8e4e",
+      "fingerprint": "5cd677577da22be3403a",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "e214c8bf7dd2f382adfe",
+      "fingerprint": "c6e600598d8097857196",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "04732e2935f33140b113",
+      "fingerprint": "68cd730d1dc3fe463c11",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "fb00c2d4b4eb28ed680f",
+      "fingerprint": "c4fb4dfc19e36ad82602",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -23050,6 +23050,28 @@
         "kind": "utility",
         "name": "data-sources-contracts",
         "declaration": "LyraCursorSource"
+      }
+    },
+    {
+      "module": "src/components/data/tree/tree-types.ts",
+      "exportName": "LyraTreePointerReorderDetail",
+      "kind": "interface",
+      "fingerprint": "a541482b5900d6967234",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/tree/tree.class.ts",
+        "src/components/data/tree/tree.ts",
+        "src/components/lr-tree.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-tree-tree-types-contracts",
+        "declaration": "LyraTreePointerReorderDetail"
       }
     }
   ],

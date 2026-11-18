@@ -156,16 +156,16 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Page breakpoint tracking, dock focus ownership and tooltip sizing add 2,191 raw bytes.
-// The complete graph measures 5,744,088 bytes across 65 files. Rounding to the next 64-byte
-// boundary leaves 40 bytes. The opt-in Oniguruma entry measures its WASM separately.
+// Tree density, expansion and pointer reordering, select keyboard handling and version metadata
+// bring the complete graph to 5,760,843 bytes across 65 files. Rounding to the next 64-byte
+// boundary leaves 53 bytes. The opt-in Oniguruma entry measures its WASM separately.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The complete core graph measures 5,744,088 raw bytes across 65 emitted files after the page, dock and tooltip fixes. The raw ceiling is 5,744,128 bytes.',
-  reviewedCoreMeasurementBytes: 5_744_088,
+  $comment: 'The complete core graph measures 5,760,843 raw bytes across 65 emitted files after the tree and select updates. The raw ceiling is 5,760,896 bytes; optional peers remain lazy and no WASM is bundled.',
+  reviewedCoreMeasurementBytes: 5_760_843,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 40,
+  selectedRegressionHeadroomBytes: 53,
 };
 
 /**
