@@ -43,7 +43,7 @@ jobs:
   prepare:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     env:
       PREPARATION_MODE: ${{ inputs.mode }}
       SOURCE_CONTRACTS_JSON: ${{ inputs.sourceContracts }}
@@ -146,6 +146,12 @@ jobs:
             git branch main "$GITHUB_SHA"
           fi
           pnpm release:prepare
+      - name: Install browsers for release budgets
+        if: inputs.mode == 'release'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium firefox webkit
+      - name: Verify release budgets on prepared package versions
+        if: inputs.mode == 'release'
+        run: pnpm release:budgets
       - name: Verify generated source contracts
         run: |
           pnpm --filter @aceshooting/lyra-ui run check:published-compatibility

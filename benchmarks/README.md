@@ -2,8 +2,8 @@
 
 Run repeatable table, chart and option-control workloads against Lyra UI's built package, save raw
 samples, and compare later builds. Release qualification includes a quick Chromium comparison on a
-stable workstation; material regressions require an explanation in the changeset. Measurements do
-not run automatically in CI. See [the release procedure](../docs/agents/ci-and-gates.md#release-procedure).
+stable workstation or the manually dispatched Release quick benchmark workflow. Material regressions
+require an explanation in the changeset. See [the release procedure](../docs/agents/ci-and-gates.md#release-procedure).
 
 ## Run
 

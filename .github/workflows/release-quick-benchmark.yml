@@ -1,0 +1,51 @@
+name: Release quick benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_version:
+        description: 'Exact preceding published UI version'
+        required: true
+        type: string
+      baseline_sha256:
+        description: 'Reviewed SHA-256 of that published npm tarball'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Require main
+        run: test "$GITHUB_REF" = 'refs/heads/main'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Install benchmark Chromium
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - name: Build the comparison candidate
+        run: pnpm --filter @aceshooting/lyra-ui build
+      - name: Measure both packages with the same quick harness
+        env:
+          BASELINE_VERSION: ${{ inputs.baseline_version }}
+          BASELINE_SHA256: ${{ inputs.baseline_sha256 }}
+        run: node benchmarks/release-quick.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: release-quick-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lyra-release-quick-results
+          if-no-files-found: error
+          retention-days: 14

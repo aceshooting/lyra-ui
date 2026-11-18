@@ -172,6 +172,8 @@ gate. Read `EXEMPTIONS` for the current list and reasons.
 - In release mode the workflow keeps its detached checkout and creates a local `main` ref at the
   dispatch SHA for Changesets' base branch (a mismatched existing `main` is rejected); it does not
   filter pending changesets or replace release preparation's `origin/main` ancestry check.
+  It installs the packed-consumer browsers and runs the complete `pnpm release:budgets` against
+  the prepared versions before returning the reviewed source delta.
 
 ### Composable styling and the token grammar
 
@@ -518,10 +520,11 @@ locally patched advisory only for its reviewed package/version, patch registrati
 and installed source digests. Unknown advisories, changed patch contents, unpatched copies, and audit
 errors fail the check. Both CI and `scripts/ci.sh` run this gate.
 
-Per-patch scope: see the patch files under `patches/` and `osv-scanner.toml`. The `braces` advisory
-has no published upstream fix. The [sprintf-js advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c)
-was withdrawn on 2026-10-22 because applications are responsible for handling exceptions. Its patch
-remains as hardening that bounds numeric precision and padding allocation. Every registered patch
+Per-patch scope is recorded in `patches/` and `osv-scanner.toml`. GitHub withdrew the
+[braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) on 2026-10-23 and the
+[sprintf-js advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) on 2026-10-22. Their patches
+remain as hardening. The braces patch bounds parser and AST traversal depth. The sprintf-js patch
+bounds numeric precision and padding allocation. Every registered patch
 still requires verified evidence, including when the registry no longer reports its advisory. A
 version-only `pnpm audit` can report the original metadata for locally patched packages.
 
@@ -593,6 +596,14 @@ an incompatible comparison is incomplete evidence. A material regression (more t
 in median or p95) requires an explanation in the changeset before release. Wall-clock measurements
 remain advisory evidence; the deterministic scale counters are the automated regression gate.
 
+For a hosted run, dispatch `release-quick-benchmark.yml` on pre-version-preparation `main` with
+the preceding published UI version and verified tarball SHA-256. The job runs the same quick
+profile for both packages on one runner with the frozen comparison dependencies. Review the
+raw results, comparison and exact source receipt. The receipt records a compatible material
+timing finding as `regression`, which still requires an explanation before release. This does
+not replace the separate Quality tools A/B job.
+
+
 1. **Prepare locally.** `pnpm release:prepare` (`scripts/release-prepare.mjs`) requires the exact
    `.nvmrc` Node patch, a clean tree and a HEAD containing `origin/main`. It fetches `origin/main` and
    tags (refusing to overwrite conflicting local tags), runs `pnpm changeset version`, refreshes the
@@ -606,7 +617,9 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    (`check:bundle-size`, Gen's build and `check:bundles`, `check:package-size`, companion archives via
    `scripts/check-companion-package-sizes.mjs`, `check-packed-consumer.mjs --skip-attw`): the bump
    changes version-stamped bytes, so a budget overrun surfaces before the release commit instead of
-   as budget-only follow-ups after CI. Changesets can auto-expand a release to a
+   as budget-only follow-ups after CI. The hosted equivalent is `prepare-artifacts.yml` on `main`
+   with `mode=release`; its artifact contains the generated source delta after budgets pass.
+   Changesets can auto-expand a release to a
    publishable dependent: the package-version delta, not the changeset list, is the release set. Only
    stable `major.minor.patch` versions are accepted.
 2. **Commit and qualify.** Review, commit as `chore(release): <pkg>@<version>`, push to main. Push CI

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
+import * as benchmarkCatalog from '../benchmarks/fixtures/catalog.mjs';
+import { validateComparison, verifyMeasurement } from '../benchmarks/release-quick.mjs';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
@@ -108,6 +110,7 @@ test('qualification and release Node setup never restores package-manager caches
     ['release.yml', 2],
     ['release-verification.yml', 1],
     ['prepare-artifacts.yml', 1],
+    ['release-quick-benchmark.yml', 1],
     ['publish.yml', 2],
     ['verify-delayed-publication.yml', 1],
   ]);
@@ -126,6 +129,70 @@ test('qualification and release Node setup never restores package-manager caches
         : /^ {10}node-version-file: \.nvmrc$/mu);
     }
   }
+});
+
+test('hosted release preparation checks prepared budgets before handing off generated source', () => {
+  const steps = read('.github/workflows/prepare-artifacts.yml');
+  const prepare = steps.indexOf('run: |\n          set -euo pipefail\n          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"');
+  const version = steps.indexOf('pnpm release:prepare', prepare);
+  const browsers = steps.indexOf('playwright install --with-deps chromium firefox webkit', version);
+  const budgets = steps.indexOf('run: pnpm release:budgets', browsers);
+  const bundle = steps.indexOf('node scripts/prepare-artifacts.mjs bundle', budgets);
+  assert.ok(prepare >= 0 && version > prepare && browsers > version && budgets > browsers && bundle > budgets);
+  assert.match(steps, /- name: Verify release budgets on prepared package versions\n        if: inputs\.mode == 'release'\n        run: pnpm release:budgets/u);
+  assert.doesNotMatch(steps.slice(browsers, bundle), /continue-on-error/u);
+});
+
+test('hosted quick comparison uses immutable main inputs in one runner and retains its evidence', () => {
+  const workflow = read('.github/workflows/release-quick-benchmark.yml');
+  const compare = job(workflow, 'compare');
+  assert.match(workflow, /workflow_dispatch:[\s\S]+baseline_version:[\s\S]+baseline_sha256:/u);
+  assert.match(workflow, /permissions:\n  contents: read/u);
+  assert.match(compare, /test "\$GITHUB_REF" = 'refs\/heads\/main'/u);
+  assert.match(compare, /ref: \$\{\{ github\.sha \}\}[\s\S]+persist-credentials: false/u);
+  assert.match(compare, /pnpm install --frozen-lockfile[\s\S]+playwright install --with-deps chromium\n[\s\S]+pnpm --filter @aceshooting\/lyra-ui build[\s\S]+run: node benchmarks\/release-quick\.mjs/u);
+  assert.match(compare, /name: release-quick-\$\{\{ github\.sha \}\}-\$\{\{ github\.run_attempt \}\}[\s\S]+if-no-files-found: error/u);
+  assert.doesNotMatch(compare, /continue-on-error/u);
+});
+
+test('hosted quick comparison distinguishes compatible timing observations from failed evidence', () => {
+  const quick = benchmarkCatalog.SCENARIOS.filter(scenario => scenario.profiles.includes('quick'));
+  const comparisons = Array.from({ length: quick.length * Object.keys(benchmarkCatalog.METRICS).length }, () => ({}));
+  const output = {
+    status: 'passed',
+    compatibility: { overridden: false, mismatches: [] },
+    thresholds: { relative: 0.15, absoluteMs: 1 },
+    comparisons,
+  };
+  assert.equal(validateComparison(output, 0), 'passed');
+  const regression = { ...output, status: 'regression' };
+  assert.equal(validateComparison(regression, 1), 'regression');
+  assert.throws(() => validateComparison(regression, 0));
+  assert.throws(() => validateComparison({ ...regression, comparisons: [] }, 1));
+  assert.throws(() => validateComparison({ ...regression, compatibility: { overridden: true, mismatches: ['environment'] } }, 1));
+  assert.throws(() => validateComparison({ ...regression, thresholds: { relative: 0.20, absoluteMs: 1 } }, 1));
+  for (const status of [2, 3, null]) assert.throws(() => validateComparison(regression, status));
+});
+
+test('hosted quick comparison requires the complete Chromium profile and exact source roles', () => {
+  const commit = 'a'.repeat(40);
+  const measurement = {
+    status: 'passed',
+    library: { publicCommit: commit, version: '31.2.0' },
+    configuration: {
+      browsers: ['chromium'],
+      profile: 'quick',
+      scenarioIds: benchmarkCatalog.SCENARIOS.filter(scenario => scenario.profiles.includes('quick')).map(scenario => scenario.id),
+    },
+  };
+  verifyMeasurement(measurement, commit, '31.2.0');
+  verifyMeasurement({ ...measurement, library: { ...measurement.library, publicCommit: null } }, null, '31.2.0');
+  assert.throws(() => verifyMeasurement(measurement, null, '31.2.0'));
+  assert.throws(() => verifyMeasurement(measurement, commit, '31.2.1'));
+  assert.throws(() => verifyMeasurement({ ...measurement, status: 'incomplete' }, commit, '31.2.0'));
+  assert.throws(() => verifyMeasurement({
+    ...measurement, configuration: { ...measurement.configuration, scenarioIds: [] },
+  }, commit, '31.2.0'));
 });
 
 test('real browser channels install independently of cache availability', () => {
