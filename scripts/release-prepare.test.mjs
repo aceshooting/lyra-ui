@@ -22,6 +22,87 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const source = readFileSync(join(repoRoot, 'scripts/release-prepare.mjs'), 'utf8');
 const render = (steps) => steps.map(([command, args]) => [command, ...args].join(' '));
 
+for (const { scenario, bumps, mapVersion, uiVersion, docsVersion, mapPeer } of [
+  {
+    scenario: 'a joint UI, Docs, and compatible Map release',
+    bumps: { 'lyra-ui': 'patch', 'lyra-docs': 'patch', 'lyra-map': 'minor' },
+    mapVersion: '1.6.0',
+    uiVersion: '31.2.1',
+    docsVersion: '0.8.1',
+    mapPeer: 'workspace:^1.5.2',
+  },
+  {
+    scenario: 'a compatible Map-only release',
+    bumps: { 'lyra-map': 'minor' },
+    mapVersion: '1.6.0',
+    uiVersion: '31.2.0',
+    docsVersion: '0.8.0',
+    mapPeer: 'workspace:^1.5.2',
+  },
+  {
+    scenario: 'a Map release outside the UI peer range',
+    bumps: { 'lyra-map': 'major' },
+    mapVersion: '2.0.0',
+    uiVersion: '31.2.1',
+    docsVersion: '0.8.0',
+    mapPeer: 'workspace:^2.0.0',
+  },
+]) {
+  test(`Changesets honors the Map peer range for ${scenario}`, () => {
+    const root = mkdtempSync(join(tmpdir(), 'lyra-release-peer-range-'));
+    const writeJSON = (file, value) => writeFileSync(join(root, file), JSON.stringify(value));
+    const readJSON = (file) => JSON.parse(readFileSync(join(root, file), 'utf8'));
+    const mapName = '@aceshooting/lyra-map';
+    const uiName = '@aceshooting/lyra-ui';
+    const mapPeerMeta = { [mapName]: { optional: true } };
+    try {
+      writeJSON('package.json', { name: 'release-fixture', private: true });
+      writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+      mkdirSync(join(root, '.changeset'));
+      const config = JSON.parse(readFileSync(join(repoRoot, '.changeset/config.json'), 'utf8'));
+      // Version the fixture without needing its own installed changelog generator.
+      writeJSON('.changeset/config.json', { ...config, changelog: false });
+      const packages = {
+        'lyra-ui': {
+          version: '31.2.0',
+          peerDependencies: { [mapName]: 'workspace:^1.5.2', '@aceshooting/lyra-translations': 'workspace:^' },
+          peerDependenciesMeta: mapPeerMeta,
+          devDependencies: { [mapName]: 'workspace:*' },
+        },
+        'lyra-ide': { version: '31.2.0', peerDependencies: { [uiName]: 'workspace:^' } },
+        'lyra-translations': { version: '31.2.0', peerDependencies: { [uiName]: 'workspace:^' } },
+        'lyra-map': { version: '1.5.2' },
+        'lyra-docs': { version: '0.8.0', peerDependencies: { [uiName]: 'workspace:^' } },
+      };
+      for (const [name, manifest] of Object.entries(packages)) {
+        const directory = `packages/${name}`;
+        mkdirSync(join(root, directory), { recursive: true });
+        writeJSON(`${directory}/package.json`, { name: `@aceshooting/${name}`, ...manifest });
+      }
+      const releases = Object.entries(bumps).map(([name, bump]) => `'@aceshooting/${name}': ${bump}`);
+      writeFileSync(join(root, '.changeset/release.md'), ['---', ...releases, '---', '', 'Release fixture.', ''].join('\n'));
+
+      const cli = fileURLToPath(import.meta.resolve('@changesets/cli/bin.js'));
+      const result = spawnSync(process.execPath, [cli, 'version'], { cwd: root, encoding: 'utf8' });
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      const manifests = Object.keys(packages).map(name => readJSON(`packages/${name}/package.json`));
+      assert.deepEqual(Object.fromEntries(manifests.map(({ name, version }) => [name, version])), {
+        [uiName]: uiVersion,
+        '@aceshooting/lyra-ide': uiVersion,
+        '@aceshooting/lyra-translations': uiVersion,
+        [mapName]: mapVersion,
+        '@aceshooting/lyra-docs': docsVersion,
+      });
+      const ui = manifests.find(({ name }) => name === uiName);
+      assert.equal(ui.peerDependencies[mapName], mapPeer);
+      assert.deepEqual(ui.peerDependenciesMeta, mapPeerMeta);
+      assert.equal(ui.devDependencies[mapName], 'workspace:*');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
 test('independent generated-UI release builds public declaration prerequisites without bumping them', () => {
   const steps = render(releasePreparationSteps(['@aceshooting/lyra-gen']));
   assert.deepEqual(steps.slice(0, 2), [
