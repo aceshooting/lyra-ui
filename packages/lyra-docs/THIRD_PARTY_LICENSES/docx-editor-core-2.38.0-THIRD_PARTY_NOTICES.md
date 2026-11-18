@@ -21,14 +21,15 @@ so they cannot appear below. Their licenses travel with the package in
 
 - `licenses/ECMA-376.md`
 - `licenses/HarfBuzz-COPYING.txt`
+- `licenses/MaterialSymbols-NOTICE.md`
 
 ## Bundled packages
 
-- harfbuzzjs 1.6.1 — MIT (https://harfbuzz.github.io/harfbuzzjs)
+- harfbuzzjs 1.6.4 — MIT (https://harfbuzz.github.io/harfbuzzjs)
 
 ---
 
-## harfbuzzjs 1.6.1
+## harfbuzzjs 1.6.4
 
 License: MIT
 

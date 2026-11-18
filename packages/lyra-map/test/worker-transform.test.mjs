@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
+import { completePlugin } from '../scripts/complete-transform.mjs';
 import { transformWorker } from '../scripts/worker-transform.mjs';
 
 const require = createRequire(import.meta.url);
@@ -81,7 +84,7 @@ function workerHarness(prepareStyleLayers) {
 
 test('transforms and parses all four files from the pinned source', async () => {
   const manifest = JSON.parse(await readFile(join(upstream, 'package.json'), 'utf8'));
-  assert.equal(manifest.version, '6.16.0');
+  assert.equal(manifest.version, '6.19.0');
   for (const path of paths) {
     assert.notEqual(transformed.get(path), sources.get(path), path);
     assert.doesNotThrow(() => javascript(transformed.get(path)), path);
@@ -203,4 +206,54 @@ test('answers global and liveness messages while a map admission is pending', as
   preparation.resolve();
   await layers;
   assert.deepEqual(calls.at(-1), 'layers');
+});
+
+test('an opaque-origin module worker resolves child imports beside its configured entry', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'lyra-worker-base-'));
+  try {
+    await writeFile(join(dir, 'signal.mjs'), 'export const signal = {};');
+    await writeFile(join(dir, 'worker entry.mjs'), [
+      "import { answer } from './child.mjs';",
+      "import { signal } from './signal.mjs';",
+      'signal.answer = answer;'
+    ].join('\n'));
+    const { signal } = await import(pathToFileURL(join(dir, 'signal.mjs')).href);
+    await writeFile(join(dir, 'child.mjs'), 'export const answer = 42;');
+    const id = join(upstream, 'src/util/web_worker.ts');
+    const source = await readFile(id, 'utf8');
+    const { code } = await completePlugin.transform(source, id);
+    const emitted = javascript(code);
+    const body = emitted.slice(emitted.indexOf('function isCrossOrigin('))
+      .replace('export async function workerFactory', 'async function workerFactory')
+      .replaceAll('import.meta.url', 'base');
+    const base = pathToFileURL(join(dir, 'frame.html')).href;
+    const urls = [];
+    class ModuleWorker {
+      constructor(url, options) {
+        assert.equal(options.type, 'module');
+        assert.equal(url, urls[0]);
+        this.module = import(url);
+      }
+    }
+    function createTrustedScriptURL(url) {
+      urls.push(url);
+      return url;
+    }
+    const factory = new Function(
+      'globalThis', 'config', 'base', 'createTrustedScriptURL', 'Worker', 'fetch', body + '\nreturn workerFactory;'
+    )(
+      { origin: 'null', document: { baseURI: base } },
+      { WORKER_URL: './worker entry.mjs' },
+      base,
+      createTrustedScriptURL,
+      ModuleWorker,
+      async (url) => new Response(await readFile(new URL(url, base)))
+    );
+    const worker = await factory();
+    assert.match(urls[0], /^data:text\/javascript/);
+    await worker.module;
+    assert.equal(signal.answer, 42);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

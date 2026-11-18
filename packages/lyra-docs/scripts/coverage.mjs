@@ -21,7 +21,7 @@ export const TOOLING = Object.freeze({
   directories: ['scripts'],
   include: [
     'scripts/build.mjs', 'scripts/build-engine.mjs', 'scripts/check-package.mjs', 'scripts/coverage.mjs',
-    'scripts/performance.mjs', 'scripts/report-coverage.mjs', 'scripts/engine/source.mjs',
+    'scripts/performance.mjs', 'scripts/report-coverage.mjs', 'scripts/engine/metafile-chunks.mjs', 'scripts/engine/source.mjs',
     'scripts/lib/editor-tags.mjs', 'scripts/lib/engine-imports.mjs',
     'scripts/lib/static-files.mjs',
   ],

@@ -108,11 +108,36 @@ and `Map.setTerrain()` require prior preparation when introducing a new feature 
 
 The plugin resolves this package's worker entry automatically. `setWorkerUrl()` remains available
 for an explicitly managed compatible worker graph. Deploy every transitive hashed worker module
-together with its renderer version. Without the plugin or an override, worker creation reports a
+together with its renderer version. A sandboxed iframe with an opaque origin needs CORS access
+to the worker entry and its imported modules. Without the plugin or an override, worker creation reports a
 configuration error; it does not load a different engine automatically.
 
 `lr-map` in `@aceshooting/lyra-ui` uses this companion by default. Its explicit `engine="maplibre"`
 mode uses the separate native `maplibre-gl` peer and retains that engine's full payload.
+
+## Migrating from Lyra Map 1.x to 2.x
+
+Version 2 uses MapLibre GL JS 6.19. Maps configured through the `Map` constructor can
+continue to use its gesture options, feature queries and custom layers. Integrations that call
+the exported gesture handlers or renderer classes directly need the following changes.
+
+- Prefer `map.cooperativeGestures` and `map.touchPitch` for enabling and disabling gestures.
+  To construct these handlers directly, pass the canvas container, locale dictionary and gesture
+  options to `CooperativeGesturesHandler`. Pass that cooperative gestures handler to
+  `TwoFingersTouchPitchHandler`.
+- A custom gesture handler can return `{ easeTo: options }` for a camera animation.
+  Move other side effects out of the former `HandlerResult.cameraAnimation` callback. Calls
+  to `KeyboardHandler.keydown`, `BoxZoomHandler.mouseupWindow`, `ScrollZoomHandler.wheel` and
+  `ScrollZoomHandler.renderFrame` can return no result. Check the result and the individual
+  fields before reading them.
+- Prefer `map.queryRenderedFeatures()` for screen-space queries. Direct calls to
+  `Style.queryRenderedFeatures()` now take the projected camera and world coordinate helper
+  after the query options. In `Tile.queryRenderedFeatures()`, pass those two arguments in
+  place of the transform and omit the former pixel-position matrix.
+- Use `map.triggerRepaint()` to request a frame or implement a custom layer's render callback
+  to draw into the map. A direct call to `Painter.render()` now takes the style, projected camera,
+  world coordinate helper and frame data. Layer compositing uses `layerCompositeFbo` and
+  `layerCompositeBackdrop` in place of `layerOpacityFbo`.
 
 ## Optional scene markers
 

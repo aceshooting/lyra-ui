@@ -168,9 +168,11 @@ test('family selection preserves defaults, deduplication, opacity, symbols, terr
     [{}, { types: [], programs: ['debug', 'sky'], projection: 'mercator' }],
     [{ sources: null, layers: null, projection: { type: null } }, { types: [], programs: ['debug', 'sky'], projection: 'mercator' }],
     [{ layers: [{ id: 'one', type: 'line' }, { id: 'two', type: 'line' }] },
-      { types: ['line'], programs: ['line', 'debug', 'sky', 'layer-opacity'], projection: 'mercator' }],
+      { types: ['line'], programs: ['line', 'debug', 'sky', 'layer-composite'], projection: 'mercator' }],
+    [{ layers: [{ id: 'image', type: 'raster' }] },
+      { types: ['raster'], programs: ['raster', 'debug', 'sky', 'layer-composite'], projection: 'mercator' }],
     [{ layers: [{ id: 'one', type: 'fill' }, { id: 'two', type: 'symbol' }], projection: { type: 'globe' }, terrain: {} },
-      { types: ['fill', 'symbol'], programs: ['fill', 'symbol', 'debug', 'sky', 'layer-opacity', 'globe', 'terrain'], projection: 'globe' }],
+      { types: ['fill', 'symbol'], programs: ['fill', 'symbol', 'debug', 'sky', 'layer-composite', 'globe', 'terrain'], projection: 'globe' }],
     [{ projection: { type: 'vertical-perspective' } },
       { types: [], programs: ['debug', 'sky', 'globe'], projection: 'vertical-perspective' }],
   ]) await both(async generated => {

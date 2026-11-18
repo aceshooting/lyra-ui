@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { metafileChunkGroups, metafileChunks } from './engine/metafile-chunks.mjs';
 import { sha256, withPreparedSource } from './engine/source.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -109,7 +110,7 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
       base: './',
       publicDir: false,
       define: { __DOCX_HARFBUZZ_WASM_URL_SUPPORTED__: 'true' },
-      plugins: [{
+      plugins: [metafileChunks(await realpath(assets.get('emf-converter'))), {
         name: 'lyra-docx-pinned-source',
         enforce: 'pre',
         async resolveId(id, importer) {
@@ -173,6 +174,7 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
             // Keep shared text primitives separate from the growing layout implementation.
             codeSplitting: {
               groups: [
+                ...metafileChunkGroups,
                 { name: 'bidi', test: /[/\\]node_modules[/\\]bidi-js[/\\]/ },
                 { name: 'font-shaping', test: /[/\\]packages[/\\]core[/\\]src[/\\]layout[/\\](?:font-resource|shaped-run)\.ts$/ },
                 // Eager layout modules that import only other layout modules form a leaf chunk: it
@@ -180,7 +182,10 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
                 { name: (id, ctx) => (layoutLeaf(id, ctx, layoutLeaves) ? 'layout-text' : null), tags: ['$initial'] },
               ],
             },
-            comments: { annotation: true },
+            banner: chunk => chunk.name.startsWith('metafile-')
+              ? '/*! emf-converter (Apache-2.0). Module boundaries modified for distribution. See THIRD_PARTY_NOTICES.md. */'
+              : '',
+            comments: { annotation: true, legal: true },
           },
         },
       },
@@ -201,7 +206,7 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
     assert.equal(wasmAssets.length, 1, 'The engine must emit one external HarfBuzz binary');
     assert.equal(wasmAssets[0].sha256, expectedWasm.sha256, 'Emitted HarfBuzz binary differs from its locked input');
     const buildInputs = [];
-    for (const file of ['build-engine.mjs', 'engine/source.mjs', 'engine/entries/core.ts', 'engine/entries/store.ts']) {
+    for (const file of ['build-engine.mjs', 'engine/metafile-chunks.mjs', 'engine/source.mjs', 'engine/entries/core.ts', 'engine/entries/store.ts']) {
       buildInputs.push({ file, sha256: sha256(await readFile(path.join(scripts, file))) });
     }
     await mkdir(path.join(outputRoot, 'docx'), { recursive: true });

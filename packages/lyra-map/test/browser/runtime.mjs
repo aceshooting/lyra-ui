@@ -78,6 +78,8 @@ const server = http.createServer((req, res) => {
   requests.push({ path: pathname, bytes: typeof body === 'string' ? Buffer.byteLength(body) : body.length });
   res.writeHead(200, {
     'content-type': type,
+    vary: 'Origin',
+    ...(req.headers.origin === 'null' ? { 'access-control-allow-origin': 'null' } : {}),
     'cache-control':
       /\.m?js$/.test(pathname) && pathname !== '/fixture.mjs' ? 'public,max-age=31536000,immutable' : 'no-store'
   });
@@ -148,9 +150,20 @@ async function positive(name) {
   let result, failure;
   try {
     await page.goto(url);
-    await page.waitForFunction(() => window.ready, null, { timeout: 15000 });
-    result = await page.evaluate((name) => window.fixture.run(name), name);
-    await page.evaluate(() => window.fixture.finish());
+    let target = page;
+    if (name === 'opaque-origin-worker') {
+      const attached = page.waitForEvent('frameattached');
+      await page.evaluate(() => {
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('sandbox', 'allow-scripts');
+        iframe.src = '/';
+        document.body.append(iframe);
+      });
+      target = await attached;
+    }
+    await target.waitForFunction(() => window.ready, null, { timeout: 15000 });
+    result = await target.evaluate((name) => window.fixture.run(name), name);
+    await target.evaluate(() => window.fixture.finish());
     if (name === 'built-in-mixed-direction-label' && externalScripts.length) {
       throw Error('Mixed-direction label requested an external text plugin: ' + JSON.stringify(externalScripts));
     }
@@ -179,6 +192,7 @@ const cases = process.env.MAP_TEST_CASES?.split(',') ?? [
   'canvas-image',
   'raster',
   'geojson',
+  'opaque-origin-worker',
   'vector-symbol',
   'cluster',
   'dynamic-features',

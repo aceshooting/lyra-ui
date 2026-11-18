@@ -7,8 +7,12 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const manifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const provenance = JSON.parse(await readFile(resolve(root, 'dist/provenance.json'), 'utf8'));
 assert.equal(manifest.name, '@aceshooting/lyra-map');
-assert.equal(provenance.version, '6.16.0');
+assert.equal(provenance.version, '6.19.0');
 assert.deepEqual(provenance.changedSourceFiles, [
+  'camera/camera_math_factory.ts',
+  'camera/camera_motions_factory.ts',
+  'camera/camera_solver_factory.ts',
+  'camera/project_camera.ts',
   'data/bucket/symbol_bucket.ts',
   'geo/projection/projection_factory.ts',
   'render/image_atlas.ts',
@@ -24,13 +28,16 @@ assert.deepEqual(provenance.changedSourceFiles, [
   'source/worker_tile.ts',
   'style/create_style_layer.ts',
   'style/load_sprite.ts',
+  'style/pauseable_placement.ts',
   'style/style.ts',
   'tile/tile.ts',
   'ui/map.ts',
   'util/actor_messages.ts',
   'util/config.ts',
+  'util/web_worker.ts',
   'util/web_worker_transfer.ts',
   'webgl/draw/draw_custom.ts',
+  'webgl/draw/draw_layer_composite.ts',
   'webgl/draw/draw_terrain.ts',
   'webgl/draw/index.ts',
   'webgl/program/program_uniforms.ts',

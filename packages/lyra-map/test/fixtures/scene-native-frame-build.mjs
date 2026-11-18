@@ -11,8 +11,8 @@ import { cameraFacts, completionInput, freeze } from './scene-completion-data.mj
 
 export const registryId = fileURLToPath(new URL('../../src/scene/native-frame-authority.mjs', import.meta.url));
 export const sourcePaths = { painter: 'render/painter.ts', drawCustom: 'webgl/draw/draw_custom.ts' };
-export const sourceHashes = { painter: 'edf08f62a0a52cce51847c154413c9b054b6d9a3d988d82fe50e3fa3d8ad090c',
-  drawCustom: 'c029531a50a329339e3b37f419a081c6e50e3e5d5dcde90473099a684a320b74' };
+export const sourceHashes = { painter: 'df60d7933bed2f26d51ac84ead1ab44911726d3a8ec2338b46fc6b4699b225c1',
+  drawCustom: '4256baa320f7ff7773038fbecba682edb937d83be016f763d0907ffc61524296' };
 export async function nativeSources() {
   return Object.fromEntries(await Promise.all(Object.entries(sourcePaths).map(async ([name, path]) =>
     [name, await readFile(join(upstreamRoot, 'src', path), 'utf8')])));
@@ -47,7 +47,7 @@ export async function loadTransformedNative({ enabled = true } = {}) {
     getDepthModeFor3D() { return { func: 'LEQUAL', mask: true, range: this.depthRangeFor3D }; }
     getDepthModeForSublayer() { return { func: 'LEQUAL', mask: false, range: [0, 1] }; }
   }
-  const dependencies = { FrameRenderContext, Color: { black: {}, transparent: {} },
+  const dependencies = { FrameRenderContext, getCameraMath: camera => camera, layerBlendsInShader: () => false, Color: { black: {}, transparent: {} },
     updateFrameUniformBuffer(buffer) { buffer.upload(); }, releaseProjectionUniformBuffers() { events.push('release-projection'); },
     selectDebugSource: () => ({}), DepthMode: { ReadOnly: false, disabled: {} }, StencilMode: { disabled: {} },
     OverscaledTileID: class { constructor(z, wrap, canonicalZ, x, y) { this.canonical = { z: canonicalZ, x, y }; this.wrap = wrap; } },
@@ -118,8 +118,10 @@ export function nativePaintFixture(native, { registry = authority, gpu = createS
   const projectionData = () => ({ mainMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     fallbackMatrix: [1 / 4096, 0, 0, 0, 0, -1 / 4096, 0, 0, 0, 0, 1 / 1000, 0, -1, 1, 0, 1],
     tileMercatorCoords: [0, 0, 1 / 8192, 1 / 8192], clippingPlane: [0, 0, 1, -1 / 3], projectionTransition: 0 });
-  const transform = { zoom: 0, pitch: 0, width: 640, height: 480, pixelsToGLUnits: [1 / 320, 1 / 240], cameraToCenterDistance: 1,
-    farZ: 1000, nearZ: 0.1, fov: 45, modelViewProjectionMatrix: projectionData().mainMatrix, projectionMatrix: projectionData().mainMatrix,
+  const worldSize = 512;
+  const viewMatrix = [2 / worldSize, 0, 0, 0, 0, -2 / worldSize, 0, 0, 0, 0, 1 / 1000, 0, -1, 1, 0, 1];
+  const transform = { projection: 'mercator', worldSize, pixelsPerMeter: 1, zoom: 0, pitch: 0, width: 640, height: 480, pixelsToGLUnits: [1 / 320, 1 / 240], cameraToCenterDistance: 1,
+    farZ: 1000, nearZ: 0.1, fov: 45, modelViewProjectionMatrix: viewMatrix, projectionMatrix: projectionData().mainMatrix,
     getProjectionDataForCustomLayer: projectionData, getProjectionData: projectionData };
   const context = { gl, programCache: {}, freeProjectionUniformBuffers: [], keyedProjectionUniformBuffers: new Map(),
     frameUniformBuffer: { pending: new Float32Array(64), context: { gl }, upload() { events.push('uniform'); hooks.work?.(); } },
@@ -162,7 +164,7 @@ export function nativePaintFixture(native, { registry = authority, gpu = createS
   return { gl, gpu, registry, context, painter, style, transform, data, implementation, originalRender, layer, styleLayer, layerReads, hooks, events, captures, renderInputs, renderReceivers,
     get projectionReads() { return projectionReads; }, get renderingReads() { return renderingReads; },
     setOffscreen(value) { offscreen = value; }, setTile(value) { tile = value; }, setRenderResult(value) { renderResult = value; },
-    render() { return painter.render(style, transform, data); },
+    render() { return painter.render(style, transform, {}, data); },
     enroll() { return registry.registerNativeFrameDemand(gl, implementation, originalRender); } };
 }
 

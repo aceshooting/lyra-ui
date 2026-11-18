@@ -172,15 +172,15 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  maplibre-gl@6.16.0>@maplibre/geojson-vt: 6.3.0
-  maplibre-gl@6.16.0>@maplibre/vt-pbf: 4.3.3
+  maplibre-gl@6.19.0>@maplibre/geojson-vt: 6.3.1
+  maplibre-gl@6.19.0>@maplibre/vt-pbf: 4.3.3
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   '@ag-ui/client@1.0.3>zod': 4.6.7
   '@ag-ui/proto@1.0.3>zod': 4.6.7
   '@rollup/plugin-node-resolve@15.3.1>deepmerge': 4.1.1
   '@web/dev-server@1.0.1>deepmerge': 4.1.1
-  '@docx-editor.dev/core@2.33.0>@docx-editor.dev/i18n': 2.33.0
-  '@docx-editor.dev/core@2.33.0>prosemirror-view': 1.42.7
+  '@docx-editor.dev/core@2.38.0>@docx-editor.dev/i18n': 2.38.0
+  '@docx-editor.dev/core@2.38.0>prosemirror-view': 1.42.7
   prosemirror-state@1.4.4>prosemirror-view: 1.42.7
   prosemirror-commands@1.7.2>prosemirror-transform: 1.12.4
   prosemirror-state@1.4.4>prosemirror-transform: 1.12.4
@@ -230,9 +230,6 @@ importers:
       '@codecov/vite-plugin':
         specifier: ^2.0.1
         version: 2.0.1(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-      '@secretlint/secretlint-rule-preset-recommend':
-        specifier: ^13.1.0
-        version: 13.1.0
       '@sgratzl/chartjs-chart-boxplot':
         specifier: ^4.4.5
         version: 4.4.5(chart.js@4.6.1)
@@ -383,8 +380,8 @@ importers:
         specifier: workspace:*
         version: link:../lyra-ui
       '@docx-editor.dev/core':
-        specifier: 2.33.0
-        version: 2.33.0
+        specifier: 2.38.0
+        version: 2.38.0(@napi-rs/canvas@1.1.1)
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
@@ -529,8 +526,8 @@ importers:
         specifier: ^4.10.2
         version: 4.10.2
       maplibre-gl:
-        specifier: 6.16.0
-        version: 6.16.0
+        specifier: 6.19.0
+        version: 6.19.0(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
       playwright:
         specifier: ^1.65.1
         version: 1.65.1
@@ -1208,8 +1205,8 @@ packages:
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
 
-  '@docx-editor.dev/core@2.33.0':
-    resolution: {integrity: sha512-j0JxjG1rwFv0jyOQ8yy2UvYoLprlJHVUXygXe7U9v5ybZ34o4RcOnPNdOKjkUz5zBydyLnJs7oQBHqrcYAGu9Q==}
+  '@docx-editor.dev/core@2.38.0':
+    resolution: {integrity: sha512-EI4PjRMf7+0KKXMjXk8IuCu7RShYUMhXLJjagMzHsXefXMchi6paZAPVeY45UeKov4TyxLNoEOmV2PBAFF+FWA==}
     engines: {node: ^20.16.0 || >=22.3.0}
     peerDependencies:
       pdf-lib: ^1.17.1
@@ -1220,8 +1217,8 @@ packages:
       yjs:
         optional: true
 
-  '@docx-editor.dev/i18n@2.33.0':
-    resolution: {integrity: sha512-RdzvS03tf4X9gErM4Y9sTTgpqkvAHSh7Nu6qS+9jSVi4eO7o07zJjIMWmYchZgjPI7RuQWUgthCrR9rK1G1aZQ==}
+  '@docx-editor.dev/i18n@2.38.0':
+    resolution: {integrity: sha512-3A7k4aDso9CH4J6eQFii5UQswElW6xYGRq+W3WiL/PUboO/yvBIIm9Pau3TRHtUn6vVQZgBcj/V+FBUWC47MKQ==}
 
   '@emnapi/core@1.11.0':
     resolution: {integrity: sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q==}
@@ -1811,9 +1808,6 @@ packages:
 
   '@mapbox/vector-tile@3.0.0':
     resolution: {integrity: sha512-Qf10S1uIHMk20ri/IVBnpS+esUEkVaR5Hftmz88jTInrpmWgPGJfPe3LVjjlE77trLx8tH6qjTG7uWH9hIq/0Q==}
-
-  '@maplibre/geojson-vt@6.3.0':
-    resolution: {integrity: sha512-3Zw2jsU9pIJG3G2CQFbLjWj2MlAHodhD7cSY+15iywUuLmmkgzcKRnueVRZ4AcC/5wOtfhidcJAAzBpoBNs3Xg==}
 
   '@maplibre/geojson-vt@6.3.1':
     resolution: {integrity: sha512-743sKqGQPU35Vgdjw0GFk58mUdKlxI3c36vvUvrU9qBx7EdWGSXagLU5yNlOTP12WADo+foDyP5vtlDJjzlvHw==}
@@ -3276,11 +3270,6 @@ packages:
     resolution: {integrity: sha512-4dVn4kOFgs0yzoe5CeActSwTu8wKIDdKn9MtxnWHvnY72MR7sU8kYuTiVSGkLVpcvhdVQiHdzD9rx8qSBGZitw==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/secretlint-rule-preset-recommend@13.1.0':
-    resolution: {integrity: sha512-dPnplMyjJYpVCJDNTjpUA8c/AfoHbWANJJJWKroK50DGGhAB4Oumzk+XinBMyMMAwgOsjU9CB9lUHXDvObMVCg==}
-    engines: {node: '>=22.0.0'}
-    deprecated: Built into secretlint v14 and later. Remove this package; the rule id still works. https://github.com/secretlint/secretlint/blob/HEAD/docs/rules/preset-recommend.md
-
   '@secretlint/source-creator@14.0.1':
     resolution: {integrity: sha512-90hxGIvpxpTw6/BO/Srh/ilmz6R3rukaFX4LLd98w8orRMv9ckdhl4aW0JU/7NK9G+fUN919h6nVAFND7Slo4w==}
     engines: {node: '>=22.0.0'}
@@ -4728,8 +4717,14 @@ packages:
   electron-to-chromium@1.5.487:
     resolution: {integrity: sha512-qWotOhQYeYEj+DK4+Y+cfPj44qiC6ETIiWtJLfmDJydED2BJJ7loPA4SfBbbrMI6X/X3tryJgxnY9nxsO545Zw==}
 
-  emf-converter@2.0.2:
-    resolution: {integrity: sha512-QLUufb45P3LlOudCoizBtJpO8cBw8LayH0mkvkRvIjvMlb6junwP0EXgUkdDyZUEF2QSEZUPV8rO8DS5rsJmkA==}
+  emf-converter@4.28.0:
+    resolution: {integrity: sha512-Y2EApPpPirdaA5JVUAVxFZx8XWG5zJpBJgQFOd76Ty+LYufp7yOZofmz8Lg3KCuOgDTcO6PA6PubPBNf3dEFog==}
+    hasBin: true
+    peerDependencies:
+      '@napi-rs/canvas': ^1.0.9
+    peerDependenciesMeta:
+      '@napi-rs/canvas':
+        optional: true
 
   emoji-picker-element-data@1.8.0:
     resolution: {integrity: sha512-VfRuRJNEDLS1JKlNS4olaqhjX5S1nnZ+ZHG73b/dV8QeZyi0yPruTPEE72EmF6XO3k/9hj3lybMIYMOYXb/57A==}
@@ -5071,8 +5066,8 @@ packages:
     resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
     engines: {node: '>=20.0.0'}
 
-  harfbuzzjs@1.6.1:
-    resolution: {integrity: sha512-+JeJmO+HzXjDwpfCOdGSyM2bNP8WzJNFKl/8TKivbInMYDtfRIuPIDLtnBNmQzcJw6GptbhHY6o5gaH6deCMEw==}
+  harfbuzzjs@1.6.4:
+    resolution: {integrity: sha512-T/PyfhVt1gGR2Tkf5KJUj1DQFkVBXHw552lS1iLEEDhV1Lukb3eq1pk2ov85kgbT2YUiZtJBTak9w+M7YgzUEQ==}
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -5646,10 +5641,6 @@ packages:
     resolution: {integrity: sha512-2cawcYFcP7ISfXbBcL9lmVgTNWo88v/52ND1gnywHtVT/pX0//puPnf0iMPV9ZgmuvNOE+zkIhDgZ9M2c2dDDg==}
     engines: {node: '>=12.0.0'}
     hasBin: true
-
-  maplibre-gl@6.16.0:
-    resolution: {integrity: sha512-gApO66EMtoDZuio680RUBvskR7ahFd/NNhLN4tBAs+Y7FeT4gQV8zVFgYVMRmFxQznOEzecW19w6xOd9XjZjiA==}
-    engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
   maplibre-gl@6.19.0:
     resolution: {integrity: sha512-3bOrnfddggUYudLGJFsYFvqulUyvSxy4iQzd/uURI7ZhgYEZifdSrECujRSghaCpc+v/ZsFI0Y6ZsGSilEtE+w==}
@@ -7800,22 +7791,24 @@ snapshots:
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 
-  '@docx-editor.dev/core@2.33.0':
+  '@docx-editor.dev/core@2.38.0(@napi-rs/canvas@1.1.1)':
     dependencies:
-      '@docx-editor.dev/i18n': 2.33.0
+      '@docx-editor.dev/i18n': 2.38.0
       bidi-js: 1.1.0
-      emf-converter: 2.0.2
+      emf-converter: 4.28.0(@napi-rs/canvas@1.1.1)
       fast-xml-parser: 5.12.1
       fflate: 0.8.3
-      harfbuzzjs: 1.6.1
+      harfbuzzjs: 1.6.4
       prosemirror-commands: 1.7.2
       prosemirror-keymap: 1.2.3
       prosemirror-model: 1.25.13
       prosemirror-state: 1.4.4
       prosemirror-view: 1.42.7
       utif2: 4.1.0
+    transitivePeerDependencies:
+      - '@napi-rs/canvas'
 
-  '@docx-editor.dev/i18n@2.33.0': {}
+  '@docx-editor.dev/i18n@2.38.0': {}
 
   '@emnapi/core@1.11.0':
     dependencies:
@@ -8292,10 +8285,6 @@ snapshots:
       '@mapbox/point-geometry': 1.1.0
       '@types/geojson': 7946.0.16
       pbf: 5.1.2
-
-  '@maplibre/geojson-vt@6.3.0':
-    dependencies:
-      kdbush: 4.1.0
 
   '@maplibre/geojson-vt@6.3.1':
     dependencies:
@@ -9243,8 +9232,6 @@ snapshots:
   '@secretlint/profiler@14.0.1': {}
 
   '@secretlint/resolver@14.0.1': {}
-
-  '@secretlint/secretlint-rule-preset-recommend@13.1.0': {}
 
   '@secretlint/source-creator@14.0.1':
     dependencies:
@@ -10792,7 +10779,9 @@ snapshots:
 
   electron-to-chromium@1.5.487: {}
 
-  emf-converter@2.0.2: {}
+  emf-converter@4.28.0(@napi-rs/canvas@1.1.1):
+    optionalDependencies:
+      '@napi-rs/canvas': 1.1.1
 
   emoji-picker-element-data@1.8.0: {}
 
@@ -11161,7 +11150,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  harfbuzzjs@1.6.1: {}
+  harfbuzzjs@1.6.4: {}
 
   has-flag@4.0.0: {}
 
@@ -11729,27 +11718,6 @@ snapshots:
       lop: 0.4.2
       underscore: 1.13.8
       xmlbuilder: 10.1.1
-
-  maplibre-gl@6.16.0:
-    dependencies:
-      '@mapbox/point-geometry': 1.1.0
-      '@mapbox/tiny-sdf': 2.3.0
-      '@mapbox/unitbezier': 1.0.0
-      '@mapbox/vector-tile': 3.0.0
-      '@maplibre/geojson-vt': 6.3.0
-      '@maplibre/maplibre-gl-style-spec': 26.8.0
-      '@maplibre/mlt': 1.3.0
-      '@maplibre/vt-pbf': 4.3.3
-      '@types/geojson': 7946.0.16
-      bidi-js: 1.1.0
-      earcut: 3.2.4
-      gl-matrix: 3.4.4
-      kdbush: 4.1.0
-      murmurhash-js: 1.0.0
-      pbf: 5.1.2
-      potpack: 2.1.0
-      quickselect: 3.0.0
-      tinyqueue: 3.0.0
 
   maplibre-gl@6.19.0(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)):
     dependencies:

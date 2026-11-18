@@ -13,9 +13,9 @@ test('globe terrain bypasses unsupported fog calculation and Mercator retains it
   const code = (await completePlugin.transform(original, id))?.code ?? original;
   const body = code.slice(code.indexOf('function drawTerrain('), code.indexOf('function drawTerrainHeightMap('));
   const calls = [];
-  const drawTerrain = new Function('mat4', 'terrainUniformValues', 'StencilMode', 'CullFaceMode',
+  const drawTerrain = new Function('mat4', 'terrainUniformValues', 'StencilMode', 'CullFaceMode', 'getCameraMath',
     stripTypeScriptTypes(body, { mode: 'transform' }) + '\nreturn drawTerrain;')(
-    mat4, (...args) => { calls.push(args); return {}; }, { disabled: 0 }, { backCCW: 0 }
+    mat4, (...args) => { calls.push(args); return {}; }, { disabled: 0 }, { backCCW: 0 }, camera => camera
   );
   let fogCalls = 0;
   let globe = true;
@@ -23,7 +23,7 @@ test('globe terrain bypasses unsupported fog calculation and Mercator retains it
   const frame = {
     data: { isRenderingGlobe: true },
     context: { gl: {}, bindFramebuffer: { set() {} }, viewport: { set() {} }, activeTexture: { set() {} } },
-    transform: { zoom: 0, pitch: 0, calculateFogMatrix() {
+    projectedCamera: { zoom: 0, pitch: 0, calculateFogMatrix() {
       fogCalls++;
       assert.equal(globe, false, 'globe must not invoke the unsupported transform');
       return mercatorMatrix;

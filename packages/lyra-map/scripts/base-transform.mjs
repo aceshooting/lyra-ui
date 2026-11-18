@@ -46,10 +46,10 @@ export const basePlugin = {
     if (relative === 'style/create_style_layer.ts') code = registry(code, layerClass, 'prepareStyleLayers');
     if (relative === 'source/source.ts') code = registry(code, sourceClass, 'prepareSources');
     // Predicates are simple type discriminants in upstream; retaining their class module defeats the boundary.
-    code = code.replace(/^import \{(is\w+StyleLayer)\} from '[^']+style_layer\/[^']+';$/gm, (line, name) => {
+    code = code.replace(/^import \{(is\w+StyleLayer)(?:, type (\w+))?\} from ('[^']+style_layer\/[^']+');$/gm, (line, name, layerType, path) => {
       const cls = name.slice(2);
       const type = layerClass[cls];
-      return type ? `const ${name}=(layer)=>layer.type===${serializeJavaScript(type)};` : line;
+      return type ? `${layerType ? `import type {${layerType}} from ${path};\n` : ''}const ${name}=(layer)=>layer.type===${serializeJavaScript(type)};` : line;
     });
     if (relative === 'webgl/draw/index.ts') {
       const imports = [...code.matchAll(/^import \{([^}]+)\} from '([^']+)';$/gm)];

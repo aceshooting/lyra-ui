@@ -156,7 +156,7 @@ if (existsSync(dist)) {
   assert.equal(provenance.sourceLockSha256, digest(readFileSync(path.join(packageRoot, 'scripts/engine-source.lock.json'))),
     'Generated engine source lock differs');
   assert.deepEqual(provenance.buildInputs?.map(input => input.file),
-    ['build-engine.mjs', 'engine/source.mjs', 'engine/entries/core.ts', 'engine/entries/store.ts'],
+    ['build-engine.mjs', 'engine/metafile-chunks.mjs', 'engine/source.mjs', 'engine/entries/core.ts', 'engine/entries/store.ts'],
     'Generated engine build input inventory differs');
   for (const input of provenance.buildInputs) {
     assert.equal(input.sha256, digest(readFileSync(path.join(packageRoot, 'scripts', input.file))),

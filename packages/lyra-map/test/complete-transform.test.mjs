@@ -10,7 +10,7 @@ import { COMPLETE_TRANSFORM_SOURCE_FILES, upstreamModules } from './pinned-upstr
 const read = (relative) => readFile(join(src, relative), 'utf8');
 const strip = (code) => stripTypeScriptTypes(code, { mode: 'transform' });
 const shaderFamilies = ['globe', 'background', 'circle', 'heatmap', 'symbol', 'color-relief', 'debug', 'fill',
-  'fill-extrusion', 'hillshade', 'line', 'layer-opacity', 'raster', 'terrain', 'sky'];
+  'fill-extrusion', 'hillshade', 'line', 'layer-composite', 'raster', 'terrain', 'sky'];
 const uniformFamilies = shaderFamilies.filter((name) => name !== 'globe');
 
 // Drives the plugin over the whole pinned tree once; every test that needs its results awaits it.
@@ -50,7 +50,7 @@ test('every rewritten module is valid once types are stripped', async () => {
 test('generates one lazy module per runtime, preparation, shader and uniform family', async () => {
   await drive();
   const generated = [...virtual.keys()].map((id) => id.slice(join(src, 'modular').length + 1)).sort();
-  const expected = ['prepare.ts', 'runtime.ts',
+  const expected = ['globe-camera.ts', 'prepare.ts', 'runtime.ts',
     ...shaderFamilies.map((name) => `shader-${name}.ts`), ...uniformFamilies.map((name) => `uniform-${name}.ts`)].sort();
   assert.deepEqual(generated, expected);
   for (const [id, code] of virtual) {
@@ -100,6 +100,7 @@ test('modules outside the pinned source tree are not transformed', async () => {
 
 // Each entry removes one reviewed anchor from a pinned module; the patch must refuse the result.
 const anchors = [
+  ['util/web_worker.ts', 'createWorker(await fetchAsDataUrl(url), asModule)'],
   ['util/config.ts', '    REGISTERED_PROTOCOLS: {},'],
   ['source/protocol_crud.ts', "    return config.REGISTERED_PROTOCOLS[url.substring(0, url.indexOf('://'))];"],
   ['tile/tile.ts', "import {SymbolBucket} from '../data/bucket/symbol_bucket.ts';"],
@@ -154,7 +155,7 @@ test('refuses the uniform table when its shape or classification drifts', async 
 test('refuses the projection factory when its lazy imports drift', async () => {
   const id = join(src, 'geo/projection/projection_factory.ts');
   const original = await read('geo/projection/projection_factory.ts');
-  const loaded = /^import \{(?:GlobeProjection|createGlobeTransform)\} from '[^']+';\n/gmu;
+  const loaded = /^import \{(?:GlobeProjection|VerticalPerspectiveProjection)\} from '[^']+';\n/gmu;
   assert.equal(original.match(loaded).length, 2);
   await assert.rejects(completePlugin.transform(original.replace(loaded, ''), id), /^Error: Projection imports drift$/u);
 });

@@ -48,8 +48,8 @@ peerDependencyRules:
     - xlsx
 overrides:
   # Keep renderer-owned declaration sources aligned with the reviewed MapLibre source lock.
-  'maplibre-gl@6.16.0>@maplibre/geojson-vt': 6.3.0
-  'maplibre-gl@6.16.0>@maplibre/vt-pbf': 4.3.3
+  'maplibre-gl@6.19.0>@maplibre/geojson-vt': 6.3.1
+  'maplibre-gl@6.19.0>@maplibre/vt-pbf': 4.3.3
   # Codecov 2.0.1 uses Zod 3 schemas; its compatibility patch supports patched Zod 4.
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   # These AG-UI versions already import Zod v4; use its patched collection validators.
@@ -64,8 +64,8 @@ overrides:
   '@rollup/plugin-node-resolve@15.3.1>deepmerge': 4.1.1
   '@web/dev-server@1.0.1>deepmerge': 4.1.1
   # Keep the reviewed DOCX engine dependency graph aligned with its source lock.
-  '@docx-editor.dev/core@2.33.0>@docx-editor.dev/i18n': 2.33.0
-  '@docx-editor.dev/core@2.33.0>prosemirror-view': 1.42.7
+  '@docx-editor.dev/core@2.38.0>@docx-editor.dev/i18n': 2.38.0
+  '@docx-editor.dev/core@2.38.0>prosemirror-view': 1.42.7
   'prosemirror-state@1.4.4>prosemirror-view': 1.42.7
   'prosemirror-commands@1.7.2>prosemirror-transform': 1.12.4
   'prosemirror-state@1.4.4>prosemirror-transform': 1.12.4
@@ -92,7 +92,6 @@ minimumReleaseAgeExclude:
   - '@secretlint/node@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
   - '@secretlint/profiler@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
   - '@secretlint/resolver@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/secretlint-rule-preset-recommend@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0'
   - '@secretlint/source-creator@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
   - '@secretlint/types@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
   - '@secretlint/walker@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'

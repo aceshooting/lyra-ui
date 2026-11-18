@@ -22,7 +22,7 @@ function builder(context, edit = () => {}) {
   const fixture = mkdtempSync(join(tmpdir(), 'lyra-docs-engine-'));
   context.after(() => rmSync(fixture, { recursive: true, force: true }));
   symlinkSync(join(packageRoot, 'node_modules'), join(fixture, 'node_modules'), 'junction');
-  const [script] = stageScripts({ from: packageRoot, to: fixture, files: ['scripts/build-engine.mjs', 'scripts/engine/source.mjs'] });
+  const [script] = stageScripts({ from: packageRoot, to: fixture, files: ['scripts/build-engine.mjs', 'scripts/engine/metafile-chunks.mjs', 'scripts/engine/source.mjs'] });
   const lock = structuredClone(committedLock);
   lock.toolchain.node = process.versions.node;
   lock.toolchain.vite = installedVite;
@@ -88,7 +88,7 @@ test('refuses an engine package whose own dependency is not installed', context 
   mkdirSync(join(fixture, 'node_modules/@docx-editor.dev/core'), { recursive: true });
   writeFileSync(join(fixture, 'node_modules/@docx-editor.dev/core/package.json'), manifest);
   symlinkSync(join(packageRoot, 'node_modules/vite'), join(fixture, 'node_modules/vite'), 'junction');
-  const [script] = stageScripts({ from: packageRoot, to: fixture, files: ['scripts/build-engine.mjs', 'scripts/engine/source.mjs'] });
+  const [script] = stageScripts({ from: packageRoot, to: fixture, files: ['scripts/build-engine.mjs', 'scripts/engine/metafile-chunks.mjs', 'scripts/engine/source.mjs'] });
   const lock = {
     toolchain: { node: process.versions.node, vite: installedVite },
     buildPackages: [{ name: '@docx-editor.dev/core', version: '9.9.9', manifestSha256: createHash('sha256').update(manifest).digest('hex') }],

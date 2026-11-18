@@ -3,8 +3,8 @@ import { isAbsolute, resolve } from 'node:path';
 import { serializeJavaScript } from './code-serialization.mjs';
 
 const pins = Object.freeze({
-  painter: 'edf08f62a0a52cce51847c154413c9b054b6d9a3d988d82fe50e3fa3d8ad090c',
-  drawCustom: 'c029531a50a329339e3b37f419a081c6e50e3e5d5dcde90473099a684a320b74'
+  painter: 'df60d7933bed2f26d51ac84ead1ab44911726d3a8ec2338b46fc6b4699b225c1',
+  drawCustom: '4256baa320f7ff7773038fbecba682edb937d83be016f763d0907ffc61524296'
 });
 const digest = value => createHash('sha256').update(value).digest('hex');
 const paths = Object.freeze({ painter: 'render/painter.ts', drawCustom: 'webgl/draw/draw_custom.ts' });

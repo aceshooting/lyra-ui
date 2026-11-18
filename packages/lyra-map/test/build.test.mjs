@@ -142,7 +142,7 @@ test('records provenance that matches the pin and the generated files', async ()
   assert.equal(provenance.version, pin.version);
   assert.equal(provenance.sourceTreeSha256, pin.sourceTreeSha256);
   assert.deepEqual(provenance.changedSourceFiles, CHANGED_SOURCE_FILES);
-  assert.equal(provenance.generatedFeatureModules, 31);
+  assert.equal(provenance.generatedFeatureModules, 32);
   assert.ok(provenance.modules.length > 0 && provenance.modules.length < 700);
   const listed = new Set(provenance.modules.map((module) => module.file));
   assert.equal(listed.size, provenance.modules.length, 'module files are unique');

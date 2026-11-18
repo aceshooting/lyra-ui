@@ -18,7 +18,7 @@ const peers = { chromium, firefox, webkit };
 const names = (process.env.DOCX_BROWSERS ?? 'chromium,firefox,webkit').split(',');
 assert(names.length && names.every(name => Object.hasOwn(peers, name))
   && new Set(names).size === names.length, 'Invalid or duplicate DOCX_BROWSERS');
-const cases = ['table-preparation', 'refresh-preparation-rejection', 'refresh-preparation-cancellation'];
+const cases = ['table-preparation', 'refresh-preparation-rejection', 'refresh-preparation-cancellation', 'chart-paste-preparation', 'image-drop-preparation'];
 const mutant = process.env.DOCX_ENGINE_REGRESSION_MUTANT ?? '';
 assert(['', 'refresh-rejection', 'refresh-cancellation'].includes(mutant), 'Unknown causal mutant');
 const selected = mutant ? [mutant === 'refresh-rejection' ? cases[1] : cases[2]] : cases;

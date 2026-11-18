@@ -1561,7 +1561,7 @@ try {
     const sourceLock = JSON.parse(await readFile(resolve(here, 'engine-source.lock.json'), 'utf8'));
     assert.equal(sourceEvidence.sourceVersion, sourceLock.upstream.version, 'Engine source version differs');
     assert.equal(sourceEvidence.sourceCommit, sourceLock.upstream.commit, 'Engine source commit differs');
-    const expectedCases = ['table-preparation', 'refresh-preparation-rejection', 'refresh-preparation-cancellation'];
+    const expectedCases = ['table-preparation', 'refresh-preparation-rejection', 'refresh-preparation-cancellation', 'chart-paste-preparation', 'image-drop-preparation'];
     assert.deepEqual(sourceEvidence.checks.map(check => `${check.browser}/${check.testCase}`).sort(),
       browsers.flatMap(browser => expectedCases.map(testCase => `${browser}/${testCase}`)).sort(),
       'Missing, duplicate or unexpected engine source regression cases');

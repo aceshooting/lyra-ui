@@ -237,14 +237,28 @@ window.fixture = {
       assert(m.getSource('image').loaded(), 'image loaded');
       remove(m);
     } else if (name === 'raster') {
-      const m = await make(rasterStyle());
+      const style = rasterStyle();
+      style.layers[1].paint = { 'raster-layer-blend': 'multiply', 'raster-fade-duration': 0 };
+      const m = await make(style);
       assert(m.getSource('raster'), 'raster source');
+      // The tile is opaque RGB(40, 140, 80) over the RGB(18, 52, 86) background.
+      const expected = [3, 29, 27, 255];
+      let pixel;
+      m.once('render', () => {
+        const canvas = m.getCanvas(), gl = canvas.getContext('webgl2');
+        pixel = new Uint8Array(4);
+        gl.readPixels(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      });
+      m.triggerRepaint();
+      await until(() => pixel !== undefined, 'raster blend render');
+      assert(expected.every((value, index) => Math.abs(pixel[index] - value) <= 2), 'raster multiply pixel: ' + pixel);
       assert(
         m.getCanvas().getAttribute('role') === 'region' || m.getCanvas().getAttribute('aria-label'),
         'named map canvas'
       );
       remove(m);
-    } else if (name === 'geojson') {
+    } else if (name === 'geojson' || name === 'opaque-origin-worker') {
+      if (name === 'opaque-origin-worker') assert(globalThis.origin === 'null', 'sandboxed frame has an opaque origin');
       const m = await make(geoStyle());
       assert(
         m.queryRenderedFeatures().some((f) => f.id === 1),

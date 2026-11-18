@@ -97,7 +97,7 @@ export function createPreparationRuntime({
     const layers = derefLayers(style.layers ?? []);
     const types = [...new Set(layers.map(l => l.type))];
     const programs = [...types, 'debug', 'sky'];
-    if (types.includes('line') || types.includes('fill')) programs.push('layer-opacity');
+    if (types.some(type => type === 'line' || type === 'fill' || type === 'raster')) programs.push('layer-composite');
     const projection = style.projection?.type ?? 'mercator';
     if (projection !== 'mercator') programs.push('globe');
     if (style.terrain) programs.push('terrain');

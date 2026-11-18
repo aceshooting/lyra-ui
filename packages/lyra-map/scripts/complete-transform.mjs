@@ -17,6 +17,7 @@ const moduleId = (name) => resolve(src, 'modular', name + '.ts');
 const path = (p) => serializeJavaScript(resolve(src, p));
 const runtimeId = moduleId('runtime');
 const prepareId = moduleId('prepare');
+const globeCameraId = moduleId('globe-camera');
 function replace(code, old, value, count = 1) {
   const n = code.split(old).length - 1;
   if (n !== count) throw Error(`Patch mismatch ${old.slice(0, 80)}: ${n} != ${count}`);
@@ -33,8 +34,51 @@ function family(name) {
   if (name === 'sky' || name === 'atmosphere') return 'sky';
   for (const p of ['background', 'circle', 'heatmap', 'fill', 'line', 'raster', 'debug'])
     if (name.startsWith(p)) return p;
-  if (name === 'layerOpacity') return 'layer-opacity';
+  if (name === 'layerComposite') return 'layer-composite';
   throw Error(`Unclassified program ${name}`);
+}
+
+// The camera math, motion and solver factories are synchronous. Populate their
+// globe-only imports before the style installs a non-Mercator projection.
+virtual.set(globeCameraId, `export let GlobeCameraMath, VerticalPerspectiveCameraMath,
+  VerticalPerspectiveCameraMotions, VerticalPerspectiveCameraSolver, createVerticalPerspectiveProjectedCamera;
+export async function prepareGlobeCamera() {
+  const [globe, vertical, motions, solver] = await Promise.all([
+    import(${path('camera/globe_camera_math.ts')}), import(${path('camera/vertical_perspective_camera_math.ts')}),
+    import(${path('camera/vertical_perspective_camera_motions.ts')}), import(${path('camera/vertical_perspective_camera_solver.ts')})
+  ]);
+  GlobeCameraMath = globe.GlobeCameraMath;
+  VerticalPerspectiveCameraMath = vertical.VerticalPerspectiveCameraMath;
+  createVerticalPerspectiveProjectedCamera = vertical.createVerticalPerspectiveProjectedCamera;
+  VerticalPerspectiveCameraMotions = motions.VerticalPerspectiveCameraMotions;
+  VerticalPerspectiveCameraSolver = solver.VerticalPerspectiveCameraSolver;
+}`);
+
+function deferCameraImplementations(code, relative) {
+  const replaceImport = (name, file) => {
+    code = replace(code, `import {${name}} from './${file}.ts';`, `import {${name}} from ${serializeJavaScript(globeCameraId)};`);
+  };
+  if (relative === 'camera/project_camera.ts') {
+    replaceImport('createVerticalPerspectiveProjectedCamera', 'vertical_perspective_camera_math');
+  } else if (relative === 'camera/camera_math_factory.ts') {
+    replaceImport('GlobeCameraMath', 'globe_camera_math');
+    replaceImport('VerticalPerspectiveCameraMath', 'vertical_perspective_camera_math');
+    code = replace(code, 'const verticalPerspectiveCameraMath = new VerticalPerspectiveCameraMath();',
+      'let verticalPerspectiveCameraMath;\nconst verticalMath = () => verticalPerspectiveCameraMath ??= new VerticalPerspectiveCameraMath();');
+    code = replace(code, 'const globeCameraMath = new GlobeCameraMath(mercatorCameraMath, verticalPerspectiveCameraMath);', 'let globeCameraMath;');
+    code = replace(code, 'return verticalPerspectiveCameraMath;', 'return verticalMath();');
+    code = replace(code, 'return globeCameraMath;', 'return globeCameraMath ??= new GlobeCameraMath(mercatorCameraMath, verticalMath());');
+  } else if (relative === 'camera/camera_motions_factory.ts') {
+    replaceImport('VerticalPerspectiveCameraMotions', 'vertical_perspective_camera_motions');
+    code = replace(code, 'const verticalPerspectiveCameraMotions = new VerticalPerspectiveCameraMotions(mercatorCameraMotions);',
+      'let verticalPerspectiveCameraMotions;');
+    code = replace(code, '? verticalPerspectiveCameraMotions :', '? (verticalPerspectiveCameraMotions ??= new VerticalPerspectiveCameraMotions(mercatorCameraMotions)) :');
+  } else if (relative === 'camera/camera_solver_factory.ts') {
+    replaceImport('VerticalPerspectiveCameraSolver', 'vertical_perspective_camera_solver');
+    code = replace(code, 'const verticalPerspectiveCameraSolver = new VerticalPerspectiveCameraSolver();', 'let verticalPerspectiveCameraSolver;');
+    code = replace(code, 'return verticalPerspectiveCameraSolver;', 'return verticalPerspectiveCameraSolver ??= new VerticalPerspectiveCameraSolver();');
+  }
+  return code;
 }
 
 virtual.set(
@@ -163,17 +207,25 @@ export const completePlugin = {
       // Globe terrain bypasses fog blending; its transform has no fog matrix.
       code = "import {mat4} from 'gl-matrix';\n" + replace(
         code,
-        'const fogMatrix = tr.calculateFogMatrix(tile.tileID.toUnwrapped());',
-        'const fogMatrix = isRenderingGlobe ? mat4.create() : tr.calculateFogMatrix(tile.tileID.toUnwrapped());'
+        'const fogMatrix = getCameraMath(projectedCamera).calculateFogMatrix(projectedCamera, tile.tileID.toUnwrapped());',
+        'const fogMatrix = isRenderingGlobe ? mat4.create() : getCameraMath(projectedCamera).calculateFogMatrix(projectedCamera, tile.tileID.toUnwrapped());'
       );
     }
     if (rel === 'shaders/shaders.ts') code = await shaderTable(original, id);
     if (rel === 'webgl/program/program_uniforms.ts') code = uniformTable(original, id);
+    if (rel === 'util/web_worker.ts') {
+      // A data URL cannot resolve the bundled worker's relative module imports.
+      code = replace(code,
+        'async function fetchAsDataUrl(url: string): Promise<string> {\n    return `data:text/javascript;charset=utf-8,${encodeURIComponent(await fetchWorkerCode(url))}`;\n}',
+        'function importAsDataUrl(url: string): string {\n    const href = new URL(url, globalThis.document?.baseURI ?? globalThis.location.href).href;\n    return `data:text/javascript;charset=utf-8,${encodeURIComponent("import " + JSON.stringify(href))}`;\n}');
+      code = replace(code, 'createWorker(await fetchAsDataUrl(url), asModule)', 'createWorker(importAsDataUrl(url), asModule)');
+    }
     if (rel === 'source/source.ts')
       code = code.replace(
         "if(!Object.hasOwn(loaders,t))throw new Error('Unknown feature '+t);",
         "if(!Object.hasOwn(loaders,t)){if(!Object.hasOwn(Object.prototype,t)&&getSourceType(t))return;throw new Error('Unknown feature '+t);}"
       );
+    if (rel.startsWith('camera/')) code = deferCameraImplementations(code, rel);
     if (rel === 'geo/projection/projection_factory.ts') {
       const loaders = [];
       code = code.replace(
@@ -183,7 +235,8 @@ export const completePlugin = {
           return `let ${name};`;
         }
       );
-      if (loaders.length !== 6) throw Error('Projection imports drift');
+      if (loaders.length !== 2) throw Error('Projection imports drift');
+      loaders.push(`import(${serializeJavaScript(globeCameraId)}).then(m=>m.prepareGlobeCamera())`);
       code += `\nlet projectionReady;export async function prepareProjection(name){if(name==='mercator')return;return projectionReady??=(Promise.all([${loaders}]).catch(e=>{projectionReady=undefined;throw e;}));}`;
     }
     if (rel === 'ui/map.ts') {

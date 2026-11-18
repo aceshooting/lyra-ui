@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { staticModuleSpecifiers } from '../../../lyra-ui/scripts/module-specifiers.mjs';
 import { sha256 } from './source.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
@@ -34,4 +35,24 @@ test('engine distribution emits the exact external text shaper binary', async ()
   const bytes = await readFile(path.join(directory, binaries[0].file));
   assert.equal(bytes.length, expected.bytes);
   assert.equal(sha256(bytes), expected.sha256);
+});
+
+test('the full metafile decoder stays outside the initial engine imports', async () => {
+  const decoder = provenance.assets.filter(asset => path.basename(asset.file).startsWith('metafile-'));
+  assert.equal(decoder.length, 4, 'Expected the codec, graphics, drawing and replay chunks');
+  const initial = new Set();
+  const pending = ['core.js', 'store.js'];
+  while (pending.length) {
+    const file = pending.pop();
+    if (initial.has(file)) continue;
+    initial.add(file);
+    const source = await readFile(path.join(directory, file), 'utf8');
+    for (const specifier of staticModuleSpecifiers(file, source)) {
+      pending.push(path.posix.join(path.posix.dirname(file), specifier));
+    }
+  }
+  for (const { file } of decoder) {
+    assert(!initial.has(file), `Eager metafile decoder chunk: ${file}`);
+    assert.match(await readFile(path.join(directory, file), 'utf8'), /emf-converter \(Apache-2\.0\)\. Module boundaries modified/u);
+  }
 });

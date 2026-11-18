@@ -9,6 +9,10 @@ export const upstreamRoot = dirname(require.resolve('maplibre-gl/package.json'))
 
 /** The upstream modules rewritten by the complete transform alone. */
 export const COMPLETE_TRANSFORM_SOURCE_FILES = [
+  'camera/camera_math_factory.ts',
+  'camera/camera_motions_factory.ts',
+  'camera/camera_solver_factory.ts',
+  'camera/project_camera.ts',
   'data/bucket/symbol_bucket.ts',
   'geo/projection/projection_factory.ts',
   'render/image_atlas.ts',
@@ -24,12 +28,15 @@ export const COMPLETE_TRANSFORM_SOURCE_FILES = [
   'source/worker_tile.ts',
   'style/create_style_layer.ts',
   'style/load_sprite.ts',
+  'style/pauseable_placement.ts',
   'style/style.ts',
   'tile/tile.ts',
   'ui/map.ts',
   'util/actor_messages.ts',
   'util/config.ts',
+  'util/web_worker.ts',
   'util/web_worker_transfer.ts',
+  'webgl/draw/draw_layer_composite.ts',
   'webgl/draw/draw_terrain.ts',
   'webgl/draw/index.ts',
   'webgl/program/program_uniforms.ts',
