@@ -918,34 +918,28 @@ describe('playback controls', () => {
   });
 
   it('handles an internal keyboard-triggered play rejection through the localized render-error path', async () => {
-    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const el = (await fixture(html`<lr-av-player kind="audio"></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
     const failure = new DOMException('Playback blocked', 'NotAllowedError');
     Object.defineProperty(media, 'play', {
       value: () => Promise.reject(failure),
       configurable: true,
     });
-    let reported: unknown;
+    const reported: unknown[] = [];
     el.addEventListener('lr-render-error', (event) => {
-      reported = event.detail.error;
+      reported.push(event.detail.error);
     });
-    const suppressUnhandled = (event: PromiseRejectionEvent): void => event.preventDefault();
-    window.addEventListener('unhandledrejection', suppressUnhandled);
-    try {
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
     Object.defineProperty(media, 'duration', { value: 60, configurable: true });
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
     timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
-      await aTimeout(0);
-      await el.updateComplete;
-      expect(reported).to.equal(failure);
-      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
-        'The media failed to load.',
-      );
-    } finally {
-      window.removeEventListener('unhandledrejection', suppressUnhandled);
-    }
+    await aTimeout(0);
+    await el.updateComplete;
+    expect(reported.map((error) => error === failure)).to.deep.equal([true]);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+      'The media failed to load.',
+    );
   });
 
   it('ignores a late internal play rejection after its source generation is replaced', async () => {
