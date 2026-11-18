@@ -6,6 +6,7 @@ import { DOCX_BATCH_LIMITS, DOCX_FRAGMENT_LIMITS, type DocxBatchEdit, type DocxB
   type DocxFragment, type DocxPaintDetail, type DocxFragmentBlock, type DocxFragmentBlockKind, type DocxFragmentRequest, type DocxParagraphEdit } from '@aceshooting/lyra-docs/docx';
 import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor, type DocxOutline,
   type DocxDocumentInspection, type DocxReviewReport } from '@aceshooting/lyra-docs/docx';
+import type { DocxSelectionBlock, DocxSerializationOptions, DocxMoveBlocksEdit } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
 import type { DocxSession as RootSession } from '@aceshooting/lyra-docs';
 // @ts-expect-error The internal factory is not public.
@@ -122,6 +123,47 @@ function editingContracts(session: DocxSession): void {
 }
 void editingContracts;
 
+async function outlineEditingContracts(session: DocxSession, editor: LyraDocxEditor): Promise<void> {
+  const options: DocxSerializationOptions = { signal: new AbortController().signal };
+  const bytes: DocxResult<Uint8Array> = await session.exportBytes(options);
+  await editor.exportBytes(options);
+  if (bytes.ok) {
+    bytes.value.fill(0);
+    // @ts-expect-error Exported bytes are not a persistence receipt.
+    session.acknowledgeSaved(bytes.value);
+  }
+  const selection: DocxResult<DocxSelectionBlock> = session.selectionBlock();
+  if (selection.ok) {
+    const index: number | null = selection.value.index;
+    void index;
+    editor.selectionBlock({ expectedRevision: selection.value.revision });
+    // @ts-expect-error Selection reports are immutable.
+    selection.value.index = 0;
+  }
+  const outline = editor.outline();
+  if (outline.ok) {
+    const index: number | undefined = outline.value.items[0]?.blockIndex;
+    void index;
+  }
+  const styles = session.paragraphStyles();
+  if (styles.ok) {
+    const level: number | null | undefined = styles.value.items[0]?.outlineLevel;
+    void level;
+    // @ts-expect-error Style metadata is immutable.
+    styles.value.items[0]!.outlineLevel = 1;
+  }
+  const fragment = editor.readFragment({ maxBlocks: 4 });
+  if (fragment.ok) {
+    const edit: DocxMoveBlocksEdit = { type: 'move-blocks', start: 0, end: 1, before: 2 };
+    await session.applyEdits([{ edit }], { expectedRevision: fragment.value.revision });
+    await editor.applyEdits([{ edit }], { expectedRevision: fragment.value.revision });
+    // @ts-expect-error A body move cannot target a paragraph selection.
+    const targeted: DocxBatchStep = { edit, target: 'opaque' };
+    void targeted;
+  }
+}
+void outlineEditingContracts;
+
 function toolbarLayoutContracts(editor: HTMLElementTagNameMap['lr-docx-editor']): void {
   const previousToolbar: DocxToolbarPlacement = editor.toolbarPlacement;
   const previousTools: DocxDocumentToolsPlacement = editor.documentToolsPlacement;
@@ -194,7 +236,7 @@ async function operationContracts(session: DocxSession, editor: LyraDocxEditor):
       await editor.applyEdits(steps, { expectedRevision: fragment.value.revision });
       // @ts-expect-error A targeted step accepts only paragraph edits.
       const targetedRun: DocxBatchStep = { edit: 'bold', target: block.id };
-      // @ts-expect-error History, structure and links are not batch edits.
+      // @ts-expect-error History commands are not batch edits.
       const history: DocxBatchStep = { edit: 'undo' };
       const paragraph: DocxParagraphEdit = { type: 'alignment', value: 'center' };
       const edit: DocxBatchEdit = paragraph;

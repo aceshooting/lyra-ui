@@ -23,6 +23,8 @@ import { runEditorContracts } from './editor-contracts-browser.mjs';
 import { runCommandsAndSearch } from './commands-search-browser.mjs';
 import { runDocumentInspection } from './document-inspection-browser.mjs';
 import { runDocumentOperations } from './document-operations-browser.mjs';
+import { runExportNavigation } from './export-navigation-browser.mjs';
+import { runBlockMoves } from './block-moves-browser.mjs';
 import { runReview } from './review-browser.mjs';
 import { runTableFormatting } from './tables-formatting-browser.mjs';
 import { runImageExtensions } from './image-extensions-browser.mjs';
@@ -46,7 +48,7 @@ const SELECTORS = {
   DOCX_FORMATTING_ONLY: ['1'],
   DOCX_INSERTION_ONLY: ['core', 'ui', 'all'],
   DOCX_IMAGES_ONLY: ['core', 'ui', 'all'],
-  DOCX_DOCUMENT_TOOLS_ONLY: ['1', 'inspection', 'review', 'tables', 'images', 'commands'],
+  DOCX_DOCUMENT_TOOLS_ONLY: ['1', 'inspection', 'export', 'moves', 'review', 'tables', 'images', 'commands'],
 };
 const selection = Object.fromEntries(Object.entries(SELECTORS)
   .filter(([variable]) => (process.env[variable] ?? '') !== '')
@@ -1407,12 +1409,14 @@ async function runSharedSuites(page, check, { record }) {
 
 async function runDocumentTools(page, check) {
   const selected = process.env.DOCX_DOCUMENT_TOOLS_ONLY;
-  assert.ok(!selected || ['1', 'inspection', 'review', 'tables', 'images', 'commands'].includes(selected));
+  assert.ok(!selected || SELECTORS.DOCX_DOCUMENT_TOOLS_ONLY.includes(selected));
   const includes = name => !selected || selected === '1' || selected === name;
   if (includes('inspection')) {
     await runDocumentInspection(page, check, { createEditor, saveEditor });
     await runDocumentOperations(page, check, { createEditor, saveEditor });
   }
+  if (includes('export')) await runExportNavigation(page, check, { createEditor });
+  if (includes('moves')) await runBlockMoves(page, check, { saveEditor });
   if (includes('review')) await runReview(page, check, { createEditor, saveEditor });
   if (includes('tables')) await runTableFormatting(page, check, { createEditor, saveEditor, assertProtectedParts });
   if (includes('images')) await runImageExtensions(page, check, { createEditor, saveEditor });

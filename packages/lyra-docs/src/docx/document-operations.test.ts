@@ -65,3 +65,22 @@ test('batch refusals name the failing step, or none for the batch as a whole', (
   const hostile = new Proxy([{ edit: 'bold' }], { getOwnPropertyDescriptor() { throw new Error('trap'); } });
   assert.deepEqual(normalizeDocxBatch(hostile, ok), { ok: false, code: 'invalid-option', step: null });
 });
+
+test('a structural move is copied and accepts one exact revision-scoped step', () => {
+  const edit = { type: 'move-blocks', start: 2, end: 5, before: 8 };
+  const options = { expectedRevision: revision };
+  const result = normalizeDocxBatch([{ edit }], options);
+  assert(result.ok);
+  assert.deepEqual(result.value.steps, [{ edit }]);
+  assert.notEqual(result.value.steps[0]!.edit, edit);
+  assert(Object.isFrozen(result.value.steps[0]!.edit));
+  for (const change of [{ start: -1 }, { end: 2 }, { end: 1 }, { before: 3 }, { before: 1.5 },
+    { end: Infinity }, { start: NaN }, { before: 2 ** 53 }, { extra: true }]) {
+    assert.deepEqual(normalizeDocxBatch([{ edit: { ...edit, ...change } }], options), { ok: false, code: 'invalid-option', step: 0 });
+  }
+  const hostile = { ...edit, get start() { throw new Error('getter must never run'); } };
+  assert.deepEqual(normalizeDocxBatch([{ edit: hostile }], options), { ok: false, code: 'invalid-option', step: 0 });
+  assert.deepEqual(normalizeDocxBatch([{ edit, target: 'paragraph' }], options), { ok: false, code: 'invalid-option', step: 0 });
+  assert.deepEqual(normalizeDocxBatch([{ edit: 'bold' }, { edit }], options), { ok: false, code: 'unsupported', step: 1 });
+  assert.deepEqual(normalizeDocxBatch([{ edit }, { edit }], options), { ok: false, code: 'unsupported', step: 0 });
+});

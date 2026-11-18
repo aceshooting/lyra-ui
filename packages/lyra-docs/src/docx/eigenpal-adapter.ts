@@ -10,6 +10,7 @@ import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
 import { createDocumentInspection } from './eigenpal-document-inspection.js';
+import { prepareBlockMove, runBlockMove } from './eigenpal-block-move.js';
 import { runEigenpalBatch, type DocxBatchPlanStep } from './eigenpal-batch.js';
 import { createEigenpalReview, createLyraReviewModule } from './eigenpal-review.js';
 import { isDocxReviewAction, normalizeDocxReviewAction } from './review-types.js';
@@ -560,6 +561,11 @@ export async function openEigenpalDocument(
         const ready = documentReadiness();
         return ready.ok ? inspection.inspectDocument() : ready;
       },
+      selectionBlock() {
+        const ready = documentReadiness();
+        if (!ready.ok) return ready;
+        return module.tableReaders ? inspection.selectionBlock(module.tableReaders) : { ok: false, code: 'unsupported' };
+      },
       paragraphIndexes: () => inspection.paragraphIndexes(),
       selectDocumentTarget: token => inspection.select(token),
       fragment(request) {
@@ -579,7 +585,14 @@ export async function openEigenpalDocument(
         const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
         const pkg = session.currentPackage();
         const plan: DocxBatchPlanStep[] = [];
+        let move: ReturnType<typeof prepareBlockMove> | undefined;
         for (const [index, step] of steps.entries()) {
+          if (typeof step.edit !== 'string' && step.edit.type === 'move-blocks') {
+            if (steps.length !== 1 || step.target) return refuse('unsupported', index);
+            move = prepareBlockMove(pkg, step.edit);
+            if (!move.ok) return refuse(move.code, index);
+            continue;
+          }
           const paragraphId = step.target ? inspection.resolve(step.target) : null;
           if (step.target && paragraphId === null) return refuse('stale-selection', index);
           if (typeof step.edit !== 'string' && step.edit.type === 'paragraph-style' && !editing.hasParagraphStyle(step.edit.styleId))
@@ -611,6 +624,21 @@ export async function openEigenpalDocument(
             await module.prepareCommandFeatures(step.command);
             ready = unchanged();
             if (!ready.ok) return refuse(ready.code);
+          }
+          if (move?.ok) {
+            if (!move.value) return { ok: true };
+            if (surface.editingMode() !== 'edit') return refuse('unsupported', 0);
+            const armed = control.arm();
+            if (!armed.ok) return refuse(armed.code);
+            const { scrollTop, scrollLeft } = viewport;
+            try {
+              return runBlockMove(active, move.value, unchanged, facade);
+            } finally {
+              if (owned() && editor === active) {
+                viewport.scrollTop = scrollTop;
+                viewport.scrollLeft = scrollLeft;
+              }
+            }
           }
           const state = surface.state();
           const selection = plan.some(step => step.paragraphId !== null) && !state.cellSelection ?

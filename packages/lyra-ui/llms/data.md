@@ -3308,7 +3308,7 @@ deeply-nested node's own shadow root still reaches it).
   not show that cap notice. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
-readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
+readonly selected?: boolean; readonly expanded?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
 badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
 accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
 LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order. A nonempty
@@ -3320,6 +3320,15 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
   the complete reachable hierarchy; malformed rows, blank IDs and later duplicates are omitted as described above
+
+An enabled data branch can supply `expanded: true` or `expanded: false` to seed its disclosure.
+The tree remembers user toggles and direct writes to a generated branch row's `expanded` by stable
+ID, including when an ancestor folds or the branch moves. A new explicit boolean overrides the
+remembered state only when the authored value changes. Omitting it preserves the remembered
+state. Removing an ID forgets its state. A visible lazy branch seeded open requests children
+through `lr-lazy-load` and opens when those children arrive. Use both `item` and `generation`
+from that event to correlate a response with the current request.
+
 - `maxNodes: number = 1000` (attribute `max-nodes`) — the object-data node budget, normalized to
   `1..10000`; unset or non-finite values restore 1,000. Set it before assigning `data`. Raising it
   does not recover excluded input automatically: reassign the original source after raising the cap.
@@ -3331,9 +3340,22 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   `[part="base"]` element. A host `aria-label` takes precedence by attribute presence, including an
   explicit empty string; removing it restores the `label` fallback. External `aria-labelledby`
   idrefs are not forwarded across the shadow boundary.
+- `size: LyraSize | undefined` — optional row density for object data and declarative items.
+  Accepts `2xs`, `xs`, `s`, `m`, `l`, `xl` and the `small`, `medium`, `large` aliases.
+  `size="s"` gives a 32px single-line row with the standard tokens and a 16px root font.
+  Unset and unsupported values use the original density. Provider rows keep their measured layout.
+- `pointerReorderable: boolean = false` (attribute `pointer-reorderable`) enables pointer reorder
+  requests for data and declarative rows. Drag the row with a mouse or pen. On touchscreens, drag
+  the grip or scroll from the label. Escape cancels a drag.
+- `allowCrossParentReorder: boolean = false` (attribute `allow-cross-parent-reorder`) permits a
+  pointer drop beside a visible row under another parent. The destination remains at that row's depth.
+- `canDrop?: (request: LyraTreePointerReorderDetail) => boolean` supplies a synchronous predicate
+  by property. It receives the proposed move during targeting and again on release. Return `true`
+  to accept it. A disabled or inert row, a node's own subtree and a move to its current index are
+  ineligible. Provider mode owns its ordering.
 - `reorderable: boolean = false` (reflected) — opts into keyboard reordering. Unset, no `lr-reorder`
   is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
-  region is not rendered at all.
+  region is rendered only when a reorder mode is enabled.
 
 **Read-only getters:** `selectedItems: readonly LyraTreeItem[]` returns a new frozen snapshot of
 selected item elements in document order, including derived fully-selected parents in either
@@ -3381,6 +3403,13 @@ by hierarchy depth, and resolved only after the affected rendered item cascade s
 each depth expand together, preserving their individual lifecycle events, motion durations and lazy
 loading behavior.
 
+Bulk collapse cancels pending lazy expansion and clears the stored disclosure of unmounted
+data branches. A bulk operation that changes disclosure emits one bubbling, composed
+`lr-bulk-toggle` with frozen `detail: { expanded: boolean; nodeIds: readonly string[] }`.
+The list contains each changed ID once, including changes to unmounted data branches. Mounted
+items still emit their lifecycle and toggle events. A lazy request enters the summary only
+if its expansion committed during the operation. Later responses use the regular row events.
+
 Both bulk methods are no-ops in source mode, and `reorderable` has no source-mode effect. Expansion
 and selection use provider projection actions rather than legacy item/lazy lifecycle events.
 
@@ -3404,6 +3433,25 @@ could mean either "swap with the next sibling" — there is none — or "reparen
 reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
 is simply not made: no event, no announcement, focus stays put. Item events listed below bubble
 through the tree as well.
+
+**Pointer reorder event.** `lr-pointer-reorder` carries `{ nodeId, fromParentNodeId, fromIndex,
+toParentNodeId, toIndex, targetNodeId, position }`. A root parent is `null`. To apply the request,
+remove the source from its sibling list, then insert it at `toIndex` in the destination list.
+The anchor's `position` is `'before'` or `'after'`. The tree keeps its data and DOM order until
+the host applies the request. The `drop-indicator` part marks accepted targets while dragging.
+Set `--lr-tree-drop-indicator-color` to theme the line. The item exposes a `reorder-handle` part.
+
+For keyboard access to the same outline, enable `reorderable` and apply `lr-reorder` through the
+same data update as pointer moves. For moves between parents, provide labeled controls to choose
+the section, a reference section and whether to move before or after it. Apply the same validation
+and data update, keep focus on the form control, and announce a confirmed move.
+
+Set `--lr-tree-row-height` to a CSS length for the minimum row height and `--lr-tree-toggle-size`
+for the disclosure button, leaf placeholder and selection checkbox size. Both inherit from the
+tree and can be overridden on a tree item. The row grows to fit taller labels, descriptions or
+slotted controls. Disclosure and checkbox targets stay at least 24 CSS px in each dimension and
+retain the shared icon-button minimum when hover is unavailable or the pointer is coarse. Slotted
+icon buttons use their own sizing. These properties apply to object data and declarative items.
 
 **Slots:** default — top-level `<lr-tree-item>` elements, each nesting its own children (the
 declarative model). Leave it empty and assign `data` for the object model; the same slot then holds
@@ -5962,6 +6010,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly id: string;
     readonly label: string;
     readonly selected?: boolean;
+    readonly expanded?: boolean;
     readonly disabled?: boolean;
     readonly lazy?: boolean;
     readonly children?: readonly LyraTreeNodeData[];
@@ -5969,6 +6018,16 @@ These named interfaces and helper signatures are available to typed integrations
     readonly icon?: unknown;
     readonly description?: string;
     readonly accessibleLabel?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/tree/tree.class.js`.
+  `LyraTreePointerReorderDetail {
+    readonly nodeId: string;
+    readonly fromParentNodeId: string | null;
+    readonly fromIndex: number;
+    readonly toParentNodeId: string | null;
+    readonly toIndex: number;
+    readonly targetNodeId: string;
+    readonly position: 'before' | 'after';
   }`
   Import: `@aceshooting/lyra-ui/components/data/tree/tree.class.js`.
   `TreeBadge {

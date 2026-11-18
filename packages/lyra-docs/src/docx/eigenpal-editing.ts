@@ -3,6 +3,7 @@ import { DOCX_LIMITS, normalizeDocxAction } from './commands.js';
 import type { DocxAction, DocxTableAction, DocxImageAction, DocxCommandAvailability, DocxFormatting, DocxParagraphStyles, DocxResult } from './types.js';
 import type { DocxEngineSearchOptions } from './engine-port.js';
 import type { DocxReviewAction } from './review-types.js';
+import { paragraphStyleLevels, paragraphStyleRoot } from './eigenpal-document-inspection.js';
 
 /** Clip display context without dividing a UTF-16 surrogate pair. */
 function clip(value: string, limit: number, tail = false): string {
@@ -37,13 +38,14 @@ export function eigenpalCommand(action: Exclude<DocxAction, DocxTableAction | Do
   }
 }
 
-/** Public core reads and commands; no parser, layout or model internals cross this seam. */
+/** Core editing commands and bounded projections for authoring controls. */
 export function createEigenpalEditing(
   current: () => DocxEditorInstance,
   navigate: (action: () => DocxResult<void>) => DocxResult<void>,
   mutationGate: () => DocxResult<void>,
 ) {
   let styles: DocxParagraphStyles | null = null;
+  let stylesSource: object | null = null;
   let styleIds = new Set<string>();
   let previousFormatting: Readonly<DocxFormatting> | null = null;
   type Match = Parameters<DocxEditorInstance['selectMatch']>[0];
@@ -51,18 +53,23 @@ export function createEigenpalEditing(
   const result = (ok: boolean): DocxResult<void> => ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
   const missing = (): DocxResult<void> => ({ ok: false, code: 'stale-search' });
   function paragraphStyles(): DocxParagraphStyles {
-    if (styles) return styles;
-    const candidates = current().getDocumentStyles().filter(style => style.type === 'paragraph');
+    const editor = current(), pkg = editor.surface?.session.currentPackage();
+    const root = pkg ? paragraphStyleRoot(pkg) : null;
+    const source = root ?? pkg ?? editor;
+    if (styles && stylesSource === source) return styles;
+    const candidates = editor.getDocumentStyles().filter(style => style.type === 'paragraph');
     const valid = candidates.filter(style => style.styleId.length > 0 && style.styleId.length <= DOCX_LIMITS.styleId);
+    const level = paragraphStyleLevels(() => root);
     styleIds = new Set(valid.map(style => style.styleId));
     styles = Object.freeze({ items: Object.freeze(valid.slice(0, DOCX_LIMITS.styles).map(style =>
-      Object.freeze({ id: style.styleId, label: clip(style.name, DOCX_LIMITS.styleLabel) }))),
+      Object.freeze({ id: style.styleId, label: clip(style.name, DOCX_LIMITS.styleLabel), outlineLevel: level(style.styleId) }))),
     truncated: valid.length > DOCX_LIMITS.styles || candidates.length !== valid.length });
+    stylesSource = source;
     return styles;
   }
   return {
     invalidateSearch() { matches = new WeakMap(); },
-    dispose() { matches = new WeakMap(); styles = null; styleIds.clear(); previousFormatting = null; },
+    dispose() { matches = new WeakMap(); styles = null; stylesSource = null; styleIds.clear(); previousFormatting = null; },
     formatting(): Readonly<DocxFormatting> {
       const editor = current();
       const value = editor.getSelectionFormatting();

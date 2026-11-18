@@ -135,6 +135,74 @@ export async function runDocumentOperations(page, check, { createEditor, saveEdi
     } finally { await page.evaluate(id => document.getElementById(id)?.remove(), id); }
   });
 
+  await check('selection location joins the current outline and catalog reports authored heading levels', async () => {
+    const id = 'operations-outline-metadata';
+    const parts = unzipSync(Uint8Array.from(await page.evaluate(() => window.__docxTest.fixture('basic-editing'))));
+    const styles =
+      '<w:style w:type="paragraph" w:styleId="LocalTitle"><w:name w:val="Titre du service"/>' +
+      '<w:pPr><w:outlineLvl w:val="0"/></w:pPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="LocalSubheading"><w:name w:val="Rubrique interne"/>' +
+      '<w:basedOn w:val="LocalTitle"/></w:style>';
+    parts['word/styles.xml'] = strToU8(strFromU8(parts['word/styles.xml']).replace('</w:styles>', styles + '</w:styles>'));
+    const paragraph = (text, styleId) => '<w:p>' + (styleId ? '<w:pPr><w:pStyle w:val="' + styleId + '"/></w:pPr>' : '') +
+      '<w:r><w:t>' + text + '</w:t></w:r></w:p>';
+    const additional = paragraph('Première section', 'LocalTitle') + paragraph('Paragraph in the first section') +
+      paragraph('Deuxième section', 'LocalSubheading');
+    parts['word/document.xml'] = strToU8(strFromU8(parts['word/document.xml']).replace('<w:body>', '<w:body>' + additional));
+    const bytes = [...zipSync(parts)];
+    try {
+      const mounted = await page.evaluate(({ id, bytes }) => {
+        const editor = document.createElement('lr-docx-editor');
+        editor.id = id;
+        document.querySelector('#fixture').append(editor);
+        return editor.open(Uint8Array.from(bytes));
+      }, { id, bytes });
+      assert.equal(mounted.ok, true, JSON.stringify(mounted));
+      const editor = page.locator('#' + id);
+      const before = await editor.evaluate(element => {
+        const fragment = element.readFragment({ maxBlocks: 4 }).value;
+        const outline = element.outline().value;
+        const catalog = element.paragraphStyles().value;
+        const selectionChanges = [];
+        element.addEventListener('lr-selection-change', event => selectionChanges.push(event.detail.selection.version));
+        const selected = element.selectFragmentBlock(fragment.blocks[3].id, { expectedRevision: fragment.revision });
+        element.focusEditor();
+        const location = element.selectionBlock({ expectedRevision: outline.revision });
+        const last = location.ok ? outline.items.findLast(row => row.blockIndex <= location.value.index) : null;
+        return { fragment, outline, catalog, selected, location, last, selectionChanges, dirty: element.snapshot().dirty };
+      });
+      assert.deepEqual(before.catalog.items.filter(style => style.id.startsWith('Local')).map(style => [style.id, style.outlineLevel]).sort(),
+        [['LocalSubheading', 1], ['LocalTitle', 1]]);
+      assert.deepEqual(before.fragment.blocks.map(block => [block.index, block.headingLevel]), [[0, 1], [1, null], [2, 1], [3, null]]);
+      assert.deepEqual(before.outline.items.slice(0, 2).map(row => [row.blockIndex, row.level]), [[0, 1], [2, 1]]);
+      assert.equal(before.selected.ok, true);
+      assert.deepEqual(before.location, { ok: true, value: { index: 3, revision: mounted.value } });
+      assert.equal(before.last.text, 'Deuxième section');
+      assert.ok(before.selectionChanges.length > 0);
+      assert.equal(before.dirty, false);
+
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForFunction(({ id, revision }) => {
+        const location = document.getElementById(id).selectionBlock({ expectedRevision: revision });
+        return location.ok && location.value.index === 2;
+      }, { id, revision: mounted.value });
+
+      const changed = await editor.evaluate(async (element, { initial, styleId }) => {
+        const previous = element.readFragment({ start: 1, maxBlocks: 1 }).value.blocks[0];
+        const edited = await element.applyEdits([{ edit: { type: 'paragraph-style', styleId }, target: previous.id }],
+          { expectedRevision: initial });
+        return { edited, stale: element.selectionBlock({ expectedRevision: initial }),
+          fragment: element.readFragment({ start: 1, maxBlocks: 1, expectedRevision: edited.value }) };
+      }, { initial: mounted.value, styleId: before.catalog.items.find(style => style.id === 'LocalSubheading').id });
+      assert.equal(changed.edited.ok, true);
+      assert.deepEqual(changed.stale, { ok: false, code: 'stale-revision' });
+      assert.equal(changed.fragment.value.blocks[0].headingLevel, 1);
+      assert.equal((await editor.evaluate(element => element.execute('undo'))).ok, true);
+      const undone = await editor.evaluate(element => element.readFragment({ start: 1, maxBlocks: 1 }));
+      assert.equal(undone.value.blocks[0].headingLevel, null);
+    } finally { await remove(page, id); }
+  });
+
   await check('fragment reads copy bounded body block slices and navigate without editing', async () => {
     const id = 'operations-fragment'; await createEditor(page, id, 'basic-editing');
     try {

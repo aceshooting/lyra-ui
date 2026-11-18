@@ -1,10 +1,18 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { minimumPointerTarget } from '../../../internal/sizes.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
   :host {
     display: block;
     outline: none; /* the host is the focusable treeitem; the visible ring lives on [part=row] */
+    --_lr-tree-toggle-min: ${minimumPointerTarget};
+    --_lr-tree-requested-toggle-size: var(--lr-tree-toggle-size, var(--_lr-tree-tier-toggle-size));
+  }
+  @media (hover: none), (pointer: coarse) {
+    :host {
+      --_lr-tree-toggle-min: max(${minimumPointerTarget}, var(--lr-icon-button-size));
+    }
   }
   [part~='item'] {
     border-radius: var(--lr-radius);
@@ -26,7 +34,9 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    min-block-size: max(${minimumPointerTarget}, var(--lr-tree-row-height, var(--_lr-tree-tier-row-height, ${minimumPointerTarget})));
+    padding-block: var(--_lr-tree-tier-row-padding, var(--lr-space-xs));
+    padding-inline: var(--lr-space-s);
     /* Depth-based indent is capped at --lr-size-8rem (8rem) so a deeply-nested item can't push its
        content off-screen with no way back; [part=label] below truncates the remaining overflow and
        tree.styles.ts's [part=base] adds an overflow-x:auto fallback for the rest. */
@@ -83,16 +93,16 @@ export const styles = css`
   :host([aria-disabled='true']) [part~='item']:active {
     background: transparent;
   }
+  [part='toggle'],
+  [part='checkbox'] {
+    /* Keep the physical hit floor independent of the requested minimum, including a unitless zero. */
+    inline-size: var(--_lr-tree-toggle-min);
+    block-size: var(--_lr-tree-toggle-min);
+  }
   [part='toggle'] {
-    /* Compact chevron glyph (the row keeps its --lr-size-1-75rem-ish visual rhythm) with the
-       interactive box at the shared minimum tappable size -- the same "small glyph, padded hit box"
-       pattern as lr-code-block's, lr-json-viewer's and lr-trace-tree's own [part='toggle'].
-       min-inline-size and min-block-size always win over a smaller explicit size, so the *visible*
-       icon stays put via its own 1em SVG sizing while the clickable box floors out at 40px. */
     font: inherit;
-    inline-size: var(--lr-size-1-75rem);
-    block-size: var(--lr-size-1-75rem);
-    ${iconHitTarget}
+    min-inline-size: var(--_lr-tree-requested-toggle-size, max(var(--lr-size-1-75rem), var(--lr-icon-button-size)));
+    min-block-size: var(--_lr-tree-requested-toggle-size, max(var(--lr-size-1-75rem), var(--lr-icon-button-size)));
     padding: var(--lr-space-xs);
     display: inline-flex;
     align-items: center;
@@ -131,6 +141,21 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
+  [part='reorder-handle'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-inline-size: var(--_lr-tree-toggle-min);
+    min-block-size: var(--_lr-tree-toggle-min);
+    align-self: stretch;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    color: var(--lr-color-text-quiet);
+  }
+  [part='reorder-handle']:where(:hover, :active) { color: var(--lr-color-text); }
+  [part='reorder-handle']:where(:active) { cursor: grabbing; }
   [part='expand-button'] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -168,10 +193,11 @@ export const styles = css`
     animation: var(--_lr-motion-animation, lr-tree-spin var(--lr-duration-ambient) linear infinite);
   }
   [part='checkbox'] {
+    min-inline-size: var(--_lr-tree-requested-toggle-size, var(--lr-icon-button-size));
+    min-block-size: var(--_lr-tree-requested-toggle-size, var(--lr-icon-button-size));
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    ${iconHitTarget}
     cursor: pointer;
     flex: 0 0 auto;
   }

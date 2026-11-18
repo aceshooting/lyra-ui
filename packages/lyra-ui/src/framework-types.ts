@@ -13582,12 +13582,16 @@ export interface LyraComponentTypeMap {
     element: LyraTree;
     properties: LyraElementProperties<
       LyraTree,
+      | 'allowCrossParentReorder'
+      | 'canDrop'
       | 'data'
       | 'label'
       | 'locale'
       | 'maxNodes'
+      | 'pointerReorderable'
       | 'reorderable'
       | 'selection'
+      | 'size'
       | 'strings'
       | 'treeSource',
       {}
@@ -13595,12 +13599,14 @@ export interface LyraComponentTypeMap {
     events: LyraTreeEventMap;
     eventNames:       | 'lr-after-collapse'
       | 'lr-after-expand'
+      | 'lr-bulk-toggle'
       | 'lr-collapse'
       | 'lr-expand'
       | 'lr-lazy-change'
       | 'lr-lazy-load'
       | 'lr-node-select'
       | 'lr-node-toggle'
+      | 'lr-pointer-reorder'
       | 'lr-reorder'
       | 'lr-selection-change'
       | 'lr-source-selection-change';
@@ -13608,9 +13614,14 @@ export interface LyraComponentTypeMap {
       | '--indent-guide-offset'
       | '--indent-guide-style'
       | '--indent-guide-width'
-      | '--indent-size';
+      | '--indent-size'
+      | '--lr-tree-drop-indicator-color'
+      | '--lr-tree-row-height'
+      | '--lr-tree-toggle-size';
     attributeAliases: {
+      'allow-cross-parent-reorder'?: LyraTree['allowCrossParentReorder'];
       'max-nodes'?: LyraTree['maxNodes'];
+      'pointer-reorderable'?: LyraTree['pointerReorderable'];
     };
   };
   'lr-tree-item': {
@@ -13659,8 +13670,10 @@ export interface LyraComponentTypeMap {
       | '--lr-tree-checkbox-indeterminate-border-color'
       | '--lr-tree-checkbox-indeterminate-color'
       | '--lr-tree-depth'
+      | '--lr-tree-row-height'
       | '--lr-tree-selected-bg'
       | '--lr-tree-selected-color'
+      | '--lr-tree-toggle-size'
       | '--show-duration';
     attributeAliases: {};
   };

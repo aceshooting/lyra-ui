@@ -16,7 +16,7 @@ import type { DocxChartModel } from './chart-model.js';
 import { DOCX_LIMITS } from './commands.js';
 import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor } from './command-catalog.js';
 import type { LyraCommand } from '@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js';
-import type { DocxOutline, DocxDocumentInspection, DocxDocumentDiagnostic, DocxDocumentCapability, DocxFragment, DocxFragmentRequest } from './document-inspection-types.js';
+import type { DocxOutline, DocxDocumentInspection, DocxDocumentDiagnostic, DocxDocumentCapability, DocxFragment, DocxFragmentRequest, DocxSelectionBlock } from './document-inspection-types.js';
 import { DOCX_REVIEW_LIMITS, type DocxReviewReport, type DocxReviewDecision } from './review-types.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import {
@@ -29,7 +29,7 @@ import { returnFocusAfterHide, trackDeferredFocusReturn } from './deferred-focus
 import { inspectDocxImageForInsertion } from './image-bytes.js';
 import { fetchDocxBytes } from './remote-source.js';
 import type {
-  DocxAction, DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
+  DocxAction, DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt, DocxSerializationOptions,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
   DocxImageAction, DocxImageDescription, DocxImageDirection, DocxImageSource, DocxInsertImageOptions, DocxCommandAvailability,
   DocxPaintDetail, DocxHighlight, DocxBatchStep, DocxBatchOptions, DocxBatchResult,
@@ -397,6 +397,9 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart image-insert-status - Local image preparation or refusal feedback.
  * @csspart navigation-tools - Stable command, navigation, review and image replacement bar.
  * @csspart document-panel-toggle - Opens a document metadata or review panel.
+ * @csspart outline-toggle - Opens or closes the document outline.
+ * @csspart checks-toggle - Opens or closes the document checks.
+ * @csspart review-toggle - Opens the review panel.
  * @csspart document-panel - Outline, checks or review panel.
  * @csspart document-panel-heading - Programmatically focused panel heading.
  * @csspart document-panel-header - Panel title, refresh and close controls.
@@ -1110,16 +1113,26 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   /** Serialize explicitly; persistence is owned by the caller. */
-  async save(options: { signal?: AbortSignal; expectedRevision?: DocxRevision } = {}): Promise<DocxResult<DocxSaveReceipt>> {
-    if (!this.session) return refused('not-ready');
+  async save(options: DocxSerializationOptions = {}): Promise<DocxResult<DocxSaveReceipt>> {
     const session = this.session;
-    const result = await session.save(options);
+    if (!session) return refused('not-ready');
+    const result = this.finishSerialization(session, await session.save(options));
+    if (result.ok) this.emit('lr-save', { receipt: result.value });
+    return result;
+  }
+
+  /** Serialize caller-owned DOCX bytes while preserving any pending save receipt. */
+  async exportBytes(options: DocxSerializationOptions = {}): Promise<DocxResult<Uint8Array>> {
+    const session = this.session;
+    if (!session) return refused('not-ready');
+    return this.finishSerialization(session, await session.exportBytes(options));
+  }
+
+  private finishSerialization<T>(session: DocxSession, result: DocxResult<T>): DocxResult<T> {
     if (this.session !== session) return refused('destroyed');
     this.syncSession();
-    if (result.ok) {
-      this.localError = null;
-      this.emit('lr-save', { receipt: result.value });
-    }
+    if (this.session !== session) return refused('destroyed');
+    if (result.ok) this.localError = null;
     else if (this.snapshot()?.status !== 'error' &&
       ['save-failed', 'engine-failed', 'resource-limit'].includes(result.code)) this.reportError(result.code);
     return result;
@@ -3068,6 +3081,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   /** Read a bounded slice of top-level body blocks with revision-scoped paragraph ids. */
   readFragment(request: DocxFragmentRequest = {}) { return this.session?.readFragment(request) ?? refused<DocxFragment>('not-ready'); }
 
+  /** Read the current selection head's top-level body block at the expected revision. */
+  selectionBlock(options: { expectedRevision?: DocxRevision } = {}): DocxResult<DocxSelectionBlock> {
+    return this.session?.selectionBlock(options) ?? refused('not-ready');
+  }
+
   /** Move the caret to the start of a current fragment paragraph without editing. */
   selectFragmentBlock(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
     const result = this.session?.selectFragmentBlock(id, options) ?? refused<void>('not-ready');
@@ -3367,7 +3385,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
               aria-label=${this.localize('docxEditorCommands')}
               ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity) || Boolean(this.currentSnapshot?.composing)}
               @pointerdown=${(event: PointerEvent) => { if (event.button === 0 && event.isPrimary) this.openCommands(); }} @click=${() => this.openCommands()}>${this.renderToolIcon('commands')}</${buttonTag}>
-            ${(['outline', 'checks', 'review'] as const).map(panel => html`<${buttonTag} part="document-panel-toggle" size="s" appearance="quiet"
+            ${(['outline', 'checks', 'review'] as const).map(panel => html`<${buttonTag} part=${`document-panel-toggle ${panel}-toggle`} size="s" appearance="quiet"
               id=${`tool-${panel}`} aria-label=${this.localize(toolIcons[panel].label)}
               .pressed=${this.documentPanel === panel} ?disabled=${!this.findActionAvailable()}
               @pointerdown=${(event: PointerEvent) => { if (event.button === 0 && event.isPrimary && panel === 'review' && this.documentPanel !== panel) this.showDocumentPanel(panel); }}

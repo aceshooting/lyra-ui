@@ -567,6 +567,7 @@ export type {
   TreeBadge,
   TreeSelection,
   LyraTreeEventMap,
+  LyraTreePointerReorderDetail,
 } from './components/data/tree/tree.class.js';
 export type {
   FileTreeNode,

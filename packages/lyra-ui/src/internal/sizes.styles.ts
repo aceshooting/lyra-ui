@@ -1,5 +1,8 @@
 import { css } from 'lit';
 
+/** Physical minimum for an independently compacted pointer target, in CSS pixels. */
+export const minimumPointerTarget = css`24px`;
+
 // The ONE size ladder. Twenty-two components carried their own copy of this scale, and four
 // different ladders were in circulation ('2xs..xl', 'xs..xl', 'small|medium|large', 'sm|md').
 //

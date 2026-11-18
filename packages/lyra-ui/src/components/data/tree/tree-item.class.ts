@@ -25,11 +25,13 @@ import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-item.styles.js';
 import {
   fromInteractiveDescendant,
+  treeItemDataExpansion,
   treeItemMotionPreference,
   treeItemOwnerContext,
   type TreeItemOwnerContext,
 } from './tree-owner-controller.js';
 import { TREE_MAX_RENDER_DEPTH, type LyraTreeNodeData } from './tree-types.js';
+import type { TreeDataExpansion } from './tree-data-expansion.js';
 /** Internal slot nested `<lr-tree-item>` children are moved into, so the default slot can stay the
  *  label the way `wa-tree-item`/`sl-tree-item` markup expects. Assigned by this component. */
 const CHILDREN_SLOT = 'children';
@@ -52,6 +54,7 @@ const TREE_ITEM_EXPORT_PARTS = [
   'item--expanded',
   'item--indeterminate',
   'item--selected',
+  'reorder-handle',
   'indentation',
   'expand-button',
   'spinner',
@@ -140,6 +143,7 @@ export interface LyraTreeItemEventMap {
  * @csspart tree-item - The outer wrapper around the row and child group. It is the same node as
  *   `base`.
  * @csspart row - The tree row.
+ * @csspart reorder-handle - Touch drag grip for pointer-reorderable trees.
  * @csspart toggle - The expand/collapse button, with pointer hover/pressed feedback while enabled.
  * @csspart icon - The optional decorative leading icon.
  * @csspart content - The primary and secondary text wrapper.
@@ -182,6 +186,8 @@ export interface LyraTreeItemEventMap {
  *   `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row,
  *   and the base its hover/press mixes from.
+ * @cssprop --lr-tree-row-height - Minimum block size of the row. Taller content can grow the row.
+ * @cssprop --lr-tree-toggle-size - Size of the disclosure button, leaf placeholder and selection checkbox, subject to pointer hit-area minimums.
  * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row in every state; unset pointer states use on-quiet text.
  * @cssprop [--lr-tree-checkbox-checked-border-color=var(--lr-color-brand)] - Checked control border, and
  *   the border under the pointer.
@@ -265,6 +271,10 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     }
     this.lazy = Boolean(value?.lazy);
     const hasResolvedChildren = Boolean(value?.children?.length);
+    if (this._loading && (old?.id !== value?.id || this.isDisabled ||
+      (value?.expanded === false && old?.expanded !== false))) {
+      this.cancelLazyLoad(true);
+    }
     if (this._loading && (hasResolvedChildren || !this.lazy)) {
       // A data refresh supplies its children before this item's next render. Resolve the request
       // here so `updated()` never has to schedule a second update merely to leave loading state.
@@ -288,7 +298,26 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
    * attribute; data objects seed it on assignment; an owning tree then maintains it directly.
    */
   @property({ type: Boolean, reflect: true }) selected = false;
-  @property({ type: Boolean, reflect: true }) expanded = false;
+  private _expanded = false;
+  /** Whether this branch is open. A data tree remembers direct writes to its branch rows by id.
+   * @default false */
+  @property({ type: Boolean, reflect: true })
+  get expanded(): boolean {
+    return this._expanded;
+  }
+  set expanded(value: boolean) {
+    if (this.setExpanded(value) && this.isConnected && this.item) {
+      treeItemDataExpansion(this)?.write(this.item, value);
+    }
+  }
+
+  private setExpanded(value: boolean): boolean {
+    const previous = this._expanded;
+    if (previous === value) return false;
+    this._expanded = value;
+    this.requestUpdate('expanded', previous);
+    return true;
+  }
   /** Enables asynchronous child loading. Expanding emits `lr-lazy-load` and waits for children. */
   @property({ type: Boolean, reflect: true }) lazy = false;
   @state() private _loading = false;
@@ -307,6 +336,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
   }
   private lifecycleGeneration = 0;
   private lazyGeneration = 0;
+  private expansionOwner?: TreeDataExpansion;
   private lifecycleTimer?: { owner: Window; handle: number };
   private lifecycleAnimation?: { node: HTMLElement; listener: (event: AnimationEvent) => void };
   @state() private _collapsing = false;
@@ -530,6 +560,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     // The observer is intentionally absent while detached. A reconnect must therefore sample once
     // before relying on future mutations; first connections remain hydration-aware in willUpdate().
     if (this.hasUpdated) this.sampleLightDomState();
+    if (this.item && this.lazy) this.requestUpdate();
     this.addEventListener('slotchange', this.handleLabelSlotChange);
     this.addEventListener('focusin', this.onOwnedFocus);
   }
@@ -543,7 +574,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     // Loading is transient request state. A reconnected item can be expanded again to issue a
     // fresh generation, but a response to the detached request must never expand it later.
     this._loading = false;
-    if (this.lazy) this.expanded = false;
+    if (this.lazy && !this.expansionOwner) this.setExpanded(false);
+    this._collapsing = false;
     super.disconnectedCallback();
   }
 
@@ -582,6 +614,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     this.assignChildSlots();
     if (this.hasUpdated) this.sampleLightDomState();
     else this.seedFirstRenderState(() => this.sampleLightDomState());
+    this.syncDataExpansion(changed);
     // A same-id data refresh deliberately reuses this element and its disclosure state. Once the
     // refreshed item becomes disabled, though, the owning tree removes this entire subtree from
     // keyboard navigation. Collapse immediately so enabled descendants cannot remain visibly
@@ -631,19 +664,41 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Lit can finish a scheduled update after disconnect. Wait for the connected update before
+    // restarting a pending authored lazy expansion or asking the tree to synchronize its rows.
+    if (!this.isConnected) return;
     // Expanding (by any route, including a direct `expanded` write) or a refreshed `item` renders
     // new child rows that start without hierarchy context. The owning tree supplies it.
     if (changed.has('expanded') || changed.has('item')) this.ownerContext.syncOwner?.();
+    if (this.item && this.ownerContext.expansionVisible &&
+      this.expansionOwner?.read(this.item) === 'awaiting-children') {
+      this.expand();
+    }
+  }
+
+  private syncDataExpansion(changed: PropertyValues): void {
+    const item = this.item;
+    const owner = item ? treeItemDataExpansion(this) : undefined;
+    const ownerChanged = owner !== this.expansionOwner;
+    this.expansionOwner = owner;
+    if (!item || !owner || (!changed.has('item') && !ownerChanged)) return;
+    const state = owner.read(item);
+    if (state !== undefined && this.setExpanded(state === 'open')) {
+      // Author changes and remounts are state restoration, with no user action or motion event.
+      this.lifecycleGeneration++;
+      this.cancelLifecycleTimer();
+      this._collapsing = false;
+      if (!this.expanded) this.ownerContext.syncOwner?.(this);
+    }
   }
 
   /** Expand this node (no-op if already expanded, disabled, loading, or a leaf). */
   expand(): void {
-    if (this.isDisabled || this._loading || this.expanded) return;
-    if (this.lazy) {
+    if (this.isDisabled || this._loading || this.expanded || !this.hasChildren) return;
+    if (this.lazy && !this.item?.children?.length) {
       this.beginLazyLoad();
       return;
     }
-    if (!this.hasChildren) return;
     this.commitExpanded(true);
   }
 
@@ -663,20 +718,22 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     this._loading = true;
     const generation = ++this.lazyGeneration;
     this.emit('lr-lazy-change', { item: this, loading: true });
-    this.emit('lr-lazy-load', { item: this, generation });
+    if (this._loading && generation === this.lazyGeneration) {
+      this.emit('lr-lazy-load', { item: this, generation });
+    }
   }
 
   private finishLazyLoad(generation: number, hasResolvedChildren = this.actualChildItems().length > 0): void {
     if (!this._loading || generation !== this.lazyGeneration) return;
     this._loading = false;
     this.emit('lr-lazy-change', { item: this, loading: false });
-    if (!this.isConnected || this.isDisabled || !hasResolvedChildren) return;
+    if (!this.isConnected || this.isDisabled || generation !== this.lazyGeneration || !hasResolvedChildren) return;
     this.commitExpanded(true);
   }
 
   private cancelLazyLoad(emitChange: boolean): void {
-    if (!this._loading) return;
     this.lazyGeneration++;
+    if (!this._loading) return;
     this._loading = false;
     if (emitChange) this.emit('lr-lazy-change', { item: this, loading: false });
   }
@@ -761,8 +818,10 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     return finiteDuration(parseCssTimeToken(raw)?.ms ?? 0, 0);
   }
 
-  /** Collapse this node (no-op if already collapsed or a leaf). */
+  /** Collapse this branch or cancel its pending lazy expansion. */
   collapse(): void {
+    this.cancelLazyLoad(true);
+    if (this.item) treeItemDataExpansion(this)?.write(this.item, false);
     if (this.isDisabled || !this.hasChildren || !this.expanded) return;
     this.commitExpanded(false);
   }
@@ -912,7 +971,11 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     return html`
       <div part="row" style=${`--lr-tree-depth:${this.ownerContext.depth}`} @click=${this.onRowClick}>
         <span part="indentation" aria-hidden="true"></span>
+        ${this.ownerContext.pointerReorderable && !this.isDisabled
+          ? html`<span part="reorder-handle" aria-hidden="true">⠿</span>` : nothing}
         <span part="expand-button">
+          <!-- hit-area-exempt: compact rows allow a 24px disclosure target and retain the
+               shared icon-button minimum when hover is unavailable or the pointer is coarse. -->
           <button
             part="toggle"
             type="button"

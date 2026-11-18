@@ -15,9 +15,16 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
+import { TreePointerReorder } from './tree-pointer-reorder.js';
 import { styles } from './tree.styles.js';
+import { TreeDataExpansion } from './tree-data-expansion.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import {
   configureTreeItemOwner,
@@ -32,7 +39,7 @@ import type { LyraTreeItem } from './tree-item.class.js';
 
 // Data types live in ./tree-item.js (extracted to break a type-only import cycle with
 // tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
-import type { TreeBadge, TreeIdentityContext, LyraTreeNodeData, TreeSelection } from './tree-types.js';
+import type { TreeBadge, TreeIdentityContext, LyraTreeNodeData, LyraTreePointerReorderDetail, TreeSelection } from './tree-types.js';
 import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES } from './tree-types.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -41,14 +48,16 @@ import { LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/data.g
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_treeNodeMoved, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { TreeBadge, LyraTreeNodeData, TreeSelection };
+export type { TreeBadge, LyraTreeNodeData, LyraTreePointerReorderDetail, TreeSelection };
 
 /** Provider-owned immutable preorder used when treeSource is defined. */
 export type TreeSource = LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>;
 
 export interface LyraTreeEventMap {
+  'lr-pointer-reorder': CustomEvent<LyraTreePointerReorderDetail>;
   'lr-source-selection-change': CustomEvent<Readonly<{ key: string; selected: boolean; scope: 'item' | 'subtree'; state: string }>>;
   'lr-node-toggle': CustomEvent<{ nodeId: string; expanded: boolean }>;
+  'lr-bulk-toggle': CustomEvent<Readonly<{ expanded: boolean; nodeIds: readonly string[] }>>;
   'lr-node-select': CustomEvent<{ nodeId: string }>;
   'lr-reorder': CustomEvent<{ nodeId: string; parentNodeId: string | null; fromIndex: number; toIndex: number }>;
   'lr-selection-change': CustomEvent<
@@ -75,6 +84,7 @@ type MutableTreeNodeData = {
   id: string;
   label: string;
   selected?: boolean;
+  expanded?: boolean;
   disabled?: boolean;
   lazy?: boolean;
   children?: MutableTreeNodeData[];
@@ -151,6 +161,7 @@ function sameTreeNode(next: MutableTreeNodeData, previous: LyraTreeNodeData): bo
     next.id !== previous.id ||
     next.label !== previous.label ||
     next.selected !== previous.selected ||
+    next.expanded !== previous.expanded ||
     next.disabled !== previous.disabled ||
     next.lazy !== previous.lazy ||
     next.description !== previous.description ||
@@ -253,9 +264,11 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
 
     const node: MutableTreeNodeData = { id, label };
     const selected = ownValue(raw, 'selected');
+    const expanded = ownValue(raw, 'expanded');
     const disabled = ownValue(raw, 'disabled');
     const lazy = ownValue(raw, 'lazy');
     if (typeof selected === 'boolean') node.selected = selected;
+    if (typeof expanded === 'boolean') node.expanded = expanded;
     if (typeof disabled === 'boolean') node.disabled = disabled;
     if (typeof lazy === 'boolean') node.lazy = lazy;
     const icon = ownValue(raw, 'icon');
@@ -411,6 +424,9 @@ function isInertWithin(node: Element, root: Element): boolean {
  *
  * Provider mode uses treeSource's immutable preorder and ignores nested value.children.
  * Legacy DOM selection/lazy events and bulk expand/collapse remain legacy-only; source reordering is unavailable.
+ * @event lr-pointer-reorder - A controlled pointer move request. Detail carries nodeId, fromParentNodeId, fromIndex, toParentNodeId, toIndex, targetNodeId and position (before or after). Root parent IDs are null and toIndex is the sibling index after removal.
+ * @csspart drop-indicator - The insertion line at the permitted pointer target.
+ * @cssprop [--lr-tree-drop-indicator-color=var(--lr-color-brand)] - Color of the insertion line.
  * @csspart source-list - The bounded source viewport.
  * @csspart source-row - A mounted semantic tree row.
  * @csspart source-toggle - A source branch or retry button.
@@ -419,6 +435,7 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @csspart source-error - Localized provider or row failure.
  * @event lr-source-selection-change - Accepted provider selection intent: readonly { key, selected, scope, state } without DOM item enumeration.
  * @customElement lr-tree
+ * @event lr-bulk-toggle - Emitted after a bulk operation changes branch expansion. Immutable `detail: { expanded, nodeIds }` includes changes to unmounted data branches.
  * @event lr-node-toggle - `detail: { nodeId, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-node-select - `detail: { nodeId }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-reorder - `detail: { nodeId, parentNodeId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused node within its **own parent's** child list (`parentNodeId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent. Success is announced only after the rendered sibling order confirms the request.
@@ -436,6 +453,8 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @slot - Top-level `<lr-tree-item>` elements, each nesting its own children — the declarative child model. Leave it empty and assign `data` instead for the object model.
  * @slot expand-icon - Default icon shown by expanded items; an item-level slot takes precedence.
  * @slot collapse-icon - Default icon shown by collapsed items; an item-level slot takes precedence.
+ * @cssprop --lr-tree-row-height - Minimum block size of data and declarative rows. Inherits through nested items.
+ * @cssprop --lr-tree-toggle-size - Size of data and declarative disclosure buttons, leaf placeholders and selection checkboxes. Inherits through nested items.
  * @cssprop [--indent-size=var(--lr-space-l)] - Indentation step for nested items.
  * @cssprop [--indent-guide-color=var(--lr-color-border-subtle)] - Indentation guide color.
  * @cssprop [--indent-guide-offset=0] - Block-axis inset for indentation guides.
@@ -471,6 +490,23 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   static override styles = [LyraElement.styles, styles, hierarchySourceStyles];
 
+  private _size?: LyraSize;
+
+  /** Optional row density for data and declarative trees. Accepts `2xs`, `xs`, `s`, `m`, `l`,
+   * `xl` and the `small`, `medium`, `large` aliases. Omitting size keeps the original row
+   * geometry. Provider rows use their own measured layout. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+
   private _treeSource: TreeSource | undefined = undefined;
   private sourceMode = false;
   private sourcePaintVersion = 0;
@@ -495,6 +531,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   set treeSource(value: TreeSource | undefined) {
     const previous = this._treeSource;
     this._treeSource = value;
+    if (value !== undefined) this.bulkExpansionGeneration++;
     this.hierarchy?.update(value, this.effectiveLocale, true);
     this.requestUpdate('treeSource', previous);
   }
@@ -540,6 +577,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * later duplicate occurrences fail closed as disabled rows so one public id can never own
    * multiple actions. Reassign after changes. */
   private _data: readonly LyraTreeNodeData[] = EMPTY_TREE_DATA;
+  private readonly dataExpansion = new TreeDataExpansion(() => this.treeSource === undefined);
   private lastDataInput: unknown = undefined;
   private lastDataLimit = 0;
   private selectionBeforeRefresh?: readonly string[];
@@ -552,6 +590,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * descendant levels and inspects at most 10,000 root/child array positions in depth-first order.
    * A reassignment is diffed by id: a node whose fields and children are unchanged keeps its
    * previous object, so its row neither re-renders nor re-seeds element state.
+   * Branch disclosure follows the id across moves and unmounts. A changed explicit `expanded`
+   * boolean replaces the current value. Removing the field preserves it. Removed ids are forgotten.
    * An otherwise unnamed projected row uses its stable data ID as its semantic name, without
    * changing its visible label or the installed data.
    * @default [] */
@@ -572,6 +612,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const previous = this._data;
     const normalized = normalizeTreeData(value, this._data, this.effectiveMaxNodes);
     this._data = normalized.data;
+    this.dataExpansion.replace(normalized.data);
     this.declaredChildrenAtPath = normalized.declaredChildrenAtPath;
     this.declaredRootCount = normalized.declaredRootCount;
     this._dataTruncated = normalized.truncated;
@@ -603,6 +644,15 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * a plain Arrow press, and the internal live region is not rendered at all.
    */
   @property({ type: Boolean, reflect: true }) reorderable = false;
+
+  /** Enables pointer reorder requests on object and declarative rows. Touch drags begin on the grip. */
+  @property({ type: Boolean, attribute: 'pointer-reorderable', reflect: true }) pointerReorderable = false;
+
+  /** Allows pointer moves before or after rows belonging to another parent. */
+  @property({ type: Boolean, attribute: 'allow-cross-parent-reorder', reflect: true }) allowCrossParentReorder = false;
+
+  /** Optional synchronous policy for pointer reordering. Only true accepts a candidate. */
+  @property({ attribute: false }) canDrop?: (request: LyraTreePointerReorderDetail) => boolean;
 
   private _selection: TreeSelection = 'single';
   /** Selection behavior. Multiple modes cascade through enabled descendants and expose checkboxes.
@@ -677,6 +727,30 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private pendingReorder?: PendingTreeReorder;
+  private pendingPointerReorder?: {
+    readonly detail: LyraTreePointerReorderDetail;
+    readonly sourceOrder: readonly string[];
+    readonly targetOrder: readonly string[];
+  };
+  private readonly pointerOrder = new TreePointerReorder(this, node => this.findRenderedSiblings(node),
+    ids => {
+      if (!this.hasAuthoredItems) return true;
+      const seen = new Set<string>();
+      for (const node of this.allNodeElements()) {
+        if (!ids.has(node.nodeId)) continue;
+        if (seen.has(node.nodeId)) return false;
+        seen.add(node.nodeId);
+      }
+      return seen.size === ids.size;
+    },
+    detail => {
+      const nodes = this.visibleNodeElements();
+      const sourceOrder = this.pointerSiblingIds(detail.fromParentNodeId, nodes);
+      const targetOrder = detail.fromParentNodeId === detail.toParentNodeId ? sourceOrder
+        : this.pointerSiblingIds(detail.toParentNodeId, nodes);
+      this.pendingPointerReorder = { detail, sourceOrder, targetOrder };
+      this.emit('lr-pointer-reorder', detail);
+    });
 
   /** Top-level items only. Deliberately `:scope >`: in the declarative child model nested items are
    *  light-DOM descendants of *this* element too, and a plain descendant query would flatten the
@@ -742,6 +816,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       setSize: number;
       posInSet: number;
       identity?: TreeIdentityContext;
+      expansionVisible: boolean;
     }> = [];
     for (let index = roots.length - 1; index >= 0; index--) {
       stack.push({
@@ -751,6 +826,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         setSize: rootCount,
         posInSet: index + 1,
         identity: this.hasAuthoredItems ? undefined : this.treeIdentityAt(String(index)),
+        expansionVisible: true,
       });
     }
     const seen = new Set<LyraTreeItem>();
@@ -770,8 +846,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         selection: this.selection,
         ownsSelection: true,
         identity: frame.identity,
+        dataExpansion: frame.identity ? this.dataExpansion : undefined,
+        expansionVisible: frame.expansionVisible,
         expandIcon,
         collapseIcon,
+        pointerReorderable: this.pointerReorderable,
         syncOwner: this.requestContextSync,
         focusOwner: this.onItemFocus,
       });
@@ -784,6 +863,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       const childAncestry = frame.node.item
         ? [...frame.ancestry, frame.node.item]
         : frame.ancestry;
+      const expansionVisible = frame.expansionVisible && frame.node.expanded && !frame.node.isDisabled;
       for (let index = children.length - 1; index >= 0; index--) {
         const identity = frame.identity
           ? {
@@ -800,6 +880,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           setSize: declaredCount,
           posInSet: index + 1,
           identity,
+          expansionVisible,
         });
       }
     }
@@ -1219,6 +1300,10 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!this.pointerReorderable || this.treeSource !== undefined) {
+      this.pointerOrder.cancel();
+      this.pendingPointerReorder = undefined;
+    }
     this.hierarchy.update(this.treeSource, this.effectiveLocale);
     if (this.treeSource !== undefined) {
       if (!this.sourceMode) {
@@ -1326,6 +1411,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           identity: undefined,
           expandIcon: this.iconSource('expand-icon'),
           collapseIcon: this.iconSource('collapse-icon'),
+          pointerReorderable: this.pointerReorderable,
           syncOwner: this.requestContextSync,
           focusOwner: this.onItemFocus,
         });
@@ -1347,6 +1433,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           identity: this.hasAuthoredItems ? undefined : this.treeIdentityAt(String(i)),
           expandIcon: this.iconSource('expand-icon'),
           collapseIcon: this.iconSource('collapse-icon'),
+          pointerReorderable: this.pointerReorderable,
           syncOwner: this.requestContextSync,
           focusOwner: this.onItemFocus,
         });
@@ -1362,6 +1449,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  item's depth, set position, roving target or selection mode. */
   private contextSyncPending = true;
   private bulkExpansions = 0;
+  private bulkExpansionGeneration = 0;
   private syncGeneration = 0;
   private syncRequested = false;
   private syncRunning = false;
@@ -1369,7 +1457,14 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   /** Handed to every configured item as `syncOwner`: an item that renders or reveals child rows
    *  (an expansion, including a direct `expanded` write, or a refreshed `item`) asks for a sync. */
-  private requestContextSync = (): void => {
+  private requestContextSync = (closedBy?: HTMLElement): void => {
+    // Passive data changes do not emit a row toggle, but can hide its active descendant.
+    if (closedBy) {
+      const node = closedBy as LyraTreeItem;
+      if (this.activeId !== node.nodeId && this.isNavigable(node) && this.subtreeHasId(node, this.activeId)) {
+        this.setActiveNode(node);
+      }
+    }
     this.contextSyncPending = true;
     this.scheduleTreeSync();
   };
@@ -1414,6 +1509,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         if (this.treeSource !== undefined || generation !== this.syncGeneration) break;
         this.reportRefreshSelectionChange();
         this.confirmPendingReorder();
+        this.confirmPointerReorder();
         this.restorePendingFocus();
       }
     } finally {
@@ -1527,8 +1623,12 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.pointerOrder.cancel();
+    this.pointerOrder.clearClick();
+    this.pendingPointerReorder = undefined;
     super.disconnectedCallback();
     this.sourceAnnouncement = undefined;
+    this.bulkExpansionGeneration++;
     this.pendingReorder = undefined;
     this.activeNode = undefined;
     this.resetChildObserver();
@@ -1575,8 +1675,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         selection: this.selection,
         ownsSelection: true,
         identity: this.treeIdentityAt(String(index)),
+        dataExpansion: this.dataExpansion,
+        expansionVisible: true,
         expandIcon: this.iconSource('expand-icon'),
         collapseIcon: this.iconSource('collapse-icon'),
+        pointerReorderable: this.pointerReorderable,
         syncOwner: this.requestContextSync,
         focusOwner: this.onItemFocus,
       });
@@ -1793,6 +1896,43 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     );
   }
 
+  private pointerSiblingIds(parentId: string | null, nodes: readonly LyraTreeItem[]): string[] {
+    if (parentId === null) return this.nodeElements.map(node => node.nodeId);
+    return nodes.find(node => node.nodeId === parentId)?.childItems().map(node => node.nodeId) ?? [];
+  }
+
+  private confirmPointerReorder(): void {
+    const request = this.pendingPointerReorder;
+    if (!request) return;
+    const pending = request.detail;
+    const nodes = this.visibleNodeElements();
+    const node = nodes.find(item => item.nodeId === pending.nodeId);
+    const anchor = nodes.find(item => item.nodeId === pending.targetNodeId);
+    const location = node && this.findRenderedSiblings(node);
+    if (!node || !anchor || !location) {
+      this.pendingPointerReorder = undefined;
+      return;
+    }
+    const parentId = location.parent?.nodeId ?? null;
+    const source = this.pointerSiblingIds(pending.fromParentNodeId, nodes);
+    const sameParent = pending.fromParentNodeId === pending.toParentNodeId;
+    const target = sameParent ? source : this.pointerSiblingIds(pending.toParentNodeId, nodes);
+    const sameOrder = (left: readonly string[], right: readonly string[]): boolean =>
+      left.length === right.length && left.every((id, index) => right[index] === id);
+    if (sameOrder(source, request.sourceOrder) && sameOrder(target, request.targetOrder)) return;
+    this.pendingPointerReorder = undefined;
+    const removed = request.sourceOrder.filter(id => id !== pending.nodeId);
+    const expected = [...(sameParent ? removed : request.targetOrder)];
+    expected.splice(pending.toIndex, 0, pending.nodeId);
+    if (!sameOrder(target, expected) || (!sameParent && !sameOrder(source, removed))) return;
+    const anchorIndex = location.index + (pending.position === 'before' ? 1 : -1);
+    if (parentId !== pending.toParentNodeId || location.index !== pending.toIndex ||
+        location.siblings[anchorIndex] !== anchor) return;
+    this.liveRegion?.announce(this.localize('treeNodeMoved', undefined, {
+      label: node.nodeLabel, index: this.formatCount(location.index + 1), total: this.formatCount(location.siblings.length),
+    }), { force: true });
+  }
+
   private onTreeKeyDown = (e: KeyboardEvent): void => {
     // A control inside an item's label owns its own keys; the item host itself is the boundary.
     const itemTag = tag('tree-item');
@@ -1904,22 +2044,27 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   async expandAll(): Promise<void> {
     if (this.treeSource !== undefined) return;
+    const generation = this.bulkExpansionGeneration;
+    const changed = new Set<string>();
     let level = this.nodeElements.map(node => ({node, depth: 0}));
     const seen = new Set<LyraTreeItem>();
     const systemReduced = preferenceMediaMatches(this.ownerDocument.defaultView, '(prefers-reduced-motion: reduce)');
     this.bulkExpansions += 1;
     try {
-      while (level.length > 0 && seen.size < this.nodeWalkLimit) {
+      while (level.length > 0 && seen.size < this.nodeWalkLimit && generation === this.bulkExpansionGeneration) {
         const current: typeof level = [];
         for (const entry of level) {
           const {node} = entry;
-          if (seen.has(node) || seen.size >= this.nodeWalkLimit) continue;
+          if (generation !== this.bulkExpansionGeneration) break;
+          if (!node.isConnected || seen.has(node) || seen.size >= this.nodeWalkLimit) continue;
           seen.add(node);
           current.push(entry);
           if (node.isDisabled) node.expanded = false;
           else if (node.hasChildren) {
             const reduced = systemReduced || inheritedPreference(node, 'data-lr-motion', 'reduce') === 'reduce';
+            const wasExpanded = node.expanded;
             withTreeItemMotionPreference(node, reduced, () => node.expand());
+            if (!wasExpanded && node.expanded) changed.add(node.nodeId);
           }
         }
         await Promise.all(current.map(({node}) => node.updateComplete));
@@ -1934,6 +2079,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     }
     if (this.bulkExpansions === 0 && this.syncRequested) this.scheduleTreeSync();
     await this.updateComplete;
+    if (generation === this.bulkExpansionGeneration) this.emitBulkToggle(true, changed);
   }
 
   /**
@@ -1946,13 +2092,27 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   async collapseAll(): Promise<void> {
     if (this.treeSource !== undefined) return;
+    this.bulkExpansionGeneration++;
+    const changed = new Set<string>();
     const focused = this.deepFocusedNode();
     const topLevel = this.nodeElements;
     const nodes = this.allNodeElements();
+    if (!this.hasAuthoredItems) {
+      // Count mounted rows from their committed disclosure; a new data value can arrive before
+      // its lazy row accepts the response. Count the data state only for rows without an element.
+      const mounted = new Set<LyraTreeNodeData>();
+      for (const node of nodes) if (node.item) mounted.add(node.item);
+      this.dataExpansion.closeAll(changed, mounted);
+    }
     for (let index = nodes.length - 1; index >= 0; index--) {
+      if (this.treeSource !== undefined) return;
       const node = nodes[index]!;
       if (node.isDisabled) node.expanded = false;
-      else node.collapse();
+      else {
+        const counted = node.expanded && node.hasChildren;
+        node.collapse();
+        if (counted && !node.expanded) changed.add(node.nodeId);
+      }
     }
     const activeTopLevel = this.hasAuthoredItems
       ? topLevel.some((node) => this.isNavigable(node) && node.nodeId === this.activeId)
@@ -1964,6 +2124,13 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     }
     if (focused) this.pendingFocusId = this.activeId;
     await cascadeUpdateComplete(topLevel);
+    if (this.isConnected && this.treeSource === undefined) this.emitBulkToggle(false, changed);
+  }
+
+  private emitBulkToggle(expanded: boolean, changed: ReadonlySet<string>): void {
+    if (changed.size > 0) {
+      this.emit('lr-bulk-toggle', Object.freeze({ expanded, nodeIds: Object.freeze([...changed]) }));
+    }
   }
 
   override render(): TemplateResult {
@@ -1987,6 +2154,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         role="tree"
         aria-label=${hostAriaLabel(this) ?? (this.label || nothing)}
         aria-multiselectable=${String(this.selection === 'multiple' || this.selection === 'leaf-multiple')}
+        @pointerdown=${this.pointerOrder.start}
         @focusin=${this.onTreeFocusIn}
         @keydown=${this.onTreeKeyDown}
         @lr-node-toggle=${this.onNodeActivate}
@@ -1996,6 +2164,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : nothing}
         <slot @slotchange=${this.onChildrenChanged}></slot>
+        ${this.pointerReorderable ? html`<span part="drop-indicator" aria-hidden="true" hidden></span>` : nothing}
         <slot name="expand-icon" hidden @slotchange=${this.onChildrenChanged}></slot>
         <slot name="collapse-icon" hidden @slotchange=${this.onChildrenChanged}></slot>
       </div>
@@ -2004,7 +2173,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
             count: this.formatCount(this.effectiveMaxNodes),
           })}</div>`
         : nothing}
-      ${this.reorderable ? html`<lr-live-region></lr-live-region>` : nothing}
+      ${this.reorderable || this.pointerReorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;
   }
   /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in

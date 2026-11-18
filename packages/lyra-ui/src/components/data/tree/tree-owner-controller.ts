@@ -1,3 +1,5 @@
+import { tag } from '../../../internal/prefix.js';
+import type { TreeDataExpansion } from './tree-data-expansion.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import type { LyraTreeNodeData, TreeIdentityContext, TreeSelection } from './tree-types.js';
 
@@ -7,6 +9,7 @@ import type { LyraTreeNodeData, TreeIdentityContext, TreeSelection } from './tre
  * @internal
  */
 export interface TreeItemOwnerContext {
+  readonly pointerReorderable?: boolean;
   readonly activeId: string | null;
   /** Stable owner lookup keeps roving state outside per-item snapshots. */
   readonly activeNodeId?: () => string | null;
@@ -16,12 +19,15 @@ export interface TreeItemOwnerContext {
   readonly posInSet: number;
   readonly selection: TreeSelection;
   readonly ownsSelection: boolean;
+  readonly dataExpansion?: TreeDataExpansion;
+  /** Whether the row is exposed by its ancestors. Lazy seeds wait for the real owner context. */
+  readonly expansionVisible?: boolean;
   readonly identity?: TreeIdentityContext;
   readonly expandIcon: Element | null;
   readonly collapseIcon: Element | null;
   readonly indeterminate: boolean;
   /** Asks the owning tree to push context to child rows this item just rendered or revealed. */
-  readonly syncOwner?: () => void;
+  readonly syncOwner?: (closedBy?: HTMLElement) => void;
   /** Reports local item focus when shadow retargeting prevents the tree from receiving focusin. */
   readonly focusOwner?: (item: HTMLElement) => void;
 }
@@ -49,6 +55,18 @@ const contexts = new WeakMap<TreeItemOwner, TreeItemOwnerContext>();
 /** @internal */
 export function treeItemOwnerContext(owner: TreeItemOwner): TreeItemOwnerContext {
   return contexts.get(owner) ?? DEFAULT_CONTEXT;
+}
+
+/** A projected child can render once before the tree installs its full hierarchy context. @internal */
+export function treeItemDataExpansion(owner: TreeItemOwner): TreeDataExpansion | undefined {
+  let item = owner;
+  while (true) {
+    const context = contexts.get(item);
+    if (context) return context.dataExpansion;
+    const root = item.getRootNode?.() as Partial<ShadowRoot> | undefined;
+    if (root?.host?.localName !== tag('tree-item')) return undefined;
+    item = root.host as TreeItemOwner;
+  }
 }
 
 function sameAncestry(
@@ -94,6 +112,7 @@ export function configureTreeItemOwner(
     indeterminate: next.indeterminate ?? previous.indeterminate,
   });
   if (
+    previous.pointerReorderable === normalized.pointerReorderable &&
     previous.activeId === normalized.activeId &&
     previous.activeNodeId === normalized.activeNodeId &&
     sameAncestry(previous.ancestry, normalized.ancestry) &&
@@ -102,6 +121,8 @@ export function configureTreeItemOwner(
     previous.posInSet === normalized.posInSet &&
     previous.selection === normalized.selection &&
     previous.ownsSelection === normalized.ownsSelection &&
+    previous.dataExpansion === normalized.dataExpansion &&
+    previous.expansionVisible === normalized.expansionVisible &&
     sameIdentity(previous.identity, normalized.identity) &&
     previous.expandIcon === normalized.expandIcon &&
     previous.collapseIcon === normalized.collapseIcon &&

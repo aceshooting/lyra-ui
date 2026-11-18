@@ -489,6 +489,11 @@ export type LyraBeforePageChangeEvent = LyraPaginationEventMap['lr-before-page-c
 export type LyraBranchChangeEvent = LyraBranchPickerEventMap['lr-branch-change'];
 
 /**
+ * `lr-bulk-toggle` — dispatched by `<lr-tree>`; detail `LyraTreeEventMap['lr-bulk-toggle']`.
+ */
+export type LyraBulkToggleEvent = LyraTreeEventMap['lr-bulk-toggle'];
+
+/**
  * `lr-calendar-geometry-change` — dispatched by `<lr-heatmap>`; detail
  * `LyraHeatmapEventMap['lr-calendar-geometry-change']`.
  */
@@ -2335,6 +2340,12 @@ export type LyraPointActivateEvent =
 export type LyraPointSelectEvent = LyraEmbeddingExplorerEventMap['lr-point-select'];
 
 /**
+ * `lr-pointer-reorder` — dispatched by `<lr-tree>`; detail
+ * `LyraTreeEventMap['lr-pointer-reorder']`.
+ */
+export type LyraPointerReorderEvent = LyraTreeEventMap['lr-pointer-reorder'];
+
+/**
  * `lr-poll-due` — dispatched by `<lr-poll-status>`; detail
  * `LyraPollStatusEventMap['lr-poll-due']`.
  */
@@ -3646,6 +3657,7 @@ export interface LyraGlobalEventMap {
   'lr-autoload-traversal-error': LyraAutoloadTraversalErrorEvent;
   'lr-before-page-change': LyraBeforePageChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
+  'lr-bulk-toggle': LyraBulkToggleEvent;
   'lr-calendar-geometry-change': LyraCalendarGeometryChangeEvent;
   'lr-camera-change': LyraCameraChangeEvent;
   'lr-camera-request': LyraCameraRequestEvent;
@@ -3879,6 +3891,7 @@ export interface LyraGlobalEventMap {
   'lr-play': LyraPlayEvent;
   'lr-point-activate': LyraPointActivateEvent;
   'lr-point-select': LyraPointSelectEvent;
+  'lr-pointer-reorder': LyraPointerReorderEvent;
   'lr-poll-due': LyraPollDueEvent;
   'lr-preview-change': LyraPreviewChangeEvent;
   'lr-preview-request': LyraPreviewRequestEvent;

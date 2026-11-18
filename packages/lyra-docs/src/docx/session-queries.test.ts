@@ -22,7 +22,7 @@ function report(engine: DocxEnginePort, query: Query, effect: () => void = () =>
 async function outlined() {
   const h = await opened();
   const heading = {}, selected: object[] = [];
-  h.engine.outline = () => ({ ok: true, value: { items: [{ token: heading, level: 1, text: 'Introduction', textTruncated: false }], truncated: false } });
+  h.engine.outline = () => ({ ok: true, value: { items: [{ token: heading, blockIndex: 0, level: 1, text: 'Introduction', textTruncated: false }], truncated: false } });
   const id = value(h.session.outline()).items[0]!.id;
   const select = (effect: () => void = () => {}) => {
     h.engine.selectDocumentTarget = token => { selected.push(token); effect(); return { ok: true, value: undefined }; };
@@ -395,4 +395,41 @@ test('a failed save whose completion notification destroys or faults the session
     f.saveGate.reject(new Error('private contents'));
     refusal(await pending, code);
   }
+});
+
+
+test('selection location is a frozen revision-scoped read and preserves outline navigation', async () => {
+  const h = await outlined(), snapshot = h.session.snapshot();
+  const read = h.session.selectionBlock.bind(h.session);
+  let reads = 0;
+  h.engine.selectionBlock = () => { reads++; return { ok: true, value: 2 }; };
+  const noOwner = value(fixture().create());
+  refusal(noOwner.selectionBlock(), 'not-ready');
+  refusal(read(null as never), 'invalid-option');
+  refusal(read({ expectedRevision: { documentId: 'foreign-document', value: h.revision.value } }), 'stale-revision');
+  const result = value(read({ expectedRevision: h.revision }));
+  assert.deepEqual(result, { revision: h.revision, index: 2 });
+  assert(Object.isFrozen(result) && Object.isFrozen(result.revision));
+  assert.equal(h.session.snapshot(), snapshot, 'a location read publishes nothing');
+  assert.equal(reads, 1);
+  h.select();
+  value(h.session.selectOutlineItem(h.id, { expectedRevision: h.revision }));
+  assert.deepEqual(h.selected, [h.heading]);
+  h.f.selection = 'none'; h.f.emit('user-selection');
+  assert.equal(value(read()).index, null);
+  h.f.selection = 'caret'; h.f.composing = true; h.f.emit('composition');
+  refusal(read(), 'composing');
+  h.f.composing = false; h.f.emit('composition');
+  const finish = await pendingSave(h);
+  refusal(read(), 'busy');
+  await finish();
+  h.engine.selectionBlock = () => {
+    h.f.emit('user-selection');
+    return { ok: true, value: 2 };
+  };
+  refusal(read(), 'stale-selection');
+  h.f.emit('change');
+  refusal(read({ expectedRevision: h.revision }), 'stale-revision');
+  h.session.destroy();
+  refusal(read(), 'destroyed');
 });

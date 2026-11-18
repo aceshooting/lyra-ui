@@ -170,7 +170,7 @@ export const styles = css`
   }
 
   :where([part='toolbar-area']) :is([data-tool-key], [part='new-button'], [part='open-button'], [part='save-button'],
-    [part='document-panel-toggle'], [part='commands-button'], [part='image-replace-trigger']) {
+    [part~='document-panel-toggle'], [part='commands-button'], [part='image-replace-trigger']) {
     --lr-button-size-s: var(--_docx-control-height);
     --lr-icon-button-size-scope: var(--_docx-tool-hit-size, var(--_docx-inherited-hit-scope));
     --lr-icon-size: var(--_docx-tool-icon-size, var(--_docx-inherited-icon-size));
@@ -211,7 +211,7 @@ export const styles = css`
   }
   .tool-icon ::slotted(*) { inline-size: 100%; block-size: 100%; }
   .tooltips { position: absolute; inline-size: 0; block-size: 0; }
-  [part='new-button'], [part='open-button'], [part='save-button'], [part='commands-button'], [part='document-panel-toggle'], [part='image-replace-trigger'], [part='table-format-trigger'],
+  [part='new-button'], [part='open-button'], [part='save-button'], [part='commands-button'], [part~='document-panel-toggle'], [part='image-replace-trigger'], [part='table-format-trigger'],
   [part='format-button'], [part='edit-button'], [part='link-trigger'], [part='find-toggle'],
   [part='image-insert-trigger'], [part='table-insert-trigger'], [part='image-previous'], [part='image-next'] {
     --lr-icon-size: var(--_docx-tool-icon-size, var(--lr-font-size-lg));

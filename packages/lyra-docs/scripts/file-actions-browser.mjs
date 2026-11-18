@@ -204,4 +204,59 @@ export async function runFileActions(page, check, { createEditor }) {
       assert.ok((await editor.locator('.docx-pages').textContent()).includes('Café 東京'));
     } finally { await editor.evaluate(element => element.remove()); }
   });
+
+  await check('palette Open on a dirty document waits for confirmation before opening the native picker', async () => {
+    await createEditor(page, id);
+    try {
+      await editor.locator('.docx-pages').click();
+      await page.keyboard.insertText('Discard only after confirming');
+      await page.waitForFunction(id => document.getElementById(id).snapshot()?.dirty, id);
+      const revision = await editor.evaluate(element => {
+        const root = element.shadowRoot;
+        const events = [];
+        const record = entry => {
+          events.push(entry);
+          element.dataset.fileActionTrace = JSON.stringify(events);
+        };
+        element.addEventListener('lr-open-request', event => record({
+          event: 'request', detail: event.detail,
+          paletteOpen: root.querySelector('[part="command-palette"]').open,
+        }));
+        root.querySelector('[part="file-input"]').addEventListener('click', () => record({ event: 'picker' }));
+        element.addEventListener('lr-before-open', event => record({ event: 'before-open', detail: event.detail }));
+        return element.snapshot().revision;
+      });
+      const request = { event: 'request', detail: { source: 'command-palette', currentRevision: revision }, paletteOpen: true };
+      const trace = () => editor.evaluate(element => JSON.parse(element.dataset.fileActionTrace));
+      const palette = editor.locator('[part="command-palette"]');
+      const confirm = editor.locator('[part="discard-button"]');
+      await page.keyboard.press('ControlOrMeta+K');
+      await palette.getByRole('dialog').waitFor({ state: 'visible' });
+      await palette.getByRole('searchbox').fill('Open');
+      let prematurePicker = false;
+      const onPicker = () => { prematurePicker = true; };
+      page.on('filechooser', onPicker);
+      try {
+        await page.keyboard.press('Enter');
+        await palette.getByRole('dialog').waitFor({ state: 'hidden' });
+        await confirm.waitFor({ state: 'visible' });
+        assert.equal(prematurePicker, false);
+        assert.deepEqual(await trace(), [request]);
+        assert.deepEqual(await editor.evaluate(element => element.snapshot().revision), revision);
+        assert.match(await editor.locator('.docx-pages').textContent(), /Discard only after confirming/u);
+      } finally { page.off('filechooser', onPicker); }
+
+      const bytes = await page.evaluate(() => window.__docxTest.fixture('basic-editing'));
+      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'), () => confirm.click());
+      await chooser.setFiles({ name: 'Confirmed palette.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+      await page.waitForFunction(id => document.getElementById(id).shadowRoot.querySelector('[part="filename"]').textContent === 'Confirmed palette.docx', id);
+      assert.deepEqual(await trace(), [request, { event: 'picker' },
+        { event: 'before-open', detail: { kind: 'docx', currentRevision: revision } }]);
+      assert.notEqual(await editor.evaluate(element => element.snapshot().revision.documentId), revision.documentId);
+      const content = await editor.locator('.docx-pages').textContent();
+      assert.match(content, /Café 東京/u);
+      assert.doesNotMatch(content, /Discard only after confirming/u);
+    } finally { await editor.evaluate(element => element.remove()); }
+  });
 }

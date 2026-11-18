@@ -77,7 +77,7 @@ test('fragment requests are validated and passed with their budgets; ids select 
 
 test('a fragment can start at a current outline item; stale, forged and foreign starts are refused', async () => {
   const h = await fragmented(4);
-  h.engine.outline = () => ({ ok: true, value: { items: [{ token: h.tokens[2]!, level: 1, text: 'Two', textTruncated: false }], truncated: false } });
+  h.engine.outline = () => ({ ok: true, value: { items: [{ token: h.tokens[2]!, blockIndex: 2, level: 1, text: 'Two', textTruncated: false }], truncated: false } });
   const outline = value(h.session.outline());
   const fragment = value(h.session.readFragment({ outlineItemId: outline.items[0]!.id, maxBlocks: 8 }));
   assert.deepEqual([fragment.start, fragment.blocks.map(item => item.text)], [2, ['B2', 'B3']]);

@@ -154336,6 +154336,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "allow-cross-parent-reorder",
+            "property": "allowCrossParentReorder",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -154366,6 +154376,16 @@
             "default": 1000
           },
           {
+            "name": "pointer-reorderable",
+            "property": "pointerReorderable",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "reorderable",
             "property": "reorderable",
             "type": "boolean",
@@ -154384,9 +154404,37 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "single"
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
+          {
+            "name": "allowCrossParentReorder",
+            "attribute": "allow-cross-parent-reorder",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "canDrop",
+            "attribute": null,
+            "type": "(request: LyraTreePointerReorderDetail) => boolean | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "data",
             "attribute": null,
@@ -154437,6 +154485,16 @@
             "default": 1000
           },
           {
+            "name": "pointerReorderable",
+            "attribute": "pointer-reorderable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "reorderable",
             "attribute": "reorderable",
             "type": "boolean",
@@ -154464,6 +154522,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "single"
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "treeSource",
@@ -154504,6 +154571,12 @@
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true
+          },
+          {
+            "name": "lr-bulk-toggle",
+            "type": "CustomEvent<Readonly<{ expanded: boolean; nodeIds: readonly string[] }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-collapse",
@@ -154550,6 +154623,12 @@
             "composed": true
           },
           {
+            "name": "lr-pointer-reorder",
+            "type": "CustomEvent<LyraTreePointerReorderDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-reorder",
             "type": "CustomEvent<{ nodeId: string; parentNodeId: string | null; fromIndex: number; toIndex: number }>",
             "cancelable": "never",
@@ -154571,6 +154650,10 @@
         "parts": [
           {
             "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "drop-indicator",
             "deprecated": null
           },
           {
@@ -154640,6 +154723,22 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-l)"
+          },
+          {
+            "name": "--lr-tree-drop-indicator-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-tree-row-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-tree-toggle-size",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -155088,6 +155187,10 @@
             "deprecated": null
           },
           {
+            "name": "reorder-handle",
+            "deprecated": null
+          },
+          {
             "name": "row",
             "deprecated": null
           },
@@ -155248,6 +155351,11 @@
             "default": 0
           },
           {
+            "name": "--lr-tree-row-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-tree-selected-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -155258,6 +155366,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-tree-toggle-size",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--show-duration",

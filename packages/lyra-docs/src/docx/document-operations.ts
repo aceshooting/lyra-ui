@@ -38,7 +38,7 @@ export function normalizeDocxRevision(value: unknown): DocxRevision | null {
 }
 
 const opaqueId = (value: unknown) => typeof value === 'string' && value.length > 0 && value.length <= 128;
-const boundedInteger = (value: unknown, minimum: number, maximum: number) =>
+const boundedInteger = (value: unknown, minimum: number, maximum: number): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= maximum;
 
 export interface NormalizedFragmentRequest {
@@ -78,7 +78,7 @@ export type DocxBatchRefusal = Readonly<{ ok: false; code: DocxRefusalCode; step
 export const batchRefusal = (code: DocxRefusalCode, step: number | null = null): DocxBatchRefusal => Object.freeze({ ok: false, code, step });
 
 /**
- * Validate and copy a whole batch before anything runs: every step must be a supported formatting
+ * Validate and copy a whole batch before anything runs: every step must be a supported
  * edit within its own limits, and a targeted step must be a paragraph edit.
  */
 export function normalizeDocxBatch(steps: unknown, options: unknown): Readonly<{ ok: true; value: NormalizedBatch }> | DocxBatchRefusal {
@@ -95,7 +95,19 @@ export function normalizeDocxBatch(steps: unknown, options: unknown): Readonly<{
       const descriptor = Object.getOwnPropertyDescriptor(steps, index);
       const step = descriptor && Object.hasOwn(descriptor, 'value') ? ownDataRecord(descriptor.value) : null;
       if (!step || Object.keys(step).some(key => key !== 'edit' && key !== 'target')) return batchRefusal('invalid-option', index);
-      const action = normalizeDocxAction(step['edit']);
+      const input = ownDataRecord(step['edit']);
+      if (input?.['type'] === 'move-blocks') {
+        const { start, end, before } = input;
+        if (Object.keys(input).some(key => !['type', 'start', 'end', 'before'].includes(key)) || step['target'] !== undefined ||
+          !boundedInteger(start, 0, DOCX_FRAGMENT_LIMITS.bodyBlocks) || !boundedInteger(end, 0, DOCX_FRAGMENT_LIMITS.bodyBlocks) ||
+          !boundedInteger(before, 0, DOCX_FRAGMENT_LIMITS.bodyBlocks) ||
+          start >= end || (before > start && before < end))
+          return batchRefusal('invalid-option', index);
+        if (length !== 1) return batchRefusal('unsupported', index);
+        copied.push(Object.freeze({ edit: Object.freeze({ type: 'move-blocks', start, end, before }) }));
+        continue;
+      }
+      const action = normalizeDocxAction(typeof step['edit'] === 'string' ? step['edit'] : input);
       if (!action.ok) return batchRefusal(action.code === 'unsupported' ? 'invalid-option' : action.code, index);
       const edit = action.value;
       if (typeof edit === 'string' ? !toggles.has(edit) : !paragraphEdits.has(edit.type) && !runEdits.has(edit.type)) return batchRefusal('unsupported', index);

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { DocxEditorInstance } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
+import { createEigenpalEditing } from './eigenpal-editing.js';
+import type { TableReaders } from './eigenpal-tables.js';
 import { createDocumentInspection } from './eigenpal-document-inspection.js';
 import { DOCX_FRAGMENT_LIMITS } from './document-operations.js';
 import { WORD_NS as W } from './ooxml.js';
@@ -23,13 +25,18 @@ function fixture(children: OoxmlNode[], styles: OoxmlNode[] = []) {
   const body = el('body', children), part = { name: '/word/document.xml', root: el('document', [body]) };
   const pkg = { mainDocumentPart: part.name, parts: new Map<string, unknown>([[part.name, part]]) };
   if (styles.length) pkg.parts.set('/word/styles.xml', { name: '/word/styles.xml', root: el('styles', styles) });
-  const f = { revision: 0, selected: '', onPackage() {} };
+  const f = { revision: 0, selected: '', story: 'body', styles: [] as { styleId: string; name: string; type: string }[],
+    anchor: { paragraphId: '', offset: 0 }, head: { paragraphId: '', offset: 0 }, cells: false, drawing: false, onPackage() {} };
   const session = { currentPackage: () => { f.onPackage(); return pkg; }, part: () => part, packageRevision: () => f.revision };
-  const editor = { surface: { session }, mountGeneration: 0, can: () => ({ ok: true }),
+  const editor = {
+    surface: { session, storyScope: () => ({ kind: f.story }),
+      state: () => ({ selection: { anchor: f.anchor, head: f.head }, cellSelection: f.cells ? {} : null }),
+      drawingSelectionIntent: () => f.drawing ? { kind: 'pointer', drawingNodeId: 'selected-drawing' } : { kind: 'none' } },
+    getDocumentStyles: () => f.styles, mountGeneration: 0, can: () => ({ ok: true }),
     exec: (command: { range: { anchor: { paragraphId: string } } }) => { f.selected = command.range.anchor.paragraphId; return { ok: true, changed: false }; },
   } as unknown as DocxEditorInstance;
   const helper = createDocumentInspection(() => editor, action => action());
-  return { f, helper, body, pkg };
+  return { f, helper, body, pkg, editor };
 }
 const read = (helper: ReturnType<typeof fixture>['helper'], request: Partial<{ start: number; token: object; maxBlocks: number; maxText: number }> = {}) => {
   const result = helper.fragment({ maxBlocks: 16, maxText: 8192, ...request });
@@ -161,4 +168,99 @@ test('painted paragraph identity follows current body order across duplicate tex
   assert.equal(h.helper.paragraphIndexes(), null);
   h.helper.dispose();
   assert.equal(h.helper.paragraphIndexes(), null);
+});
+
+
+test('selection uses the semantic head and the outline and fragment element ordinals after a reorder', () => {
+  const first = paragraph('Same', { level: 1 }), second = paragraph('Same', { level: 2 });
+  const cell = paragraph('Cell'), drawingHost = el('p', [run(el('drawing'))]);
+  const table = el('tbl', [el('tr', [el('tc', [el('tbl', [el('tr', [el('tc', [cell])])])])])]);
+  const h = fixture([text('\n'), first, el('sdt'), table, second, drawingHost, el('sectPr')]);
+  const nodes = new Map<string, OoxmlNode>(), parents = new Map<string, OoxmlElement>();
+  const index = (node: OoxmlNode) => {
+    nodes.set(node.id, node);
+    if (node.kind !== 'textValue') for (const child of node.children) {
+      parents.set(child.id, node);
+      index(child);
+    }
+  };
+  index(h.body);
+  const readers: TableReaders = { findNode: (_part, id) => nodes.get(id) ?? null,
+    parentNodeOf: (_part, id) => parents.get(id) ?? null };
+  const selectedIndex = (paragraphId: string) => {
+    h.f.head = { paragraphId, offset: 0 };
+    return h.helper.selectionBlock(readers);
+  };
+  const fragment = read(h.helper), outline = h.helper.outline();
+  assert(outline.ok);
+  assert.deepEqual(outline.value.items.map(item => item.blockIndex), [0, 3]);
+  h.f.anchor = { paragraphId: first.id, offset: 0 };
+  assert.deepEqual(selectedIndex(first.id), { ok: true, value: fragment.blocks[0]!.index });
+  assert.deepEqual(selectedIndex(second.id), { ok: true, value: fragment.blocks[3]!.index });
+  h.f.anchor = { paragraphId: second.id, offset: 2 };
+  assert.deepEqual(selectedIndex(first.id), { ok: true, value: fragment.blocks[0]!.index }, 'a backward range follows its head');
+  h.f.cells = true;
+  assert.deepEqual(selectedIndex(cell.id), { ok: true, value: fragment.blocks[2]!.index }, 'nested cells resolve to their top-level table');
+  h.f.cells = false; h.f.drawing = true;
+  assert.deepEqual(selectedIndex(drawingHost.id), { ok: true, value: fragment.blocks[4]!.index });
+  h.f.drawing = false; h.f.story = 'headerFooter';
+  assert.deepEqual(selectedIndex(first.id), { ok: true, value: null });
+  h.f.story = 'body';
+  assert.deepEqual(selectedIndex('unmapped'), { ok: true, value: null });
+  h.f.head = { paragraphId: cell.id, offset: 0 };
+  assert.deepEqual(h.helper.selectionBlock({ ...readers, findNode(part, id) {
+    h.f.head = { paragraphId: second.id, offset: 0 };
+    return readers.findNode(part, id);
+  } }), { ok: false, code: 'stale-selection' });
+  const blocks = h.body.children as OoxmlNode[];
+  blocks.splice(1, 1);
+  blocks.splice(4, 0, first);
+  h.f.revision++;
+  assert.deepEqual(selectedIndex(first.id), { ok: true, value: 3 });
+  assert.deepEqual(read(h.helper).blocks[3]?.text, 'Same');
+  const reordered = h.helper.outline();
+  assert(reordered.ok);
+  assert.deepEqual(reordered.value.items.map(item => [item.level, item.blockIndex]), [[2, 2], [1, 3]]);
+});
+
+test('paragraph style entries share fragment heading levels for authored, inherited and ambiguous styles', () => {
+  const definition = (id: string, name: string, base: string | null, level: string | null) => el('style', [
+    el('name', [], { val: name }),
+    ...(base === null ? [] : [el('basedOn', [], { val: base })]),
+    ...(level === null ? [] : [el('pPr', [el('outlineLvl', [], { val: level })])]),
+  ], { type: 'paragraph', styleId: id });
+  const definitions = [
+    definition('InstitutionA', 'Titre institutionnel', null, '3'),
+    definition('Custom', 'Sous-titre', 'InstitutionA', null),
+    definition('NameFallback', 'HeAdInG 9', null, null),
+    definition('BodyText', 'heading 2', 'InstitutionA', '9'),
+    definition('Invalid', 'heading 2', 'InstitutionA', 'invalid'),
+    definition('Missing', 'Missing base', 'NoSuchStyle', null),
+    definition('CycleA', 'Cycle A', 'CycleB', null),
+    definition('CycleB', 'Cycle B', 'CycleA', null),
+  ];
+  const cases = [
+    ['InstitutionA', 'Titre institutionnel', 4], ['Custom', 'Sous-titre', 4],
+    ['NameFallback', 'Heading 9', 9], ['BodyText', 'Body text', null],
+    ['Invalid', 'Invalid level', null], ['Missing', 'Missing base', null],
+    ['CycleA', 'Cycle A', null], ['CycleB', 'Cycle B', null],
+  ] as const;
+  const h = fixture([...cases.map(([id]) => paragraph(id, { style: id })),
+    paragraph('Direct override', { style: 'Custom', level: 2 })], definitions);
+  h.f.styles = cases.map(([styleId, name]) => ({ styleId, name, type: 'paragraph' }));
+  const editing = createEigenpalEditing(() => h.editor, action => action(), () => ({ ok: true, value: undefined }));
+  const catalog = editing.paragraphStyles();
+  assert.deepEqual(catalog.items.map(item => [item.id, item.label, item.outlineLevel]), cases);
+  assert.deepEqual(read(h.helper).blocks.map(block => block.headingLevel), [...cases.map(([, , level]) => level), 2]);
+  assert.equal(editing.paragraphStyles(), catalog);
+  h.pkg.parts.set('/word/styles.xml', { name: '/word/styles.xml',
+    root: el('styles', [definition('InstitutionA', 'Titre institutionnel', null, '5'), ...definitions.slice(1)]) });
+  h.f.revision++;
+  const refreshed = editing.paragraphStyles();
+  assert.notEqual(refreshed, catalog);
+  assert.deepEqual(refreshed.items.slice(0, 2).map(item => item.outlineLevel), [6, 6]);
+  h.pkg.parts.set('/other/styles.xml', { name: '/other/styles.xml', contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml',
+    root: el('styles') });
+  assert(editing.paragraphStyles().items.every(item => item.outlineLevel === null));
+  assert.equal(read(h.helper).blocks[0]!.headingLevel, null);
 });

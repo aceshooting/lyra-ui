@@ -78,6 +78,8 @@ export interface DocxEnginePort {
   can(command: DocxAction): DocxCommandAvailability;
   execute(command: DocxAction, retainedSelection?: object, validateSettled?: () => DocxResult<void>): Promise<DocxResult<void>> | DocxResult<void>;
   outline?(): DocxResult<DocxEngineOutlineReport>;
+  /** Top-level body ordinal of the semantic selection head without settling native input. */
+  selectionBlock?(): DocxResult<number | null>;
   inspectDocument?(): DocxResult<DocxEngineInspectionReport>;
   selectDocumentTarget?(token: object): DocxResult<void>;
   /** Bounded body block slice; paragraph tokens share the outline/diagnostic navigation store. */

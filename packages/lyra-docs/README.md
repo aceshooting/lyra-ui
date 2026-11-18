@@ -122,6 +122,14 @@ receipt object to `acknowledgeSaved()`. Only the latest receipt for the current
 revision can clear dirty state. There is no background save or per-keystroke
 byte payload.
 
+Use `exportBytes({ expectedRevision, signal })` for a preview, download or transformation
+that needs the current DOCX bytes without requesting persistence. It returns
+`Promise<DocxResult<Uint8Array>>`, emits no `lr-save`, and creates no save receipt.
+Export leaves the revision, dirty state and any outstanding Save receipt intact, including
+when export fails or is canceled. Both options are optional. Export shares Save's
+serialization barrier, so another export or save can return `busy` until it settles.
+The returned byte array belongs to the caller. The session exposes the same method.
+
 The `read-only` property is applied when the next document is opened. It stays
 fixed for that session; changing the property does not alter an already open
 session. Read-only sessions still allow selection, focus, and export.
@@ -330,16 +338,16 @@ The component exposes `snapshot()`, `open(input, options)`, `openUrl(url, option
 `newDocument(options)`, `can(action)`, `execute(action, options)`,
 `paragraphStyles()`, `fontFamilies()`, `imageDescription()`, `selectImage(direction)`,
 `canInsertImage()`, `insertImage(source, options)`, `canReplaceImage()`,
-`replaceImage(bytes, options)`, `outline()`, `inspectDocument()`, `review()`,
+`replaceImage(bytes, options)`, `outline()`, `selectionBlock(options)`, `inspectDocument()`, `review()`,
 `selectOutlineItem(id, options)`, `selectDiagnostic(id, options)`,
 `selectReviewItem(id, options)`, `readFragment(request)`,
 `selectFragmentBlock(id, options)`, `applyEdits(steps, options)`, `find(query, options)`,
-`selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`,
+`selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`, `exportBytes(options)`,
 `acknowledgeSaved(receipt)`, and `focusEditor()`. The editing and search
 methods use the same action, result, revision, and bounds contract described
 in the session API below. `open()` accepts a `Uint8Array` or `File`;
 `newDocument()` opens a blank document. These methods return `DocxResult`
-values except `snapshot()`; `open()`, `newDocument()`, and `save()` return
+values except `snapshot()`; `open()`, `newDocument()`, `save()`, and `exportBytes()` return
 `Promise<DocxResult<...>>`; image insertion and replacement are also asynchronous.
 `applyEdits()` returns a `Promise<DocxBatchResult>`; see
 [Fragments and edit batches](#fragments-and-edit-batches).
@@ -585,6 +593,7 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `navigation-tools` | Compact document-tools group above the editing toolbar by default, or after insertion controls with first-row placement |
 | `find-results`, `find-match`, `find-current` | Clickable bounded excerpts and current result |
 | `document-panel-toggle`, `document-panel`, `document-panel-heading`, `document-panel-refresh`, `document-panel-close` | Outline, checks and review panel controls |
+| `outline-toggle`, `checks-toggle`, `review-toggle` | Individual document-panel buttons; each also retains `document-panel-toggle` |
 | `outline-items`, `document-target`, `inspection-items`, `diagnostic-target` | Heading and diagnostic navigation |
 | `review-author`, `review-text`, `review-submit`, `review-track`, `review-items`, `review-target`, `review-reply`, `review-decision` | Review drafts, copied items and actions |
 | `table-format-trigger`, `table-format-popover`, `table-format-fields`, `table-vertical`, `table-shading`, `table-width`, `table-border-target`, `table-border-style`, `table-border-width`, `table-border-color` | Explicit table and cell formatting |
@@ -672,7 +681,13 @@ The cached `snapshot()` includes immutable `formatting: DocxFormatting`.
 Scalar fields are `null` when absent, mixed, or not derivable; the boolean list
 fields come from `isActive`, where `false` can include a mixed selection.
 `paragraphStyles()` returns `DocxResult<DocxParagraphStyles>` with
-`{ items: { id, label }[], truncated }`; `fontFamilies()` returns
+`{ items: { id, label, outlineLevel }[], truncated }`; `outlineLevel` is 1–9 or `null`,
+resolved from the document's style and its bounded inheritance chain using the same
+heading rules as fragment reads. Explicit body-text metadata suppresses an inherited
+heading level. Without explicit outline metadata, the exact English names `Heading 1`
+through `Heading 9` supply a fallback before following the parent style. Localized or
+custom styles can declare outline metadata or inherit it; hosts can read the resolved
+level instead of interpreting display labels. `fontFamilies()` returns
 `DocxResult<DocxFontFamilies>` with `{ items: string[], truncated }`. Both are
 on-demand. Search methods are:
 
@@ -737,11 +752,28 @@ and refuse `busy` or `composing` while native input cannot be inspected safely.
 Read-only sessions may read reports and navigate.
 
 `outline()` returns `{ revision, items, truncated }`, with at most 512 body headings.
-Each item has `id`, `level` (1–9), `text` (at most 256 UTF-16 code units), and
+Each item has `id`, `blockIndex`, `level` (1–9), `text` (at most 256 UTF-16 code units), and
 `textTruncated`. The supported profile resolves direct outline levels and bounded
 paragraph-style inheritance; it does not infer headings from font size or bold text.
 Headings in cells, other stories, hidden content or complex revision/field structures
 are outside this profile.
+
+`selectionBlock({ expectedRevision })` returns `DocxResult<DocxSelectionBlock>` with
+`{ revision, index }`. The optional revision guard can bind it to a previous outline or
+fragment report. `index` is the zero-based top-level body element ordinal used by
+`readFragment()`, or `null` when there is no mapped body selection. A text range follows
+its semantic head, including a backward range; a selection within a table maps to the
+outermost body table; a drawing selection maps to its host paragraph. Moving focus to a host control does not discard the semantic
+selection. This query reads document state without scrolling, editing or saving.
+
+A host can listen for `lr-selection-change`, schedule one read after synchronous
+selection notifications settle, and use the last outline item whose `blockIndex` is at
+or before the current block. Retry after a transient `busy` refusal: programmatic
+navigation may emit the event before releasing its operation. Read a fresh outline after a content
+revision changes. A truncated outline cannot reliably identify a section beyond its
+reported headings. No heading is selected before the first heading or for a null index.
+The query has the same readiness, composing, busy and stale-revision refusals as the other
+document inspection methods.
 
 `inspectDocument()` returns `{ revision, scope: 'body', diagnostics, capabilities,
 truncated }`, with at most 256 diagnostics. Rules are `heading-level-skipped`,
@@ -858,8 +890,9 @@ editing, and can target a batch step. Reading more than 4,096 ids at one revisio
 earlier ones. Reads are refused with `busy` or `composing` while native input cannot be
 inspected safely; read-only sessions may read and navigate.
 
-`applyEdits(steps, { expectedRevision })` applies 1–32 ordered formatting steps at the
-required revision as one change. A step is `{ edit }` or `{ edit, target }`:
+`applyEdits(steps, { expectedRevision })` applies 1–32 ordered formatting steps, or one
+body-block move, at the required revision as one change. A formatting step is `{ edit }`
+or `{ edit, target }`:
 
 ```ts
 type DocxParagraphEdit =
@@ -868,6 +901,7 @@ type DocxParagraphEdit =
   | { type: 'line-spacing'; multiple: number };
 type DocxBatchEdit =
   | DocxParagraphEdit
+  | { type: 'move-blocks'; start: number; end: number; before: number }
   | 'bold' | 'italic' | 'underline' | 'strikethrough' | 'superscript' | 'subscript'
   | { type: 'font-family'; family: string }
   | { type: 'font-size'; points: number }
@@ -877,31 +911,60 @@ type DocxBatchEdit =
 ```
 
 A targeted step moves the caret to the start of a paragraph block id read at the expected
-revision, so it accepts only paragraph edits. An untargeted step formats the selection as
-the previous steps left it, which is the host's selection when no step is targeted. Each
-edit has the same limits as `execute()`. Lists, indentation, links, page breaks, tables,
+revision, so it accepts only paragraph edits. An untargeted formatting step formats the
+selection as the previous steps left it, which is the host's selection when no step is
+targeted. Formatting edits have the same limits as `execute()`. Lists, indentation, links, page breaks, tables,
 images, review actions and history commands are not batch steps; they remain single
 `execute()` actions.
 
+For a structural move, pass one untargeted step:
+
+```js
+const fragment = editor.readFragment({ maxBlocks: 8 });
+if (fragment.ok && fragment.value.blockCount >= 4) {
+  await editor.applyEdits([
+    { edit: { type: 'move-blocks', start: 0, end: 2, before: 4 } },
+  ], { expectedRevision: fragment.value.revision });
+}
+```
+
+The source interval includes `start` and excludes `end`; `before` refers to the original
+document order, before removing the source. All three are integer body-element ordinals
+from the same revision. `before: blockCount` appends before the final section properties,
+which cannot themselves be moved, or at the document end when no such properties exist.
+A destination at either end of the source interval is a no-op: revision, dirty state, save
+receipt and undo/redo history stay unchanged. A destination strictly inside it is refused.
+A move cannot carry `target` or share a batch with another move or formatting step. Rich
+runs, tables and numbering references remain attached to their blocks. Supported Word
+comment, bookmark, move, permission and custom-XML ranges and complex fields must remain
+intact. Moves that would split those ranges or fields, move a locked content control, or encounter unsupported section properties
+are refused before writing. A nontrivial move also requires editing mode: turn off Track
+Changes first, or the move returns `unsupported`. One undo reverses the move while retaining earlier history.
+The document stays mounted; text selection follows stable paragraph identities and the
+viewport keeps its scroll offset subject to the browser's layout bounds.
+
 The whole batch is validated before anything runs: shapes and limits, targets, and
 paragraph style membership. Native input is then settled and every engine feature is
-prepared; a change during that time refuses the batch with `stale-revision`. The writes
-then run synchronously inside one engine history group, so no input can interleave. On
+prepared; a change during that time refuses the batch with `stale-revision`. Formatting
+writes then run synchronously inside one engine history group; a structural move commits
+one native transaction. No input can interleave with those writes. On
 success the result is `{ ok: true, value: revision }` with exactly one new revision, and one
 undo normally reverts the whole batch; a batch that changes nothing returns the unchanged
 revision. A refusal is `{ ok: false, code, step }`, where `step` is the zero-based index of
 the failing step, or `null` when the batch as a whole was refused. If the engine refuses a
-step after earlier steps wrote, those writes are undone and the package is compared with a
+formatting step after earlier steps wrote, those writes are undone and the package is compared with a
 structural digest taken before the batch; the document, revision, dirty state and save
 receipt are then unchanged, while earlier ids and search results are invalidated and the
 selection version advances. If the revert cannot be verified, the session fails closed with
-`engine-failed` instead of exposing a partially edited document. The digest visits at most
+`engine-failed` instead of exposing a partially edited document. The formatting digest visits at most
 300,000 XML nodes (`DOCX_BATCH_LIMITS.fingerprintNodes`); a larger package refuses the batch
 with `resource-limit` before writing. Because the revision is required, a retried batch
 after a success is refused with `stale-revision` rather than applied twice. A targeted
 batch restores the caret it moved; a retained host selection is released. Batches are
 refused in read-only sessions. `DOCX_FRAGMENT_LIMITS` and `DOCX_BATCH_LIMITS` export these
-bounds.
+bounds. A block move validates the body and commits one immutable part replacement; it
+verifies the resulting native revision and part identity. A failure after that commit
+fails closed with `engine-failed`, so a refused move cannot remain available in redo history.
 
 Use `retainSelection()` when host controls need to preserve an editor selection
 while focus moves outside the document surface. `focus()` returns focus to the

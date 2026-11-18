@@ -12,3 +12,4 @@ export const PageWideToolbar = { ...stories.PageWideToolbar };
 
 export const CompactToolbar = { ...stories.CompactToolbar };
 export const HostManagedNew = { ...stories.HostManagedNew };
+export const HostOutlineAndExport = { ...stories.HostOutlineAndExport };

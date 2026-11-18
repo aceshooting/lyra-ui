@@ -1,4 +1,4 @@
-import type { DocxOutline, DocxDocumentInspection, DocxFragment, DocxFragmentRequest } from './document-inspection-types.js';
+import type { DocxOutline, DocxDocumentInspection, DocxFragment, DocxFragmentRequest, DocxSelectionBlock } from './document-inspection-types.js';
 import type { DocxReviewAction, DocxReviewReport } from './review-types.js';
 /** Lifecycle of one document session. Destruction is terminal. */
 export type DocxStatus = 'idle' | 'opening' | 'ready' | 'error' | 'destroyed';
@@ -87,11 +87,22 @@ export interface DocxInsertImageOptions {
 export type DocxAction = DocxCommand | DocxEdit | DocxReviewAction;
 /** Edits that apply to a paragraph wherever the caret is inside it; a targeted batch step accepts only these. */
 export type DocxParagraphEdit = Extract<DocxEdit, { type: 'paragraph-style' | 'alignment' | 'line-spacing' }>;
+/** Move an entire contiguous range of top-level body blocks at the batch's expected revision. */
+export interface DocxMoveBlocksEdit {
+  readonly type: 'move-blocks';
+  /** Inclusive readFragment() block index. */
+  readonly start: number;
+  /** Exclusive readFragment() block index. */
+  readonly end: number;
+  /** Insert before this original block index; blockCount appends before final section properties. */
+  readonly before: number;
+}
 /**
- * Formatting a batch can apply: paragraph edits, character formatting toggles and run formatting.
+ * A body move is the sole step in its batch. Formatting batches can apply: paragraph edits, character formatting toggles and run formatting.
  * Lists and indentation remain single `execute()` actions.
  */
 export type DocxBatchEdit =
+  | DocxMoveBlocksEdit
   | DocxParagraphEdit
   | Exclude<DocxCommand, 'undo' | 'redo'>
   | Extract<DocxEdit, { type: 'font-family' | 'font-size' | 'text-color' | 'highlight' | 'clear-formatting' }>;
@@ -162,7 +173,12 @@ export interface DocxFormatting {
   readonly numberedList: boolean;
 }
 export interface DocxParagraphStyles {
-  readonly items: readonly Readonly<{ id: string; label: string }>[];
+  readonly items: readonly Readonly<{
+    id: string;
+    label: string;
+    /** The style's effective heading level (1–9), or null for body text or unresolved metadata. */
+    outlineLevel: number | null;
+  }>[];
   readonly truncated: boolean;
 }
 export interface DocxFontFamilies {
@@ -206,6 +222,10 @@ export interface DocxSelectionLease {
   /** Release retained selection; repeated calls are safe. */
   release(): void;
 }
+export interface DocxSerializationOptions {
+  signal?: AbortSignal;
+  expectedRevision?: DocxRevision;
+}
 export interface DocxSaveReceipt {
   readonly revision: DocxRevision;
   /** Caller-owned copy. Object identity authenticates an acknowledgement. */
@@ -244,6 +264,8 @@ export interface DocxSession {
   fontFamilies(): DocxResult<DocxFontFamilies>;
   /** Bounded body headings; identifiers expire after a new outline query or content edit. */
   outline(): DocxResult<DocxOutline>;
+  /** Locate the semantic selection head among the top-level body blocks at the current revision. */
+  selectionBlock(options?: { expectedRevision?: DocxRevision }): DocxResult<DocxSelectionBlock>;
   /** Bounded body diagnostics, with opaque revision-scoped navigation identifiers. */
   inspectDocument(): DocxResult<DocxDocumentInspection>;
   selectOutlineItem(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
@@ -256,7 +278,7 @@ export interface DocxSession {
   selectFragmentBlock(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
   /**
    * Apply 1–32 formatting steps in order as one change: all succeed with one new revision and, normally,
-   * one undo step, or none apply. Input is suspended while the batch runs; a step the engine refuses
+   * one undo step, or none apply. A body move occupies its own batch. Input is suspended while the batch runs; a step the engine refuses
    * reverts the earlier steps and is reported by index.
    */
   applyEdits(steps: readonly DocxBatchStep[], options: DocxBatchOptions): Promise<DocxBatchResult>;
@@ -271,7 +293,9 @@ export interface DocxSession {
   /** One undoable replacement, at most 4096 code units of XML 1.0 text. Empty text deletes the match. */
   replaceMatch(id: string, text: string, options?: { expectedRevision?: DocxRevision }): DocxResult<DocxRevision>;
   focus(): DocxResult<void>;
-  save(options?: { signal?: AbortSignal; expectedRevision?: DocxRevision }): Promise<DocxResult<DocxSaveReceipt>>;
+  save(options?: DocxSerializationOptions): Promise<DocxResult<DocxSaveReceipt>>;
+  /** Export caller-owned DOCX bytes and preserve the current save receipt. */
+  exportBytes(options?: DocxSerializationOptions): Promise<DocxResult<Uint8Array>>;
   /** Only the latest genuine receipt at the current revision can clear dirty. */
   acknowledgeSaved(receipt: DocxSaveReceipt): DocxResult<void>;
   destroy(): void;

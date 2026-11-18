@@ -25,7 +25,7 @@ async function fixture(readOnly = false) {
     paragraphStyles: () => ({ items: [], truncated: false }), fontFamilies: () => ({ items: [], truncated: false }),
     find: () => ({ matches: [], truncated: false }), selectMatch: () => ok(undefined), replaceMatch: () => ok(undefined),
     retainSelection: () => f.retained, releaseSelection() {}, focus() {}, save() { f.saves++; return Promise.resolve(new Uint8Array([1])); }, destroy() {},
-    outline() { f.queryReads++; f.beforeRead(); return ok({ items: [{ token: heading, level: 1, text: 'Introduction', textTruncated: false }], truncated: false }); },
+    outline() { f.queryReads++; f.beforeRead(); return ok({ items: [{ token: heading, blockIndex: 0, level: 1, text: 'Introduction', textTruncated: false }], truncated: false }); },
     inspectDocument() { f.queryReads++; f.beforeRead(); return ok({ scope: 'body',
       diagnostics: [{ rule: 'image-description-missing', data: { number: 1 }, token: diagnostic }],
       capabilities: [{ code: 'inline-image-descriptions', count: 1, preserved: 'unverified', renderable: 'unverified', editable: 'unverified', refused: false }], truncated: false }); },

@@ -13,6 +13,17 @@ export const TREE_MAX_RENDER_NODES = 1_000;
 /** Selection behavior shared by the declarative and data-driven tree models. */
 export type TreeSelection = 'single' | 'multiple' | 'leaf' | 'leaf-multiple';
 
+/** Controlled pointer insertion. Indices are sibling-scoped; toIndex is measured after removing the source. */
+export interface LyraTreePointerReorderDetail {
+  readonly nodeId: string;
+  readonly fromParentNodeId: string | null;
+  readonly fromIndex: number;
+  readonly toParentNodeId: string | null;
+  readonly toIndex: number;
+  readonly targetNodeId: string;
+  readonly position: 'before' | 'after';
+}
+
 export interface TreeBadge {
   readonly text: string;
   readonly tone?: LyraVariant;
@@ -29,6 +40,8 @@ export interface LyraTreeNodeData {
   /** Whether this item is the current selection. When set, the treeitem exposes
    * `aria-selected` and renders the matching selected state. */
   readonly selected?: boolean;
+  /** Seeds a data branch on first assignment or when an explicitly supplied value changes. */
+  readonly expanded?: boolean;
   /** Removes this item from roving focus and prevents select/toggle activation. */
   readonly disabled?: boolean;
   /** Marks children as asynchronously loadable. Assign a refreshed item with children (or

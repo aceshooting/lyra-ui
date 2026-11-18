@@ -1,6 +1,6 @@
 import type { DocxReviewAction, DocxReviewReport } from './review-types.js';
 import { isDocxReviewAction } from './review-types.js';
-import type { DocxOutline, DocxDocumentInspection, DocxFragment, DocxFragmentRequest } from './document-inspection-types.js';
+import type { DocxOutline, DocxDocumentInspection, DocxFragment, DocxFragmentRequest, DocxSelectionBlock } from './document-inspection-types.js';
 import { DOCX_FRAGMENT_LIMITS, batchRefusal, normalizeDocxBatch, normalizeDocxRevision, normalizeFragmentRequest } from './document-operations.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineBatchResult, DocxEngineEvent, DocxEnginePort, DocxEngineImageOperation, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
@@ -9,7 +9,7 @@ import { DOCX_LIMITS, isDocxImageAction, isDocxTableAction, normalizeDocxAction,
 import { ownDataRecord } from './own-data-record.js';
 import type {
   DocxAction, DocxBatchOptions, DocxBatchResult, DocxBatchStep, DocxCommand, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxRevision,
-  DocxSaveReceipt, DocxSelection, DocxSelectionLease, DocxSession,
+  DocxSaveReceipt, DocxSerializationOptions, DocxSelection, DocxSelectionLease, DocxSession,
   DocxSessionOptions, DocxSnapshot, DocxSource, DocxStatus, DocxFormatting,
   DocxParagraphStyles, DocxFontFamilies, DocxSearchResults, DocxTableAction, DocxTableContext, DocxImageAction, DocxImageContext, DocxImageDescription, DocxImageDirection,
   DocxImageSource, DocxInsertImageOptions
@@ -774,9 +774,18 @@ class InternalDocxSession implements DocxSession {
       const items = report.value.items.map(item => {
         const id = randomId();
         this.outlineTargets.set(id, { token: item.token, revision });
-        return Object.freeze({ id, level: item.level, text: item.text, textTruncated: item.textTruncated });
+        return Object.freeze({ id, blockIndex: item.blockIndex, level: item.level, text: item.text, textTruncated: item.textTruncated });
       });
       return ok(Object.freeze({ revision, items: Object.freeze(items), truncated: report.value.truncated }));
+    });
+  }
+  selectionBlock(options: { expectedRevision?: DocxRevision } = {}): DocxResult<DocxSelectionBlock> {
+    return this.documentQuery((engine, revision) => {
+      const checked = searchRevisionOptions(options);
+      if (!checked.ok) return checked;
+      if (checked.value.expectedRevision && !equalRevision(checked.value.expectedRevision, revision)) return refused('stale-revision');
+      const location = this.selectionKind === 'none' ? ok(null) : engine.selectionBlock?.() ?? refused('unsupported');
+      return location.ok ? ok(Object.freeze({ revision, index: location.value })) : location;
     });
   }
   inspectDocument(): DocxResult<DocxDocumentInspection> {
@@ -1043,13 +1052,20 @@ class InternalDocxSession implements DocxSession {
       return failure ? refused(failure) : ok(undefined);
     } catch { return refused(this.completionFailure() ?? 'unsupported'); }
   }
-  async save(options: { signal?: AbortSignal; expectedRevision?: DocxRevision } = {}): Promise<DocxResult<DocxSaveReceipt>> {
+  save(options: DocxSerializationOptions = {}): Promise<DocxResult<DocxSaveReceipt>> {
+    return this.serialize(options, 'save');
+  }
+  async exportBytes(options: DocxSerializationOptions = {}): Promise<DocxResult<Uint8Array>> {
+    const result = await this.serialize(options, 'export');
+    return result.ok ? ok(result.value.bytes) : result;
+  }
+  private async serialize(options: DocxSerializationOptions, purpose: 'save' | 'export'): Promise<DocxResult<DocxSaveReceipt>> {
     const gate = this.gate();
     if (gate) return refused(gate);
     if (this.composing) return refused('composing');
     if (options.signal?.aborted) return refused('aborted');
     if (options.expectedRevision && !equalRevision(options.expectedRevision, this.revision)) return refused('stale-revision');
-    this.receipt = null;
+    if (purpose === 'save') this.receipt = null;
     const revision = this.revision!;
     const operation = this.begin(options.signal);
     this.publish();
@@ -1071,7 +1087,7 @@ class InternalDocxSession implements DocxSession {
     this.end(operation);
     if (!result.ok) { this.publish(); const failure = this.completionFailure(); return failure ? refused(failure) : result; }
     const receipt = Object.freeze({ revision, bytes: new Uint8Array(result.value) });
-    this.receipt = receipt;
+    if (purpose === 'save') this.receipt = receipt;
     this.publish();
     const failure = this.completionFailure();
     return failure ? refused(failure) : ok(receipt);

@@ -1,4 +1,5 @@
 import { html } from 'lit';
+import '@aceshooting/lyra-ui/components/lr-button.js';
 import '../src/docx/editor.js';
 import '@aceshooting/lyra-docs/docx/editor.css';
 import { docxFixture } from './admission-fixtures.js';
@@ -15,10 +16,10 @@ export const storyMeta = {
 
 const container = 'padding:var(--lr-space-l);display:grid;gap:var(--lr-space-m);min-inline-size:0';
 const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-const headings = () => docxFixture({ 'word/document.xml': `<w:document xmlns:w="${word}"><w:body>
+const headings = (secondLevel = 2) => docxFixture({ 'word/document.xml': `<w:document xmlns:w="${word}"><w:body>
   <w:p><w:pPr><w:outlineLvl w:val="0"/></w:pPr><w:r><w:t>Project overview</w:t></w:r></w:p>
   <w:p><w:r><w:t>Find this example sentence. Find another example sentence.</w:t></w:r></w:p>
-  <w:p><w:pPr><w:outlineLvl w:val="2"/></w:pPr><w:r><w:t>Delivery notes</w:t></w:r></w:p>
+  <w:p><w:pPr><w:outlineLvl w:val="${secondLevel}"/></w:pPr><w:r><w:t>Delivery notes</w:t></w:r></w:p>
   <w:p><w:r><w:t>Select text, open Review, enter an author and add a comment.</w:t></w:r></w:p>
   </w:body></w:document>` });
 
@@ -91,6 +92,66 @@ export const HostManagedNew = {
   </div>`,
   play: load(null),
 };
+
+function outlineHost(event) {
+  const host = event.currentTarget.closest('.docx-host-outline-story');
+  return { editor: host.querySelector('lr-docx-editor'), output: host.querySelector('output') };
+}
+function describeOutline(editor, output) {
+  const result = editor.outline();
+  output.textContent = result.ok
+    ? result.value.items.map(item => `${item.text} (body block ${item.blockIndex + 1})`).join(' · ')
+    : 'The document outline is unavailable.';
+}
+export const HostOutlineAndExport = {
+  render: () => html`<div style=${container} class="docx-host-outline-story">
+    <style>.docx-host-outline-story lr-docx-editor::part(outline-toggle) { display: none; }</style>
+    <p>The application manages the outline here; Checks and Review remain in the editor. Move the first section after the second, then use Undo or Redo in the editor. Exporting a copy keeps the document's unsaved state.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-s)">
+      <lr-button size="s" appearance="outlined" @click=${event => {
+        const { editor, output } = outlineHost(event);
+        describeOutline(editor, output);
+      }}>Refresh outline</lr-button>
+      <lr-button size="s" appearance="outlined" @click=${event => {
+        const { editor, output } = outlineHost(event);
+        const result = editor.selectionBlock();
+        output.textContent = result.ok && result.value.index !== null
+          ? `The caret is in body block ${result.value.index + 1}.`
+          : 'Place the caret in the document to inspect its body block.';
+      }}>Locate caret</lr-button>
+      <lr-button size="s" appearance="outlined" @click=${async event => {
+        const { editor, output } = outlineHost(event);
+        const outline = editor.outline();
+        if (!outline.ok || outline.value.truncated || outline.value.items.length < 2) {
+          output.textContent = 'Two complete sections are needed for this example.';
+          return;
+        }
+        const expectedRevision = outline.value.revision;
+        const fragment = editor.readFragment({ maxBlocks: 1, expectedRevision });
+        if (!fragment.ok) { output.textContent = 'Refresh the outline and try again.'; return; }
+        const [first, second] = outline.value.items;
+        const moved = await editor.applyEdits([{ edit: {
+          type: 'move-blocks', start: first.blockIndex, end: second.blockIndex, before: fragment.value.blockCount,
+        } }], { expectedRevision });
+        if (moved.ok) describeOutline(editor, output);
+        else output.textContent = 'The section could not be moved. The document remains available.';
+      }}>Move first section to end</lr-button>
+      <lr-button size="s" appearance="outlined" @click=${async event => {
+        const { editor, output } = outlineHost(event);
+        const exported = await editor.exportBytes();
+        output.textContent = exported.ok
+          ? `Exported a ${exported.value.byteLength}-byte DOCX copy. The document's saved state is unchanged.`
+          : 'The document copy could not be exported.';
+      }}>Inspect exported copy</lr-button>
+    </div>
+    <output aria-live="polite"></output>
+    <lr-docx-editor aria-label="Document with application outline" zoom="fit"></lr-docx-editor>
+  </div>`,
+  play: async context => {
+    await load(() => headings(0))(context);
+    describeOutline(context.canvasElement.querySelector('lr-docx-editor'), context.canvasElement.querySelector('output'));
+  },
+};
 export const PageWideToolbar = {
   render: () => html`<div style=${container}>
     <p>The toolbar spans the application grid above the document and two host-owned sidebars. Resize the viewport to stack the workspace and sidebars. Fit zoom follows the document column. Press Alt+F10 to enter the toolbar.</p>
@@ -131,4 +192,4 @@ export const PageWideToolbar = {
   play: load(headings),
 };
 
-export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor, DocumentToolsFirstRow, CompactToolbar, HostManagedNew, PageWideToolbar };
+export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor, DocumentToolsFirstRow, CompactToolbar, HostManagedNew, HostOutlineAndExport, PageWideToolbar };

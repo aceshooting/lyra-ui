@@ -1,12 +1,13 @@
 import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
-import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
+import type { OoxmlElement, OoxmlNode, OoxmlPackage } from '@docx-editor.dev/core/store';
 import type { DocxDocumentCapability, DocxDocumentCapabilityCode, DocxDocumentDiagnosticRule, DocxFragmentBlockKind } from './document-inspection-types.js';
 import { DOCX_FRAGMENT_LIMITS } from './document-operations.js';
+import type { TableReaders } from './eigenpal-tables.js';
 import type { DocxResult } from './types.js';
 import { OOXML_TREE_LIMITS, WORD_NS as W, WORD_DRAWING_NS as WP, DRAWING_MAIN_NS as A, DRAWING_PICTURE_NS as PIC } from './ooxml.js';
 
 export interface DocxEngineOutlineReport {
-  readonly items: readonly Readonly<{ token: object; level: number; text: string; textTruncated: boolean }>[];
+  readonly items: readonly Readonly<{ token: object; blockIndex: number; level: number; text: string; textTruncated: boolean }>[];
   readonly truncated: boolean;
 }
 export interface DocxEngineInspectionReport {
@@ -102,6 +103,7 @@ const fragmentLimits = DOCX_FRAGMENT_LIMITS;
 const elementName = (node: unknown): string | null => data(node, 'kind') === 'textValue' ? null :
   `${String(data(node, 'namespaceUri'))}|${String(data(node, 'localName'))}`;
 const wordName = (name: string) => `${W}|${name}`;
+const topLevelBlocks = (body: unknown) => array(data(body, 'children'), fragmentLimits.bodyBlocks).filter(value => elementName(value) !== null);
 function wordChild(node: unknown, name: string): unknown {
   return array(data(node, 'children'), LIMITS.nodes).find(value => elementName(value) === wordName(name)) ?? null;
 }
@@ -115,6 +117,59 @@ function wordValue(node: unknown): string | null {
   return null;
 }
 const outlineLevel = (value: string | null): number | null => value && /^[0-8]$/.test(value) ? Number(value) + 1 : null;
+
+/** Identify the same canonical stylesheet for the fragment and style catalog reads. */
+export function paragraphStyleRoot(pkg: OoxmlPackage): OoxmlElement | null {
+  let root: OoxmlElement | null = null;
+  for (const part of pkg.parts.values()) {
+    if (part.name !== '/word/styles.xml' && !part.contentType?.endsWith('.styles+xml')) continue;
+    if (root) return null;
+    root = part.root;
+  }
+  return root;
+}
+
+/** Lazily copy bounded style definitions. Unresolved or ambiguous metadata has no level. */
+export function paragraphStyleLevels(root: () => OoxmlElement | null, limits = LIMITS): (id: string) => number | null {
+  let definitions: { styles: Map<string, NodeCopy>; nodes: Map<string, NodeCopy> } | null | undefined;
+  const load = () => {
+    if (definitions !== undefined) return definitions;
+    try {
+      const source = root();
+      if (!source) return definitions = null;
+      const nodes = new Map<string, NodeCopy>(), styles = new Map<string, NodeCopy>();
+      const frames = readTree(source, limits, { nodes: 0, text: 0 }, nodes);
+      if (!is(frames[0]!.node, 'styles')) reject();
+      for (const frame of frames) if (is(frame.node, 'style') && attr(frame.node, 'type') === 'paragraph') {
+        const id = attr(frame.node, 'styleId');
+        if (!id || styles.has(id)) reject();
+        styles.set(id, frame.node);
+      }
+      definitions = { styles, nodes };
+    } catch { definitions = null; }
+    return definitions;
+  };
+  return first => {
+    try {
+      const loaded = load();
+      if (!loaded) return null;
+      const seen = new Set<string>();
+      for (let id: string | undefined = first; id;) {
+        if (seen.has(id) || seen.size >= limits.depth) return null;
+        seen.add(id);
+        const definition = loaded.styles.get(id);
+        if (!definition) return null;
+        const properties = child(definition, 'pPr', loaded.nodes), level = properties && child(properties, 'outlineLvl', loaded.nodes);
+        if (level) return outlineLevel(attr(level, 'val') ?? null);
+        const name = child(definition, 'name', loaded.nodes), match = name && /^heading\s+([1-9])$/i.exec(attr(name, 'val') ?? '');
+        if (match) return Number(match[1]);
+        const base = child(definition, 'basedOn', loaded.nodes);
+        id = base ? attr(base, 'val') : undefined;
+      }
+      return null;
+    } catch { return null; }
+  };
+}
 interface FragmentBudget { nodes: number; text: number }
 type TextFrame = { node: unknown; inText: boolean; inCell: boolean } | { exit: 'p' | 'tc' | 'tr'; inCell: boolean };
 /** Plain text of one block, visiting only its own subtree within the shared node budget. */
@@ -176,6 +231,7 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
     const frames = readTree(part.root, limits, budget, nodes), root = frames[0]!.node;
     if (!is(root, 'document')) reject();
     const body = child(root, 'body', nodes); if (!body) reject();
+    const blockIndexes = new Map(topLevelBlocks(body).map((block, index) => [data(block, 'id'), index]));
     const styles = new Map<string, NodeCopy>(), styleNodes = new Map<string, NodeCopy>();
     for (const candidate of pkg.parts.values()) {
       if (candidate.name !== '/word/styles.xml' && !candidate.contentType?.endsWith('.styles+xml')) continue;
@@ -192,7 +248,7 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
       const list = descendants.get(ancestor.id) ?? []; list.push(frame); descendants.set(ancestor.id, list);
     }
     const counts = new Map(families.map(code => [code, 0])), refused = new Set<DocxDocumentCapabilityCode>();
-    const headings: { paragraph: NodeCopy; level: number; text: string; textTruncated: boolean }[] = [];
+    const headings: { paragraph: NodeCopy; blockIndex: number; level: number; text: string; textTruncated: boolean }[] = [];
     let previousLevel: number | null = 0;
     const findings: { rule: DocxDocumentDiagnosticRule; data: Readonly<Record<string, string | number>>; paragraph: NodeCopy | null }[] = [];
     const limitation = (family: DocxDocumentCapabilityCode) => { if (family === 'body-headings') previousLevel = null; if (!refused.has(family)) findings.push({ rule: 'unsupported-content', data: Object.freeze({ family }), paragraph: null }); refused.add(family); };
@@ -223,7 +279,8 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
         let text = '';
         for (const entry of content) if (entry.node.value !== null && is(entry.path.at(-1)!, 't')) text += entry.node.value;
         else if (is(entry.node, 'tab') || is(entry.node, 'br')) text += ' ';
-        headings.push({ paragraph: node, level, ...clipped(text.replace(/[\u0000-\u001f]/g, ' '), limits.label) });
+        headings.push({ paragraph: node, blockIndex: blockIndexes.get(node.id)!, level,
+          ...clipped(text.replace(/[\u0000-\u001f]/g, ' '), limits.label) });
         counts.set('body-headings', counts.get('body-headings')! + 1);
         if (previousLevel !== null && level > previousLevel + 1) findings.push({ rule: 'heading-level-skipped', data: Object.freeze({ previousLevel, level }), paragraph: node });
         previousLevel = level;
@@ -269,44 +326,6 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
       preserved: 'unverified' as const, renderable: 'unverified' as const, editable: 'unverified' as const, refused: refused.has(code) }))) };
   }
   function failure(error: unknown) { return refusal(error instanceof InspectionFailure ? error.code : 'unsupported'); }
-  /** Lazily reads paragraph style definitions once per fragment; ambiguity yields no level rather than a guess. */
-  function styleLevels(pkg: ReturnType<NonNullable<DocxEditorInstance['surface']>['session']['currentPackage']>) {
-    let definitions: { styles: Map<string, NodeCopy>; nodes: Map<string, NodeCopy> } | null | undefined;
-    const load = () => {
-      if (definitions !== undefined) return definitions;
-      try {
-        const nodes = new Map<string, NodeCopy>(), styles = new Map<string, NodeCopy>(), budget = { nodes: 0, text: 0 };
-        for (const candidate of pkg.parts.values()) {
-          if (candidate.name !== '/word/styles.xml' && !candidate.contentType?.endsWith('.styles+xml')) continue;
-          if (styles.size) reject();
-          const frames = readTree(candidate.root, limits, budget, nodes);
-          if (!is(frames[0]!.node, 'styles')) reject();
-          for (const frame of frames) if (is(frame.node, 'style') && attr(frame.node, 'type') === 'paragraph') {
-            const id = attr(frame.node, 'styleId'); if (!id || styles.has(id)) reject(); styles.set(id, frame.node);
-          }
-        }
-        definitions = { styles, nodes };
-      } catch { definitions = null; }
-      return definitions;
-    };
-    return (first: string): number | null => {
-      try {
-        const loaded = load(); if (!loaded) return null;
-        const seen = new Set<string>();
-        for (let id: string | undefined = first; id;) {
-          if (seen.has(id) || seen.size >= limits.depth) return null;
-          seen.add(id);
-          const definition = loaded.styles.get(id); if (!definition) return null;
-          const properties = child(definition, 'pPr', loaded.nodes), level = properties && child(properties, 'outlineLvl', loaded.nodes);
-          if (level) return outlineLevel(attr(level, 'val') ?? null);
-          const name = child(definition, 'name', loaded.nodes), match = name && /^heading\s+([1-9])$/i.exec(attr(name, 'val') ?? '');
-          if (match) return Number(match[1]);
-          const base = child(definition, 'basedOn', loaded.nodes); id = base ? attr(base, 'val') : undefined;
-        }
-        return null;
-      } catch { return null; }
-    };
-  }
   function bodyBlocks() {
     if (disposed) reject();
     const editor = current(), surface = editor.surface;
@@ -319,10 +338,33 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
     if (elementName(part.root) !== wordName('document')) reject();
     const bodies = array(data(part.root, 'children'), limits.nodes).filter(value => elementName(value) === wordName('body'));
     if (bodies.length !== 1) reject();
-    const blocks = array(data(bodies[0], 'children'), fragmentLimits.bodyBlocks).filter(value => elementName(value) !== null);
-    return { pkg, valid, blocks };
+    return { pkg, part, valid, body: bodies[0], blocks: topLevelBlocks(bodies[0]) };
   }
   return {
+    /** Locate the semantic selection head by ancestry in the admitted canonical body. */
+    selectionBlock(readers: TableReaders): DocxResult<number | null> {
+      try {
+        const editor = current(), surface = editor.surface;
+        if (!surface || disposed) reject();
+        if (surface.storyScope().kind !== 'body') return { ok: true, value: null };
+        const { paragraphId, offset } = surface.state().selection.head;
+        if (!paragraphId) return { ok: true, value: null };
+        const { pkg, part, body, blocks, valid } = bodyBlocks();
+        let block = readers.findNode(part, paragraphId);
+        if (block && elementName(block) !== wordName('p')) block = null;
+        for (let depth = 0; block; depth++) {
+          if (depth >= limits.depth) reject('resource-limit');
+          const parent = readers.parentNodeOf(part, block.id);
+          if (parent === body) break;
+          block = parent;
+        }
+        const index = blocks.indexOf(block);
+        const head = surface.state().selection.head;
+        if (editor.surface !== surface || surface.session.currentPackage() !== pkg || surface.session.part() !== part || !valid()) reject();
+        if (head.paragraphId !== paragraphId || head.offset !== offset || surface.storyScope().kind !== 'body') return refusal('stale-selection');
+        return { ok: true, value: index < 0 ? null : index };
+      } catch (error) { return failure(error); }
+    },
     /** Join painted paragraph identities to direct body block indexes without reading their text. */
     paragraphIndexes(): ReadonlyMap<string, number> | null {
       try {
@@ -349,7 +391,8 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
           if (start < 0) return refusal('stale-selection');
         }
         if (start > blocks.length) return refusal('invalid-option');
-        const level = styleLevels(pkg), budget: FragmentBudget = { nodes: fragmentLimits.nodes, text: request.maxText };
+        const level = paragraphStyleLevels(() => paragraphStyleRoot(pkg), limits);
+        const budget: FragmentBudget = { nodes: fragmentLimits.nodes, text: request.maxText };
         const read: (Omit<DocxEngineFragmentBlock, 'token'> & { id: string | null })[] = [];
         let index = start, truncated = false;
         while (index < blocks.length && read.length < request.maxBlocks && budget.text > 0 && budget.nodes > 0) {

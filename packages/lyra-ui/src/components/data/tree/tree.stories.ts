@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
-import type { LyraTreeNodeData } from '../../../lyra.js';
+import { html, type TemplateResult } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
+import type { LyraTree, LyraTreeEventMap, LyraTreeNodeData, LyraTreePointerReorderDetail } from './tree.class.js';
 
 const data: LyraTreeNodeData[] = [
   {
@@ -25,6 +26,18 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-tree style="max-width: 20rem" label="File explorer" .data=${data}></lr-tree>`,
+};
+
+export const Compact: Story = {
+  render: () => html`
+    <lr-tree
+      label="Compact outline"
+      size="s"
+      selection="multiple"
+      style="max-inline-size: var(--lr-size-20rem)"
+      .data=${data}
+    ></lr-tree>
+  `,
 };
 
 export const UnnamedDataRows: Story = {
@@ -406,6 +419,141 @@ export const Reorderable: Story = {
       expandAll: () => Promise<void> | void;
     };
     await tree.expandAll();
+  },
+};
+
+export const PointerOutline: Story = {
+  render: () => {
+    const outline: LyraTreeNodeData[] = [
+      { id: 'intro', label: 'Introduction', expanded: true, children: [{ id: 'scope', label: 'Scope' }] },
+      { id: 'method', label: 'Method', expanded: true, children: [{ id: 'samples', label: 'Samples' }] },
+      { id: 'findings', label: 'Findings' },
+    ];
+    const treeRef = createRef<LyraTree>();
+    const statusRef = createRef<HTMLOutputElement>();
+
+    const locate = (
+      nodes: readonly LyraTreeNodeData[],
+      id: string,
+      parentId: string | null = null,
+    ): { node: LyraTreeNodeData; parentId: string | null; index: number } | undefined => {
+      for (const [index, node] of nodes.entries()) {
+        if (node.id === id) return { node, parentId, index };
+        const descendant = node.children && locate(node.children, id, node.id);
+        if (descendant) return descendant;
+      }
+      return undefined;
+    };
+    const editChildren = (
+      nodes: readonly LyraTreeNodeData[],
+      parentId: string | null,
+      edit: (children: readonly LyraTreeNodeData[]) => LyraTreeNodeData[],
+    ): LyraTreeNodeData[] => {
+      if (parentId === null) return edit(nodes);
+      return nodes.map(node => {
+        if (node.id === parentId) return { ...node, children: edit(node.children ?? []) };
+        return node.children ? { ...node, children: editChildren(node.children, parentId, edit) } : node;
+      });
+    };
+    const moveSection = (nodeId: string, toParentId: string | null, toIndex: number): void => {
+      const tree = treeRef.value;
+      const source = tree && locate(tree.data, nodeId);
+      if (!tree || !source) return;
+      const remaining = editChildren(tree.data, source.parentId, siblings => siblings.filter(node => node.id !== nodeId));
+      tree.data = editChildren(remaining, toParentId, siblings => [
+        ...siblings.slice(0, toIndex), source.node, ...siblings.slice(toIndex),
+      ]);
+    };
+
+    const onPointerReorder = (event: CustomEvent<LyraTreePointerReorderDetail>): void => {
+      const { nodeId, toParentNodeId, toIndex } = event.detail;
+      moveSection(nodeId, toParentNodeId, toIndex);
+    };
+    const onKeyboardReorder = (event: LyraTreeEventMap['lr-reorder']): void => {
+      const { nodeId, parentNodeId, toIndex } = event.detail;
+      moveSection(nodeId, parentNodeId, toIndex);
+    };
+    const onSubmit = (event: SubmitEvent): void => {
+      event.preventDefault();
+      const form = event.currentTarget as HTMLFormElement;
+      const fields = new FormData(form);
+      const nodes = treeRef.value?.data;
+      const status = statusRef.value;
+      if (!nodes || !status) return;
+      const source = locate(nodes, String(fields.get('section')));
+      const target = locate(nodes, String(fields.get('reference')));
+      if (!source || !target || locate([source.node], target.node.id)) {
+        status.value = 'Choose a reference outside the section you are moving.';
+        return;
+      }
+      const after = fields.get('position') === 'after';
+      const insertion = target.index + Number(after);
+      const sameParent = source.parentId === target.parentId;
+      const toIndex = insertion - Number(sameParent && source.index < insertion);
+      if (sameParent && toIndex === source.index) {
+        status.value = 'The section is already in that position.';
+        return;
+      }
+      moveSection(source.node.id, target.parentId, toIndex);
+      status.value = `${source.node.label} moved ${after ? 'after' : 'before'} ${target.node.label}.`;
+    };
+
+    const options = (nodes: readonly LyraTreeNodeData[], selected: string): TemplateResult[] =>
+      nodes.flatMap(node => [
+        html`<option value=${node.id} ?selected=${node.id === selected}>${node.label}</option>`,
+        ...(node.children ? options(node.children, selected) : []),
+      ]);
+    return html`
+      <style>
+        .outline-move-form {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: end;
+          gap: var(--lr-space-m);
+          margin-block-start: var(--lr-space-m);
+        }
+        .outline-move-form label {
+          display: grid;
+          gap: var(--lr-space-xs);
+        }
+        .outline-move-form :is(select, button) {
+          min-block-size: var(--lr-size-2-25rem);
+          padding: var(--lr-space-xs) var(--lr-space-s);
+          border: var(--lr-border-width-thin) solid var(--lr-color-border);
+          border-radius: var(--lr-radius);
+          background: var(--lr-color-surface);
+          color: var(--lr-color-text);
+          font: inherit;
+        }
+        .outline-move-form button {
+          border-color: var(--lr-color-brand);
+          background: var(--lr-color-brand);
+          color: var(--lr-color-on-brand);
+          cursor: pointer;
+        }
+        .outline-move-form button:hover {
+          background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+        }
+        .outline-move-form :is(select, button):focus-visible {
+          outline: var(--lr-focus-ring);
+          outline-offset: var(--lr-focus-ring-offset);
+        }
+        .outline-move-form + output:not(:empty) {
+          display: block;
+          margin-block-start: var(--lr-space-s);
+        }
+      </style>
+      <p>Use Ctrl or Command with the Up or Down arrow to reorder siblings. Use the form to move a section across parents.</p>
+      <lr-tree ${ref(treeRef)} label="Document outline" size="s" reorderable pointer-reorderable allow-cross-parent-reorder
+        .data=${outline} @lr-reorder=${onKeyboardReorder} @lr-pointer-reorder=${onPointerReorder}></lr-tree>
+      <form class="outline-move-form" @submit=${onSubmit}>
+        <label>Section to move <select name="section">${options(outline, 'scope')}</select></label>
+        <label>Reference section <select name="reference">${options(outline, 'samples')}</select></label>
+        <label>Position <select name="position"><option value="before">Before</option><option value="after">After</option></select></label>
+        <button type="submit">Move section</button>
+      </form>
+      <output ${ref(statusRef)}></output>
+    `;
   },
 };
 

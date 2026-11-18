@@ -3,6 +3,8 @@ import type { DocxRevision } from './types.js';
 /** A copied body heading. Level 1 is Word's outline level zero. IDs are revision scoped. */
 export interface DocxOutlineItem {
   readonly id: string;
+  /** Zero-based top-level body position in the same revision as the outline. */
+  readonly blockIndex: number;
   readonly level: number;
   readonly text: string;
   readonly textTruncated: boolean;
@@ -11,6 +13,12 @@ export interface DocxOutline {
   readonly revision: DocxRevision;
   readonly items: readonly DocxOutlineItem[];
   readonly truncated: boolean;
+}
+/** The top-level body block that contains the semantic selection head, at a specific revision. */
+export interface DocxSelectionBlock {
+  readonly revision: DocxRevision;
+  /** Matches readFragment block indexes. Null when the selection does not map to a body block. */
+  readonly index: number | null;
 }
 export type DocxDocumentDiagnosticRule =
   | 'heading-level-skipped' | 'image-description-missing' | 'table-header-missing' | 'unsupported-content';
