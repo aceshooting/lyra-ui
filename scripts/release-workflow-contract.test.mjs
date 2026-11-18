@@ -12,8 +12,9 @@ const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 const workflowStep = (source, name) => {
   const marker = `      - name: ${name}\n`, start = source.indexOf(marker);
   assert.ok(start >= 0, `Missing ${name}`);
-  const next = source.indexOf('\n      - ', start + marker.length);
-  return source.slice(start, next < 0 ? undefined : next);
+  const remaining = source.slice(start + marker.length);
+  const next = remaining.search(/\n(?: {6}- | {2}[\w-]+:\n)/u);
+  return source.slice(start, next < 0 ? undefined : start + marker.length + next);
 };
 const stepScript = step => {
   const marker = '        run: |\n', start = step.indexOf(marker);
@@ -402,7 +403,16 @@ test('publishing embeds the tested byte verifier without checking out or executi
   const workflow = read('.github/workflows/publish.yml');
   const step = workflow.indexOf('      - name: Confirm the registry serves the published tarball\n');
   assert.ok(step >= 0);
-  const confirmation = workflow.slice(step, workflow.indexOf('\n  dispatch-freshness:', step));
+  const jobStart = workflow.indexOf('\n  confirm-registry:\n');
+  const protectedJob = workflow.slice(workflow.indexOf('\n  publish:\n'), jobStart);
+  const confirmation = workflow.slice(jobStart, workflow.indexOf('\n  dispatch-freshness:', step));
+  assert.ok(jobStart > 0 && step > jobStart);
+  assert.doesNotMatch(protectedJob, /Confirm the registry serves the published tarball/u);
+  assert.match(confirmation, /needs: \[verify, publish\]/u);
+  assert.match(confirmation, /permissions:\n      actions: read\n    steps:/u);
+  assert.match(confirmation, /name: verified-release-tarball/u);
+  assert.match(confirmation, /node-version: \$\{\{ needs\.verify\.outputs\.node_version \}\}/u);
+  assert.doesNotMatch(confirmation, /: write|environment:|secrets\.|npm publish "\$TARBALL"|actions\/checkout@/u);
   assert.match(confirmation, /if: \$\{\{ github\.event_name == 'release' \|\| inputs\.dry_run != true \}\}/u);
   assert.match(confirmation, /EXPECTED_SHA256: \$\{\{ needs\.verify\.outputs\.tarball_sha256 \}\}/u);
   assert.match(confirmation, /node --input-type=module <<'NODE'/u);
@@ -411,7 +421,7 @@ test('publishing embeds the tested byte verifier without checking out or executi
     .split('// publication-verifier:end')[0].trimEnd().replace(/^export /u, '');
   const embedded = confirmation.slice(confirmation.indexOf('          async function verifyNpmPublication'), confirmation.indexOf('          try {\n            const result'))
     .split('\n').map(line => line.startsWith('          ') ? line.slice(10) : line).join('\n').trimEnd();
-  assert.equal(embedded, authored, 'Protected inline code must exactly match the independently tested verifier.');
+  assert.equal(embedded, authored, 'Inline code must exactly match the independently tested verifier.');
   const publish = workflow.slice(workflow.indexOf('\n  publish:\n'), workflow.indexOf('\n  dispatch-freshness:'));
   assert.doesNotMatch(publish, /actions\/checkout@|npm install|npm ci|node scripts\//u);
 });
@@ -711,4 +721,80 @@ test('the release plan job outlasts all four qualification waits running to thei
     budgetMinutes * 60 >= windows.reduce((sum, seconds) => sum + seconds, 0) + 300,
     `plan has ${budgetMinutes} minutes for waits of ${windows.join(' + ')} seconds`,
   );
+});
+
+test('delayed registry verification binds the failed attempt and rejects changed assets or signatures', () => {
+  const workflow = read('.github/workflows/verify-delayed-publication.yml');
+  assert.match(workflow, /if: github.ref == 'refs\/heads\/main'/u);
+  assert.doesNotMatch(workflow, /: write|environment:|secrets\.|npm publish/u);
+  const original = read('scripts/verify-delayed-publication.sh');
+  assert.doesNotMatch(original, /gh release upload|gh run rerun|npm publish ["$]/u);
+  const scratch = mkdtempSync(path.join(tmpdir(), 'delayed-publication-'));
+  try {
+    const repo = 'example/components', tag = 'lyra-ui@1.2.3', source = '1'.repeat(40), tagObject = '2'.repeat(40);
+    const tarball = 'aceshooting-lyra-ui-1.2.3.tgz';
+    const mocked = String.raw`
+const args = process.argv.slice(2), cmd = path.basename(process.argv[1]);
+const problem = process.env.PROBLEM, repo = process.env.GITHUB_REPOSITORY, tag = process.env.TAG;
+const sha = process.env.SOURCE_SHA, oid = process.env.TAG_OBJECT;
+const arg = flag => args[args.indexOf(flag) + 1];
+const print = item => console.log(JSON.stringify(item));
+const fail = () => process.exit(1);
+const ok = value => { if (!value) fail(); };
+const digest = text => crypto.createHash('sha256').update(text).digest('hex');
+const archive = 'aceshooting-lyra-ui-1.2.3.tgz', standalone = ['CHANGELOG.md','release-source.tar'];
+const npmURL = 'https://registry.npmjs.org/-/npm/v1/attestations/@aceshooting%2flyra-ui@1.2.3', predicate = 'https://slsa.dev/provenance/v1';
+if (cmd === 'node') {
+  ok(args.join(' ') === 'scripts/verify-npm-publication.mjs' && digest(fs.readFileSync(process.env.TARBALL)) === process.env.EXPECTED_SHA256 && problem !== 'registry-bytes');
+} else if (cmd === 'curl') {
+  print(args.at(-1) === npmURL ? {attestations:[{predicateType:predicate,bundle:{}}]} : {dist:{attestations:{url:npmURL,provenance:{predicateType:predicate}}}});
+} else if (args[0] === 'api') {
+  const url = args.at(-1);
+  if (url.includes('/git/ref/')) print({ref:'refs/tags/'+tag,object:{type:'tag',sha:problem === 'tag' ? sha : oid}});
+  else if (url.includes('/git/tags/')) print({tag,object:{type:'commit',sha}});
+  else if (url.endsWith('/approvals')) print([{state:'approved',environments:[{name:'npm-publish'}]}]);
+  else if (url.includes('/jobs?')) {
+    const success = name => ({name,conclusion:'success'});
+    const steps = ['Generate release provenance','Upload provenance to GitHub release','Generate standalone release provenance','Upload standalone release provenance','Publish with protected npm token and provenance'].map(success);
+    steps.push({name:problem === 'wrong-failure' ? 'Publish to npm' : 'Confirm the registry serves the published tarball',conclusion:'failure'});
+    print([{jobs:[{name:'verify / verify',conclusion:'success'},{name:'publish',conclusion:'failure',steps}]}]);
+  } else print({repository:{full_name:repo},head_repository:{full_name:repo},path:'.github/workflows/publish.yml',event:'workflow_dispatch',head_branch:tag,head_sha:sha,status:'completed',conclusion:'failure',run_attempt:problem === 'attempt' ? 2 : 1});
+} else if (args[0] === 'attestation') {
+  ok(args[1] === 'verify' && arg('--repo')===repo && args.includes('--deny-self-hosted-runners') && arg('--format')==='json');
+  ok(arg('--cert-identity')==='https://github.com/'+repo+'/.github/workflows/publish.yml@refs/tags/'+tag && arg('--cert-oidc-issuer')==='https://token.actions.githubusercontent.com' && arg('--signer-digest')===sha && arg('--source-ref')==='refs/tags/'+tag && arg('--source-digest')===sha);
+  if (args.includes('--digest-alg')) {
+    ok(problem !== 'npm-provenance' && arg('--digest-alg')==='sha512');
+  } else ok(problem !== 'github-provenance');
+  const changedRun = problem === (args.includes('--digest-alg') ? 'npm-run' : 'github-run');
+  print([{verificationResult:{signature:{certificate:{runInvocationURI:'https://github.com/'+repo+'/actions/runs/'+(changedRun ? '100' : process.env.PUBLISH_RUN)+'/attempts/'+process.env.ATTEMPT}}}}]);
+} else if (args[0] === 'release' && args[1] === 'view') print({tagName:tag,isDraft:false,isPrerelease:false});
+else if (args[1] === 'download' && ['run','release'].includes(args[0])) {
+  const dir=arg('--dir'); fs.mkdirSync(dir);
+  const put=(file,value)=>fs.writeFileSync(path.join(dir,file),value);
+  if (args[0] === 'release') {
+    for (const n of [archive,...standalone]) {
+      put(n,problem === 'asset' && n === archive ? 'wrong' : n);put(n+'.sigstore.json','sig');put(n+'.intoto.jsonl','sig');
+    }
+    if(problem==='extra')put('unknown','');
+  } else if(arg('--name')==='verified-release-tarball')put(archive,archive);
+  else {for(const n of standalone)put(n,n);put('SHA256SUMS',standalone.map(n=>digest(n)+'  '+n+'\n').join(''));}
+} else fail();
+`;
+    const executable = '#!' + process.execPath + '\nconst fs=require("fs"),path=require("path"),crypto=require("crypto");\n' + mocked;
+    for (const tool of ['gh', 'curl', 'node']) {
+      writeFileSync(path.join(scratch,tool), executable);
+      chmodSync(path.join(scratch,tool), 0o755);
+    }
+    for (const problem of ['', 'tag', 'attempt', 'wrong-failure', 'asset', 'extra', 'registry-bytes', 'github-provenance', 'npm-provenance', 'github-run', 'npm-run']) {
+      const result = spawnSync('bash', ['scripts/verify-delayed-publication.sh'], {
+        cwd:root, encoding:'utf8', env:{PATH:scratch+':'+process.env.PATH, RUNNER_TEMP:scratch, GITHUB_REPOSITORY:repo,
+          GITHUB_STEP_SUMMARY:path.join(scratch,'summary-'+problem), GITHUB_EVENT_NAME:'workflow_dispatch', GITHUB_REF:'refs/heads/main',
+          TAG:tag, SOURCE_SHA:source, TAG_OBJECT:tagObject, PUBLISH_RUN:'99', ATTEMPT:'1', PROBLEM:problem,
+          EXPECTED_SHA256:createHash('sha256').update(tarball).digest('hex')},
+      });
+      assert.equal(result.status===0, problem==='', problem+' '+result.stderr);
+    }
+  } finally {
+    rmSync(scratch,{recursive:true,force:true});
+  }
 });

@@ -627,6 +627,11 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    website deployment so `release-feed-freshness.yml` can confirm the upgrade feed matches npm;
    document-companion releases skip that automatic check.
 
+   If npm accepted the tarball and only the read-only `confirm-registry` job timed out, wait
+   for the exact version to appear and rerun that failed job within the verified artifact's
+   retention period. GitHub retains the successful publish job's outputs and reruns dependent
+   jobs, including eligible feed checks. A new dispatch starts a new publication attempt.
+
 The read-only publish verification job rejects a lightweight tag, verifies the annotated tag's peeled
 commit is both the checkout and the invocation ref/SHA, then waits for one successful `push`/`main`
 `ci.yml` run and successful `workflow_dispatch`/`main` runs of `test-all-browsers.yml`,
@@ -659,6 +664,12 @@ the in-toto statement) and is uploaded byte-identically as `.sigstore.json` for 
 the single rebuild/byte-verification implementation; recovery keeps the same artifact handoff,
 protected signer, post-approval tag check and asset round-trip, and is dispatched on the requested
 tag, never on `main`.
+
+### Delayed npm availability
+
+When the tagged Publish run completed its protected npm write and registry confirmation was its only failed publishing step, the read-only `verify-delayed-publication.yml` workflow can verify the release after npm makes it available. Dispatch the verifier on `main` with the reviewed stable tag, annotated tag object SHA, peeled source SHA, original Publish run ID and attempt, and the SHA-256 from its verified build. Both original verified artifacts must still be available during their 14-day retention.
+
+The verifier binds the original tag, successful qualification and protected publication evidence, compares all release payloads with the original artifacts, and verifies every GitHub provenance sidecar. It then checks the canonical npm bytes and npm provenance for the exact source. Record the original failed run and the separate successful recovery run together. After verified UI or flags publication, dispatch `release-feed-freshness.yml` on `main` with the verified `published_tag` to check the upgrade feed.
 
 ### Verify signed release downloads
 

@@ -2114,8 +2114,8 @@ test('initial 3D release selects and validates only its own stable package', () 
 test('freshness dispatch is isolated and only follows real UI or flags publication', () => {
   const publish = readFileSync(path.join(repoRoot, '.github/workflows/publish.yml'), 'utf8');
   const dispatch = publish.slice(publish.indexOf('\n  dispatch-freshness:'));
-  assert.match(dispatch, /needs: \[verify, publish\]/u);
-  assert.match(dispatch, /needs\.publish\.result == 'success'/u);
+  assert.match(dispatch, /needs: \[verify, confirm-registry\]/u);
+  assert.match(dispatch, /needs\['confirm-registry'\]\.result == 'success'/u);
   assert.match(dispatch, /github\.event_name == 'release' \|\| inputs\.dry_run != true/u);
   assert.match(dispatch, /startsWith\(needs\.verify\.outputs\.tag, 'lyra-ui@'\) \|\| startsWith\(needs\.verify\.outputs\.tag, 'lyra-flags@'\)/u);
   const condition = dispatch.match(/    if: \$\{\{ (.*) \}\}/u)[1];
@@ -2124,7 +2124,7 @@ test('freshness dispatch is isolated and only follows real UI or flags publicati
     for (const result of ['success', 'failure', 'cancelled', 'skipped']) {
       for (const tag of ['lyra-ui@28.1.4', 'lyra-flags@2.3.0', 'lyra-docs@0.5.1', 'lyra-ide@28.1.4', 'lyra-translations@28.1.4']) {
         for (const dryRun of [false, true]) {
-          assert.equal(shouldDispatch({ publish: { result }, verify: { outputs: { tag } } }, { event_name: event }, { dry_run: dryRun }, (value, prefix) => value.startsWith(prefix)),
+          assert.equal(shouldDispatch({ 'confirm-registry': { result }, verify: { outputs: { tag } } }, { event_name: event }, { dry_run: dryRun }, (value, prefix) => value.startsWith(prefix)),
             result === 'success' && (event === 'release' || !dryRun) && /^(?:lyra-ui|lyra-flags)@/u.test(tag));
         }
       }

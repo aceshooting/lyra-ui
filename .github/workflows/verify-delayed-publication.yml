@@ -1,0 +1,59 @@
+name: Verify delayed npm publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Reviewed stable release tag
+        required: true
+        type: string
+      tag_object:
+        description: Reviewed annotated tag object SHA
+        required: true
+        type: string
+      source_sha:
+        description: Reviewed tag commit SHA
+        required: true
+        type: string
+      publish_run:
+        description: Original Publish run ID
+        required: true
+        type: string
+      attempt:
+        description: Original Publish attempt
+        required: true
+        default: '1'
+        type: string
+      tarball_sha256:
+        description: SHA-256 from the original verified build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Verify original tagged evidence, signatures and canonical registry bytes
+        env:
+          TAG: ${{ inputs.tag }}
+          TAG_OBJECT: ${{ inputs.tag_object }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          PUBLISH_RUN: ${{ inputs.publish_run }}
+          ATTEMPT: ${{ inputs.attempt }}
+          EXPECTED_SHA256: ${{ inputs.tarball_sha256 }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/verify-delayed-publication.sh
