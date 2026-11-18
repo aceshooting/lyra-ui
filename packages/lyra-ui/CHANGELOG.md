@@ -1,5 +1,36 @@
 # Changelog
 
+## 31.2.1
+
+### Patch Changes
+
+- e49aab5: Update the modular renderer to MapLibre GL JS 6.19.0. Maps can use the new line,
+  fill and raster blend modes, read their request transform with `getTransformRequest()`,
+  and supply a Trusted Types policy with `setTrustedTypesPolicy()`. Globe camera math
+  loads when a style requests the globe or vertical perspective projection.
+
+  Update direct gesture-handler construction, custom handler animation results, and calls to
+  low-level feature query and painter methods as described in the Lyra Map 2.x migration guide.
+  Sandboxed pages can use modular workers when the server permits cross-origin module requests.
+  The `lr-map` component supports both Lyra Map 1.x (from 1.5.2) and 2.x.
+
+  Load geolocation controls without worker codecs or unused projection solvers.
+- a1175a8: Preserve compatible optional companion peer ranges during coordinated releases. Installing a newly released companion no longer raises an existing compatible minimum version as a side effect of release preparation.
+- d87fe61: Retry transient failures when installing Chrome and Edge for browser qualification, with bounded attempts and unchanged signature verification. Installation exhaustion and timeouts still fail the check.
+- 353aa65: Improve release verification by separating package publication from registry availability checks, checking browser startup before hosted release budgets, and recording reproducible pre-release benchmarks. Refresh the tested Svelte integration and build-tool dependencies.
+
+  Clarify withdrawn dependency advisories while retaining the tested parser and formatting hardening.
+
+  Preserve the verified public-standard citation in a bundled engine license notice without exempting other notice text from provenance checks.
+
+  The hosted Chromium quick comparison against 31.2.0 passed the semantic checks for all 15 workloads.
+  It flagged 8 of 150 timing metrics as slower and 5 as faster. Seven slower metrics were flagged only
+  at p95, the maximum of seven samples. Their maxima came from three candidate samples across ingestion,
+  table filtering, and chart no-op timings. The ingestion update median rose from 8.9 to 10.9 ms, and
+  its end-to-end median held at 30.9 ms. All 2,953 published distribution files matched the candidate
+  byte for byte, including the 277 package files reached by the quick fixtures. The timing observations
+  are advisory.
+
 ## 31.2.0
 
 The quick Chromium comparison of the feature candidate with 31.1.1 flagged five of 150 timing metrics as slower. For 1,000 chart points, total p95 rose from 93.7 to 114.8 ms; for 5,000 ingestion items, paint median rose from 23.2 to 27.9 ms; for sorting 10,000 table rows, settle p95 rose from 8.0 to 9.3 ms. A fixed A-B-B-A follow-up used 15 samples per workload per run. No metric was flagged in both candidate-versus-baseline pairs, and repeated runs of the same version also produced flags. The affected component implementations and dependencies were unchanged; their shared code differed only in package metadata and an unused size constant. Together, these observations point to timing variation without demonstrating a sustained slowdown.
