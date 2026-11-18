@@ -6,6 +6,8 @@ Improve release verification by separating package publication from registry ava
 
 Clarify withdrawn dependency advisories while retaining the tested parser and formatting hardening.
 
+Preserve the verified public-standard citation in a bundled engine license notice without exempting other notice text from provenance checks.
+
 The hosted Chromium quick comparison against 31.2.0 passed the semantic checks for all 15 workloads.
 It flagged 8 of 150 timing metrics as slower and 5 as faster. Seven slower metrics were flagged only
 at p95, the maximum of seven samples. Their maxima came from three candidate samples across ingestion,

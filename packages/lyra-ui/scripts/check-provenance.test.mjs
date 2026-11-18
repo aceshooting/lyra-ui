@@ -111,6 +111,20 @@ test('permits ordinary product vocabulary, release review prose, and decorative 
   ]);
 });
 
+test('preserves the verbatim public-standard citation without exempting other license prose', () => {
+  const file = 'packages/lyra-docs/THIRD_PARTY_LICENSES/ECMA-376.md';
+  const citation = '- `src/layout/cjk-typography.ts`: the default line-break character sets of §17.3.1.16.';
+  assert.deepEqual(labels(file, citation), []);
+  assert.deepEqual(labels('README.md', citation), ['internal section reference']);
+  assert.deepEqual(labels(file, 'Follow §3.4 of the plan.'), ['internal section reference']);
+  assert.deepEqual(labels(file, `${citation} See docs/superpowers/plans/widget.md.`), [
+    'local-only tooling reference', 'internal section reference',
+  ]);
+  assert.deepEqual(labels(file, `${citation}\nSee docs/superpowers/plans/widget.md.`), [
+    'local-only tooling reference',
+  ]);
+});
+
 test('discovers only tracked textual files and excludes the policy fixtures themselves', () => {
   assert.equal(isTrackedTextPath('packages/lyra-ui/src/example.ts'), true);
   assert.equal(isTrackedTextPath('packages/lyra-ui/visual-baselines/example.png'), false);

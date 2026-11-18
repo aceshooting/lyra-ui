@@ -78,6 +78,11 @@ const NON_PERSONAL_USERS = new Set([
   'user',
   'username',
 ]);
+// Preserve the exact public-standard citation carried by the upstream license notice.
+const STANDARD_SECTION_CITATIONS = new Map([
+  ['packages/lyra-docs/THIRD_PARTY_LICENSES/ECMA-376.md',
+    '- `src/layout/cjk-typography.ts`: the default line-break character sets of §17.3.1.16.'],
+]);
 
 function normalizedPath(file) {
   return String(file).replaceAll('\\', '/').replace(/^\.\//, '');
@@ -144,7 +149,9 @@ export function findProvenanceFindings({ file, source }) {
       if (rule.pattern.test(line) && !isPolicyDefinitionLine(relative, line)) labels.add(rule.label);
     }
     if (LOCAL_TOOLING_REFERENCE.test(line)) labels.add('local-only tooling reference');
-    if (/§\s*\d+(?:\.\d+)*/.test(line)) labels.add('internal section reference');
+    if (/§\s*\d+(?:\.\d+)*/.test(line) && STANDARD_SECTION_CITATIONS.get(relative) !== line) {
+      labels.add('internal section reference');
+    }
     if (containsExplanatoryCommitHash(relative, line)) labels.add('explanatory commit provenance');
     if (containsPersonalPath(line)) labels.add('personal local filesystem path');
     for (const label of labels) findings.push({ file: relative, line: index + 1, label });
