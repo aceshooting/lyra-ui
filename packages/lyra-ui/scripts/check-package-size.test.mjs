@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -189,6 +191,36 @@ test('gates actual archive bytes even when the dry-run estimate is below the dow
 
     writeFileSync(tarball, withDownloadSize(archive, 10_000_000));
     await assert.rejects(readTarballMetrics(tarball), /packedBytes 10,000,000 exceeds hard budget 9,999,999/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('retains the exact archive measurement when the archive exceeds its file ceiling', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-measurement-'));
+  try {
+    const { maximum } = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+    const extraFiles = Object.fromEntries(Array.from({ length: maximum.fileCount }, (_, i) => [`dist/example-${i}.js`, '']));
+    const bytes = archiveFixture(expectedPackage, extraFiles);
+    const tarball = join(directory, 'package.tgz');
+    writeFileSync(tarball, bytes);
+    const result = spawnSync(process.execPath, [
+      'check-package-size.mjs', '--tarball', tarball,
+    ], { cwd: new URL('.', import.meta.url), encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /fileCount .* exceeds hard budget/u);
+    const measurement = result.stdout.match(/^Package size measurement: (.+)$/mu)?.[1];
+    assert.ok(measurement, result.stdout);
+    assert.deepEqual(JSON.parse(measurement), {
+      name: expectedPackage.name,
+      version: expectedPackage.version,
+      measurement: 'archive',
+      packedBytes: bytes.length,
+      unpackedBytes: Buffer.byteLength(JSON.stringify(expectedPackage))
+        + requiredTarballFiles.length * Buffer.byteLength('public documentation'),
+      fileCount: maximum.fileCount + requiredTarballFiles.length + 1,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    });
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

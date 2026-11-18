@@ -444,11 +444,8 @@ test('release budgets check generated bundles before archive and installed-consu
   const commands = script.split(' && ');
   const build = indexAfter(commands, 'pnpm --filter @aceshooting/lyra-gen run build');
   const bundles = indexAfter(commands, 'pnpm --filter @aceshooting/lyra-gen run check:bundles', build);
-  for (const archive of [
-    'pnpm --filter @aceshooting/lyra-ui run check:package-size',
-    'node scripts/check-companion-package-sizes.mjs',
-    'node scripts/check-packed-consumer.mjs --skip-attw',
-  ]) indexAfter(commands, archive, bundles);
+  const archives = indexAfter(commands, 'node scripts/check-companion-package-sizes.mjs --include-ui', bundles);
+  indexAfter(commands, 'node scripts/check-packed-consumer.mjs --skip-attw', archives);
   assert.equal(commands.filter(command => command.includes('@aceshooting/lyra-gen')).length, 2);
   assert.doesNotMatch(script, /--(?:write-budgets|refresh-versions)/u);
 });

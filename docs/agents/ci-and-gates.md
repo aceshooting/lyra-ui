@@ -172,8 +172,9 @@ gate. Read `EXEMPTIONS` for the current list and reasons.
 - In release mode the workflow keeps its detached checkout and creates a local `main` ref at the
   dispatch SHA for Changesets' base branch (a mismatched existing `main` is rejected); it does not
   filter pending changesets or replace release preparation's `origin/main` ancestry check.
-  It installs the packed-consumer browsers and runs the complete `pnpm release:budgets` against
-  the prepared versions before returning the reviewed source delta.
+  It verifies the provisioned browsers in the pinned Playwright image and runs the complete
+  `pnpm release:budgets` before returning the reviewed source delta. The budget transcript retains
+  the exact UI estimate and actual archive measurements even when a ceiling fails.
 
 ### Composable styling and the token grammar
 
@@ -614,8 +615,10 @@ not replace the separate Quality tools A/B job.
    When UI or Gen releases, preparation builds Gen against the final UI output and refreshes its
    bundle version stamps only after the existing byte ceilings and dependency inventories pass.
    It never lints, tests, packs, commits, tags or pushes. Then run `pnpm release:budgets`
-   (`check:bundle-size`, Gen's build and `check:bundles`, `check:package-size`, companion archives via
-   `scripts/check-companion-package-sizes.mjs`, `check-packed-consumer.mjs --skip-attw`): the bump
+   (`check:bundle-size`, Gen's build and `check:bundles`, the UI estimate and actual UI and companion
+   archives via `scripts/check-companion-package-sizes.mjs --include-ui`, and
+   `check-packed-consumer.mjs --skip-attw`). The archive checker reports every size before
+   returning an aggregate failure. The bump
    changes version-stamped bytes, so a budget overrun surfaces before the release commit instead of
    as budget-only follow-ups after CI. The hosted equivalent is `prepare-artifacts.yml` on `main`
    with `mode=release`; its artifact contains the generated source delta after budgets pass.

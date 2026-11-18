@@ -44,6 +44,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    container:
+      image: ${{ inputs.mode == 'release' && 'mcr.microsoft.com/playwright:v1.65.1-noble' || '' }}
+      options: --shm-size=2g
+    defaults:
+      run:
+        shell: bash
     env:
       PREPARATION_MODE: ${{ inputs.mode }}
       SOURCE_CONTRACTS_JSON: ${{ inputs.sourceContracts }}
@@ -134,6 +140,19 @@ jobs:
             node "$RUNNER_TEMP/lyra-preparation-control.mjs" verify "$PWD" "$GITHUB_SHA" "$PREPARATION_SOURCE_SHA"
           fi
           node scripts/prepare-artifacts.mjs source-contracts
+      - name: Ensure skill packaging tools are available
+        if: inputs.mode == 'release'
+        run: |
+          missing=()
+          for tool in python3 unzip; do
+            if ! command -v "$tool" >/dev/null; then missing+=("$tool"); fi
+          done
+          if (( ${#missing[@]} )); then
+            timeout --kill-after=10s 120s apt-get -o Acquire::Retries=2 -o APT::Update::Error-Mode=any update
+            timeout --kill-after=10s 120s apt-get -o Acquire::Retries=2 install -y --no-install-recommends "${missing[@]}"
+          fi
+          command -v python3
+          command -v unzip
       - name: Prepare release source from pending changesets
         if: inputs.mode == 'release' && inputs.candidateSha == ''
         run: |
@@ -146,12 +165,29 @@ jobs:
             git branch main "$GITHUB_SHA"
           fi
           pnpm release:prepare
-      - name: Install browsers for release budgets
+      - name: Verify provisioned browsers for release budgets
         if: inputs.mode == 'release'
-        run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium firefox webkit
+        run: |
+          node --input-type=module <<'NODE'
+          import { accessSync, constants } from 'node:fs';
+          import { chromium, firefox, webkit } from 'playwright';
+          for (const browser of [chromium, firefox, webkit]) {
+            accessSync(browser.executablePath(), constants.X_OK);
+          }
+          NODE
       - name: Verify release budgets on prepared package versions
+        id: release_budgets
         if: inputs.mode == 'release'
-        run: pnpm release:budgets
+        run: |
+          set -o pipefail
+          pnpm release:budgets 2>&1 | tee "$RUNNER_TEMP/lyra-release-budgets.log"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && inputs.mode == 'release' && (steps.release_budgets.outcome == 'success' || steps.release_budgets.outcome == 'failure') }}
+        with:
+          name: release-budget-measurements-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lyra-release-budgets.log
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify generated source contracts
         run: |
           pnpm --filter @aceshooting/lyra-ui run check:published-compatibility

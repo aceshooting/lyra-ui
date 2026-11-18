@@ -21,11 +21,19 @@ test('local aggregate checks companion archive budgets before packed consumers',
   assert.equal(commands.filter(line => line === 'node scripts/check-companion-package-sizes.mjs').length, 1);
 });
 
-for (const rejected of ['', '@aceshooting/lyra-map']) {
-  test(`companion size packs use supported config syntax after preparation${rejected ? ' and retain all checks after an overrun' : ''}`, () => {
+for (const [includeUi, rejected] of [
+  [false, ''],
+  [false, '@aceshooting/lyra-map'],
+  [true, ''],
+  [true, 'estimate'],
+  [true, '@aceshooting/lyra-ui'],
+  [true, '@aceshooting/lyra-ide'],
+]) {
+  test(`archive size checks collect ${includeUi ? 'UI and companion' : 'companion'} evidence${rejected ? ` after ${rejected} fails` : ''}`, () => {
     const root = mkdtempSync(join(tmpdir(), 'lyra-companion-pack-options-'));
     const bin = join(root, 'bin');
     const calls = join(root, 'calls.jsonl');
+    const ui = ['lyra-ui'];
     const companions = [
       ['lyra-translations', 'assemble'], ['lyra-ide', 'sync'], ['lyra-map', 'build'],
       ['lyra-3d', 'build'], ['lyra-gen', 'build'],
@@ -35,7 +43,7 @@ for (const rejected of ['', '@aceshooting/lyra-map']) {
       mkdirSync(join(root, 'scripts'));
       mkdirSync(join(root, 'packages/lyra-ui/scripts'), { recursive: true });
       writeFileSync(join(root, 'scripts/check-companion-package-sizes.mjs'), read('scripts/check-companion-package-sizes.mjs'));
-      for (const [name] of companions) {
+      for (const [name] of [ui, ...companions]) {
         const directory = join(root, 'packages', name);
         mkdirSync(directory, { recursive: true });
         writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: `@aceshooting/${name}`, version: '0.0.0' }));
@@ -46,26 +54,39 @@ const { join } = require('node:path');
 const args = process.argv.slice(2);
 appendFileSync(process.env.LYRA_COMPANION_TEST_LOG, JSON.stringify({ kind: args[0] === '--filter' ? 'prepare' : 'pack', args, cwd: process.cwd() }) + '\\n');
 if (args[0] === '--filter') process.exit(0);
-if (args.length !== 4 || args[0] !== '--config.ignore-scripts=true' || args[1] !== 'pack' || args[2] !== '--pack-destination') {
-  console.error('Unsupported companion pack argument form'); process.exit(64);
-}
 const metadata = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
+const [command, option, destination, ...rest] = metadata.name === '@aceshooting/lyra-ui' ? args
+  : args[0] === '--config.ignore-scripts=true' ? args.slice(1) : [];
+if (command !== 'pack' || option !== '--pack-destination' || !destination || rest.length) process.exit(64);
 const file = metadata.name.replace('@', '').replace('/', '-') + '-' + metadata.version + '.tgz';
-writeFileSync(join(args[3], file), 'fixture archive');
+writeFileSync(join(destination, file), 'fixture archive');
 `, { mode: 0o755 });
       writeFileSync(join(root, 'packages/lyra-ui/scripts/check-package-size.mjs'), `import { appendFileSync, existsSync } from 'node:fs';
-const args = process.argv.slice(2), name = args[args.indexOf('--package') + 1], archive = args[args.indexOf('--tarball') + 1];
-appendFileSync(process.env.LYRA_COMPANION_TEST_LOG, JSON.stringify({ kind: 'check', args, exists: existsSync(archive) }) + '\\n');
-process.exit(name === process.env.LYRA_COMPANION_TEST_REJECT ? 1 : 0);
+const args = process.argv.slice(2);
+const name = args.includes('--package') ? args[args.indexOf('--package') + 1] : '@aceshooting/lyra-ui';
+const archive = args.includes('--tarball') ? args[args.indexOf('--tarball') + 1] : undefined;
+const kind = archive ? 'check' : 'estimate';
+appendFileSync(process.env.LYRA_COMPANION_TEST_LOG, JSON.stringify({ kind, args, exists: !!archive && existsSync(archive) }) + '\\n');
+process.exit((archive ? name : kind) === process.env.LYRA_COMPANION_TEST_REJECT ? 1 : 0);
 `);
-      const result = spawnSync(process.execPath, ['scripts/check-companion-package-sizes.mjs'], {
+      const result = spawnSync(process.execPath, ['scripts/check-companion-package-sizes.mjs', ...(includeUi ? ['--include-ui'] : [])], {
         cwd: root,
         env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, LYRA_COMPANION_TEST_LOG: calls, LYRA_COMPANION_TEST_REJECT: rejected },
         encoding: 'utf8',
       });
       assert.equal(result.status, rejected ? 1 : 0, result.stderr);
       const events = readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
-      assert.deepEqual(events.map(event => event.kind), companions.flatMap(() => ['prepare', 'pack', 'check']));
+      const expected = [...(includeUi ? ['estimate', 'pack', 'check'] : []),
+        ...companions.flatMap(() => ['prepare', 'pack', 'check'])];
+      assert.deepEqual(events.map(event => event.kind), expected);
+      if (includeUi) {
+        const [estimate, pack, check] = events.splice(0, 3);
+        assert.deepEqual(estimate.args, []);
+        assert.deepEqual(pack.args.slice(0, 2), ['pack', '--pack-destination']);
+        assert.equal(pack.cwd, join(root, 'packages', 'lyra-ui'));
+        assert.deepEqual(check.args, ['--tarball', join(pack.args[2], 'aceshooting-lyra-ui-0.0.0.tgz')]);
+        assert.equal(check.exists, true);
+      }
       for (const [index, [name, prepare]] of companions.entries()) {
         const [preparation, pack, check] = events.slice(index * 3, index * 3 + 3);
         assert.deepEqual(preparation.args, ['--filter', `@aceshooting/${name}`, prepare]);
@@ -132,15 +153,23 @@ test('qualification and release Node setup never restores package-manager caches
 });
 
 test('hosted release preparation checks prepared budgets before handing off generated source', () => {
-  const steps = read('.github/workflows/prepare-artifacts.yml');
+  const steps = job(read('.github/workflows/prepare-artifacts.yml'), 'prepare');
+  const image = steps.match(/^      image: \$\{\{ (.+) \}\}$/mu)?.[1];
+  assert.ok(image);
+  assert.equal(runInNewContext(image, { inputs: { mode: 'source' } }), '');
+  assert.match(runInNewContext(image, { inputs: { mode: 'release' } }), /^mcr\.microsoft\.com\/playwright:v\d+\.\d+\.\d+-noble$/u);
+  assert.match(steps, /defaults:\n      run:\n        shell: bash/u);
+  assert.match(steps, /- name: Ensure skill packaging tools are available\n        if: inputs\.mode == 'release'[\s\S]+for tool in python3 unzip/u);
   const prepare = steps.indexOf('run: |\n          set -euo pipefail\n          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"');
   const version = steps.indexOf('pnpm release:prepare', prepare);
-  const browsers = steps.indexOf('playwright install --with-deps chromium firefox webkit', version);
-  const budgets = steps.indexOf('run: pnpm release:budgets', browsers);
+  const browsers = steps.indexOf('accessSync(browser.executablePath(), constants.X_OK)', version);
+  const budgets = steps.indexOf('pnpm release:budgets 2>&1 | tee', browsers);
   const bundle = steps.indexOf('node scripts/prepare-artifacts.mjs bundle', budgets);
   assert.ok(prepare >= 0 && version > prepare && browsers > version && budgets > browsers && bundle > budgets);
-  assert.match(steps, /- name: Verify release budgets on prepared package versions\n        if: inputs\.mode == 'release'\n        run: pnpm release:budgets/u);
-  assert.doesNotMatch(steps.slice(browsers, bundle), /continue-on-error/u);
+  assert.match(steps, /- name: Verify provisioned browsers for release budgets\n        if: inputs\.mode == 'release'[\s\S]+\[chromium, firefox, webkit\]/u);
+  assert.match(steps, /- name: Verify release budgets on prepared package versions\n        id: release_budgets\n        if: inputs\.mode == 'release'\n        run: \|\n          set -o pipefail\n          pnpm release:budgets/u);
+  assert.match(steps, /steps\.release_budgets\.outcome == 'failure'[\s\S]+name: release-budget-measurements-/u);
+  assert.doesNotMatch(steps, /continue-on-error|playwright install/u);
 });
 
 test('hosted quick comparison uses immutable main inputs in one runner and retains its evidence', () => {

@@ -350,13 +350,21 @@ export async function readTarballMetrics(tarball, expectedPackage = JSON.parse(r
   };
 }
 
+function reportMeasurement({ name, version }, { measurement, packedBytes, unpackedBytes, fileCount, sha256 }) {
+  console.log(`Package size measurement: ${JSON.stringify({
+    name, version, measurement, packedBytes, unpackedBytes, fileCount, sha256,
+  })}`);
+}
+
 async function main() {
   const options = parsePackageSizeArguments(process.argv.slice(2));
   const budgets = validatePackageBudgets(JSON.parse(readFileSync(budgetsPath, 'utf8')));
   if (options.package) {
     // A companion archive is always inspected as produced; there is no dry-run estimate for it.
     const companionDir = join(packageDir, '..', COMPANIONS[options.package].directory);
-    const metrics = await readTarballMetrics(options.tarball, JSON.parse(readFileSync(join(companionDir, 'package.json'), 'utf8')));
+    const manifest = JSON.parse(readFileSync(join(companionDir, 'package.json'), 'utf8'));
+    const metrics = await readTarballMetrics(options.tarball, manifest);
+    reportMeasurement(manifest, metrics);
     console.log(`Package archive SHA-256: ${metrics.sha256}`);
     const findings = companionBudgetFindings(metrics, options.package, budgets);
     const summary = `${options.package}: ${formatBytes(metrics.packedBytes)} packed archive, ${formatBytes(metrics.unpackedBytes)} unpacked, ${metrics.fileCount.toLocaleString('en')} files`;
@@ -368,7 +376,9 @@ async function main() {
     console.log(`${summary} — within hard package budgets`);
     return;
   }
-  const metrics = options.tarball ? await readTarballMetrics(options.tarball) : readPackedMetrics();
+  const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
+  const metrics = options.tarball ? await readTarballMetrics(options.tarball, manifest) : readPackedMetrics();
+  reportMeasurement(manifest, metrics);
   if (metrics.sha256) console.log(`Package archive SHA-256: ${metrics.sha256}`);
   const findings = packageBudgetFindings(metrics, budgets);
   const summary = formatPackageSummary(metrics, budgets);

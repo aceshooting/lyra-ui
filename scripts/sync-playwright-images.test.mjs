@@ -6,8 +6,12 @@ import test from 'node:test';
 
 import { pinnedPlaywright, syncPlaywrightImages } from './sync-playwright-images.mjs';
 
-const WORKFLOWS = ['ci.yml', 'full-engine.yml', 'quality-tools.yml', 'test-all-browsers.yml'];
-const image = (version) => `container:\n  image: mcr.microsoft.com/playwright:v${version}-noble\n`;
+const WORKFLOWS = ['ci.yml', 'full-engine.yml', 'quality-tools.yml', 'test-all-browsers.yml', 'prepare-artifacts.yml'];
+function image(version, conditional) {
+  const reference = `mcr.microsoft.com/playwright:v${version}-noble`;
+  const value = conditional ? `\${{ inputs.mode == 'release' && '${reference}' || '' }}` : reference;
+  return `container:\n  image: ${value}\n`;
+}
 
 function fixtureRoot({ pinned = '1.64.0', images = '1.63.0', versionFile = '1.63.0' } = {}) {
   const root = mkdtempSync(path.join(tmpdir(), 'lyra-playwright-images-'));
@@ -16,7 +20,7 @@ function fixtureRoot({ pinned = '1.64.0', images = '1.63.0', versionFile = '1.63
     path.join(root, 'package.json'),
     JSON.stringify({ devDependencies: { playwright: `^${pinned}` } }),
   );
-  for (const name of WORKFLOWS) writeFileSync(path.join(root, '.github/workflows', name), image(images));
+  for (const name of WORKFLOWS) writeFileSync(path.join(root, '.github/workflows', name), image(images, name === 'prepare-artifacts.yml'));
   writeFileSync(path.join(root, '.github/playwright-version.txt'), `${versionFile}\n`);
   return root;
 }
@@ -45,7 +49,7 @@ test('check mode reports stale images without writing; write mode updates every 
 
     syncPlaywrightImages({ write: true, repoRoot: root });
     for (const name of WORKFLOWS) {
-      assert.equal(readFileSync(path.join(root, '.github/workflows', name), 'utf8'), image('1.64.0'));
+      assert.equal(readFileSync(path.join(root, '.github/workflows', name), 'utf8'), image('1.64.0', name === 'prepare-artifacts.yml'));
     }
     assert.equal(readFileSync(path.join(root, '.github/playwright-version.txt'), 'utf8'), '1.64.0\n');
     assert.deepEqual(syncPlaywrightImages({ write: false, repoRoot: root }).stale, []);
