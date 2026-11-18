@@ -39,7 +39,7 @@ if [[ "$channel" == msedge ]]; then
     -o "Dir::State::lists=$edge_apt/lists"
     -o 'Dir::Cache::pkgcache='
     -o 'Dir::Cache::srcpkgcache='
-    -o 'Acquire::Retries=2'
+    -o 'Acquire::Retries=7'
     -o 'Acquire::https::Timeout=20')
   "${apt_command[@]}" --error-on=any update
   "${apt_command[@]}" --reinstall --no-remove --no-install-recommends -y install microsoft-edge-stable/stable
