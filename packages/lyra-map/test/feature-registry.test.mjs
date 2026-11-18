@@ -244,14 +244,16 @@ test('globe and vertical perspective modules load together, once, and never for 
   const registry = await instantiate('geo/projection/projection_factory.ts', ['prepareProjection'], {
     'globe_projection.ts': classes('GlobeProjection'),
     'vertical_perspective_projection.ts': classes('VerticalPerspectiveProjection'),
-    'globe-camera.ts': { prepareGlobeCamera() { cameraPreparations++; } },
+    'globe-camera.ts': { installGlobeCamera() { cameraPreparations++; } },
+    'globe_camera_math.ts': {}, 'vertical_perspective_camera_math.ts': {},
+    'vertical_perspective_camera_motions.ts': {}, 'vertical_perspective_camera_solver.ts': {},
   });
   await registry.prepareProjection('mercator');
   assert.deepEqual(registry.loads, []);
   await Promise.all([registry.prepareProjection('globe'), registry.prepareProjection('vertical-perspective')]);
   await registry.prepareProjection('globe');
   assert.equal(cameraPreparations, 1);
-  assert.equal(registry.loads.length, 3);
+  assert.equal(registry.loads.length, 7);
 });
 
 test('loading Mercator camera math before preparation preserves live constructors for both globe projections', async () => {
@@ -262,12 +264,7 @@ test('loading Mercator camera math before preparation preserves live constructor
     return JSON.stringify(modules[name]);
   }));
   const cameraModule = join(src, 'modular/globe-camera.ts');
-  const cameraUrl = urlFor(virtual.get(cameraModule), {
-    'globe_camera_math.ts': sourceUrl('export class GlobeCameraMath { constructor(mercator, vertical) { Object.assign(this, { mercator, vertical }); } }'),
-    'vertical_perspective_camera_math.ts': sourceUrl('export class VerticalPerspectiveCameraMath {} export function createVerticalPerspectiveProjectedCamera() {}'),
-    'vertical_perspective_camera_motions.ts': sourceUrl('export class VerticalPerspectiveCameraMotions {}'),
-    'vertical_perspective_camera_solver.ts': sourceUrl('export class VerticalPerspectiveCameraSolver {}'),
-  });
+  const cameraUrl = sourceUrl(virtual.get(cameraModule));
   const id = join(src, 'camera/camera_math_factory.ts');
   const { code } = await completePlugin.transform(await readFile(id, 'utf8'), id);
   const factoryUrl = urlFor(stripTypeScriptTypes(code, { mode: 'transform' }), {
@@ -279,7 +276,18 @@ test('loading Mercator camera math before preparation preserves live constructor
   assert.equal(mercator.constructor.name, 'MercatorCameraMath');
   const camera = await import(cameraUrl);
   assert.equal(camera.GlobeCameraMath, undefined);
-  await camera.prepareGlobeCamera();
+  const projection = await instantiate('geo/projection/projection_factory.ts', ['prepareProjection'], {
+    'globe_projection.ts': classes('GlobeProjection'),
+    'vertical_perspective_projection.ts': classes('VerticalPerspectiveProjection'),
+    'globe-camera.ts': camera,
+    'globe_camera_math.ts': { GlobeCameraMath: class {
+      constructor(mercator, vertical) { Object.assign(this, { mercator, vertical }); }
+    } },
+    'vertical_perspective_camera_math.ts': classes('VerticalPerspectiveCameraMath'),
+    'vertical_perspective_camera_motions.ts': classes('VerticalPerspectiveCameraMotions'),
+    'vertical_perspective_camera_solver.ts': classes('VerticalPerspectiveCameraSolver'),
+  });
+  await projection.prepareProjection('globe');
   const vertical = getCameraMath({ projection: 'vertical-perspective' });
   const globe = getCameraMath({ projection: 'globe' });
   assert.ok(vertical instanceof camera.VerticalPerspectiveCameraMath);

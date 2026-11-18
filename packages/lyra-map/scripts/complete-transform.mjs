@@ -18,6 +18,8 @@ const path = (p) => serializeJavaScript(resolve(src, p));
 const runtimeId = moduleId('runtime');
 const prepareId = moduleId('prepare');
 const globeCameraId = moduleId('globe-camera');
+const tileTransferRegistrations = `register('CanonicalTileID', CanonicalTileID);
+register('OverscaledTileID', OverscaledTileID, {omit: ['terrainRttPosMatrix32f']});`;
 function replace(code, old, value, count = 1) {
   const n = code.split(old).length - 1;
   if (n !== count) throw Error(`Patch mismatch ${old.slice(0, 80)}: ${n} != ${count}`);
@@ -42,11 +44,7 @@ function family(name) {
 // globe-only imports before the style installs a non-Mercator projection.
 virtual.set(globeCameraId, `export let GlobeCameraMath, VerticalPerspectiveCameraMath,
   VerticalPerspectiveCameraMotions, VerticalPerspectiveCameraSolver, createVerticalPerspectiveProjectedCamera;
-export async function prepareGlobeCamera() {
-  const [globe, vertical, motions, solver] = await Promise.all([
-    import(${path('camera/globe_camera_math.ts')}), import(${path('camera/vertical_perspective_camera_math.ts')}),
-    import(${path('camera/vertical_perspective_camera_motions.ts')}), import(${path('camera/vertical_perspective_camera_solver.ts')})
-  ]);
+export function installGlobeCamera(globe, vertical, motions, solver) {
   GlobeCameraMath = globe.GlobeCameraMath;
   VerticalPerspectiveCameraMath = vertical.VerticalPerspectiveCameraMath;
   createVerticalPerspectiveProjectedCamera = vertical.createVerticalPerspectiveProjectedCamera;
@@ -220,6 +218,23 @@ export const completePlugin = {
         'function importAsDataUrl(url: string): string {\n    const href = new URL(url, globalThis.document?.baseURI ?? globalThis.location.href).href;\n    return `data:text/javascript;charset=utf-8,${encodeURIComponent("import " + JSON.stringify(href))}`;\n}');
       code = replace(code, 'createWorker(await fetchAsDataUrl(url), asModule)', 'createWorker(importAsDataUrl(url), asModule)');
     }
+    if (rel === 'util/smart_wrap.ts') {
+      // The two covering-tile providers allow world copies only on the rendered Mercator camera.
+      code = replace(code, "import {getCoveringTilesDetailsProvider} from '../geo/projection/covering_tiles_details_provider_factory.ts';",
+        "import {isGlobeRendering} from '../camera/projected_camera.ts';");
+      code = replace(code, '!getCoveringTilesDetailsProvider(projectedCamera).allowWorldCopies()', 'isGlobeRendering(projectedCamera)');
+    }
+    if (rel === 'tile/tile_id.ts') {
+      code = replace(code, "import {register} from '../util/web_worker_transfer.ts';\n", '');
+      code = replace(code, tileTransferRegistrations, '');
+    }
+    if (rel === 'util/web_worker_transfer.ts') {
+      // Register the classes when the codec initializes in either realm. A control that
+      // uses tile geometry without a worker does not need the style expression codecs.
+      code = "import {CanonicalTileID, OverscaledTileID} from '../tile/tile_id.ts';\n" +
+        replace(code, "register('TransferableGridIndex', TransferableGridIndex);",
+          "register('TransferableGridIndex', TransferableGridIndex);\n" + tileTransferRegistrations);
+    }
     if (rel === 'source/source.ts')
       code = code.replace(
         "if(!Object.hasOwn(loaders,t))throw new Error('Unknown feature '+t);",
@@ -236,7 +251,13 @@ export const completePlugin = {
         }
       );
       if (loaders.length !== 2) throw Error('Projection imports drift');
-      loaders.push(`import(${serializeJavaScript(globeCameraId)}).then(m=>m.prepareGlobeCamera())`);
+      // Only projection preparation imports the implementations. A control consuming
+      // the ready camera registry needs neither motion solvers nor their modules.
+      loaders.push(`Promise.all([
+        import(${serializeJavaScript(globeCameraId)}), import(${path('camera/globe_camera_math.ts')}),
+        import(${path('camera/vertical_perspective_camera_math.ts')}), import(${path('camera/vertical_perspective_camera_motions.ts')}),
+        import(${path('camera/vertical_perspective_camera_solver.ts')})
+      ]).then(([registry, globe, vertical, motions, solver]) => registry.installGlobeCamera(globe, vertical, motions, solver))`);
       code += `\nlet projectionReady;export async function prepareProjection(name){if(name==='mercator')return;return projectionReady??=(Promise.all([${loaders}]).catch(e=>{projectionReady=undefined;throw e;}));}`;
     }
     if (rel === 'ui/map.ts') {

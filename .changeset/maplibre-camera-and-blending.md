@@ -12,3 +12,5 @@ Update direct gesture-handler construction, custom handler animation results, an
 low-level feature query and painter methods as described in the Lyra Map 2.x migration guide.
 Sandboxed pages can use modular workers when the server permits cross-origin module requests.
 The `lr-map` component supports both Lyra Map 1.x (from 1.5.2) and 2.x.
+
+Load geolocation controls without worker codecs or unused projection solvers.

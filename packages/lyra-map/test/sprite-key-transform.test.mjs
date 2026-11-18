@@ -19,10 +19,15 @@ async function codecHarness() {
   const names = ['TransferableGridIndex', 'Color', 'CompoundExpression', 'ResolvedImage', 'StylePropertyFunction',
     'StyleExpression', 'ZoomDependentExpression', 'ZoomConstantExpression', 'AJAXError'];
   const dependencies = Object.fromEntries(names.map(name => [name, class {}]));
+  const tileTypes = await moduleHarness('tile/tile_id.ts', ['CanonicalTileID', 'OverscaledTileID'], {
+    isInBoundsForTileZoomXY: () => true,
+  });
+  Object.assign(dependencies, tileTypes);
   dependencies.expressions = {};
   dependencies.isImageBitmap = () => false;
   dependencies.ImageData = class {};
-  return moduleHarness('util/web_worker_transfer.ts', ['register', 'serialize', 'deserialize'], dependencies);
+  const codec = await moduleHarness('util/web_worker_transfer.ts', ['register', 'serialize', 'deserialize'], dependencies);
+  return { ...tileTypes, ...codec };
 }
 
 const specialNames = ['constructor', 'hasOwnProperty', '__proto__'];
@@ -44,6 +49,20 @@ test('worker codec round-trips own dictionary names without changing the output 
       assert.deepEqual(result[name], { index });
     }
   }
+});
+
+test('the worker codec restores both tile ID classes while keeping terrain render matrices local', async () => {
+  const { OverscaledTileID, CanonicalTileID, serialize, deserialize } = await codecHarness();
+  const tile = new OverscaledTileID(4, -1, 3, 7, 2);
+  tile.terrainRttPosMatrix32f = new Float32Array(16);
+  const wire = serialize(tile);
+  assert.equal(wire.$name, 'OverscaledTileID');
+  assert.equal(wire.canonical.$name, 'CanonicalTileID');
+  assert.equal(Object.hasOwn(wire, 'terrainRttPosMatrix32f'), false);
+  const copy = deserialize(structuredClone(wire));
+  assert.ok(copy instanceof OverscaledTileID);
+  assert.ok(copy.canonical instanceof CanonicalTileID);
+  assert.equal(copy.equals(tile), true);
 });
 
 test('worker codec retains registered class brands even with an own constructor field', async () => {

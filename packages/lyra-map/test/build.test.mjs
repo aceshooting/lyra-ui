@@ -5,7 +5,7 @@ import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } fro
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, before } from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build as buildVite, createLogger } from 'vite';
 import { createScratchPackage } from '../scripts/scratch-package.mjs';
 import { CHANGED_SOURCE_FILES, upstreamRoot } from './pinned-upstream.mjs';
@@ -97,6 +97,46 @@ test('each control has a granular entry and a declaration that reuses the root t
       .exec(await text(built.directory, `dist/controls/${name}.mjs`));
     assert.ok(entry && files.has(entry[1]), `${name} entry loads its own module`);
     assert.equal(await text(built.directory, `dist/controls/${name}.d.ts`), `export {${exported}} from '../index.js';\n`);
+  }
+});
+
+test('geolocation keeps marker camera math without importing tile transfer or projection preparation', () => {
+  const modules = new Map(provenance.modules.map(module => [module.file, module]));
+  const pending = [...modules.keys()].filter(name => name.startsWith('modules/control-geolocate-'));
+  assert.equal(pending.length, 1);
+  const reached = new Set();
+  while (pending.length) {
+    const name = pending.pop();
+    if (reached.has(name)) continue;
+    reached.add(name);
+    const module = modules.get(name);
+    pending.push(...module.imports, ...module.dynamicImports);
+  }
+  const names = [...reached];
+  assert.ok(names.some(name => name.startsWith('modules/mercator_camera_math-')));
+  for (const feature of ['web_worker_transfer', 'covering_tiles_details_provider_factory',
+    'vertical_perspective_camera_motions', 'vertical_perspective_camera_solver']) {
+    assert.ok(!names.some(name => name.startsWith(`modules/${feature}-`)), feature);
+  }
+});
+
+test('marker world wrapping agrees with the rendered projection, including both sides of the globe transition', async () => {
+  async function loadModule(name) {
+    const module = provenance.modules.find(module => module.file.startsWith(`modules/${name}-`));
+    return import(pathToFileURL(join(built.directory, 'dist', module.file)).href);
+  }
+  const { smartWrap } = await loadModule('smart_wrap');
+  const { getCoveringTilesDetailsProvider } = await loadModule('covering_tiles_details_provider_factory');
+  const { LngLat } = await loadModule('lng_lat');
+  const location = new LngLat(540, 10);
+  const mercator = { projection: 'mercator', center: location };
+  const verticalPerspective = { projection: 'vertical-perspective', center: location };
+  const globe = { projection: 'globe', mercator, verticalPerspective, center: location };
+  for (const camera of [mercator, verticalPerspective, { ...globe, globeness: 1 },
+    { ...globe, globeness: 0.5 }, { ...globe, globeness: 0 }]) {
+    const expected = getCoveringTilesDetailsProvider(camera).allowWorldCopies() ? location : location.wrap();
+    assert.equal(smartWrap(location, null, camera, {}).lng, expected.lng);
+    assert.equal(smartWrap(location, null, camera, {}, true).lng, location.wrap().lng);
   }
 });
 
