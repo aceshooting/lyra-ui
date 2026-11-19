@@ -623,6 +623,25 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return entry?.needsApproval === true && entry.approved === undefined;
   }
 
+  private reviewedArgs?: { key: string; json: string; args: unknown };
+  /** A host that reassigns the same still-pending entry (a failed save re-sending its controlled
+   *  `entries`) hands over a new but equal `args` object. Keep the one the dialog already shows, so
+   *  that dialog does not treat it as a new proposal and drop the held decision and the draft. */
+  private reviewArgs(entry: CanonicalToolTimelineEntry): unknown {
+    const key = entryIdentity(entry);
+    let json: string;
+    try {
+      json = JSON.stringify(entry.args);
+    } catch {
+      this.reviewedArgs = undefined;
+      return entry.args;
+    }
+    const previous = this.reviewedArgs;
+    if (previous?.key === key && previous.json === json) return previous.args;
+    this.reviewedArgs = { key, json, args: entry.args };
+    return entry.args;
+  }
+
   private decisionDispatching = false;
   private onDialogDecision = (event: CustomEvent<{args?: unknown; waitUntil: ApprovalWaitUntil}>): void => {
     event.stopPropagation();
@@ -842,7 +861,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         part="approval-dialog"
         tool-name=${reviewing?.name ?? ''}
         .proposalKey=${reviewing === undefined ? '' : entryIdentity(reviewing)}
-        .args=${reviewing?.args ?? {}}
+        .args=${reviewing ? this.reviewArgs(reviewing) : {}}
         .readonly=${this.approvalReadonly}
         .disabled=${this.disabled}
         .open=${reviewing !== undefined}
