@@ -134,3 +134,19 @@ it('uses the themed row hover color', async () => {
     expect(getComputedStyle(target).backgroundColor).to.equal('rgb(5, 10, 15)');
   } finally { await resetMouse(); }
 });
+
+it('keeps the shortest span inside the timeline at its final timestamp in both directions', async () => {
+  const spans: LyraSpan[] = [
+    { id: 'range', name: 'Range', kind: 'tool', status: 'success', startMs: 0, endMs: 100 },
+    { id: 'end', name: 'End', kind: 'tool', status: 'success', startMs: 100, endMs: 100 },
+  ];
+  for (const dir of ['ltr', 'rtl']) {
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree dir=${dir} style="inline-size: 900px" .spans=${spans}></lr-trace-tree>`);
+    const track = el.shadowRoot!.querySelector('[data-id="end"] [part="bar-track"]')!;
+    const bar = track.firstElementChild!.getBoundingClientRect();
+    const bounds = track.getBoundingClientRect();
+    expect(bar.width).to.be.at.least(2);
+    expect(bar.left).to.be.at.least(bounds.left - 0.1);
+    expect(bar.right).to.be.at.most(bounds.right + 0.1);
+  }
+});

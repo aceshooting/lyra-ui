@@ -1274,6 +1274,59 @@ export function resolveLocalizedParts(
   template: string,
   interpolate: (marker: string) => string
 ): string[] {
+  const marker = selectAbsentMarker(template);
+  return interpolate(marker).split(marker);
+}
+
+/** One rich slot in {@link resolveLocalizedSlots} output. */
+export interface LocalizedSlot {
+  readonly slot: string;
+}
+
+/**
+ * Like {@link resolveLocalizedParts} for several rich values: `interpolate` receives one distinct
+ * marker per name and returns the localized message. The result is the message's text runs and
+ * `{ slot }` entries in translated order; empty text runs are dropped, and a placeholder the
+ * translation repeats or omits appears that many times.
+ */
+export function resolveLocalizedSlots(
+  template: string,
+  names: readonly string[],
+  interpolate: (markers: Readonly<Record<string, string>>) => string
+): Array<string | LocalizedSlot> {
+  const markers: Record<string, string> = Object.create(null) as Record<string, string>;
+  const byMarker = new Map<string, string>();
+  let seen = template;
+  for (const name of names) {
+    if (Object.prototype.hasOwnProperty.call(markers, name)) continue;
+    const marker = selectAbsentMarker(seen);
+    markers[name] = marker;
+    byMarker.set(marker, name);
+    seen += marker;
+  }
+  const text = interpolate(markers);
+  const out: Array<string | LocalizedSlot> = [];
+  let start = 0;
+  for (;;) {
+    let at = -1;
+    let found = '';
+    for (const marker of byMarker.keys()) {
+      const index = text.indexOf(marker, start);
+      if (index !== -1 && (at === -1 || index < at)) {
+        at = index;
+        found = marker;
+      }
+    }
+    if (at === -1) break;
+    if (at > start) out.push(text.slice(start, at));
+    out.push({ slot: byMarker.get(found)! });
+    start = at + found.length;
+  }
+  if (start < text.length) out.push(text.slice(start));
+  return out;
+}
+
+function selectAbsentMarker(template: string): string {
   const privateUse = new Set<number>();
   for (let index = 0; index < template.length; index += 1) {
     const code = template.charCodeAt(index);
@@ -1326,5 +1379,5 @@ export function resolveLocalizedParts(
       );
     }
   }
-  return interpolate(marker).split(marker);
+  return marker;
 }

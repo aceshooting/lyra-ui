@@ -19,7 +19,7 @@ import { projectLyraSpans } from './span-projection.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { createHierarchySummarySource, captureHierarchySourceEffects, traceSourceSummary } from '../../../internal/hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -364,26 +364,23 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const { epoch, error, loading, rowError, rowsObserved, bound, current } = captureHierarchySourceEffects(this, this.sourceControl,
+    const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
+    const { epoch, bound, current } = snapshot;
     if (!current()) return;
     for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')) {
       const active = row.dataset['sourceKey'] === this.activeSpanId;
       row.setAttribute('aria-current', String(active));
       row.toggleAttribute('data-active', active);
     }
-    const status = error ? this.localize('treeSourceError') : loading ? this.localize('loading') : this.sourceSummary();
-    if (!current()) return;
-    if (this.sourceAnnouncement !== undefined && status !== this.sourceAnnouncement) {
-      this.announcements.announcePolite(status);
-      if (!current()) return;
-    }
-    if (rowsObserved) {
-      const message = rowError ? this.localize('treeSourceError') : '';
-      if (!current()) return;
-      this.announcements.transition('source-rows', rowError ? 'error' : 'ready', message);
-      if (!current()) return;
-    }
+    const status = applyHierarchySourceEffects(snapshot, {
+      errorText: () => this.localize('treeSourceError'),
+      loadingText: () => this.localize('loading'),
+      summary: () => this.sourceSummary(),
+      announce: text => this.announcements.announcePolite(text),
+      rowsTransition: (state, message) => this.announcements.transition('source-rows', state, message),
+    }, this.sourceAnnouncement);
+    if (status === undefined) return;
     this.sourceAnnouncement = status;
     const key = this.activeSpanId;
     if (!key || (this.sourceReveal?.[0] === epoch && this.sourceReveal[1] === key)) return;
@@ -421,7 +418,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       <span part="detail">${span.detail ?? ''}</span>
       <span part="status-text" data-status=${span.status}>${this.localize(STATUS_LABEL_KEY[span.status])}</span>
       ${!this.withoutBars ? html`<span part="bar-track"><span part="bar" data-status=${span.status}
-        style=${`inset-inline-start:${start}%;inline-size:${width}%`}></span></span>` : nothing}
+        style=${`--_lr-trace-tree-bar-start:${start}%;inline-size:${width}%`}></span></span>` : nothing}
       <span part="duration">${this.formatDuration(span.endMs === undefined ? undefined : span.endMs - span.startMs)}</span>
       ${this.withTokens ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatLocaleNumber(finiteCount(span.tokensIn)) : ''}</span>
         <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatLocaleNumber(finiteCount(span.tokensOut)) : ''}</span>` : nothing}
@@ -935,7 +932,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         <span part="status-text" data-status=${span.status}>${this.localize(STATUS_LABEL_KEY[span.status])}</span>
         ${!this.withoutBars
           ? html`<span part="bar-track"
-              ><span part="bar" data-status=${span.status} style=${`inset-inline-start:${startPct}%;inline-size:${widthPct}%`}></span
+              ><span part="bar" data-status=${span.status} style=${`--_lr-trace-tree-bar-start:${startPct}%;inline-size:${widthPct}%`}></span
             ></span>`
           : nothing}
         <span part="duration">${durationLabel}</span>

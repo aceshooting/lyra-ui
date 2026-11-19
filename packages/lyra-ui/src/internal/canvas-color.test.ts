@@ -117,6 +117,50 @@ describe('readCanvasRgba', () => {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
     }
   });
+  it('reuses one readback canvas per document across colours', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const doc = frame.contentDocument!;
+      const original = doc.createElementNS;
+      let created = 0;
+      doc.createElementNS = function (this: Document, ...args: Parameters<Document['createElementNS']>) {
+        created += 1;
+        return original.apply(this, args);
+      } as Document['createElementNS'];
+      expect(readCanvasRgba(doc, '#ff0000')).to.deep.equal([255, 0, 0, 1]);
+      expect(readCanvasRgba(doc, '#00ff00')).to.deep.equal([0, 255, 0, 1]);
+      expect(readCanvasRgba(doc, 'blue')).to.deep.equal([0, 0, 255, 1]);
+      expect(created).to.equal(1);
+    } finally {
+      frame.remove();
+    }
+  });
+  it('reads through a supplied context and restores its drawing state', () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.globalAlpha = 0.25;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.setTransform(4, 0, 0, 4, 9, 9);
+    ctx.fillStyle = '#123456';
+    expect(readCanvasRgba(document, '#ff8000', ctx)).to.deep.equal([255, 128, 0, 1]);
+    expect(ctx.globalAlpha).to.equal(0.25);
+    expect(ctx.globalCompositeOperation).to.equal('multiply');
+    expect(ctx.getTransform().a).to.equal(4);
+    expect(ctx.fillStyle).to.equal('#123456');
+  });
+  it('returns undefined for a document whose canvas has no 2D context', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const view = frame.contentWindow as unknown as { HTMLCanvasElement: typeof HTMLCanvasElement };
+      view.HTMLCanvasElement.prototype.getContext = () => null;
+      expect(readCanvasRgba(frame.contentDocument!, '#ff0000')).to.equal(undefined);
+      expect(readCanvasRgba(frame.contentDocument!, '#ff0000')).to.equal(undefined);
+    } finally {
+      frame.remove();
+    }
+  });
   it('serializes to rgb/rgba strings', () => {
     expect(toRgbaString([1, 2, 3, 1])).to.equal('rgb(1, 2, 3)');
     expect(toRgbaString([1, 2, 3, 0.5])).to.equal('rgba(1, 2, 3, 0.5)');

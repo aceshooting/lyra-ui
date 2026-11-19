@@ -167,6 +167,27 @@ describe('owned observers', () => {
     expect(readInlineSize({ contentRect: { width: -1 } })).to.be.undefined;
     expect(readInlineSize(null)).to.be.undefined;
   });
+  it('delivers an empty list for a revoked entries container instead of throwing', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const fakes = (['ResizeObserver', 'IntersectionObserver', 'MutationObserver'] as const).map((n) => installFake(window, n));
+    const received: unknown[][] = [];
+    try {
+      new OwnedResizeObserver(host, (e) => received.push(e)).observe(host);
+      new OwnedIntersectionObserver(host, (e) => received.push(e)).observe(host);
+      new OwnedMutationObserver(host, (r) => received.push(r)).observe(host, { childList: true });
+      for (const fake of fakes) {
+        const { proxy, revoke } = Proxy.revocable([], {});
+        revoke();
+        fake.instances[0]!.cb(proxy);
+        fake.instances[0]!.cb(undefined as never);
+      }
+      expect(received.map((list) => list.length)).to.deep.equal([0, 0, 0, 0, 0, 0]);
+    } finally {
+      fakes.forEach((f) => f.restore());
+      host.remove();
+    }
+  });
 });
 
 describe('observer controllers', () => {

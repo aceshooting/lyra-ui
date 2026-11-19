@@ -1,6 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
-  isAbortError,
   readResponseArrayBuffer,
   readResponseText,
   resolveOwnerFetchTarget,
@@ -12,7 +11,8 @@ export type ViewerSourceHost = HTMLElement & ReactiveControllerHost;
 /** Identifies one `begin()` call; pass it to {@link ViewerSourceController.isStale} after every await. */
 export interface ViewerSourceToken {
   readonly generation: number;
-  /** Aborted when a newer load begins or the host disconnects; undefined without an owner window. */
+  /** Aborted when a newer load begins or the host disconnects; undefined without an owner window or
+   * its `AbortController`. */
   readonly signal: AbortSignal | undefined;
   /** The browsing context that issued the request. */
   readonly view: Window & typeof globalThis;
@@ -42,6 +42,9 @@ export interface ViewerSourceOptions {
   onError(error: unknown, token: ViewerSourceToken): void;
   /** Byte ceiling for {@link ViewerSourceController.readArrayBuffer}/`readText`. */
   readonly maxBytes?: number;
+  /** Read at disconnect: when true, the in-flight load survives a same-task re-insertion in the same
+   * window and is cancelled a microtask later only if the host stayed detached. */
+  readonly retainAcrossMove?: () => boolean;
 }
 
 /**
@@ -53,6 +56,8 @@ export interface ViewerSourceOptions {
 export class ViewerSourceController implements ReactiveController {
   private current = 0;
   private abortController: AbortController | undefined;
+  private loadView: Window | null | undefined;
+  private pendingDetach: object | undefined;
 
   constructor(
     private readonly host: ViewerSourceHost,
@@ -66,10 +71,24 @@ export class ViewerSourceController implements ReactiveController {
     return this.current;
   }
 
-  hostConnected(): void {}
+  hostConnected(): void {
+    this.pendingDetach = undefined;
+    // Disconnect reactions run after adoption, so only the load's own view can detect a move away.
+    if (this.loadView !== undefined && this.loadView !== this.host.ownerDocument.defaultView) this.cancel();
+  }
 
   hostDisconnected(): void {
-    this.cancel();
+    if (this.options.retainAcrossMove?.() !== true) {
+      this.cancel();
+      return;
+    }
+    const pending = {};
+    this.pendingDetach = pending;
+    queueMicrotask(() => {
+      if (this.pendingDetach !== pending) return;
+      this.pendingDetach = undefined;
+      this.cancel();
+    });
   }
 
   /** Invalidates and aborts any in-flight load without starting another. */
@@ -77,6 +96,7 @@ export class ViewerSourceController implements ReactiveController {
     this.current += 1;
     this.abortController?.abort();
     this.abortController = undefined;
+    this.loadView = undefined;
   }
 
   /** True once `token` was superseded, aborted, or its host disconnected or moved to another window. */
@@ -108,8 +128,9 @@ export class ViewerSourceController implements ReactiveController {
     if (src === undefined || src === null || src === '') return;
     const view = this.host.ownerDocument.defaultView;
     const generation = this.current;
-    const controller = view ? new view.AbortController() : undefined;
+    const controller = typeof view?.AbortController === 'function' ? new view.AbortController() : undefined;
     this.abortController = controller;
+    this.loadView = view;
     const token: ViewerSourceToken = {
       generation,
       signal: controller?.signal,
@@ -127,7 +148,7 @@ export class ViewerSourceController implements ReactiveController {
       if (!response.ok) throw new ViewerSourceHttpError(response.status, response.statusText);
       await this.options.load(response, { ...token, view: target.view });
     } catch (error) {
-      if (this.isStale(token) || isAbortError(error)) return;
+      if (this.isStale(token)) return;
       this.options.onError(error, token);
     } finally {
       discardBody(response);

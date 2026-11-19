@@ -62,7 +62,9 @@ it('navigates End across the full source and uses the global nonzero extent', as
   const el = await fixture<Tree>(html`<lr-trace-tree .treeSource=${source}></lr-trace-tree>`);
   await ready(el);
   const bar = el.shadowRoot!.querySelector<HTMLElement>('[part="bar"]')!;
-  expect(bar.style.insetInlineStart).to.equal('10%');
+  expect(bar.style.getPropertyValue('--_lr-trace-tree-bar-start')).to.equal('10%');
+  const track = bar.parentElement!.getBoundingClientRect();
+  expect(bar.getBoundingClientRect().left - track.left).to.be.closeTo(track.width * 0.1, 0.1);
   expect(bar.style.inlineSize).to.equal('10%');
   await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[role="tree"]')!);
   await sendKeys({ press: 'End' });
@@ -283,7 +285,9 @@ it('keeps zero and extreme finite extents finite, including running endpoints', 
     } }; } };
     const el = await fixture<Tree>(html`<lr-trace-tree .treeSource=${source}></lr-trace-tree>`); await ready(el);
     const bar = el.shadowRoot!.querySelector<HTMLElement>('[part="bar"]')!;
-    expect(bar.style.insetInlineStart).to.equal('0%');
+    expect(bar.style.getPropertyValue('--_lr-trace-tree-bar-start')).to.equal('0%');
+    const track = bar.parentElement!.getBoundingClientRect();
+    expect(bar.getBoundingClientRect().left - track.left).to.be.closeTo(0, 0.1);
     expect(bar.style.inlineSize).to.equal(summary.startMs === summary.endMs ? '1%' : '100%');
     expect(el.shadowRoot!.textContent).not.to.contain('Infinity');
   }

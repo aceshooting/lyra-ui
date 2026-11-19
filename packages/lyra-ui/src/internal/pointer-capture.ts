@@ -25,6 +25,27 @@ export function releasePointer(el: Element, id: number): void {
   }
 }
 
+/** Calls `setPointerCapture(id)` and reports whether the native call returned without throwing,
+ *  without probing `hasPointerCapture` (a gesture that admits on the call itself). Never throws. */
+export function trySetPointerCapture(el: Element, id: number): boolean {
+  try {
+    if (typeof el.setPointerCapture !== 'function') return false;
+    el.setPointerCapture(id);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Always attempts `releasePointerCapture(id)`, with no `hasPointerCapture` probe. Never throws. */
+export function tryReleasePointerCapture(el: Element, id: number): void {
+  try {
+    el.releasePointerCapture?.(id);
+  } catch {
+    // Releasing a pointer that is not captured (or already gone) throws NotFoundError.
+  }
+}
+
 interface Suppression {
   keys: Set<string>;
   timer: number;

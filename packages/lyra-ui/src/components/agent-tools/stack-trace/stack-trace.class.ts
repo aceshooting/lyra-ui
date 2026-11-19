@@ -18,6 +18,7 @@ import { LYRA_DEFAULT_stackTraceInternalFrames, LYRA_DEFAULT_stackTraceLabel, LY
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+const regexpSource = Object.getOwnPropertyDescriptor(RegExp.prototype, 'source')!.get!;
 const MAX_INTERNAL_PATTERNS = 10_000;
 
 function snapshotInternalPatterns(value: unknown): readonly (string | RegExp)[] {
@@ -45,8 +46,9 @@ function snapshotInternalPatterns(value: unknown): readonly (string | RegExp)[] 
       const pattern = descriptor.value;
       if (typeof pattern === 'string') {
         if (pattern.trim().length > 0) patterns.push(pattern);
-      } else if (Object.prototype.toString.call(pattern) === '[object RegExp]') {
-        patterns.push(new RegExp(pattern.source, pattern.flags));
+      } else {
+        const source: string = regexpSource.call(pattern);
+        patterns.push(new RegExp(source, pattern.flags));
       }
     } catch {
       // A malformed entry cannot suppress later valid patterns.

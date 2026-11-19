@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { CollectionSourceTracker } from './collection-source-tracker.js';
+import { CollectionSourceTracker, SnapshotProperty } from './collection-source-tracker.js';
 
 it('tracks only the latest source per property without replacing it on snapshot round trips', () => {
   const tracker = new CollectionSourceTracker();
@@ -44,4 +44,34 @@ it('recognizes cross-realm and revoked proxy identities without inspecting their
   revoke();
   expect(tracker.isRebind('rows', proxy, snapshot)).to.equal(true);
   expect(tracker.isRebind('columns', proxy, snapshot)).to.equal(false);
+});
+
+describe('SnapshotProperty', () => {
+  it('normalizes a new source once, publishes before requestUpdate and skips rebinds', () => {
+    let normalized = 0;
+    const property = new SnapshotProperty<readonly string[]>([], (input) => {
+      normalized += 1;
+      return Object.freeze(Array.isArray(input) ? input.filter((v): v is string => typeof v === 'string') : []);
+    });
+    const updates: Array<[PropertyKey | undefined, unknown, readonly string[]]> = [];
+    const host = { requestUpdate: (name?: PropertyKey, old?: unknown) => updates.push([name, old, property.read()]) };
+    const source = ['a', 1, 'b'];
+    expect(property.assign(host, 'items', source)).to.equal(true);
+    expect(property.read()).to.deep.equal(['a', 'b']);
+    expect(updates.length).to.equal(1);
+    expect(updates[0]![0]).to.equal('items');
+    expect(updates[0]![2] === property.read()).to.equal(true);
+    expect(property.assign(host, 'items', source)).to.equal(false);
+    expect(property.assign(host, 'items', property.read())).to.equal(false);
+    expect(normalized).to.equal(1);
+    const before = property.read();
+    expect(property.assign(host, 'items', ['c'])).to.equal(true);
+    expect(updates[1]![1] === before).to.equal(true);
+    expect(property.assign(host, 'items', source)).to.equal(true);
+    expect(property.assign(host, 'items', null)).to.equal(true);
+    expect(property.assign(host, 'items', null)).to.equal(false);
+    expect(property.assign(host, 'items', 'x')).to.equal(true);
+    expect(property.assign(host, 'items', 'x')).to.equal(false);
+    expect(normalized).to.equal(5);
+  });
 });

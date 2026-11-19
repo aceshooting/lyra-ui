@@ -124,3 +124,45 @@ export function captureHierarchySourceEffects(host: Host, control: HierarchyEffe
     control.rowError === rowError && control.rowsObserved === rowsObserved;
   return { epoch, error, loading, rowError, rowsObserved, bound, current };
 }
+
+/** Authority captured by {@link captureHierarchySourceEffects}. */
+export type HierarchySourceEffectSnapshot = ReturnType<typeof captureHierarchySourceEffects>;
+
+/** Localized text and announcement sinks for {@link applyHierarchySourceEffects}. */
+export interface HierarchySourceEffectSinks {
+  errorText(): string;
+  loadingText(): string;
+  summary(): string;
+  /** Polite announcement of a changed status. */
+  announce(text: string): void;
+  /** Row-observation outcome (the `source-rows` transition). */
+  rowsTransition(state: 'error' | 'ready', message: string): void;
+}
+
+/**
+ * The shared status/announcement step of a hierarchy source host: resolves the status (error,
+ * loading or summary), announces it when it changed from `lastAnnouncement`, and reports the
+ * row-observation outcome. Authority is re-checked before and after every effect; the result is
+ * the status to remember, or `undefined` when authority was lost and the host must stop.
+ */
+export function applyHierarchySourceEffects(
+  snapshot: HierarchySourceEffectSnapshot,
+  sinks: HierarchySourceEffectSinks,
+  lastAnnouncement: string | undefined,
+): string | undefined {
+  const { current } = snapshot;
+  if (!current()) return undefined;
+  const status = snapshot.error ? sinks.errorText() : snapshot.loading ? sinks.loadingText() : sinks.summary();
+  if (!current()) return undefined;
+  if (lastAnnouncement !== undefined && status !== lastAnnouncement) {
+    sinks.announce(status);
+    if (!current()) return undefined;
+  }
+  if (snapshot.rowsObserved) {
+    const message = snapshot.rowError ? sinks.errorText() : '';
+    if (!current()) return undefined;
+    sinks.rowsTransition(snapshot.rowError ? 'error' : 'ready', message);
+    if (!current()) return undefined;
+  }
+  return status;
+}

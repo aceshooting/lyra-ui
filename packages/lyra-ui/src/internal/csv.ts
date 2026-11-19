@@ -11,16 +11,30 @@
  * either, which is exactly how it ended up guarding only the four bare ASCII sigils.
  */
 export const UNSAFE_LEADING = /^[\s=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/u;
-const NEEDS_QUOTING = /[",\r\n]/;
+const NEEDS_QUOTING = /["\r\n]/;
 
 /** Escapes a CSV field: quotes as needed, guards against formula injection. */
 export function escapeCsvField(value: unknown): string {
+  return escapeDelimitedField(value);
+}
+
+export interface LyraDelimitedFieldOptions {
+  /** Field separator; an empty string falls back to `,`. Defaults to `,`. */
+  readonly delimiter?: string;
+  /** Text-prefixes a caller string whose first character is a formula sigil. Defaults to `true`. */
+  readonly escapeFormulas?: boolean;
+}
+
+/** {@link escapeCsvField} for any delimiter and formula policy: quotes a field containing the
+ *  delimiter, a quote or a line break, and keeps a finite number an unguarded numeric cell. */
+export function escapeDelimitedField(value: unknown, options: LyraDelimitedFieldOptions = {}): string {
   // Keep real finite numbers as numeric spreadsheet cells. Formula guarding applies to caller
   // strings, where a leading minus is data rather than trusted numeric type information.
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  const delimiter = options.delimiter || ',';
   let s = value == null ? '' : String(value);
-  if (UNSAFE_LEADING.test(s)) s = `'${s}`;
-  if (NEEDS_QUOTING.test(s)) s = `"${s.replace(/"/g, '""')}"`;
+  if (options.escapeFormulas !== false && UNSAFE_LEADING.test(s)) s = `'${s}`;
+  if (NEEDS_QUOTING.test(s) || s.includes(delimiter)) s = `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
@@ -70,9 +84,12 @@ export function downloadBlob(
   const a = ownerDocument.createElement('a');
   a.href = url;
   a.download = filename;
-  a.click();
-  // Deferred revoke: Safari can cancel the download if the URL is revoked immediately.
-  view.setTimeout(() => view.URL.revokeObjectURL(url), 5000);
+  try {
+    a.click();
+  } finally {
+    // Deferred revoke: Safari can cancel the download if the URL is revoked immediately.
+    view.setTimeout(() => view.URL.revokeObjectURL(url), 5000);
+  }
 }
 
 /** Joins already-raw values into one escaped CSV row (no trailing line break). */

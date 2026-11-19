@@ -50,4 +50,55 @@ describe('measured offset index properties', () => {
     index.resize(2);
     expect(index.total).to.equal(70);
   });
+
+  it('appends incrementally with the same offsets as a full reset', () => {
+    fc.assert(fc.property(
+      fc.array(fc.array(fc.integer({ min: 1, max: 300 }), { maxLength: 12 }), { maxLength: 8 }),
+      (batches) => {
+        const incremental = new MeasuredOffsetIndex(10);
+        for (const batch of batches) incremental.append(batch);
+        const all = batches.flat();
+        const full = new MeasuredOffsetIndex(10);
+        full.reset(all, 10);
+        for (let i = 0; i <= all.length; i += 1) expect(incremental.offsetOf(i)).to.equal(full.offsetOf(i));
+        expect(incremental.length).to.equal(all.length);
+      }
+    ), propertyRuns());
+  });
+
+  it('keeps subpixel and zero heights with a zero minimum', () => {
+    const index = new MeasuredOffsetIndex(10, 0, { minimumHeight: 0 });
+    index.append([0.5, 0, 2.25, Number.NaN]);
+    expect([0, 1, 2, 3].map((i) => index.heightAt(i))).to.deep.equal([0.5, 0, 2.25, 10]);
+    expect(index.total).to.equal(12.75);
+    expect(index.indexAt(0.5)).to.equal(2);
+    index.set(2, -4);
+    expect(index.heightAt(2)).to.equal(0);
+    const defaults = new MeasuredOffsetIndex(10, 2);
+    defaults.set(0, 0);
+    expect(defaults.heightAt(0)).to.equal(1);
+  });
+
+  it('saturates reported offsets at the maximum and recovers when a huge height shrinks', () => {
+    const index = new MeasuredOffsetIndex(10, 3, { maximumTotal: Number.MAX_VALUE });
+    index.set(1, Number.MAX_VALUE);
+    index.set(2, Number.MAX_VALUE);
+    expect(index.total).to.equal(Number.MAX_VALUE);
+    expect(index.offsetOf(1)).to.equal(10);
+    index.append([Number.MAX_VALUE]);
+    expect(index.total).to.equal(Number.MAX_VALUE);
+    index.set(1, 5);
+    index.set(2, 6);
+    index.set(3, 7);
+    expect(index.total).to.equal(28);
+    expect(index.indexAt(16)).to.equal(2);
+    const safe = new MeasuredOffsetIndex(1, 2);
+    safe.set(0, Number.MAX_SAFE_INTEGER);
+    safe.set(1, Number.MAX_SAFE_INTEGER);
+    expect(safe.total).to.equal(Number.MAX_SAFE_INTEGER);
+    safe.set(0, 3);
+    expect(safe.total).to.equal(Number.MAX_SAFE_INTEGER);
+    safe.set(1, 4);
+    expect(safe.total).to.equal(7);
+  });
 });

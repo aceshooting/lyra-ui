@@ -503,9 +503,10 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private changeFrameZoom(action: 'zoomIn' | 'zoomOut' | 'resetZoom'): void {
     const frame = this.frameEl;
-    if (!frame) return;
-    frame[action]();
-    this.zoom = frame.zoom;
+    if (frame) {
+      frame[action]();
+      this.zoom = frame.zoom;
+    }
   }
 
   rotate(): void {

@@ -279,6 +279,7 @@ export const styles = css`
   [part='bar'] {
     position: absolute;
     inset-block: 0;
+    inset-inline-start: min(var(--_lr-trace-tree-bar-start), max(0px, calc(100% - var(--lr-size-2px))));
     min-inline-size: var(--lr-size-2px);
     border-radius: inherit;
   }

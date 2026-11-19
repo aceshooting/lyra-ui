@@ -289,6 +289,14 @@ describe("image loading", () => {
 });
 
 describe("zoom, rotation, and fit", () => {
+  it('keeps zoom actions idle before a frame exists', () => {
+    const el = document.createElement('lr-image-viewer');
+    el.zoomIn();
+    el.zoomOut();
+    el.resetZoom();
+    expect(el.zoom).to.equal(1);
+  });
+
   it("delegates zoomIn/zoomOut/resetZoom to the embedded pan-zoom surface and stays in sync", async () => {
     const el = (await fixture(
       html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`

@@ -1,10 +1,37 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { armClickSuppression, capturePointer, consumeSuppressedClick, releasePointer } from './pointer-capture.js';
+import {
+  armClickSuppression,
+  capturePointer,
+  consumeSuppressedClick,
+  releasePointer,
+  tryReleasePointerCapture,
+  trySetPointerCapture,
+} from './pointer-capture.js';
 import { listenUntilPointerEnd } from './document-pointer.js';
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));
 
 describe('pointer-capture', () => {
+  it('reports the native capture call itself and always attempts release', () => {
+    const calls: string[] = [];
+    const el = {
+      setPointerCapture: (id: number) => { calls.push(`set:${id}`); },
+      releasePointerCapture: (id: number) => { calls.push(`release:${id}`); },
+      hasPointerCapture: () => { calls.push('probe'); return false; },
+    } as unknown as Element;
+    expect(trySetPointerCapture(el, 3)).to.equal(true);
+    tryReleasePointerCapture(el, 3);
+    expect(calls).to.deep.equal(['set:3', 'release:3']);
+    const throwing = {
+      setPointerCapture: () => { throw new DOMException('gone', 'NotFoundError'); },
+      releasePointerCapture: () => { throw new DOMException('gone', 'NotFoundError'); },
+    } as unknown as Element;
+    expect(trySetPointerCapture(throwing, 1)).to.equal(false);
+    expect(() => tryReleasePointerCapture(throwing, 1)).not.to.throw();
+    expect(trySetPointerCapture({} as Element, 1)).to.equal(false);
+    expect(() => tryReleasePointerCapture({} as Element, 1)).not.to.throw();
+  });
+
   it('does not throw for an unknown pointer id', async () => {
     const el = (await fixture(html`<button>x</button>`)) as HTMLElement;
     expect(() => capturePointer(el, 987654)).not.to.throw();

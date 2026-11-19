@@ -212,7 +212,7 @@ export interface LyraTerminalEventMap {
  *   `matchCount` as a lower bound rather than an exact total.
  * @event lr-highlight-activate - `detail: { highlightId }` — a highlighted line was
  *   clicked/activated.
- * @event lr-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
+ * @event lr-text-select - `detail: { text, anchor, rects }` — fires on key or pointer release after a text
  *   selection ending inside the viewport. `anchor` is `null` when either selection endpoint isn't
  *   inside a currently-mounted (non-virtualized-out) line. Ranges outside the viewport are ignored.
  * @csspart base - The outer container.
@@ -248,8 +248,8 @@ export interface LyraTerminalEventMap {
  *   of `[part="copy-button"]` and `[part="download-button"]`.
  * @cssprop [--lr-terminal-toolbar-button-active-bg=color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of the toolbar buttons.
  * @cssprop [--lr-terminal-line-hover-bg=var(--lr-color-brand-quiet)] - Hover background of an
- *   ordinary rendered `[part="line"]`.
- * @cssprop [--lr-terminal-line-active-bg=color-mix(in oklab, var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of an ordinary rendered line.
+ *   activatable highlighted line.
+ * @cssprop [--lr-terminal-line-active-bg=color-mix(in oklab, var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of an activatable highlighted line.
  * @cssprop [--lr-terminal-highlight-accent-bg=var(--lr-color-brand-quiet)] - Background of an
  *   `accent`-tone highlighted line. Decoupled from the shared `--lr-color-brand-quiet` token also
  *   used by `[part="copy-button"]`/`[part="download-button"]`'s hover state, and from any
@@ -955,12 +955,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private lastSelectedRange?: Pick<Range, 'startContainer' | 'startOffset' | 'endContainer' | 'endOffset'>;
 
-  private onViewportPointerUp = (event: PointerEvent): void => {
-    // Selectable text lives inside <lr-virtual-list>'s own shadow root (renderItem's render
-    // root, not this component's -- see the class doc's `line` csspart note), so a shadow-scoped
-    // selection read is anchored there, not on `this.shadowRoot`. `ShadowRoot.getSelection` is a
-    // Chromium-only extension absent from the standard DOM lib types (same cast the shared
-    // `internal/anchor-target.ts` selection helper uses for its own shadow-scoped read).
+  private onViewportSelectionEnd = (event: Event): void => {
+    // The virtual list owns the line text. Read its shadow selection before the document fallback.
     const shadowGetSelection = (root: ShadowRoot | null | undefined) =>
       (root as unknown as { getSelection?: () => Selection | null } | null | undefined)?.getSelection?.();
     const listShadow = this.renderRoot.querySelector(tag('virtual-list'))?.shadowRoot;
@@ -1174,7 +1170,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           aria-live="off"
           aria-label=${ariaLabel}
           @keydown=${this.onViewportKeyDown}
-          @pointerup=${this.onViewportPointerUp}
+          @pointerup=${this.onViewportSelectionEnd}
+          @keyup=${this.onViewportSelectionEnd}
         >
           <lr-virtual-list
             exportparts="line:line, line-interactive:line-interactive, line-highlight-accent:line-highlight-accent, line-highlight-success:line-highlight-success, line-highlight-warning:line-highlight-warning, line-highlight-danger:line-highlight-danger, line-highlight-neutral:line-highlight-neutral, line-match:line-match, line-active-match:line-active-match"

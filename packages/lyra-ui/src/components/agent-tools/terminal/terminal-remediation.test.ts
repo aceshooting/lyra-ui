@@ -1,3 +1,4 @@
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -136,7 +137,7 @@ it('does not leak the internal lr-virtual-scroll event', async () => {
   expect(count).to.equal(0);
 });
 
-it('emits lr-text-select once for an unchanged selection across later viewport pointer-ups', async () => {
+it('emits lr-text-select once for an unchanged viewport selection across key and pointer releases', async () => {
   const el = await fixture<LyraTerminal>(html`<lr-terminal content="first&#10;second"></lr-terminal>`);
   const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
   await waitUntil(() => list.shadowRoot!.querySelector('[data-line-number="1"]') !== null);
@@ -148,7 +149,8 @@ it('emits lr-text-select once for an unchanged selection across later viewport p
   let count = 0;
   el.addEventListener('lr-text-select', () => count++);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
-  viewport.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+  viewport.dispatchEvent(new KeyboardEvent('keyup', { key: 'Shift', bubbles: true }));
+  expect(count).to.equal(1);
   viewport.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
   expect(count).to.equal(1);
   (selection as { isCollapsed: boolean }).isCollapsed = true;
@@ -244,4 +246,20 @@ it('keeps the focus ring on a focused match line and tints only interactive line
   await settlePointer();
   expect(getComputedStyle(plain).backgroundColor).to.equal(resting);
   await resetMouse();
+});
+
+it('keeps a search marker and a separate focus outline in forced colors', async () => {
+  try {
+    await setForcedColors('active');
+    const el = await fixture<LyraTerminal>(html`<lr-terminal content="error"></lr-terminal>`);
+    el.highlights = [{ id: 'h', anchor: { kind: 'line-range', start: 1, end: 1 } }];
+    await el.updateComplete;
+    await el.search('error');
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    await waitUntil(() => list.shadowRoot!.querySelector('[data-match="active"]') !== null);
+    const line = list.shadowRoot!.querySelector<HTMLElement>('[data-match="active"]')!;
+    await focusByKeyboard(line);
+    expect(getComputedStyle(line).borderInlineStartStyle).to.equal('solid');
+    expect(getComputedStyle(line).outlineStyle).to.equal('solid');
+  } finally { await setForcedColors('none'); }
 });

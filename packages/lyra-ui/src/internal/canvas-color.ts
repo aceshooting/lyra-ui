@@ -78,34 +78,58 @@ export type CanvasRgba = readonly [number, number, number, number];
 
 const READBACK_BASES = ['#010203', '#040506'] as const;
 
+const readbackContexts = new WeakMap<Document, CanvasRenderingContext2D | null>();
+
+function readbackContext(doc: Document): CanvasRenderingContext2D | null {
+  let ctx = readbackContexts.get(doc);
+  if (ctx === undefined) {
+    const canvas = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
+    canvas.width = 1;
+    canvas.height = 1;
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
+    readbackContexts.set(doc, ctx);
+  }
+  return ctx;
+}
+
 /**
  * Reads any CSS colour the canvas understands (named, hex, `hsl()`, `color-mix()`, `oklch()`, ...)
  * back as sRGB `[r, g, b, a]` by painting one pixel. Returns `undefined` for an invalid value, an
  * unresolved `var()`, or a document without a canvas. Canvas silently keeps its previous fill on
  * an invalid assignment, so the colour is painted over two different base fills; differing
- * results mean the assignment was rejected.
+ * results mean the assignment was rejected. Reuses one 1px context per document, or `context`
+ * (an owner-document scratch context) whose drawing state is saved and restored around the read.
  */
-export function readCanvasRgba(doc: Document, css: string): CanvasRgba | undefined {
+export function readCanvasRgba(
+  doc: Document,
+  css: string,
+  context?: CanvasRenderingContext2D | null
+): CanvasRgba | undefined {
   // One guard covers a missing canvas and a tainted or privacy-restricted one whose getImageData
-  // throws (SecurityError): both mean "colour unavailable", never an exception for the caller. A
-  // short pixel buffer reads its missing channels as 0.
+  // throws (SecurityError): both mean "colour unavailable", never an exception for the caller.
+  let ctx: CanvasRenderingContext2D | null | undefined;
   try {
-    const canvas = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
-    canvas.width = 1;
-    canvas.height = 1;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx = context ?? readbackContext(doc);
     if (!ctx) return undefined;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = 'none';
+    const target = ctx;
     const [first, second] = READBACK_BASES.map((base) => {
-      ctx.clearRect(0, 0, 1, 1);
-      ctx.fillStyle = base;
-      ctx.fillStyle = css;
-      ctx.fillRect(0, 0, 1, 1);
-      return ctx.getImageData(0, 0, 1, 1).data;
+      target.clearRect(0, 0, 1, 1);
+      target.fillStyle = base;
+      target.fillStyle = css;
+      target.fillRect(0, 0, 1, 1);
+      return target.getImageData(0, 0, 1, 1).data;
     }) as [Uint8ClampedArray, Uint8ClampedArray];
     for (let i = 0; i < 4; i++) if ((first[i] ?? 0) !== (second[i] ?? 0)) return undefined;
     return [first[0] ?? 0, first[1] ?? 0, first[2] ?? 0, (first[3] ?? 0) / 255];
   } catch {
     return undefined;
+  } finally {
+    ctx?.restore();
   }
 }
 

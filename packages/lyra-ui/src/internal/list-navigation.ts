@@ -84,3 +84,21 @@ export function isRovingTargetAvailable(element: HTMLElement, boundary?: Element
   }
   return !element.hidden;
 }
+
+/**
+ * Availability of a catalog option a picker projects from its light DOM into its own rendered
+ * rows. Authored `hidden`/`inert` between the option and `owner` count; the owner's internal
+ * hidden data slot does not (it hides every projected option). Inert on the owner or any composed
+ * ancestor still excludes it.
+ */
+export function isCatalogOptionAvailable(option: HTMLElement, owner: Element): boolean {
+  if ('disabled' in option && Boolean(option.disabled)) return false;
+  if (option.getAttribute('aria-disabled') === 'true') return false;
+  for (let node: Element | null = option; node && node !== owner; node = node.parentElement) {
+    if (node.hasAttribute('hidden') || node.hasAttribute('inert')) return false;
+  }
+  for (let node: Element | null = owner; node; node = composedParentElement(node)) {
+    if (node.hasAttribute('inert')) return false;
+  }
+  return true;
+}

@@ -2024,7 +2024,7 @@ server-side or other handling),
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
-text, anchor, rects }`). The terminal reports a selection inside its viewport once for unchanged endpoints.
+text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, once for unchanged endpoints.
 User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
 release following silently. Copy outcomes are announced. When an input or line exceeds the character
 limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
@@ -2891,7 +2891,7 @@ Unknown values normalize and reflect as `'agent'`.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
 letterboxing-aware). After dropping blank ids and later duplicates, only the last 500 markers in
-input order render. `part="limit"` shows the localized overflow notice. Entering overflow after
+the admitted snapshot render, in input order. `part="limit"` shows the localized overflow notice. Entering overflow after
 mount also announces the notice politely.
 `withoutControls: boolean = false` (attribute `without-controls`, reflected) — hides the built-in
 take-over/stop buttons, for a read-only viewer; the `actions` slot still renders.
@@ -4122,8 +4122,10 @@ studio emits a `blur` and then a `focus`.
 
 **Headings and malformed rows:** `heading-level` defaults to `none`; `heading` is used verbatim including `''` (omission localizes “Prompt studio”), and the Variables and Preview titles sit one level below `heading-level` (no heading semantics under `none`). A `null` variable row, or one without a string `name`/`value`, is skipped instead of blanking the studio.
 
-When messages, variables and versions total more than 500 rows, `size-notice` shows a localized
-performance advisory. Every row remains available and save and run events still carry the full workspace.
+Workspace inputs follow the shared collection ceiling of 10,000 entries per array and 50,000
+values per assignment. When messages, variables and versions total more than 500 admitted rows,
+`size-notice` shows a localized performance advisory. Every admitted row remains available, and
+save and run events still carry the workspace in full.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `size-notice`, `messages`, `message`, `message-role`,
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
@@ -5073,7 +5075,8 @@ and MCP form-elicitation actions. Set `request-id`, `requester` (server/agent pr
 localized heading; `disabled` defaults false and `status` defaults `'pending'`.
 
 Without a schema, the action buttons can submit an empty response. Supplying a supported
-schema loads the field controls before the question's `updateComplete` resolves.
+schema loads the field controls before the question's `updateComplete` resolves. For
+server-rendered fields, import `@aceshooting/lyra-ui/components/lr-tool-param-form.js` before rendering.
 
 The component composes `lr-tool-param-form` with the flat MCP 2025-11-25 schema subset: strings,
 numbers/integers, booleans, titled or untitled single/multiple string-enum choices, defaults,

@@ -14,7 +14,7 @@ Keep fallback task-list state across equivalent run updates and contain events f
 Respect a toggle-request listener that closes, removes, or updates a thinking panel or activity feed before the toggle commits.
 Announce submitted questions after reconnection and announce clipboard results in stack traces and terminal output.
 Show and announce a localized terminal note when an input or line exceeds its character limit.
-Report terminal text selection only inside the viewport and once for unchanged endpoints. Listen on the selected content's owner for selections elsewhere on the page.
+Report terminal text selection on key or pointer release inside the viewport, once for unchanged endpoints. Listen on the selected content's owner for selections elsewhere on the page.
 Recognize shared completion, failure, and cancellation spellings in task lists.
 Observe streamed thinking-panel content only while the expanded live transcript follows new output.
 Load question form controls when a schema is supplied.

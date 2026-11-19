@@ -10,6 +10,8 @@ import {
   isAriaTrue,
   accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
+  observeAccessibleTextReferences,
+  releaseAccessibleTextReferences,
 } from './accessibility-visibility.js';
 
 describe('isAriaTrue', () => {
@@ -1019,5 +1021,28 @@ describe('adversarial accessibility visibility boundaries', () => {
       else Reflect.deleteProperty(boundary, 'checkVisibility');
     }
     expect(composedAccessibilityText(label, options)).to.equal('Popup label');
+  });
+});
+
+describe('observeAccessibleTextReferences', () => {
+  it('accepts any observe-only observer and subscribes to referenced labels', async () => {
+    const root = await fixture<HTMLDivElement>(html`<div><span id="ref-label">Name</span><h2 aria-labelledby="ref-label missing-label">x</h2></div>`);
+    const heading = root.querySelector('h2')!;
+    const observed: Node[] = [];
+    let changed = 0;
+    const references = { releases: [] as Array<() => void>, changed: () => { changed += 1; } };
+    observeAccessibleTextReferences(
+      { observe: (node: Node) => { observed.push(node); } },
+      heading,
+      composedAccessibilityTextResult(heading, { requireRendered: false }),
+      references,
+    );
+    expect(observed.some((node) => node === root.querySelector('#ref-label'))).to.equal(true);
+    const late = document.createElement('span');
+    late.id = 'missing-label';
+    root.append(late);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(changed).to.be.greaterThan(0);
+    releaseAccessibleTextReferences(references);
   });
 });

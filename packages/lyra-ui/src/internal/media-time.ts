@@ -17,3 +17,11 @@ export function formatMediaTime(seconds: number, locale: string): string {
     ? `${regular.format(hours)}:${padded.format(minutes)}:${padded.format(remaining)}`
     : `${regular.format(minutes)}:${padded.format(remaining)}`;
 }
+
+/** The playback-rate choices with `current` inserted in ascending order when the list lacks it, so
+ *  a native rate `<select>` never shows a preset for an off-list rate. Returns `rates` unchanged
+ *  when it already holds `current` or `current` is not a finite positive rate. */
+export function withCurrentRate(rates: readonly number[], current: number): readonly number[] {
+  if (!Number.isFinite(current) || current <= 0 || rates.includes(current)) return rates;
+  return [...rates, current].sort((a, b) => a - b);
+}

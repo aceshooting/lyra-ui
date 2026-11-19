@@ -443,3 +443,13 @@ describe('malformed frame tokens degrade to raw trace text', () => {
     });
   }
 });
+
+it('classifies the same frames for LF, CRLF and CR input', () => {
+  const lines = ['Error: message', '    at first (/app/main.js:1:2)', '    at library (/vendor/work.js:3:4)'];
+  for (const separator of ['\n', '\r\n', '\r']) {
+    const groups = parseStackTrace(lines.join(separator), ['/vendor/']);
+    expect(groups.flatMap(group => group.frames.map(frame => [frame.file, frame.internal]))).to.deep.equal([
+      ['/app/main.js', false], ['/vendor/work.js', true],
+    ]);
+  }
+});

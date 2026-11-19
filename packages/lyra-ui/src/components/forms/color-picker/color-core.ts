@@ -297,10 +297,11 @@ function parseFunctional(text: string): LyraColorHsva | null {
  * whatever happens to be inherited rather than naming a colour at all.
  */
 function parseViaCssom(text: string, doc: Document | undefined): LyraColorHsva | null {
-  if (!doc?.defaultView || CSS_WIDE_KEYWORDS.test(text)) return null;
+  const view = doc?.defaultView;
+  if (!view || CSS_WIDE_KEYWORDS.test(text)) return null;
   const cached = cssomCache.get(text);
   if (cached !== undefined) return cached;
-  const resolved = resolveViaCssom(text, doc);
+  const resolved = resolveViaCssom(text, view);
   // Bounded so a component fed a long stream of distinct colour names cannot grow this without
   // limit; the eviction order does not matter for correctness, only for hit rate.
   if (cssomCache.size >= CSSOM_CACHE_LIMIT) cssomCache.clear();
@@ -311,13 +312,13 @@ function parseViaCssom(text: string, doc: Document | undefined): LyraColorHsva |
 const CSSOM_CACHE_LIMIT = 64;
 const cssomCache = new Map<string, LyraColorHsva | null>();
 
-function resolveViaCssom(text: string, doc: Document): LyraColorHsva | null {
+function resolveViaCssom(text: string, view: Window): LyraColorHsva | null {
+  const doc = view.document;
   const probe = doc.createElement('span');
   probe.style.color = text;
   if (probe.style.color === '') return null;
   const parent = doc.body ?? doc.documentElement;
-  const view = doc.defaultView;
-  if (!parent || !view) return null;
+  if (!parent) return null;
   probe.style.position = 'absolute';
   probe.style.visibility = 'hidden';
   probe.style.pointerEvents = 'none';
@@ -345,13 +346,10 @@ function resolveViaCssom(text: string, doc: Document): LyraColorHsva | null {
  * Parses any colour this component accepts, or returns `null` when the input is not a colour.
  * Names and newer colour functions resolve through `doc` (default: the global document).
  */
-export function parseColor(
-  input: string,
-  doc: Document | undefined = typeof document === 'undefined' ? undefined : document,
-): LyraColorHsva | null {
+export function parseColor(input: string, doc?: Document): LyraColorHsva | null {
   const text = (input ?? '').trim();
   if (text === '') return null;
-  return parseHex(text) ?? parseFunctional(text) ?? parseViaCssom(text, doc);
+  return parseHex(text) ?? parseFunctional(text) ?? parseViaCssom(text, doc ?? (globalThis.document as Document | undefined));
 }
 
 const hexByte = (channel: number): string =>

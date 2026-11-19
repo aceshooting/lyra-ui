@@ -5,6 +5,8 @@ import {
   getOwnDataDescriptor,
   getInheritedPropertyDescriptor,
   readOwnDataValue,
+  ownDataDescriptorValue,
+  hasUnsafeOwnDescriptor,
   projectFrozenRows,
   projectStringList,
 } from './data-descriptors.js';
@@ -195,5 +197,19 @@ describe('descriptor-safe projections of holes, unsafe lengths and accessors', (
     revoke();
     expect(projectStringList(proxy, 10)).to.equal(undefined);
     expect(projectFrozenRows(proxy, project, 10, Object.freeze([]))).to.deep.equal([]);
+  });
+});
+
+describe('ownDataDescriptorValue / hasUnsafeOwnDescriptor', () => {
+  it('reads data values and flags a record with any accessor-backed field', () => {
+    const record = { id: 'a', get label(): string { throw new Error('accessor invoked'); } };
+    const id = getOwnDataDescriptor(record, 'id');
+    const label = getOwnDataDescriptor(record, 'label');
+    const missing = getOwnDataDescriptor(record, 'quote');
+    expect(ownDataDescriptorValue(id)).to.equal('a');
+    expect(ownDataDescriptorValue(label)).to.equal(undefined);
+    expect(ownDataDescriptorValue(missing)).to.equal(undefined);
+    expect(hasUnsafeOwnDescriptor([id, missing])).to.equal(false);
+    expect(hasUnsafeOwnDescriptor([id, label, missing])).to.equal(true);
   });
 });

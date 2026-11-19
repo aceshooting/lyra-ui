@@ -17,6 +17,7 @@ interface Harness {
 
 class SourceHost extends LitElement {
   harness!: Harness;
+  retain = false;
   override connectedCallback(): void {
     super.connectedCallback();
     this.harness ??= this.createHarness();
@@ -31,6 +32,7 @@ class SourceHost extends LitElement {
         if (!harness.controller.isStale(token)) harness.loads.push(text);
       },
       onError: (error: unknown) => harness.errors.push(error),
+      retainAcrossMove: () => this.retain,
     });
     return harness;
   }
@@ -146,5 +148,104 @@ describe('ViewerSourceController', () => {
     await el.harness.controller.begin('');
     expect(el.harness.controller.generation).to.be.greaterThan(before);
     expect(el.harness.errors.length).to.equal(0);
+  });
+  it('reports an AbortError raised while its own signal is still live', async () => {
+    const el = await host();
+    window.fetch = (() => Promise.reject(new DOMException('body aborted', 'AbortError'))) as typeof fetch;
+    await el.harness.controller.begin('/abort');
+    expect(el.harness.errors.length).to.equal(1);
+    expect((el.harness.errors[0] as DOMException).name).to.equal('AbortError');
+  });
+
+  it('loads without a signal when the owner window has no AbortController', async () => {
+    const el = await host();
+    const target = window as unknown as Record<string, unknown>;
+    const original = target['AbortController'];
+    let init: RequestInit | undefined = {};
+    window.fetch = ((_url: string, next?: RequestInit) => {
+      init = next;
+      return Promise.resolve(new Response('ok'));
+    }) as typeof fetch;
+    target['AbortController'] = undefined;
+    try {
+      await el.harness.controller.begin('/plain');
+    } finally {
+      target['AbortController'] = original;
+    }
+    expect(init === undefined).to.equal(true);
+    expect(el.harness.loads).to.deep.equal(['ok']);
+  });
+
+  function gatedFetch() {
+    const state: { signal?: AbortSignal; release?: () => void } = {};
+    window.fetch = ((_url: string, init?: RequestInit) => {
+      state.signal = init?.signal ?? undefined;
+      return new Promise<Response>((resolve, reject) => {
+        state.release = () => resolve(new Response('moved'));
+        state.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      });
+    }) as typeof fetch;
+    return state;
+  }
+
+  it('keeps a retained load across a same-task move and completes it', async () => {
+    const el = await host();
+    el.retain = true;
+    const state = gatedFetch();
+    const pending = el.harness.controller.begin('/keep');
+    await waitUntil(() => state.signal !== undefined);
+    const parent = el.parentNode!;
+    el.remove();
+    parent.append(el);
+    await Promise.resolve();
+    expect(state.signal?.aborted).to.equal(false);
+    state.release!();
+    await pending;
+    expect(el.harness.loads).to.deep.equal(['moved']);
+  });
+
+  it('cancels a retained load once the host stays detached', async () => {
+    const el = await host();
+    el.retain = true;
+    const state = gatedFetch();
+    const pending = el.harness.controller.begin('/drop');
+    await waitUntil(() => state.signal !== undefined);
+    el.remove();
+    await pending;
+    expect(state.signal?.aborted).to.equal(true);
+    expect(el.harness.loads.length + el.harness.errors.length).to.equal(0);
+  });
+
+  it('cancels a retained load when a repeated disconnect is still pending', async () => {
+    const el = await host();
+    el.retain = true;
+    const state = gatedFetch();
+    const pending = el.harness.controller.begin('/twice');
+    await waitUntil(() => state.signal !== undefined);
+    const parent = el.parentNode!;
+    el.remove();
+    parent.append(el);
+    el.remove();
+    await pending;
+    expect(state.signal?.aborted).to.equal(true);
+  });
+
+  it('cancels a retained load when the host moves into another document', async () => {
+    const el = await host();
+    el.retain = true;
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    await waitUntil(() => frame.contentDocument?.readyState === 'complete');
+    try {
+      const state = gatedFetch();
+      const pending = el.harness.controller.begin('/away');
+      await waitUntil(() => state.signal !== undefined);
+      frame.contentDocument!.body.append(el);
+      await pending;
+      expect(state.signal?.aborted).to.equal(true);
+      expect(el.harness.loads.length + el.harness.errors.length).to.equal(0);
+    } finally {
+      frame.remove();
+    }
   });
 });

@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import {
+  isCatalogOptionAvailable,
   isRepeatedActivationKey,
   isRovingTargetAvailable,
   resolveListMove,
@@ -125,5 +126,41 @@ describe('roving target availability across shadow boundaries', () => {
     widget.setAttribute('hidden', '');
     expect(isRovingTargetAvailable(target, widget)).to.equal(false);
     container.remove();
+  });
+});
+
+describe('catalog option availability', () => {
+  it('ignores the owner hidden data slot but honours authored hidden, inert and disabled states', () => {
+    const outer = document.body.appendChild(document.createElement('div'));
+    const owner = outer.appendChild(document.createElement('div'));
+    const slot = owner.attachShadow({ mode: 'open' }).appendChild(document.createElement('div'));
+    slot.hidden = true;
+    slot.appendChild(document.createElement('slot'));
+    const group = owner.appendChild(document.createElement('div'));
+    const option = group.appendChild(document.createElement('button'));
+    try {
+      expect(isRovingTargetAvailable(option)).to.equal(false);
+      expect(isCatalogOptionAvailable(option, owner)).to.equal(true);
+      for (const attribute of ['hidden', 'inert']) {
+        group.setAttribute(attribute, '');
+        expect(isCatalogOptionAvailable(option, owner)).to.equal(false);
+        group.removeAttribute(attribute);
+      }
+      option.disabled = true;
+      expect(isCatalogOptionAvailable(option, owner)).to.equal(false);
+      option.disabled = false;
+      option.setAttribute('aria-disabled', 'true');
+      expect(isCatalogOptionAvailable(option, owner)).to.equal(false);
+      option.removeAttribute('aria-disabled');
+      outer.setAttribute('inert', '');
+      expect(isCatalogOptionAvailable(option, owner)).to.equal(false);
+      outer.removeAttribute('inert');
+      const detached = document.createElement('button');
+      expect(isCatalogOptionAvailable(detached, owner)).to.equal(true);
+      detached.hidden = true;
+      expect(isCatalogOptionAvailable(detached, owner)).to.equal(false);
+    } finally {
+      outer.remove();
+    }
   });
 });

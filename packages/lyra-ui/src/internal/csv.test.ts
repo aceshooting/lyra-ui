@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { escapeCsvField, buildCsv, downloadBlob } from './csv.js';
+import { escapeCsvField, escapeDelimitedField, buildCsv, downloadBlob } from './csv.js';
 
 /** Spelled via `fromCharCode` rather than a source literal so no invisible character sits in
  *  this file. */
@@ -110,4 +110,40 @@ it('prepends a UTF-8 byte-order mark before the header row when bom is requested
 it('does not add a byte-order mark when bom is explicitly false', () => {
   const csv = buildCsv([{ id: 'a' }], [{ key: 'id', label: 'ID' }], { bom: false });
   expect(csv).to.equal('ID\r\na');
+});
+
+it('escapes delimited fields for a custom delimiter and formula policy', () => {
+  expect(escapeDelimitedField('a;b', { delimiter: ';' })).to.equal('"a;b"');
+  expect(escapeDelimitedField('a,b', { delimiter: ';' })).to.equal('a,b');
+  expect(escapeDelimitedField('a\tb', { delimiter: '\t' })).to.equal('"a\tb"');
+  expect(escapeDelimitedField('=1', { delimiter: ';', escapeFormulas: false })).to.equal('=1');
+  expect(escapeDelimitedField('=1', { delimiter: ';' })).to.equal("'=1");
+  expect(escapeDelimitedField(-5, { delimiter: ';' })).to.equal('-5');
+  expect(escapeDelimitedField('a,b', { delimiter: '' })).to.equal('"a,b"');
+  expect(escapeDelimitedField('a"b')).to.equal(escapeCsvField('a"b'));
+});
+
+it('still schedules URL revocation when the download anchor throws on activation', () => {
+  const view = window;
+  const originalClick = HTMLAnchorElement.prototype.click;
+  const originalRevoke = view.URL.revokeObjectURL;
+  const originalTimeout = view.setTimeout;
+  const revoked: string[] = [];
+  let scheduled: (() => void) | undefined;
+  try {
+    HTMLAnchorElement.prototype.click = () => { throw new Error('activation blocked'); };
+    view.URL.revokeObjectURL = (url: string) => { revoked.push(url); };
+    view.setTimeout = ((fn: () => void) => { scheduled = fn; return 0; }) as typeof setTimeout;
+    expect(() => downloadBlob('x', 'x.txt', 'text/plain', document)).to.throw('activation blocked');
+  } finally {
+    HTMLAnchorElement.prototype.click = originalClick;
+    view.setTimeout = originalTimeout;
+  }
+  try {
+    expect(typeof scheduled).to.equal('function');
+    scheduled!();
+    expect(revoked.length).to.equal(1);
+  } finally {
+    view.URL.revokeObjectURL = originalRevoke;
+  }
 });

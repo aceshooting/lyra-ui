@@ -509,4 +509,12 @@ describe('lr-community-card layout guards', () => {
     expect(title.getBoundingClientRect().width <= 161).to.equal(true);
     expect(title.scrollWidth <= title.clientWidth + 1).to.equal(true);
   });
+
+  it('keeps a short title button as wide as its themed hit target', async () => {
+    const el = await fixture<LyraCommunityCard>(html`<lr-community-card
+      style="--lr-icon-button-size: 48px" .community=${{ ...community, label: 'I' }}
+    ></lr-community-card>`);
+    const title = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="title"] button')!;
+    expect(title.getBoundingClientRect().width).to.be.at.least(48);
+  });
 });

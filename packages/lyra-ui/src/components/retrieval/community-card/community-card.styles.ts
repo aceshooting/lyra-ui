@@ -54,8 +54,8 @@ export const styles = css`
   [part='title'] button {
     display: block;
     box-sizing: border-box;
-    ${iconHitTarget}
     ${wrapGuard}
+    ${iconHitTarget}
     padding: 0;
     border: none;
     background: transparent;

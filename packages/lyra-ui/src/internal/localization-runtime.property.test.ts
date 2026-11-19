@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { resolveLocalizedParts, resolveLyraString, snapshotLyraLocaleStrings } from './localization-runtime.js';
+import { resolveLocalizedParts, resolveLocalizedSlots, resolveLyraString, snapshotLyraLocaleStrings } from './localization-runtime.js';
 
 it('rejects unknown plural categories without discarding neighboring string overrides', () => {
   const host = document.createElement('div');
@@ -23,5 +23,17 @@ it('preserves arbitrary UTF-16 text around repeated rich localized values', () =
     const template = `${prefix}{value}${middle}{value}${suffix}`;
     const result = resolveLocalizedParts(template, marker => `${prefix}${marker}${middle}${marker}${suffix}`);
     expect(result).to.deep.equal([prefix, middle, suffix]);
+  }), propertyRuns());
+});
+
+it('splits arbitrary UTF-16 text around two distinct rich slots in translated order', () => {
+  const text = fc.array(fc.integer({ min: 0, max: 0xffff }), { maxLength: 200 })
+    .map(units => units.map(unit => String.fromCharCode(unit)).join(''));
+  fc.assert(fc.property(text, text, text, fc.boolean(), (prefix, middle, suffix, swap) => {
+    const [first, second] = swap ? ['b', 'a'] : ['a', 'b'];
+    const template = `${prefix}{${first}}${middle}{${second}}${suffix}`;
+    const result = resolveLocalizedSlots(template, ['a', 'b'], m => `${prefix}${m[first]}${middle}${m[second]}${suffix}`);
+    const expected = [prefix, { slot: first }, middle, { slot: second }, suffix].filter(part => part !== '');
+    expect(result).to.deep.equal(expected);
   }), propertyRuns());
 });

@@ -131,8 +131,11 @@ const CONTENT_NODE_ATTRIBUTES = [
  *  subtree its own `aria-label`, it can only hide or reveal it. */
 const ANCESTOR_ATTRIBUTES = ['aria-hidden', 'class', 'hidden', 'inert', 'open', 'style'];
 
+/** Only `observe` is called, so an owner-realm wrapper such as `OwnedMutationObserver` fits too. */
+export type AccessibleTextObserveTarget = Pick<MutationObserver, 'observe'>;
+
 function observeAccessibleTextNode(
-  observer: MutationObserver,
+  observer: AccessibleTextObserveTarget,
   node: Node,
   extraAttributes: readonly string[],
 ): void {
@@ -411,7 +414,7 @@ export function bindAccessibleTextObserver(
 
 /** Tracks the resolved and unresolved labels used by a particular text projection. */
 export function observeAccessibleTextReferences(
-  observer: MutationObserver,
+  observer: AccessibleTextObserveTarget,
   host: Element,
   result: ComposedAccessibilityTextResult,
   references: AccessibleTextReferences,

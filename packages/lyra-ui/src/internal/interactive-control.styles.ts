@@ -51,3 +51,36 @@ export const disabledControl = css`
   opacity: var(--lr-opacity-disabled);
   cursor: not-allowed;
 `;
+
+/**
+ * Minimum target for an icon action inside a form field: the icon-button floor capped at the
+ * field's own tier height (so a compact field does not grow), never below the 24px WCAG 2.5.8
+ * minimum.
+ */
+export const formControlIconHitTarget = css`
+  min-inline-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
+  min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
+`;
+
+/** Selectors for {@link disclosureChevron}; author-controlled CSS, never user input. */
+export interface DisclosureChevronSelectors {
+  /** The chevron glyph wrapper. */
+  readonly glyph: string;
+  /** The glyph while expanded (rotated to point down). */
+  readonly expanded: string;
+  /** The glyph while collapsed under RTL (mirrored to point left). */
+  readonly collapsedRtl: string;
+}
+
+/**
+ * A right-pointing disclosure chevron that rotates a quarter turn when expanded and mirrors while
+ * collapsed under RTL; the expanded glyph is symmetric, so it needs no mirroring. The rotation
+ * stops under reduced motion.
+ */
+export function disclosureChevron(selectors: DisclosureChevronSelectors): CSSResult {
+  const { glyph, expanded, collapsedRtl } = selectors;
+  return unsafeCSS(`${glyph} { display: inline-flex; flex: 0 0 auto; transition: transform var(--lr-transition-fast); }
+  ${expanded} { transform: rotate(90deg); }
+  ${collapsedRtl} { transform: scaleX(-1); }
+  @media (prefers-reduced-motion: reduce) { ${glyph} { transition: none; } }`);
+}

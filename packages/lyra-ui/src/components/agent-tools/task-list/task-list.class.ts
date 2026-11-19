@@ -3,7 +3,7 @@ import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTas
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { createHierarchySummarySource, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
@@ -546,21 +546,16 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const { error, loading, rowError, rowsObserved, current } = captureHierarchySourceEffects(this, this.sourceControl,
+    const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
-    if (!current()) return;
-    const status = error ? this.localize('treeSourceError') : loading ? this.localize('loading') : this.sourceSummary();
-    if (!current()) return;
-    if (this.sourceAnnouncement !== undefined && status !== this.sourceAnnouncement) {
-      this.limitAnnouncements.announcePolite(status);
-      if (!current()) return;
-    }
-    if (rowsObserved) {
-      const message = rowError ? this.localize('treeSourceError') : '';
-      if (!current()) return;
-      this.limitAnnouncements.transition('source-rows', rowError ? 'error' : 'ready', message);
-      if (!current()) return;
-    }
+    const status = applyHierarchySourceEffects(snapshot, {
+      errorText: () => this.localize('treeSourceError'),
+      loadingText: () => this.localize('loading'),
+      summary: () => this.sourceSummary(),
+      announce: text => this.limitAnnouncements.announcePolite(text),
+      rowsTransition: (state, message) => this.limitAnnouncements.transition('source-rows', state, message),
+    }, this.sourceAnnouncement);
+    if (status === undefined) return;
     this.sourceAnnouncement = status;
   }
 

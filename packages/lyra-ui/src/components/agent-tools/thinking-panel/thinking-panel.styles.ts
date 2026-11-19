@@ -1,10 +1,7 @@
+import { disclosureChevron } from '../../../internal/interactive-control.styles.js';
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
-// Shares its collapsible-header shape (border/radius/hover/focus-ring, the
-// rotating chevron) with lr-source-list's styles almost verbatim -- the two
-// are siblings in the same "collapsible region behind a header button"
-// family and are meant to sit comfortably next to each other in a message.
 export const styles = css`
   :host {
     display: block;
@@ -75,21 +72,11 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
-  [part="toggle"] {
-    display: inline-flex;
-    flex: 0 0 auto;
-    transition: transform var(--lr-transition-fast);
-  }
-  :host([expanded]) [part="toggle"] {
-    transform: rotate(90deg);
-  }
-  /* RTL: the collapsed chevron mirrors to point left, the conventional disclosure direction.
-     Scoped to the collapsed state, not a plain :dir(rtl) rule, so it never competes with the
-     expanded rule above -- rotating this asymmetric glyph 90deg already yields a symmetric down
-     chevron. Matches lr-source-list's and lr-code-block's toggle. */
-  :host(:not([expanded]):dir(rtl)) [part="toggle"] {
-    transform: scaleX(-1);
-  }
+  ${disclosureChevron({
+    glyph: '[part="toggle"]',
+    expanded: ':host([expanded]) [part="toggle"]',
+    collapsedRtl: ':host(:not([expanded]):dir(rtl)) [part="toggle"]',
+  })}
   [part="label"] {
     flex: 1 1 auto;
     min-inline-size: var(--lr-size-6ch);
@@ -200,9 +187,6 @@ export const styles = css`
     display: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part="toggle"] {
-      transition: none !important;
-    }
     .pending-dot {
       animation: none !important;
       opacity: 1;

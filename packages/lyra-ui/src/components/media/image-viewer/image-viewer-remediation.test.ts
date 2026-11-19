@@ -226,14 +226,6 @@ describe('caller labels', () => {
 });
 
 describe('public actions and events', () => {
-  it('keeps zoom actions idle before a frame exists', () => {
-    const el = document.createElement('lr-image-viewer');
-    el.zoomIn();
-    el.zoomOut();
-    el.resetZoom();
-    expect(el.zoom).to.equal(1);
-  });
-
   it('declares zoomIn/zoomOut/resetZoom as methods', () => {
     for (const name of ['zoomIn', 'zoomOut', 'resetZoom']) {
       expect(typeof (LyraImageViewer.prototype as unknown as Record<string, unknown>)[name]).to.equal('function');

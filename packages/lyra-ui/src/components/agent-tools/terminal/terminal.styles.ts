@@ -150,11 +150,10 @@ export const styles = css`
   }
   @media (forced-colors: active) {
     lr-virtual-list::part(line-match) {
-      outline: var(--lr-size-2px) dashed CanvasText;
-      outline-offset: calc(-1 * var(--lr-size-2px));
+      border-inline-start: var(--lr-size-2px) dashed CanvasText;
     }
     lr-virtual-list::part(line-active-match) {
-      outline-style: solid;
+      border-inline-start-style: solid;
     }
   }
   /* The log's half of the density escape above: the same one-hop ::part() selector as the base

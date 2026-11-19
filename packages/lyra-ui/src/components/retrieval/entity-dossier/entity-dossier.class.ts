@@ -65,7 +65,7 @@ export interface LyraEntityDossierEventMap
   extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
     Omit<LyraChunkInspectorEventMap, 'lr-toggle'>,
     Omit<LyraProvenancePanelEventMap, 'lr-entity-select'>,
-    Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
+    Omit<LyraTabGroupEventMap, 'lr-tab-show' | 'lr-tab-hide'> {
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;

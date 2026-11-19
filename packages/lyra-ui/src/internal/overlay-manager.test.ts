@@ -2347,3 +2347,30 @@ it('ignores childList churn outside the allowed paths while a modal is open, yet
     background.remove();
   }
 });
+
+it('leaves a modified Escape chord to the application instead of dismissing', () => {
+  const overlay = createOverlay(document, 'escape-chord');
+  let escapes = 0;
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    modal: false,
+    trapFocus: false,
+    onEscape: () => escapes++,
+  });
+  try {
+    const prevented: boolean[] = [];
+    for (const modifier of ['ctrlKey', 'altKey', 'metaKey'] as const) {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape', [modifier]: true });
+      document.dispatchEvent(event);
+      prevented.push(event.defaultPrevented);
+    }
+    expect(escapes).to.equal(0);
+    expect(prevented).to.deep.equal([false, false, false]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape', shiftKey: true }));
+    expect(escapes).to.equal(1);
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+    overlay.host.remove();
+  }
+});

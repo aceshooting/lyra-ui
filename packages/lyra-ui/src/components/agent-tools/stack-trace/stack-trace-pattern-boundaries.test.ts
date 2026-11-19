@@ -70,7 +70,8 @@ it('folds internal frames with a regular expression from another document', asyn
   const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const view = iframe.contentWindow as Window & typeof globalThis;
   const pattern = new view.RegExp('/vendor/', 'g');
-  const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} .internalPatterns=${[pattern]}></lr-stack-trace>`);
+  const unrelated = { [Symbol.toStringTag]: 'RegExp', source: '/app/', flags: '' };
+  const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} .internalPatterns=${[unrelated, pattern]}></lr-stack-trace>`);
   expect(el.internalPatterns).to.have.lengthOf(1);
   expect(el.shadowRoot!.querySelectorAll('[part="frame"]').length).to.equal(1);
   expect(pattern.lastIndex).to.equal(0);

@@ -66,6 +66,21 @@ describe('test-results provider admission and authority', () => {
     });
   }
 
+  for (const input of [null, 12]) {
+    it(`rejects a provider record or nested test set to ${input}`, async () => {
+      const page = result();
+      const row = page.rows[0]!;
+      const nested = { ...row, value: { ...row.value, test: input } };
+      for (const malformed of [{ ...row, value: input }, nested]) {
+        const source = provider(async () => ({ ...page, rows: [malformed] }) as unknown as Awaited<ReturnType<TestResultsSource['query']>>);
+        const el = await fixture<LyraTestResults>(html`<lr-test-results .dataSource=${source}></lr-test-results>`);
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="source-retry"]') !== null);
+        expect(el.sourceTotal).to.equal(null);
+        expect(el.shadowRoot!.querySelectorAll('[part="test"]').length).to.equal(0);
+      }
+    });
+  }
+
   it('ignores arbitrary output and attachment graphs', async () => {
     let reads = 0;
     const page = result();

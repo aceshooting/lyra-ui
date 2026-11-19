@@ -301,7 +301,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   private fallbackTabbableIndex = 0;
   private pendingFocus?: { index: number; origin: HTMLElement };
   private focusRevealFrame?: number;
-  private focusRevealView?: Window;
+  private focusRevealView?: Window | null;
 
   private resolveSelectedIndex(): number {
     if (this.value === null) {
@@ -340,7 +340,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     ) as HTMLElement | null;
     this.cancelFocusReveal();
     const view = this.ownerDocument.defaultView;
-    this.focusRevealView = view ?? undefined;
+    this.focusRevealView = view;
     this.focusRevealFrame = view?.requestAnimationFrame(() => {
       this.focusRevealFrame = undefined;
       if (!this.isConnected || this.disabled) return;

@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { TypeAheadBuffer, type TypeAheadMemo } from './type-ahead-buffer.js';
+import { foldSearchText } from './search-haystack.js';
 
 describe('type-ahead buffer', () => {
   it('matches from after the active row and skips unavailable matches', () => {
@@ -61,5 +62,17 @@ describe('type-ahead buffer', () => {
     const buffer = new TypeAheadBuffer(document.createElement('div'));
     buffer.add('b', 'en');
     expect(buffer.match(['a', 'b'], -1, x => x, 'en', () => true, new WeakMap())).to.equal(1);
+  });
+  it('applies a custom fold to keys and memoized labels', () => {
+    const buffer = new TypeAheadBuffer(document.createElement('div'), foldSearchText);
+    const rows = [{ label: 'Alpha' }, { label: 'École' }];
+    const memo: TypeAheadMemo = new WeakMap();
+    buffer.add('E', 'fr');
+    expect(buffer.text).to.equal('e');
+    expect(buffer.match(rows, -1, r => r.label, 'fr', () => true, memo)).to.equal(1);
+    expect(memo.get(rows[1]!)!.folded).to.equal('ecole');
+    buffer.clear();
+    buffer.add('é', 'fr');
+    expect(buffer.match(rows, -1, r => r.label, 'fr')).to.equal(1);
   });
 });

@@ -1,3 +1,4 @@
+import { disclosureChevron } from '../../../internal/interactive-control.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
@@ -68,17 +69,11 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
-  [part="toggle"] {
-    display: inline-flex;
-    flex: 0 0 auto;
-    transition: transform var(--lr-transition-fast);
-  }
-  :host([expanded]) [part="toggle"] {
-    transform: rotate(90deg);
-  }
-  :host(:not([expanded]):dir(rtl)) [part="toggle"] {
-    transform: scaleX(-1);
-  }
+  ${disclosureChevron({
+    glyph: '[part="toggle"]',
+    expanded: ':host([expanded]) [part="toggle"]',
+    collapsedRtl: ':host(:not([expanded]):dir(rtl)) [part="toggle"]',
+  })}
   [part="status-dot"] {
     flex: 0 0 auto;
     inline-size: var(--lr-size-0-5rem);
@@ -231,9 +226,6 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part="toggle"] {
-      transition: none !important;
-    }
     [part="status-dot"] {
       animation: none !important;
     }

@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import type { LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchySource, LyraHierarchyView, LyraTraceSourceSummary } from '../data-sources.js';
-import { captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary } from './hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary } from './hierarchy-summary-source.js';
 
 type Row = LyraHierarchyRow<string>;
 type Source = LyraHierarchySource<string, LyraHierarchyQuery, LyraTraceSourceSummary>;
@@ -172,4 +172,55 @@ it('distinguishes a bound hierarchy effect from the captured rendered status', (
   binding = false; expect(snapshot.bound()).to.equal(false); binding = true;
   host.ownerDocument = document.implementation.createHTMLDocument(); expect(snapshot.bound()).to.equal(false);
   host.ownerDocument = document; host.isConnected = false; expect(snapshot.bound()).to.equal(false);
+});
+
+describe('applyHierarchySourceEffects', () => {
+  function setup(flags: Partial<{ error: boolean; loading: boolean; rowError: boolean; rowsObserved: boolean }> = {}) {
+    const host = { ownerDocument: document, isConnected: true };
+    const control = { epoch: 1, projection: {}, error: false, loading: false, rowError: false, rowsObserved: false, ...flags };
+    const log: string[] = [];
+    let lose = '';
+    const check = (step: string) => { log.push(step); if (lose === step) control.epoch++; };
+    const sinks = {
+      errorText: () => { check('error'); return 'Failed'; },
+      loadingText: () => { check('loading'); return 'Loading'; },
+      summary: () => { check('summary'); return '1 of 2'; },
+      announce: (text: string) => { check(`announce:${text}`); },
+      rowsTransition: (state: string, message: string) => { check(`rows:${state}:${message}`); },
+    };
+    const run = (last: string | undefined) =>
+      applyHierarchySourceEffects(captureHierarchySourceEffects(host, control, () => true), sinks, last);
+    return { control, log, sinks, run, loseAt: (step: string) => { lose = step; } };
+  }
+
+  it('resolves the status, announces only a change and reports row observation', () => {
+    const plain = setup();
+    expect(plain.run(undefined)).to.equal('1 of 2');
+    expect(plain.run('1 of 2')).to.equal('1 of 2');
+    expect(plain.log).to.deep.equal(['summary', 'summary']);
+    const failing = setup({ error: true, rowsObserved: true, rowError: true });
+    expect(failing.run('old')).to.equal('Failed');
+    expect(failing.log).to.deep.equal(['error', 'announce:Failed', 'error', 'rows:error:Failed']);
+    const loading = setup({ loading: true, rowsObserved: true });
+    expect(loading.run(undefined)).to.equal('Loading');
+    expect(loading.log).to.deep.equal(['loading', 'rows:ready:']);
+  });
+
+  it('stops as soon as authority is lost around any effect', () => {
+    for (const step of ['summary', 'announce:1 of 2', 'rows:ready:']) {
+      const state = setup({ rowsObserved: true });
+      state.loseAt(step);
+      expect(state.run('old')).to.equal(undefined);
+      expect(state.log[state.log.length - 1]).to.equal(step);
+    }
+    const lostRowsMessage = setup({ rowsObserved: true, rowError: true });
+    lostRowsMessage.loseAt('error');
+    expect(lostRowsMessage.run(undefined)).to.equal(undefined);
+    expect(lostRowsMessage.log).to.deep.equal(['summary', 'error']);
+    const stale = setup();
+    stale.control.epoch++;
+    const snapshot = captureHierarchySourceEffects({ ownerDocument: document, isConnected: false }, stale.control, () => true);
+    expect(applyHierarchySourceEffects(snapshot, stale.sinks, undefined)).to.equal(undefined);
+    expect(stale.log).to.deep.equal([]);
+  });
 });

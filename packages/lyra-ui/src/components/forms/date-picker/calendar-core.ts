@@ -47,8 +47,7 @@ export function dateTimeFormat(
 export function parseISO(s: string): Date | null {
   const parts = s ? parseIsoDate(s.trim()) : undefined;
   if (!parts) return null;
-  const d = localDate(parts.y, parts.m - 1, parts.d);
-  return Number.isFinite(d.getTime()) ? d : null;
+  return localDate(parts.y, parts.m - 1, parts.d);
 }
 
 /** Format a supported Date as local `YYYY-MM-DD`, or an empty string outside years 0000–9999. */

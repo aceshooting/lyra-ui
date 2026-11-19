@@ -11,6 +11,7 @@ import {
   peekLyraDirection,
   resolveLyraDirection,
   resolveLocalizedParts,
+  resolveLocalizedSlots,
   resolveLyraLocale,
   resolveLyraString,
   resolveLyraStringWithLocale,
@@ -528,4 +529,19 @@ describe('numeric interpolation', () => {
     expect(format(-0)).to.equal('0');
     expect(format(Number.POSITIVE_INFINITY)).to.equal('Infinity');
   });
+});
+
+it('resolves several rich slots, repeated or omitted by the translation', () => {
+  expect(resolveLocalizedSlots('{current} / {duration}', ['current', 'duration'], (m) => `${m['duration']} of ${m['current']}!`))
+    .to.deep.equal([{ slot: 'duration' }, ' of ', { slot: 'current' }, '!']);
+  expect(resolveLocalizedSlots('x', ['a', 'b', 'a'], (m) => `${m['a']}${m['a']}-`))
+    .to.deep.equal([{ slot: 'a' }, { slot: 'a' }, '-']);
+  expect(resolveLocalizedSlots('plain', ['a'], () => 'plain')).to.deep.equal(['plain']);
+  expect(resolveLocalizedSlots('', [], () => '')).to.deep.equal([]);
+});
+
+it('keeps rich slot markers distinct when the template exhausts the private-use area', () => {
+  const template = Array.from({ length: 0xf8ff - 0xe000 + 1 }, (_, index) => String.fromCharCode(0xe000 + index)).join('');
+  const parts = resolveLocalizedSlots(template, ['a', 'b'], (m) => `L${m['a']}M${m['b']}R`);
+  expect(parts).to.deep.equal(['L', { slot: 'a' }, 'M', { slot: 'b' }, 'R']);
 });

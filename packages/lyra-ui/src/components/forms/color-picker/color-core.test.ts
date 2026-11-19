@@ -401,5 +401,16 @@ describe('parseColor document scoping', () => {
     const detached = document.implementation.createHTMLDocument('');
     expect(parseColor('palevioletred', detached)).to.equal(null);
     expect(parseColor('palevioletred') === null).to.equal(false);
+    const bare = document.createElement('iframe');
+    document.body.append(bare);
+    try {
+      bare.contentDocument!.documentElement.remove();
+      expect(parseColor('lightsalmon', bare.contentDocument!)).to.equal(null);
+      const bodyless = bare.contentDocument!;
+      bodyless.append(bodyless.createElement('html'));
+      expect(parseColor('darkkhaki', bodyless) === null).to.equal(false);
+    } finally {
+      bare.remove();
+    }
   });
 });

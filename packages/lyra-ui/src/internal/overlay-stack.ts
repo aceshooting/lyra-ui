@@ -10,6 +10,7 @@ import {
   isComposedFocusAvailable,
 } from './focus-navigation.js';
 import { isHtmlElement } from './dom-guards.js';
+import { shouldIgnoreNavigationKey } from './list-navigation.js';
 import {
   leaseInlineStyleProperty,
   type InlineStylePropertyLease,
@@ -343,6 +344,8 @@ function createState(doc: Document): OverlayDocumentState {
     const panel = entry.options.panel();
     if (nativeModal && (!panel || !composedContains(nativeModal, panel))) return;
     if (event.key === 'Escape') {
+      // A modified Escape is an application or system shortcut, not a dismissal.
+      if (shouldIgnoreNavigationKey(event)) return;
       event.preventDefault();
       entry.options.onEscape();
     } else if (event.key === 'Tab') {
