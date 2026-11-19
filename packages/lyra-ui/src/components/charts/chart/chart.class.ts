@@ -29,7 +29,6 @@ import {
   projectChartConfiguration,
   UNSAFE_KEYS
 } from './chart-input-projection.js';
-export { projectChartSeries } from './chart-input-projection.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { SpatialSourceController } from '../../../internal/spatial-source-controller.js';

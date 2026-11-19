@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './chart.js';
-import { projectChartSeries, type LyraChart } from './chart.class.js';
+import type { LyraChart } from './chart.class.js';
+import { projectChartSeries } from './chart-input-projection.js';
 
 describe('lr-chart annotation entries', () => {
   it('describes only well-formed annotations: a known axis, a text label and a known tone', async () => {

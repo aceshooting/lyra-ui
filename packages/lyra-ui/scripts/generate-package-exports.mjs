@@ -103,6 +103,9 @@ export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
   // The box-plot class re-exports the loader's public compatibility function; callers use the
   // existing class route, so a second granular helper route would be redundant.
   'src/components/charts/chart/box-plot-loader.ts',
+  // Shared constructor check and import warning for the chart loaders; it installs nothing and has
+  // no consumer API, so it stays internal.
+  'src/components/charts/chart/chart-peer.ts',
   // Already reachable without a dedicated route: each viewer's registration module (which already
   // has its own package export via the component inventory, and is re-exported again by the
   // `./components/viewers` family barrel) does `export * from './<name>-loader.js'` wholesale, so

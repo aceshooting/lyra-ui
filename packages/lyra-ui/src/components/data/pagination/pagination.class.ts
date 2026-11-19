@@ -839,7 +839,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return html`<span part="page-field label">
       <input
         part="page-input"
-        style=${styleMap({ '--_lr-pagination-page-digits': String(digits) })}
+        style=${styleMap({ '--_lr-pagination-page-digits': String(digits), '--_lr-pagination-page-width': `${digits}ch` })}
         type="number"
         inputmode="numeric"
         min="1"

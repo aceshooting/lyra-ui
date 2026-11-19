@@ -3,10 +3,10 @@ import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
   LyraChart,
-  projectChartSeries,
   type LyraChartConfiguration,
   type LyraChartSeries,
 } from './chart.class.js';
+import { projectChartSeries } from './chart-input-projection.js';
 import { lockChartType } from './chart-type-lock.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';

@@ -313,7 +313,7 @@ export const styles = css`
     inline-size: max(
       var(--lr-pagination-control-size, var(--_lr-pagination-control-size)),
       var(--lr-icon-button-size),
-      calc(var(--_lr-pagination-page-digits, 2) * 1ch + var(--lr-space-l))
+      calc(var(--_lr-pagination-page-width) + var(--lr-space-l))
     );
     min-inline-size: var(--lr-icon-button-size);
     block-size: max(
