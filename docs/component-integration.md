@@ -61,7 +61,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-chart"></a>`lr-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-skeleton` | none | 85.3 KiB |
 | <a id="lr-chart-3d"></a>`lr-chart-3d` | charts | `import '@aceshooting/lyra-ui/components/lr-chart-3d.js';` | `@aceshooting/lyra-3d` | none | none | 39.2 KiB |
 | <a id="lr-chat-composer"></a>`lr-chat-composer` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-composer.js';` | none | none | none | 40.1 KiB |
-| <a id="lr-chat-message"></a>`lr-chat-message` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-message.js';` | none | none | none | 31.1 KiB |
+| <a id="lr-chat-message"></a>`lr-chat-message` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-message.js';` | none | none | none | 30.7 KiB |
 | <a id="lr-chat-viewport"></a>`lr-chat-viewport` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-viewport.js';` | none | none | none | 41 KiB |
 | <a id="lr-checkbox"></a>`lr-checkbox` | forms | `import '@aceshooting/lyra-ui/components/lr-checkbox.js';` | none | none | none | 44.7 KiB |
 | <a id="lr-checkbox-group"></a>`lr-checkbox-group` | forms | `import '@aceshooting/lyra-ui/components/lr-checkbox-group.js';` | none | none | none | 41.9 KiB |

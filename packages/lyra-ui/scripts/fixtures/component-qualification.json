@@ -35430,7 +35430,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 772,
+              "line": 775,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

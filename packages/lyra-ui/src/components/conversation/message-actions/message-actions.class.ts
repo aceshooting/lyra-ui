@@ -491,7 +491,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const parent = this.parentNode;
     const target =
       (this.closest(tag('chat-message')) as HTMLElement | null) ??
-      (parent instanceof ShadowRoot ? parent.host as HTMLElement : this.parentElement);
+      // nodeType, not `instanceof ShadowRoot`: the global is absent during server rendering.
+      (parent?.nodeType === 11 /* DOCUMENT_FRAGMENT_NODE */ && 'host' in parent
+        ? (parent as ShadowRoot).host as HTMLElement
+        : this.parentElement);
     if (!target) return;
     this.hoverTarget = target;
     target.addEventListener('pointerenter', this.onHoverTargetEnter);

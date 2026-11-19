@@ -11,7 +11,7 @@ qualification and publication are complete; complete application migration remai
 A regression in 30.1.0 affects asynchronous modular object-style replacement: active
 ordering overrides can reject readiness, and the public layer catalog can retain the previous
 style. The correction now passes affected tests in Chromium, Firefox with WebGL, and WebKit;
-it shipped in [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0). The [30.2 maintenance record](30.2-maintenance.md) records
+it shipped in [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0). The [30.2 maintenance record](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0) records
 exact-commit qualification and delivery.
 
 Published 30.2 maintenance also replaces full feature-preflight snapshots with validated
@@ -21,7 +21,7 @@ stable map-anchor placement sessions during camera movement. Full companion cove
 candidate. Production preflight and anchor measurements retain their individual fixture and source
 scope; native ingestion remains separate from preflight. Exact-commit release qualification,
 including mutation testing, is complete. [lyra-map 1.3.1](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-map%401.3.1) and [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0)
-were published on 2026-10-25. See the [maintenance status table](30.2-maintenance.md#implementation-status).
+were published on 2026-10-25. See the [maintenance status table](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0).
 
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
 supported component API. Published 30.1.0 corrections cover URL-style readiness, anchor visibility

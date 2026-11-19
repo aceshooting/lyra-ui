@@ -203,7 +203,7 @@ scope. These results do not establish a blanket coverage improvement. Earlier sn
 their capture dates and scopes. The raw 99.85% UI line/statement result is a separate metric;
 the 99.80% Codecov full-hit goal remains open.
 
-The [nineteen-item status table](30.2-maintenance.md#implementation-status) keeps source,
+The [nineteen-item status table](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0) keeps source,
 exercised checks and remaining delivery work separate. The 99.80% Codecov goal and historical
 WebKit PDF investigation remain open; no maintenance extraction completes either.
 
@@ -212,7 +212,7 @@ WebKit PDF investigation remain open; no maintenance extraction completes either
 A later regression in 30.1.0 affects asynchronous modular object-style replacement: active
 ordering overrides can reject readiness, and the public layer catalog can retain the previous
 style. Its correction now passes affected three-engine regressions but remains unreleased;
-integrated qualification is tracked in the [30.2 maintenance plan](30.2-maintenance.md).
+integrated qualification is tracked in the [30.2 maintenance plan](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0).
 
 - [x] Verify the expanded chart/map/data and conversation/retrieval/internal coverage cases,
   including the chart-loading and progressive Markdown corrections. The integrated map and SSR slice

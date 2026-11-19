@@ -63,7 +63,8 @@ must never be mirrored.
 - `form`, `validity`, `validationMessage` (read-only) — the native form-control readbacks.
 
 **Methods:** `clear()` removes every stroke without firing events. `checkValidity()`,
-`reportValidity()` and `setCustomValidity(message)` follow the native contract.
+`reportValidity()` and `setCustomValidity(message)` follow the native contract. `focus(options?)`
+and `click()` focus the drawing surface (both do nothing while disabled), and `blur()` blurs it.
 
 **Events:**
 

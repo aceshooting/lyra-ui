@@ -123,17 +123,17 @@ describe('owned observers', () => {
     const host = document.createElement('div');
     document.body.append(host);
     const target = window as unknown as Fakeable;
-    const original = target.ResizeObserver;
+    const original = target['ResizeObserver'];
     try {
-      target.ResizeObserver = undefined;
+      target['ResizeObserver'] = undefined;
       const observer = new OwnedResizeObserver(host, () => undefined);
       expect(() => observer.observe(host)).to.not.throw();
       expect(observer.active).to.be.false;
-      target.ResizeObserver = class { constructor() { throw new Error('nope'); } };
+      target['ResizeObserver'] = class { constructor() { throw new Error('nope'); } };
       expect(() => observer.resume()).to.not.throw();
       expect(observer.active).to.be.false;
     } finally {
-      target.ResizeObserver = original;
+      target['ResizeObserver'] = original;
       host.remove();
     }
   });
@@ -217,9 +217,9 @@ describe('observer controllers', () => {
     extra.remove();
 
     const target = window as unknown as Fakeable;
-    const original = target.ResizeObserver;
+    const original = target['ResizeObserver'];
     try {
-      target.ResizeObserver = undefined;
+      target['ResizeObserver'] = undefined;
       const lone = document.createElement('lr-owned-observer-host') as HostElement;
       lone.style.cssText = 'display:block;width:50px;height:10px';
       const sizes: number[] = [];
@@ -231,7 +231,7 @@ describe('observer controllers', () => {
       window.dispatchEvent(new Event('resize'));
       expect(sizes).to.deep.equal([50]);
     } finally {
-      target.ResizeObserver = original;
+      target['ResizeObserver'] = original;
     }
   });
 
@@ -260,10 +260,10 @@ describe('observer controllers', () => {
 
   it('VisibilityGate degrades to visible when IntersectionObserver is unavailable or throws', () => {
     const target = window as unknown as Fakeable;
-    const original = target.IntersectionObserver;
+    const original = target['IntersectionObserver'];
     try {
       for (const broken of [undefined, class { constructor() { throw new Error('x'); } }]) {
-        target.IntersectionObserver = broken;
+        target['IntersectionObserver'] = broken;
         const host = document.createElement('lr-owned-observer-host') as HostElement;
         const events: boolean[] = [];
         const gate = new VisibilityGate(host, { onVisible: (v) => events.push(v) });
@@ -274,7 +274,7 @@ describe('observer controllers', () => {
         host.remove();
       }
     } finally {
-      target.IntersectionObserver = original;
+      target['IntersectionObserver'] = original;
     }
   });
 });

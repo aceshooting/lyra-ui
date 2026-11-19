@@ -19,7 +19,7 @@ measurements. Current [lyra-3d 1.1.0](https://github.com/aceshooting/lyra-ui/rel
 
 ## Published 1.1.0 maintenance
 
-The [30.2 maintenance delivery](30.2-maintenance.md#implementation-status) includes sparse point/graph
+The [30.2 maintenance delivery](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0) includes sparse point/graph
 visual-state updates, resumable graph fallback work, lower-allocation XYZ parsing, admitted-format
 loader boundaries and an additive asynchronous model-loading path. These changes do not complete
 the later visuals or 100k-node graph target.

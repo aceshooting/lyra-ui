@@ -1,4 +1,3 @@
-import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -498,7 +497,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
           ? 'promptStudioRoleSystem'
           : 'promptStudioRoleAssistant',
     );
-    const articleLabel = normalizeLabel(this.getAttribute('aria-label')) ?? authorLabel;
+    const articleLabel = this.hasAttribute('aria-label')
+      ? (this.getAttribute('aria-label') ?? '')
+      : authorLabel;
     const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
       ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
     ></span>`;

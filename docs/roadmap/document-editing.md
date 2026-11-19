@@ -15,7 +15,7 @@ The published lyra-ui 30.1.0 release does not advance these editor phases. The e
 0.6.3, with corpus, interoperability, IME, assistive-technology and retained-memory work open as
 listed below; viewer regression tests do not establish editor fidelity.
 
-The [published 0.6.4 maintenance work](30.2-maintenance.md#implementation-status) adds a query-local
+The [published 0.6.4 maintenance work](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0) adds a query-local
 relationship index for multi-drawing image navigation and keeps a direct scan for a single drawing.
 The revised path passes focused/full unit, lint and package checks. Deterministic paired fixtures
 retain exact archive/semantic hashes and targets, recovering the single-drawing regression while
