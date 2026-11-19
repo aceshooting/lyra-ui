@@ -90,7 +90,7 @@
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
-    "knip": "^6.45.1",
+    "knip": "^6.46.1",
     "lit": "^3.3.3",
     "maplibre-gl": "^6.19.0",
     "oxlint": "1.94.0",
