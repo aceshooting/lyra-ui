@@ -86,27 +86,27 @@ const READBACK_BASES = ['#010203', '#040506'] as const;
  * results mean the assignment was rejected.
  */
 export function readCanvasRgba(doc: Document, css: string): CanvasRgba | undefined {
-  let ctx: CanvasRenderingContext2D | null;
+  // One guard covers a missing canvas and a tainted or privacy-restricted one whose getImageData
+  // throws (SecurityError): both mean "colour unavailable", never an exception for the caller. A
+  // short pixel buffer reads its missing channels as 0.
   try {
     const canvas = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
     canvas.width = 1;
     canvas.height = 1;
-    ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return undefined;
+    const [first, second] = READBACK_BASES.map((base) => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = base;
+      ctx.fillStyle = css;
+      ctx.fillRect(0, 0, 1, 1);
+      return ctx.getImageData(0, 0, 1, 1).data;
+    }) as [Uint8ClampedArray, Uint8ClampedArray];
+    for (let i = 0; i < 4; i++) if ((first[i] ?? 0) !== (second[i] ?? 0)) return undefined;
+    return [first[0] ?? 0, first[1] ?? 0, first[2] ?? 0, (first[3] ?? 0) / 255];
   } catch {
     return undefined;
   }
-  if (!ctx) return undefined;
-  const pixels: Uint8ClampedArray[] = [];
-  for (const base of READBACK_BASES) {
-    ctx.clearRect(0, 0, 1, 1);
-    ctx.fillStyle = base;
-    ctx.fillStyle = css;
-    ctx.fillRect(0, 0, 1, 1);
-    pixels.push(ctx.getImageData(0, 0, 1, 1).data);
-  }
-  const [first, second] = pixels as [Uint8ClampedArray, Uint8ClampedArray];
-  for (let i = 0; i < 4; i++) if (first[i] !== second[i]) return undefined;
-  return [first[0]!, first[1]!, first[2]!, first[3]! / 255];
 }
 
 /** Serializes a colour as a comma-form `rgb()`/`rgba()` string (alpha omitted when opaque). */

@@ -62612,6 +62612,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -67497,6 +67521,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
           }
         ],
         "cssStates": [
@@ -72984,6 +73032,66 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color, inherit)"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
           {
             "name": "--lr-image-viewer-annotate-active-bg",
             "deprecated": null,
@@ -102646,6 +102754,66 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color, inherit)"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
           {
             "name": "--lr-pan-zoom-min-block-size",
             "deprecated": null,
@@ -163543,6 +163711,66 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color, inherit)"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
           {
             "name": "--lr-zoomable-frame-control-hover-bg",
             "deprecated": null,

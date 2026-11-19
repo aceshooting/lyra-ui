@@ -26449,7 +26449,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 946,
+              "line": 950,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63789,7 +63789,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 421,
+              "line": 431,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

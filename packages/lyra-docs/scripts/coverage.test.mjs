@@ -475,11 +475,11 @@ test('a coverage run clears earlier output, builds under coverage, runs both sui
 
   const unit = calls[3];
   assert.equal(unit.command, process.execPath);
-  assert.deepEqual(unit.args.slice(0, 4), ['--test', '--test-concurrency=2',
+  assert.deepEqual(unit.args.slice(0, 5), ['--disable-warning=ExperimentalWarning', '--test', '--test-concurrency=2',
     resolve(root, '.coverage-output/src/docx/a.test.js'), resolve(root, '.coverage-output/src/docx/b.test.js')]);
   assert.equal(unit.args.includes(resolve(root, '.coverage-output/src/docx/helper.js')), false, 'only test files run');
   assert.deepEqual(unit.environment, base);
-  for (const suite of unit.args.slice(4)) {
+  for (const suite of unit.args.slice(5)) {
     assert.equal(existsSync(resolve(packageRoot, suite)), true, `${suite} must exist in the package`);
   }
   for (const suite of ['scripts/package.test.mjs', 'scripts/check-package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs', 'scripts/performance.test.mjs', 'scripts/engine/source.test.mjs', 'test/xml.test.mjs']) {

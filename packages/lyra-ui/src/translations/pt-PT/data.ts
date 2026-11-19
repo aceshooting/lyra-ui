@@ -122,7 +122,7 @@ const strings: LyraLocaleStrings = {
   flowStatusWithDetail: '{status} — {detail}',
   flowSourceRevealSourceNode: 'Ir para o nó de origem {node} de {edge}',
   flowSourceRevealTargetNode: 'Ir para o nó de destino {node} de {edge}',
-  flowSourceRecordMatches: 'Registros correspondentes: {count}',
+  flowSourceRecordMatches: 'Registos correspondentes: {count}',
   flowRunStatusLabel: 'Estado da execução',
   flowRunSummary: '{done} de {total} etapas concluídas',
   flowRunStepStatus: '{label}: {status}',

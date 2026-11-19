@@ -71,12 +71,16 @@ export function resolveListMove(event: KeyboardEvent | string, options: ListMove
 }
 
 /** Common availability baseline; callers may add widget-specific guards. Hidden and inert
- *  ancestors are checked across shadow boundaries. */
-export function isRovingTargetAvailable(element: HTMLElement): boolean {
+ *  ancestors are checked across shadow boundaries. A widget that lives inside a container with
+ *  its own transient hidden/inert phase (a popup still waiting to be positioned) passes itself as
+ *  `boundary`: the walk stops after that element, so the widget can still settle its roving stop
+ *  while the container is between states and the container focuses it once it is shown. */
+export function isRovingTargetAvailable(element: HTMLElement, boundary?: Element): boolean {
   if ('disabled' in element && Boolean(element.disabled)) return false;
   if (element.getAttribute('aria-disabled') === 'true' || element.getAttribute('aria-hidden') === 'true') return false;
   for (let node: Element | null = element; node; node = composedParentElement(node)) {
     if (node.hasAttribute('hidden') || node.hasAttribute('inert')) return false;
+    if (node === boundary) break;
   }
   return !element.hidden;
 }

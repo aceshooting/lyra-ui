@@ -31,7 +31,7 @@ function run(command, arguments_, { cwd = root } = {}) {
 const tests = (await readdir(resolve(root, 'test'))).filter((name) => name.endsWith('.test.mjs'))
   .sort().map((name) => `test/${name}`);
 if (!tests.length) throw new Error('Coverage cannot run without unit test files');
-const unitStatus = run(process.execPath, ['--test', '--test-concurrency=4', ...tests]);
+const unitStatus = run(process.execPath, ['--disable-warning=ExperimentalWarning', '--test', '--test-concurrency=4', ...tests]);
 
 let pipelineStatus = 0;
 let browserStatus;

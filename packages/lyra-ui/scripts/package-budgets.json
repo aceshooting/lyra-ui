@@ -27,7 +27,7 @@
     "@aceshooting/lyra-3d": {
       "maximum": {
         "packedBytes": 300288,
-        "unpackedBytes": 1303488,
+        "unpackedBytes": 1303552,
         "fileCount": 263
       }
     },
@@ -40,15 +40,15 @@
     },
     "@aceshooting/lyra-translations": {
       "maximum": {
-        "packedBytes": 1967296,
-        "unpackedBytes": 8749632,
+        "packedBytes": 1983104,
+        "unpackedBytes": 8827136,
         "fileCount": 1121
       }
     },
     "@aceshooting/lyra-ide": {
       "maximum": {
-        "packedBytes": 1756224,
-        "unpackedBytes": 10845760,
+        "packedBytes": 1760768,
+        "unpackedBytes": 10890304,
         "fileCount": 10
       }
     },

@@ -59,6 +59,16 @@ export interface LyraPanZoomEventMap {
  * @csspart reset - Reset-to-100-percent button.
  * @cssprop [--lr-pan-zoom-min-block-size=var(--lr-size-10rem)] - Minimum viewport block size.
  * @cssprop [--lr-pan-zoom-zoom=1] - Read-only scale written from `zoom`; set the property instead.
+ * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
+ * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
+ * @cssprop [--lr-icon-button-bg-hover=var(--lr-color-brand-quiet)] - Control background in the hover state.
+ * @cssprop [--lr-icon-button-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Control border in the resting state.
+ * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
+ * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
+ * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
+ * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] - Control foreground color in the pressed state.
+ * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Control foreground color in the hover state.
+ * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.
  * @status stable
  * @since 8.0.0
  */

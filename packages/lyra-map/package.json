@@ -98,7 +98,7 @@
     "build": "node scripts/build.mjs",
     "prepack": "pnpm build",
     "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.scene-native-peer.test.json",
-    "test": "node --test test/*.test.mjs",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
     "test:coverage": "node scripts/coverage.mjs",
     "test:mutation": "pnpm test && cd ../.. && packages/lyra-map/node_modules/.bin/stryker run packages/lyra-map/stryker.config.mjs"

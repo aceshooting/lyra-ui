@@ -5697,7 +5697,11 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraFlowControlsEventMap;
     eventNames:       | 'lr-readonly-change';
-    cssNames:       | '--lr-flow-controls-lock-active-color';
+    cssNames:       | '--lr-flow-controls-lock-active-color'
+      | '--lr-icon-button-bg'
+      | '--lr-icon-button-border'
+      | '--lr-icon-button-color'
+      | '--lr-icon-button-radius';
     attributeAliases: {
       'without-lock'?: LyraFlowControls['withoutLock'];
     };
@@ -6162,7 +6166,11 @@ export interface LyraComponentTypeMap {
       | '--lr-graph-query-builder-saved-delete-color'
       | '--lr-graph-query-builder-saved-delete-hover-color'
       | '--lr-graph-query-builder-saved-load-active-bg'
-      | '--lr-graph-query-builder-saved-load-color';
+      | '--lr-graph-query-builder-saved-load-color'
+      | '--lr-icon-button-bg'
+      | '--lr-icon-button-border'
+      | '--lr-icon-button-color'
+      | '--lr-icon-button-radius';
     attributeAliases: {
       'custom-error'?: LyraGraphQueryBuilder['customError'];
       'error-text'?: LyraGraphQueryBuilder['errorText'];
@@ -6676,7 +6684,17 @@ export interface LyraComponentTypeMap {
       | 'lr-render-error'
       | 'lr-rotation-change'
       | 'lr-zoom-change';
-    cssNames:       | '--lr-image-viewer-annotate-active-bg'
+    cssNames:       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
+      | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
+      | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
+      | '--lr-icon-button-radius'
+      | '--lr-image-viewer-annotate-active-bg'
       | '--lr-image-viewer-annotate-active-border'
       | '--lr-image-viewer-annotation-box-bg'
       | '--lr-image-viewer-annotation-box-border'
@@ -9177,7 +9195,17 @@ export interface LyraComponentTypeMap {
       | 'focus'
       | 'lr-render-error'
       | 'lr-zoom-change';
-    cssNames:       | '--lr-pan-zoom-min-block-size'
+    cssNames:       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
+      | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
+      | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
+      | '--lr-icon-button-radius'
+      | '--lr-pan-zoom-min-block-size'
       | '--lr-pan-zoom-zoom';
     attributeAliases: {
       'aria-label'?: LyraPanZoom['accessibleLabel'];
@@ -14418,7 +14446,17 @@ export interface LyraComponentTypeMap {
       | 'focus'
       | 'load'
       | 'lr-zoom-change';
-    cssNames:       | '--lr-zoomable-frame-control-hover-bg'
+    cssNames:       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
+      | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
+      | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
+      | '--lr-icon-button-radius'
+      | '--lr-zoomable-frame-control-hover-bg'
       | '--lr-zoomable-frame-zoom';
     attributeAliases: {
       'aria-label'?: LyraZoomableFrame['accessibleLabel'];

@@ -141,8 +141,8 @@ Lyra retains the localized native-button names, actions, and minimum hit areas.
 `navigation`, `navigation-button`, `navigation-button-previous` /
 `navigation-button-next`, Shoelace aliases `navigation-button--previous` /
 `navigation-button--next`, plus `previous-glyph` / `next-glyph`; `pagination`, `pagination-item`,
-active aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track` and
-`controls` are Lyra extensions.
+active aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track`,
+`controls`, and `autoplay-button` (pauses or resumes automatic rotation) are Lyra extensions.
 
 **Themeable custom properties:** mapped `--aspect-ratio` (default `16/9`), `--scroll-hint`
 (logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions

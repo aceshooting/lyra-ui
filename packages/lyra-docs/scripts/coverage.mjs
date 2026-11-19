@@ -82,7 +82,7 @@ export async function runCoverage({
     const tests = (await readdir(testDirectory)).filter(name => name.endsWith('.test.js'))
       .sort().map(name => resolve(testDirectory, name));
     if (!tests.length) throw new Error('Coverage cannot run without unit test files');
-    const unitStatus = run(root, process.execPath, ['--test', '--test-concurrency=2', ...tests, ...UNIT_SUITES], base);
+    const unitStatus = run(root, process.execPath, ['--disable-warning=ExperimentalWarning', '--test', '--test-concurrency=2', ...tests, ...UNIT_SUITES], base);
     // Always the complete suite: clear any narrowing selector left in the shell.
     // The performance harness is exercised by its own run, so the qualification record of the suite above
     // never carries timings taken under coverage instrumentation.

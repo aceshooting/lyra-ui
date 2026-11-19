@@ -280,6 +280,7 @@ const strings: LyraLocaleStrings = {
   flowLockCanvas: 'Bloquear o ecrã',
   flowControlsLabel: 'Controlos do ecrã',
   nodePaletteDragHint: 'Arraste para o ecrã ou prima Enter para posicionar',
+  flowSourceRecordMatches: 'Registos correspondentes: {count}',
   neighborListLabel: 'Relações',
   neighborListEmpty: 'Nenhuma relação',
   neighborSourceChoose: 'Selecione uma entidade para ver os seus vizinhos.',

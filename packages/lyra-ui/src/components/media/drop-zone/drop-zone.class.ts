@@ -16,7 +16,7 @@ import {
 } from '../../../internal/drop-session-controller.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
-  type FileIntakeRejected, type FileIntakeResult,
+  type FileIntakeResult,
 } from '../file-input/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
@@ -28,7 +28,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAU
 
 export interface LyraDropZoneRejectedFile {
   readonly file: File;
-  readonly reason: FileIntakeRejected['reason'];
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
 }
 
 export interface LyraDropZoneFilesDetail {

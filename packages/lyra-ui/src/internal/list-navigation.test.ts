@@ -114,4 +114,16 @@ describe('roving target availability across shadow boundaries', () => {
       host.remove();
     }
   });
+
+  it('stops the ancestor walk after the boundary but still honors the boundary itself', () => {
+    const container = document.body.appendChild(document.createElement('div'));
+    const widget = container.attachShadow({ mode: 'open' }).appendChild(document.createElement('div'));
+    const target = widget.appendChild(document.createElement('button'));
+    container.setAttribute('inert', '');
+    expect(isRovingTargetAvailable(target)).to.equal(false);
+    expect(isRovingTargetAvailable(target, widget)).to.equal(true);
+    widget.setAttribute('hidden', '');
+    expect(isRovingTargetAvailable(target, widget)).to.equal(false);
+    container.remove();
+  });
 });

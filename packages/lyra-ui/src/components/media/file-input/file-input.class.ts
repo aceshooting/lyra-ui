@@ -32,7 +32,7 @@ import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
-  type FileIntakeRejected, type FileIntakeResult,
+  type FileIntakeResult,
 } from './file-intake.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -89,7 +89,7 @@ function isElementTarget(value: EventTarget): value is Element {
 
 export interface LyraFileInputRejectedFile {
   readonly file: File;
-  readonly reason: FileIntakeRejected['reason'];
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
 }
 
 export interface LyraFileInputFilesDetail {

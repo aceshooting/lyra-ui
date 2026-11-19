@@ -103,6 +103,20 @@ describe('readCanvasRgba', () => {
   it('does not mistake a color equal to a probe base for invalid', () => {
     expect(readCanvasRgba(document, '#010203')).to.deep.equal([1, 2, 3, 1]);
   });
+  it('fails closed on an unreadable canvas and reads a short pixel buffer as zeros', () => {
+    const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+    try {
+      CanvasRenderingContext2D.prototype.getImageData = () => {
+        throw new DOMException('Canvas pixels are unavailable', 'SecurityError');
+      };
+      expect(readCanvasRgba(document, '#ff0000')).to.equal(undefined);
+      CanvasRenderingContext2D.prototype.getImageData = () =>
+        ({ colorSpace: 'srgb', data: new Uint8ClampedArray(0), height: 0, width: 0 }) as ImageData;
+      expect(readCanvasRgba(document, '#ff0000')).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
+    }
+  });
   it('serializes to rgb/rgba strings', () => {
     expect(toRgbaString([1, 2, 3, 1])).to.equal('rgb(1, 2, 3)');
     expect(toRgbaString([1, 2, 3, 0.5])).to.equal('rgba(1, 2, 3, 0.5)');

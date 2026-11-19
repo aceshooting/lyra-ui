@@ -104,6 +104,10 @@ const lockOpenGlyph = () =>
  *   `readonly`; bubbles through a canvas this cluster is slotted into.
  * @cssprop [--lr-flow-controls-lock-active-color=var(--lr-color-brand)] - Pressed lock-button
  *   foreground.
+ * @cssprop [--lr-icon-button-bg=transparent] - Control background in the resting state.
+ * @cssprop [--lr-icon-button-border=0] - Control border in the resting state.
+ * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
+ * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.
  * @status stable
  * @since 4.0.0
  */

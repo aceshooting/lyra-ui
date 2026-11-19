@@ -45,7 +45,7 @@ const tests = (await readdir(resolve(root, 'test'))).filter((name) => name.endsW
   .sort().map((name) => `test/${name}`);
 if (!tests.length) throw new Error('Coverage cannot run without unit test files');
 const redirect = new URL('./coverage-redirect.mjs', import.meta.url).href;
-const unitStatus = run(process.execPath, ['--test', '--test-concurrency=4', ...tests], environment({
+const unitStatus = run(process.execPath, ['--disable-warning=ExperimentalWarning', '--test', '--test-concurrency=4', ...tests], environment({
   NODE_V8_COVERAGE: resolve(coverage, 'node-v8'),
   NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${redirect}`].filter(Boolean).join(' '),
 }));

@@ -386,6 +386,10 @@ export interface LyraGraphQueryBuilderEventMap {
  * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
  * cannot paint the form red before the user has typed anything. A form reset makes it pristine
  * again.
+ * @cssprop [--lr-icon-button-bg=transparent] - Control background in the resting state.
+ * @cssprop [--lr-icon-button-border=0] - Control border in the resting state.
+ * @cssprop [--lr-icon-button-color=var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))] - Control foreground color in the resting state.
+ * @cssprop [--lr-icon-button-radius=var(--lr-radius-xs)] - Control corner radius.
  * @status stable
  * @since 4.1.0
  */

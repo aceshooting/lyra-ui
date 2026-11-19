@@ -588,12 +588,12 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.packedBytes, 1_071_936);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_400_192);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.fileCount, 692);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 1_967_296);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 8_749_632);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 1_983_104);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 8_827_136);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.fileCount, 1_121);
   assert.deepEqual(
     [actualBudgets.companions['@aceshooting/lyra-ide'].maximum.packedBytes, actualBudgets.companions['@aceshooting/lyra-ide'].maximum.unpackedBytes],
-    [1_756_224, 10_845_760],
+    [1_760_768, 10_890_304],
   );
 
   const ide = ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'].map((path) => file(path));

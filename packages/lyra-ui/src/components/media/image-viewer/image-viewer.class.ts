@@ -232,6 +232,16 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   renders, resolved per tone from the `--lr-image-viewer-highlight-*-bg` knobs above. Its hover
  *   and pressed states are colour mixes taken from this value, so setting it directly retints all
  *   three at once for one highlight; retint a whole tone through the `-bg` knob instead.
+ * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
+ * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
+ * @cssprop [--lr-icon-button-bg-hover=var(--lr-color-brand-quiet)] - Control background in the hover state.
+ * @cssprop [--lr-icon-button-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Control border in the resting state.
+ * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
+ * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
+ * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
+ * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] - Control foreground color in the pressed state.
+ * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Control foreground color in the hover state.
+ * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.
  * @status stable
  * @since 4.0.0
  */

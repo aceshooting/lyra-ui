@@ -259,7 +259,7 @@ export function createMapEngineLoader<T>(
   importer: () => Promise<unknown>,
   validate: (candidate: unknown) => candidate is T,
   missing: (candidate: unknown) => string | undefined,
-) {
+): { get(): Promise<T | null>; loadWith(load?: () => Promise<unknown>): Promise<T | null> } {
   type Inspection = { module: T | null };
   const inspect = async (load: () => Promise<unknown>): Promise<Inspection> => {
     const value = await load();
@@ -325,7 +325,9 @@ const maplibreLoader = createMapEngineLoader('maplibre-gl', importMaplibre, isMa
 export const loadMaplibreModule = maplibreLoader.loadWith;
 
 /** Lazily loads the native engine. A rejected import is retried on the next call. */
-export const loadMaplibre = maplibreLoader.get;
+export function loadMaplibre(): Promise<MaplibreModule | null> {
+  return maplibreLoader.get();
+}
 
 /** The companion additionally provides per-map main-thread and worker readiness. */
 export interface ModularMapModule extends MaplibreModule {
@@ -355,7 +357,9 @@ const modularLoader = createMapEngineLoader('@aceshooting/lyra-map', importModul
 export const loadModularMapModule = modularLoader.loadWith;
 
 /** Lazily loads the modular companion. A rejected import is retried on the next call. */
-export const loadModularMap = modularLoader.get;
+export function loadModularMap(): Promise<ModularMapModule | null> {
+  return modularLoader.get();
+}
 
 /** The standard peer controls `<lr-map controls>` can add, by kind. */
 export type MapControlKind = 'navigation' | 'scale' | 'geolocate' | 'globe' | 'terrain' | 'attribution';

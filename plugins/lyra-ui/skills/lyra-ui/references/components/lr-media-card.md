@@ -108,7 +108,7 @@ above.
 **CSS parts:** `base` (a `<button>` for `kind="image"`, a plain wrapper `<div>` for `kind="video"`,
 an `<a>` or `<span>` for the file-chip fallback depending on href safety), `media` (the `<img>`/
 `<video>`), `file-icon`, `filename` (file-chip fallback only), `open-button` (video only — see
-below).
+below), `media-error` (the localized message shown in place of media that failed to load).
 
 **Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as

@@ -157,7 +157,7 @@ export const styles = css`
   [part='edge'] {
     fill: none;
     stroke: var(--_lr-flow-edge-color, var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border)));
-    stroke-width: calc(1.5px / var(--_lr-flow-zoom, 1));
+    stroke-width: calc(var(--lr-size-1px) * 1.5 / var(--_lr-flow-zoom, 1));
     pointer-events: stroke;
     cursor: pointer;
   }
@@ -289,7 +289,7 @@ export const styles = css`
      [part='edge-hit-area']:active + [part='edge'] arm is (0,3,0), three compound selectors, and
      out-ranked it either way, so the press still worked through the fat hit target. */
   [part='edge'][aria-pressed='true'] {
-    stroke-width: calc(2.5px / var(--_lr-flow-zoom, 1));
+    stroke-width: calc(var(--lr-size-1px) * 2.5 / var(--_lr-flow-zoom, 1));
   }
   /* The hit area is the wide transparent twin painted immediately before its edge, so it wins the
      hit test everywhere outside the drawn 1.5px stroke; without the sibling selector the edge lit
@@ -297,7 +297,7 @@ export const styles = css`
      an already-selected edge is a no-op because there is nothing further to say, not masking. */
   [part='edge']:hover,
   [part='edge-hit-area']:hover + [part='edge'] {
-    stroke-width: calc(2.5px / var(--_lr-flow-zoom, 1));
+    stroke-width: calc(var(--lr-size-1px) * 2.5 / var(--_lr-flow-zoom, 1));
   }
   /* Stroke weight is the only channel an edge has: the stroke colour is the consumer's assigned
      tone (the [data-tone] rules above), so tinting on press would read as a tone change, not
@@ -305,7 +305,7 @@ export const styles = css`
      below that rule -- hence the ordering above. */
   [part='edge']:active,
   [part='edge-hit-area']:active + [part='edge'] {
-    stroke-width: calc(3.5px / var(--_lr-flow-zoom, 1));
+    stroke-width: calc(var(--lr-size-1px) * 3.5 / var(--_lr-flow-zoom, 1));
   }
   [part='node']:has([part='node-control']:focus-visible),
   [part='edge']:focus-visible {

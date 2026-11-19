@@ -292,6 +292,12 @@ export class LyraTimelineItem extends LyraElement {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
+  /** Kept as an own override so the published protected surface subclasses rely on stays stable;
+   *  slot presence is tracked by the controller, so there is no first-render work left here. */
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+  }
+
   override render(): TemplateResult {
     if (this.clusterPresentation) {
       return html`
