@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Свернуть панель',
   dockPanelExpand: 'Развернуть панель',
   dockPanelResize: 'Изменить размер панели',
+  dockPanelToggle: 'Показать или скрыть панель',
   responsivePanel: 'Панель',
   breadcrumb: 'Навигационная цепочка',
   resizeDivider: 'Изменить размер: разделитель между панелями {a} и {b}',

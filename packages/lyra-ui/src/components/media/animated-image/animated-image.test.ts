@@ -2,6 +2,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './animated-image.js';
 import type { LyraAnimatedImage } from './animated-image.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
@@ -854,3 +855,35 @@ describe('accessibility', () => {
 });
 
 expectStaleAttribute('lr-animated-image', 'respect-reduced-motion');
+
+describe('lr-animated-image remediation', () => {
+  const OTHER_DATA_URI =
+    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+  it('keeps a load that completes while detached and shows the controls after reattach', async () => {
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+    await loaded(el);
+    const parent = el.parentElement!;
+    el.remove();
+    el.src = OTHER_DATA_URI;
+    await el.updateComplete;
+    const image = el.shadowRoot!.querySelector<HTMLImageElement>('[part="image"]')!;
+    await waitUntil(() => image.complete && image.naturalWidth > 0, 'detached image never decoded');
+    image.dispatchEvent(new Event('load'));
+    parent.append(el);
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="control-box"]') !== null, 'controls never returned');
+    expect(el.hasAttribute('data-loaded')).to.equal(true);
+  });
+
+  it('returns focus to the play button when a new src removes and then restores it', async () => {
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+    await loaded(el);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="play-button"]')!;
+    await focusByKeyboard(button);
+    expect(el.shadowRoot!.activeElement === button).to.equal(true);
+    await loaded(el, OTHER_DATA_URI);
+    const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="play-button"]')!;
+    expect(el.shadowRoot!.activeElement === next).to.equal(true);
+  });
+});

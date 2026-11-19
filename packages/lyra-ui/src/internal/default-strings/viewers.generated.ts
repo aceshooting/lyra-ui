@@ -115,6 +115,7 @@ export const LYRA_DEFAULT_pageRailPageHighlighted: LyraMessage = {
 export const LYRA_DEFAULT_pdfViewerLabel: LyraMessage = 'PDF document';
 export const LYRA_DEFAULT_pdfViewerMissingLibrary: LyraMessage = 'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.';
 export const LYRA_DEFAULT_pdfViewerNextPage: LyraMessage = 'Next page';
+export const LYRA_DEFAULT_pdfViewerPageHighlights: LyraMessage = 'Page {page} highlights';
 export const LYRA_DEFAULT_pdfViewerPageOf: LyraMessage = 'Page {page} of {total}';
 export const LYRA_DEFAULT_pdfViewerPreviousPage: LyraMessage = 'Previous page';
 export const LYRA_DEFAULT_pdfViewerZoomIn: LyraMessage = 'Zoom in';

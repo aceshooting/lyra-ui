@@ -32,6 +32,7 @@ export const LYRA_DEFAULT_dashboardGridLabel: LyraMessage = 'Dashboard grid';
 export const LYRA_DEFAULT_dockPanelCollapse: LyraMessage = 'Collapse panel';
 export const LYRA_DEFAULT_dockPanelExpand: LyraMessage = 'Expand panel';
 export const LYRA_DEFAULT_dockPanelResize: LyraMessage = 'Resize panel';
+export const LYRA_DEFAULT_dockPanelToggle: LyraMessage = 'Toggle panel';
 export const LYRA_DEFAULT_drilldownDocuments: LyraMessage = 'Documents';
 export const LYRA_DEFAULT_drilldownEmpty: LyraMessage = 'No item selected';
 export const LYRA_DEFAULT_drilldownRuns: LyraMessage = 'Agent runs';

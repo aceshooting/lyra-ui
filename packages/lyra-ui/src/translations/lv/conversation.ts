@@ -181,6 +181,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Daži ieteikumi vai kataloga ieraksti tika izlaisti, jo tika sasniegts ievades ierobežojums.',
   transcriptFeedInputLimit: 'Tiek saglabāti tikai {count} jaunākie no {total} ierakstiem.',
   codeBlockHighlightLimit: 'Garš kods tiek rādīts bez sintakses izcelšanas.',
+  codeBlockHighlightedLine: 'Izcelta rinda',
+  codeBlockActiveLine: 'Aktīva izcelta rinda',
 };
 
 registerLyraLocale('lv', strings);

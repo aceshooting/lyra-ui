@@ -1,6 +1,10 @@
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { render, svg } from 'lit';
+import { checkIcon, copyIcon } from '../../../internal/icons.js';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
-import { writeClipboardText, type LyraClipboardWriteSuccess, type LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
+import { writeClipboardText } from '../../../internal/clipboard.js';
 import { acquireAnnouncementSink } from '../../../internal/announcer.js';
 
 export const MARKDOWN_CODE_HEADER_MAX = 200;
@@ -16,8 +20,7 @@ interface HeaderOptions {
   getChangedRoots?(): readonly ParentNode[];
   localize(key: string, fallback?: string, values?: Record<string, string>): string;
   buildHeader(frame: HTMLElement, language: string): HTMLButtonElement;
-  emitCopy(outcome: LyraClipboardWriteSuccess): void;
-  emitCopyError(outcome: LyraClipboardWriteFailure): void;
+  emit: Parameters<typeof reportCopyOutcome>[0]['emit'];
 }
 
 export function sanitizeCodeLanguageLabel(language: string): string {
@@ -34,26 +37,23 @@ function partNode<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
+const glyphs = new WeakMap<Document, Map<Status, SVGSVGElement>>();
+
 function glyph(button: HTMLButtonElement, status: Status): void {
   const document = button.ownerDocument;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('focusable', 'false');
-  const shapes = status === 'success' ? ['M5 12l4 4L19 6']
-    : status === 'error' ? ['M12 3 2 21h20L12 3Z', 'M12 9v5', 'M12 17h.01']
-    : ['M9 9h11v11H9z', 'M5 15H4V4h11v1'];
-  for (const d of shapes) {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    svg.append(path);
+  let cache = glyphs.get(document);
+  if (!cache) glyphs.set(document, cache = new Map());
+  let icon = cache.get(status);
+  if (!icon) {
+    const container = document.createElement('div');
+    const warning = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17h.01"></path></svg>`;
+    render(status === 'error' ? warning : status === 'success' ? checkIcon() : copyIcon(), container);
+    icon = container.querySelector('svg')!;
+    // Keep template markers and surrounding whitespace out of the document text index.
+    icon.replaceChildren(...icon.children);
+    cache.set(status, icon);
   }
-  button.replaceChildren(svg);
+  button.replaceChildren(icon.cloneNode(true));
 }
 
 /** Builds only elements and attributes: header decoration never enters the document text corpus. */
@@ -72,12 +72,6 @@ export function renderMarkdownCodeHeader(frame: HTMLElement, language: string): 
   header.append(button);
   if (frame.firstChild !== header) frame.insertBefore(header, frame.firstChild);
   return button;
-}
-
-function deepActive(document: Document): Element | null {
-  let active = document.activeElement;
-  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
-  return active;
 }
 
 /** Instance-owned copy controls with generation-safe clipboard writes and owner-window timers. */
@@ -148,7 +142,7 @@ export class MarkdownCodeHeaderController implements ReactiveController {
   hostAdopted(): void { this.release(); }
 
   hostUpdate(): void {
-    const active = deepActive(this.host.ownerDocument);
+    const active = deepActiveElementIn(this.host.ownerDocument);
     const index = active ? this.buttons.get(active) : undefined;
     if (active && index !== undefined) this.remembered = { button: active, index };
   }
@@ -210,7 +204,7 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     this.remembered = undefined;
     if (remembered && !remembered.button.isConnected) {
       const document = this.host.ownerDocument;
-      const active = deepActive(document);
+      const active = deepActiveElementIn(document);
       if (!active || active === document.body || active === document.documentElement) {
         this.liveButtons.get(remembered.index)?.focus({ preventScroll: true });
       }
@@ -239,10 +233,11 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     const outcome = await writeClipboardText(owner, record.source);
     if (!current()) return;
     this.statuses[index] = outcome.ok ? 'success' : 'error';
-    if (outcome.ok) this.options.emitCopy(outcome);
-    else this.options.emitCopyError(outcome);
+    reportCopyOutcome({
+      emit: this.options.emit,
+      announce: ok => this.sink?.announce(ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed')),
+    }, outcome, current);
     if (!current()) return;
-    this.sink?.announce(outcome.ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed'));
     this.host.requestUpdate();
     if (owner) this.timers.set(index, { owner, handle: owner.setTimeout(() => {
       if (!current()) return;

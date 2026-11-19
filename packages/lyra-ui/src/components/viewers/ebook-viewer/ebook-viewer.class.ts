@@ -18,6 +18,7 @@ import {
   isObjectValue,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
+  readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
 import {
   DocumentAnchorTarget,
@@ -41,6 +42,8 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { renderViewerPagerButton, viewerPagerStyles } from '../viewer-pager.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
@@ -332,18 +335,11 @@ function normalizeSpineItem(value: unknown): SafeEpubSpineItem | undefined {
 function projectSpineItems(book: SafeEpubBook): { readonly items: readonly SafeEpubSpineItem[]; readonly exact: boolean } {
   const spineItems = inheritedDataValue(book.spine, 'spineItems');
   if (!isArrayValue(spineItems)) return Object.freeze({ items: Object.freeze([]), exact: spineItems === undefined });
-  const length = getOwnDataDescriptor(spineItems, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR
-    || length === UNSAFE_OWN_DATA_DESCRIPTOR
-    || typeof length.value !== 'number'
-    || !Number.isSafeInteger(length.value)
-    || length.value < 0
-  )
-    return Object.freeze({ items: Object.freeze([]), exact: false });
+  const length = readOwnArrayLength(spineItems);
+  if (length === undefined) return Object.freeze({ items: Object.freeze([]), exact: false });
   const items: SafeEpubSpineItem[] = [];
-  let exact = length.value <= MAX_SEARCH_SPINE_ITEMS;
-  const count = Math.min(length.value, MAX_SEARCH_SPINE_ITEMS);
+  let exact = length <= MAX_SEARCH_SPINE_ITEMS;
+  const count = Math.min(length, MAX_SEARCH_SPINE_ITEMS);
   for (let index = 0; index < count; index += 1) {
     const descriptor = getOwnDataDescriptor(spineItems, String(index));
     if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
@@ -364,18 +360,11 @@ function projectSpineItems(book: SafeEpubBook): { readonly items: readonly SafeE
  * positions make an externally reported count inexact, but never discard a later valid sibling. */
 function projectFindResults(value: unknown, work: ViewerSearchWorkBudget): FindResultProjection {
   if (!isArrayValue(value)) return Object.freeze({ matches: Object.freeze([]), exact: false });
-  const length = getOwnDataDescriptor(value, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR
-    || length === UNSAFE_OWN_DATA_DESCRIPTOR
-    || typeof length.value !== 'number'
-    || !Number.isSafeInteger(length.value)
-    || length.value < 0
-  )
-    return Object.freeze({ matches: Object.freeze([]), exact: false });
+  const length = readOwnArrayLength(value);
+  if (length === undefined) return Object.freeze({ matches: Object.freeze([]), exact: false });
   const matches: EbookSearchMatch[] = [];
-  let exact = length.value <= MAX_FIND_RESULTS;
-  const count = Math.min(length.value, MAX_FIND_RESULTS);
+  let exact = length <= MAX_FIND_RESULTS;
+  const count = Math.min(length, MAX_FIND_RESULTS);
   for (let index = 0; index < count; index += 1) {
     const descriptor = getOwnDataDescriptor(value, String(index));
     if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || !isObjectValue(descriptor.value)) {
@@ -423,16 +412,9 @@ function pushTocEntries(
   stack: Array<{ readonly value: unknown; readonly level: number }>,
 ): void {
   if (!isArrayValue(value) || budget.positions >= MAX_TOC_ITEMS) return;
-  const length = getOwnDataDescriptor(value, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR
-    || length === UNSAFE_OWN_DATA_DESCRIPTOR
-    || typeof length.value !== 'number'
-    || !Number.isSafeInteger(length.value)
-    || length.value < 0
-  )
-    return;
-  const count = Math.min(length.value, MAX_TOC_ITEMS - budget.positions);
+  const length = readOwnArrayLength(value);
+  if (length === undefined) return;
+  const count = Math.min(length, MAX_TOC_ITEMS - budget.positions);
   for (let index = count - 1; index >= 0; index -= 1) {
     budget.positions += 1;
     const descriptor = getOwnDataDescriptor(value, String(index));
@@ -486,24 +468,31 @@ function projectToc(value: unknown): readonly EbookTocItem[] {
   return Object.freeze(items);
 }
 
+/** A public component token, the shared token it falls back to, and the last-resort value. */
+interface HighlightFillToken {
+  readonly own: string;
+  readonly token: string;
+  readonly fallback: string;
+}
+
 /** Tone -> the token (and its light-theme fallback) a painted `cfi` highlight resolves its `fill`
  *  from, mirroring `highlight-layer`'s own tone mapping. epub.js's `annotations.highlight()`
  *  applies its `styles` argument as raw SVG presentation attributes on the mark it paints (see
  *  `marks-pane`'s `Highlight.bind()`), not as a stylesheet declaration -- an unresolved `var(...)`
  *  string left in that attribute isn't guaranteed to repaint on a later theme change, so the
  *  concrete value is read via `getComputedStyle` at paint time instead. */
-const TONE_FILL_TOKEN: Record<LyraHighlightTone, { token: string; fallback: string }> = {
-  accent: { token: '--lr-color-brand-quiet', fallback: '#ddf4ff' },
-  success: { token: '--lr-color-success-quiet', fallback: '#dafbe1' },
-  warning: { token: '--lr-color-warning-quiet', fallback: '#fff8c5' },
-  danger: { token: '--lr-color-danger-quiet', fallback: '#ffebe9' },
-  neutral: { token: '--lr-color-surface-raised', fallback: '#f6f8fa' },
+const TONE_FILL_TOKEN: Record<LyraHighlightTone, HighlightFillToken> = {
+  accent: { own: '--lr-ebook-viewer-highlight-accent-bg', token: '--lr-color-brand-quiet', fallback: '#ddf4ff' },
+  success: { own: '--lr-ebook-viewer-highlight-success-bg', token: '--lr-color-success-quiet', fallback: '#dafbe1' },
+  warning: { own: '--lr-ebook-viewer-highlight-warning-bg', token: '--lr-color-warning-quiet', fallback: '#fff8c5' },
+  danger: { own: '--lr-ebook-viewer-highlight-danger-bg', token: '--lr-color-danger-quiet', fallback: '#ffebe9' },
+  neutral: { own: '--lr-ebook-viewer-highlight-neutral-bg', token: '--lr-color-surface-raised', fallback: '#f6f8fa' },
 };
 
 /** The active search match's own fill token/fallback -- mirrors `docx-viewer`'s
  *  `search-match-active` treatment (`--lr-color-warning`) rather than any highlight tone. */
-const SEARCH_MATCH_FILL_TOKEN = { token: '--lr-color-warning', fallback: '#9a6700' };
-const ACTIVE_HIGHLIGHT_STROKE_TOKEN = { token: '--lr-focus-ring-color', fallback: DEFAULT_CANVAS_COLOR };
+const SEARCH_MATCH_FILL_TOKEN: HighlightFillToken = { own: '--lr-ebook-viewer-search-match-bg', token: '--lr-color-warning', fallback: '#9a6700' };
+const ACTIVE_HIGHLIGHT_STROKE_TOKEN: HighlightFillToken = { own: '--lr-ebook-viewer-highlight-active-outline', token: '--lr-focus-ring-color', fallback: DEFAULT_CANVAS_COLOR };
 
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -566,6 +555,13 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart spinner - The shared loading treatment.
  * @csspart error - Visible ordinary error text; transitions announce through the shared
  *   document-level assertive region. Search state is exposed through `lr-search-change`.
+ * @cssprop --lr-ebook-viewer-highlight-accent-bg - Accent highlight fill.
+ * @cssprop --lr-ebook-viewer-highlight-success-bg - Success highlight fill.
+ * @cssprop --lr-ebook-viewer-highlight-warning-bg - Warning highlight fill.
+ * @cssprop --lr-ebook-viewer-highlight-danger-bg - Danger highlight fill.
+ * @cssprop --lr-ebook-viewer-highlight-neutral-bg - Neutral highlight fill.
+ * @cssprop --lr-ebook-viewer-highlight-active-outline - Active highlight outline color.
+ * @cssprop --lr-ebook-viewer-search-match-bg - Search-match fill.
  * @cssprop [--lr-ebook-viewer-max-height=none] - Maximum block size of the mount area epub.js
  *   renders into, before it scrolls internally. Also settable via the `max-height` property.
  * @status stable
@@ -593,7 +589,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, viewerPagerStyles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, viewerPagerStyles, srOnly, viewerLoadingStyles];
 
   /** URL fetched as an ArrayBuffer and rendered as an EPUB. */
   @property() src = '';
@@ -687,6 +683,11 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A location belongs to the book it was read from; one assigned with the new `src` stays.
+    const previousSrc = changed.get('src');
+    if (changed.has('src') && typeof previousSrc === 'string' && previousSrc !== '' && !changed.has('location')) {
+      this.location = '';
+    }
     const active = shadowFocusTarget(this);
     this.chapterButtonFocused = active?.localName === 'button' && !(active as HTMLButtonElement).disabled
       && active.getAttribute('part')?.endsWith('-button') === true;
@@ -861,8 +862,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         candidateBook = undefined;
         return;
       }
+      this.titleChapterFrames();
       rendition.on('relocated', (loc: unknown) => {
         if (!this.isCurrentBookRendition(generation, fetchTarget.view, book, rendition)) return;
+        this.titleChapterFrames();
         const start = inheritedDataValue(loc, 'start');
         const cfi = inheritedDataValue(start, 'cfi');
         const href = inheritedDataValue(start, 'href');
@@ -1226,7 +1229,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     // (via getComputedStyle) at most once per pass and reuse it across every highlight that shares
     // it, instead of re-querying it once per painted highlight.
     const fillCache = new Map<string, string>();
-    const resolveFill = (pair: { token: string; fallback: string }): string => {
+    const resolveFill = (pair: HighlightFillToken): string => {
       let value = fillCache.get(pair.token);
       if (value === undefined) {
         value = this.resolveHighlightFill(pair).fill;
@@ -1516,8 +1519,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   /** Resolves a `{ token, fallback }` pair to the mark's `fill` `styles` arg, reading the token's
    *  live concrete value off this instance via its owner window's `getComputedStyle` (falling back to its
    *  light-theme default when unresolved, e.g. before this element's own stylesheet is attached). */
-  private resolveHighlightFill({ token, fallback }: { token: string; fallback: string }): { fill: string } {
-    const value = this.ownerDocument.defaultView?.getComputedStyle(this).getPropertyValue(token).trim() ?? '';
+  private resolveHighlightFill({ own, token, fallback }: HighlightFillToken): { fill: string } {
+    const style = this.ownerDocument.defaultView?.getComputedStyle(this);
+    const value = style?.getPropertyValue(own).trim() || style?.getPropertyValue(token).trim() || '';
     return { fill: value || fallback };
   }
 
@@ -1530,6 +1534,21 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       return html`<p class="status-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
     return nothing;
+  }
+
+  private regionName(): string {
+    return normalizeLabel(this.name) ?? this.localize('ebookViewerRegionLabel');
+  }
+
+  /** epub.js creates one iframe per chapter inside the mount; a frame needs its own name. */
+  private titleChapterFrames(): void {
+    const title = this.regionName();
+    for (const frame of this.mountRef.value?.querySelectorAll('iframe') ?? []) {
+      if (!frame.hasAttribute('title') || frame.dataset['lyraTitle'] !== undefined) {
+        frame.setAttribute('title', title);
+        frame.dataset['lyraTitle'] = '';
+      }
+    }
   }
 
   override render(): TemplateResult {
@@ -1551,7 +1570,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
           part="mount"
           tabindex="-1"
           role=${viewerSemanticRole(this, 'region') ?? nothing}
-          aria-label=${viewerSemanticLabel(this, this.name || this.localize('ebookViewerRegionLabel')) ?? nothing}
+          aria-label=${viewerSemanticLabel(this, this.regionName()) ?? nothing}
           ${ref(this.mountRef)}
         ></div>
         ${this.renderStatus()}

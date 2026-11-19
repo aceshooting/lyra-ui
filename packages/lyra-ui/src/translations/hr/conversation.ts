@@ -181,6 +181,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Zbog ograničenja ulaza izostavljene su neke stavke: prijedlozi ili stavke kataloga.',
   transcriptFeedInputLimit: 'Zadržava se samo najnovijih {count} od {total} zapisa.',
   codeBlockHighlightLimit: 'Dugačak kôd prikazuje se bez isticanja sintakse.',
+  codeBlockHighlightedLine: 'Istaknuti redak',
+  codeBlockActiveLine: 'Aktivni istaknuti redak',
 };
 
 registerLyraLocale('hr', strings);

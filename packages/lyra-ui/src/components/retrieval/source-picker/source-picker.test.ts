@@ -1349,7 +1349,7 @@ it('caps adversarial depth and breadth and exposes a localized visible limit sta
   });
   const el = (await fixture(
     html`<lr-source-picker
-      .strings=${{ valueInvalid: 'Source tree limited' }}
+      .strings=${{ sourcePickerLimit: 'Source tree limited' }}
     ></lr-source-picker>`
   )) as LyraSourcePicker;
 
@@ -1358,6 +1358,9 @@ it('caps adversarial depth and breadth and exposes a localized visible limit sta
   expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(
     'Source tree limited'
   );
+  expect(el.shadowRoot!.querySelector('[part="limit"]')!.getAttribute('role')).to.equal('note');
+  const polite = document.querySelector('[data-lr-live-region="polite"]')!;
+  expect(polite.lastElementChild?.textContent).to.equal('Source tree limited');
 
   el.sources = wide;
   await el.updateComplete;

@@ -1,3 +1,4 @@
+import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -426,21 +427,7 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
 
   private createToolbarAction(): LyraToolbarAction {
     const host = this;
-    let leasedTrigger: HTMLElement | undefined;
-    let authoredTabIndex: string | null = null;
-    let lastManagedTabIndex: string | null = null;
-    let consumerOwnsTabIndex = false;
-    const releaseTabIndex = (): void => {
-      const target = leasedTrigger;
-      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
-        if (authoredTabIndex === null) target.removeAttribute('tabindex');
-        else target.setAttribute('tabindex', authoredTabIndex);
-      }
-      leasedTrigger = undefined;
-      authoredTabIndex = null;
-      lastManagedTabIndex = null;
-      consumerOwnsTabIndex = false;
-    };
+    const lease = leaseTabIndex();
     return {
       id: 'toggle',
       get disabled() {
@@ -450,27 +437,10 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
         host.focus(options);
       },
       setTabIndex(tabIndex) {
-        const trigger = host.button;
-        if (!trigger || host.groupLink) {
-          releaseTabIndex();
-          return;
-        }
-        if (leasedTrigger !== trigger) {
-          releaseTabIndex();
-          leasedTrigger = trigger;
-          authoredTabIndex = trigger.getAttribute('tabindex');
-        }
-        if (
-          consumerOwnsTabIndex ||
-          (lastManagedTabIndex !== null && trigger.getAttribute('tabindex') !== lastManagedTabIndex)
-        ) {
-          consumerOwnsTabIndex = true;
-          return;
-        }
-        trigger.tabIndex = tabIndex;
-        lastManagedTabIndex = trigger.getAttribute('tabindex');
+        if (host.groupLink) lease.release();
+        else lease.set(host.button ?? undefined, tabIndex);
       },
-      releaseTabIndex,
+      releaseTabIndex: lease.release,
       matchesEventPath(path) {
         // `!= null`: Lit's @query getter yields null, not undefined, before the first render.
         const button = host.button;

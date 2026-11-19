@@ -115,6 +115,7 @@ function isMarkedModule(value: unknown): value is MarkedModule {
 }
 
 const markedLoader = /* @__PURE__ */ createOptionalPeerLoader<MarkedModule>({
+  cache: 'generation',
   load: () => import('marked'),
   isCapability: isMarkedModule,
   warningKey: 'lyra-markdown-marked-unavailable',
@@ -156,31 +157,17 @@ export async function loadMarkdownAndSanitizer(
   importMarked?: () => Promise<unknown>,
   importDompurify?: () => Promise<unknown>,
 ): Promise<MarkdownDeps> {
-  const [marked, DOMPurify] = await Promise.all([markedLoader.loadWith(importMarked), loadDompurify(importDompurify)]);
+  const [marked, DOMPurify] = await Promise.all([importMarked ? markedLoader.loadWith(importMarked) : markedLoader.load(), loadDompurify(importDompurify)]);
   return { marked: marked ?? undefined, DOMPurify: DOMPurify ?? undefined };
 }
 
-/**
- * Lazily loads `marked` + `dompurify` once per page (see
- * `loadMarkdownAndSanitizer()` for why each is loaded and caught
- * independently). Cached the same way `chart-core-loader.ts`/`map-loader.ts`
- * cache their promise, so every `<lr-markdown>` instance on a page shares
- * one load.
- *
- * The dynamic `import()` inside `loadMarkdownAndSanitizer()` is always
- * asynchronous — even when both peers are already installed and resolve
- * without error — so every `<lr-markdown>` that calls this from
- * `connectedCallback()` paints its plain-text fallback (`data-fallback` on
- * the `content` part) for at least one microtask before the real rendered
- * output replaces it. That window is unconditional, not just a failure
- * path: it ends only once this promise settles. A consumer that wants to avoid it can call the
- * public `preloadMarkdown()` helper before mounting the first instance. Every later instance
- * adopts the settled cache synchronously.
- */
+/** Shares in-flight peer loads and caches a complete parser and sanitizer pair. A later
+ *  connection retries after a partial load, keeping the plain-text fallback available. */
 export function loadMarkdownDeps(): Promise<MarkdownDeps> {
   if (!deps) {
     deps = loadMarkdownAndSanitizer().then((resolved) => {
-      resolvedDeps = resolved;
+      if (resolved.marked && resolved.DOMPurify) resolvedDeps = resolved;
+      else deps = undefined;
       return resolved;
     });
   }

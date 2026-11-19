@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A form-associated radiogroup. Typed value events include `option` and the equal `radio` compatibility alias. Host `aria-label` wins by attribute presence, including an explicitly empty override that suppresses visible-label linkage.',
+          'A form-associated radiogroup. Typed value events include the chosen `option` and its `radio` alias. The committed `lr-change` also includes `previousValue`. Host `aria-label` wins by attribute presence, including an explicitly empty override that suppresses visible-label linkage.',
       },
     },
   },

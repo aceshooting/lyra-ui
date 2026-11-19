@@ -253,3 +253,15 @@ it('wraps long source status text at a narrow RTL allocation', async () => {
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.scrollWidth).to.be.at.most(321);
 });
+it('announces a later provider reload through the polite status channel but stays quiet on first load', async () => {
+  const { sinkTexts } = await import('../../../../test/announcements.js');
+  const data = provider(1);
+  const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .strings=${{ loading: 'Loading sources' }} .dataSource=${data.source}></lr-knowledge-base>`);
+  await table(el, 's0');
+  expect(sinkTexts('polite')).not.to.include('Loading sources');
+  const next = provider(1); let release!: () => void;
+  next.source.query = () => new Promise((resolve) => { release = () => resolve({ total: 0, summary: { total: 0, synced: 0, syncing: 0, attention: 0 }, rows: [] }); });
+  el.dataSource = next.source;
+  await waitUntil(() => sinkTexts('polite').includes('Loading sources'));
+  release();
+});

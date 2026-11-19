@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'ਪਲੇਬੈਕ ਗਤੀ',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{duration} ਵਿੱਚੋਂ {current}',
+  avPlayerHighlightRange: '{start} ਤੋਂ {end} ਤੱਕ',
+  avPlayerHighlightAt: '{start} ’ਤੇ',
   attachmentTriggerAudio: 'ਆਡੀਓ ਰਿਕਾਰਡ ਕਰੋ',
   attachmentMenuAudio: 'ਆਡੀਓ ਰਿਕਾਰਡ ਕਰੋ',
   flagLoadError: 'ਝੰਡਾ ਉਪਲਬਧ ਨਹੀਂ',

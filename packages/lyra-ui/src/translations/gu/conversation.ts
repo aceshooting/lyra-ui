@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી કેટલીક વસ્તુઓ છોડી દેવાઈ છે: સૂચનો અથવા કૅટલૉગની એન્ટ્રીઓ.',
   transcriptFeedInputLimit: 'કુલ {total}માંથી ફક્ત સૌથી નવી {count} એન્ટ્રીઓ જ રાખવામાં આવે છે.',
   codeBlockHighlightLimit: 'લાંબો કોડ સિન્ટેક્સ હાઇલાઇટિંગ વિના બતાવવામાં આવે છે.',
+  codeBlockHighlightedLine: 'હાઇલાઇટ કરેલ લાઇન',
+  codeBlockActiveLine: 'સક્રિય હાઇલાઇટ કરેલ લાઇન',
 };
 
 registerLyraLocale('gu', strings);

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Kelajuan main balik',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} daripada {duration}',
+  avPlayerHighlightRange: '{start} hingga {end}',
+  avPlayerHighlightAt: 'pada {start}',
   attachmentTriggerAudio: 'Rakam audio',
   attachmentMenuAudio: 'Rakam audio',
   flagLoadError: 'Bendera tidak tersedia',

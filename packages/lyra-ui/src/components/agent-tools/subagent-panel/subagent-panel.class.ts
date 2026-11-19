@@ -1,4 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -11,6 +14,7 @@ import {
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { normalizeLabel, labelWithVisibleText } from '../../../internal/accessible-name.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
@@ -44,7 +48,7 @@ export interface SubagentRun {
 export interface LyraSubagentPanelEventMap {
   'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>;
   'lr-run-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
-  'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
+  'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string; attempt: number }>>;
 }
 
 const ACTIVE = new Set<AgentStatusKind>(['queued', 'running', 'collecting', 'waiting-input', 'waiting-approval']);
@@ -74,7 +78,7 @@ interface OrderedRuns {
  * @customElement lr-subagent-panel
  * @event lr-run-activate - A complete subagent run was activated. `detail: { runId, run }`.
  * @event lr-run-cancel - Cancellation was requested for an active run. `detail: { runId }`.
- * @event lr-run-retry - Retry was requested for an errored/cancelled run.
+ * @event lr-run-retry - Retry was requested for an errored/cancelled run. `detail: { runId, attempt }`.
  * @csspart base - The named subagent region.
  * @csspart list - Hierarchical run list.
  * @csspart run - One run.
@@ -300,12 +304,16 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     return { rows, truncated };
   }
 
+  private focusedRunRowId: string | undefined;
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.focusedRunRowId = captureComposedFocusRepair(this, this)?.activeElement.closest<HTMLElement>('[data-run-id]')?.dataset['runId'];
     if (changed.has('runs') || changed.has('selectedRunId')) {
       this.orderedRunsCache = this.ordered();
       const rows = this.orderedRunsCache.rows;
       const ids = new Set(rows.map((row) => row.run.id));
+      for (const id of this.retryAttempts.keys()) if (!ids.has(id)) this.retryAttempts.delete(id);
       // Concretize focusedId to a real row (defaulting to the first) whenever it's unset or its row
       // was removed by a `runs` update -- onKeyDown indexes off it directly, so leaving it `null`
       // makes `rows.findIndex(...)` return -1 and ArrowDown/Up land back on the same row instead of
@@ -318,6 +326,12 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
+    if (this.focusedRunRowId !== undefined) {
+      const row = this.runElement(this.focusedRunRowId);
+      const fallback = row?.querySelector<HTMLElement>('[part="run-trigger"]') ??
+        this.renderRoot.querySelector<HTMLElement>('[role="treeitem"][tabindex="0"]');
+      restoreComposedFocus(this, true, fallback);
+    }
     const limitText = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
     if (!this.suppressNextLimitAnnouncement && limitText && limitText !== this.previousLimitText) {
       this.announcements.announcePolite(limitText);
@@ -354,6 +368,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     const { rows } = this.orderedRunsCache;
     if (rows.length === 0) return;
     const currentIndex = rows.findIndex((r) => r.run.id === this.focusedId);
@@ -411,6 +426,8 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     if (runId) this.focusedId = runId;
   };
 
+  private readonly retryAttempts = new Map<string, number>();
+
   private requestRunAction(event: Event, run: SubagentRun, runId: string, retry: boolean): void {
     const runs = this.runs;
     if (!this.isConnected || !this.shadowRoot?.contains(event.currentTarget as Node) ||
@@ -421,7 +438,13 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     if (current !== run) return;
     const status = current.status;
     if (this.runs === runs && (retry ? status === 'error' || status === 'cancelled' : ACTIVE.has(status))) {
-      this.emit(retry ? 'lr-run-retry' : 'lr-run-cancel', { runId });
+      if (retry) {
+        const attempt = (this.retryAttempts.get(runId) ?? 0) + 1;
+        this.retryAttempts.set(runId, attempt);
+        this.emit('lr-run-retry', { runId, attempt });
+      } else {
+        this.emit('lr-run-cancel', { runId });
+      }
     }
   }
 
@@ -431,6 +454,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     const progress = typeof run.progressRatio === 'number' ? finiteRange(run.progressRatio, 0, 0, 1) : null;
     const runPart = selected ? 'run run-selected' : 'run';
     const tabbable = this.focusedId === run.id || (this.focusedId == null && run.id === firstId);
+    const actionLabel = normalizeLabel(run.label) ?? run.id;
     const buttonTabindex = tabbable ? nothing : '-1';
     return html`
       <li
@@ -456,6 +480,30 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
             <lr-badge part="status" variant=${AGENT_STATUS_VARIANTS[run.status] ?? 'neutral'}>${this.statusLabel(run.status)}</lr-badge>
             ${run.task ? html`<span part="task">${run.task}</span>` : nothing}
             ${run.model ? html`<span part="model">${run.model}</span>` : nothing}
+          </button>
+          <span part="actions">
+            ${ACTIVE.has(run.status)
+              ? html`<button
+                  part="cancel"
+                  data-agent-action="inline"
+                  type="button"
+                  tabindex=${buttonTabindex}
+                  aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: actionLabel })}
+                  @click=${(event: Event) => this.requestRunAction(event, run, runId, false)}
+                >×</button>`
+              : nothing}
+            ${run.status === 'error' || run.status === 'cancelled'
+              ? html`<button
+                  part="retry"
+                  data-agent-action="inline"
+                  type="button"
+                  tabindex=${buttonTabindex}
+                  aria-label=${labelWithVisibleText(this.localize('subagentPanelRetry'), actionLabel)}
+                  aria-description=${this.localize('subagentPanelRetryRun', undefined, { name: actionLabel })}
+                  @click=${(event: Event) => this.requestRunAction(event, run, runId, true)}
+                >${this.localize('subagentPanelRetry')}</button>`
+              : nothing}
+          </span>
             ${progress != null
               ? html`<span
                   part="progress"
@@ -466,29 +514,6 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                   aria-valuenow=${Math.round(progress * 100)}
                 ><span style=${styleMap({ inlineSize: `${progress * 100}%` })}></span></span>`
               : nothing}
-          </button>
-          <span part="actions">
-            ${ACTIVE.has(run.status)
-              ? html`<button
-                  part="cancel"
-                  data-agent-action="inline"
-                  type="button"
-                  tabindex=${buttonTabindex}
-                  aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
-                  @click=${(event: Event) => this.requestRunAction(event, run, runId, false)}
-                >×</button>`
-              : nothing}
-            ${run.status === 'error' || run.status === 'cancelled'
-              ? html`<button
-                  part="retry"
-                  data-agent-action="inline"
-                  type="button"
-                  tabindex=${buttonTabindex}
-                  aria-description=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
-                  @click=${(event: Event) => this.requestRunAction(event, run, runId, true)}
-                >${this.localize('subagentPanelRetry')}</button>`
-              : nothing}
-          </span>
         </div>
       </li>
     `;
@@ -515,7 +540,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                       count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),
                     })}</p>`
                 : nothing}`
-          : html`<lr-empty part="empty" heading=${this.localize('subagentPanelEmpty')}></lr-empty>`}
+          : html`<lr-empty part="empty" tabindex="-1" heading=${this.localize('subagentPanelEmpty')}></lr-empty>`}
       </div>
     `;
   }

@@ -76,8 +76,8 @@ surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state box: a check when selected, a dash when mixed), `icon` (the `lr-file-icon` type
 badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMatches` when a filter
 empties the tree), `error` (a nonempty raw
-payload containing no valid roots), `limit` (bounded-normalizer
-failure/truncation). Post-mount no-match and recovery transitions announce through the shared
+payload containing no valid roots), `limit` (`role="note"`; localized `sourcePickerLimit` message when the bounded
+normalizer omitted sources, also announced politely once it appears after mount). Post-mount no-match and recovery transitions announce through the shared
 light-DOM polite sink; positive matches announce a localized count. The shadow messages are visible
 mirrors, never live regions.
 

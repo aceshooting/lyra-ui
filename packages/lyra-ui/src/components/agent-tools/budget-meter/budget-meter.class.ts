@@ -1,4 +1,6 @@
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { bdi } from '../../../internal/bidi.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
@@ -29,7 +31,7 @@ export type BudgetMeterValueFormatter = (value: number, context: BudgetMeterForm
  * @customElement lr-budget-meter
  * @csspart base - The component wrapper and semantic group.
  * @csspart label - The visible meter label.
- * @csspart meter - The progressbar, present only for a positive finite limit.
+ * @csspart meter - The budget meter, present only for a positive finite limit.
  * @csspart track - The meter track.
  * @csspart fill - The clamped visual fill.
  * @csspart percent - The localized percentage text.
@@ -92,7 +94,7 @@ export class LyraBudgetMeter extends LyraElement {
     return Math.max(0, finiteNumber(this.limit, 0));
   }
 
-  private valueProjection(): { used: number; limit: number; text: string } {
+  private valueProjection(): { used: number; limit: number; text: string; content: (string | TemplateResult)[] } {
     const formatter = this.valueFormatter;
     const usedInput = this.used;
     const limitInput = this.limit;
@@ -138,38 +140,46 @@ export class LyraBudgetMeter extends LyraElement {
       usedText = formattedUsed;
       limitText = formattedLimit;
     }
-    return {
-      used: finalUsed,
-      limit: finalLimit,
-      text: this.localize('budgetMeterValue', undefined, {
-        used: usedText,
-        limit: limitText,
-        unit: this.unit ?? '',
-      }).trim(),
-    };
+    const values = new Map([['{used}', usedText], ['{limit}', limitText], ['{unit}', this.unit ?? '']]);
+    const template = this.localize('budgetMeterValue');
+    const parts = template.split(/(\{used\}|\{limit\}|\{unit\})/).map(token => ({
+      text: values.get(token) ?? token,
+      isolate: values.has(token),
+    }));
+    const hasText = parts.map(part => part.text.trim().length > 0);
+    const retained = parts.slice(hasText.indexOf(true), hasText.lastIndexOf(true) + 1);
+    const content = retained.map((part, index) => {
+      if (index === 0) part.text = part.text.trimStart();
+      if (index === retained.length - 1) part.text = part.text.trimEnd();
+      return part.isolate ? bdi(part.text) : part.text;
+    });
+    return { used: finalUsed, limit: finalLimit, text: retained.map(part => part.text).join(''), content };
   }
 
   override render(): TemplateResult {
-    const { used, limit, text } = this.valueProjection();
-    const visibleLabel = this.label == null ? this.localize('budgetMeterLabel') : this.label;
-    const hostLabel = hostAriaLabel(this);
+    const { used, limit, text, content } = this.valueProjection();
+    const defaultLabel = this.localize('budgetMeterLabel');
+    const visibleLabel = this.label === '' ? '' : normalizeLabel(this.label) ?? defaultLabel;
+    const hostLabel = resolveAccessibleName(this);
     const available = limit > 0;
     const ratio = available ? finiteRatio(used, 0, limit) : 0;
     const percentage = available ? getNumberFormat(this.effectiveLocale, {
       style: 'percent',
-      maximumFractionDigits: 0,
+      ...(ratio > 0 && ratio < 0.01
+        ? { maximumSignificantDigits: 3 }
+        : { maximumFractionDigits: ratio > 0.99 && ratio < 1 ? 16 : 0 }),
     }).format(ratio) : '';
     const ariaValueNow = Math.min(used, limit);
     const level = resolveHeadingLevel(this.headingLevel ?? '2');
     return html`
-      <section part="base" role="group" aria-label=${hostLabel === null ? nothing : hostLabel}>
+      <section part="base" role="group" aria-label=${ifDefined(hostLabel)}>
         ${visibleLabel === '' ? nothing : html`<div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>`}
         ${available
           ? html`
               <div
                 part="meter"
-                role="progressbar"
-                aria-label=${hostLabel ?? visibleLabel}
+                role="meter"
+                aria-label=${ifDefined(resolveAccessibleName(this, visibleLabel, defaultLabel))}
                 aria-valuemin="0"
                 aria-valuemax=${String(limit)}
                 aria-valuenow=${String(ariaValueNow)}
@@ -180,7 +190,7 @@ export class LyraBudgetMeter extends LyraElement {
               <span part="percent">${this.localize('budgetMeterPercent', undefined, { percent: percentage })}</span>
             `
           : html`<p part="unavailable">${this.localize('budgetMeterUnavailable')}</p>`}
-        <p part="value">${text}</p>
+        <p part="value">${content}</p>
         ${available && used > limit ? html`<p part="exceeded">${this.localize('budgetMeterExceeded')}</p>` : nothing}
       </section>
     `;

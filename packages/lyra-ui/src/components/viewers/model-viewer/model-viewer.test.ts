@@ -607,3 +607,24 @@ it('reports an AbortError from a current fetch', async () => {
     expect(Boolean(viewer.shadowRoot!.querySelector('[part="error"]'))).to.equal(true);
   } finally { window.fetch = original; }
 });
+
+it('repairs focus when context loss disables the focused camera control', async () => {
+  const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`);
+  await ready(viewer);
+  await focusByKeyboard(toolbarButtons(viewer)[0]!);
+  hosts[0]!.lost('context-lost');
+  await viewer.updateComplete;
+  const active = viewer.shadowRoot!.activeElement;
+  expect(active !== null && !active.matches(':disabled, [hidden]')).to.equal(true);
+});
+
+it('stops reporting an engine failure after the fallback listener removes the viewer', async () => {
+  const el = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`);
+  await ready(el);
+  let errors = 0;
+  el.addEventListener('lr-engine-fallback', () => el.remove());
+  el.addEventListener('lr-render-error', () => errors++);
+  hosts[0]!.lost('error');
+  expect(el.isConnected).to.equal(false);
+  expect(errors).to.equal(0);
+});

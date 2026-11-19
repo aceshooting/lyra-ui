@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-markdown-core`
+
+Assign a new `languages` map to update available grammars.
+Math rendering caps explicit sizes at 20 em and macro expansion at 1,000. Targeted HTML forms receive the same `rel` protection as links.
 
 A build-lean sibling of `<lr-markdown>` above, for a consumer whose `languages` map already covers
 every language it will ever render — mirrors `<lr-code-block-core>`'s relationship to
@@ -25,7 +28,8 @@ This component's own module never imports or calls that function; it only calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
-Direction behaves exactly as described for `<lr-markdown>` (**Direction** above).
+Direction behaves exactly as described for `<lr-markdown>` (**Direction** above). Plain fences accept
+`--lr-markdown-code-block-bg` in both palettes.
 
 Removing `content` clears the document and its empty-document tab stop, including while streaming.
 The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
@@ -65,8 +69,8 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
 block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
-`() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
-fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
+`() => import('@shikijs/langs/bash')`). Successful loads are shared per key. A later request retries
+a failed load, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`, `maxHeight: string = ''` (attribute `max-height`) — same CSS-length scroll
 cap on `[part="content"]` as `<lr-markdown>`'s own; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
@@ -87,7 +91,7 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-activate`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
+`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-error`, `lr-copy-error` — identical detail shapes to
 `<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.

@@ -18,6 +18,9 @@
 
 A form-associated single-choice control. Use it alone or inside `lr-radio-group`.
 
+Value event details capture the user’s edit. Disabling or removing the control during
+`input` ends that interaction before `change`.
+
 An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
 For example, assigning `checked = false` to an already-unchecked radio prevents a later
 `defaultChecked = true` from selecting it until form reset. Pristine default propagation and

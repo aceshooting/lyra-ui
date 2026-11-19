@@ -181,6 +181,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'S’han omès alguns suggeriments o entrades del catàleg perquè s’ha arribat a un límit d’entrada.',
   transcriptFeedInputLimit: 'Només es conserven les {count} entrades més recents de {total}.',
   codeBlockHighlightLimit: 'El codi llarg es mostra sense ressaltat de sintaxi.',
+  codeBlockHighlightedLine: 'Línia destacada',
+  codeBlockActiveLine: 'Línia destacada activa',
 };
 
 registerLyraLocale('ca', strings);

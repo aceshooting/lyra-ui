@@ -1,3 +1,5 @@
+import { escapeHtml } from '../../../internal/escape-html.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { progressiveMarkdownBlocks, streamingTailText } from './markdown-streaming-tail.js';
 import { MARKDOWN_CODE_HEADER_MAX, sanitizeCodeLanguageLabel, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
 /**
@@ -155,26 +157,11 @@ export class MarkdownOwnedAnimationFrameController {
   }
 }
 
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
+export { escapeHtml };
 
-export function escapeHtml(text: string): string {
-  return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch] ?? ch);
-}
-
-/** Matches what marked's own escaping of ordinary text replaces: every markup-significant
- *  character, and an ampersand only when it does not already start a character reference. */
-const TEXT_ESCAPE_PATTERN = /[<>"']|&(?!(?:#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g;
-
-/** Escapes text the way marked escapes ordinary (non-raw) text, so an existing character
- *  reference such as the entity for a copyright sign still renders as its character. */
+/** Marked preserves existing character references in prose. */
 function escapeMarkdownText(text: string): string {
-  return text.replace(TEXT_ESCAPE_PATTERN, (ch) => HTML_ESCAPES[ch] ?? ch);
+  return escapeHtml(text).replace(/&amp;((?:#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g, '&$1');
 }
 
 /**
@@ -567,6 +554,10 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
             const mathml = cachedKatex.renderToString(token.tex, {
               output: 'mathml',
               throwOnError: false,
+              trust: false,
+              maxSize: 20,
+              maxExpand: 1000,
+              strict: 'ignore',
             });
             return `<span part='math' data-display='${token.display ? 'block' : 'inline'}'>${mathml}</span>`;
           } catch {
@@ -877,6 +868,7 @@ export function createMarkdownKatexState(): MarkdownKatexState {
   // never collapse into the same falsy value.
   let resolved: KatexApi | null | undefined;
   let loadStarted = false;
+  let notifying = false;
   const subscribers = new Set<() => void>();
   return {
     getIfLoaded() {
@@ -888,15 +880,23 @@ export function createMarkdownKatexState(): MarkdownKatexState {
       return (override.present ? override.value : resolved) === null;
     },
     startLoad(onResolved) {
-      if (readKatexOverride().present || resolved !== undefined) return;
+      if (readKatexOverride().present || resolved || notifying) return;
       subscribers.add(onResolved);
       if (loadStarted) return;
       loadStarted = true;
       void getKatex().then((katex) => {
+        loadStarted = false;
+        const changed = resolved !== katex;
         resolved = katex;
         const pending = [...subscribers];
         subscribers.clear();
-        for (const subscriber of pending) subscriber();
+        if (!changed) return;
+        notifying = true;
+        try {
+          for (const subscriber of pending) subscriber();
+        } finally {
+          notifying = false;
+        }
       });
     },
   };
@@ -1039,13 +1039,13 @@ function enforceMarkdownLinkSchemes(markup: string, allowed: ReadonlySet<string>
   return changed ? template.innerHTML : markup;
 }
 
-/** Raw `<a>`/`<area>` skip the `link()` renderer: every parsed one with a `target` gets the `resolveGuardedRel()` rel. */
+/** Applies the target policy to navigation elements authored as raw HTML. */
 function enforceMarkdownAnchorRelGuard(markup: string): string {
   if (!/target/i.test(markup)) return markup;
   const template = document.createElement('template');
   template.innerHTML = markup;
   let changed = false;
-  for (const link of template.content.querySelectorAll('a[target],area[target]')) {
+  for (const link of template.content.querySelectorAll('a[target],area[target],form[target]')) {
     const rel = resolveGuardedRel(link.getAttribute('rel'), 'target')!;
     if (rel === link.getAttribute('rel')) continue;
     link.setAttribute('rel', rel);
@@ -1071,8 +1071,8 @@ export function tokenizeMarkdownHighlight(
       lang: normalizeShikiLanguage(pending.lang),
       themes: SHIKI_THEMES,
       transformers: [markdownCodeTransformer(pending.lang)],
-    }) as string;
-    return `${encodeMarkdownHighlightStyles(highlighted)}\n`;
+    });
+    return typeof highlighted === 'string' ? `${encodeMarkdownHighlightStyles(highlighted)}\n` : null;
   } catch {
     // Tokenization failed for a reason other than an unrecognized grammar (each variant's loader
     // reports that itself) -- same effect either way: permanent plain fallback for this block.
@@ -1548,7 +1548,7 @@ function nativeAnchorAttribute(anchor: HTMLAnchorElement, name: string): string 
  *  always browser-resolved to an absolute URL (e.g. "https://example.com/docs") even for a
  *  relative/prefixed path, which would never match a relative `internal-link-prefix`. */
 export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | null {
-  if (!prefix) return null;
+  if (!prefix || e.defaultPrevented || e.button > 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return null;
   const anchor = e.composedPath().find(
     (target): target is HTMLAnchorElement => markdownAnchorFromTarget(target) !== undefined,
   );
@@ -1629,7 +1629,7 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
         part="content"
         role="document"
         tabindex=${options.content.trim() ? '0' : nothing}
-        aria-label=${options.hostAriaLabel ?? nothing}
+        aria-label=${normalizeLabel(options.hostAriaLabel) ?? nothing}
         ?data-fallback=${isFallback}
         ?data-unsanitized=${!options.sanitized}
         data-dark-theme=${options.isDarkTheme ? 'true' : nothing}

@@ -1,3 +1,4 @@
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -1385,4 +1386,35 @@ describe('element entry registration', () => {
     const resolved = await loadDocumentRenderer(definition!);
     expect(typeof resolved.render).to.equal('function');
   });
+});
+
+it('caps the archive list itself and shrinks a short listing to its entries', async () => {
+  const { el, list, restore } = await listingWithEntries(['one','two']);
+  try {
+    const port = list.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const spacer = list.shadowRoot!.querySelector<HTMLElement>('[part="spacer"]')!;
+    expect(port.clientHeight).to.be.closeTo(spacer.offsetHeight, 1);
+    el.maxHeight = '40px';
+    await el.updateComplete;
+    expect(port.clientHeight).to.be.at.most(40);
+    expect(getComputedStyle(list.shadowRoot!.querySelector('[part~="entry-name"]')!).unicodeBidi).to.equal('isolate');
+  } finally { restore(); }
+});
+
+it('outlines an archive highlight in forced colors', async () => {
+  const original = globalThis.Highlight;
+  await setForcedColors('active');
+  try {
+    Reflect.set(globalThis, 'Highlight', undefined);
+    const { el, list, restore } = await listingWithEntries(['sample.txt']);
+    try {
+      el.highlights = [{ id: 'path', tone: 'warning', anchor: { kind: 'text-quote', quote: 'sample' } }];
+      const mark = () => list.shadowRoot!.querySelector('mark[data-lr-highlight-tone]');
+      await waitUntil(() => !!mark());
+      expect(getComputedStyle(mark()!).outlineStyle).to.equal('solid');
+    } finally { restore(); }
+  } finally {
+    Reflect.set(globalThis, 'Highlight', original);
+    await setForcedColors('none');
+  }
 });

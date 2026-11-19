@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'ဖွင့်နှုန်း',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: 'စုစုပေါင်း {duration} အနက် {current}',
+  avPlayerHighlightRange: '{start} မှ {end} အထိ',
+  avPlayerHighlightAt: '{start} တွင်',
   attachmentTriggerAudio: 'အသံသွင်းရန်',
   attachmentMenuAudio: 'အသံသွင်းရန်',
   flagLoadError: 'အလံ မရရှိနိုင်ပါ။',

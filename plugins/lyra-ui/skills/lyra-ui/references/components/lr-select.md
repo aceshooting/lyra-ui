@@ -30,7 +30,8 @@ its own single/multiple value, reset, and option synchronization. The trigger is
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
 combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's
-shared nonmodal overlay stack.
+shared nonmodal overlay stack. The trigger has an `aria-activedescendant` attribute only while
+an option is active. Type-ahead accepts unaccented input for accented option labels.
 Session-history/autofill restoration assigns the stored string through the same synchronous
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.

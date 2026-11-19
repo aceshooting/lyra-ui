@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'ಪ್ಯಾನೆಲ್ ಕುಗ್ಗಿಸಿ',
   dockPanelExpand: 'ಪ್ಯಾನೆಲ್ ವಿಸ್ತರಿಸಿ',
   dockPanelResize: 'ಪ್ಯಾನೆಲ್ ಗಾತ್ರ ಬದಲಿಸಿ',
+  dockPanelToggle: 'ಪ್ಯಾನೆಲ್ ಟಾಗಲ್ ಮಾಡಿ',
   responsivePanel: 'ಪ್ಯಾನೆಲ್',
   breadcrumb: 'ಬ್ರೆಡ್‌ಕ್ರಂಬ್',
   resizeDivider: 'ಪ್ಯಾನೆಲ್ {a} ಮತ್ತು ಪ್ಯಾನೆಲ್ {b} ನಡುವಿನ ವಿಭಾಜಕದ ಗಾತ್ರ ಬದಲಿಸಿ',

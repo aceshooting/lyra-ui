@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Oynatma hızı',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} / {duration}',
+  avPlayerHighlightRange: '{start} - {end}',
+  avPlayerHighlightAt: '{start} konumunda',
   attachmentTriggerAudio: 'Ses kaydet',
   attachmentMenuAudio: 'Ses kaydet',
   flagLoadError: 'Bayrak kullanılamıyor',

@@ -564,3 +564,18 @@ it('gives each status tier its own border style under forced colors', async () =
   expect(styles['unverified']).to.equal('double');
   expect(styles['default']).to.not.equal('dashed');
 });
+
+describe('modified Space keydown', () => {
+  it('leaves modified and composing Space keydowns to the browser', async () => {
+    const el = (await fixture(html`<lr-citation-badge index="2" source-id="d"></lr-citation-badge>`)) as LyraCitationBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    let opened = 0;
+    el.addEventListener('lr-citation-open', () => opened++);
+    for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+      const ev = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true, ...init });
+      base.dispatchEvent(ev);
+      expect(ev.defaultPrevented, JSON.stringify(init)).to.be.false;
+    }
+    expect(opened).to.equal(0);
+  });
+});

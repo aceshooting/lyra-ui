@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF құжаты',
   pdfViewerMissingLibrary: 'PDF файлдарын көрсету үшін қарау құралына қосымша «pdfjs-dist» бумасын орнату қажет.',
   pdfViewerPageOf: 'Бет {page}, барлығы {total}',
+  pdfViewerPageHighlights: '{page}-беттегі бөлектеулер',
   pdfViewerZoomIn: 'Үлкейту',
   pdfViewerZoomOut: 'Кішірейту',
   pdfViewerPreviousPage: 'Алдыңғы бет',

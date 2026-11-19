@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -129,4 +130,5 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  ${forcedColorsPart(':host(:state(current)) [part~="base"]')}
 `;

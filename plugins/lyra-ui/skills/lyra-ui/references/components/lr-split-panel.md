@@ -23,7 +23,7 @@ multi-divider events are intentionally a different API.
 
 Both `lr-resize-request` and `lr-reposition-request` detail fields `position` and `positionInPixels` measure from the
 selected primary edge and agree with accepted public property readback, including `primary="end"`.
-Canceling preserves both prior values; direct property writes remain silent.
+Both events describe one proposal. Canceling either preserves both prior values. Direct property writes remain silent.
 
 **Properties:**
 

@@ -6,7 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { styles } from './source-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_showLess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -109,6 +109,8 @@ export class LyraSourceCard extends LyraSourceCardBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    retrievalShowLessWithContext: LYRA_DEFAULT_retrievalShowLessWithContext,
+    retrievalShowMoreWithContext: LYRA_DEFAULT_retrievalShowMoreWithContext,
     showLess: LYRA_DEFAULT_showLess,
     showMore: LYRA_DEFAULT_showMore,
     sourcePageSuffix: LYRA_DEFAULT_sourcePageSuffix,
@@ -269,6 +271,7 @@ export class LyraSourceCard extends LyraSourceCardBase {
               type="button"
               aria-expanded=${this.fullExpanded ? 'true' : 'false'}
               aria-controls=${this.fullId}
+              aria-label=${this.localize(this.fullExpanded ? 'retrievalShowLessWithContext' : 'retrievalShowMoreWithContext', undefined, { label: this.titleText })}
               ?disabled=${this.disabled}
               @click=${this.toggleFull}
             >

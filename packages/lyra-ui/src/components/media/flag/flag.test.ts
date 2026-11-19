@@ -634,8 +634,9 @@ describe('image frame ring border-width token', () => {
     const el = (await fixture(
       html`<lr-flag data-lr-theme-scope country="fr" style="--lr-theme-border-width-thin: 4px"></lr-flag>`,
     )) as LyraFlag;
-    const image = await img(el);
-    expect(getComputedStyle(image).boxShadow).to.contain('4px');
+    await img(el);
+    const ring = el.shadowRoot!.querySelector('.ring') as HTMLElement;
+    expect(getComputedStyle(ring).boxShadow).to.contain('4px');
   });
 
   it('paints the decorative frame ring in the subtle border tier', async () => {
@@ -646,9 +647,10 @@ describe('image frame ring border-width token', () => {
         style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)"
       ></lr-flag>`,
     )) as LyraFlag;
-    const image = await img(el);
-    expect(getComputedStyle(image).boxShadow).to.contain('rgb(1, 2, 3)');
-    expect(getComputedStyle(image).boxShadow).to.not.contain('rgb(7, 8, 9)');
+    await img(el);
+    const ring = el.shadowRoot!.querySelector('.ring') as HTMLElement;
+    expect(getComputedStyle(ring).boxShadow).to.contain('rgb(1, 2, 3)');
+    expect(getComputedStyle(ring).boxShadow).to.not.contain('rgb(7, 8, 9)');
   });
 });
 
@@ -1493,5 +1495,30 @@ describe('synchronously throwing resolver', () => {
     expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "nl"');
     expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.shadowRoot!.querySelector('img') === null).to.equal(true);
+  });
+});
+
+describe('image frame ring overlay', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('paints the ring as an overlay above the image, never on the replaced image', async () => {
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+    const image = await img(el);
+    const ring = el.shadowRoot!.querySelector('.ring') as HTMLElement;
+    expect(getComputedStyle(image).boxShadow).to.equal('none');
+    expect(getComputedStyle(ring).position).to.equal('absolute');
+    expect(image.compareDocumentPosition(ring) & Node.DOCUMENT_POSITION_FOLLOWING).to.not.equal(0);
+    const a = image.getBoundingClientRect();
+    const b = ring.getBoundingClientRect();
+    expect(Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1).to.equal(true);
+  });
+
+  it('sizes the loading skeleton like the circular flag it stands in for', async () => {
+    setFlagUrlResolver(() => new Promise(() => undefined));
+    const el = (await fixture(html`<lr-flag country="fr" shape="circle"></lr-flag>`)) as LyraFlag;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-skeleton') !== null, 'no skeleton');
+    const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+    expect(skeleton.getAttribute('shape')).to.equal('circle');
   });
 });

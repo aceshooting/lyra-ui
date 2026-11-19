@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { flattenedThemeParent, THEME_ATTRIBUTES } from './theme-observation.js';
+import { nodeContainsSlot, someListedNode } from './dom-guards.js';
 import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 export type LyraThemeRoot = Document | ShadowRoot | Element;
@@ -258,16 +259,6 @@ function containsStyleCarrier(node: Node): boolean {
   return node.nodeType === ELEMENT_NODE && Boolean((node as Element).querySelector('style, link'));
 }
 
-function containsSlot(node: Node): boolean {
-  return node.nodeType === ELEMENT_NODE &&
-    ((node as Element).localName === 'slot' || Boolean((node as Element).querySelector('slot')));
-}
-
-function someNode(nodes: NodeList, predicate: (node: Node) => boolean): boolean {
-  for (let index = 0; index < nodes.length; index += 1) if (predicate(nodes[index]!)) return true;
-  return false;
-}
-
 function sameNodes(left: readonly object[], right: readonly object[]): boolean {
   return left.length === right.length && left.every((node, index) => node === right[index]);
 }
@@ -451,10 +442,10 @@ function onRootMutations(
       stylesheet ||= record.target.parentElement?.localName === 'style';
     } else {
       stylesheet ||= isStyleCarrier(record.target) ||
-        someNode(record.addedNodes, containsStyleCarrier) ||
-        someNode(record.removedNodes, containsStyleCarrier);
+        someListedNode(record.addedNodes, containsStyleCarrier) ||
+        someListedNode(record.removedNodes, containsStyleCarrier);
       // A removed slot reassigns its nodes, but its own slotchange fires outside this root.
-      slotRemoved ||= someNode(record.removedNodes, containsSlot);
+      slotRemoved ||= someListedNode(record.removedNodes, nodeContainsSlot);
     }
   }
   if (slotRemoved) queueRootRebind(registry, observation);

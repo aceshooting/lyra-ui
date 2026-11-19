@@ -21,6 +21,8 @@ import type {
   LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './page-rail.styles.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
@@ -97,7 +99,8 @@ type ThumbnailState = 'pending' | 'ready' | 'unavailable';
  * available to browser and application shortcuts and never alter the page.
  *
  * @customElement lr-page-rail
- * @event lr-page-select - A page row was activated (click, or Enter/Space on a focused row).
+ * @event lr-page-select - A page row was activated (click, or Enter/Space on a focused row) or a
+ *   page number was typed in mediated mode.
  *   `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
  * @csspart base - The rail.
  * @csspart pages - The embedded `lr-virtual-list`.
@@ -645,20 +648,23 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     const digit = /^[0-9]$/.test(e.key)
       ? Number(e.key)
       : Array.from({ length: 10 }, (_unused, value) => format.format(value)).indexOf(e.key);
-    if (e.altKey || e.ctrlKey || e.metaKey || digit < 0) return;
-    this.digitBuffer += digit;
-    const target = Number(this.digitBuffer);
+    if (shouldIgnoreNavigationKey(e) || digit < 0) return;
+    const count = this.effectivePageCount();
+    let buffer = this.digitBuffer + digit;
+    // An impossible prefix restarts the buffer at this digit, like native type-ahead.
+    if (Number(buffer) > count) buffer = String(digit);
+    this.digitBuffer = buffer;
+    const target = Number(buffer);
     this.cancelDigitTimer();
-    // A realm-less rail arms nothing and drops the buffer immediately, exactly as before: the
-    // controller would otherwise fall back to the ambient timer queue and clear the buffer
-    // through a document this element does not live in. `target` is already read above, so this
-    // keystroke still navigates.
+    // A realm-less rail arms nothing and drops the buffer immediately; `target` is already read.
     if (this.ownerDocument.defaultView) this.digitBufferReset.push(undefined);
     else this.digitBuffer = '';
-    const count = this.effectivePageCount();
     if (target >= 1 && target <= count) {
       if (this.boundViewer) this.onPageActivate(target);
-      else this.page = target;
+      else {
+        this.page = target;
+        this.emit('lr-page-select', { page: target });
+      }
     }
   };
 
@@ -721,7 +727,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
         part="base"
         role=${viewerSemanticRole(this, 'navigation') ?? nothing}
         @keydown=${this.onKeyDown}
-        aria-label=${viewerSemanticLabel(this, this.label || this.localize('pageRailLabel')) ?? nothing}
+        aria-label=${viewerSemanticLabel(this, normalizeLabel(this.label) ?? this.localize('pageRailLabel')) ?? nothing}
       >
         <lr-virtual-list
           part="pages"

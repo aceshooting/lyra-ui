@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Restrânge panoul',
   dockPanelExpand: 'Extinde panoul',
   dockPanelResize: 'Redimensionează panoul',
+  dockPanelToggle: 'Comută panoul',
   responsivePanel: 'Panou',
   breadcrumb: 'Fir Ariadna',
   resizeDivider: 'Separator de redimensionare între panoul {a} și panoul {b}',

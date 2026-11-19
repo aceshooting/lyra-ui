@@ -21,6 +21,7 @@ import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
+import { announcementTexts } from '../../../../test/graph-test-support.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 
 // These fixtures test locale-sensitive search, not missing translations. Supply their UI
@@ -6545,4 +6546,174 @@ describe('PDF document cleanup failures', () => {
       } finally { pending.reject(new Error('Canceled old PDF')); restore(); }
     });
   }
+});
+
+describe('lr-pdf-viewer remediation', () => {
+  function docWithRender(pages: number, render: (page: number) => unknown, counters?: { streams: number[] }) {
+    return {
+      numPages: pages,
+      getPage: (pageNumber: number) => {
+        const base = fakePage(pageNumber);
+        return Promise.resolve({
+          ...base,
+          render: () => render(pageNumber),
+          streamTextContent: () => {
+            counters?.streams.push(pageNumber);
+            return base.streamTextContent();
+          },
+        });
+      },
+    };
+  }
+
+  it('reuses extracted page text across repeated searches of a long document', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const counters = { streams: [] as number[] };
+    installFakeLoader(el, docWithRender(80, () => ({ promise: Promise.resolve(), cancel: () => {} }), counters) as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/long.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await el.search('revenue');
+      const searchedOnce = counters.streams.filter((page) => page > 1).length;
+      expect(searchedOnce).to.be.greaterThan(64);
+      await el.search('costs');
+      expect(counters.streams.filter((page) => page > 1).length).to.equal(searchedOnce);
+      expect(el.pageViewerSnapshot.pageCount).to.equal(80);
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves false instead of rejecting when pdf.js cancels a superseded thumbnail render', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    let renders = 0;
+    const doc = docWithRender(2, () => {
+      renders += 1;
+      if (renders === 1) return { promise: Promise.resolve(), cancel: () => {} };
+      let reject!: (reason: unknown) => void;
+      const promise = new Promise<void>((_resolve, rej) => { reject = rej; });
+      return { promise, cancel: () => reject({ name: 'RenderingCancelledException', message: 'cancelled' }) };
+    });
+    installFakeLoader(el, doc as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/thumb.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const canvas = document.createElement('canvas');
+      const first = el.renderPageThumbnail(2, canvas, { width: 96 });
+      await aTimeout(0);
+      const second = el.renderPageThumbnail(2, canvas, { width: 96 });
+      expect(await first).to.equal(false);
+      second.catch(() => undefined);
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports a current page render that fails with an AbortError instead of staying blank', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, docWithRender(1, () => ({
+      promise: Promise.reject(new DOMException('peer aborted', 'AbortError')),
+      cancel: () => {},
+    })) as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      const failed = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/abort.pdf';
+      await failed;
+      await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]') !== null);
+    } finally {
+      restore();
+    }
+  });
+
+  it('re-localizes a visible page error when the strings change', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, docWithRender(1, () => ({ promise: Promise.reject(new Error('bad page')), cancel: () => {} })) as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/failing.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]') !== null);
+      el.strings = { documentPreviewFailedToLoad: 'Seite fehlgeschlagen' };
+      await el.updateComplete;
+      await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]')?.textContent === 'Seite fehlgeschlagen');
+    } finally {
+      restore();
+    }
+  });
+
+  it('centres the page error over the page under RTL', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer dir="rtl"></lr-pdf-viewer>`);
+    installFakeLoader(el, docWithRender(1, () => ({ promise: Promise.reject(new Error('bad page')), cancel: () => {} })) as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/failing-rtl.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]') !== null);
+      const error = listShadowRoot(el).querySelector('[part~="page-error-visible"]')!.getBoundingClientRect();
+      const canvas = listShadowRoot(el).querySelector('[part="page-canvas"]')!.getBoundingClientRect();
+      expect(Math.abs(error.left + error.width / 2 - (canvas.left + canvas.width / 2))).to.be.at.most(1.5);
+    } finally {
+      restore();
+    }
+  });
+
+  it('gives each page highlight layer its own accessible name', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/names.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => listShadowRoot(el).querySelectorAll('lr-highlight-layer').length > 1);
+      const names = [...listShadowRoot(el).querySelectorAll('lr-highlight-layer')].map((layer) => layer.getAttribute('aria-label'));
+      expect(new Set(names).size).to.equal(names.length);
+      expect(names[0]).to.equal('Page 1 highlights');
+    } finally {
+      restore();
+    }
+  });
+
+  it('names the region with the default for a whitespace-only name', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer name="   "></lr-pdf-viewer>`);
+    const label = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+    expect(label?.trim().length).to.be.greaterThan(0);
+  });
+
+  it('draws toolbar buttons in the host font and keeps a disabled one flat on hover', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer style="--lr-font: Georgia, serif"></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(2));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/toolbar.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const previous = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="previous-button"]')!;
+      expect(previous.disabled).to.equal(true);
+      expect(getComputedStyle(previous).fontFamily).to.equal(getComputedStyle(el).fontFamily);
+      const resting = getComputedStyle(previous).backgroundColor;
+      await hoverUntilMatched(previous, 'the disabled button never matched :hover');
+      expect(getComputedStyle(previous).backgroundColor).to.equal(resting);
+      await resetMouse();
+    } finally {
+      restore();
+    }
+  });
+
+  it('announces a navigation page change through the polite sink', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/announce.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const sink = () => announcementTexts(document, 'polite');
+      el.nextPage();
+      await el.updateComplete;
+      await waitUntil(() => sink().some((text) => text.includes('Page 2 of 3')), 'page change never announced');
+    } finally {
+      restore();
+    }
+  });
 });

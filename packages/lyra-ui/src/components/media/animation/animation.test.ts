@@ -1569,3 +1569,17 @@ describe("ambient color/font inheritance (display: contents host)", () => {
 });
 
 expectStaleAttribute('lr-animation', 'respect-reduced-motion');
+
+it("restores the declared Infinity iterations when the attribute is removed", async () => {
+  const el = (await fixture(html`
+    <lr-animation name="fade-in" iterations="2">
+      <p>content</p>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+  expect(computedTiming(firstAnimation(el.querySelector("p")!)).iterations).to.equal(2);
+  el.removeAttribute("iterations");
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(computedTiming(firstAnimation(el.querySelector("p")!)).iterations).to.equal(Infinity);
+});

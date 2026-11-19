@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Doiciméad PDF',
   pdfViewerMissingLibrary: 'Teastaíonn an pacáiste roghnach "pdfjs-dist" ón amharcán seo chun comhaid PDF a rindreáil.',
   pdfViewerPageOf: 'Leathanach {page} as {total}',
+  pdfViewerPageHighlights: 'Aibhsithe leathanach {page}',
   pdfViewerZoomIn: 'Zúmáil isteach',
   pdfViewerZoomOut: 'Zúmáil amach',
   pdfViewerPreviousPage: 'An leathanach roimhe seo',

@@ -27,6 +27,7 @@ export const styles = css`
   [part~="base"] {
     position: relative;
     flex: 1 1 auto;
+    inline-size: var(--lr-size-4rem);
     min-inline-size: 0;
     block-size: var(--lr-slider-row-size, var(--_lr-slider-row-size));
   }

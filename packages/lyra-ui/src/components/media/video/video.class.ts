@@ -22,7 +22,10 @@ import {
   safeNativeMediaSource,
 } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
@@ -416,6 +419,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @state() private thumbnailCues: ThumbnailCue[] = [];
   @state() private activeThumbnail?: ThumbnailCue;
   @state() private thumbnailPosition = 50;
+  private posterHadFocus = false;
 
   @query('[part~="video-wrapper"]') private wrapperEl?: HTMLElement;
 
@@ -428,7 +432,29 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const video = this.videoEl;
     this.panorama.update(this.panoramaEnabled, this.panoramaVideoReady && video && (video.readyState >= 2 || this.panorama.ready || this.panorama.notice?.reason === 'context-lost') ? video : null,
       this.panoramaRevision, this.hotspots, this.panoramaCamera, this.renderRoot.querySelector<HTMLElement>('[part="panorama-engine"]'));
+    if (changed.has('posterVisible') && !this.posterVisible && this.posterHadFocus) {
+      this.posterHadFocus = false;
+      restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLElement>('[data-control="play"]'));
+    }
+    this.positionThumbnail();
   }
+
+  /** Keeps the scrub preview inside the player: the timeline sits inset from the player edge,
+   *  and the wrapper clips anything that overhangs it. */
+  private positionThumbnail = (): void => {
+    const thumbnail = this.renderRoot.querySelector<HTMLElement>('[part="thumbnail"]');
+    const timeline = this.renderRoot.querySelector<HTMLElement>('[part="timeline"]');
+    const wrapper = this.wrapperEl;
+    if (!thumbnail || !timeline || !wrapper) return;
+    const width = thumbnail.offsetWidth;
+    const track = timeline.getBoundingClientRect();
+    const bounds = wrapper.getBoundingClientRect();
+    if (width <= 0 || track.width <= 0) return;
+    const half = width / 2;
+    const centre = track.left + (this.thumbnailPosition / 100) * track.width;
+    const clamped = Math.min(Math.max(centre, bounds.left + half), Math.max(bounds.left + half, bounds.right - half));
+    thumbnail.style.insetInlineStart = `${clamped - track.left}px`;
+  };
 
   override adoptedCallback(): void {
     super.adoptedCallback(); this.panorama.adopted(); super.requestUpdate('panoramaAdopted', undefined, { hasChanged: () => true });
@@ -552,12 +578,16 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (changed.has('preload')) this.preload = safePreload(this.preload);
 
     if (changed.has('volume')) {
-      const next = finiteRange(this.volume, this.mediaController.volume, 0, 1);
+      const authored: number | null = this.volume;
+      const next = authored === null ? 1 : finiteRange(authored, this.mediaController.volume, 0, 1);
       if (!Object.is(next, this.volume)) this.volume = next;
       this.mediaController.volume = next;
     }
 
     if (changed.has('isPlaying')) this.toggleAttribute('playing', this.isPlaying);
+    if (changed.has('posterVisible') && !this.posterVisible) {
+      this.posterHadFocus = this.renderRoot.querySelector('[part="poster-play-button"]') === this.shadowRoot?.activeElement;
+    }
     if (changed.has('muted')) this.mediaController.muted = this.muted;
     if (changed.has('autoplayMuted') && this.autoplayMuted) this.forceAutoplayMuted();
 
@@ -786,6 +816,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   togglePlay(): void {
     if (this.videoEl?.paused ?? true) void this.play().catch(() => undefined);
     else this.pause();
+  }
+
+  /** Alias of `togglePlay()`, matching `lr-av-player`. */
+  toggle(): void {
+    this.togglePlay();
   }
 
   /** Requests fullscreen for the wrapper so custom overlays remain visible. */
@@ -1035,7 +1070,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         !this.isConnected ||
         this.ownerDocument.defaultView !== fetchTarget.view
       ) return;
-      if (!response.ok) return;
+      if (!response.ok) {
+        discardBody(response);
+        return;
+      }
       const text = await readResponseText(response, MAX_THUMBNAIL_BYTES);
       if (
         generation !== this.thumbnailGeneration ||
@@ -1130,10 +1168,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       <div
         part="thumbnail"
         aria-hidden="true"
-        style=${styleMap({ 'inset-inline-start': `${this.thumbnailPosition}%` })}
       >
         <div style=${styleMap(frameStyle)}>
-          <img src=${cue.src} alt="" style=${styleMap(imageStyle)}>
+          <img src=${cue.src} alt="" style=${styleMap(imageStyle)} @load=${this.positionThumbnail}>
         </div>
       </div>
     `;
@@ -1304,7 +1341,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           @enterpictureinpicture=${this.onPictureInPictureChange}
           @leavepictureinpicture=${this.onPictureInPictureChange}
           playsinline
-          ?autoplay=${this.autoplay || this.autoplayMuted}
+          ?autoplay=${this.autoplay || (this.autoplayMuted && !prefersReducedMotion(this))}
           ?loop=${this.loop}
           .muted=${this.mediaController.muted}
           .volume=${finiteRange(this.volume, 1, 0, 1)}
@@ -1331,9 +1368,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               </span>
             </div>`
           : nothing}
-        ${this.title ? html`<div part="video-title-overlay">${this.title}</div>` : nothing}
+        ${this.title ? html`<div part="video-title-overlay" dir="auto">${this.title}</div>` : nothing}
         ${this.captionText
-          ? html`<div part="caption-overlay"><div part="caption">${this.captionText}</div></div>`
+          ? html`<div part="caption-overlay"><div part="caption" dir="auto">${this.captionText}</div></div>`
           : nothing}
         ${this.renderControls(posterActive)}
         <span hidden><slot @slotchange=${this.onSourceSlotChange}></slot></span>

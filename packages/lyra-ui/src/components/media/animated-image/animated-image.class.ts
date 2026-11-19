@@ -151,6 +151,8 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   /** An explicit press of the play button overrides a reduced-motion freeze until it is paused. */
   private userPlay = false;
   private stopMotionWatch?: () => void;
+  /** The play button held focus when a new `src` removed it; it takes focus back once it returns. */
+  private controlFocusPending = false;
   /**
    * Each connection starts from state, not from an observable transition. Keep this armed until
    * the first connected update commits so a property write made while detached cannot emit merely
@@ -197,6 +199,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     super.willUpdate(changed);
     const mayEmitConnectionTransition = this.isConnected && !this.connectionEventBaselinePending;
     if (changed.has('src')) {
+      if (this.hasLoaded && this.shadowRoot?.activeElement === this.playButtonEl) this.controlFocusPending = true;
       this.hasLoaded = false;
       this.hasError = false;
       const trimmed = this.src?.trim() ?? '';
@@ -228,6 +231,10 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.isConnected) this.connectionEventBaselinePending = false;
+    if (this.controlFocusPending && this.playButtonEl) {
+      this.controlFocusPending = false;
+      this.playButtonEl.focus();
+    }
   }
 
   private get effectiveAlt(): string {
@@ -245,7 +252,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   }
 
   private onImageLoad = (event: Event): void => {
-    if (!this.isConnected || event.currentTarget !== this.imageEl) return;
+    if (event.currentTarget !== this.imageEl) return;
     this.hasError = false;
     this.hasLoaded = true;
     const img = this.imageEl;
@@ -271,14 +278,15 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
         ctx.drawImage(img, 0, 0, width, height);
       }
     }
-    this.emit('lr-load', null);
+    if (this.isConnected) this.emit('lr-load', null);
   };
 
   private onImageError = (event: Event): void => {
-    if (!this.isConnected || event.currentTarget !== this.imageEl) return;
+    if (event.currentTarget !== this.imageEl) return;
     this.hasLoaded = false;
     this.hasError = true;
-    this.emit('lr-error', null);
+    this.controlFocusPending = false;
+    if (this.isConnected) this.emit('lr-error', null);
   };
 
   private onToggleClick = (): void => {

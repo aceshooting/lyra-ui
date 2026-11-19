@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Avspillingshastighet',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} av {duration}',
+  avPlayerHighlightRange: '{start} til {end}',
+  avPlayerHighlightAt: 'ved {start}',
   attachmentTriggerAudio: 'Ta opp lyd',
   attachmentMenuAudio: 'Ta opp lyd',
   flagLoadError: 'Flagget er ikke tilgjengelig',

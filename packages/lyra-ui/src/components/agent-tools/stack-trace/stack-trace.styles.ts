@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -99,7 +99,7 @@ export const styles = css`
     );
   }
   button[part="frame"]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part="frame-function"] {
     font-weight: var(--lr-font-weight-semibold);
@@ -135,7 +135,7 @@ export const styles = css`
     );
   }
   [part="internal-toggle"]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part="raw"] {
     margin: 0;

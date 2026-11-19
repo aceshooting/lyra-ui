@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'پينل سميٽيو',
   dockPanelExpand: 'پينل وڌايو',
   dockPanelResize: 'پينل جو ماپ بدلايو',
+  dockPanelToggle: 'پينل ٽوگل ڪريو',
   responsivePanel: 'پينل',
   breadcrumb: 'رستي جي نشاندهي',
   resizeDivider: 'پينل {a} ۽ پينل {b} جي وچ واري ورڇ جو ماپ بدلايو',

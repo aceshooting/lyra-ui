@@ -38,6 +38,9 @@ import type {
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { renderViewerPagerButton, viewerPagerStyles } from '../viewer-pager.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -60,6 +63,7 @@ const MAX_PPTX_THUMBNAIL_WIDTH = 2_048;
 export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ slideCount: number }>;
   'lr-slide-change': CustomEvent<{ index: number; count: number }>;
+  'lr-page-change': CustomEvent<{ page: number; pageCount: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -85,6 +89,8 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  *
  * @customElement lr-pptx-viewer
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
+ * @event lr-page-change - Fired when `page` changes while a presentation is shown, with the
+ *   same `detail: { page, pageCount }` shape as `<lr-pdf-viewer>`.
  * @event lr-slide-change - Fired when the active slide changes.
  * @event lr-render-error - Fired for terminal fetch/open/render failures and rejected public slide
  *   navigation. Navigation rejection enters the localized error state. Recoverable post-load
@@ -147,7 +153,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   // `srOnly` keeps the anchor-target mixin's aria-hidden diagnostic mirror from painting as a
   // visible row under the fidelity notice. The spoken copy lives in the document-level sink.
-  static override styles = [LyraElement.styles, styles, viewerPagerStyles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, viewerPagerStyles, srOnly, viewerLoadingStyles];
 
   /** URL of the PPTX file. */
   @property() src = '';
@@ -372,6 +378,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.keepPagerFocus();
+    this.syncScrollRegion();
     this.announcements.transition(
       'load',
       this.phase,
@@ -382,6 +389,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.pendingSearchResetEvent = false;
       this.emitPptxSearchChange();
     }
+    if (
+      changed.has('page')
+      && this.phase === 'mounted'
+      && changed.get('page') !== undefined
+      && changed.get('page') !== this.page
+    ) this.emit('lr-page-change', { page: this.page, pageCount: this.slideCount });
     if (changed.has('page') && this.viewer && this.page - 1 !== this.currentSlideIndex) {
       const page = this.page;
       this.scheduleAfterUpdate(() => {
@@ -416,10 +429,22 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   private readonly detached = new DeferredTeardown(() => this.releaseDetachedPresentation());
+  private scrollRegion?: { el: HTMLElement; name: string; dispose: () => void };
+
+  private syncScrollRegion(): void {
+    const el = this.containerEl;
+    if (!el) return;
+    const name = this.regionName() || this.localize('pptxViewerLabel');
+    const current = this.scrollRegion;
+    if (current?.el === el && current.name === name) return;
+    current?.dispose();
+    this.scrollRegion = { el, name, dispose: makeScrollRegionFocusable(el, name) };
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.hasUpdated) this.syncScrollRegion();
     const moved = this.detached.cancel();
     // After a genuine disconnect updated()'s `src` gate won't fire again, so re-arm the mount.
     if (this.hasUpdated && this.src && (!moved || this.phase === 'loading')) this.scheduleAfterUpdate(() => { void this.mount(); });
@@ -429,6 +454,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     // Fetch, body admission and library acquisition stop with transport; renderer opens survive moves.
     if (this.phase === 'loading') this.generation++;
     this.announcements.disconnect();
+    this.scrollRegion?.dispose();
+    this.scrollRegion = undefined;
     super.disconnectedCallback();
     this.detached.schedule();
   }
@@ -789,7 +816,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.publishPageViewerSnapshot('ready', viewer.slideCount);
       if (current()) this.emit('lr-load', { slideCount: viewer.slideCount });
     } catch (error) {
-      if (isAbortError(error) || !current()) return;
+      if (!current()) return;
       this.phase = 'error';
       this.errorMessage = this.renderErrorMessage;
       this.publishPageViewerSnapshot('error', 0);
@@ -814,12 +841,15 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     `;
   }
 
+  /** Explicit empty `label` clears the name; blank text falls through to `name`, then the default. */
+  private regionName(): string {
+    if (this.label === '') return '';
+    return normalizeLabel(this.label) ?? normalizeLabel(this.name) ?? this.localize('pptxViewerLabel');
+  }
+
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    const ariaLabel = viewerSemanticLabel(
-      this,
-      this.label == null ? this.name || this.localize('pptxViewerLabel') : this.label
-    );
+    const ariaLabel = viewerSemanticLabel(this, this.regionName());
     return html`
       <div
         part="base"

@@ -117,21 +117,6 @@ export const styles = css`
     overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
   }
-  [part='source-retry'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
-  }
-  [part='source-retry']:hover { background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover)); }
-  [part='source-retry']:active { background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
-  [part='source-retry']:focus-visible { ${focusRing} }
   [part='source-pagination'] { display: block; margin-block-start: var(--lr-space-m); }
 
   [part='limit'] {

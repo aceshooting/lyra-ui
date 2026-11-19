@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Luas athsheinnte',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} as {duration}',
+  avPlayerHighlightRange: '{start} go {end}',
+  avPlayerHighlightAt: 'ag {start}',
   attachmentTriggerAudio: 'Taifead fuaim',
   attachmentMenuAudio: 'Taifead fuaim',
   flagLoadError: 'Níl an bhratach ar fáil',

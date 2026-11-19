@@ -931,3 +931,12 @@ describe('lr-grounding-summary retired show-claims alias', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+it("includes a citation's visible label in its badge's accessible name", async () => {
+  const el = (await fixture(
+    html`<lr-grounding-summary .assessment=${ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`
+  )) as LyraGroundingSummary;
+  await el.updateComplete;
+  const badge = el.shadowRoot!.querySelector('[part="evidence-list"] lr-citation-badge') as HTMLElement & { label: string };
+  expect(badge.label).to.equal('[1]');
+});

@@ -9,6 +9,8 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import { styles } from './test-results.styles.js';
 import { testResultDetailSlotName } from './test-results-slots.js';
 export { testResultDetailSlotName } from './test-results-slots.js';
@@ -20,7 +22,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsInputTooLarge, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsInputTooLarge, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsShownAnnounce, LYRA_DEFAULT_testResultsSkipped, LYRA_DEFAULT_testResultsUnnamedTest } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -107,6 +109,7 @@ const STATUS_GLYPH: Record<Exclude<TestStatus, 'running'>, string> = {
 
 export interface LyraTestResultsEventMap {
   'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
+  'lr-filter-request': CustomEvent<LyraEventDetailSnapshot<{ statuses: TestStatus[] }>>;
   'lr-filter-change': CustomEvent<LyraEventDetailSnapshot<{ statuses: TestStatus[] }>>;
   'lr-toggle-request': CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
   'lr-toggle': CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
@@ -129,6 +132,7 @@ export interface LyraTestResultsEventMap {
  *
  * @customElement lr-test-results
  * @event lr-test-select - `detail: { suiteId, testId }` — a test row's name was activated.
+ * @event lr-filter-request - Cancelable proposal before the status-set filter changes. `detail: { statuses }` is the requested set.
  * @event lr-filter-change - `detail: { statuses }` — the status-set filter changed.
  * @event lr-toggle-request - Cancelable proposal before a row's failure detail changes. `detail: { suiteId, testId, expanded }`
  *   is the requested state.
@@ -218,7 +222,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsLimit: LYRA_DEFAULT_testResultsLimit,
     testResultsPassed: LYRA_DEFAULT_testResultsPassed,
     testResultsRunning: LYRA_DEFAULT_testResultsRunning,
+    testResultsShownAnnounce: LYRA_DEFAULT_testResultsShownAnnounce,
     testResultsSkipped: LYRA_DEFAULT_testResultsSkipped,
+    testResultsUnnamedTest: LYRA_DEFAULT_testResultsUnnamedTest,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -235,6 +241,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly, agentActionButtonStyles];
 
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-filter-request',
     'lr-filter-change',
   ]);
 
@@ -620,12 +627,15 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),
       }));
     }
+    if (!this.sourceMode && changed.has('statusFilter') && changed.get('statusFilter') !== undefined) {
+      const counts = this.completeStatusCounts;
+      const total = STATUSES.reduce((sum, key) => sum + counts[key], 0);
+      const shown = this.statusFilter.length === 0 ? total : this.statusFilter.reduce((sum, key) => sum + (counts[key] ?? 0), 0);
+      const number = getNumberFormat(this.effectiveLocale);
+      this.announcements.announcePolite(this.localize('testResultsShownAnnounce', undefined, { shown: number.format(shown), total: number.format(total) }));
+    }
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.projectionTruncated;
-  }
-
-  private computeStatusCounts(): Record<TestStatus, number> {
-    return this.completeStatusCounts;
   }
 
   private testKey(suiteId: string, testId: string): string {
@@ -658,19 +668,30 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const next = this.statusFilter.includes(status)
       ? this.statusFilter.filter((s) => s !== status)
       : [...this.statusFilter, status];
-    this.statusFilter = next;
-    this.emit('lr-filter-change', { statuses: next });
+    requestThenCommit({
+      requestDetail: { statuses: next },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-filter-request', detail, init),
+      commit: () => {
+        this.statusFilter = next;
+        this.emit('lr-filter-change', { statuses: next });
+      },
+    });
   }
 
   private toggleExpanded(suiteId: string, test: TestCaseResult, current: () => boolean): void {
     if (!current()) return;
     const expanded = !this.isExpanded(suiteId, test);
-    if (this.emit('lr-toggle-request', { suiteId, testId: test.id, expanded }, { cancelable: true }).defaultPrevented) return;
-    if (!current()) return;
-    const next = new Map(this.sourceMode ? this.sourceExpanded : this.manualExpanded);
-    next.set(this.testKey(suiteId, test.id), expanded);
-    if (this.sourceMode) { this.sourceExpanded = next; this.sourceVersion++; } else this.manualExpanded = next;
-    this.emit('lr-toggle', { suiteId, testId: test.id, expanded });
+    requestThenCommit({
+      requestDetail: { suiteId, testId: test.id, expanded },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-toggle-request', detail, init),
+      commit: () => {
+        if (!current()) return;
+        const next = new Map(this.sourceMode ? this.sourceExpanded : this.manualExpanded);
+        next.set(this.testKey(suiteId, test.id), expanded);
+        if (this.sourceMode) { this.sourceExpanded = next; this.sourceVersion++; } else this.manualExpanded = next;
+        this.emit('lr-toggle', { suiteId, testId: test.id, expanded });
+      },
+    });
   }
 
   private onDetailSlotChange(): void {
@@ -733,8 +754,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const domKey = `${suiteIndex}-${testIndex}`;
     const failureId = `${this.idPrefix}-${domKey}-failure`;
     const statusId = `${this.idPrefix}-${domKey}-status`;
+    const testName = normalizeLabel(test.name) ?? this.localize('testResultsUnnamedTest');
     const toggleName = this.localize(expanded ? 'testResultsCollapseTest' : 'testResultsExpandTest', undefined, {
-      name: [suiteName, test.name].join(this.localize('accessibleLabelSeparator')),
+      name: [suiteName, testName].join(this.localize('accessibleLabelSeparator')),
     });
     return html`
       <div part="test" role="listitem" data-status=${test.status}>
@@ -750,7 +772,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           aria-describedby=${statusId}
           @click=${() => { if (current()) this.emit('lr-test-select', { suiteId, testId: test.id }); }}
         >
-          ${test.name}
+          ${testName}
         </button>
         ${typeof test.durationMs === 'number' && Number.isFinite(test.durationMs) && test.durationMs >= 0
           ? html`<span part="test-duration"
@@ -803,7 +825,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const label = overallSemanticLabel(this, this.localize('testResultsLabel'));
     return html`<div part="base" role=${overallSemanticRole(this, 'group') ?? nothing} aria-label=${label ?? nothing} aria-busy=${state.pending ? 'true' : 'false'}>
       ${result ? this.renderSummary(result.summary!) : html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>`}
-      ${failed ? html`<button part="source-retry" type="button" @click=${() => {
+      ${failed ? html`<button part="source-retry" data-agent-action="neutral" type="button" @click=${() => {
         if (this.isConnected && this.dataSource === source && this.sourcePages.state === state) { this.sourceInputs = undefined; this.syncSource(); this.sourceVersion++; }
       }}>${this.localize('retry')}</button>` : nothing}
       ${rows.map((record, index) => html`${index === 0 || rows[index - 1]!.value.suiteId !== record.value.suiteId ? html`<div part="suite-header">${record.value.suiteName}</div>` : nothing}
@@ -832,7 +854,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
               role=${overallSemanticRole(this, 'group') ?? nothing}
               aria-label=${ariaLabel ?? nothing}
             >
-              ${this.renderSummary(this.computeStatusCounts())}
+              ${this.renderSummary(this.completeStatusCounts)}
               ${visibleSuites.length === 0
                 ? html`<lr-empty part="empty" heading=${this.localize('noMatches')}></lr-empty>`
                 : repeat(this.projectedSuitesCache, (suite) => suite.id, (suite, index) => this.renderSuite(suite, index))}

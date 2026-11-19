@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ ጥቆማዎች ወይም የካታሎግ ግቤቶች ተወግደዋል።',
   transcriptFeedInputLimit: 'ከ{total} ግቤቶች የቅርብ ጊዜዎቹ {count} ብቻ ይቀመጣሉ።',
   codeBlockHighlightLimit: 'ረጅም ኮድ የአገባብ ማድመቂያ ሳይኖረው ይታያል።',
+  codeBlockHighlightedLine: 'ጎልቶ የወጣ መስመር',
+  codeBlockActiveLine: 'ንቁ ጎልቶ የወጣ መስመር',
 };
 
 registerLyraLocale('am', strings);

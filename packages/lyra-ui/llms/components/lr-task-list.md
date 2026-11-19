@@ -58,8 +58,9 @@ deeper source rows fail visibly. The component never traverses `value.children` 
 metadata, and `row.key` must equal the nonblank `value.id`.
 
 Source values copy only own data fields `id`, `label`, `status` and optional `detail`.
-Accessor-backed fields reject; nonstring label/detail normalize to empty text and unknown status
-to `'pending'`. A normalized row's key, parent key, id, label and detail share a 65,536 UTF-16-unit
+Accessor-backed fields reject; nonstring label/detail normalize to empty text. The shared terminal spellings are accepted for
+`status` (`done`/`completed`/`complete` as `success`, `failed` as `error`, `cancelled` as `incomplete`);
+any other unknown status becomes `'pending'`. A normalized row's key, parent key, id, label and detail share a 65,536 UTF-16-unit
 budget. Retained rows, focused reserve and pending admission share a 2,000,000-unit payload
 ceiling. Four 100-row pages retain at most 400 rows plus one focused row; at most 301 rows mount,
 with at most two physical range reads. Projection work permits one physical call and only the

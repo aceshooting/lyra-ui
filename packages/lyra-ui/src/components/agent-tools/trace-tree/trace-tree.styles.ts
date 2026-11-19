@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
+import { iconHitTarget, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -203,7 +204,7 @@ export const styles = css`
     );
   }
   [part='toggle']:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part='toggle'][hidden] {
     display: inline-flex;
@@ -369,6 +370,21 @@ export const styles = css`
         minmax(0, 0.75fr)
         max-content
         var(--lr-size-3-5rem);
+    }
+  }
+
+  ${forcedColorsPart("[part~='row'][data-active], [part~='source-row'][data-active]")}
+  @media (forced-colors: active) {
+    [part='bar'][data-status] {
+      forced-color-adjust: none;
+      box-sizing: border-box;
+      background: Highlight;
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part='bar-track'] {
+      background: Canvas;
+      outline: var(--lr-border-width-thin) solid CanvasText;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
     }
   }
 `;

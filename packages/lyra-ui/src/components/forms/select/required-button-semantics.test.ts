@@ -109,3 +109,10 @@ it('keeps required information as an opted-in single-option select changes seman
   expect(trigger.hasAttribute('aria-required')).to.equal(false);
   expect(descriptions(trigger)).not.to.include('Choose a required option.');
 });
+
+it('shows a required select label and exposes the requirement on its combobox', async () => {
+  const select = await fixture<LyraSelect>(html`<lr-select label="Choice" required></lr-select>`);
+  const label = select.shadowRoot!.querySelector('[part~="form-control-label"]')!;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+  expect(select.shadowRoot!.querySelector('[role="combobox"]')!.getAttribute('aria-required')).to.equal('true');
+});

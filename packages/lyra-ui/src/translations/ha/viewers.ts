@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Takardar PDF',
   pdfViewerMissingLibrary: 'Wannan mai dubawa yana buƙatar a girka fakitin zaɓi na "pdfjs-dist" don nuna fayilolin PDF.',
   pdfViewerPageOf: 'Shafi {page} cikin {total}',
+  pdfViewerPageHighlights: 'Abubuwan da aka haskaka na shafi {page}',
   pdfViewerZoomIn: 'Ƙara girman kallo',
   pdfViewerZoomOut: 'Rage girman kallo',
   pdfViewerPreviousPage: 'Shafin da ya gabata',

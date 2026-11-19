@@ -6,6 +6,9 @@ import { formatMediaTime } from '../../../internal/media-time.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { HostChildrenObserver } from '../../../internal/owned-observer.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import type { NativeMediaPreferences } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -195,7 +198,16 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   @state() private navigationIndex = -1;
 
   private activeVideo?: LyraVideo;
-  private mutationObserver?: MutationObserver;
+  protected readonly childObserver = new HostChildrenObserver(this, {
+    subtree: true,
+    attributeFilter: ['default', 'inert', 'kind', 'label', 'media', 'poster', 'src', 'srclang', 'title', 'type'],
+    onChange: () => {
+      this.scheduleAfterUpdate(() => {
+        this.reconcileChildren();
+        this.requestUpdate();
+      }, 'video-playlist-reconcile');
+    },
+  });
   private readonly listeners = new Map<LyraVideo, VideoListeners>();
   private readonly lastKnownPlaying = new WeakMap<LyraVideo, boolean>();
   private readonly nativeVideos = new WeakMap<LyraVideo, HTMLVideoElement>();
@@ -208,7 +220,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.observeChildren();
     // A browser-only mount can derive its rows synchronously and never paint the seed. Hydration
     // must reproduce the server's deterministic `items` pass first, then adopt the live children
     // in a corrective update so Lit can reuse the server-rendered row nodes.
@@ -225,8 +236,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     this.activationGeneration += 1;
     this.reconcileGeneration += 1;
     this.pendingPlay = undefined;
-    this.mutationObserver?.disconnect();
-    this.mutationObserver = undefined;
     // The playlist still owns descendants when the whole subtree disconnects (including during
     // same-origin adoption). Keep the authored snapshots claimed so reconnecting does not briefly
     // restore and re-project every child, which would create needless media/custom-element work in
@@ -247,36 +256,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     if (changed.has('controls') || changed.has('iconLibrary')) {
       this.scheduleAfterUpdate(() => this.reconcileChildren(), 'video-playlist-reconcile');
     }
-  }
-
-  private observeChildren(): void {
-    this.mutationObserver?.disconnect();
-    this.mutationObserver = undefined;
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    this.mutationObserver = new MutationObserverCtor(() => {
-      this.scheduleAfterUpdate(() => {
-        this.reconcileChildren();
-        this.requestUpdate();
-      }, 'video-playlist-reconcile');
-    });
-    this.mutationObserver.observe(this, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: [
-        'default',
-        'inert',
-        'kind',
-        'label',
-        'media',
-        'poster',
-        'src',
-        'srclang',
-        'title',
-        'type',
-      ],
-    });
   }
 
   private directVideos(): LyraVideo[] {
@@ -641,6 +620,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       return;
     }
 
+    const hadFocus = Boolean(outgoing?.matches(':focus-within'));
     const wasPlaying = forcePlay || Boolean(outgoing?.getState().playing);
     if (outgoing) {
       this.preferences = this.capturePreferences(outgoing);
@@ -657,6 +637,13 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     }
     this.activateVideo(incoming, wasPlaying, this.activationGeneration);
     this.requestUpdate();
+    if (hadFocus) {
+      void this.updateComplete.then(() => restoreComposedFocus(
+        this,
+        true,
+        this.shadowRoot?.querySelector<HTMLElement>(`[data-index="${index}"]`),
+      ));
+    }
     this.emitChange(previousIndex, index, incoming);
   }
 
@@ -691,23 +678,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     if (!Number.isInteger(index)) return;
     this.navigationIndex = index;
     this.goTo(index);
-  }
-
-  private enabledIndices(): number[] {
-    const result: number[] = [];
-    for (let index = 0; index < this.playlistVideos.length; index += 1) {
-      if (this.isEnabled(this.playlistVideos[index]!)) result.push(index);
-    }
-    return result;
-  }
-
-  private moveNavigation(from: number, direction: -1 | 1): void {
-    const enabled = this.enabledIndices();
-    const position = enabled.indexOf(from);
-    if (position < 0) return;
-    const next = enabled[position + direction];
-    if (next === undefined) return;
-    this.focusItem(next);
   }
 
   /** The current row, falling back to the first enabled row, for host method forwarding. */
@@ -766,24 +736,18 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       return;
     }
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    if (event.key === 'ArrowDown' || event.key === forward) {
-      event.preventDefault();
-      this.moveNavigation(index, 1);
-    } else if (event.key === 'ArrowUp' || event.key === backward) {
-      event.preventDefault();
-      this.moveNavigation(index, -1);
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      const first = this.enabledIndices()[0];
-      if (first !== undefined) this.focusItem(first);
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      const enabled = this.enabledIndices();
-      const last = enabled[enabled.length - 1];
-      if (last !== undefined) this.focusItem(last);
-    }
+    const target = resolveListMove(event, {
+      count: this.playlistVideos.length,
+      current: index,
+      orientation: 'both',
+      direction: this.effectiveDirection,
+      wrap: false,
+      clamp: true,
+      isAvailable: (candidate) => this.isEnabled(this.playlistVideos[candidate]!),
+    });
+    if (target === null) return;
+    event.preventDefault();
+    if (target !== index) this.focusItem(target);
   }
 
   private itemTitle(value: unknown, index: number): string {
@@ -831,7 +795,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
             `}
           </span>
           <span data-item-copy>
-            <span part="playlist-title">${title}</span>
+            <span part="playlist-title" dir="auto">${title}</span>
             <span part="playlist-duration" id=${durationId}>
               ${duration > 0 ? formatMediaTime(duration, this.effectiveLocale) : nothing}
             </span>

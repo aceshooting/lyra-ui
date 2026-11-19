@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Dokumen PDF',
   pdfViewerMissingLibrary: 'Pamawas iki mbutuhake paket opsional "pdfjs-dist" kanggo nampilake berkas PDF.',
   pdfViewerPageOf: 'Kaca {page} saka {total}',
+  pdfViewerPageHighlights: 'Sorotan kaca {page}',
   pdfViewerZoomIn: 'Gedhekake',
   pdfViewerZoomOut: 'Cilikake',
   pdfViewerPreviousPage: 'Kaca sadurunge',

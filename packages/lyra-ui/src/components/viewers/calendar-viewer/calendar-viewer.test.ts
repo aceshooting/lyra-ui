@@ -417,3 +417,27 @@ it('registers a text/calendar renderer whose matches() and render() behave as de
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-calendar-viewer'), 'render() produces the viewer element').to.exist;
 });
+
+it('isolates calendar fields from the surrounding direction', async () => {
+  const { el, restore } = await loaded(SAMPLE_ICS);
+  try {
+    el.dir = 'rtl';
+    for (const part of ['event-summary', 'event-location', 'event-description', 'event-time']) {
+      const value = el.shadowRoot!.querySelector(`[part="${part}"] bdi`)!;
+      expect(getComputedStyle(value).unicodeBidi, part).to.equal('isolate');
+    }
+  } finally { restore(); }
+});
+
+it('omits malformed peer text fields and preserves valid event text', async () => {
+  const peer = (await import('ical.js')).default;
+  const descriptor = Object.getOwnPropertyDescriptor(peer.Event.prototype, 'summary')!;
+  Object.defineProperty(peer.Event.prototype, 'summary', { configurable: true, get: () => 42 });
+  try {
+    const { el, restore } = await loaded(SAMPLE_ICS);
+    try {
+      expect(el.shadowRoot!.querySelector('[part="event-summary"]')?.textContent).to.equal('(no title)');
+      expect(el.shadowRoot!.querySelector('[part="event-location"]')?.textContent).to.equal('Room 204');
+    } finally { restore(); }
+  } finally { Object.defineProperty(peer.Event.prototype, 'summary', descriptor); }
+});

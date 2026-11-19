@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Isivinini sokudlala',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} kokungu-{duration}',
+  avPlayerHighlightRange: 'kusukela ku-{start} kuya ku-{end}',
+  avPlayerHighlightAt: 'ku-{start}',
   attachmentTriggerAudio: 'Rekhoda umsindo',
   attachmentMenuAudio: 'Rekhoda umsindo',
   flagLoadError: 'Ifulegi alitholakali',

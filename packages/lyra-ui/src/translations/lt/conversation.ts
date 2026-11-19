@@ -184,6 +184,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Kai kurie pasiūlymai arba katalogo įrašai praleisti, nes pasiekta įvesties riba.',
   transcriptFeedInputLimit: 'Išsaugoma tik naujausių įrašų: {count} iš {total}.',
   codeBlockHighlightLimit: 'Ilgas kodas rodomas be sintaksės paryškinimo.',
+  codeBlockHighlightedLine: 'Paryškinta eilutė',
+  codeBlockActiveLine: 'Aktyvi paryškinta eilutė',
 };
 
 registerLyraLocale('lt', strings);

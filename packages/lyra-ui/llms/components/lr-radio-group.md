@@ -38,6 +38,9 @@ hint/error guidance. References track unresolved IDs, target replacement/removal
 reconnect, and document adoption. Group descriptions remain on the group; child radios can carry
 their own separately authored descriptions.
 
+The error precedes the hint in the rendered control and in its accessible description.
+An individually disabled radio keeps its checked value and is omitted from form submission.
+
 **Properties:** `label`, `hint`, `helpText` (`help-text`, Shoelace alias), `errorText`
 (`error-text`), `name` (empty by default, with the empty attribute omitted), live `value`, reflected
 `defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`
@@ -75,7 +78,7 @@ label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 a bubbling/composed `Event` named `input`, `lr-input`, a bubbling/composed `Event` named
 `change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
 `event.target.value`);
-both prefixed aliases carry `{ value, option, radio }`. `option` and its retained `radio` alias
+both prefixed aliases carry `{ value, option, radio }`. The committed `lr-change` also includes the previous group value in `previousValue`. `option` and its retained `radio` alias
 reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after

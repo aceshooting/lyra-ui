@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಅಂಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ: ಸಲಹೆಗಳು ಅಥವಾ ಕ್ಯಾಟಲಾಗ್ ನಮೂದುಗಳು.',
   transcriptFeedInputLimit: '{total} ನಮೂದುಗಳಲ್ಲಿ ಅತ್ಯಂತ ಹೊಸ {count} ನಮೂದುಗಳನ್ನು ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.',
   codeBlockHighlightLimit: 'ಉದ್ದವಾದ ಕೋಡ್ ಅನ್ನು ಸಿಂಟ್ಯಾಕ್ಸ್ ಹೈಲೈಟಿಂಗ್ ಇಲ್ಲದೆ ತೋರಿಸಲಾಗುತ್ತದೆ.',
+  codeBlockHighlightedLine: 'ಹೈಲೈಟ್ ಮಾಡಿದ ಸಾಲು',
+  codeBlockActiveLine: 'ಸಕ್ರಿಯ ಹೈಲೈಟ್ ಮಾಡಿದ ಸಾಲು',
 };
 
 registerLyraLocale('kn', strings);

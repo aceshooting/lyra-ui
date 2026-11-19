@@ -11,6 +11,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokens, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_map } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -182,6 +183,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
     generationStatusElapsedSeconds: LYRA_DEFAULT_generationStatusElapsedSeconds,
     generationStatusThroughput: LYRA_DEFAULT_generationStatusThroughput,
     generationStatusTokens: LYRA_DEFAULT_generationStatusTokens,
+    map: LYRA_DEFAULT_map,
     stopGenerating: LYRA_DEFAULT_stopGenerating,
   };
   // GENERATED DEFAULT-STRING SLICE: END

@@ -1,3 +1,4 @@
+import type { LyraCheckboxGroupToggleRequestDetail } from './checkbox-group.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './checkbox-group.js';
@@ -63,7 +64,7 @@ it('lets a consumer retint the invalid options border independently', async () =
   `)) as LyraCheckboxGroup;
   el.setAttribute('data-invalid', '');
   const options = el.shadowRoot!.querySelector('[part~="options"]') as HTMLElement;
-  expect(getComputedStyle(options).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(options).outlineColor).to.equal('rgb(1, 2, 3)');
 });
 
 it('applies required and disabled states when server rendering provides no light-DOM query API', () => {
@@ -252,12 +253,12 @@ it('adds a localized aggregate required description after resolved host, hint, a
   const el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
   const description = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
-  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
   const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
   const ids = describedByIds(fieldset);
   const expected = hasDescribedByElementReflection(fieldset)
-    ? ['checkbox-group-external', hint.id, error.id, description.id]
-    : [hint.id, error.id, description.id];
+    ? ['checkbox-group-external', error.id, hint.id, description.id]
+    : [error.id, hint.id, description.id];
 
   expect(description.textContent?.trim()).to.equal('Choisissez au moins une option.');
   expect(ids).to.deep.equal(expected);
@@ -267,8 +268,8 @@ it('adds a localized aggregate required description after resolved host, hint, a
   await el.updateComplete;
   const optionalIds = describedByIds(fieldset);
   const optionalExpected = hasDescribedByElementReflection(fieldset)
-    ? ['checkbox-group-external', hint.id, error.id]
-    : [hint.id, error.id];
+    ? ['checkbox-group-external', error.id, hint.id]
+    : [error.id, hint.id];
   expect(optionalIds).to.deep.equal(optionalExpected);
 });
 
@@ -282,7 +283,7 @@ it('keeps checkbox-group host descriptions live across late resolution and recon
   `);
   const el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
-  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
 
   if (!hasDescribedByElementReflection(fieldset)) {
     expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
@@ -361,7 +362,7 @@ for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
       el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
       const source = wrapper.querySelector('#checkbox-group-adopted-description')!;
       const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
-      const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+      const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
 
       if (!hasDescribedByElementReflection(fieldset)) {
         expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
@@ -913,11 +914,11 @@ it('consumes child native-style events before emitting one group event surface',
 
   expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
   expect(events.every(({ target }) => target === el)).to.be.true;
-  expect(events.map(({ detail }) => detail)).to.deep.equal([
-    undefined,
-    undefined,
-    { value: ['a'] },
-  ]);
+  expect(events.slice(0, 2).map(({ detail }) => detail)).to.deep.equal([undefined, undefined]);
+  const selection = events[2]!.detail as LyraCheckboxGroupToggleRequestDetail;
+  expect(selection.value).to.deep.equal(['a']);
+  expect(selection.previousValue).to.deep.equal([]);
+  expect(selection.option === el.querySelector('lr-checkbox')).to.equal(true);
 });
 
 it('syncs value and FormData silently when a child is checked or renamed programmatically', async () => {
@@ -1131,7 +1132,9 @@ it('stops a child checkbox\'s own lr-change from also reaching a listener bound 
     const event = events[0];
     if (!event) throw new Error('The aggregate change event was not emitted.');
     expect(event.target === group, 'the surviving event targets the group itself').to.be.true;
-    expect(event.detail).to.deep.equal({ value: ['a'] });
+    expect(event.detail.value).to.deep.equal(['a']);
+    expect(event.detail.previousValue).to.deep.equal([]);
+    expect(event.detail.option === box).to.equal(true);
   } finally {
     group.remove();
   }
@@ -1469,7 +1472,7 @@ describe('size', () => {
 describe('disabled chrome', () => {
   const chrome = (el: LyraCheckboxGroup) => ({
     legend: el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement,
-    hint: el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement,
+    hint: el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement,
     error: el.shadowRoot!.querySelector('[part="error"]') as HTMLElement,
   });
 
@@ -2227,7 +2230,11 @@ it('republishes a child lr-input as the group lr-input carrying the aggregate va
   (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
   expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
   expect(seen.every(({ target }) => target === el)).to.be.true;
-  expect(seen.map(({ detail }) => detail)).to.deep.equal([undefined, { value: ['a'] }, undefined, { value: ['a'] }]);
+  expect(seen.slice(0, 3).map(({ detail }) => detail)).to.deep.equal([undefined, { value: ['a'] }, undefined]);
+  const commit = seen[3]!.detail as LyraCheckboxGroupToggleRequestDetail;
+  expect(commit.value).to.deep.equal(['a']);
+  expect(commit.previousValue).to.deep.equal([]);
+  expect(commit.option === el.querySelector('lr-checkbox')).to.equal(true);
 });
 
 it('reconciles a bulk of direct child writes without re-querying the catalog per checkbox', async () => {
@@ -2286,7 +2293,7 @@ it('renders the hint and error props alongside slotted hint and error content', 
     </lr-checkbox-group>
   `)) as LyraCheckboxGroup;
   for (const [part, text] of [['hint', 'Plain hint'], ['error', 'Plain error']] as const) {
-    const walker = document.createTreeWalker(el.shadowRoot!.querySelector(`[part="${part}"]`)!, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(el.shadowRoot!.querySelector(`[part~="${part}"]`)!, NodeFilter.SHOW_TEXT);
     let node = walker.nextNode();
     while (node && node.textContent?.trim() !== text) node = walker.nextNode();
     const range = document.createRange();

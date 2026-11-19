@@ -180,6 +180,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Algumas sugestões ou entradas do catálogo foram omitidas por ter sido atingido um limite de entrada.',
   transcriptFeedInputLimit: 'Apenas são mantidas as {count} entradas mais recentes de um total de {total}.',
   codeBlockHighlightLimit: 'O código extenso é apresentado sem realce de sintaxe.',
+  codeBlockHighlightedLine: 'Linha destacada',
+  codeBlockActiveLine: 'Linha destacada ativa',
 };
 
 registerLyraLocale('pt-PT', strings);

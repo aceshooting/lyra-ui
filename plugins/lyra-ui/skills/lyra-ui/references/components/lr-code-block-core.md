@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-code-block-core`
+
+Assign a new `languages` map to update available grammars. The component takes a snapshot of the supplied map.
 
 A build-lean sibling of `<lr-code-block>` above, for a consumer whose `languages` map already
 covers every language it will ever render. Where `<lr-code-block>` can call
@@ -82,9 +84,9 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   contract, identical to `<lr-code-block>`.
 - `languages: Readonly<Record<string, ShikiLanguageSource>> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
-  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
-  per highlighter/key pair, memoized, the first time this code block requests that language;
-  unused loaders do not run. Empty
+  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }`. Concurrent requests
+  share a load per highlighter and key. Successful loads are cached, and a later request retries
+  a failure. Unused loaders do not run. Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback, and so
   does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
@@ -113,7 +115,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button`, `limit` —
 identical set to `<lr-code-block>`.
 
-**Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
+**Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
+`--lr-code-block-radius`, `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
+`--lr-code-block-line-number-color`. `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),

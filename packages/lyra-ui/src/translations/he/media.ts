@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'מהירות השמעה',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} מתוך {duration}',
+  avPlayerHighlightRange: 'מ-{start} עד {end}',
+  avPlayerHighlightAt: 'ב-{start}',
   attachmentTriggerAudio: 'הקלט אודיו',
   attachmentMenuAudio: 'הקלט אודיו',
   flagLoadError: 'הדגל אינו זמין',

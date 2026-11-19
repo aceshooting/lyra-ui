@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Sababaraha saran atawa éntri katalog dileungitkeun lantaran wates input geus kahontal.',
   transcriptFeedInputLimit: 'Ngan {count} éntri panganyarna tina {total} nu disimpen.',
   codeBlockHighlightLimit: 'Kode nu panjang dipintonkeun tanpa panyorot sintaksis.',
+  codeBlockHighlightedLine: 'Baris anu disorot',
+  codeBlockActiveLine: 'Baris sorotan aktif',
 };
 
 registerLyraLocale('su', strings);

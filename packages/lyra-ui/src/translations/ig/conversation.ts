@@ -176,6 +176,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'A hapụrụ ụfọdụ aro ma ọ bụ ndekọ katalọgụ n\'ihi na e ruru oke ntinye.',
   transcriptFeedInputLimit: 'Naanị ndekọ {count} kachasị ọhụrụ n\'ime {total} ka a na-edobe.',
   codeBlockHighlightLimit: 'A na-egosi koodu dị ogologo na-enweghị iji agba mee ka sintaksị ya pụta ìhè.',
+  codeBlockHighlightedLine: 'Ahịrị egosipụtara',
+  codeBlockActiveLine: 'Ahịrị egosipụtara na-arụ ọrụ',
 };
 
 registerLyraLocale('ig', strings);

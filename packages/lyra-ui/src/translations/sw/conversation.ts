@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Baadhi ya mapendekezo au maingizo ya katalogi yameachwa kwa sababu kikomo cha ingizo kimefikiwa.',
   transcriptFeedInputLimit: 'Ni maingizo mapya zaidi {count} kati ya {total} pekee yanayohifadhiwa.',
   codeBlockHighlightLimit: 'Msimbo mrefu unaonyeshwa bila uangaziaji wa sintaksia.',
+  codeBlockHighlightedLine: 'Mstari ulioangaziwa',
+  codeBlockActiveLine: 'Mstari unaotumika ulioangaziwa',
 };
 
 registerLyraLocale('sw', strings);

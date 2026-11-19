@@ -1,3 +1,4 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { VirtualListCompositionController } from '../../../internal/virtual-list-composition.js';
@@ -29,7 +30,7 @@ import {
   finiteInteger,
   finiteNumber,
 } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   getOwnDataDescriptor,
@@ -373,10 +374,7 @@ export interface LyraVirtualListEventMap {
  * @customElement lr-virtual-list
  * @event lr-load-more - Fired once per approach to the bottom of the list
  *   while `has-more` is true and `loading` is false. Deliberately does not
- *   refire on every scroll tick while still near the bottom (`loading`
- *   gates the in-flight case; scrolling back away from the bottom and
- *   returning, or the effective source growing enough to move the window away from the
- *   end, re-arms it) — a consumer wanting an automatic retry after a failed
+ *   refire on every scroll tick. Leaving the end or appending more items re-arms it — a consumer wanting an automatic retry after a failed
  *   fetch should surface its own retry affordance rather than relying on
  *   this firing again unprompted.
  * @event lr-visible-range-change - `detail: { start, end }` (see
@@ -419,6 +417,8 @@ export interface LyraVirtualListEventMap {
  *   marked with `data-lr-virtual-list-link`.
  *   (`role="listitem"`); `renderItem`'s return value renders inside it. Normal content wraps
  *   within the row; consumer content can opt out with `white-space: nowrap`.
+ * @cssprop [--lr-virtual-list-sticky-group-bg=var(--lr-color-surface)] - Background of the pinned
+ *   `sticky-group` overlay, so rows scrolling beneath it do not show through.
  * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A
  *   virtualized list needs a bounded scroll extent, so this ships a default rather than
  *   collapsing to zero when a caller does not size the host. Ignored while `scrollElement` names an
@@ -1091,8 +1091,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private visibleEnd = -1;
   private lastEmittedStart = -1;
   private lastEmittedEnd = -1;
-  /** Re-armed whenever the window moves away from the end of `items` -- see the `lr-load-more` event doc. */
+  /** Re-armed after leaving the end or receiving another page. */
   private loadMoreArmed = true;
+  private loadMoreItemCount = 0;
   /** Identity- and source-bound correction transaction for estimate-based programmatic scrolling. */
   private pendingScrollCorrection?: {
     identity: string;
@@ -1131,9 +1132,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private readonly observedRowIndices = new WeakMap<HTMLElement, number>();
   private readonly observedGroups = new Map<number, HTMLElement>();
   private readonly observedGroupIndices = new WeakMap<HTMLElement, number>();
-  private scrollRafId?: number;
-  private scrollRafOwner?: Window;
-  private scrollRafDocument?: Document;
+  private readonly scrollFrame = new OwnedFrame(this);
   /** Whatever this component last bound its scroll/intent listeners to -- its own `[part="base"]`,
    *  an external `scrollElement`, or a `Window`. Detaching reads this stored target rather than
    *  re-deriving one, so re-pointing `scrollElement` can never strand a listener on the old target. */
@@ -1165,9 +1164,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  drops an entry here whenever it drops the same identity there. */
   private readonly deferredRowObservations = new Map<string, HTMLElement>();
   private readonly deferredGroupObservations = new Map<number, HTMLElement>();
-  private rowObserveRafId?: number;
-  private rowObserveRafOwner?: Window;
-  private rowObserveRafDocument?: Document;
+  private readonly rowObserveFrame = new OwnedFrame(this);
 
   /** Array identities build a first-key index with the offset cache. Indexed sources use the
    * caller's indexOfKey capability without scanning their declared count. */
@@ -1317,23 +1314,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // reports its current size once.
     this.pendingRowMeasurements.clear();
     this.pendingGroupMeasurements.clear();
-    if (this.rowObserveRafId !== undefined) {
-      this.rowObserveRafOwner?.cancelAnimationFrame(this.rowObserveRafId);
-    }
-    this.rowObserveRafId = undefined;
-    this.rowObserveRafOwner = undefined;
-    this.rowObserveRafDocument = undefined;
+    this.rowObserveFrame.cancel();
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
     this.stickyResizeObserver?.disconnect();
     this.stickyResizeObserver = undefined;
     this.observedSticky = undefined;
-    if (this.scrollRafId !== undefined) {
-      this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
-    }
-    this.scrollRafId = undefined;
-    this.scrollRafOwner = undefined;
-    this.scrollRafDocument = undefined;
+    this.scrollFrame.cancel();
     this.pendingScrollTop = null;
     this.externalMetricsPending = false;
     this.pendingScrollCorrection = undefined;
@@ -2035,27 +2022,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     } else {
       this.pendingScrollTop = this.logicalScroll((e.currentTarget as HTMLElement).scrollTop);
     }
-    if (this.scrollRafId !== undefined) return;
+    if (this.scrollFrame.pending) return;
     // Coalesce to one recompute per animation frame -- native `scroll`
     // events can fire far faster than that under a fast trackpad/touch
     // fling, and each recompute is a full Lit update. `lr-virtual-scroll` is emitted
     // from this same tick rather than a second rAF of its own, so a consumer
     // driving scroll-linked layout gets exactly one notification per frame,
     // already in sync with the range recompute.
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow || !this.isConnected) return;
-    const generation = this.ownerRealmGeneration;
-    const handle = ownerWindow.requestAnimationFrame(() => {
-      if (
-        this.scrollRafId !== handle ||
-        this.scrollRafOwner !== ownerWindow ||
-        this.scrollRafDocument !== ownerDocument ||
-        !this.isCurrentOwnerWork(ownerDocument, generation)
-      ) return;
-      this.scrollRafId = undefined;
-      this.scrollRafOwner = undefined;
-      this.scrollRafDocument = undefined;
+    this.scrollFrame.schedule(() => {
       if (this.externalMetricsPending) {
         this.externalMetricsPending = false;
         const metrics = this.readScrollMetrics();
@@ -2079,9 +2053,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         }
       }
     });
-    this.scrollRafId = handle;
-    this.scrollRafOwner = ownerWindow;
-    this.scrollRafDocument = ownerDocument;
   };
 
   private onRowsResized = (entries: ResizeObserverEntry[]): void => {
@@ -2260,26 +2231,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    */
   private beginResizeDelivery(): void {
     this.inResizeDelivery = true;
-    if (this.rowObserveRafId !== undefined) return;
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow || !this.isConnected) {
-      // No frame can flush now, so `defersMeasurementApplication` stays false and this delivery's
-      // callbacks apply their own measurements inline, exactly as they did before any of this.
+    if (this.rowObserveFrame.pending) return;
+    if (!this.ownerDocument.defaultView || !this.isConnected) {
       this.inResizeDelivery = false;
       return;
     }
-    const generation = this.ownerRealmGeneration;
-    const handle = ownerWindow.requestAnimationFrame(() => {
-      if (
-        this.rowObserveRafId !== handle ||
-        this.rowObserveRafOwner !== ownerWindow ||
-        this.rowObserveRafDocument !== ownerDocument ||
-        !this.isCurrentOwnerWork(ownerDocument, generation)
-      ) return;
-      this.rowObserveRafId = undefined;
-      this.rowObserveRafOwner = undefined;
-      this.rowObserveRafDocument = undefined;
+    this.rowObserveFrame.schedule(() => {
       this.inResizeDelivery = false;
       const ro = this.rowResizeObserver;
       for (const [identity, el] of this.deferredRowObservations) {
@@ -2297,9 +2254,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.applyPendingRowMeasurements();
       this.applyPendingGroupMeasurements();
     });
-    this.rowObserveRafId = handle;
-    this.rowObserveRafOwner = ownerWindow;
-    this.rowObserveRafDocument = ownerDocument;
   }
 
   /** Keeps the row `ResizeObserver` watching exactly the currently-rendered
@@ -2559,6 +2513,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private maybeFireLoadMore(): void {
     const n = this.itemCount;
+    if (n > this.loadMoreItemCount) this.loadMoreArmed = true;
+    this.loadMoreItemCount = n;
     const nearBottom = n > 0 && this.visibleEnd >= n - 1;
     if (!nearBottom) {
       this.loadMoreArmed = true;
@@ -2713,11 +2669,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const isActive = index === activeIndex;
     const isRowMode = this.itemRole === 'row';
     const transparent = this.composition.profile !== undefined;
+    const group = transparent ? undefined : this.normalizedGroups[this.groupCountThrough(index) - 1];
+    const description = group && this.groupLabel(group);
     return html`
       <div
         part="row"
         ${ref(element => { if (element) this.rowElements.set(identity, element as HTMLElement); else this.rowElements.delete(identity); })}
         role=${transparent ? 'presentation' : isRowMode ? 'row' : 'listitem'}
+        aria-description=${description || nothing}
         data-row-key=${domKeyToken(key)}
         data-row-index=${index}
         aria-setsize=${transparent || isRowMode ? nothing : total}
@@ -2801,6 +2760,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.normalizedGroupByIndex.set(group.startIndex, group);
   }
 
+  private groupLabel(group: LyraVirtualListGroup): string {
+    return group.label ?? (typeof group.key === 'number' ? this.formatLocaleNumber(group.key) : group.key);
+  }
+
   private renderGroups(): TemplateResult[] {
     return (
       this.normalizedGroups
@@ -2814,16 +2777,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           (group) => html`
             <div
               part="group"
+              role="presentation"
+              aria-hidden=${this.composition.profile ? nothing : 'true'}
               ${ref(element => { if (element) this.groupElements.set(group.startIndex, element as HTMLElement); else this.groupElements.delete(group.startIndex); })}
               data-group-index=${group.startIndex}
               style=${styleMap({
                 transform: `translateY(${this.physicalRowOffset(this.groupTopAt(group.startIndex))}px)`,
               })}
             >
-              ${group.label ??
-              (typeof group.key === 'number'
-                ? getNumberFormat(this.effectiveLocale).format(group.key)
-                : group.key)}
+              ${this.groupLabel(group)}
             </div>
           `
         )
@@ -2959,7 +2921,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         style=${stickyInset > 0
           ? `scroll-padding-block-start:${stickyInset}px`
           : nothing}
-        aria-label=${!transparent && this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : nothing}
+        aria-label=${transparent ? nothing : this.getAttribute('aria-label') === '' ? '' : resolveAccessibleName(this) ?? nothing}
         aria-busy=${transparent ? nothing : this.loading ? 'true' : 'false'}
         @focusout=${this.onFocusOut}
       >

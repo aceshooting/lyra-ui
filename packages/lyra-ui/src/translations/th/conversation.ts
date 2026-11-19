@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'คำแนะนำหรือรายการแค็ตตาล็อกบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
   transcriptFeedInputLimit: 'เก็บเฉพาะรายการล่าสุด {count} จาก {total} รายการเท่านั้น',
   codeBlockHighlightLimit: 'โค้ดที่ยาวจะแสดงโดยไม่มีการเน้นสีไวยากรณ์',
+  codeBlockHighlightedLine: 'บรรทัดที่ไฮไลต์',
+  codeBlockActiveLine: 'บรรทัดที่ไฮไลต์ที่ใช้งานอยู่',
 };
 
 registerLyraLocale('th', strings);

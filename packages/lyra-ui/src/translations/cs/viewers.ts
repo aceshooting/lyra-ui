@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Dokument PDF',
   pdfViewerMissingLibrary: 'Tento prohlížeč vyžaduje k vykreslení souborů PDF nainstalovaný volitelný balíček „pdfjs-dist“.',
   pdfViewerPageOf: 'Stránka {page} z {total}',
+  pdfViewerPageHighlights: 'Zvýraznění na straně {page}',
   pdfViewerZoomIn: 'Přiblížit',
   pdfViewerZoomOut: 'Oddálit',
   pdfViewerPreviousPage: 'Předchozí stránka',

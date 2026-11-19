@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF ଦଲିଲ',
   pdfViewerMissingLibrary: 'PDF ଫାଇଲ୍ ରେଣ୍ଡର୍ କରିବାକୁ ଏହି ଦର୍ଶକରେ ଇଚ୍ଛାଧୀନ "pdfjs-dist" ପ୍ୟାକେଜ୍ ସ୍ଥାପନ କରିବା ଆବଶ୍ୟକ।',
   pdfViewerPageOf: '{total} ମଧ୍ୟରୁ {page} ନମ୍ବର ପୃଷ୍ଠା',
+  pdfViewerPageHighlights: 'ପୃଷ୍ଠା {page} ର ହାଇଲାଇଟ୍',
   pdfViewerZoomIn: 'ବଡ଼ କରନ୍ତୁ',
   pdfViewerZoomOut: 'ଛୋଟ କରନ୍ତୁ',
   pdfViewerPreviousPage: 'ପୂର୍ବ ପୃଷ୍ଠା',

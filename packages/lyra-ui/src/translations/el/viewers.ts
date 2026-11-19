@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Έγγραφο PDF',
   pdfViewerMissingLibrary: 'Για την απόδοση αρχείων PDF απαιτείται το προαιρετικό πακέτο "pdfjs-dist".',
   pdfViewerPageOf: 'Σελίδα {page} από {total}',
+  pdfViewerPageHighlights: 'Επισημάνσεις σελίδας {page}',
   pdfViewerZoomIn: 'Μεγέθυνση',
   pdfViewerZoomOut: 'Σμίκρυνση',
   pdfViewerPreviousPage: 'Προηγούμενη σελίδα',

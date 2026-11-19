@@ -19,6 +19,9 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='metric']:hover { background: var(--lr-color-surface-raised); }
+  [part='metric']:where(:not([aria-pressed='true'])):active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='metric']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='metric'][aria-pressed='true'] {
     border-color: var(--lr-agent-eval-dashboard-active-border, var(--lr-color-brand));

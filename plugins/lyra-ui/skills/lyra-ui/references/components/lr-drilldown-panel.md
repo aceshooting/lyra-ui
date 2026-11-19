@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,6 +25,8 @@ source-card, document-preview, and entity-card primitives.
 - `path: readonly LyraDrilldownNode[] = []` (attribute: false) — host-owned breadcrumb trail. Each
   node uses `nodeId` and may carry readonly `evidence`, `documents`, and `entities` collections.
   Evidence records use `evidenceId`, documents use `documentId`, and entities use `entityId`.
+  When a path update removes the focused breadcrumb control, focus moves to the current crumb
+  or to the panel if the path is empty.
 - `activeCategory: LyraDrilldownCategory | '' = ''` (attribute `active-category`, reflected) —
   controlled category authority. Empty or unavailable values resolve to the first populated
   category without mutating the property. A tab interaction emits a change request; the host
@@ -70,6 +72,10 @@ arrowing across tabs does not request expensive categories until Enter/Space com
   preserving the preview event's domain-specific highlight identity. Raw events from owned source
   cards, previews, entity cards, and tabs are contained;
   events from consumer-owned `runs` slot content continue bubbling normally.
+
+`--lr-drilldown-panel-gap` controls spacing between the breadcrumb and content (default `var(--lr-space-m)`).
+`--lr-drilldown-panel-category-gap` spaces category entries (default `var(--lr-space-s)`).
+`--lr-drilldown-panel-pagination-gap` spaces the page controls (default `var(--lr-space-xs)`).
 
 **Slots:** `runs`. **CSS parts:** `base`, `breadcrumb`, `breadcrumb-item`, `breadcrumb-button`,
 `tabs`, `category`, `content`, `evidence-item`, `document-item`, `entity-item`, `pagination`,

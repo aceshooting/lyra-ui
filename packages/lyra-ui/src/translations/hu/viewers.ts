@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF-dokumentum',
   pdfViewerMissingLibrary: 'A PDF-fájlok megjelenítéséhez ennek a megjelenítőnek szüksége van az opcionális „pdfjs-dist” csomagra.',
   pdfViewerPageOf: '{page}/{total}. oldal',
+  pdfViewerPageHighlights: '{page}. oldal kiemelései',
   pdfViewerZoomIn: 'Nagyítás',
   pdfViewerZoomOut: 'Kicsinyítés',
   pdfViewerPreviousPage: 'Előző oldal',

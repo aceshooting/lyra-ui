@@ -383,9 +383,10 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
    *  (which cannot itself represent "fall back to Infinity" -- its fallback parameter must be
    *  finite). Only a genuinely invalid raw value (`NaN`, negative, `-Infinity`) falls back to `1`. */
   private get safeIterations(): number {
-    return this.iterations === Infinity
+    const authored: number | null = this.iterations;
+    return authored === null || authored === Infinity
       ? Infinity
-      : finiteRange(this.iterations, 1, 0);
+      : finiteRange(authored, 1, 0);
   }
   private get safeIterationStart(): number {
     return finiteRange(this.iterationStart, 0, 0);

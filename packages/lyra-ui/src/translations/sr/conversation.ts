@@ -181,6 +181,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Неки предлози или ставке каталога су изостављени јер је достигнуто ограничење уноса.',
   transcriptFeedInputLimit: 'Задржава се само најновијих {count} од {total} уноса.',
   codeBlockHighlightLimit: 'Дугачак код се приказује без истицања синтаксе.',
+  codeBlockHighlightedLine: 'Истакнути ред',
+  codeBlockActiveLine: 'Активни истакнути ред',
 };
 
 registerLyraLocale('sr', strings);

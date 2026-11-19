@@ -3,6 +3,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { styles } from './compare-panel.styles.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
@@ -108,10 +110,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   private _disabled = false;
   private pendingScrollReset = false;
   private suppressSync = false;
-  private syncScrollRafId?: number;
-  private syncScrollRafOwner?: Window;
-  private syncScrollRafDocument?: Document;
-  private ownerRealmGeneration = 0;
+  private readonly syncFrame = new OwnedFrame(this);
   private voteAssignedInCommit = false;
 
   get labelA(): string {
@@ -206,13 +205,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   }
 
   private resetScrollSyncFrame(): void {
-    this.ownerRealmGeneration += 1;
-    if (this.syncScrollRafId !== undefined) {
-      this.syncScrollRafOwner?.cancelAnimationFrame(this.syncScrollRafId);
-    }
-    this.syncScrollRafId = undefined;
-    this.syncScrollRafOwner = undefined;
-    this.syncScrollRafDocument = undefined;
+    this.syncFrame.cancel();
     this.suppressSync = false;
   }
 
@@ -224,8 +217,8 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       if (this.disabled) return;
       const itemId = this.itemId;
       const voteVersion = this.voteWriteVersion;
-      const labelAText = this.labelA || this.localize('compareResponseA');
-      const labelBText = this.labelB || this.localize('compareResponseB');
+      const labelAText = normalizeLabel(this.labelA) ?? this.localize('compareResponseA');
+      const labelBText = normalizeLabel(this.labelB) ?? this.localize('compareResponseB');
       const label =
         choice === 'a'
           ? labelAText
@@ -272,9 +265,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       const fromMax = from.scrollHeight - from.clientHeight;
       const toMax = to.scrollHeight - to.clientHeight;
       if (fromMax <= 0) return;
-      const ownerDocument = this.ownerDocument;
-      const ownerWindow = ownerDocument.defaultView;
-      if (!ownerWindow || !this.isConnected) return;
+      if (!this.isConnected || !this.ownerDocument.defaultView) return;
       const fraction = from.scrollTop / fromMax;
       const position = fraction * toMax;
       // A rounded native scroll event can arrive after frame suppression ends. Avoid feeding
@@ -282,26 +273,9 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       if (Math.abs(to.scrollTop - position) <= 1) return;
       this.suppressSync = true;
       to.scrollTop = position;
-      const generation = this.ownerRealmGeneration;
-      const handle = ownerWindow.requestAnimationFrame(() => {
-        if (
-          this.syncScrollRafId !== handle ||
-          this.syncScrollRafOwner !== ownerWindow ||
-          this.syncScrollRafDocument !== ownerDocument ||
-          this.ownerRealmGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) {
-          return;
-        }
-        this.syncScrollRafId = undefined;
-        this.syncScrollRafOwner = undefined;
-        this.syncScrollRafDocument = undefined;
+      this.syncFrame.schedule(() => {
         this.suppressSync = false;
       });
-      this.syncScrollRafId = handle;
-      this.syncScrollRafOwner = ownerWindow;
-      this.syncScrollRafDocument = ownerDocument;
     };
   };
 
@@ -342,8 +316,8 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   }
 
   override render(): TemplateResult {
-    const labelAText = this.labelA || this.localize('compareResponseA');
-    const labelBText = this.labelB || this.localize('compareResponseB');
+    const labelAText = normalizeLabel(this.labelA) ?? this.localize('compareResponseA');
+    const labelBText = normalizeLabel(this.labelB) ?? this.localize('compareResponseB');
     return html`
       <div
         part="base"

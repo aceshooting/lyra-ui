@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
@@ -239,5 +240,28 @@ export const styles = css`
     padding: var(--lr-space-s);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
+  }
+
+  ${forcedColorsPart("[part='header']:hover")}
+  @media (forced-colors: active) {
+    [part="status-dot"], [part~="variant-dot"], lr-virtual-list::part(variant-dot) {
+      forced-color-adjust: none;
+      box-sizing: border-box;
+      border: var(--lr-border-width-thin) solid CanvasText;
+      background: Canvas;
+    }
+    :host([mode="live"]) [part="status-dot"], [part~="variant-dot-success"], lr-virtual-list::part(variant-dot-success) {
+      background: Highlight;
+    }
+    [part~="variant-dot-brand"], lr-virtual-list::part(variant-dot-brand) {
+      border-radius: 0;
+      background: CanvasText;
+    }
+    [part~="variant-dot-warning"], lr-virtual-list::part(variant-dot-warning) {
+      border-style: dashed;
+    }
+    [part~="variant-dot-danger"], lr-virtual-list::part(variant-dot-danger) {
+      border: var(--lr-size-3px) double CanvasText;
+    }
   }
 `;

@@ -1,3 +1,4 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -16,11 +17,14 @@ import {
 } from '../../../internal/overlay-manager.js';
 import {
   getOwnDataDescriptor,
+  projectFrozenRows,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { styles } from './command-palette.styles.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
+import { isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -99,32 +103,8 @@ const EMPTY_CANONICAL_COMMANDS: readonly CanonicalCommand[] = Object.freeze([]);
 const EMPTY_COMMAND_KEYWORDS: readonly string[] = Object.freeze([]);
 
 function projectCommandKeywords(value: unknown): readonly string[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_COMMAND_KEYWORDS;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return EMPTY_COMMAND_KEYWORDS;
-    const keywords: string[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_COMMAND_PALETTE_KEYWORDS); index += 1) {
-      const entry = getOwnDataDescriptor(value, String(index));
-      if (
-        entry === MISSING_OWN_DATA_DESCRIPTOR ||
-        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        typeof entry.value !== 'string'
-      )
-        continue;
-      keywords.push(entry.value);
-    }
-    return Object.freeze(keywords);
-  } catch {
-    return EMPTY_COMMAND_KEYWORDS;
-  }
+  return projectFrozenRows(value, entry => typeof entry === 'string' ? entry : undefined,
+    MAX_COMMAND_PALETTE_KEYWORDS, EMPTY_COMMAND_KEYWORDS);
 }
 
 function projectCommand(candidate: unknown): CanonicalCommand | undefined {
@@ -191,31 +171,8 @@ function projectCommand(candidate: unknown): CanonicalCommand | undefined {
 }
 
 function projectCommands(value: unknown): readonly CanonicalCommand[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_CANONICAL_COMMANDS;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return EMPTY_CANONICAL_COMMANDS;
-    const commands: CanonicalCommand[] = [];
-    const seen = new Set<string>();
-    for (let index = 0; index < Math.min(length.value, MAX_COMMAND_PALETTE_COMMANDS); index += 1) {
-      const entry = getOwnDataDescriptor(value, String(index));
-      if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
-      const command = projectCommand(entry.value);
-      if (!command || seen.has(command.commandId)) continue;
-      seen.add(command.commandId);
-      commands.push(command);
-    }
-    return Object.freeze(commands);
-  } catch {
-    return EMPTY_CANONICAL_COMMANDS;
-  }
+  return projectFrozenRows(value, projectCommand, MAX_COMMAND_PALETTE_COMMANDS,
+    EMPTY_CANONICAL_COMMANDS, command => command.commandId);
 }
 export type LyraCommandPaletteCloseReason = 'api' | 'escape' | 'backdrop' | 'select';
 
@@ -392,8 +349,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private observedList?: HTMLElement;
   private observedRow?: HTMLElement;
   private observedGroup?: HTMLElement;
-  private rowPitchFrame?: number;
-  private listScrollFrame?: number;
+  private readonly rowPitchFrame = new OwnedFrame(this);
+  private readonly listScrollFrame = new OwnedFrame(this);
   /** Window that owns listeners, observers, and animation frames for the current connection. */
   private runtimeWindow?: Window;
   /** The canonical command view `haystacks` was built from -- reference-keyed memo, since `commands`
@@ -603,15 +560,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   private scheduleRowPitchMeasurement(): void {
-    if (this.rowPitchFrame !== undefined) return;
+    if (this.rowPitchFrame.pending) return;
     const view = this.runtimeWindow ?? this.ownerDocument.defaultView;
     if (!view) {
       this.measureRowPitch();
       return;
     }
-    this.rowPitchFrame = view.requestAnimationFrame(() => {
-      this.rowPitchFrame = undefined;
-      if (this.isConnected) this.measureRowPitch();
+    this.rowPitchFrame.schedule(() => {
+      this.measureRowPitch();
     });
   }
 
@@ -675,14 +631,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.observedList = undefined;
     this.observedRow = undefined;
     this.observedGroup = undefined;
-    if (this.listScrollFrame !== undefined) {
-      view?.cancelAnimationFrame(this.listScrollFrame);
-      this.listScrollFrame = undefined;
-    }
-    if (this.rowPitchFrame !== undefined) {
-      view?.cancelAnimationFrame(this.rowPitchFrame);
-      this.rowPitchFrame = undefined;
-    }
+    this.listScrollFrame.cancel();
+    this.rowPitchFrame.cancel();
     this.runtimeWindow = undefined;
   }
 
@@ -841,9 +791,26 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private select(command: CanonicalCommand): void {
     if (command.disabled) return;
     this.emit('lr-select', { command: command.source });
-    command.onSelect?.();
-    this.close('select');
+    if (!this.selectionStillCurrent(command)) return;
+    try {
+      command.onSelect?.();
+    } finally {
+      if (this.isConnected && this.open) this.close('select');
+    }
   }
+  /** Whitespace-only is blank, so it falls back to the localized name; an explicit empty string
+   *  stays the documented opt-out. */
+  private get dialogName(): string {
+    if (this.accessibleLabel === '') return '';
+    return normalizeLabel(this.accessibleLabel) ?? this.localize('commandPaletteLabel');
+  }
+
+  private selectionStillCurrent(command: CanonicalCommand): boolean {
+    if (!this.isConnected || !this.open) return false;
+    const current = this.effectiveCommands.find((row) => row.commandId === command.commandId);
+    return current?.source === command.source && !current.disabled && current.onSelect === command.onSelect;
+  }
+
   /** First enabled index at or past `from`, walking in `step` direction; -1 when every row that
    *  way is disabled (callers then keep the current index, preserving clamp-at-the-ends arrow
    *  behavior). Keeps the active option off disabled rows so Enter always has a live target. */
@@ -860,28 +827,34 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.isComposing || event.keyCode === 229) return;
+    if (event.defaultPrevented || event.shiftKey || shouldIgnoreNavigationKey(event)) return;
     const rows = this.filtered;
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'Home' || event.key === 'End') {
+      const input = this.renderRoot.querySelector<HTMLInputElement>('[part="input"]');
+      if (input && event.target === input) {
+        const boundary = event.key === 'Home' ? 0 : input.value.length;
+        if (input.selectionStart !== boundary || input.selectionEnd !== boundary) return;
+      }
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' ||
+      (rows.length && (event.key === 'Home' || event.key === 'End'))) {
       event.preventDefault();
-      const next = this.seekEnabled(rows, this.activeIndex + 1, 1);
-      if (next !== -1) this.setActiveIndex(rows, next);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      const previous = this.seekEnabled(rows, this.activeIndex - 1, -1);
-      if (previous !== -1) this.setActiveIndex(rows, previous);
+      const index = resolveListMove(event, {
+        current: this.activeIndex, count: rows.length, orientation: 'vertical',
+        wrap: false, clamp: true, isAvailable: index => !rows[index]!.disabled,
+      });
+      if (index !== null) this.setActiveIndex(rows, index);
     } else if (event.key === 'Enter') {
       const active = rows[this.activeIndex];
-      if (active) {
+      if (active && !isRepeatedActivationKey(event)) {
         event.preventDefault();
         this.select(active);
       }
-    } else if (rows.length && ['Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) {
+    } else if (rows.length && (event.key === 'PageUp' || event.key === 'PageDown')) {
       event.preventDefault();
-      const step = event.key === 'Home' || event.key === 'PageDown' ? 1 : -1;
+      const step = event.key === 'PageDown' ? 1 : -1;
       const page = Math.max(1, Math.floor(this.listViewportHeight / this.rowPitch));
-      const from = event.key === 'Home' ? 0 : event.key === 'End' ? rows.length - 1
-        : Math.min(rows.length - 1, Math.max(0, this.activeIndex + step * page));
+      const from = Math.min(rows.length - 1, Math.max(0, this.activeIndex + step * page));
       const next = this.seekEnabled(rows, from, step);
       if (next !== -1) this.setActiveIndex(rows, next);
     }
@@ -1021,14 +994,13 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private onListScroll = (event: Event): void => {
     const list = event.currentTarget as HTMLElement;
-    if (this.listScrollFrame !== undefined) return;
+    if (this.listScrollFrame.pending) return;
     const view = this.runtimeWindow ?? this.ownerDocument.defaultView;
     if (!view) {
       this.listScrollTop = list.scrollTop;
       return;
     }
-    this.listScrollFrame = view.requestAnimationFrame(() => {
-      this.listScrollFrame = undefined;
+    this.listScrollFrame.schedule(() => {
       this.listScrollTop = list.scrollTop;
     });
   };
@@ -1048,9 +1020,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       aria-posinset=${row.index + 1}
       tabindex="-1"
       ?disabled=${command.disabled}
-      @mouseenter=${() => {
-        if (!command.disabled) this.setActiveIndex(this.filtered, row.index);
-      }}
       @click=${() => this.select(command)}
     >
       ${command.icon
@@ -1088,9 +1057,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         part="dialog"
         role=${this.nativeModal.requested ? nothing : 'dialog'}
         aria-modal=${this.nativeModal.requested ? nothing : 'true'}
-        aria-label=${this.nativeModal.requested ? nothing : this.accessibleLabel == null
-          ? this.localize('commandPaletteLabel')
-          : this.accessibleLabel}
+        aria-label=${this.nativeModal.requested ? nothing : this.dialogName}
         tabindex="-1"
         @keydown=${this.onKeyDown}
       >
@@ -1100,6 +1067,11 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
             type="search"
             .value=${this.queryText}
             placeholder=${this.localize('commandPalettePlaceholder')}
+            role="combobox"
+            aria-expanded="true"
+            aria-haspopup="listbox"
+            aria-autocomplete="list"
+            aria-label=${this.dialogName || this.localize('commandPaletteLabel')}
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}
             @input=${this.onInput}
@@ -1161,7 +1133,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         </div>
         ${this.nativeModal.renderHelperSlot()}
       </section>
-    </div>`, { label: this.accessibleLabel ?? this.localize('commandPaletteLabel') });
+    </div>`, { label: this.dialogName });
   }
 }
 declare global {

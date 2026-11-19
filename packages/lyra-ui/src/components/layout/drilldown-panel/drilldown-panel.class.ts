@@ -5,7 +5,9 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import type { LyraEntity } from '../../retrieval/entity-card/entity-card.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -181,35 +183,8 @@ const registeredChildren = new Set<string>();
 const EMPTY_PATH: readonly LyraDrilldownNode[] = Object.freeze([]);
 const EMPTY_TYPES: readonly LyraNodeTypeStyle[] = Object.freeze([]);
 
-function ownDataValue(record: Record<string, unknown>, key: string): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function safeArrayLength(value: unknown): number {
-  if (!Array.isArray(value)) return 0;
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
-    return typeof length === 'number' && Number.isFinite(length)
-      ? Math.max(0, Math.floor(length))
-      : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function arrayItem(value: readonly unknown[], index: number): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
+  return Array.isArray(value) ? readOwnArrayLength(value) ?? 0 : 0;
 }
 
 function boundedString(value: unknown, maxLength: number): string | undefined {
@@ -228,7 +203,7 @@ function optionalString(
   key: string,
   maxLength = MAX_TEXT_LENGTH
 ): string | undefined {
-  return boundedString(ownDataValue(record, key), maxLength);
+  return boundedString(readOwnDataValue(record, key), maxLength);
 }
 
 function normalizeUniqueCollection<T>(
@@ -246,7 +221,7 @@ function normalizeUniqueCollection<T>(
   const seen = new Set<string>();
   const end = Math.min(sourceCount, startIndex + limit);
   for (let index = startIndex; index < end; index += 1) {
-    const normalized = normalize(arrayItem(value, index));
+    const normalized = normalize(readOwnDataValue(value, index));
     if (!normalized || seen.has(normalized[0])) continue;
     seen.add(normalized[0]);
     items.push(normalized[1]);
@@ -258,14 +233,14 @@ function normalizeEvidence(
   candidate: unknown
 ): readonly [string, LyraDrilldownEvidenceItem] | undefined {
   if (!isCrossRealmPlainRecord(candidate)) return undefined;
-  const evidenceId = domainId(ownDataValue(candidate, 'evidenceId'));
+  const evidenceId = domainId(readOwnDataValue(candidate, 'evidenceId'));
   const title = boundedString(
-    ownDataValue(candidate, 'title'),
+    readOwnDataValue(candidate, 'title'),
     MAX_LABEL_LENGTH
   );
   if (!evidenceId || title === undefined) return undefined;
 
-  const rawPage = ownDataValue(candidate, 'page');
+  const rawPage = readOwnDataValue(candidate, 'page');
   const page =
     typeof rawPage === 'number' && Number.isFinite(rawPage)
       ? rawPage
@@ -291,8 +266,8 @@ function normalizeDocument(
   candidate: unknown
 ): readonly [string, LyraDrilldownDocument] | undefined {
   if (!isCrossRealmPlainRecord(candidate)) return undefined;
-  const documentId = domainId(ownDataValue(candidate, 'documentId'));
-  const name = boundedString(ownDataValue(candidate, 'name'), MAX_LABEL_LENGTH);
+  const documentId = domainId(readOwnDataValue(candidate, 'documentId'));
+  const name = boundedString(readOwnDataValue(candidate, 'name'), MAX_LABEL_LENGTH);
   if (!documentId || name === undefined) return undefined;
   const document = Object.freeze({
     documentId,
@@ -349,18 +324,18 @@ function normalizeEntity(
   candidate: unknown
 ): readonly [string, LyraDrilldownEntity] | undefined {
   if (!isCrossRealmPlainRecord(candidate)) return undefined;
-  const entityId = domainId(ownDataValue(candidate, 'entityId'));
+  const entityId = domainId(readOwnDataValue(candidate, 'entityId'));
   const label = boundedString(
-    ownDataValue(candidate, 'label'),
+    readOwnDataValue(candidate, 'label'),
     MAX_LABEL_LENGTH
   );
   if (!entityId || label === undefined) return undefined;
-  const rawDegree = ownDataValue(candidate, 'degree');
+  const rawDegree = readOwnDataValue(candidate, 'degree');
   const degree =
     typeof rawDegree === 'number' && Number.isFinite(rawDegree)
       ? Math.max(0, Math.floor(rawDegree))
       : undefined;
-  const properties = normalizeProperties(ownDataValue(candidate, 'properties'));
+  const properties = normalizeProperties(readOwnDataValue(candidate, 'properties'));
   const entity = Object.freeze({
     entityId,
     label,
@@ -381,25 +356,25 @@ function normalizeEntity(
 
 function normalizeNode(candidate: unknown): NormalizedNode | undefined {
   if (!isCrossRealmPlainRecord(candidate)) return undefined;
-  const nodeId = domainId(ownDataValue(candidate, 'nodeId'));
+  const nodeId = domainId(readOwnDataValue(candidate, 'nodeId'));
   const label = boundedString(
-    ownDataValue(candidate, 'label'),
+    readOwnDataValue(candidate, 'label'),
     MAX_LABEL_LENGTH
   );
   if (!nodeId || label === undefined) return undefined;
 
   const evidence = normalizeUniqueCollection(
-    ownDataValue(candidate, 'evidence'),
+    readOwnDataValue(candidate, 'evidence'),
     MAX_CATEGORY_ITEMS,
     normalizeEvidence
   );
   const documents = normalizeUniqueCollection(
-    ownDataValue(candidate, 'documents'),
+    readOwnDataValue(candidate, 'documents'),
     MAX_CATEGORY_ITEMS,
     normalizeDocument
   );
   const entities = normalizeUniqueCollection(
-    ownDataValue(candidate, 'entities'),
+    readOwnDataValue(candidate, 'entities'),
     MAX_CATEGORY_ITEMS,
     normalizeEntity
   );
@@ -437,7 +412,7 @@ function normalizePath(value: unknown): NormalizedPath {
     Readonly<Record<'evidence' | 'documents' | 'entities', number>>
   >();
   for (let index = startIndex; index < sourceCount; index += 1) {
-    const normalized = normalizeNode(arrayItem(value, index));
+    const normalized = normalizeNode(readOwnDataValue(value, index));
     if (!normalized || seen.has(normalized.node.nodeId)) continue;
     seen.add(normalized.node.nodeId);
     path.push(normalized.node);
@@ -454,13 +429,13 @@ function normalizeNodeType(
   candidate: unknown
 ): readonly [string, LyraNodeTypeStyle] | undefined {
   if (!isCrossRealmPlainRecord(candidate)) return undefined;
-  const id = domainId(ownDataValue(candidate, 'id'));
+  const id = domainId(readOwnDataValue(candidate, 'id'));
   const label = boundedString(
-    ownDataValue(candidate, 'label'),
+    readOwnDataValue(candidate, 'label'),
     MAX_LABEL_LENGTH
   );
   if (!id || label === undefined) return undefined;
-  const rawShape = ownDataValue(candidate, 'shape');
+  const rawShape = readOwnDataValue(candidate, 'shape');
   const shape =
     rawShape === 'circle' || rawShape === 'square' || rawShape === 'diamond'
       ? rawShape
@@ -524,6 +499,9 @@ function normalizeCategory(value: unknown): LyraDrilldownCategory | '' {
  * @event lr-drilldown-document-render-error - Correlated document render failure detail.
  * @event lr-drilldown-document-highlight-activate - Correlated document highlight detail.
  * @event lr-drilldown-entity-activate - Correlated entity activation detail.
+ * @cssprop [--lr-drilldown-panel-gap=var(--lr-space-m)] - Gap between the breadcrumb and content.
+ * @cssprop [--lr-drilldown-panel-category-gap=var(--lr-space-s)] - Gap between category items.
+ * @cssprop [--lr-drilldown-panel-pagination-gap=var(--lr-space-xs)] - Gap between pagination controls.
  * @csspart base - The root wrapper.
  * @csspart breadcrumb - The nested breadcrumb trail.
  * @csspart breadcrumb-item - One nested breadcrumb item.
@@ -629,84 +607,24 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
    * and uses the category label for a sole region; an explicit empty string is preserved. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  @state() private hasRunsSlot = false;
   @state() private categoryPage = 0;
 
   private pageContext = '';
-  private mutationObserver?: MutationObserver;
-  private mutationObserverDocument?: Document;
-  private mutationObserverGeneration = 0;
+  private readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private announcementsArmed = false;
   private announcedLimits = new Map<string, string>();
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.syncRunsSlot();
-    this.armMutationObserver();
-  }
-
-  private armMutationObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected) return;
-    if (
-      this.mutationObserver &&
-      this.mutationObserverDocument === ownerDocument
-    ) {
-      return;
-    }
-    this.resetMutationObserver();
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.mutationObserverGeneration;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.mutationObserver !== observer ||
-        this.mutationObserverDocument !== ownerDocument ||
-        this.mutationObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.syncRunsSlot();
-    });
-    this.mutationObserver = observer;
-    this.mutationObserverDocument = ownerDocument;
-    observer.observe(this, {
-      childList: true,
-      attributes: true,
-      attributeFilter: ['slot'],
-      subtree: true,
-    });
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   override disconnectedCallback(): void {
-    this.resetMutationObserver();
     this.announcementsArmed = false;
     this.announcedLimits.clear();
     super.disconnectedCallback();
   }
-
-  override adoptedCallback(): void {
-    super.adoptedCallback();
-    this.resetMutationObserver();
-    this.announcements.adopted();
-    this.armMutationObserver();
-  }
-
-  private resetMutationObserver(): void {
-    this.mutationObserverGeneration += 1;
-    this.mutationObserver?.disconnect();
-    this.mutationObserver = undefined;
-    this.mutationObserverDocument = undefined;
-  }
-
-  private syncRunsSlot = (): void => {
-    this.hasRunsSlot = Array.from(this.children).some(
-      (element) => element.getAttribute('slot') === 'runs'
-    );
-  };
 
   private get currentNode(): LyraDrilldownNode | undefined {
     return this.effectivePath[this.effectivePath.length - 1];
@@ -734,7 +652,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
         label: this.localize('provenanceEntities'),
       });
     }
-    if (this.hasRunsSlot) {
+    if (this.slotPresence.has('runs')) {
       categories.push({
         key: 'runs',
         label: this.localize('drilldownRuns'),
@@ -752,8 +670,12 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     );
   }
 
+  private breadcrumbHadFocus = false;
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.breadcrumbHadFocus = changed.has('path') && this.hasUpdated &&
+      this.renderRoot.querySelector('[part="breadcrumb"]')?.matches(':focus-within') === true;
     const node = this.currentNode;
     const categories = node ? this.categoriesFor(node) : [];
     const active = this.resolvedCategory(categories) ?? '';
@@ -780,6 +702,19 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     }
     this.announcedLimits = nextLimits;
     this.announcementsArmed = true;
+    if (this.breadcrumbHadFocus) {
+      this.breadcrumbHadFocus = false;
+      void this.restoreBreadcrumbFocus();
+    }
+  }
+
+  /** The item that was activated changes template (link to current label), which strands focus. */
+  private async restoreBreadcrumbFocus(): Promise<void> {
+    const items = Array.from(this.renderRoot.querySelectorAll<HTMLElementTagNameMap['lr-breadcrumb-item']>('[part="breadcrumb-item"]'));
+    await Promise.all(items.map((item) => item.updateComplete));
+    if (!this.isConnected) return;
+    const current = items.at(-1) ?? this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    restoreComposedFocus(this, true, current);
   }
 
   private navigateTo(node: LyraDrilldownNode, index: number): void {
@@ -789,13 +724,16 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     );
   }
 
+  /** Only the owned tab group's own events stop here; a tab group inside a category reaches
+   *  consumer ancestors. */
   private stopOwnedEvent = (event: Event): void => {
-    event.stopPropagation();
+    if (event.target === event.currentTarget) event.stopPropagation();
   };
 
   private onCategoryShow = (
     event: LyraTabGroupEventMap['lr-tab-show']
   ): void => {
+    if (event.target !== event.currentTarget) return;
     event.stopPropagation();
     const node = this.currentNode;
     if (!node) return;
@@ -1002,10 +940,6 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     )}`;
   }
 
-  private formatCount(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
-  }
-
   private rangeSummary(
     start: number,
     end: number,
@@ -1013,9 +947,9 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     itemLabel: string
   ): string {
     return this.localize('paginationSummary', undefined, {
-      start: this.formatCount(start),
-      end: this.formatCount(end),
-      total: this.formatCount(total),
+      start: this.formatLocaleNumber(start),
+      end: this.formatLocaleNumber(end),
+      total: this.formatLocaleNumber(total),
       itemLabel,
     });
   }
@@ -1175,7 +1109,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
               ? this.localize('drilldownUntitledNode')
               : node.label;
             return isCurrent
-              ? html`<lr-breadcrumb-item part="breadcrumb-item" current
+              ? html`<lr-breadcrumb-item part="breadcrumb-item" current tabindex="-1"
                   >${label}</lr-breadcrumb-item
                 >`
               : html`<lr-breadcrumb-item
@@ -1256,7 +1190,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
 
   override render(): TemplateResult {
     return html`
-      <div part="base">
+      <div part="base" tabindex="-1">
         ${this.renderBreadcrumb()}
         <div part="content">${this.renderContent()}</div>
       </div>

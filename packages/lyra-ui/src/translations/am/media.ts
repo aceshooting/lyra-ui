@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'የማጫወቻ ፍጥነት',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: 'ከ{duration} {current}',
+  avPlayerHighlightRange: 'ከ{start} እስከ {end}',
+  avPlayerHighlightAt: 'በ{start}',
   attachmentTriggerAudio: 'ድምጽ ቅረጽ',
   attachmentMenuAudio: 'ድምጽ ቅረጽ',
   flagLoadError: 'ባንዲራው አይገኝም',

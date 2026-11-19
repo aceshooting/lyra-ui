@@ -32,6 +32,8 @@ import type { LyraPdfViewerEventMap } from '../pdf-viewer/pdf-viewer.class.js';
 import type { LyraPptxViewerEventMap } from '../pptx-viewer/pptx-viewer.class.js';
 import type { LyraNotebookViewerEventMap } from '../notebook-viewer/notebook-viewer.class.js';
 import { styles } from './document-viewer.styles.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
@@ -70,6 +72,8 @@ export interface LyraDocumentViewerEventMap {
   'lr-location-change': LyraEbookViewerEventMap['lr-location-change'];
   'lr-viewer-diagnostic': LyraPptxViewerEventMap['lr-viewer-diagnostic'];
 }
+
+const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
 
 /**
  * A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
@@ -259,23 +263,48 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   @query('lr-document-preview') private fallbackPreviewEl?: LyraDocumentPreview;
   private readonly announcements = new ViewerAnnouncementController(this);
 
+  private readonly detached = new DeferredTeardown(() => this.releaseDetached());
+  private scrollRegion?: { el: HTMLElement; child: Element | null; name: string; dispose: () => void };
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.hasUpdated && this.open) void this.resolve();
+    const moved = this.detached.cancel();
+    if (this.hasUpdated) this.syncScrollRegion();
+    // A moved viewer keeps a finished render; any in-flight work was invalidated on detach.
+    if (this.hasUpdated && this.open && !(moved && this.renderState.kind !== 'loading')) void this.resolve();
   }
 
   override disconnectedCallback(): void {
     this.searchGeneration++;
     this.generation++;
-    this.renderState = { kind: 'fallback' };
     this.announcements.disconnect();
+    this.scrollRegion?.dispose();
+    this.scrollRegion = undefined;
     super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  /** Runs a microtask after disconnect unless a same-task DOM move re-inserted the viewer. */
+  private releaseDetached(): void {
+    this.renderState = { kind: 'fallback' };
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.announcements.adopted();
+  }
+
+  private syncScrollRegion(): void {
+    const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    if (!el) return;
+    const name = this.currentFile().name || this.localize('documentViewerLabel');
+    const child = el.firstElementChild;
+    const current = this.scrollRegion;
+    if (current?.el === el && current.child === child && current.name === name) return;
+    current?.dispose();
+    this.scrollRegion = { el, child, name, dispose: makeScrollRegionFocusable(el, name) };
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -308,6 +337,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     this.announcements.transition(
       'renderer',
       this.renderState.kind,
@@ -575,7 +605,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
             mime-type=${file.mimeType}
             filename=${file.name}
             .alt=${file.alt}
-            .highlights=${file.highlights ?? []}
+            .highlights=${file.highlights ?? EMPTY_HIGHLIGHTS}
             .suppressDownload=${true}
           ></lr-document-preview>
         `;

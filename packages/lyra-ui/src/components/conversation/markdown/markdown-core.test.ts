@@ -56,11 +56,11 @@ function highlightPainted(el: LyraMarkdownCore, tone = "accent"): boolean {
 // markdown.test.ts's own identically-named helper.
 function withNavigationBlocked<T>(run: () => T): T {
   const blockNav = (e: Event) => e.preventDefault();
-  document.addEventListener("click", blockNav, { capture: true });
+  document.addEventListener("click", blockNav);
   try {
     return run();
   } finally {
-    document.removeEventListener("click", blockNav, { capture: true });
+    document.removeEventListener("click", blockNav);
   }
 }
 

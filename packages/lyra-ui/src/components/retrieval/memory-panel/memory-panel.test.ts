@@ -1973,3 +1973,11 @@ describe('lr-memory-panel hostile memory rows', () => {
     expect(el.shadowRoot!.querySelector('lr-empty') === null).to.equal(false);
   });
 });
+
+describe('per-item control names', () => {
+  it('names the expand toggle with the item text', async () => {
+    const el = await populated();
+    const toggle = el.shadowRoot!.querySelector('[part="item"][data-id="l1"] [part="expand-toggle"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal(`Show more: ${longTermItems[0]!.text}`);
+  });
+});

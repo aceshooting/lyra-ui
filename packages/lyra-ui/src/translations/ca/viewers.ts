@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Document PDF',
   pdfViewerMissingLibrary: 'Aquest visualitzador necessita el paquet opcional «pdfjs-dist» instal·lat per mostrar fitxers PDF.',
   pdfViewerPageOf: 'Pàgina {page} de {total}',
+  pdfViewerPageHighlights: 'Ressaltats de la pàgina {page}',
   pdfViewerZoomIn: 'Amplia',
   pdfViewerZoomOut: 'Redueix',
   pdfViewerPreviousPage: 'Pàgina anterior',

@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Dokument PDF',
   pdfViewerMissingLibrary: 'Dan il-werrej jeħtieġ il-pakkett fakultattiv "pdfjs-dist" installat biex juri fajls PDF.',
   pdfViewerPageOf: 'Paġna {page} minn {total}',
+  pdfViewerPageHighlights: 'Enfasi tal-paġna {page}',
   pdfViewerZoomIn: 'Iżżumja ’l ġewwa',
   pdfViewerZoomOut: 'Iżżumja ’l barra',
   pdfViewerPreviousPage: 'Paġna ta’ qabel',

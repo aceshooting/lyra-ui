@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,7 +79,13 @@ are appended to the shared document-level polite sink, which lives in the host's
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
-which writes this token inline.
+which writes this token inline. Painted highlights read `--lr-ebook-viewer-highlight-accent-bg`,
+`-success-bg`, `-warning-bg`, `-danger-bg` and `-neutral-bg` (each falling back to the matching
+shared quiet token), `--lr-ebook-viewer-highlight-active-outline` (the active highlight's stroke)
+and `--lr-ebook-viewer-search-match-bg`. A host with a definite height gives the reading area the
+remaining height; an auto-height host keeps the `10rem` minimum. The chapter iframes epub.js creates
+carry a `title` taken from `name` (or the localized region name). Changing `src` clears `location`
+unless the same update assigns a new one; a reconnect keeps it.
 
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain

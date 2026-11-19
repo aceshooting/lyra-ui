@@ -654,3 +654,10 @@ describe('review fixes', () => {
     }
   });
 });
+
+it('keeps a visible outline on the selected claim when frame is plain', async () => {
+  const el = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence frame="plain" selected-claim-id="claim-1" .claims=${claims} .citations=${citations}></lr-claim-evidence>`);
+  const selected = el.shadowRoot!.querySelector('[part~="claim-selected"]')!;
+  expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+  expect(getComputedStyle(selected).borderTopWidth).to.equal('0px');
+});

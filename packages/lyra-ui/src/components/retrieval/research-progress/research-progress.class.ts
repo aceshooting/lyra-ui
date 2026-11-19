@@ -1,4 +1,5 @@
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { progressPercent, formatProgressPercent } from '../../../internal/progress-value.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -36,6 +37,17 @@ export interface ResearchStep {
 
 const MAX_RENDERED_STEPS = 100;
 const STATUSES: readonly ResearchStepStatus[] = ['pending', 'running', 'completed', 'failed', 'incomplete'];
+/** The rows to render when there are more than `limit`: running and failed steps always stay, the
+ *  newest remaining steps fill the rest, and the original order is preserved. */
+function windowSteps<T extends { status: string }>(steps: readonly T[], limit: number): readonly T[] {
+  if (steps.length <= limit) return steps;
+  const keep = new Set<number>();
+  for (let i = steps.length - 1; i >= 0 && keep.size < limit; i -= 1) {
+    if (steps[i]!.status === 'running' || steps[i]!.status === 'failed') keep.add(i);
+  }
+  for (let i = steps.length - 1; i >= 0 && keep.size < limit; i -= 1) keep.add(i);
+  return steps.filter((_, index) => keep.has(index));
+}
 type DisplayStep = Omit<ResearchStep, 'status'> & { status: ResearchStepStatus | 'unknown' };
 const STATUS_LABEL_KEY: Record<DisplayStep['status'], string> = {
   pending: 'researchProgressStatusPending',
@@ -163,7 +175,7 @@ export class LyraResearchProgress extends LyraElement {
 
   override render(): TemplateResult {
     const steps = this.normalizedSteps;
-    const visibleLabel = this.label == null ? this.localize('researchProgressLabel') : this.label;
+    const visibleLabel = this.label === '' ? '' : (normalizeLabel(this.label) ?? this.localize('researchProgressLabel'));
     const groupLabel = retrievalSemanticLabel(this, visibleLabel);
     const level = resolveHeadingLevel(this.headingLevel);
     const completed = steps.filter((step) => step.status === 'completed').length;
@@ -171,7 +183,7 @@ export class LyraResearchProgress extends LyraElement {
     const formattedPercent = formatProgressPercent(this.effectiveLocale, percent);
     return html`
       <section part="base" role=${retrievalSemanticRole(this, 'group') ?? nothing} aria-label=${groupLabel ?? nothing}>
-        <div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
+        <div part="label" role=${level && visibleLabel ? 'heading' : nothing} aria-level=${level && visibleLabel ? level : nothing}>${visibleLabel}</div>
         ${steps.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('researchProgressEmpty')}></lr-empty>`
           : html`
@@ -187,10 +199,10 @@ export class LyraResearchProgress extends LyraElement {
               >
                 <span part="progress-label">${formattedPercent}</span>
               </div>
-              <ol part="list">${steps.slice(0, MAX_RENDERED_STEPS).map((step) => this.renderStep(step))}</ol>
+              <ol part="list">${windowSteps(steps, MAX_RENDERED_STEPS).map((step) => this.renderStep(step))}</ol>
             `}
         ${steps.length > MAX_RENDERED_STEPS
-          ? html`<p part="limit">${this.localize('researchProgressLimit', undefined, {
+          ? html`<p part="limit" role="note">${this.localize('researchProgressLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_STEPS),
             })}</p>`
           : nothing}

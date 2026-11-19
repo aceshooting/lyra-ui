@@ -129,7 +129,7 @@ describe('lr-research-progress', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="step"]')).to.have.lengthOf(100);
     expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.contain('100');
-    expect(el.shadowRoot!.textContent).to.contain('Search the library');
+    expect(el.shadowRoot!.textContent).to.contain('Step 101');
     expect(el.shadowRoot!.textContent).not.to.contain('Duplicate should not win');
     el.steps = [{ id: 'replacement', label: 'Replacement', status: 'completed' }];
     await el.updateComplete;
@@ -244,4 +244,47 @@ it('lr-research-progress drops its card chrome under frame="plain" and tightens 
   el.frame = 'plain';
   await el.updateComplete;
   expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
+});
+
+
+describe('blank label', () => {
+  it('falls back to the localized default heading for a whitespace-only label and drops the heading role for an empty one', async () => {
+    const base = (await fixture(html`<lr-research-progress></lr-research-progress>`)) as HTMLElement;
+    const spaced = (await fixture(html`<lr-research-progress label="   " heading-level="2"></lr-research-progress>`)) as HTMLElement;
+    const part = (el: HTMLElement) => el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    expect(part(spaced).textContent!.trim()).to.not.equal('');
+    expect(part(spaced).textContent!.trim()).to.equal(part(base).textContent!.trim());
+    expect(part(spaced).getAttribute('role')).to.equal('heading');
+    const empty = (await fixture(html`<lr-research-progress label="" heading-level="2"></lr-research-progress>`)) as HTMLElement;
+    expect(part(empty).hasAttribute('role')).to.equal(false);
+    expect(part(empty).hasAttribute('aria-level')).to.equal(false);
+  });
+
+  it('keeps running and failed steps and the newest rows when more than 100 steps exist', async () => {
+    const many: ResearchStep[] = Array.from({ length: 150 }, (_, index) => ({
+      id: `s${index}`,
+      label: `Step ${index}`,
+      status: index === 3 ? 'running' : index === 5 ? 'failed' : 'completed',
+    }));
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress .steps=${many}></lr-research-progress>`);
+    const ids = [...el.shadowRoot!.querySelectorAll('[part="step"]')].map((step) => step.getAttribute('data-step-id'));
+    expect(ids).to.have.lengthOf(100);
+    expect(ids).to.include.members(['s3', 's5', 's149', 's52']);
+    expect(ids).not.to.include('s0');
+    expect(ids.indexOf('s3')).to.be.lessThan(ids.indexOf('s149'));
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.getAttribute('role')).to.equal('note');
+  });
+
+  it('keeps the progress fill visible under forced colors', async () => {
+    const { setForcedColors } = await import('../../../../test/wtr-media.js');
+    try {
+      await setForcedColors('active');
+      const el = await fixture<LyraResearchProgress>(html`<lr-research-progress .steps=${steps}></lr-research-progress>`);
+      const progress = el.shadowRoot!.querySelector<HTMLElement>('[part="progress"]')!;
+      const fill = getComputedStyle(progress, '::before');
+      expect(fill.backgroundColor).to.not.equal(getComputedStyle(progress).backgroundColor);
+    } finally {
+      await setForcedColors('none');
+    }
+  });
 });

@@ -1,3 +1,5 @@
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
 import type { RangeDragState } from '../../../internal/range-drag.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -53,11 +55,6 @@ installFormControlLabelSupport();
  *  dropped entirely rather than half-drawn. */
 const MAX_MARKER_INTERVALS = 100;
 
-/** Shadow-root-scoped id of the rendered hint region, referenced by each
- *  handle's `aria-describedby`. Ids are scoped per shadow root, so a fixed
- *  one cannot collide across instances. */
-const HINT_ID = 'slider-hint';
-const ERROR_ID = 'slider-error';
 const LABEL_ID = 'slider-label';
 
 /** The value axis. `'horizontal'` maps values to the inline axis (mirroring
@@ -694,8 +691,6 @@ export class LyraSlider extends LyraSliderBase {
    * row without including its text in the control's accessible name. */
   @property({ attribute: 'value-placement' }) valuePlacement: SliderValuePlacement = 'inline';
 
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint') || this.slotPresence.has('help-text'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
   private get hasReferenceSlot(): boolean { return this.slotPresence.has('reference'); }
@@ -933,9 +928,7 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    this.markInteracted();
-    return this.internals.reportValidity();
+    return this.validityController.reportValidity(() => this.markInteracted());
   }
 
   setCustomValidity(message: string): void {
@@ -1221,13 +1214,15 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   private emitInput(handle: SliderHandle): void {
+    const detail = this.detailFor(handle);
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', this.detailFor(handle));
+    this.emit('lr-input', detail);
   }
 
   private emitChange(handle: SliderHandle): void {
+    const detail = this.detailFor(handle);
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', this.detailFor(handle));
+    this.emit('lr-change', detail);
   }
 
   /** Assign one handle silently. Crossing pushes the sibling to the same value. */
@@ -1271,7 +1266,7 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   private onKeyDown = (handle: SliderHandle, e: KeyboardEvent): void => {
-    if (!this.interactive) return;
+    if (!this.interactive || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     const current = this.valueForHandle(handle);
     // Under RTL, physical ArrowRight moves toward inset-inline-start, i.e. a
     // lower value — swap which physical key counts as "forward", matching
@@ -1575,12 +1570,14 @@ export class LyraSlider extends LyraSliderBase {
 
   override render(): TemplateResult {
     const vertical = this.orientation === 'vertical';
-    const hasHint = this.withHint || this.hasHintSlot || (this.hint ?? '').length > 0 || (this.helpText ?? '').length > 0;
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: 'slider', hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
     const hasLabel = this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasReference = this.hasReferenceSlot;
-    const describedBy = [hasError ? ERROR_ID : '', hasHint ? HINT_ID : ''].filter(Boolean).join(' ') || undefined;
-    const invalid = hasError || (this._hasInteracted && !this.internals.validity.valid);
+    const describedBy = supporting.describedBy;
+    const invalid = supporting.hasError || (this._hasInteracted && !this.internals.validity.valid);
     const labelledBy = hasLabel && !this.hasAttribute('aria-label') ? LABEL_ID : undefined;
     const valuePercent = this.percentOf(this.value);
     const offsetPercent = this.percentOf(
@@ -1640,13 +1637,10 @@ export class LyraSlider extends LyraSliderBase {
           : this.renderHandle('value', describedBy, labelledBy, invalid)}
       </div>
       ${labelValue ? nothing : value}
-      <div id=${ERROR_ID} part="error" ?hidden=${!hasError}>
-        ${this.hasErrorSlot ? nothing : this.errorText}<slot name="error"></slot>
-      </div>
-      <div id=${HINT_ID} part="hint form-control-help-text" ?hidden=${!hasHint}>
-        ${this.hint || this.helpText}<slot name="hint"></slot
-        ><slot name="help-text"></slot>
-      </div>
+      ${renderFormControlHintError({
+          ...supporting, idPrefix: 'slider', hint: this.hint || this.helpText,
+          errorText: this.slotPresence.has('error') ? '' : this.errorText, helpTextSlot: true,
+        })}
     `;
   }
 }

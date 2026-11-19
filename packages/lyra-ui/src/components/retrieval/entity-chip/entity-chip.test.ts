@@ -580,3 +580,18 @@ it('lets Escape reach document listeners and ignores it during IME composition',
   await el.updateComplete;
   expect([reached, hidden()]).to.deep.equal([true, true]);
 });
+
+it('leaves modified and composing Space keydowns to the browser', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
+  )) as LyraEntityChip;
+  const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  let opened = 0;
+  el.addEventListener('lr-entity-open', () => opened++);
+  for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+    const ev = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true, ...init });
+    button.dispatchEvent(ev);
+    expect(ev.defaultPrevented, JSON.stringify(init)).to.be.false;
+  }
+  expect(opened).to.equal(0);
+});

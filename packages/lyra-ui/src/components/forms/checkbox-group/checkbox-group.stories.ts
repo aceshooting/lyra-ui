@@ -12,7 +12,7 @@ export const ExternalDescription: Story = {
       <lr-checkbox-group
         aria-describedby="checkbox-group-external-description"
         label="Topics"
-        hint="You can change these preferences later."
+        help-text="You can change these preferences later."
         name="topics"
         required
       >
@@ -69,7 +69,7 @@ export const ValueIsReadOnly: Story = {
     docs: {
       description: {
         story:
-          '`value` is a defensive readonly snapshot of child state. Direct child checked/value writes update it, FormData and validity in the same task without emitting user events. Preselect by setting `checked` on the children, and give each child a distinct `value` so submitted FormData can tell them apart.',
+          '`value` is a defensive readonly snapshot of child state. Direct child checked/value writes update it, FormData and validity in the same task without emitting user events. A user edit also supplies `previousValue` and the initiating checkbox in `lr-change.detail.option`. Preselect by setting `checked` on the children, and give each child a distinct `value` so submitted FormData can tell them apart.',
       },
     },
   },

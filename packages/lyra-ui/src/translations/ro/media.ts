@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Viteza de redare',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} din {duration}',
+  avPlayerHighlightRange: 'de la {start} la {end}',
+  avPlayerHighlightAt: 'la {start}',
   attachmentTriggerAudio: 'Înregistrează audio',
   attachmentMenuAudio: 'Înregistrează audio',
   flagLoadError: 'Steag indisponibil',

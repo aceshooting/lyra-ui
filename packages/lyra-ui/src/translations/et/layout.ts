@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Ahenda paneel',
   dockPanelExpand: 'Laienda paneel',
   dockPanelResize: 'Muuda paneeli suurust',
+  dockPanelToggle: 'Lülita paneel sisse või välja',
   responsivePanel: 'Paneel',
   breadcrumb: 'Leivapururada',
   resizeDivider: 'Muuda paneelide {a} ja {b} vahelise eraldaja asukohta',

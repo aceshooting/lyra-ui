@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './artifact-panel.js';
 import type { LyraArtifactPanel } from './artifact-panel.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-artifact-panel', () => {
@@ -725,4 +727,56 @@ it('normalizes duplicate version ids first-wins before navigation and labels', a
   `);
   expect(el.shadowRoot!.querySelector('[part="version-position"]')!.textContent).to.contain('1');
   expect(el.shadowRoot!.querySelector('[part="version-label"]')!.textContent).to.equal('First version');
+});
+
+describe('lr-artifact-panel remediation (evals batch)', () => {
+  const versions = [{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }];
+
+  it('keeps focus inside the panel when navigating onto a boundary version disables the pressed button', async () => {
+    const el = (await fixture(html`<lr-artifact-panel .versions=${versions} active-version-id="v2"></lr-artifact-panel>`)) as LyraArtifactPanel;
+    const previous = el.shadowRoot!.querySelector('[part="version-previous"]') as HTMLButtonElement;
+    await focusByKeyboard(previous);
+    previous.click();
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="version-previous"]')!.hasAttribute('disabled')).to.equal(true);
+    const active = deepActiveElementIn(document);
+    expect(active !== null && active !== document.body && el.shadowRoot!.contains(active)).to.equal(true);
+  });
+
+  it('ignores a restore click whose rendered version is no longer the current one', async () => {
+    const el = (await fixture(html`<lr-artifact-panel .versions=${versions} active-version-id="v1"></lr-artifact-panel>`)) as LyraArtifactPanel;
+    const restore = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+    const restored: string[] = [];
+    el.addEventListener('lr-restore', (event) => restored.push((event as CustomEvent<{ versionId: string }>).detail.versionId));
+    el.activeVersionId = 'v2';
+    restore.click();
+    expect(restored).to.deep.equal([]);
+  });
+
+  it('reports the view change when the code slot disappears under view=code', async () => {
+    const el = (await fixture(html`<lr-artifact-panel view="code"><pre slot="code">x</pre></lr-artifact-panel>`)) as LyraArtifactPanel;
+    await el.updateComplete;
+    expect(el.view).to.equal('code');
+    const changes: string[] = [];
+    el.addEventListener('lr-view-change', (event) => changes.push((event as CustomEvent<{ view: string }>).detail.view));
+    el.querySelector('pre')!.remove();
+    await waitUntil(() => changes.length > 0, 'view change reported');
+    expect(el.view).to.equal('preview');
+    expect(changes).to.deep.equal(['preview']);
+  });
+
+  it('shows visible copy feedback after the clipboard settles', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.resolve() } });
+    try {
+      const el = (await fixture(html`<lr-artifact-panel copy-text="hello"></lr-artifact-panel>`)) as LyraArtifactPanel;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      button.click();
+      await waitUntil(() => button.textContent?.trim() === 'Copied!', 'visible copied feedback');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
 });

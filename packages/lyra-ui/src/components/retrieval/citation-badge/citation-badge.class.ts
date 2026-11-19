@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { PreviewDisclosureController } from '../../../internal/preview-disclosure-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -271,7 +272,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     // here (preventDefault on keydown suppresses it) rather than left to
     // fire alongside this. Enter deliberately gets no such handling: its
     // native immediate click already reaches onClick below.
-    if (e.key === ' ' && !e.repeat && e.target === this.buttonEl) {
+    if (e.key === ' ' && !shouldIgnoreActivationKey(e) && e.target === this.buttonEl) {
       e.preventDefault();
       this.emitOpen();
     }

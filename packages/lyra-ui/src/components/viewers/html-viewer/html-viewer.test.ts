@@ -280,3 +280,19 @@ it('registers a text/html renderer whose matches() and lazy render() behave as d
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-html-viewer'), 'render() produces the viewer element').to.exist;
 });
+
+it('keeps wide preformatted content horizontally scrollable', async () => {
+  const original = window.fetch;
+  window.fetch = async () => new Response('<pre>' + 'column'.repeat(120) + '</pre>');
+  const restore = () => { window.fetch = original; };
+  try {
+    const el = await fixture<LyraHtmlViewer>(html`<lr-html-viewer src="/wide.html"></lr-html-viewer>`);
+    el.style.inlineSize = '200px';
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="html"] pre'));
+    const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="html"]')!;
+    expect(surface.scrollWidth).to.be.greaterThan(surface.clientWidth);
+    expect(getComputedStyle(surface).overflowX).to.equal('auto');
+    surface.scrollLeft = 80;
+    expect(surface.scrollLeft).to.be.greaterThan(0);
+  } finally { restore(); }
+});

@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Bereich einklappen',
   dockPanelExpand: 'Bereich ausklappen',
   dockPanelResize: 'Bereichsgröße ändern',
+  dockPanelToggle: 'Bereich umschalten',
   responsivePanel: 'Bereich',
   breadcrumb: 'Navigationspfad',
   resizeDivider: 'Trennlinie zwischen Bereich {a} und Bereich {b} verschieben',

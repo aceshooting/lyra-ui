@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ଇନପୁଟ୍ ସୀମା ପୂରଣ ହେବାରୁ କିଛି ପରାମର୍ଶ କିମ୍ବା କ୍ୟାଟାଲଗ୍ ପ୍ରବେଶ ବାଦ ଦିଆଯାଇଛି।',
   transcriptFeedInputLimit: '{total}ଟି ପ୍ରବିଷ୍ଟିରୁ କେବଳ ସବୁଠୁ ନୂଆ {count}ଟି ରଖାଯାଏ।',
   codeBlockHighlightLimit: 'ଲମ୍ବା କୋଡ୍ ସିଣ୍ଟାକ୍ସ ହାଇଲାଇଟିଂ ବିନା ଦେଖାଯାଏ।',
+  codeBlockHighlightedLine: 'ହାଇଲାଇଟ୍ କରାଯାଇଥିବା ଧାଡ଼ି',
+  codeBlockActiveLine: 'ସକ୍ରିୟ ହାଇଲାଇଟ୍ କରାଯାଇଥିବା ଧାଡ଼ି',
 };
 
 registerLyraLocale('or', strings);

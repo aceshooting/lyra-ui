@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Rage faifan aiki',
   dockPanelExpand: 'Faɗaɗa faifan aiki',
   dockPanelResize: 'Canza girman faifan aiki',
+  dockPanelToggle: 'Kunna/kashe allo',
   responsivePanel: 'Faifan aiki',
   breadcrumb: 'Hanyar kewayawa',
   resizeDivider: 'Canza girman mai raba faifan aiki {a} da {b}',

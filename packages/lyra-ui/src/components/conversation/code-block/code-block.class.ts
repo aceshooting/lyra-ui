@@ -1,6 +1,7 @@
 import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import { resolvedShikiLanguages, ensureShikiLanguageLoaded, type ShikiLanguageInput, type ShikiLanguageLoader } from './shiki-types.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
@@ -141,6 +142,11 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  *   `highlights`.
  * @csspart line-button - A gutter line-number button, only rendered while `activatable-lines` and
  *   `line-numbers` are both set.
+ * @cssprop [--lr-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Code padding.
+ * @cssprop [--lr-code-block-radius=var(--lr-radius)] - Frame corner radius.
+ * @cssprop [--lr-code-block-header-bg=var(--lr-color-surface)] - Header background.
+ * @cssprop [--lr-code-block-header-color=var(--lr-color-text)] - Filename color.
+ * @cssprop [--lr-code-block-line-number-color=var(--lr-color-text-quiet)] - Line number color.
  * @cssprop [--lr-code-block-max-height=none] - Scroll cap applied to `body`. The `max-height`
  *   attribute, when set, writes this same property inline on `body` and therefore wins.
  * @cssprop [--lr-code-block-font=var(--lr-font-mono)] - Monospace family for the rendered `pre`
@@ -306,26 +312,28 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.resumedMove) return;
     this.ensureDefaultHighlighter();
     if (this.hasPreSuppliedGrammar() || this.highlighter) this.syncHighlight();
+  }
+
+  protected override beforeHighlightUpdate(changed: PropertyValues): void {
+    if (changed.has('code') || changed.has('language') || changed.has('languages') || changed.has('languageLoaders')) {
+      this.ensureDefaultHighlighter();
+    }
   }
 
   private ensureDefaultHighlighter(): void {
     if (
       !this.isConnected ||
-      this.highlighter !== undefined ||
+      !this.language || this.highlightLimited || this.hasPreSuppliedGrammar() ||
+      this.highlighter ||
       this.defaultHighlighterLoading
     )
       return;
     this.defaultHighlighterLoading = true;
     void loadShikiHighlighter().then((hl) => {
       this.defaultHighlighterLoading = false;
-      // loadShikiHighlighter() is a page-lifetime singleton promise -- it can
-      // resolve well after this element has disconnected (or been torn down
-      // for good). Bail out rather than mutate @state on a dead instance and
-      // kick off syncHighlight()'s own further async grammar load for
-      // nothing. Mirrors chart.ts's/markdown.ts's identical
-      // connectedCallback() guard for the same race.
       if (!this.isConnected) return;
       this.highlighter = hl;
       this.shikiReady = true;

@@ -88,7 +88,12 @@ it('honors top-k and emits the full selected set/chunk pair', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="chunk"]').length).to.equal(2);
   const pending = oneEvent(el, 'lr-chunk-select');
   (el.shadowRoot!.querySelector('[part="chunk"]') as HTMLButtonElement).click();
-  expect((await pending).detail).to.deep.equal({ setId: 'baseline', chunk: sets[0]!.chunks[1] });
+  expect((await pending).detail).to.deep.equal({
+    setId: 'baseline',
+    chunk: sets[0]!.chunks[1],
+    chunkId: sets[0]!.chunks[1]!.id,
+    sourceId: sets[0]!.chunks[1]!.source.id,
+  });
 });
 
 it('uses one roving tab stop per result set while keeping chunk activation intact', async () => {
@@ -345,6 +350,8 @@ it('omits blank and later duplicate set and nested chunk ids before overlap, ren
   expect((await selected).detail).to.deep.equal({
     setId: firstSet.id,
     chunk: firstChunk,
+    chunkId: firstChunk.id,
+    sourceId: firstChunk.source.id,
   });
 });
 
@@ -447,4 +454,41 @@ it('lr-retrieval-compare drops its card chrome under frame="plain" and tightens 
   el.frame = 'plain';
   await el.updateComplete;
   expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
+});
+
+it('keeps a visible outline on the selected chunk when frame is plain', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-compare frame="plain" .sets=${sets} selected-chunk-id="b"></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  const selected = el.shadowRoot!.querySelector('[part~="chunk-selected"]') as HTMLElement;
+  expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+  expect(getComputedStyle(selected).borderTopWidth).to.equal('0px');
+});
+
+it('never rounds a small nonzero score to 0%', async () => {
+  const tiny: RetrievalChunk = { id: 'tiny', text: 'Tiny', score: 0.0004, source: { id: 's', name: 'S' } };
+  const el = await fixture<LyraRetrievalCompare>(html`
+    <lr-retrieval-compare locale="en-US" .sets=${[{ id: 'one', label: 'One', chunks: [tiny] }]}></lr-retrieval-compare>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="scores"]')!.textContent).to.contain('<0.1%');
+});
+
+it('draws the focused chunk ring inside the scrolling sets container', async () => {
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  const chunkEl = el.shadowRoot!.querySelector('[part~="chunk"][tabindex="0"]') as HTMLElement;
+  await focusByKeyboard(chunkEl);
+  expect(el.shadowRoot!.activeElement).to.equal(chunkEl);
+  expect(parseFloat(getComputedStyle(chunkEl).outlineOffset)).to.be.lessThan(0);
+});
+
+it('animates pagination button paint with the shared interactive transition', async () => {
+  const many: RetrievalComparisonSet[] = Array.from({ length: 10 }, (_, index) => ({
+    id: `set-${index}`,
+    label: `Set ${index}`,
+    chunks: [chunk('a', 0.8, 1)],
+  }));
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${many}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  const button = el.shadowRoot!.querySelector('[part="page-button"]') as HTMLElement;
+  expect(getComputedStyle(button).transitionProperty).to.not.equal('all');
+  expect(getComputedStyle(button).transitionDuration).to.not.equal('0s');
 });

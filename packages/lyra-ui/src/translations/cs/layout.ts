@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Sbalit panel',
   dockPanelExpand: 'Rozbalit panel',
   dockPanelResize: 'Změnit velikost panelu',
+  dockPanelToggle: 'Přepnout panel',
   responsivePanel: 'Panel',
   breadcrumb: 'Drobečková navigace',
   resizeDivider: 'Změnit velikost oddělovače mezi panelem {a} a panelem {b}',

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Esituskiirus',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} / {duration}',
+  avPlayerHighlightRange: '{start} kuni {end}',
+  avPlayerHighlightAt: 'kohas {start}',
   attachmentTriggerAudio: 'Salvesta heli',
   attachmentMenuAudio: 'Salvesta heli',
   flagLoadError: 'Lipp pole saadaval',

@@ -1,3 +1,5 @@
+import { isObjectLike } from './object-guards.js';
+
 /** Returned when a property is absent from the inspected object. */
 export const MISSING_OWN_DATA_DESCRIPTOR = Symbol(
   'missing-own-data-descriptor'
@@ -7,9 +9,7 @@ export const MISSING_OWN_DATA_DESCRIPTOR = Symbol(
 export const UNSAFE_OWN_DATA_DESCRIPTOR = Symbol('unsafe-own-data-descriptor');
 
 /** Whether a value can carry own or inherited property descriptors, including callable objects. */
-export function isObjectValue(value: unknown): value is object {
-  return value !== null && (typeof value === 'object' || typeof value === 'function');
-}
+export const isObjectValue: (value: unknown) => value is object = isObjectLike;
 
 /** An own descriptor whose value can be inspected without invoking a source accessor. */
 interface OwnDataPropertyDescriptor {

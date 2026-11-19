@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: '播放速度',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current}/{duration}',
+  avPlayerHighlightRange: '{start} 至 {end}',
+  avPlayerHighlightAt: '在 {start}',
   attachmentTriggerAudio: '錄製音訊',
   attachmentMenuAudio: '錄製音訊',
   flagLoadError: '旗幟不可用',

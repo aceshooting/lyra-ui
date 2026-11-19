@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 
 export const styles = css`
@@ -34,12 +35,6 @@ export const styles = css`
     block-size: auto;
     overflow: visible;
   }
-  [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    /* Inward: the outward ring every other component uses is clipped along the scrolling edges by
-       this element's own overflow:auto. */
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
-  }
   /* [part="base"] carries tabindex="0" whenever it owns the scrollport, so mouse users need a hint
      it is interactive. A plain border color, not the focus ring's brand color, keeps the ring
      distinct; inward offset for the reason above. Suppressed under an external scrollElement, where
@@ -60,6 +55,13 @@ export const styles = css`
       --lr-virtual-list-hover-outline-offset,
       calc(-1 * var(--lr-border-width-thin))
     );
+  }
+  /* After the hover rule so a hovered, keyboard-focused list keeps the full focus ring. */
+  [part="base"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    /* Inward: the outward ring every other component uses is clipped along the scrolling edges by
+       this element's own overflow:auto. */
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   /* Under an external scrollElement this element is neither focusable nor scrollable (see the
      template), so the hover hint above would advertise an interactivity it no longer has. Only the
@@ -159,6 +161,7 @@ export const styles = css`
     position: sticky;
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
+    background: var(--lr-virtual-list-sticky-group-bg, var(--lr-color-surface));
     /* An inert, aria-hidden copy of a real row: pointer input passes through so it never creates a
        mouse-only action while its semantic/keyboard owner is virtualized. */
     pointer-events: none;
@@ -168,6 +171,9 @@ export const styles = css`
      no height to measure. */
   [part="sticky-group"][data-inactive] {
     visibility: hidden;
+  }
+  .sr-only {
+    ${visuallyHidden}
   }
   :host([loading]) [part="base"] {
     cursor: progress;

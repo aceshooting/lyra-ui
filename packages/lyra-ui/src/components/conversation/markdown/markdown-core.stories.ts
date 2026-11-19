@@ -205,7 +205,7 @@ export const WideGfmTables: Story = {
   </div>`,
 };
 export const CodeBlockHeaders: Story = {
-  render: () => html`<lr-markdown-core code-block-header .content=${'```ts\nconst greeting = "Hello";\n```\n\n    indented code'}></lr-markdown-core>`,
+  render: () => html`<lr-markdown-core code-block-header style="--lr-markdown-code-block-bg: var(--lr-color-surface-raised)" .content=${'```ts\nconst greeting = "Hello";\n```\n\n    indented code'}></lr-markdown-core>`,
 };
 export const RightToLeftCode: Story = {
   parameters: { docs: { description: { story: 'Arabic prose with inline code, a fenced block with one long line, an indented block and an authored `<pre>` of Arabic verse in sanitize mode. Code reads left-to-right; prose and the authored verse follow their own direction.' } } },

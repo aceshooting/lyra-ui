@@ -7,8 +7,7 @@ import {
   type ShikiHighlighter,
   type ShikiLanguageInput,
 } from './shiki-types.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader, resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
 // Preserve the established full-loader module surface. Lean components import the peer-neutral
 // and fine-grained leaves directly so this module's `import('shiki')` cannot enter their graph.
@@ -23,18 +22,9 @@ export {
 } from './shiki-types.js';
 export { loadShikiHighlighterCore } from './shiki-types.js';
 
-let highlighter: Promise<ShikiHighlighter | null> | undefined;
-
 type ShikiModuleLoader = () => Promise<unknown>;
 let shikiModuleLoaderForTesting: ShikiModuleLoader | undefined;
-
-/** Language ids that have already failed `loadLanguage()` once — avoids
- *  retrying (and re-throwing on) the same unrecognized `language` value on
- *  every re-render of every `<lr-code-block>` that requests it. Shared
- *  across every highlighter instance the page ever creates (there's only
- *  ever one, see `loadShikiHighlighter()` below), so this never needs
- *  resetting alongside it. */
-const unsupportedLanguages = new Set<string>();
+const bundledByHighlighter = new WeakMap<ShikiHighlighter, object>();
 
 const FULL_HIGHLIGHTER_WARNING_KEY = 'lyra-code-block-shiki-unavailable';
 const FULL_HIGHLIGHTER_WARNING =
@@ -45,7 +35,7 @@ export function __setShikiModuleLoaderForTesting(
   loader: ShikiModuleLoader | undefined
 ): void {
   shikiModuleLoaderForTesting = loader;
-  highlighter = undefined;
+  highlighter.reset();
 }
 
 const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
@@ -56,6 +46,7 @@ const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
 /** The shape of the `shiki` module namespace this loader actually calls -- the highlighter
  *  `createHighlighter()` produces is validated separately by `isShikiHighlighter()` below. */
 interface ShikiModule {
+  bundledLanguages?: object;
   createHighlighter(options: Record<string, unknown>): Promise<unknown>;
 }
 
@@ -67,50 +58,27 @@ function isShikiModule(candidate: unknown): candidate is ShikiModule {
   );
 }
 
-/**
- * Lazily loads the optional peer dependency `shiki` once per page and builds
- * (and caches) a single `Highlighter` instance seeded with `SHIKI_THEMES` and
- * *zero* language grammars. Creating the highlighter — compiling its regex
- * engine, parsing the seed themes — is the expensive part, not the dynamic
- * `import()` itself, so the created instance is what's cached here rather
- * than just the resolved module (one level deeper than `map-loader.ts`'s
- * single-dependency cached-promise shape, which this otherwise mirrors).
- * Resolves to `null` with a one-time development diagnostic if shiki isn't
- * installed — `<lr-code-block>` falls back to plain unhighlighted text in
- * that case, which is a fully supported default, not a degraded mode. No
- * language grammar is loaded up front; `loadShikiLanguage()` below loads each
- * one incrementally the first time a `language` value actually requests it.
- */
+const highlighter = /* @__PURE__ */ createOptionalPeerLoader<ShikiHighlighter>({
+  cache: 'generation',
+  async load() {
+    const mod = await (shikiModuleLoaderForTesting?.() ?? import('shiki'));
+    const peer = resolveOptionalPeerCapability(mod, isShikiModule);
+    if (!peer) return null;
+    const instance = await peer.createHighlighter({ themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME], langs: [] });
+    if (!isShikiHighlighter(instance)) return null;
+    if (peer.bundledLanguages && typeof peer.bundledLanguages === 'object') {
+      bundledByHighlighter.set(instance, peer.bundledLanguages);
+    }
+    return instance;
+  },
+  isCapability: isShikiHighlighter,
+  warningKey: FULL_HIGHLIGHTER_WARNING_KEY,
+  warning: FULL_HIGHLIGHTER_WARNING,
+});
+
+/** Shares the full highlighter and retries a rejected import or construction on the next request. */
 export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
-  if (!highlighter) {
-    const loadShikiModule = shikiModuleLoaderForTesting ?? (() => import('shiki'));
-    highlighter = loadShikiModule()
-      .then(async (mod) => {
-        // Handles both the flat-namespace shape a native ESM `shiki` import produces and a
-        // `{ default }`-wrapped shape a CJS-interop bundler/test harness might produce instead.
-        const shikiModule = resolveOptionalPeerCapability(mod, isShikiModule);
-        if (!shikiModule) {
-          throw new Error(
-            'Invalid optional peer `shiki`: missing `createHighlighter` capability.'
-          );
-        }
-        const instance = await shikiModule.createHighlighter({
-          themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
-          langs: [],
-        });
-        if (!isShikiHighlighter(instance)) {
-          throw new Error(
-            'Invalid optional peer `shiki`: `createHighlighter()` did not produce a usable highlighter capability.'
-          );
-        }
-        return instance;
-      })
-      .catch(() => {
-        devWarnOnce(FULL_HIGHLIGHTER_WARNING_KEY, FULL_HIGHLIGHTER_WARNING);
-        return null;
-      });
-  }
-  return highlighter;
+  return highlighter.load();
 }
 
 /**
@@ -131,34 +99,20 @@ export function shikiHasLoadedLanguage(hl: ShikiHighlighter, lang: string): bool
   }
 }
 
-/**
- * Ensures `lang` is loaded into `hl`, loading it on demand the first time
- * it's requested rather than bundling every possible grammar up front —
- * shiki supports this incrementally via `Highlighter.loadLanguage()`, which
- * is what keeps this lazy instead of defeating the point of lazy-loading the
- * peer at all. Resolves `false` (and remembers not to retry) when `lang`
- * isn't a shiki-recognized grammar id or alias at all, so a caller can fall
- * back to plain-text rendering instead of retrying an id that can never
- * succeed on every future render.
- */
+/** Loads a recognized grammar on demand, allowing a failed chunk to be retried. */
 export async function loadShikiLanguage(
   hl: ShikiHighlighter,
   lang: string
 ): Promise<boolean> {
   const normalizedLanguage = normalizeShikiLanguage(lang);
   if (shikiHasLoadedLanguage(hl, normalizedLanguage)) return true;
-  if (unsupportedLanguages.has(normalizedLanguage)) return false;
+  const bundled = bundledByHighlighter.get(hl);
+  const custom = Object.hasOwn(CUSTOM_LANGUAGES, normalizedLanguage) ? CUSTOM_LANGUAGES[normalizedLanguage] : undefined;
+  if (!custom && bundled && !Object.hasOwn(bundled, normalizedLanguage)) return false;
   try {
-    await hl.loadLanguage(
-      CUSTOM_LANGUAGES[normalizedLanguage] ?? normalizedLanguage
-    );
+    await hl.loadLanguage(custom ?? normalizedLanguage);
     return true;
   } catch {
-    // Not a shiki-recognized grammar id/alias, or the grammar failed to
-    // load for some other reason — either way, <lr-code-block> treats an
-    // unrecognized language the same as an unset one (plain text), and
-    // there's nothing more specific a caller could do with the reason.
-    unsupportedLanguages.add(normalizedLanguage);
     return false;
   }
 }

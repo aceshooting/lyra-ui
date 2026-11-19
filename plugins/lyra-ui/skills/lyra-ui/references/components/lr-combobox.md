@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -468,7 +468,8 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error.
+never shows the raw error. An independently rejected `AbortError` from the current source displays
+the same retry action. Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
@@ -562,6 +563,16 @@ secondary line, when `sub` is set), `option-badge` (an async row's trailing meta
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
 `retry-button`, `error`, `hint`
+
+The `help-text` attribute, `helpText` property and `help-text` slot supply supporting text.
+The hint container also exposes the `form-control-help-text` part.
+The selection getters return `null` before the input renders.
+
+A pristine combobox follows its `defaultValue` property or `default-value` attribute. Form reset restores
+that default after a user or programmatic edit. Assign an array for multiple selections.
+
+`lr-change-request` carries the proposed `value`, the `previousValue`, and the aligned row `data`.
+Calling `preventDefault()` or assigning `value` during the request suppresses the built-in selection change.
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
 `lr-input`/`lr-change` event detail `value` and `previousValue` narrow to `string` when

@@ -1,6 +1,7 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
@@ -158,6 +159,15 @@ export const styles = css`
   .timeline-markers [part='timeline-marker'] {
     pointer-events: auto;
   }
+  [part='timeline-playhead'] {
+    position: absolute;
+    inset-block: 0;
+    inline-size: var(--lr-border-width-medium);
+    inset-inline-start: clamp(0px, calc(var(--_lr-playhead-position) - var(--lr-border-width-medium) / 2), calc(100% - var(--lr-border-width-medium)));
+    background: var(--lr-color-text);
+    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-surface-raised);
+    pointer-events: none;
+  }
   /* Not filter: brightness(1.2), which multiplies every channel: it lightened a dark marker, did
      nothing to a fully saturated or pure-white fill, and applied to the subtree, dragging the
      marker's own label with it. */
@@ -312,4 +322,13 @@ export const styles = css`
     :host([controls-surface='clear']) [part='rate-select'] { border-color: ButtonText; }
   }
 
+  ${forcedColorsPart('lr-virtual-list::part(cue-current)')}
+  @media (forced-colors: active) {
+    [part='timeline-playhead'] {
+      forced-color-adjust: none;
+      background: Highlight;
+      box-shadow: none;
+      outline: var(--lr-border-width-thin) solid CanvasText;
+    }
+  }
 `;

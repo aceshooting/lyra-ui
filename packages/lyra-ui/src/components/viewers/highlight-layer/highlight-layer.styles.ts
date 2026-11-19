@@ -88,7 +88,8 @@ export const styles = css`
     );
   }
   [part='rect']:where([data-active]) {
-    outline-width: var(--lr-border-width-medium);
+    outline-width: var(--lr-border-width-thick);
+    outline-offset: calc(-1 * var(--lr-border-width-thick));
   }
   [part='rect-target']:focus-visible {
     outline: var(--lr-focus-ring);
@@ -143,7 +144,9 @@ export const styles = css`
   @media (prefers-reduced-motion: reduce) {
     [part='rect']:where([data-flash]) {
       animation: none;
-      outline-width: var(--lr-border-width-medium);
+      background: var(--_lr-highlight-layer-background);
+      outline-width: var(--lr-border-width-thick);
+      outline-offset: calc(-1 * var(--lr-border-width-thick));
     }
   }
 `;

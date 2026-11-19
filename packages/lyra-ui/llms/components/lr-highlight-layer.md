@@ -45,6 +45,13 @@ the box tall and scrolling) containing one `highlight-action` button per rendere
 highlights whose hit areas do not overlap keep their in-place targets. Keyboard focus and the roving
 tab stop follow a highlight's `id` when `items` is re-sorted or prepended.
 
+Enter/Space activation ignores Alt/Ctrl/Meta-modified, IME-composing and auto-repeating keys, and
+arrow navigation ignores modified or composing keys, so browser shortcuts keep working. `items` are
+snapshotted with each rectangle sanitized once; a whitespace-only item `label` is treated as absent.
+The active highlight is drawn with a heavier outline than a hovered one. Under reduced motion a
+`flash(id)` keeps the tone's own fill and shows the heavier outline for a short hold instead of an
+opaque one-frame fill.
+
 **Themeable custom properties:**
 `--lr-highlight-layer-accent-bg`, `--lr-highlight-layer-accent-outline`,
 `--lr-highlight-layer-success-bg`, `--lr-highlight-layer-success-outline`,

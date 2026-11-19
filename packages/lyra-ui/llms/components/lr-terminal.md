@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,8 +83,10 @@ server-side or other handling),
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
-text, anchor, rects }`).
-
+text, anchor, rects }`). The terminal reports a selection inside its viewport once for unchanged endpoints.
+User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
+release following silently. Copy outcomes are announced. When an input or line exceeds the character
+limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
 `download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries

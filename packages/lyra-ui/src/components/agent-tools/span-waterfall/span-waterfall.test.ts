@@ -315,7 +315,7 @@ describe('lr-span-waterfall', () => {
     expect(el.shadowRoot!.querySelector('[data-id="early"]')!.getAttribute('tabindex')).to.equal('-1');
   });
 
-  it('keeps even a tiny-duration bar at the shared 36px icon-button floor in both axes', async () => {
+  it('paints a tiny-duration bar to scale and keeps a 36px pointer target in both axes', async () => {
     const spans: LyraSpan[] = [
       { id: 'tiny', name: 'Tiny span', kind: 'tool', startMs: 10, endMs: 11, status: 'success' },
     ];
@@ -332,7 +332,11 @@ describe('lr-span-waterfall', () => {
     expect(bars.length).to.be.greaterThan(0);
     for (const bar of bars) {
       const rect = bar.getBoundingClientRect();
-      expect(rect.width, `${bar.dataset['id'] ?? ''} width`).to.be.at.least(36);
+      expect(rect.width, 'painted width').to.be.within(0.01, 1);
+      const track = bar.parentElement!.getBoundingClientRect();
+      const hit = el.shadowRoot!.elementFromPoint(track.left + 34, rect.top + rect.height / 2);
+      expect(hit === bar, 'hit beyond the painted duration').to.equal(true);
+      expect(parseFloat(getComputedStyle(bar, '::before').width)).to.be.at.least(36);
       expect(rect.height, `${bar.dataset['id'] ?? ''} height`).to.be.at.least(36);
     }
   });
@@ -360,7 +364,11 @@ describe('lr-span-waterfall', () => {
           const track = bar.parentElement as HTMLElement;
           const barRect = bar.getBoundingClientRect();
           const trackRect = track.getBoundingClientRect();
-          expect(barRect.width, `${dir} ${id} target width`).to.be.at.least(36);
+          expect(barRect.width, `${dir} ${id} painted width`).to.be.within(0.01, 1);
+          const hitLeft = (dir === 'ltr') === (id === 'first');
+          const x = hitLeft ? trackRect.left + 35 : trackRect.right - 35;
+          expect(el.shadowRoot!.elementFromPoint(x, barRect.top + barRect.height / 2) === bar).to.equal(true);
+          expect(parseFloat(getComputedStyle(bar, '::before').width)).to.be.at.least(36);
           expect(barRect.left, `${dir} ${id} left edge`).to.be.at.least(trackRect.left - 1);
           expect(barRect.right, `${dir} ${id} right edge`).to.be.at.most(trackRect.right + 1);
 

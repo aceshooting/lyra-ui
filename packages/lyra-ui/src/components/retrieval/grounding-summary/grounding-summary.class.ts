@@ -563,6 +563,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
         <lr-citation-badge
           index=${index + 1}
           source-id=${citation.sourceId ?? ''}
+          .label=${citation.label ?? ''}
           .rovingTabIndex=${citation.id === rovingEvidenceId ? 0 : -1}
           @focusin=${() => { this.rovingEvidenceId = citation.id; this.requestUpdate(); }}
           @keydown=${(event: KeyboardEvent) => this.onEvidenceKeyDown(event, index, count)}

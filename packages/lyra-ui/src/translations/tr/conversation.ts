@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Girdi sınırına ulaşıldığı için bazı öneriler veya katalog kayıtları atlandı.',
   transcriptFeedInputLimit: '{total} kayıttan yalnızca en yeni {count} tanesi saklanır.',
   codeBlockHighlightLimit: 'Uzun kod, sözdizimi vurgulaması olmadan gösterilir.',
+  codeBlockHighlightedLine: 'Vurgulu satır',
+  codeBlockActiveLine: 'Etkin vurgulu satır',
 };
 
 registerLyraLocale('tr', strings);

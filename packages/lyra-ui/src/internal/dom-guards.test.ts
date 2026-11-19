@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { imageMapImageFor, isDateObject, isHtmlElement, isSvgElement } from './dom-guards.js';
+import { imageMapImageFor, isDateObject, isHtmlElement, isSvgElement, nodeContainsSlot, someListedNode } from './dom-guards.js';
 
 it('recognizes genuine HTML elements and Dates from another same-origin realm', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
@@ -87,4 +87,18 @@ it('fails closed for malformed or over-budget image maps and supports a detached
   let work = 0;
   expect(imageMapImageFor(map, { consume: () => ++work === 1 })).to.equal(null);
   expect(work).to.equal(2);
+});
+
+it('finds a slot at or below a node and scans a node list root by root', () => {
+  const wrapper = document.createElement('div');
+  const slot = document.createElement('slot');
+  expect(nodeContainsSlot(slot)).to.equal(true);
+  expect(nodeContainsSlot(wrapper)).to.equal(false);
+  wrapper.append(document.createElement('p'));
+  wrapper.firstElementChild!.append(slot);
+  expect(nodeContainsSlot(wrapper)).to.equal(true);
+  expect(nodeContainsSlot(document.createTextNode('text'))).to.equal(false);
+  expect(someListedNode(wrapper.childNodes, nodeContainsSlot)).to.equal(true);
+  expect(someListedNode([document.createTextNode('a')], nodeContainsSlot)).to.equal(false);
+  expect(someListedNode([], nodeContainsSlot)).to.equal(false);
 });

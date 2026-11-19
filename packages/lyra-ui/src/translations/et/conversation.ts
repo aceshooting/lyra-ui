@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Osa soovitusi või kataloogikirjeid jäeti välja, kuna sisendi piirang sai täis.',
   transcriptFeedInputLimit: 'Säilitatakse ainult {count} uusimat kirjet {total}-st.',
   codeBlockHighlightLimit: 'Pikk kood kuvatakse ilma süntaksi esiletõstuta.',
+  codeBlockHighlightedLine: 'Esile tõstetud rida',
+  codeBlockActiveLine: 'Aktiivne esile tõstetud rida',
 };
 
 registerLyraLocale('et', strings);

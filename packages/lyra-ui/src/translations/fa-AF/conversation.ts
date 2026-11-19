@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'برخی پیشنهادها یا ورودی‌های فهرست به‌دلیل رسیدن به حد ورودی حذف شدند.',
   transcriptFeedInputLimit: 'تنها تازه‌ترین {count} مورد از {total} ورودی نگهداری می‌شوند.',
   codeBlockHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نشان داده می‌شود.',
+  codeBlockHighlightedLine: 'خط برجسته',
+  codeBlockActiveLine: 'خط برجستهٔ فعال',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

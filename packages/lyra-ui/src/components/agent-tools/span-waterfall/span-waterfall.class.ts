@@ -1,8 +1,11 @@
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
+import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -499,6 +502,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     if (this.treeSource !== undefined || e.currentTarget !== this.renderRoot.querySelector('[role=list]')) return;
     const view = this.viewWindow();
     const rows = this.sortedSpans().filter((span) => this.barGeometry(span, view).visible);
@@ -533,8 +537,11 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }
   };
 
+  private focusWasInside = false;
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.focusWasInside = captureComposedFocusRepair(this, this) !== null;
     this.syncSource();
     if (this.treeSource !== undefined) return;
     if (changed.has('treeSource')) {
@@ -581,6 +588,9 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.focusWasInside && this.treeSource === undefined) {
+      restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLElement>('[part="bar"][tabindex="0"]'));
+    }
     if (this.treeSource !== undefined) {
       const version = this.sourceVersion;
       this.updateSourceEffects();
@@ -721,6 +731,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       <div part="row" role="listitem" aria-posinset=${posInSet} aria-setsize=${setSize} ?data-active=${isActive}>
         <span part="name">${span.name}</span>
         <span part="bar-track">
+          <!-- hit-area-exempt: the duration sets the painted width. The button pseudo-element supplies the full track-clamped pointer target. -->
           <button
             part="bar"
             type="button"
@@ -788,6 +799,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       <div
         part="base"
         role="list"
+        tabindex="-1"
         aria-label=${hostAriaLabel(this) ?? this.label ?? this.localize('spanWaterfall')}
         @keydown=${this.onKeyDown}
       >

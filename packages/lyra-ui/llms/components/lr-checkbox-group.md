@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,9 +50,14 @@ Awesome's unset-default behavior.
 
 **Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
 alongside slotted hint/error content, like every other group.
+The `help-text` attribute and `helpText` property supply the fallback for an empty `hint`.
+The `help-text` slot adds supporting content to the `form-control-help-text` part.
+The error precedes the hint in the fieldset and in its accessible description.
+
 **Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
 `lr-change`. The native `input` and `change` are plain `Event` objects. Both `lr-input` and
-`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings.
+`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings. The committed
+`lr-change` also identifies the checkbox in `detail.option` and the earlier selection in `detail.previousValue`.
 The owned child's corresponding events are
 consumed at the group boundary, so an ancestor does not receive a second, differently shaped
 sequence.

@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'ፓነሉን አጠቃልል',
   dockPanelExpand: 'ፓነሉን አስፋ',
   dockPanelResize: 'የፓነሉን መጠን ቀይር',
+  dockPanelToggle: 'ፓነልን ቀያይር',
   responsivePanel: 'ፓነል',
   breadcrumb: 'የመንገድ ማመልከቻ',
   resizeDivider: 'በፓነል {a} እና ፓነል {b} መካከል ያለውን መከፋፈያ መጠን ቀይር',

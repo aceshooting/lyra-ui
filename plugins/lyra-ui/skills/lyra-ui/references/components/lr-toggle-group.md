@@ -62,13 +62,13 @@ when `detail.value.length === 0`.
 **Events:**
 
 - `lr-toggle-group-toggle-request` — cancelable; an owned toggle is about to flip.
-- `lr-change` — not cancelable; after a committed user change, with single-mode exclusivity applied.
+- `lr-change` is the sole value notification after a committed user change, with single-mode exclusivity applied.
 
 The request's `detail: { value, previousValue, option }` (`LyraToggleGroupToggleRequestDetail`) is
 the group value that **would** result, the value as it stands, and the toggle the user acted on (kept
 by identity). `preventDefault()` keeps every toggle unchanged and no `lr-change` follows; assigning the
 group's `value` from a listener resolves the request the same way. `lr-change` carries
-`detail: { value }`. Both details are detached, frozen snapshots. The group **consumes each owned
+`{ value, previousValue, option }`. Both details are detached, frozen snapshots. The group **consumes each owned
 toggle's `lr-toggle-toggle-request` and `lr-change`** and republishes them as these two events, so an
 ancestor never receives two differently shaped sequences for one interaction, and a listener on an
 individual grouped toggle receives neither. Programmatic `value`, `pressed` and `selection-mode`

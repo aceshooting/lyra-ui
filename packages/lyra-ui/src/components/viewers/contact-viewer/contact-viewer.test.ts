@@ -428,3 +428,25 @@ it('renders the localized unnamed fallback for a card without FN', async () => {
     window.fetch = original;
   }
 });
+
+it('isolates contact names, addresses and typed values in a right-to-left document', async () => {
+  const original = window.fetch;
+  window.fetch = async () => new Response(CARD);
+  try {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer dir="rtl" src="/person.vcf"></lr-contact-viewer>`);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="contact-name"]'));
+    for (const part of ['contact-name','contact-org','contact-tel','contact-email','contact-adr']) {
+      expect(el.shadowRoot!.querySelector(`[part="${part}"] bdi`)?.getAttribute('dir'), part).to.equal('auto');
+    }
+  } finally { window.fetch = original; }
+});
+
+it('does not double-pad the empty state inside the padded body', async () => {
+  const original = window.fetch;
+  window.fetch = (() => Promise.resolve(new Response(''))) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer src="/empty.vcf"></lr-contact-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('.empty-note') !== null);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('.empty-note')!).paddingInlineStart).to.equal('0px');
+  } finally { window.fetch = original; }
+});

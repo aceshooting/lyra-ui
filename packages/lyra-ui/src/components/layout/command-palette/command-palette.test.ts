@@ -1709,8 +1709,6 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
       await resetMouse();
       await hoverUntilMatched(row, "the pointer must reach the highlighted row");
       expect(row.isConnected, "the highlighted row must remain mounted").to.equal(true);
-      // mouseenter keeps the hovered row the highlighted one, so this is still the
-      // data-active row -- exactly the combination the press rule has to out-rank.
       expect(row.getAttribute("data-active")).to.equal("true");
       await sendMouse({ type: "down" });
       // Margined timeout, not the 1s default. This waits on a real pointer-down round-tripping

@@ -57,7 +57,7 @@ button): state is conveyed by `aria-pressed` alone, so a "Mute"/"Unmute" swap is
 **Events:**
 
 - `lr-toggle-toggle-request` — cancelable; a user activation (click, Enter on keydown, Space on keyup, or host `click()`) is about to flip `pressed`.
-- `lr-change` — not cancelable; after a committed user toggle.
+- `lr-change` is the sole value notification after a committed user toggle.
 - `lr-toolbar-actions-change` — no detail; the toggle joined or left an `lr-toggle-group`.
 - `focus` / `blur` — relayed once from the internal button, bubbling and composed.
 

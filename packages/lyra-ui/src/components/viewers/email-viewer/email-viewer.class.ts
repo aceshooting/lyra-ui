@@ -1,3 +1,5 @@
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { bdi } from '../../../internal/bidi.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -528,8 +530,19 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       this.foldQuotes && element.localName === 'button' && element.getAttribute('data-email-chrome') === 'quote-toggle');
   }
 
+  private releaseScrollRegion?: () => void;
+
+  private syncScrollRegion(): void {
+    this.releaseScrollRegion?.();
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    this.releaseScrollRegion = body && this.isConnected
+      ? makeScrollRegionFocusable(body, this.name.trim() || this.localize('emailViewerLabel'))
+      : undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
     const moved = this.detached.cancel();
     if (moved && this.pendingTransportGeneration === undefined) return;
@@ -549,6 +562,8 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   override disconnectedCallback(): void {
     if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.announcements.disconnect();
+    this.releaseScrollRegion?.();
+    this.releaseScrollRegion = undefined;
     super.disconnectedCallback();
     this.detached.schedule();
   }
@@ -569,6 +584,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     this.announcements.transition(
       'load',
       this.fetchState.kind,
@@ -597,6 +613,13 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      if (!(await loadEmailDeps()).PostalMime) {
+        throw new LyraUserFacingError(
+          this.localize('emailViewerMissingParser'),
+          (localize) => localize('emailViewerMissingParser'),
+        );
+      }
+      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       const buffer = await readResponseArrayBuffer(response);
       if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
@@ -704,10 +727,10 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   private renderHeaders(email: ParsedEmail, fromAddress?: Address, toAddresses?: readonly Address[]): TemplateResult {
     return html`<div part="headers">
-      <span part="from-label">${this.localize('emailViewerFrom')}</span><span part="from">${fromAddress ? this.formatAddress(fromAddress) : email.from}</span>
-      <span part="to-label">${this.localize('emailViewerTo')}</span><span part="to">${toAddresses ? this.formatAddresses(toAddresses) : email.to}</span>
-      <span part="subject-label">${this.localize('emailViewerSubject')}</span><span part="subject">${email.subject || this.localize('emailViewerNoSubject')}</span>
-      <span part="date-label">${this.localize('emailViewerDate')}</span><span part="date">${this.formatDate(email.date)}</span>
+      <span part="from-label">${this.localize('emailViewerFrom')}</span><span part="from">${bdi(fromAddress ? this.formatAddress(fromAddress) : email.from)}</span>
+      <span part="to-label">${this.localize('emailViewerTo')}</span><span part="to">${bdi(toAddresses ? this.formatAddresses(toAddresses) : email.to)}</span>
+      <span part="subject-label">${this.localize('emailViewerSubject')}</span><span part="subject">${bdi(email.subject || this.localize('emailViewerNoSubject'))}</span>
+      <span part="date-label">${this.localize('emailViewerDate')}</span><span part="date">${bdi(this.formatDate(email.date))}</span>
     </div>`;
   }
 

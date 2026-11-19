@@ -9,13 +9,15 @@ import { flattenedParentElement } from '../../../internal/composed-tree.js';
 import { styles } from './dock-panel.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { SeparatorDragController, separatorArrowDirection, separatorCoordinate } from '../../../internal/separator-drag.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_dockPanelToggle } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -154,6 +156,8 @@ interface DragState {
  *   (drag affordance vs. button feedback).
  * @cssprop [--lr-dock-panel-handle-active-color=color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background of `handle` while actively dragged/pressed.
+ * @cssprop [--lr-dock-panel-handle-color=var(--lr-color-border)] - Resting resize line color.
+ * @cssprop [--lr-dock-panel-handle-size=var(--lr-size-3px)] - Visible resize line thickness.
  * @cssprop [--lr-dock-panel-handle-hit-area=var(--lr-space-m)] - Resize target width along the
  *   panel's inner edge, inside its clipped box and over its content. Precise pointers get exactly
  *   this width, so content beside the edge stays clickable (set it to the visible line, e.g. `3px`,
@@ -170,6 +174,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
     dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
     dockPanelResize: LYRA_DEFAULT_dockPanelResize,
+    dockPanelToggle: LYRA_DEFAULT_dockPanelToggle,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -188,7 +193,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  shared six-step ladder (`internal/variants.ts`'s `LyraSize`), and this is an arbitrary CSS
    *  length instead. A clean rename with no alias -- `size`/`min-size`/`max-size` on
    *  `<lr-dock-panel>` are simply unknown attributes now. */
-  @property()
+  @property({ converter: declaredDefaultConverter('280px') })
   get extent(): string { return this._extent; }
   set extent(value: string) {
     const old = this._extent;
@@ -197,11 +202,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.requestUpdate('extent', old);
   }
   /** Minimum resize bound, as a CSS length. */
-  @property({ attribute: 'min-extent' }) minExtent = '160px';
+  @property({ attribute: 'min-extent', converter: declaredDefaultConverter('160px') }) minExtent = '160px';
   /** Maximum resize bound, as a CSS length. Empty means "no explicit cap" -- the live extent of
    *  the containing element is used instead, so the panel still can't be dragged wider/taller than
    *  its container. */
-  @property({ attribute: 'max-extent' }) maxExtent = '';
+  @property({ attribute: 'max-extent', converter: declaredDefaultConverter('') }) maxExtent = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
   private readonly toggleWriteGuard = new VetoWriteGuard();
   private _collapsed = false;
@@ -215,6 +220,12 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
   /** When set, no drag handle renders at all and the panel is a fixed size. */
   @property({ type: Boolean, reflect: true, attribute: 'without-resize' }) withoutResize = false;
+  /** Disables resizing while leaving the collapse toggle available. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
+  private get resizeDisabled(): boolean {
+    return this.disabled || this.withoutResize;
+  }
 
   private drag: DragState | null = null;
   private readonly resizeWriteGuard = new VetoWriteGuard();
@@ -358,7 +369,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     if (
       this.hasUpdated &&
       ((changed.has('collapsed') && this.collapsed && this.matches(':focus-within')) ||
-        (changed.has('withoutResize') && this.withoutResize && shadowFocusTarget(this)?.matches('[part="handle"]')))
+        ((changed.has('withoutResize') || changed.has('disabled')) && this.resizeDisabled && shadowFocusTarget(this)?.matches('[part="handle"]')))
     ) this.relocateFocus(changed.has('collapsed') && this.collapsed);
     else if (
       this.hasUpdated && changed.has('collapsed') && !this.collapsed &&
@@ -373,11 +384,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     ) {
       if (this.drag && !this.dragSnapshotIsCurrent(this.drag)) this.endDrag();
       this.reconcileLiveExtent();
-    } else if (
-      this.drag &&
-      ((changed.has('withoutResize') && this.withoutResize) ||
-        (changed.has('collapsed') && this.collapsed))
-    ) {
+    } else if (this.drag && this.resizeDisabled) {
       this.endDrag();
     }
   }
@@ -543,7 +550,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       extent: this.extent,
       placement: this.placement,
       collapsed: this.collapsed,
-      withoutResize: this.withoutResize,
+      withoutResize: this.resizeDisabled,
       minExtent: this.minExtent,
       maxExtent: this.maxExtent,
       growSign: this.growSign,
@@ -557,9 +564,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       commit: () => {
         const currentBounds = this.resolveBoundsPx(snapshot.containerPx);
         if (
-          this.drag !== snapshot.drag || this.collapsed || this.collapsed !== snapshot.collapsed ||
+          !this.isConnected || this.drag !== snapshot.drag || this.collapsed || this.collapsed !== snapshot.collapsed ||
           this.resizeRequestSequence !== requestSequence ||
-          this.withoutResize || this.withoutResize !== snapshot.withoutResize ||
+          this.resizeDisabled || this.resizeDisabled !== snapshot.withoutResize ||
           this.extent !== snapshot.extent || this.placement !== snapshot.placement ||
           this.minExtent !== snapshot.minExtent || this.maxExtent !== snapshot.maxExtent ||
           this.growSign !== snapshot.growSign ||
@@ -586,7 +593,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private dragSnapshotIsCurrent(drag: DragState): boolean {
     return (
-      !this.withoutResize &&
+      !this.resizeDisabled &&
       !this.collapsed &&
       this.placement === drag.placement &&
       this.axis === drag.axis &&
@@ -602,7 +609,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     if (
       !e.isPrimary ||
       e.button !== 0 ||
-      this.withoutResize ||
+      this.resizeDisabled ||
       this.collapsed ||
       this.drag
     ) {
@@ -636,7 +643,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const drag = this.drag;
     if (!drag || e.pointerId !== drag.pointerId) return;
     if (
-      this.withoutResize || this.collapsed || this.placement !== drag.placement ||
+      this.resizeDisabled || this.collapsed || this.placement !== drag.placement ||
       this.axis !== drag.axis || this.growSign !== drag.growSign ||
       this.extent !== drag.expectedExtent || this.minExtent !== drag.minExtent ||
       this.maxExtent !== drag.maxExtent
@@ -655,7 +662,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     drag.currentSizePx = parseFloat(extent);
     drag.acceptedResize = true;
     this.emitResize('lr-resize', extent);
-    if (this.drag !== drag || this.extent !== extent || this.collapsed || this.withoutResize) return;
+    if (this.drag !== drag || this.extent !== extent || this.collapsed || this.resizeDisabled) return;
     this.emitResize('lr-resize-input', extent);
   };
 
@@ -682,7 +689,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   private onHandleKeyDown = (e: KeyboardEvent): void => {
-    if (this.withoutResize || this.collapsed || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    if (this.resizeDisabled || this.collapsed || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     // The physical "positive direction" key is always Right/Down; growSign
     // already encodes whether that direction grows or shrinks the panel for
     // the current edge + RTL-ness, exactly mirroring how onPointerMove folds
@@ -708,9 +715,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const extent = this.requestResize(proposal.bounds, proposal.nextExtent);
     if (!extent) return;
     this.emitResize('lr-resize', extent);
-    if (this.extent !== extent || this.collapsed || this.withoutResize) return;
+    if (this.extent !== extent || this.collapsed || this.resizeDisabled) return;
     this.emitResize('lr-resize-input', extent);
-    if (this.extent !== extent || this.collapsed || this.withoutResize) return;
+    if (this.extent !== extent || this.collapsed || this.resizeDisabled) return;
     this.emitResize('lr-resize-change', extent);
   };
 
@@ -774,7 +781,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   private handleTemplate(): TemplateResult | typeof nothing {
-    if (this.withoutResize || this.collapsed) return nothing;
+    if (this.resizeDisabled || this.collapsed) return nothing;
     const { minPx, maxPx } = this.renderBounds ?? this.resolveBoundsPx();
     const nowPx = Math.min(Math.max(this.renderSizePx ?? this.currentSizePx(), minPx), maxPx);
     // hit-area-exempt: a drag-handle separator (role="separator",
@@ -785,7 +792,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     return html`<div
       part="handle"
       role="separator"
-      aria-label=${this.localize('dockPanelResize')}
+      aria-label=${resolveAccessibleName(this, this.localize('dockPanelResize'))}
       aria-orientation=${this.axis === 'inline' ? 'vertical' : 'horizontal'}
       aria-valuenow=${Math.round(nowPx)}
       aria-valuetext=${this.resizeValueText(nowPx)}
@@ -804,7 +811,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       type="button"
       aria-expanded=${this.collapsed ? 'false' : 'true'}
       aria-controls=${this.contentId}
-      aria-label=${this.collapsed
+      aria-label=${this.localize('dockPanelToggle')}
+      title=${this.collapsed
         ? this.localize('dockPanelExpand')
         : this.localize('dockPanelCollapse')}
       @click=${this.toggleCollapsed}

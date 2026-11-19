@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF ಡಾಕ್ಯುಮೆಂಟ್',
   pdfViewerMissingLibrary: 'PDF ಫೈಲ್‌ಗಳನ್ನು ರೆಂಡರ್ ಮಾಡಲು ಈ ವೀಕ್ಷಕಕ್ಕೆ ಐಚ್ಛಿಕ "pdfjs-dist" ಪ್ಯಾಕೇಜ್ ಅಗತ್ಯವಿದೆ.',
   pdfViewerPageOf: 'ಒಟ್ಟು {total}ರಲ್ಲಿ {page}ನೇ ಪುಟ',
+  pdfViewerPageHighlights: 'ಪುಟ {page} ರ ಹೈಲೈಟ್‌ಗಳು',
   pdfViewerZoomIn: 'ಜೂಮ್ ಹೆಚ್ಚಿಸಿ',
   pdfViewerZoomOut: 'ಜೂಮ್ ಕಡಿಮೆ ಮಾಡಿ',
   pdfViewerPreviousPage: 'ಹಿಂದಿನ ಪುಟ',

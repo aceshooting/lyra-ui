@@ -7,6 +7,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   collectFocusableElements,
@@ -19,6 +20,10 @@ import {
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { parseIsoDate, utcDate } from '../../../internal/calendar-date.js';
+import { bdi } from '../../../internal/bidi.js';
+import { BUILDER_CHILD_EVENTS, containShadowChildEvent } from '../../../internal/child-event-containment.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { styles } from './filter-bar.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -337,7 +342,7 @@ export interface LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBa
  *  heatmap cell, a map selection, a chart brush. `<lr-filter-bar>` renders NO control for it and it
  *  occupies NO toolbar cell, but it is a filter in every other sense this component knows: it lives
  *  in `value` under its own `filterId`, rides every `lr-input`/`lr-reset` detail, counts toward
- *  `hasActiveFilters` (so it enables the reset button) and `invalidFilterIds`, renders a removable
+ *  `hasActiveFilters` and `invalidFilterIds`, renders a removable
  *  active-filter chip subject to `activeFiltersDisplay`, and is cleared by a chip removal and by
  *  `reset()` alongside every other filter.
  *
@@ -506,6 +511,11 @@ const MAX_FILTER_COLLECTION_ENTRIES = 10_000;
 const MAX_FILTER_COLLECTION_NODES = 50_000;
 const MAX_FILTER_COLLECTION_DEPTH = 16;
 const OMIT_FILTER_VALUE = Symbol('omit-filter-value');
+const CONTAINED_CONTROL_EVENTS = [
+  ...BUILDER_CHILD_EVENTS.filter(type => type.startsWith('lr-')),
+  'lr-change-request', 'lr-create', 'lr-retry-request', 'lr-source-error', 'lr-option-change',
+  'lr-select', 'lr-menu-item-change-request', 'lr-chip-toggle-request', 'lr-chip-change', 'lr-overflow-toggle',
+];
 const EMPTY_FILTERS: readonly LyraFilterBarFilterDefinition[] = Object.freeze([]);
 const EMPTY_VALUE: LyraFilterBarValue = Object.freeze({});
 // One shared identity, so a date filter that declares no quick-range row never hands the composed
@@ -940,8 +950,7 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * renders no field for it and it claims no toolbar cell (no `field` wrapper, and therefore no blank
  * column where an empty one's validation spacer would otherwise reserve a row of height). It is a
  * filter in every other sense: it lives in `value` under its own `filterId`, rides every
- * `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables the reset button,
- * which is exactly the "clear all" action an all-chip bar needs) and `invalidFilterIds`, renders a
+ * `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` and `invalidFilterIds`, renders a
  * removable active-filter chip subject to `activeFiltersDisplay`, and is cleared by a chip removal
  * and by `reset()` alongside every other filter. Its chip text comes from an optional
  * `formatValue(value, locale)` receiving `effectiveLocale` -- the same locale every built-in type's
@@ -963,8 +972,8 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * the same `setFilterValue()` path and emits a single `lr-input` carrying the *full* resulting
  * `value`, not just the changed filter's own value, mirroring `<lr-tool-param-form>`'s identical
  * "always the whole object" event contract. A composed control's own `lr-input`/`lr-change`
- * aliases stay inside this wrapper; its native-style `input`/`change` events retain their normal
- * bubbling path. Date/date-range chip labels localize only
+ * aliases, picker requests, and popup lifecycle events stay inside this wrapper. Native-style
+ * `input`/`change` events retain their normal bubbling path. Date/date-range chip labels localize only
  * round-trip-valid ISO `YYYY-MM-DD` segments, including literal four-digit years `0000`-`0099`.
  * Impossible dates, malformed values, and a range with either invalid endpoint remain verbatim so
  * display never invents a normalized day. A `'date-range'` filter may also declare `presets`,
@@ -1135,10 +1144,7 @@ export class LyraFilterBar<
    *  filter, exactly as it always has -- this property only changes which already-active filters
    *  get a chip in the row, never what removing one does.
    *
-   *  `'changed'` additionally gates the reset button on `hasChangedFilters` rather than
-   *  `hasActiveFilters`, so an untouched defaults-only bar -- which renders no chip in this mode --
-   *  no longer offers an enabled reset that would change nothing. `hasActiveFilters` itself is
-   *  unaffected by this property in every mode, and so is reset enablement under `'all'`/`'hidden'`. */
+   *  In every display mode, reset is available when a filter differs from its default. */
   @property({ reflect: true, attribute: 'active-filters-display' })
   activeFiltersDisplay: LyraFilterBarActiveFiltersDisplay = 'all';
 
@@ -1343,10 +1349,7 @@ export class LyraFilterBar<
   }
 
   /** Whether any filter currently has a value -- including one sitting at its own declared
-   *  `defaultValue`, which is a value the filter holds like any other. Also what gates whether the
-   *  `active-filters` chip row renders at all, and the reset button's own disabled state in every
-   *  `activeFiltersDisplay` mode except `'changed'`, where `hasChangedFilters` gates it instead.
-   *  This getter itself is unaffected by `activeFiltersDisplay`. */
+   *  `defaultValue`. Chip visibility is controlled separately by `activeFiltersDisplay`. */
   get hasActiveFilters(): boolean {
     return this._filters.some((def) => !this.isEmpty(def, this.valueFor(def)));
   }
@@ -1386,18 +1389,6 @@ export class LyraFilterBar<
    *  chip while still reading as changed here. */
   get hasChangedFilters(): boolean {
     return this._filters.some((def) => this.filterIsChanged(def));
-  }
-
-  /** What the reset button's own enablement keys on: whether pressing it would change anything.
-   *  Under `activeFiltersDisplay: 'changed'` -- the mode whose whole premise is that a value
-   *  sitting at its own declared default is not something the user applied -- that is
-   *  `hasChangedFilters`, so an untouched defaults-only bar offers no reset to press (and shows no
-   *  chip to remove either, which is the state the enabled button used to contradict). Every other
-   *  mode keeps `hasActiveFilters`, byte for byte what this component has always gated on. */
-  private get hasResettableFilters(): boolean {
-    return this.activeFiltersDisplay === 'changed'
-      ? this.hasChangedFilters
-      : this.hasActiveFilters;
   }
 
   /** Filter ids currently failing their own `required` check -- a filter is invalid only when
@@ -1565,13 +1556,6 @@ export class LyraFilterBar<
       return;
     }
     this.setFilterValue(def.filterId, control.value, control.appliedPreset);
-  };
-
-  /** Built-in controls keep their native-style `input`/`change` compatibility path, but their
-   * prefixed aliases carry the child control's detail shape and must not impersonate this bar's
-   * single full-value `lr-input` contract at the host boundary. */
-  private stopControlAlias = (event: Event): void => {
-    event.stopPropagation();
   };
 
   private onCustomControlChange = (
@@ -1769,19 +1753,8 @@ export class LyraFilterBar<
       timeZone: 'UTC',
     });
     const parseIso = (input: string): Date | undefined => {
-      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
-      if (!match) return undefined;
-      const year = Number(match[1]);
-      const month = Number(match[2]);
-      const day = Number(match[3]);
-      const date = new Date(0);
-      date.setUTCHours(0, 0, 0, 0);
-      date.setUTCFullYear(year, month - 1, day);
-      return date.getUTCFullYear() === year &&
-        date.getUTCMonth() === month - 1 &&
-        date.getUTCDate() === day
-        ? date
-        : undefined;
+      const parts = parseIsoDate(input);
+      return parts ? utcDate(parts.y, parts.m - 1, parts.d) : undefined;
     };
     const segments = value.split('/');
     if (
@@ -1845,6 +1818,8 @@ export class LyraFilterBar<
 
   override connectedCallback(): void {
     super.connectedCallback();
+    for (const name of CONTAINED_CONTROL_EVENTS)
+      this.renderRoot.addEventListener(name, containShadowChildEvent);
     if (this.hasUpdated) this.closeCheckboxMenus();
     if (!this.schemaAbortController || this.schemaAbortController.signal.aborted) {
       this.renewSchemaContext();
@@ -1880,14 +1855,26 @@ export class LyraFilterBar<
     }
   }
 
+  private resetLostFocus = false;
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('disabled') && this.disabled) this.cancelDebounce();
+    this.resetLostFocus = shadowFocusTarget(this)?.matches('[part="reset-button"]') === true &&
+      (this.disabled || this.loading || !this.hasChangedFilters);
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncTextControls();
+    if (this.resetLostFocus) {
+      const reset = this.renderRoot.querySelector<HTMLElementTagNameMap['lr-button']>('[part="reset-button"]');
+      void reset?.updateComplete.then(() => {
+        if (!this.isConnected) return;
+        const target = collectFocusableElements(this)[0] ?? this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+        restoreComposedFocus(this, true, target);
+      });
+    }
     if (changed.has('value') || changed.has('filters')) {
       const invalidFilterIds = this.invalidFilterIds;
       const valid = invalidFilterIds.length === 0;
@@ -2085,7 +2072,6 @@ export class LyraFilterBar<
         stay-open-on-select
         .size=${size}
         ?disabled=${this.disabled}
-        @lr-select=${this.stopControlAlias}
         @focusout=${() => this.onFieldFocusout(def.filterId)}
       >
         <lr-button
@@ -2172,8 +2158,6 @@ export class LyraFilterBar<
       return html`<div
         part="filter-control"
         data-filter-id=${def.filterId}
-        @lr-input=${(event: Event) => event.stopPropagation()}
-        @lr-change=${(event: Event) => event.stopPropagation()}
       >${custom.render(context)}</div>`;
     }
 
@@ -2219,9 +2203,6 @@ export class LyraFilterBar<
         .value=${comboValue}
         ?disabled=${this.disabled}
         @change=${onChange}
-        @lr-activate=${this.stopControlAlias}
-        @lr-input=${this.stopControlAlias}
-        @lr-change=${this.stopControlAlias}
         @focusout=${() => this.onFieldFocusout(def.filterId)}
         >${this.renderStartAdornment(def.icon)}${(def.options ?? []).map((o) => this.renderOption(o))}</lr-combobox
       >`;
@@ -2290,8 +2271,6 @@ export class LyraFilterBar<
         .value=${typeof value === 'string' ? value : ''}
         ?disabled=${this.disabled}
         @change=${onChange}
-        @lr-input=${this.stopControlAlias}
-        @lr-change=${this.stopControlAlias}
         @focusout=${onFocusout}
         >${this.renderStartAdornment(def.icon)}</lr-date-input
       >`;
@@ -2320,9 +2299,6 @@ export class LyraFilterBar<
       .value=${typeof value === 'string' ? value : undefined}
       ?disabled=${this.disabled}
       @change=${onChange}
-      @lr-activate=${this.stopControlAlias}
-      @lr-input=${this.stopControlAlias}
-      @lr-change=${this.stopControlAlias}
       @focusout=${onFocusout}
       >${this.renderStartAdornment(def.icon)}${(def.options ?? []).map((o) =>
         this.renderOption(o)
@@ -2337,12 +2313,13 @@ export class LyraFilterBar<
   }
 
   override render(): TemplateResult {
-    const accessibleLabel = this.hasAttribute('aria-label')
-      ? this.getAttribute('aria-label')!
-      : this.label || nothing;
+    const hostLabel = this.getAttribute('aria-label');
+    const accessibleLabel = hostLabel === ''
+      ? ''
+      : resolveAccessibleName(this, this.label) ?? nothing;
     const active = this.activeEntries;
     return html`
-      <div part="base" role="group" aria-label=${accessibleLabel}>
+      <div part="base" role="group" tabindex="-1" aria-label=${accessibleLabel}>
         <div part="controls">
           ${this._filters
             // A `'chip'` filter renders no control and claims no toolbar cell: its value is owned
@@ -2367,7 +2344,7 @@ export class LyraFilterBar<
               <lr-button
                 part="reset-button"
                 appearance="quiet"
-                ?disabled=${this.disabled || this.loading || !this.hasResettableFilters}
+                ?disabled=${this.disabled || this.loading || !this.hasChangedFilters}
                 @click=${() => this.reset()}
               >
                 ${this.localize('filterBarReset')}
@@ -2380,7 +2357,10 @@ export class LyraFilterBar<
             </span>
           </div>
           ${this.loading
-            ? html`<lr-spinner part="status"></lr-spinner>`
+            ? html`<div class="reset-field">
+                <lr-spinner part="status"></lr-spinner>
+                <span class="validation-spacer" aria-hidden="true"></span>
+              </div>`
             : nothing}
         </div>
         ${active.length > 0
@@ -2406,7 +2386,7 @@ export class LyraFilterBar<
                         })()
                       );
                     }}
-                    >${def.label}: ${display}</lr-chip
+                    >${bdi(def.label)}: ${bdi(display)}</lr-chip
                   >`
                 )}
               </lr-chip-group>

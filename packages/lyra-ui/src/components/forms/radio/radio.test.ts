@@ -476,7 +476,9 @@ it("emits only the aggregate alias to a capture listener registered before group
 
   expect(events).to.have.length(1);
   expect(events[0]!.target === group).to.equal(true);
-  expect(events[0]!.detail).to.deep.equal({ value: "a", option: radio, radio });
+  const { value, previousValue, option, radio: alias } = events[0]!.detail;
+  expect([value, previousValue]).to.deep.equal(['a', '']);
+  expect(option === radio && alias === radio).to.equal(true);
   expect(radioEvents).to.have.length(0);
 });
 
@@ -520,7 +522,9 @@ it("switches between standalone and new-group lr-change ownership without waitin
   expect(sourceEvents).to.have.length(0);
   expect(destinationEvents).to.have.length(1);
   expect(destinationEvents[0]!.target === destination).to.equal(true);
-  expect(destinationEvents[0]!.detail).to.deep.equal({ value: "a", option: radio, radio });
+  const { value, previousValue, option, radio: alias } = destinationEvents[0]!.detail;
+  expect([value, previousValue]).to.deep.equal(['a', '']);
+  expect(option === radio && alias === radio).to.equal(true);
 });
 
 it("honors disabled-group membership and releases imposed state during synchronous reparenting", async () => {

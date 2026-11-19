@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 21 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,7 +30,9 @@ Sanitized `text/html` output uses the passive-document profile: anchors, form co
 elements are unwrapped to ordinary text/children where safe, remote navigation/resource attributes
 are removed, and only inline base64 raster image sources render. Sanitized `image/svg+xml` output
 is likewise network-silent and non-interactive: animation is removed and only same-document
-fragment references or inline base64 raster image references survive.
+fragment references or inline base64 raster image references survive. Markdown cells render with
+remote images disabled (`without-images`), so a notebook never fetches an image or stylesheet
+from a markdown cell.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
 index; `fragment` anchors resolve a cell's own `id`. For cells with IDs, successful public anchor
 navigation scrolls the matching virtual row into the notebook allocation and applies active-cell
@@ -93,7 +95,10 @@ tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
-an error output), `error-output-label` (the label introducing an error output's traceback),
+an error output), `output-stream-label` (visually hidden "Error output" prefix on a stderr stream),
+`output-loading` (visually hidden loading text while sanitized output resolves),
+`output-image` (raster image output, shrinks to the cell width),
+`error-output-label` (the label introducing an error output's traceback),
 `output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
 of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
 sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The

@@ -1,7 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -73,6 +72,7 @@ const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
  * @csspart body - The archive listing body.
  * @csspart entry - An archive entry row.
  * @csspart entry-icon - The decorative folder or file icon.
+ * @csspart entry-kind - Visually hidden "File"/"Folder" text for assistive technology.
  * @csspart entry-name - The entry path.
  * @csspart entry-name-dir - The entry path of a directory row (also carries `entry-name`).
  * @csspart entry-size - The human-readable file size.
@@ -126,7 +126,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, viewerLoadingStyles];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
   /** Display name used on the shadow listing owner when host `aria-label` is absent. A non-empty
@@ -413,7 +413,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     // DOM id (the canonical DOM-clobbering primitive). applyAnchor() resolves a fragment anchor
     // by matching entry.name against the loaded DATA and then, for the exact scroll target,
     // against rendered text content -- never against a DOM id -- so no id was ever needed here.
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
       entry.size,
       (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
       (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
@@ -522,7 +522,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeItemId=${this.activeArchiveMatchKey()} @lr-visible-range-change=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-kind:entry-kind, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeItemId=${this.activeArchiveMatchKey()} @lr-visible-range-change=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;

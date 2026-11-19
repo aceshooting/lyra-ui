@@ -1,3 +1,4 @@
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { guard } from 'lit/directives/guard.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -622,8 +623,27 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     }
   }
 
+  private readonly scrollRegions = new Map<Element, () => void>();
+
+  private syncScrollRegions(): void {
+    const live = new Set<Element>(this.renderRoot.querySelectorAll('[part="base"], [part="metadata"]'));
+    for (const el of live) {
+      const name = el.getAttribute('part') === 'metadata' ? undefined : this.effectiveLabel;
+      if (!this.scrollRegions.has(el)) this.scrollRegions.set(el, makeScrollRegionFocusable(el as HTMLElement, name));
+    }
+    for (const [el, dispose] of this.scrollRegions) {
+      if (!live.has(el)) { dispose(); this.scrollRegions.delete(el); }
+    }
+  }
+
+  private disposeScrollRegions(): void {
+    for (const dispose of this.scrollRegions.values()) dispose();
+    this.scrollRegions.clear();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegions();
     this.announcements.connect();
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc && this.loadState.kind !== 'loaded') {
       this.scheduleAfterUpdate(() => {
@@ -640,6 +660,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     this.mapReady = false;
     this.mapCanvas = null;
     this.announcements.disconnect();
+    this.disposeScrollRegions();
     super.disconnectedCallback();
   }
 
@@ -651,6 +672,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegions();
     if (this.loadState.kind === 'loaded') {
       const peerAvailable = this.loadState.peerAvailable;
       this.announcements.transition(
@@ -844,7 +866,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
         return html`<div part="error">${this.loadState.message()}</div>`;
       case 'idle':
       default:
-        return html`<p>
+        return html`<p class="empty-note">
           ${this.localize('documentPreviewEmpty', undefined, {
             type: this.localize('documentPreviewTypeDocument'),
           })}

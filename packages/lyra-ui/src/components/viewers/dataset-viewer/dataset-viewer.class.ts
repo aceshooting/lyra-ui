@@ -361,6 +361,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   override connectedCallback(): void {
     super.connectedCallback();
     this.tableController.connected();
+    if (this.fetchState.kind === 'loading') this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
@@ -384,6 +385,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.tableController.updated(changed, this.fetchState);
+    const list = this.renderRoot.querySelector<HTMLElement & { scrollElement?: HTMLElement }>(tag('virtual-list'));
+    if (list && this.scrollMode === 'self') {
+      list.scrollElement = this.renderRoot.querySelector<HTMLElement>('[part="body"]') ?? undefined;
+    }
   }
 
   private async load(): Promise<void> {
@@ -433,9 +438,11 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
       if (!response.ok)
         throw new Error(`${response.status} ${response.statusText}`);
+      const papa = await this.requirePapa(generation);
+      if (!papa) return;
       const source = await readResponseText(response, this.effectiveMaxBytes);
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      const parsed = await this.parse(source, generation);
+      const parsed = await this.parse(source, generation, papa);
       if (parsed === undefined) return;
       if (this.isConnected && this.loadTask.isCurrent(generation)) {
         const { table } = parsed;
@@ -476,10 +483,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
    *  that is a distinct, non-error "empty" state, not the same failure as a missing parser library
    *  or an oversized file, and must not be funneled into the same error chrome/assertive announcement as those
    *  genuine failures (matching `<lr-calendar-viewer>`'s identical zero-events handling). */
-  private async parse(
-    text: string,
-    generation: number
-  ): Promise<DatasetParseResult | undefined> {
+  private async requirePapa(generation: number): Promise<NonNullable<Awaited<ReturnType<typeof loadPapaParseCached>>> | undefined> {
     const papa = await loadPapaParseCached();
     if (!this.isConnected || !this.loadTask.isCurrent(generation))
       return undefined;
@@ -488,6 +492,14 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
         this.localize('datasetViewerMissingParser'),
         localize => localize('datasetViewerMissingParser')
       );
+    return papa;
+  }
+
+  private async parse(
+    text: string,
+    generation: number,
+    papa: NonNullable<Awaited<ReturnType<typeof loadPapaParseCached>>>
+  ): Promise<DatasetParseResult | undefined> {
     const result = await parseDelimitedRecordsYielding(papa, text, this.parseLimits, () => yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && this.loadTask.isCurrent(generation)));
     if (!this.isConnected || !this.loadTask.isCurrent(generation)) return undefined;
     if (!result.fields.length || !result.rows.length) {

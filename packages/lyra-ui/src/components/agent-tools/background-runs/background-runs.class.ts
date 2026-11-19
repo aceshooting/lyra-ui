@@ -1,9 +1,12 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './background-runs.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
@@ -113,6 +116,17 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   private dispatchingRequest = false;
+  private focusedRow?: Element | null;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.focusedRow = captureComposedFocusRepair(this, this)?.activeElement.closest('[data-run-id]');
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.focusedRow) restoreComposedFocus(this, true, this.focusedRow.querySelector<HTMLElement>('[part="open"]'));
+  }
 
   private normalizedFor?: readonly BackgroundRun[];
   private normalizedCache: NormalizedRun[] = [];
@@ -160,6 +174,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
 
   private renderRun(run: NormalizedRun): TemplateResult {
     const cancellable = CANCELLABLE_STATUSES.has(run.status);
+    const actionLabel = normalizeLabel(run.label) ?? run.id;
     return html`
       <div part="run" role="listitem" data-run-id=${run.id}>
         <div part="run-copy">
@@ -172,7 +187,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
             part="open"
             data-agent-action="neutral"
             type="button"
-            aria-label=${this.localize('backgroundRunsOpenFor', undefined, { label: run.label })}
+            aria-label=${this.localize('backgroundRunsOpenFor', undefined, { label: actionLabel })}
             ?disabled=${this.disabled}
             @click=${() => this.requestOpen(run.id)}
           >${this.localize('open')}</button>
@@ -181,7 +196,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
                 part="cancel"
                 data-agent-action="neutral"
                 type="button"
-                aria-label=${this.localize('backgroundRunsCancelFor', undefined, { label: run.label })}
+                aria-label=${this.localize('backgroundRunsCancelFor', undefined, { label: actionLabel })}
                 ?disabled=${this.disabled}
                 @click=${() => this.requestCancel(run.id)}
               >${this.localize('cancel')}</button>`
@@ -199,7 +214,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
       <fieldset part="base" aria-label=${hostLabel === null ? nothing : hostLabel} ?disabled=${this.disabled}>
         <legend part="legend">${visibleLabel}</legend>
         ${runs.length === 0
-          ? html`<p part="empty">${this.localize('backgroundRunsEmpty')}</p>`
+          ? html`<p part="empty" tabindex="-1">${this.localize('backgroundRunsEmpty')}</p>`
           : html`<div part="list" role="list">
               ${repeat(runs.slice(0, MAX_RENDERED_RUNS), (run) => run.id, (run) => this.renderRun(run))}
             </div>`}

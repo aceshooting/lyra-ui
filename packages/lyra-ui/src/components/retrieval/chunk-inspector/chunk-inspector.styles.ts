@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -115,7 +115,7 @@ export const styles = css`
   }
   [part~='open-button']:focus-visible,
   lr-virtual-list::part(open-button):focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part~='title'],
   lr-virtual-list::part(title) {
@@ -168,6 +168,6 @@ export const styles = css`
   }
   [part~='toggle']:focus-visible,
   lr-virtual-list::part(toggle):focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
 `;

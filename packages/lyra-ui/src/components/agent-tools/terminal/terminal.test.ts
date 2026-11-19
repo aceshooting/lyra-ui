@@ -1008,7 +1008,7 @@ describe('lr-terminal', () => {
       expect(blobs.length).to.equal(1);
       expect(blobs[0] instanceof ownerWindow.Blob).to.be.true;
       expect(clickedAnchorDocument === ownerDocument).to.be.true;
-      const revokeTimer = [...timers].find(([, timer]) => timer.delay === 5000)?.[0];
+      const revokeTimer = [...timers].reverse().find(([, timer]) => timer.delay === 5000)?.[0];
       expect(revokeTimer).to.be.a('number');
       timers.get(revokeTimer!)!.callback();
       expect(revoked).to.deep.equal(['blob:frame-terminal']);
@@ -1398,27 +1398,23 @@ describe('lr-terminal', () => {
     el.write('first\nsecond');
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    // A selection whose endpoints don't resolve to any [data-line-number] ancestor (landing on
-    // <lr-virtual-list>'s own row/spacer scaffolding, or entirely outside the viewport) can't be
-    // walked back to a line number by lineNumberOf(). Exercised via a stand-in Selection rather
-    // than a real Range/addRange() at an element (non-text) boundary -- Chromium's Selection
-    // doesn't reliably preserve such a boundary's exact container across addRange(), so a real
-    // selection can't deterministically reproduce this case.
-    const outside = document.createTextNode('outside text');
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
+    const scaffold = document.createTextNode('viewport text');
+    viewport.append(scaffold);
     const range = document.createRange();
-    range.setStart(outside, 0);
-    range.setEnd(outside, outside.data.length);
+    range.setStart(scaffold, 0);
+    range.setEnd(scaffold, scaffold.data.length);
     const fakeSelection = {
       isCollapsed: false,
-      anchorNode: document.body,
-      focusNode: document.body,
+      anchorNode: scaffold,
+      focusNode: scaffold,
       getRangeAt: () => range,
     } as unknown as Selection;
     (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => fakeSelection;
     const listener = oneEvent(el, 'lr-text-select');
     el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
-    expect(event.detail.text).to.equal('outside text');
+    expect(event.detail.text).to.equal('viewport text');
     expect(event.detail.anchor).to.be.null;
   });
 

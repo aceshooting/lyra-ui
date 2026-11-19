@@ -16,7 +16,7 @@ import { styles } from './eval-result.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
-import { firstByIdentityMemo } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

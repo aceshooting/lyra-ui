@@ -2294,3 +2294,84 @@ it('fails closed on revoked converter diagnostics and renders a subsequent valid
     expect(errors).to.equal(1);
   } finally { restore(); }
 });
+
+describe('lr-docx-viewer remediation', () => {
+  it('does not activate a highlight when a drag selection ends over it', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      await waitUntil(() => highlightPainted(el));
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+      const range = document.createRange();
+      range.setStart(paragraph.firstChild!, 0);
+      range.setEnd(paragraph.firstChild!, 5);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      if (selection.isCollapsed) {
+        selection.removeAllRanges();
+        return;
+      }
+      const originalGetClientRects = Range.prototype.getClientRects;
+      Range.prototype.getClientRects = (() => [new DOMRect(0, 0, 1000, 1000)] as unknown as DOMRectList) as typeof Range.prototype.getClientRects;
+      let activations = 0;
+      el.addEventListener('lr-highlight-activate', () => { activations++; });
+      try {
+        paragraph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 5, clientY: 5 }));
+        await aTimeout(0);
+        expect(activations).to.equal(0);
+      } finally {
+        Range.prototype.getClientRects = originalGetClientRects;
+        selection.removeAllRanges();
+      }
+    } finally {
+      restore();
+    }
+  });
+
+  it('marks the activated highlight active for a pointer click as the action list does', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    const originalGetClientRects = Range.prototype.getClientRects;
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      await waitUntil(() => highlightPainted(el));
+      Range.prototype.getClientRects = (() => [new DOMRect(0, 0, 1000, 1000)] as unknown as DOMRectList) as typeof Range.prototype.getClientRects;
+      window.getSelection()?.removeAllRanges();
+      el.shadowRoot!.querySelector('[part="content"] p')!.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, composed: true, clientX: 5, clientY: 5 }),
+      );
+      await aTimeout(0);
+      expect(el.activeHighlightId).to.equal('h1');
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+      restore();
+    }
+  });
+
+  it('names the region with the default for a whitespace-only name', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hi</p>');
+    try {
+      el.name = '   ';
+      await el.updateComplete;
+      const labelled = el.shadowRoot!.querySelector('[aria-label]');
+      expect(labelled?.getAttribute('aria-label')?.trim().length ?? 0).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('makes an overflowing document body keyboard scrollable', async () => {
+    const { el, restore } = await loadWithMarkup(Array.from({ length: 80 }, (_unused, i) => `<p>Paragraph ${i}</p>`).join(''));
+    try {
+      el.maxHeight = '6rem';
+      await el.updateComplete;
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+      await waitUntil(() => body.getAttribute('tabindex') === '0', 'overflowing body never became focusable');
+      expect(body.getAttribute('role')).to.equal('region');
+    } finally {
+      restore();
+    }
+  });
+});

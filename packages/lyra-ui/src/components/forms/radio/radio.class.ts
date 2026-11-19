@@ -1,3 +1,5 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -11,8 +13,8 @@ import { groupOptionSize, sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './radio.styles.js';
 import { appearanceStyles } from './radio-button.styles.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { CheckedFormAssociated } from '../../../internal/form-associated.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { CheckedFormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
@@ -408,6 +410,11 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.syncStandaloneRadios();
   }
 
+  override formDisabledCallback(disabled: boolean): void {
+    super.formDisabledCallback(disabled);
+    if (this.checked) this.currentGroup()?.reconcileRadio?.(this);
+  }
+
   /** @internal Reconcile standalone sets when the platform changes this control's form owner. */
   formAssociatedCallback(): void {
     this.syncStandaloneRadios();
@@ -610,10 +617,11 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     }
     if (!this.checked) {
       this.checked = true;
-      dispatchNativeEvent(this, 'input');
-      this.emit('lr-input', { checked: true, value: this.value });
-      dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { checked: true, value: this.value });
+      const connected = this.isConnected;
+      const detail = { checked: true, value: this.value };
+      emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
+      if (this.isConnected !== connected || isLiveDisabled(this)) return;
+      emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
     }
     this.emit('lr-activate', { value: this.value });
   }
@@ -682,6 +690,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.select();
   };
   protected onKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || shouldIgnoreActivationKey(event)) return;
     if (this.isNestedInteractiveEvent(event)) {
       event.stopPropagation();
       return;

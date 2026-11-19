@@ -66,7 +66,7 @@ export const styles = css`
      on logical insets so the start/end edges mirror automatically under RTL. */
   [part="handle"] {
     position: absolute;
-    background: var(--lr-color-border);
+    background: var(--lr-dock-panel-handle-color, var(--lr-color-border));
     touch-action: none;
     transition: background var(--lr-transition-fast);
   }
@@ -140,25 +140,25 @@ export const styles = css`
   :host([placement="start"]) [part="handle"] {
     inset-block: 0;
     inset-inline-end: 0;
-    inline-size: var(--lr-size-3px);
+    inline-size: var(--lr-dock-panel-handle-size, var(--lr-size-3px));
     cursor: col-resize;
   }
   :host(:is([placement="end"], :not([placement]))) [part="handle"] {
     inset-block: 0;
     inset-inline-start: 0;
-    inline-size: var(--lr-size-3px);
+    inline-size: var(--lr-dock-panel-handle-size, var(--lr-size-3px));
     cursor: col-resize;
   }
   :host([placement="top"]) [part="handle"] {
     inset-inline: 0;
     inset-block-end: 0;
-    block-size: var(--lr-size-3px);
+    block-size: var(--lr-dock-panel-handle-size, var(--lr-size-3px));
     cursor: row-resize;
   }
   :host([placement="bottom"]) [part="handle"] {
     inset-inline: 0;
     inset-block-start: 0;
-    block-size: var(--lr-size-3px);
+    block-size: var(--lr-dock-panel-handle-size, var(--lr-size-3px));
     cursor: row-resize;
   }
 

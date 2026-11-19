@@ -45,10 +45,13 @@ export async function loadMammothAndSanitizer(
 
 export function loadDocxDeps(): Promise<DocxDeps> {
   if (!depsPromise) {
-    depsPromise = loadMammothAndSanitizer().then((resolved) => {
-      resolvedDeps = resolved;
+    const pending: Promise<DocxDeps> = loadMammothAndSanitizer().then((resolved) => {
+      // A peer that failed to load is retried by the next caller rather than cached.
+      if (resolved.mammoth && resolved.DOMPurify) resolvedDeps = resolved;
+      else if (depsPromise === pending) depsPromise = undefined;
       return resolved;
     });
+    depsPromise = pending;
   }
   return depsPromise;
 }

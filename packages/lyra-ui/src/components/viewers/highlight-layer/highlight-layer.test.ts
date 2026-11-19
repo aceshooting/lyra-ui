@@ -609,7 +609,7 @@ describe('lr-highlight-layer', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[data-flash]') === null, 'the flash state was never cleaned up');
   });
 
-  it('clears flash state for a zero-duration reduced-motion equivalent', async () => {
+  it('holds then clears the flash state for a zero-duration reduced-motion equivalent', async () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer
         style="--lr-transition-ambient: 0ms linear"
@@ -618,9 +618,10 @@ describe('lr-highlight-layer', () => {
     `);
     el.flash('a');
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-flash]') !== null, 'the cue holds past a frame').to.be.true;
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-flash]') === null, 'the flash state was never cleaned up');
   });
 
   it('clears transient flash state when disconnected or when items are replaced', async () => {

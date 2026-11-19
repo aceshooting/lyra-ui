@@ -5,6 +5,11 @@ import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { containShadowChildEvent } from '../../../internal/child-event-containment.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { FlatToolParamSchema, LyraToolParamForm, ToolParamFormValue } from '../tool-param-form/tool-param-form.class.js';
 import { snapshotFormValue } from '../tool-param-form/tool-param-snapshot.js';
@@ -60,7 +65,7 @@ const PROPERTY_KEYS = new Set(['type', 'enum', 'description', 'title', 'default'
  * @csspart actions - Response controls.
  * @csspart action - A response button.
  * @csspart status - The submitted-state message. Receives focus if submission disables the focused
- *   response button and focus has not moved elsewhere.
+ *   response control and focus has not moved elsewhere.
  * @csspart error - Unsupported-schema explanation.
  * @status experimental
  * @since 22.0.0
@@ -154,17 +159,25 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     this.valueAssignedInCommit = false;
     this.statusAssignedInCommit = false;
 
-    const active = changed.get('status') === 'pending' && this.status === 'submitted' && !changed.has('requestId')
-      ? shadowFocusTarget(this)
+    this.restoreActionFocus = changed.get('status') === 'submitted' && this.status === 'pending' &&
+      shadowFocusTarget(this)?.getAttribute('part') === 'status';
+    this.submittedFocusAnchor = changed.get('status') === 'pending' && this.status === 'submitted' && !changed.has('requestId')
+      ? captureComposedFocusRepair(this, this)?.activeElement ?? null
       : null;
-    this.submittedFocusAnchor = active?.matches('button[part="action"]') ? active : null;
   }
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const root = super.createRenderRoot();
+    for (const type of ['input', 'change', 'lr-change', 'lr-invalid']) root.addEventListener(type, containShadowChildEvent);
+    return root;
+  }
+
+  private restoreActionFocus = false;
   private submittedFocusAnchor: Element | null = null;
   private announcements?: AnnouncementSink;
   private isMounting = true;
   override connectedCallback(): void {
     super.connectedCallback();
-    this.isMounting = true;
+    this.isMounting = !this.hasUpdated;
     this.announcements = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
   override disconnectedCallback(): void {
@@ -174,6 +187,9 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.restoreActionFocus) {
+      restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLButtonElement>('button[part="action"]:enabled'));
+    }
     const anchor = this.submittedFocusAnchor;
     this.submittedFocusAnchor = null;
     const mounted = !this.isMounting;
@@ -240,9 +256,10 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   }
   override render(): TemplateResult {
     const requestId = this.requestId;
-    const label = this.label ?? this.localize('agentQuestionLabel');
+    const defaultLabel = this.localize('agentQuestionLabel');
+    const label = this.label === '' ? '' : normalizeLabel(this.label) ?? defaultLabel;
     const level = resolveHeadingLevel(this.headingLevel ?? '2');
-    return html`<div part="base" role="group" aria-label=${this.getAttribute('aria-label') ?? label}>
+    return html`<div part="base" role="group" aria-label=${ifDefined(resolveAccessibleName(this, label, defaultLabel))}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${this.requester ? html`<p part="requester">${this.requester}</p>` : nothing}
       ${this.message ? html`<p part="message">${this.message}</p>` : nothing}

@@ -2646,7 +2646,7 @@ describe('i18n', () => {
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
     const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]') as HTMLElement;
-    expect(marker.getAttribute('aria-label')).to.equal('Surligner');
+    expect(marker.getAttribute('aria-label')).to.equal('Surligner at 0:05');
 
     const errorPromise = oneEvent(el, 'lr-render-error');
     media.dispatchEvent(new Event('error'));
@@ -3263,4 +3263,96 @@ it('forwards host focus()/blur()/click() to the native media element and re-disp
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
   expect(sequence).to.deep.equal(['focus', 'blur']);
   expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
+});
+
+describe('lr-av-player remediation', () => {
+  async function withDuration(html_: ReturnType<typeof html>, duration = 100): Promise<LyraAvPlayer> {
+    const el = (await fixture(html_)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: duration, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    return el;
+  }
+
+  it('seeks with ArrowUp/ArrowDown and PageUp/PageDown on the timeline slider', async () => {
+    const el = await withDuration(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`);
+    const media = mediaEl(el);
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    el.currentTime = 50;
+    const press = (key: string) => {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true });
+      timeline.dispatchEvent(event);
+      return event;
+    };
+    expect(press('ArrowUp').defaultPrevented).to.equal(true);
+    expect(media.currentTime).to.equal(55);
+    press('ArrowDown');
+    expect(media.currentTime).to.equal(50);
+    press('PageUp');
+    expect(media.currentTime).to.equal(65);
+    press('PageDown');
+    expect(media.currentTime).to.equal(50);
+  });
+
+  it('shows the playback position on the timeline with a playhead', async () => {
+    const el = await withDuration(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`);
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'currentTime', { value: 25, writable: true, configurable: true });
+    media.dispatchEvent(new Event('timeupdate'));
+    await el.updateComplete;
+    const playhead = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline-playhead"]')!;
+    const positioner = el.shadowRoot!.querySelector<HTMLElement>('.timeline-positioner')!;
+    const centre = playhead.getBoundingClientRect().left + playhead.getBoundingClientRect().width / 2;
+    const expected = positioner.getBoundingClientRect().left + positioner.getBoundingClientRect().width * 0.25;
+    expect(Math.abs(centre - expected) < 2).to.equal(true);
+  });
+
+  it('names each highlight marker with its time range', async () => {
+    const el = await withDuration(html`<lr-av-player src=${MP3_SRC} .highlights=${[
+      { id: 'a', label: 'Intro', anchor: { kind: 'time-range', start: 5, end: 10 } },
+      { id: 'b', label: 'Point', anchor: { kind: 'time-range', start: 20 } },
+    ]}></lr-av-player>`);
+    const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')];
+    expect(markers.map((marker) => marker.getAttribute('aria-label'))).to.deep.equal([
+      'Intro 0:05 to 0:10',
+      'Point at 0:20',
+    ]);
+  });
+
+  it('matches transcript search regardless of accents', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${[
+      { cueId: 'x', start: 0, end: 5, text: 'Un café noir', speaker: 'Élodie' },
+    ]}></lr-av-player>`)) as LyraAvPlayer;
+    expect(await el.search('CAFE')).to.equal(1);
+    expect(await el.search('elodie')).to.equal(1);
+  });
+
+  it('keeps the current transcript cue visibly distinct under forced colors', async () => {
+    await setForcedColors('active');
+    try {
+      const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+      const media = mediaEl(el);
+      Object.defineProperty(media, 'currentTime', { value: 12, writable: true, configurable: true });
+      media.dispatchEvent(new Event('timeupdate'));
+      await el.updateComplete;
+      await waitUntil(() => cueRows(el).some((row) => row.getAttribute('aria-current') === 'true'), 'no current cue');
+      const current = cueRows(el).find((row) => row.getAttribute('aria-current') === 'true')!;
+      const plain = cueRows(el).find((row) => row.getAttribute('aria-current') === 'false')!;
+      const a = getComputedStyle(current);
+      const b = getComputedStyle(plain);
+      expect(a.outlineStyle).to.not.equal('none');
+      expect(b.outlineStyle).to.equal('none');
+    } finally {
+      await setForcedColors('none');
+    }
+  });
+
+  it('isolates caller cue text and speaker direction', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+    await waitUntil(() => cueRows(el).length > 0, 'no cues');
+    const row = cueRows(el)[0]!;
+    expect(row.querySelector('[part="cue-text"]')!.getAttribute('dir')).to.equal('auto');
+    expect(row.querySelector('[part="cue-speaker"]')!.getAttribute('dir')).to.equal('auto');
+  });
 });

@@ -7,6 +7,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -232,28 +233,14 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   private readonly bodyId = nextId('thinking-panel-body');
 
-  private contentObserver?: MutationObserver;
-  private contentObserverDocument?: Document;
+  private readonly contentObserver = new OwnedMutationObserver(this, () => this.onContentMutated());
   private scrollRafId?: number;
   private scrollRafOwner?: Window;
   private realmGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Watches this element's own light-DOM subtree, not the shadow-DOM
-    // [part="body"] wrapper -- the slotted reasoning content actually lives
-    // here, as this element's children. See the class doc for why this
-    // (rather than `slotchange`) is what detects streamed-in content.
-    this.armContentObserver();
-    // The second, complementary content-change signal: a composed `lr-content-settled` from a
-    // first-party streaming renderer (`<lr-streaming-text>`, `<lr-markdown>`,
-    // `<lr-markdown-core>`) slotted here, covering exactly the property-driven, shadow-DOM-
-    // rendered case the light-DOM MutationObserver above cannot see -- see the class doc. Reuses
-    // the same handler (and therefore the same rAF coalescing) as the observer, so a mutation and
-    // a settle event landing in the same frame still trigger only one scroll. The listener
-    // function reference is stable across the element's lifetime, so re-adding it on every
-    // connect (mirroring `armContentObserver()`'s own per-connect re-arm) is a safe no-op per the
-    // DOM spec's duplicate-listener dedup, not a leak.
+    this.syncContentObserver();
     this.addEventListener('lr-content-settled', this.onContentMutated);
   }
 
@@ -285,38 +272,17 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     }
   }
 
-  private armContentObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected) return;
-    if (this.contentObserver && this.contentObserverDocument === ownerDocument) return;
-    this.contentObserver?.disconnect();
-    this.contentObserver = undefined;
-    this.contentObserverDocument = undefined;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.realmGeneration;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.contentObserver !== observer ||
-        this.contentObserverDocument !== ownerDocument ||
-        this.realmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onContentMutated();
-    });
-    this.contentObserver = observer;
-    this.contentObserverDocument = ownerDocument;
-    observer.observe(this, { childList: true, subtree: true, characterData: true });
+  private syncContentObserver(): void {
+    if (this.expanded && this.mode === 'live' && this.follow) {
+      if (!this.contentObserver.active) this.contentObserver.observe(this, { childList: true, subtree: true, characterData: true });
+    } else {
+      this.contentObserver.clear();
+    }
   }
 
   private resetOwnerRealmWork(): void {
     this.realmGeneration += 1;
-    this.contentObserver?.disconnect();
-    this.contentObserver = undefined;
-    this.contentObserverDocument = undefined;
+    this.contentObserver.clear();
     if (this.scrollRafId !== undefined) this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
     this.scrollRafId = undefined;
     this.scrollRafOwner = undefined;
@@ -324,6 +290,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('expanded') || changed.has('mode') || changed.has('follow')) this.syncContentObserver();
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Opening a live panel -- or a still-expanded panel later becoming
       // `'live'` -- always jumps straight to the newest content and resets
@@ -354,12 +321,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     this.emit('lr-follow-change', { following });
   };
 
-  /** Shared content-change handler for both detection mechanisms -- the light-DOM
-   *  `MutationObserver` armed by `armContentObserver()` (plain text producers) and the
-   *  `lr-content-settled` listener armed in `connectedCallback()` (first-party shadow-DOM
-   *  renderers). Whichever fires first schedules the coalesced rAF below; the other's call
-   *  within the same frame is then a no-op via the `scrollRafId` guard, so a mutation and a
-   *  settle event landing together never produce a double scroll. */
   private onContentMutated = (): void => {
     if (this.mode !== 'live' || !this.expanded || !this.follow) return;
     // Coalesce to at most one scroll-to-bottom per animation frame -- a fast
@@ -395,8 +356,11 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   };
 
   private toggle = (): void => {
+    if (!this.isConnected) return;
     const expanded = !this.expanded;
+    const generation = this.realmGeneration;
     if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
+    if (this.realmGeneration !== generation || this.expanded === expanded) return;
     this.expanded = expanded;
     this.emit('lr-toggle', { expanded: this.expanded });
   };

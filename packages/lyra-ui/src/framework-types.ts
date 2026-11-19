@@ -2520,6 +2520,7 @@ export interface LyraComponentTypeMap {
       | 'disabled'
       | 'errorText'
       | 'form'
+      | 'helpText'
       | 'hint'
       | 'label'
       | 'labelDisplay'
@@ -2558,6 +2559,7 @@ export interface LyraComponentTypeMap {
       'aria-label'?: LyraCheckboxGroup['accessibleLabel'];
       'custom-error'?: LyraCheckboxGroup['customError'];
       'error-text'?: LyraCheckboxGroup['errorText'];
+      'help-text'?: LyraCheckboxGroup['helpText'];
       'label-display'?: LyraCheckboxGroup['labelDisplay'];
       'with-hint'?: LyraCheckboxGroup['withHint'];
       'with-label'?: LyraCheckboxGroup['withLabel'];
@@ -2762,10 +2764,15 @@ export interface LyraComponentTypeMap {
       | 'lr-toggle-request';
     cssNames:       | '--lr-code-block-active-line-outline-color'
       | '--lr-code-block-font'
+      | '--lr-code-block-header-bg'
+      | '--lr-code-block-header-color'
       | '--lr-code-block-highlighted-line-bg'
       | '--lr-code-block-language-bg'
       | '--lr-code-block-language-color'
+      | '--lr-code-block-line-number-color'
       | '--lr-code-block-max-height'
+      | '--lr-code-block-padding'
+      | '--lr-code-block-radius'
       | '--lr-code-block-tab-size'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
@@ -2813,10 +2820,15 @@ export interface LyraComponentTypeMap {
       | 'lr-toggle-request';
     cssNames:       | '--lr-code-block-active-line-outline-color'
       | '--lr-code-block-font'
+      | '--lr-code-block-header-bg'
+      | '--lr-code-block-header-color'
       | '--lr-code-block-highlighted-line-bg'
       | '--lr-code-block-language-bg'
       | '--lr-code-block-language-color'
+      | '--lr-code-block-line-number-color'
       | '--lr-code-block-max-height'
+      | '--lr-code-block-padding'
+      | '--lr-code-block-radius'
       | '--lr-code-block-tab-size'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
@@ -3025,6 +3037,7 @@ export interface LyraComponentTypeMap {
       | 'autocorrect'
       | 'clearable'
       | 'customError'
+      | 'defaultValue'
       | 'disabled'
       | 'emptyText'
       | 'enterkeyhint'
@@ -3034,6 +3047,7 @@ export interface LyraComponentTypeMap {
       | 'form'
       | 'getTag'
       | 'getUnknownLabel'
+      | 'helpText'
       | 'hint'
       | 'inputmode'
       | 'inputMode'
@@ -3056,10 +3070,12 @@ export interface LyraComponentTypeMap {
       | 'positioningStrategy'
       | 'readonly'
       | 'required'
+      | 'select'
       | 'selectedRows'
       | 'selectionDirection'
       | 'selectionEnd'
       | 'selectionStart'
+      | 'setSelectionRange'
       | 'size'
       | 'source'
       | 'sourceDelay'
@@ -3088,6 +3104,7 @@ export interface LyraComponentTypeMap {
       | 'lr-after-hide'
       | 'lr-after-show'
       | 'lr-change'
+      | 'lr-change-request'
       | 'lr-clear'
       | 'lr-create'
       | 'lr-filter'
@@ -3141,9 +3158,11 @@ export interface LyraComponentTypeMap {
       'allow-create'?: LyraCombobox['allowCreate'];
       'allow-custom-value'?: LyraCombobox['allowCustomValue'];
       'custom-error'?: LyraCombobox['customError'];
+      'default-value'?: LyraCombobox['defaultValue'];
       'empty-text'?: LyraCombobox['emptyText'];
       'enterkeyhint'?: LyraCombobox['enterKeyHint'];
       'error-text'?: LyraCombobox['errorText'];
+      'help-text'?: LyraCombobox['helpText'];
       'inputmode'?: LyraCombobox['inputMode'];
       'label-display'?: LyraCombobox['labelDisplay'];
       'loading-text'?: LyraCombobox['loadingText'];
@@ -4359,6 +4378,7 @@ export interface LyraComponentTypeMap {
       LyraDockPanel,
       | 'collapsed'
       | 'collapsible'
+      | 'disabled'
       | 'extent'
       | 'locale'
       | 'maxExtent'
@@ -4379,8 +4399,10 @@ export interface LyraComponentTypeMap {
       | '--lr-dock-panel-collapse-toggle-hover-color'
       | '--lr-dock-panel-collapsed-size'
       | '--lr-dock-panel-handle-active-color'
+      | '--lr-dock-panel-handle-color'
       | '--lr-dock-panel-handle-hit-area'
-      | '--lr-dock-panel-handle-hover-color';
+      | '--lr-dock-panel-handle-hover-color'
+      | '--lr-dock-panel-handle-size';
     attributeAliases: {
       'max-extent'?: LyraDockPanel['maxExtent'];
       'min-extent'?: LyraDockPanel['minExtent'];
@@ -4804,7 +4826,9 @@ export interface LyraComponentTypeMap {
       | 'lr-drilldown-evidence-expand'
       | 'lr-drilldown-evidence-open'
       | 'lr-drilldown-navigate';
-    cssNames: never;
+    cssNames:       | '--lr-drilldown-panel-category-gap'
+      | '--lr-drilldown-panel-gap'
+      | '--lr-drilldown-panel-pagination-gap';
     attributeAliases: {
       'active-category'?: LyraDrilldownPanel['activeCategory'];
       'aria-label'?: LyraDrilldownPanel['accessibleLabel'];
@@ -4991,7 +5015,14 @@ export interface LyraComponentTypeMap {
       | 'lr-render-error'
       | 'lr-search-change'
       | 'lr-text-select';
-    cssNames:       | '--lr-ebook-viewer-max-height';
+    cssNames:       | '--lr-ebook-viewer-highlight-accent-bg'
+      | '--lr-ebook-viewer-highlight-active-outline'
+      | '--lr-ebook-viewer-highlight-danger-bg'
+      | '--lr-ebook-viewer-highlight-neutral-bg'
+      | '--lr-ebook-viewer-highlight-success-bg'
+      | '--lr-ebook-viewer-highlight-warning-bg'
+      | '--lr-ebook-viewer-max-height'
+      | '--lr-ebook-viewer-search-match-bg';
     attributeAliases: {
       'active-highlight-id'?: LyraEbookViewer['activeHighlightId'];
       'max-height'?: LyraEbookViewer['maxHeight'];
@@ -7751,12 +7782,14 @@ export interface LyraComponentTypeMap {
       | 'lr-content-settled'
       | 'lr-copy'
       | 'lr-copy-error'
+      | 'lr-error'
       | 'lr-highlight-activate'
       | 'lr-link-activate'
       | 'lr-render-error'
       | 'lr-text-select';
     cssNames:       | '--lr-code-block-tab-size'
       | '--lr-markdown-code-bg'
+      | '--lr-markdown-code-block-bg'
       | '--lr-markdown-code-block-padding'
       | '--lr-markdown-code-block-radius'
       | '--lr-markdown-code-header-bg'
@@ -7824,12 +7857,14 @@ export interface LyraComponentTypeMap {
       | 'lr-content-settled'
       | 'lr-copy'
       | 'lr-copy-error'
+      | 'lr-error'
       | 'lr-highlight-activate'
       | 'lr-link-activate'
       | 'lr-render-error'
       | 'lr-text-select';
     cssNames:       | '--lr-code-block-tab-size'
       | '--lr-markdown-code-bg'
+      | '--lr-markdown-code-block-bg'
       | '--lr-markdown-code-block-padding'
       | '--lr-markdown-code-block-radius'
       | '--lr-markdown-code-header-bg'
@@ -8391,6 +8426,7 @@ export interface LyraComponentTypeMap {
       | 'collapsedPanels'
       | 'collapseState'
       | 'defaultSizes'
+      | 'disabled'
       | 'dividerLabel'
       | 'floatBreakpoint'
       | 'for'
@@ -9831,6 +9867,7 @@ export interface LyraComponentTypeMap {
     events: LyraPptxViewerEventMap;
     eventNames:       | 'lr-anchor-result'
       | 'lr-load'
+      | 'lr-page-change'
       | 'lr-page-viewer-state-change'
       | 'lr-render-error'
       | 'lr-search-change'
@@ -11344,6 +11381,7 @@ export interface LyraComponentTypeMap {
     element: LyraSequencePlayback;
     properties: LyraElementProperties<
       LyraSequencePlayback,
+      | 'autoplayInterval'
       | 'currentIndex'
       | 'hidden'
       | 'intervalMs'
@@ -11365,6 +11403,7 @@ export interface LyraComponentTypeMap {
       | '--lr-sequence-playback-play-button-active-bg'
       | '--lr-sequence-playback-play-button-active-border-color';
     attributeAliases: {
+      'autoplay-interval'?: LyraSequencePlayback['autoplayInterval'];
       'current-index'?: LyraSequencePlayback['currentIndex'];
       'interval-ms'?: LyraSequencePlayback['intervalMs'];
       'item-count'?: LyraSequencePlayback['itemCount'];
@@ -12634,6 +12673,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraTestResultsEventMap;
     eventNames:       | 'lr-filter-change'
+      | 'lr-filter-request'
       | 'lr-test-select'
       | 'lr-toggle'
       | 'lr-toggle-request';
@@ -14140,7 +14180,8 @@ export interface LyraComponentTypeMap {
       | '--lr-virtual-list-row-mark-bg'
       | '--lr-virtual-list-row-mark-color'
       | '--lr-virtual-list-row-mark-padding'
-      | '--lr-virtual-list-row-mark-radius';
+      | '--lr-virtual-list-row-mark-radius'
+      | '--lr-virtual-list-sticky-group-bg';
     attributeAliases: {
       'active-item-id'?: LyraVirtualList['activeItemId'];
       'has-more'?: LyraVirtualList['hasMore'];

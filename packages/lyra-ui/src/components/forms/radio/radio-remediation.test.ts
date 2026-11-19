@@ -68,7 +68,7 @@ for (const [tag, role, local] of [
     const owner = el.shadowRoot!.querySelector(`[role="${role}"]`)!;
     const source = wrapper.querySelector('p')!;
     await waitUntil(() => descriptions(owner)[0] === source);
-    const expected = !local ? ['External'] : tag === 'lr-switch' ? ['External', 'Error', 'Hint'] : ['External', 'Hint', 'Error'];
+    const expected = local ? ['External', 'Error', 'Hint'] : ['External'];
     expect(descriptions(owner).map((node) => node.textContent?.trim())).to.deep.equal(expected);
     const replacement = source.cloneNode(true) as HTMLElement;
     replacement.textContent = 'Replacement';
@@ -241,10 +241,10 @@ it('dims the group chrome while disabled and outlines the options while invalid'
   }
   const group = await fixture<LyraRadioGroup>('<lr-radio-group required label="Plan"><lr-radio value="a">A</lr-radio></lr-radio-group>');
   const options = group.shadowRoot!.querySelector('[part~="radios"]')!;
-  expect(getComputedStyle(options).borderTopStyle).to.equal('none');
+  expect(getComputedStyle(options).outlineStyle).to.equal('none');
   group.reportValidity();
   await group.updateComplete;
-  expect(getComputedStyle(options).borderTopStyle).to.equal('solid');
+  expect(getComputedStyle(options).outlineStyle).to.equal('solid');
 });
 
 it('makes standalone radios that share a name and form owner mutually exclusive', async () => {

@@ -74,6 +74,9 @@ describe('lr-budget-meter heading', () => {
     const heading = (el: LyraBudgetMeter): Element | null => el.shadowRoot!.querySelector('[part="label"]');
     const el = await fixture<LyraBudgetMeter>(html`<lr-budget-meter used="1" limit="2" heading-level="4"></lr-budget-meter>`);
     expect([heading(el)!.getAttribute('role'), heading(el)!.getAttribute('aria-level')]).to.deep.equal(['heading', '4']);
+    el.removeAttribute('heading-level');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.getAttribute('aria-level')).to.equal('2');
     el.headingLevel = 'none';
     await el.updateComplete;
     expect(heading(el)!.getAttribute('role')).to.equal(null);

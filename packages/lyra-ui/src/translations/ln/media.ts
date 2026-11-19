@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Vitesse ya lecture',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} kati na {duration}',
+  avPlayerHighlightRange: 'longwa na {start} tii na {end}',
+  avPlayerHighlightAt: 'na {start}',
   attachmentTriggerAudio: 'Enregistrer audio',
   attachmentMenuAudio: 'Enregistrer audio',
   flagLoadError: 'Drapeau ezali te',

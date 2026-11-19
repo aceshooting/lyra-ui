@@ -44,3 +44,13 @@ describe('column separator interaction math', () => {
     expect(columnResizeKeyboardWidth(new KeyboardEvent('keydown', { key: 'End' }), 120, 40, 300, true)).to.equal(300);
   });
 });
+
+describe('columnResizeKeyboardWidth shortcuts', () => {
+  it('yields to modified and composing keys', () => {
+    for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+      for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End']) {
+        expect(columnResizeKeyboardWidth(new KeyboardEvent('keydown', { key, ...init }), 120, 40, 300, false)).to.equal(undefined);
+      }
+    }
+  });
+});

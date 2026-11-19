@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF పత్రం',
   pdfViewerMissingLibrary: 'PDF ఫైళ్లను చూపించడానికి ఐచ్ఛిక "pdfjs-dist" ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
   pdfViewerPageOf: '{total}లో {page}వ పేజీ',
+  pdfViewerPageHighlights: '{page}వ పేజీ హైలైట్‌లు',
   pdfViewerZoomIn: 'జూమ్ పెంచండి',
   pdfViewerZoomOut: 'జూమ్ తగ్గించండి',
   pdfViewerPreviousPage: 'మునుపటి పేజీ',

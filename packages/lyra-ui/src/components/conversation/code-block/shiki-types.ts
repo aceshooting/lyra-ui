@@ -59,12 +59,8 @@ export type ShikiLanguageInput =
   | ShikiLanguageRegistration
   | readonly ShikiLanguageRegistration[];
 
-/** A `languages` entry that hasn't been imported/resolved yet -- called at most once per
- *  distinct (`HighlighterCore`, normalized key) pair, the first time that key is actually
- *  requested (see `ensureShikiLanguageLoaded()`). May return either a grammar directly or an ES
- *  module namespace/default-export wrapper around one, matching a plain
- *  `() => import('@shikijs/langs/<name>')` call site verbatim -- no `.then(m => m.default)`
- *  required from the caller. */
+/** Loads a grammar on demand. Concurrent requests share the attempt, and a later request
+ *  retries a rejected load. */
 export type ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>;
 
 /** One `languages` map entry: either an already-resolved grammar (today's contract, seeded eagerly
@@ -351,9 +347,14 @@ export function loadShikiHighlighterCore(
         cached = promise;
         recentHighlighterCores.splice(i, 1);
         recentHighlighterCores.push({ languages: new WeakRef(languages), engine, promise: entry.promise });
-        perEngine ??= new Map();
-        perEngine.set(engine, cached);
-        highlighterCores.set(languages, perEngine);
+        const matching = cached;
+        void matching.then(core => {
+          if (core) {
+            const aliases = highlighterCores.get(languages) ?? new Map();
+            aliases.set(engine, matching);
+            highlighterCores.set(languages, aliases);
+          }
+        });
         break;
       }
     }
@@ -361,7 +362,7 @@ export function loadShikiHighlighterCore(
   if (!cached) {
     cached = Promise.all([
       import('shiki/core'),
-      Promise.resolve(engine()),
+      Promise.resolve().then(() => engine()),
       import('shiki/themes/github-light.mjs'),
       import('shiki/themes/github-dark.mjs'),
     ])
@@ -390,6 +391,11 @@ export function loadShikiHighlighterCore(
     perEngine ??= new Map();
     perEngine.set(engine, cached);
     highlighterCores.set(languages, perEngine);
+    const engineCache = perEngine;
+    const pendingCore = cached;
+    void pendingCore.then(core => {
+      if (!core && engineCache.get(engine) === pendingCore) engineCache.delete(engine);
+    });
     if (frozen) {
       recentHighlighterCores.push({ languages: new WeakRef(languages), engine, promise: new WeakRef(cached) });
       if (recentHighlighterCores.length > 8) recentHighlighterCores.shift();
@@ -450,11 +456,7 @@ export function resolvedShikiLanguages(
   return cached;
 }
 
-// Per-(core, normalized key) memoization of a loader's resolution + `loadLanguage()` call, so a
-// core shared across multiple component instances or re-renders (via loadShikiHighlighterCore()'s
-// own identity/content cache) never re-imports or re-registers the same lazy grammar twice. A
-// failed load is memoized too, same convention as code-loader.ts's `unsupportedLanguages` Set --
-// it never retries on every re-render, it just keeps rendering the plain-text fallback.
+// Concurrent callers share grammar registration. A failed chunk can be retried.
 const loadedLanguageSources = new WeakMap<ShikiHighlighterCore, Map<string, Promise<boolean>>>();
 
 const LAZY_LANGUAGE_SOURCE_WARNING_KEY = 'lyra-shiki-lazy-language-source-failed';
@@ -496,6 +498,7 @@ export function ensureShikiLanguageLoaded(
       })
       .then(() => true)
       .catch(() => {
+        perCore.delete(key);
         devWarnOnce(LAZY_LANGUAGE_SOURCE_WARNING_KEY, LAZY_LANGUAGE_SOURCE_WARNING);
         return false;
       });

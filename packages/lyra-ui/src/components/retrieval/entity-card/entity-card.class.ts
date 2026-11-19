@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { resolveHeadingLevel } from '../../../internal/heading-level.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -17,7 +18,7 @@ import '../../overlays/empty/empty.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_focusInGraphWithContext, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -110,6 +111,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     entityCommunity: LYRA_DEFAULT_entityCommunity,
     entityDegree: LYRA_DEFAULT_entityDegree,
     focusInGraph: LYRA_DEFAULT_focusInGraph,
+    focusInGraphWithContext: LYRA_DEFAULT_focusInGraphWithContext,
     noData: LYRA_DEFAULT_noData,
     untitledEntity: LYRA_DEFAULT_untitledEntity,
   };
@@ -180,7 +182,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     const resolved = entity.type ? this.resolvedType(entity.type) : undefined;
     const badgeLabel = resolved?.label ?? entity.type;
     const properties = Object.entries(entity.properties ?? {});
-    const ariaLevel = this.getAttribute('aria-level') || '3';
+    const ariaLevel = resolveHeadingLevel(this.getAttribute('aria-level') || '3') ?? '3';
 
     // The degree/community rows route their localized labels through `lr-result-field`'s
     // `label` prop, exactly like the plain `property` rows above: the label/value separator is
@@ -206,6 +208,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
               ? html`<lr-button
                   part="focus-button"
                   size="s"
+                  aria-label=${this.localize('focusInGraphWithContext', undefined, { label: titleText })}
                   @click=${this.onFocusClick}
                   >${this.localize('focusInGraph')}</lr-button
                 >`

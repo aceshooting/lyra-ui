@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'ဘောင်ကို ခေါက်သိမ်းရန်',
   dockPanelExpand: 'ဘောင်ကို ချဲ့ရန်',
   dockPanelResize: 'ဘောင် အရွယ်အစားပြောင်းရန်',
+  dockPanelToggle: 'ပင်နယ်ကို ဖွင့်/ပိတ်ပါ',
   responsivePanel: 'ဘောင်',
   breadcrumb: 'လမ်းကြောင်းညွှန်',
   resizeDivider: 'ဘောင် {a} နှင့် ဘောင် {b} ကြား ပိုင်းခြားမျဉ်း အရွယ်အစားပြောင်းရန်',

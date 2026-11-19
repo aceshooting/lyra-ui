@@ -66,10 +66,12 @@ export const DockedStart: Story = {
 };
 
 export const CollapsibleSidebar: Story = {
-  render: () => html`
+  args: { disabled: false },
+  render: ({ disabled }) => html`
     <div style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
-      <lr-dock-panel placement="end" extent="280px" collapsible>
+      <lr-dock-panel placement="end" extent="280px" collapsible ?disabled=${disabled}
+        style="--lr-dock-panel-handle-color: var(--lr-color-border-strong); --lr-dock-panel-handle-size: var(--lr-border-width-thick)">
         <div style="padding: 1rem;">
           <strong>Collapsible</strong>
           <p>The chevron button collapses this panel to a persistent rail without losing its

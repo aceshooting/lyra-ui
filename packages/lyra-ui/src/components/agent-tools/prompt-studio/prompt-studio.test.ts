@@ -7,6 +7,7 @@ import type {
   PromptStudioMessageReorderDetail,
   PromptStudioVersion,
 } from './prompt-studio.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const messages: PromptStudioMessage[] = [
@@ -620,10 +621,10 @@ it('keeps message reordering opt-in and disables boundary actions', async () => 
   expect(down[2]!.disabled).to.be.true;
   expect(up[1]!.disabled).to.be.false;
   expect(down[1]!.disabled).to.be.false;
-  el.strings = { moveUp: 'Déplacer vers le haut', moveDown: 'Déplacer vers le bas' };
+  el.strings = { promptStudioMoveMessageUp: 'Déplacer le message {index} vers le haut', promptStudioMoveMessageDown: 'Déplacer le message {index} vers le bas' };
   await el.updateComplete;
-  expect(up[1]!.getAttribute('aria-label')).to.equal('Déplacer vers le haut');
-  expect(down[1]!.getAttribute('aria-label')).to.equal('Déplacer vers le bas');
+  expect(up[1]!.getAttribute('aria-label')).to.equal('Déplacer le message 2 vers le haut');
+  expect(down[1]!.getAttribute('aria-label')).to.equal('Déplacer le message 2 vers le bas');
   await expect(el).shadowDom.to.be.accessible();
 
   el.reorderable = false;
@@ -1093,4 +1094,24 @@ it('keeps the shared substitution ceiling when identical message previews are re
 it('keeps an explicitly empty heading verbatim instead of the localized default', async () => {
   const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading=""></lr-prompt-studio>`);
   expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.firstElementChild!.textContent!.trim()).to.equal('');
+});
+
+it('names each per-message action with its message number', async () => {
+  const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const names = (part: string) => [...el.shadowRoot!.querySelectorAll(`[part="${part}"]`)].map((node) => node.getAttribute('aria-label'));
+  expect(names('move-message-up')).to.deep.equal(['Move message 1 up', 'Move message 2 up', 'Move message 3 up']);
+  expect(names('move-message-down')).to.deep.equal(['Move message 1 down', 'Move message 2 down', 'Move message 3 down']);
+  expect(names('remove-message')).to.deep.equal(['Remove message 1', 'Remove message 2', 'Remove message 3']);
+});
+
+it('keeps keyboard focus inside the studio when the focused message is removed', async () => {
+  const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const remove = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove-message"]')[1]!;
+  await focusByKeyboard(remove);
+  remove.click();
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[data-message-id]').length === 2, 'row removed');
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const active = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(active?.getAttribute('part')).to.equal('remove-message');
 });

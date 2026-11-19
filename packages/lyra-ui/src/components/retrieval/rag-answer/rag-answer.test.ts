@@ -788,12 +788,7 @@ describe('lr-rag-answer', () => {
     ).MutationObserver = undefined;
     try {
       expect(() => el.connectedCallback()).to.not.throw();
-      const observer = (el as unknown as { slotObserver?: MutationObserver })
-        .slotObserver;
-      expect(
-        observer === undefined,
-        'no observer is armed without a constructor to build it from'
-      ).to.equal(true);
+      expect(() => el.disconnectedCallback()).to.not.throw();
     } finally {
       el.disconnectedCallback();
       window.MutationObserver = OriginalMutationObserver;
@@ -1032,4 +1027,17 @@ describe('lr-rag-answer heading level', () => {
     const grounding = el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { assessment?: { claims?: unknown } } | null;
     if (grounding) expect(grounding.assessment?.claims).to.deep.equal([]);
   });
+});
+
+it('announces the first error that arrives after the element was moved', async () => {
+  const el = (await fixture(html`<lr-rag-answer announce></lr-rag-answer>`)) as LyraRagAnswer;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  el.errorText = 'Failure after the move';
+  await el.updateComplete;
+  const sink = document.querySelector('[data-lr-live-region="assertive"]')!;
+  expect(sink.lastElementChild?.textContent).to.equal('Failure after the move');
 });

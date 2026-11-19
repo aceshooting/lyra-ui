@@ -17,6 +17,7 @@ export const styles = css`
     display: block;
     max-inline-size: 100%;
     contain: paint;
+    overflow-x: auto;
     overflow-wrap: anywhere;
   }
   [part="html"] img {

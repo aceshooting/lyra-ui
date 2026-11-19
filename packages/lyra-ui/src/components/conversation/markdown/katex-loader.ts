@@ -16,6 +16,7 @@ function isKatexApi(value: unknown): value is KatexApi {
 }
 
 const katex = /* @__PURE__ */ createOptionalPeerLoader<KatexApi>({
+  cache: 'generation',
   load: () => import('katex'),
   isCapability: isKatexApi,
   warningKey: 'lyra-markdown-katex-unavailable',
@@ -23,7 +24,7 @@ const katex = /* @__PURE__ */ createOptionalPeerLoader<KatexApi>({
     '<lr-markdown>/<lr-markdown-core>: Math rendering is unavailable because the optional KaTeX peer could not load. TeX is rendered as literal text.',
 });
 
-let cached: Promise<KatexApi | null> | undefined;
+let configuredImporter: (() => Promise<unknown>) | undefined;
 let cacheGeneration: unknown;
 const KATEX_CACHE_GENERATION = Symbol.for('@aceshooting/lyra-ui/markdown-katex-cache-generation');
 
@@ -37,17 +38,13 @@ export function loadKatex(importKatex?: () => Promise<unknown>): Promise<KatexAp
   return katex.loadWith(importKatex);
 }
 
-/**
- * Lazily loads `katex` once per page, caching the resolved module (or `null`) across every
- * `<lr-markdown>` instance -- mirrors `markdown-loader.ts`'s `loadMarkdownDeps()`/
- * `getMarkdownDepsIfLoaded()` cached-promise shape for a single optional peer.
- */
+/** Shares one import per generation, retrying a rejected chunk on the next request. */
 export function getKatex(importKatex?: () => Promise<unknown>): Promise<KatexApi | null> {
   const generation = Reflect.get(globalThis, KATEX_CACHE_GENERATION);
-  if (generation !== cacheGeneration) {
-    cached = undefined;
+  if (generation !== cacheGeneration || (importKatex && importKatex !== configuredImporter)) {
     cacheGeneration = generation;
+    configuredImporter = importKatex;
+    katex.override(importKatex);
   }
-  if (!cached) cached = loadKatex(importKatex);
-  return cached;
+  return katex.load();
 }

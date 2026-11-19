@@ -95,11 +95,15 @@ describe('lr-qr-code', () => {
     // documents the same gap), so this test browser cannot resolve it. Its fixed development-only
     // diagnostic is expected; stub `console.warn` locally so it does not trip strict-console mode.
     const originalWarn = console.warn;
-    console.warn = () => {};
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => { warnings.push(args); };
     try {
       const preloadResult: Promise<boolean> = LyraQrCode.preload();
       const loaded = await preloadResult;
-      expect(typeof loaded).to.equal('boolean');
+      // The peer cannot be resolved by this runner, so preload must report failure and the fixed
+      // diagnostic fires; a resolving peer would flip both and need this expectation revisited.
+      expect(loaded).to.equal(false);
+      expect(warnings.length).to.be.at.most(1);
     } finally {
       console.warn = originalWarn;
     }
@@ -1907,4 +1911,31 @@ it('keeps the QR symbol usable when a platform image source setter rejects its l
     expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
     expect(el.canvas.getContext('2d')!.getImageData(40, 40, 1, 1).data[3]).to.equal(255);
   } finally { el?.remove(); restoreOwnProperty(window, 'Image', descriptor); }
+});
+
+describe('lr-qr-code paint batching', () => {
+  it('fills every dark module with one path fill', async () => {
+    const fills = { count: 0 };
+    const original = CanvasRenderingContext2D.prototype.fill;
+    CanvasRenderingContext2D.prototype.fill = function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+      fills.count += 1;
+      return (original as (...a: unknown[]) => void).apply(this, args);
+    } as typeof original;
+    try {
+      const el = (await fixture(html`<lr-qr-code radius="0.4"></lr-qr-code>`)) as LyraQrCode;
+      installFakeLoader(el, fakeApi(() => ({ modules: { size: 4, get: () => 1 } })));
+      el.value = 'hello';
+      await waitForInitialPaint(el);
+      fills.count = 0;
+      el.size = 120;
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(fills.count).to.be.lessThan(2);
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      const centre = Math.round(canvas.width / 2);
+      expect([...canvas.getContext('2d')!.getImageData(centre, centre, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 0, 0]);
+    } finally {
+      CanvasRenderingContext2D.prototype.fill = original;
+    }
+  });
 });

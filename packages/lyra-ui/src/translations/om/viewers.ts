@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Dokumantii PDF',
   pdfViewerMissingLibrary: 'Faayilota PDF agarsiisuuf ilaaltuun kun paakeejii filannoo "pdfjs-dist" fe\'amee qabaachuu barbaada.',
   pdfViewerPageOf: 'Fuula {page} keessaa {total}',
+  pdfViewerPageHighlights: 'Wantoota fuula {page} halluu itti dabalaman',
   pdfViewerZoomIn: 'Guddina dabali',
   pdfViewerZoomOut: 'Guddina hir\'isi',
   pdfViewerPreviousPage: 'Fuula duraa',

@@ -825,6 +825,34 @@ describe('lr-spreadsheet-viewer', () => {
     }
   });
 
+  it('resumes its load after a same-task move while the request is in flight', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    const value = buffer(GRID_WORKBOOK);
+    window.fetch = ((_url: unknown, init?: RequestInit) => {
+      calls++;
+      if (calls === 1) {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(value) } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSpreadsheetViewer>(
+        html`<lr-spreadsheet-viewer src="https://example.test/book.xlsx"></lr-spreadsheet-viewer>`
+      );
+      await waitUntil(() => calls === 1);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null, 'load never resumed');
+      expect(calls).to.equal(2);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('keeps the workbook and search across a same-task DOM move', async () => {
     const original = window.fetch;
     let calls = 0;
@@ -2051,4 +2079,16 @@ it('declines a cell jump whose viewer is detached while switching sheets and jum
   } finally {
     restore();
   }
+});
+
+it('renders and searches small General numbers without rounding to zero', async () => {
+  const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer lang="en"></lr-spreadsheet-viewer>`);
+  const restore = fetchBuffer(buffer({ Sheet1: [['Rate'], [0.000042]] }));
+  try {
+    el.src = '/rates.xlsx';
+    const cell = () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="cell"]');
+    await waitUntil(() => !!cell());
+    expect(cell()!.textContent).to.equal('0.000042');
+    expect(await el.search('0.000042')).to.equal(1);
+  } finally { restore(); }
 });

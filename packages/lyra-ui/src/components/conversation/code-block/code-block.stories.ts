@@ -66,7 +66,7 @@ export const ThemedScrollbar: Story = {
       <lr-code-block
         language="typescript"
         .code=${tsSample}
-        style="max-width: 32rem; --lr-code-block-max-height: 6rem;"
+        style="max-width: 32rem; --lr-code-block-max-height: 6rem; --lr-code-block-header-bg: var(--lr-color-surface-raised); --lr-code-block-padding: var(--lr-space-m);"
       ></lr-code-block>
     </div>
   `,

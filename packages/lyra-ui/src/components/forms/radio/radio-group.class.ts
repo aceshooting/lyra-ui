@@ -1,3 +1,5 @@
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
@@ -53,7 +55,7 @@ export interface LyraRadioGroupEventMap {
   input: Event;
   change: Event;
   'lr-input': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
-  'lr-change': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
+  'lr-change': CustomEvent<{ value: string; previousValue: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-activate': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-invalid': CustomEvent<null>;
 }
@@ -95,7 +97,7 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * `option` identifies the acted-on radio; `radio` remains an equal compatibility alias.
  *
  * @event lr-input - Prefixed alias for `input`; `detail: { value, option, radio }`.
- * @event lr-change - A radio was selected. `detail: { value, option, radio }`.
+ * @event lr-change - A radio was selected. `detail: { value, previousValue, option, radio }`.
  * @event lr-activate - An available radio was activated by click, Space or an arrow/Home/End key,
  * whether or not the selection moved; emitted after `lr-change` when it did.
  * `detail: { value, option, radio }`.
@@ -213,16 +215,11 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasHelpTextSlot(): boolean { return this.slotPresence.has('help-text'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly labelId = nextId('radio-group-label');
-  private readonly hintId = nextId('radio-group-hint');
-  private readonly errorId = nextId('radio-group-error');
+  private readonly supportingId = nextId('radio-group');
   private managedRadios = new Set<LyraRadio>();
   private syncingRadios = false;
-  private membershipObserver?: MutationObserver;
-  private membershipObserverDocument?: Document;
+  private membershipObserver?: OwnedMutationObserver;
   private membershipObserverGeneration = 0;
   private readonly runs = new AdjacentRunScheduler(this, () => this.projectButtonRuns());
   private internals: ElementInternals;
@@ -237,6 +234,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   private _disabled = false;
   private _fieldsetDisabled = false;
   private hasInteracted = false;
+  private selectedRadio?: LyraRadio;
   private pendingSelection?: string | null;
   private hadShoelaceDefaultValue = false;
 
@@ -398,39 +396,9 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   }
 
   private armMembershipObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected) return;
-    if (this.membershipObserver && this.membershipObserverDocument === ownerDocument) return;
-    this.resetMembershipObserver();
-    const ownerWindow = ownerDocument?.defaultView;
-    const MutationObserverCtor = ownerWindow?.MutationObserver;
-    if (!ownerWindow || !MutationObserverCtor) return;
-    const generation = this.membershipObserverGeneration;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.membershipObserver !== observer ||
-        this.membershipObserverDocument !== ownerDocument ||
-        this.membershipObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      ownerWindow.queueMicrotask(() => {
-        if (
-          this.membershipObserver !== observer ||
-          this.membershipObserverDocument !== ownerDocument ||
-          this.membershipObserverGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) {
-          return;
-        }
-        this.syncRadios();
-      });
-    });
+    if (this.membershipObserver?.active || !this.isConnected || !this.ownerDocument.defaultView?.MutationObserver) return;
+    const observer = new OwnedMutationObserver(this, () => this.scheduleMembershipSync());
     this.membershipObserver = observer;
-    this.membershipObserverDocument = ownerDocument;
     observer.observe(this, {
       attributes: true,
       childList: true,
@@ -471,7 +439,6 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     this.membershipObserverGeneration += 1;
     this.membershipObserver?.disconnect();
     this.membershipObserver = undefined;
-    this.membershipObserverDocument = undefined;
   }
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -549,6 +516,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     const radios = this.radios();
     if (radios.length === 0) {
       const old = this._value;
+      this.selectedRadio = undefined;
       this._value = desired || null;
       this.pendingSelection = desired;
       this.syncFormState();
@@ -612,6 +580,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
         radio.setGroupTabbable(radio === tabbableRadio);
       }
       const oldValue = this._value;
+      this.selectedRadio = checkedRadio;
       this._value = checkedRadio?.value ?? null;
       this.syncFormState();
       this.updateValidity();
@@ -651,6 +620,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio)) return false;
     const detail = Object.freeze({ value: radio.value, option: radio, radio });
     if (!radio.checked) {
+      const previousValue = this.value;
       this._valueDirty = true;
       this.hasInteracted = true;
       this.syncingRadios = true;
@@ -665,7 +635,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
       dispatchNativeEvent(this, 'input');
       this.emit('lr-input', detail);
       dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', detail);
+      this.emit('lr-change', { ...detail, previousValue });
     }
     this.emit('lr-activate', detail);
     return true;
@@ -707,6 +677,10 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   };
   private onRadioSlotChange = (): void => {
     this.syncRadios();
+    this.scheduleMembershipSync();
+  };
+
+  private scheduleMembershipSync(): void {
     const ownerDocument = this.ownerDocument;
     const generation = this.membershipObserverGeneration;
     const ownerWindow = ownerDocument?.defaultView;
@@ -720,7 +694,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
         this.syncRadios();
       }
     });
-  };
+  }
 
   /** Moves focus to the selected enabled option, or the first enabled option when empty. */
   override focus(options?: FocusOptions): void {
@@ -749,7 +723,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
 
   private syncFormState(): void {
     if (!this.internals) return;
-    this.internals.setFormValue(this.name ? this._value : null, this._value);
+    this.internals.setFormValue(this.name && !this.selectedRadio?.effectiveDisabled ? this._value : null, this._value);
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -844,9 +818,11 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
     const accessibleLabel = hostAriaLabel(this);
-    const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText) || this.withHint;
-    const hasError = this.hasErrorSlot || Boolean(this.errorText);
-    const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: this.supportingId, hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
+    const describedBy = supporting.describedBy;
     // A direct JS property write bypasses the reflected-attribute converter, so re-normalize here
     // too -- an out-of-vocabulary orientation must never reach aria-orientation.
     const ariaOrientation = RADIO_GROUP_ORIENTATION.normalize(this.orientation);
@@ -854,11 +830,11 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
       <div part="base" role="radiogroup"
         aria-label=${accessibleLabel ?? nothing}
         aria-labelledby=${accessibleLabel === null && hasLabel ? this.labelId : nothing}
-        aria-describedby=${described}
+        aria-describedby=${describedBy ?? nothing}
         aria-required=${this.required ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-orientation=${ariaOrientation}
-        aria-invalid=${hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
+        aria-invalid=${supporting.hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
         @keydown=${this.onKeyDown}
         @focusout=${this.onFocusOut}>
         <div part="form-control">
@@ -867,11 +843,10 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
           <div part="radios form-control-input button-group button-group__base">
             <slot @slotchange=${this.onRadioSlotChange}></slot>
           </div>
-          <div part="hint form-control-help-text" id=${this.hintId} ?hidden=${!hasHint}>
-            ${this.hint || this.helpText}<slot name="hint"></slot
-            ><slot name="help-text"></slot>
-          </div>
-          <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error"></slot></div>
+          ${renderFormControlHintError({
+          ...supporting, idPrefix: this.supportingId, hint: this.hint || this.helpText,
+          errorText: this.errorText, helpTextSlot: true,
+        })}
         </div>
       </div>
     `;

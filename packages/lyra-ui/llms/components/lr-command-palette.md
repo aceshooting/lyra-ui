@@ -69,7 +69,8 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   activation is idempotently open rather than a toggle.
 - `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
-  explicitly empty value is used as-is
+  explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
+  combobox also has its own name and announces its active listbox option.
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
@@ -80,10 +81,12 @@ unregister function. Calls in the same turn are admitted together in a microtask
 pending registration. Assign `commands` for an immediate bulk update; replacing it before a queued
 batch flush supersedes that older batch.
 
-**Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
-cycling) at the ends; Home/End jump to the first/last enabled row and PageUp/PageDown by one visible
-page, as in `lr-combobox`; the active row is scrolled into view within the list. Enter selects.
-Hovering a non-disabled row also makes it active. A non-empty query announces its localized result
+**Keyboard:** ArrowUp/ArrowDown move between enabled options and stop at the ends. Home/End move
+the search caret to the start/end of the query. When the caret is already at that boundary, the
+key jumps to the first/last enabled option. PageUp/PageDown move by one visible page and scroll
+the active option into view. Enter selects the keyboard-active command once per press.
+Shift, Alt, Ctrl, and Meta chords, IME composition, and previously handled keys pass through.
+Pointer hover highlights a row visually. Click selects the hovered row. A non-empty query announces its localized result
 count through the shared polite announcement sink; a query matching nothing announces
 `commandPaletteEmpty`. Unchanged results and the initial render are silent.
 
@@ -93,8 +96,10 @@ with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; no
 `lr-close-request`, so `lr-hide` is not cancelable here, unlike `lr-dialog`); non-cancelable
 `lr-close` with that same reason object after closing; no-detail `lr-after-show` / `lr-after-hide`
 once the palette has rendered open / closed (it has no transition to wait for); `lr-select`
-(`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
-closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
+(`detail: { command }`, fired before invoking the command’s `onSelect` and closing the palette).
+A synchronous listener can assign a new commands array to remove, replace or disable the command
+or replace its `onSelect` callback. Any of those changes stops the pending action.
+The host re-dispatches no-detail `focus`/`blur` events whenever the search input
 gains or loses focus. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously

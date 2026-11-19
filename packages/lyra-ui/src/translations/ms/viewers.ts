@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Dokumen PDF',
   pdfViewerMissingLibrary: 'Papar ini memerlukan pakej pilihan "pdfjs-dist" dipasang untuk memaparkan fail PDF.',
   pdfViewerPageOf: 'Halaman {page} daripada {total}',
+  pdfViewerPageHighlights: 'Serlahan halaman {page}',
   pdfViewerZoomIn: 'Zum masuk',
   pdfViewerZoomOut: 'Zum keluar',
   pdfViewerPreviousPage: 'Halaman sebelumnya',

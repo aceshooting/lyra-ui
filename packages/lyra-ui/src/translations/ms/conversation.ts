@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Sebahagian cadangan atau entri katalog telah digugurkan kerana had input dicapai.',
   transcriptFeedInputLimit: 'Hanya {count} entri terkini daripada {total} entri dikekalkan.',
   codeBlockHighlightLimit: 'Kod panjang dipaparkan tanpa penyerlahan sintaks.',
+  codeBlockHighlightedLine: 'Baris diserlahkan',
+  codeBlockActiveLine: 'Baris serlahan aktif',
 };
 
 registerLyraLocale('ms', strings);

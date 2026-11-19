@@ -3,6 +3,7 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const reorderItems: TaskItem[] = [
   {
@@ -452,4 +453,52 @@ it('ignores modified horizontal arrows and keeps a reorder pending across an unr
 it('reports that no key can be revealed without a source', async () => {
   const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${clone()}></lr-task-list>`);
   expect(await el.revealSourceKey('write')).to.equal(false);
+});
+
+const insetFocusRing = (el: HTMLElement): boolean => {
+  const style = getComputedStyle(el);
+  return parseFloat(style.outlineOffset) <= -parseFloat(style.outlineWidth);
+};
+
+it('draws the reorderable row focus ring inside the row box', async () => {
+  const el = (await fixture(html`<lr-task-list reorderable .items=${clone()}></lr-task-list>`)) as LyraTaskList;
+  const row = itemRow(el, 'prepare');
+  await focusByKeyboard(row);
+  expect(insetFocusRing(row)).to.equal(true);
+});
+
+it('moves focus from a reorderable row to the header when the list collapses', async () => {
+  const el = (await fixture(html`<lr-task-list reorderable .items=${clone()}></lr-task-list>`)) as LyraTaskList;
+  const row = itemRow(el, 'prepare');
+  await focusByKeyboard(row);
+  el.collapsed = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('button[part="header"]')).to.equal(true);
+});
+
+it('accepts the shared terminal status spellings instead of folding them into pending', async () => {
+  const el = (await fixture(html`<lr-task-list .items=${[
+    { id: 'a', label: 'A', status: 'done' },
+    { id: 'b', label: 'B', status: 'failed' },
+    { id: 'c', label: 'C', status: 'cancelled' },
+    { id: 'd', label: 'D', status: 'mystery' },
+  ]}></lr-task-list>`)) as LyraTaskList;
+  const status = (id: string): string | undefined => itemRow(el, id).dataset['status'];
+  expect([status('a'), status('b'), status('c'), status('d')]).to.deep.equal(['success', 'error', 'incomplete', 'pending']);
+});
+
+it('leaves composing, additional modifiers and claimed reorder shortcuts alone', async () => {
+  const el = await fixture<LyraTaskList>(html`<lr-task-list reorderable .items=${clone()}></lr-task-list>`);
+  let requests = 0;
+  el.addEventListener('lr-reorder', () => requests++);
+  const row = itemRow(el, 'prepare');
+  for (const extra of [{ isComposing: true }, { keyCode: 229 }, { altKey: true }, { shiftKey: true }]) {
+    const key = new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, cancelable: true, ...extra });
+    row.dispatchEvent(key);
+    expect(key.defaultPrevented).to.equal(false);
+  }
+  const claimed = new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, cancelable: true });
+  claimed.preventDefault();
+  row.dispatchEvent(claimed);
+  expect(requests).to.equal(0);
 });

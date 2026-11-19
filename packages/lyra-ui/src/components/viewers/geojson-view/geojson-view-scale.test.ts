@@ -87,3 +87,23 @@ for (const [name, text] of [
     } finally { window.fetch = fetch; }
   });
 }
+
+it('bounds long metadata and gives the overflowing text a keyboard stop', async () => {
+  const previous = window.fetch;
+  window.fetch = async () => new Response(JSON.stringify(data));
+  try {
+    const el = await viewer();
+    const empty = el.shadowRoot!.querySelector('p')!;
+    expect(getComputedStyle(empty).marginBlockStart).to.equal('0px');
+    el.dir = 'rtl';
+    el.src = '/features.geojson';
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="metadata"]'));
+    const pre = el.shadowRoot!.querySelector<HTMLElement>('[part="metadata"]')!;
+    expect(getComputedStyle(pre).direction).to.equal('ltr');
+    expect(getComputedStyle(pre).marginBlockStart).to.equal('0px');
+    expect(pre.scrollHeight).to.be.greaterThan(pre.clientHeight);
+    await waitUntil(() => pre.tabIndex === 0);
+    pre.scrollTop = 50;
+    expect(pre.scrollTop).to.be.greaterThan(0);
+  } finally { window.fetch = previous; }
+});

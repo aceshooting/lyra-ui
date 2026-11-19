@@ -93,3 +93,18 @@ export const DensityAndChrome: Story = {
     },
   },
 };
+
+export const RetryAttempts: Story = {
+  render: () => html`
+    <div @lr-run-retry=${(event: CustomEvent<{ runId: string; attempt: number }>) => {
+      const output = (event.currentTarget as HTMLElement).querySelector('output')!;
+      output.textContent = `Retry ${event.detail.attempt} for ${event.detail.runId}`;
+    }}>
+      <lr-subagent-panel .runs=${[
+        { id: 'review', label: 'Reviewer', status: 'error' },
+        { id: 'research', label: 'Researcher', status: 'cancelled' },
+      ]}></lr-subagent-panel>
+      <output></output>
+    </div>
+  `,
+};

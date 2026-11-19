@@ -5,13 +5,7 @@ export const styles = css`
     display: block;
   }
   [part="base"] {
-    display: flex;
-    flex-direction: column;
     min-inline-size: 0;
-    overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
   }
   [part="header"],
   [part="notice"],

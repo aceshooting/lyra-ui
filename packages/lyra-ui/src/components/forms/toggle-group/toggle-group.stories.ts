@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A set of `lr-toggle` children behind one tab stop. `selection-mode="multiple"` (the default) allows any number pressed; `single` allows zero or one, and pressing the pressed toggle clears the choice. A choice that must never be empty, such as text alignment or a view mode, is a radio choice: use `lr-radio-group` with `lr-radio-button`.',
+          'A set of `lr-toggle` children behind one tab stop. The group emits `lr-change` with the chosen toggle in `option` and the selection before and after the edit in `previousValue` and `value`. `selection-mode="multiple"` (the default) allows any number pressed; `single` allows zero or one, and pressing the pressed toggle clears the choice. A choice that must never be empty, such as text alignment or a view mode, is a radio choice: use `lr-radio-group` with `lr-radio-button`.',
       },
     },
   },

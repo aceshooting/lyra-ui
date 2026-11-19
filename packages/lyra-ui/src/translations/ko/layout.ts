@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: '패널 접기',
   dockPanelExpand: '패널 펼치기',
   dockPanelResize: '패널 크기 조정',
+  dockPanelToggle: '패널 전환',
   responsivePanel: '패널',
   breadcrumb: '이동경로',
   resizeDivider: '패널 {a}와 패널 {b} 사이의 크기 조정 구분자',

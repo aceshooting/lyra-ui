@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Kó pánẹ́lì jọ',
   dockPanelExpand: 'Fẹ pánẹ́lì sí i',
   dockPanelResize: 'Yí ìwọ̀n pánẹ́lì padà',
+  dockPanelToggle: 'Yi pẹpẹ pada',
   responsivePanel: 'Pánẹ́lì',
   breadcrumb: 'Àmì ọ̀nà',
   resizeDivider: 'Yí ìwọ̀n ìpín láàárín pánẹ́lì {a} àti {b} padà',

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Atskaņošanas ātrums',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} no {duration}',
+  avPlayerHighlightRange: 'no {start} līdz {end}',
+  avPlayerHighlightAt: 'pie {start}',
   attachmentTriggerAudio: 'Ierakstīt audio',
   attachmentMenuAudio: 'Ierakstīt audio',
   flagLoadError: 'Karogs nav pieejams',

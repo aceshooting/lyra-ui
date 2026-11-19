@@ -133,4 +133,8 @@ export const styles = css`
     border: 0;
     border-radius: 0;
   }
+  :host([frame='plain']) [part='evidence-row'][data-active] {
+    outline: var(--lr-border-width-medium) solid var(--lr-retrieval-trace-active-border, var(--lr-color-brand));
+    outline-offset: calc(-1 * var(--lr-border-width-medium));
+  }
 `;

@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் சில பரிந்துரைகள் அல்லது பட்டியல் பதிவுகள் விடப்பட்டன.',
   transcriptFeedInputLimit: '{total} பதிவுகளில் மிகப் புதிய {count} மட்டுமே தக்கவைக்கப்படுகின்றன.',
   codeBlockHighlightLimit: 'நீளமான குறியீடு தொடரியல் சிறப்பித்தல் இல்லாமல் காட்டப்படுகிறது.',
+  codeBlockHighlightedLine: 'சிறப்பிக்கப்பட்ட வரி',
+  codeBlockActiveLine: 'செயலில் உள்ள சிறப்பிக்கப்பட்ட வரி',
 };
 
 registerLyraLocale('ta', strings);

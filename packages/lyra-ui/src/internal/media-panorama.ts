@@ -3,11 +3,12 @@ import { literalSetConverter } from './converters.js';
 import { snapshotPublicCollection } from './collection-snapshot.js';
 import { isObjectValue, readOwnDataValue } from './data-descriptors.js';
 import { finiteRange } from './numbers.js';
+import { shouldIgnoreNavigationKey } from './list-navigation.js';
 import { createEngine3dLoader, type Engine3dInstance } from './engine-3d-loader.js';
 import { Engine3dSelection, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason } from './engine-3d.js';
 import { AnnouncementSinkController } from './announcer.js';
 import { isAccessibilityVisible } from './accessibility-visibility.js';
-import { resolveCanvasColor } from './canvas-color.js';
+import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import type { LyraMessageKey } from './localization.js';
 import { tag } from './prefix.js';
 
@@ -237,14 +238,11 @@ export class PanoramaController {
   private style(): unknown {
     const view = this.host.ownerDocument.defaultView!;
     const computed = view.getComputedStyle(this.host);
-    const canvas = this.host.ownerDocument.createElement('canvas'); canvas.width = canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const doc = this.host.ownerDocument;
     const color = (name: string) => {
       const value = resolveCanvasColor(this.host, `var(${name})`, computed.color);
-      if (!context) return value;
-      context.clearRect(0, 0, 1, 1); context.fillStyle = value; context.fillRect(0, 0, 1, 1);
-      const rgba = context.getImageData(0, 0, 1, 1).data;
-      return `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]! / 255})`;
+      const rgba = readCanvasRgba(doc, value);
+      return rgba ? toRgbaString(rgba) : value;
     };
     return { background: color('--lr-color-surface'), foreground: color('--lr-color-text'), muted: color('--lr-color-text-quiet'), accent: color('--lr-color-brand'), focus: color('--lr-focus-ring-color'), palette: [color('--lr-color-brand')],
       fontFamily: computed.fontFamily, fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128), pointSize: 24, lineWidth: 1,
@@ -257,7 +255,7 @@ export class PanoramaController {
   }
 
   keydown(event: KeyboardEvent, direction: 'ltr' | 'rtl'): void {
-    if (!this.ready || event.target !== event.currentTarget) return;
+    if (!this.ready || event.target !== event.currentTarget || shouldIgnoreNavigationKey(event)) return;
     const sign = direction === 'rtl' ? -1 : 1;
     let { yaw, pitch, fieldOfView } = this.camera;
     switch (event.key) {

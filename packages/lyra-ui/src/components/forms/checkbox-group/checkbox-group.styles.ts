@@ -44,7 +44,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
   }
-  [part="hint"],
+  [part~="hint"],
   [part="error"] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
@@ -53,14 +53,13 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
   :host([data-invalid]) [part~="options"] {
-    padding: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid
+    outline: var(--lr-border-width-thin) solid
       var(--lr-checkbox-group-invalid-border, var(--lr-color-danger));
     border-radius: var(--lr-radius);
   }
   [part="form-control"],
   [part="form-control-label"],
-  [part="hint"],
+  [part~="hint"],
   [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -73,7 +72,7 @@ export const styles = css`
      every owned <lr-checkbox> already dims itself, and a host-level opacity would multiply with
      that, pushing the options to a quarter of full contrast. */
   :host(:disabled) [part~="form-control-label"],
-  :host(:disabled) [part="hint"],
+  :host(:disabled) [part~="hint"],
   :host(:disabled) [part="error"] {
     opacity: var(--lr-opacity-disabled);
   }

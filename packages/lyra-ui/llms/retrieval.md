@@ -1,3 +1,4 @@
+
 ## Current event migration
 
 Listen for `lr-entity-select` from community cards and relationship paths, and for
@@ -1384,8 +1385,8 @@ surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state box: a check when selected, a dash when mixed), `icon` (the `lr-file-icon` type
 badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMatches` when a filter
 empties the tree), `error` (a nonempty raw
-payload containing no valid roots), `limit` (bounded-normalizer
-failure/truncation). Post-mount no-match and recovery transitions announce through the shared
+payload containing no valid roots), `limit` (`role="note"`; localized `sourcePickerLimit` message when the bounded
+normalizer omitted sources, also announced politely once it appears after mount). Post-mount no-match and recovery transitions announce through the shared
 light-DOM polite sink; positive matches announce a localized count. The shadow messages are visible
 mirrors, never live regions.
 
@@ -3003,7 +3004,7 @@ distinct occurrence keys may show repeated canonical IDs, while selection still 
 Canonical `lookup` must always return `key === value.id`; page occurrence keys never become selected
 IDs. Provider order is preserved in the visible page.
 
-Up to 10,000 explicit `selectedChunkIds` resolve globally in sequential batches of at most 500;
+Selecting a row beyond the 10,000-id ceiling is refused and announced politely with the localized `retrievalResultsSelectionLimit` message. Up to 10,000 explicit `selectedChunkIds` resolve globally in sequential batches of at most 500;
 blanks/duplicates normalize before lookup. Off-page IDs remain selected while unresolved, and only
 a successful global absence proof removes an ID. Complete canonical records are ordered by
 provider `order`, independently of page/query order. The selected-record cache and pending user
@@ -3779,7 +3780,7 @@ Set ids and each set's nested chunk ids are canonicalized independently. Malform
 later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,
 controlled selection, rendering, or events.
 
-**Events:** `lr-chunk-select` (`{ setId, chunk }`).
+**Events:** `lr-chunk-select` (`{ setId, chunk, chunkId, sourceId }`; `chunkId`/`sourceId` match `lr-chunk-open` on the sibling retrieval components).
 
 **CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
 `chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`,
@@ -3867,6 +3868,14 @@ document-viewer-compatible `anchor` in `lr-chunk-open`.
 
 ## Consumer integration notes
 
+- **Explorer legend:** observe `lr-hidden-types-change` on
+  `lr-knowledge-graph-explorer` for an accepted visibility change. A visibility proposal can be
+  vetoed through `lr-visibility-change-request` on the nested legend or on a separately owned legend.
+- **Projected records:** `lr-memory-panel` and `lr-claim-evidence` capture usable display/action
+  fields when their collections are assigned. Unsafe or malformed branches are omitted while valid
+  siblings remain; selected/action event details retain the original record where that identity is
+  part of the public contract. Reassign a new collection to update the rendered projection.
+
 ## `lr-research-progress`
 
 The shared `--lr-progress-track-color`, `--lr-progress-track-radius`, `--lr-progress-indicator-color`, and `--lr-progress-indicator-variant-color` hooks control the progress track and indicator.
@@ -3887,7 +3896,7 @@ shared success spellings `success`, `done`, and `complete` map to `completed`, a
 step. The component keeps its research-specific status wording and `.strings` overrides. The
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid
-record, and renders at most 100 steps. `label` sets the visible group heading and names the group
+record, and renders at most 100 steps: running and failed steps always stay, the newest others fill the rest, and a `role="note"` limit notice reports the cut. `label` sets the visible group heading and names the group
 unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
 localized default for an empty one). The `headingLevel` property and `heading-level` attribute
 (`'2'` by default; `'none'` keeps the text without heading semantics) set the heading's level.

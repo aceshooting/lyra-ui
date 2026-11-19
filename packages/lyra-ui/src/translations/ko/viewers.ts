@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF 문서',
   pdfViewerMissingLibrary: 'PDF 파일을 렌더링하려면 선택적 "pdfjs-dist" 패키지를 설치해야 합니다.',
   pdfViewerPageOf: '페이지 {page}/{total}',
+  pdfViewerPageHighlights: '{page}페이지 강조 표시',
   pdfViewerZoomIn: '확대',
   pdfViewerZoomOut: '축소',
   pdfViewerPreviousPage: '이전 페이지',

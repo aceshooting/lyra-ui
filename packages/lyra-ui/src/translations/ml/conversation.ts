@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ചില ഇനങ്ങൾ ഒഴിവാക്കി: നിർദ്ദേശങ്ങൾ അല്ലെങ്കിൽ കാറ്റലോഗ് എൻട്രികൾ.',
   transcriptFeedInputLimit: '{total} എൻട്രികളിൽ ഏറ്റവും പുതിയ {count} എണ്ണം മാത്രമേ സൂക്ഷിക്കൂ.',
   codeBlockHighlightLimit: 'നീളമുള്ള കോഡ് സിന്റാക്സ് ഹൈലൈറ്റിംഗ് ഇല്ലാതെ കാണിക്കുന്നു.',
+  codeBlockHighlightedLine: 'ഹൈലൈറ്റ് ചെയ്ത വരി',
+  codeBlockActiveLine: 'സജീവമായ ഹൈലൈറ്റ് ചെയ്ത വരി',
 };
 
 registerLyraLocale('ml', strings);

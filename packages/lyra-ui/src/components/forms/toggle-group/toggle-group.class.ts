@@ -1,3 +1,5 @@
+import { acquireResolvedAriaRelationship, HostDescriptionController, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -5,7 +7,7 @@ import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyr
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -24,7 +26,7 @@ import {
   collectComposedFocusTargets,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { AdjacentRunScheduler, measureAdjacentRuns, type AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -54,7 +56,7 @@ export interface LyraToggleGroupEventMap {
   'lr-toggle-group-toggle-request': CustomEvent<
     LyraEventDetailSnapshot<LyraToggleGroupToggleRequestDetail>
   >;
-  'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-change': CustomEvent<LyraEventDetailSnapshot<LyraToggleGroupToggleRequestDetail>>;
 }
 
 const SELECTION_MODE = literalSetConverter<LyraToggleGroupSelectionMode>(
@@ -133,7 +135,7 @@ interface TrackedFocus {
  *   instead resolve the request by assigning the group's `value` itself during the dispatch, which
  *   suppresses the change the same way. The detail is a detached, frozen snapshot.
  * @event lr-change - A committed user change, with single-mode exclusivity already applied;
- *   `detail: { value }`. Not cancelable and not fired for programmatic changes.
+ *   `detail: { value, previousValue, option }`. Not cancelable and not fired for programmatic changes.
  * @csspart base - The `role="group"` flex container.
  * @cssprop [--lr-toggle-group-gap=0] - Gap between toggles along the group's axis. The built-in
  *   default is 0 when horizontal, so adjacent toggles join, and `var(--lr-space-2xs)` when
@@ -152,6 +154,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     'lr-change',
   ]);
   protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-change': Object.freeze(['option']),
     'lr-toggle-group-toggle-request': Object.freeze(['option']),
   });
 
@@ -160,6 +163,18 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     value: { attribute: false, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
+
+  private readonly description = new HostDescriptionController(this, () => this.groupTarget);
+  private groupLabel?: ResolvedAriaRelationshipLease;
+
+  private get groupTarget(): HTMLElement | null {
+    return this.renderRoot?.querySelector('[role="group"]') ?? null;
+  }
+
+  private syncGroupLabel(): void {
+    if (this.groupLabel) this.groupLabel.update(this.groupTarget);
+    else this.groupLabel = acquireResolvedAriaRelationship(this, this.groupTarget, 'aria-labelledby');
+  }
 
   private _disabled = false;
   private _selectionMode: LyraToggleGroupSelectionMode = 'multiple';
@@ -178,7 +193,6 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   /** The most recently pressed toggle in single mode, which wins an exclusivity repair. */
   private lastPressed?: LyraToggle;
   private trackedFocus?: TrackedFocus;
-  private membershipObserver?: MutationObserver;
   private readonly runs = new AdjacentRunScheduler(this, () => this.measureRuns());
   private generation = 0;
   private definitionSyncQueued = false;
@@ -230,12 +244,10 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.sync();
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, size => {
+      this._size = size;
+      this.sync();
+    });
   }
 
   /** Opt-in `plain`/`outlined` appearance projected onto every owned toggle. Unset (the default)
@@ -299,6 +311,11 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
 
   constructor() {
     super();
+    new HostChildrenObserver(this, {
+      subtree: true,
+      attributeFilter: OBSERVED_ATTRIBUTES,
+      onChange: () => this.sync(),
+    });
     // Capture phase on the host: it runs before any bubble-phase listener on this node and before
     // any listener on the toggle itself, so consuming the toggle's own events here is reliable
     // whatever order a consumer registered theirs in. An outer group's capture runs before an
@@ -313,14 +330,19 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.armMembershipObserver();
+    if (this.hasUpdated) this.syncGroupLabel();
     this.sync();
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.description.adopted();
+  }
+
   override disconnectedCallback(): void {
+    this.groupLabel?.release();
+    this.groupLabel = undefined;
     this.generation += 1;
-    this.membershipObserver?.disconnect();
-    this.membershipObserver = undefined;
     this.runs.dispose();
     this.definitionSyncQueued = false;
     this.pendingValue = undefined;
@@ -337,6 +359,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.isConnected) this.syncGroupLabel();
     // Orientation, direction and language changes move toggles without resizing any of them.
     this.runs.schedule();
   }
@@ -385,8 +408,8 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   }
 
   /** The owned, upgraded toggles in DOM order. */
-  private toggles(): LyraToggle[] {
-    return this.ownedElements().filter(
+  private toggles(elements = this.ownedElements()): LyraToggle[] {
+    return elements.filter(
       (element): element is LyraToggle => typeof (element as Partial<LyraToggle>).joinGroup === 'function',
     );
   }
@@ -417,7 +440,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   private sync(): void {
     if (this.syncing || !this.isConnected) return;
     const elements = this.ownedElements();
-    const toggles = this.toggles();
+    const toggles = this.toggles(elements);
     if (elements.length !== toggles.length) this.queueDefinitionSync();
     this.syncing = true;
     try {
@@ -590,24 +613,6 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     });
   }
 
-  private armMembershipObserver(): void {
-    const ownerWindow = this.ownerDocument?.defaultView;
-    const MutationObserverCtor = ownerWindow?.MutationObserver;
-    if (!MutationObserverCtor || this.membershipObserver) return;
-    const generation = this.generation;
-    const observer = new MutationObserverCtor(() => {
-      if (this.membershipObserver !== observer || this.generation !== generation || !this.isConnected) return;
-      this.sync();
-    });
-    this.membershipObserver = observer;
-    observer.observe(this, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      attributeFilter: OBSERVED_ATTRIBUTES,
-    });
-  }
-
   private observeSizes(toggles: readonly LyraToggle[]): void {
     this.runs.observe(toggles);
   }
@@ -639,6 +644,8 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     return undefined;
   }
 
+  private readonly previousValues = new WeakMap<LyraToggle, readonly string[]>();
+
   private onToggleRequest = (event: Event): void => {
     const option = event.target;
     if (!this.isOwnedToggle(option)) return;
@@ -652,10 +659,11 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     }
     const proposed = (event as CustomEvent<LyraToggleChangeDetail>).detail.pressed;
     let allowed = false;
+    const previousValue = this.value;
     requestThenCommit({
       requestDetail: {
         value: this.projectedValue(option, proposed),
-        previousValue: this.value,
+        previousValue,
         option,
       },
       emitRequest: (detail, init: { cancelable: true }) =>
@@ -668,13 +676,18 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
         allowed = !this.disabled;
       },
     });
-    if (!allowed) event.preventDefault();
+    if (allowed) this.previousValues.set(option, previousValue);
+    else event.preventDefault();
   };
 
   private onToggleChange = (event: Event): void => {
     if (!this.isOwnedToggle(event.target)) return;
     event.stopImmediatePropagation();
-    this.emit('lr-change', { value: this.value });
+    const option = event.target;
+    const value = this.value;
+    const previousValue = this.previousValues.get(option) ?? value;
+    this.previousValues.delete(option);
+    this.emit('lr-change', { value, previousValue, option });
   };
 
   /** The group value that would result if `option` took `pressed`, in DOM order. */
@@ -688,7 +701,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const current = this.firstToggleInPath(event);
     if (!current || !this.isOwnedToggle(current)) return;
     const available = this.toggles().filter((toggle) => this.isAvailable(toggle));

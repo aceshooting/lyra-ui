@@ -319,6 +319,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.table.connected();
+    if (this.fetchState.kind === 'loading') this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {

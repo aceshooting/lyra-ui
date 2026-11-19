@@ -1,3 +1,4 @@
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { html, nothing, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -237,8 +238,20 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     this.descriptions.adopted();
   }
 
+  private repairFocus = false;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.repairFocus = changed.has('status') && Boolean(this.shadowRoot?.activeElement);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.repairFocus) {
+      const fallback = this.renderRoot.querySelector<HTMLElement>('[part="footer"] button, [part="footer"] a')
+        ?? this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+      restoreComposedFocus(this, true, fallback);
+    }
     this.announcements.transition(
       'model',
       this.status,
@@ -271,8 +284,12 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     this.retire();
     this.status = 'error';
     this.message = message;
+    const { generation, src, name, mimeType, format } = this;
     this.emit('lr-engine-fallback', { from: 'webgl', to: 'list', reason });
-    this.emit('lr-render-error', { error: error ?? new Error('Model engine unavailable') });
+    if (this.isConnected && generation === this.generation && src === this.src && name === this.name
+      && mimeType === this.mimeType && format === this.format) {
+      this.emit('lr-render-error', { error: error ?? new Error('Model engine unavailable') });
+    }
   }
 
   private async load(): Promise<void> {
@@ -549,7 +566,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       ['out', this.localize('zoomOut')],
       ['fit', this.localize('modelViewerFit')],
     ];
-    return html`<section part="base" role="region" aria-label=${label}>
+    return html`<section part="base" tabindex="-1" role="region" aria-label=${label}>
       <div part="viewport" role="group" aria-label=${label} aria-busy=${String(this.status === 'loading')} tabindex=${ready ? '0' : '-1'} ?data-ready=${ready} ?hidden=${this.status === 'idle' || this.status === 'empty' || this.status === 'error'} @keydown=${this.keydown}></div>
       <div part="toolbar">${controls.map(([action, label]) => html`<button part="control" type="button" ?disabled=${!ready} @click=${() => this.move(action)}>${label}</button>`)}</div>
       <p part="instructions">${this.localize('modelViewerInstructions')}</p>

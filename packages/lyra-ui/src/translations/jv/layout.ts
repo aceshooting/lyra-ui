@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Ciutake panel',
   dockPanelExpand: 'Bukak panel',
   dockPanelResize: 'Owahi ukuran panel',
+  dockPanelToggle: 'Owahi panel',
   responsivePanel: 'Panel',
   breadcrumb: 'Jejak navigasi',
   resizeDivider: 'Owahi ukuran pemisah antarane panel {a} lan panel {b}',

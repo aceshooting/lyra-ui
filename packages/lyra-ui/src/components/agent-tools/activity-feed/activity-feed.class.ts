@@ -695,8 +695,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   private toggle = (): void => {
+    if (!this.isConnected) return;
     const expanded = !this.expanded;
+    const generation = this.ownerRealmGeneration;
     if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
+    if (this.ownerRealmGeneration !== generation || this.expanded === expanded) return;
     this.expanded = expanded;
     this.emit('lr-toggle', { expanded });
   };

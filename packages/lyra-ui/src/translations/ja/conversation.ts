@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: '入力上限に達したため、候補またはカタログ項目の一部が省略されました。',
   transcriptFeedInputLimit: '{total}件の項目のうち、最新の{count}件のみが保持されます。',
   codeBlockHighlightLimit: '長いコードはシンタックスハイライトなしで表示されます。',
+  codeBlockHighlightedLine: 'ハイライトされた行',
+  codeBlockActiveLine: 'アクティブなハイライト行',
 };
 
 registerLyraLocale('ja', strings);

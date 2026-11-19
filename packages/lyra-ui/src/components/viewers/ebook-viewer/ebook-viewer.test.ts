@@ -3816,3 +3816,84 @@ it('installs chapter network policy in a genuine headless XHTML chapter through 
     expect(fake.calls.destroy).to.equal(0);
   } finally { restore(); __setEpubJsForTesting(undefined); }
 });
+
+describe('lr-ebook-viewer remediation', () => {
+  it('clears the previous book location when src changes, but keeps one assigned with the new src', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer src="https://example.test/a.epub"></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await twoFrames();
+      fake.relocate({ start: { cfi: 'epubcfi(/6/2!/4/2)', href: 'ch1.xhtml' } });
+      expect(el.location).to.equal('epubcfi(/6/2!/4/2)');
+      await el.updateComplete;
+      el.src = 'https://example.test/b.epub';
+      await el.updateComplete;
+      expect(el.location).to.equal('');
+      el.location = 'epubcfi(/6/4)';
+      el.src = 'https://example.test/c.epub';
+      await el.updateComplete;
+      expect(el.location).to.equal('epubcfi(/6/4)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('titles the chapter iframes epub.js creates', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    const renderTo = fake.book.renderTo;
+    (fake.book as { renderTo: (mount: HTMLElement) => unknown }).renderTo = (mount: HTMLElement) => {
+      mount.append(document.createElement('iframe'));
+      return renderTo();
+    };
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer name="My book" src="https://example.test/book.epub"></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await twoFrames();
+      const frame = el.shadowRoot!.querySelector('[part="mount"] iframe')!;
+      expect(frame.getAttribute('title')).to.equal('My book');
+    } finally {
+      restore();
+    }
+  });
+
+  it('gives the reading area the height of a definite-height host', async () => {
+    const el = (await fixture(
+      html`<lr-ebook-viewer style="display: block; block-size: 600px"></lr-ebook-viewer>`
+    )) as LyraEbookViewer;
+    const mount = el.shadowRoot!.querySelector<HTMLElement>('[part="mount"]')!;
+    expect(mount.getBoundingClientRect().height).to.be.greaterThan(400);
+  });
+
+  it('names the reading region with the default for a whitespace-only name', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer name="   "></lr-ebook-viewer>`)) as LyraEbookViewer;
+    const label = el.shadowRoot!.querySelector('[part="mount"]')!.getAttribute('aria-label');
+    expect(label?.trim().length ?? 0).to.be.greaterThan(0);
+  });
+
+  it('paints cfi highlights with the public component fill token', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer
+          style="--lr-ebook-viewer-highlight-accent-bg: rgb(1, 2, 3)"
+          src="https://example.test/book.epub"
+          .highlights=${[{ id: 'h', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/2)' } }]}
+        ></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await twoFrames();
+      await el.updateComplete;
+      expect(fake.highlightCalls.at(-1)?.styles['fill']).to.equal('rgb(1, 2, 3)');
+    } finally {
+      restore();
+    }
+  });
+});

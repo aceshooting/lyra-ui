@@ -1,4 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { shouldIgnoreNavigationKey } from './list-navigation.js';
+import { capturePointer, releasePointer } from './pointer-capture.js';
 
 export type SeparatorAxis = 'inline' | 'block';
 
@@ -24,7 +26,7 @@ export function separatorArrowDirection(
   axis: SeparatorAxis,
   rtl: boolean,
 ): -1 | 0 | 1 {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return 0;
+  if (shouldIgnoreNavigationKey(event)) return 0;
   if (axis === 'block') {
     if (event.key === 'ArrowDown') return 1;
     if (event.key === 'ArrowUp') return -1;
@@ -65,11 +67,7 @@ export class SeparatorDragController implements ReactiveController {
       ownerWindow.addEventListener('lostpointercapture', this.handleEnd);
     }
     handle.addEventListener('lostpointercapture', this.handleEnd);
-    try {
-      handle.setPointerCapture(event.pointerId);
-    } catch {
-      // Synthetic and detached pointers still end through the window listeners.
-    }
+    capturePointer(handle, event.pointerId);
     return true;
   }
 
@@ -80,13 +78,7 @@ export class SeparatorDragController implements ReactiveController {
     if (![...this.handles.values()].includes(handle)) {
       handle.removeEventListener('lostpointercapture', this.handleEnd);
     }
-    if (handle.hasPointerCapture(pointerId)) {
-      try {
-        handle.releasePointerCapture(pointerId);
-      } catch {
-        // Capture may already have been released by the platform.
-      }
-    }
+    releasePointer(handle, pointerId);
     if (this.handles.size === 0) this.removeWindowListeners();
   }
 

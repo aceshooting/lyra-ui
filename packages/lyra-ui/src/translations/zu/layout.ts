@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Goqa iphaneli',
   dockPanelExpand: 'Nweba iphaneli',
   dockPanelResize: 'Shintsha usayizi wephaneli',
+  dockPanelToggle: 'Guqula iphaneli',
   responsivePanel: 'Iphaneli',
   breadcrumb: 'Umzila wokuzulazula',
   resizeDivider: 'Shintsha usayizi wesihlukanisi phakathi kwephaneli {a} nephaneli {b}',

@@ -45,6 +45,7 @@ import type {
 } from '../page-rail/page-rail.class.js';
 import type { LyraVirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.class.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
@@ -67,7 +68,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageHighlights, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -128,6 +129,13 @@ interface PdfTextAccumulator {
 interface PdfTextLayerBudget {
   remainingItems: number;
   remainingCodeUnits: number;
+}
+
+/** pdf.js rejects a cancelled render task with its own exception, not a DOM AbortError. */
+function isPdfRenderCancellation(error: unknown): boolean {
+  if (isAbortError(error)) return true;
+  const name = typeof error === 'object' && error !== null ? (error as { name?: unknown }).name : undefined;
+  return name === 'RenderingCancelledException' || name === 'AbortException';
 }
 
 function isReadablePdfTextStream(value: unknown): value is ReadableStream<unknown> {
@@ -485,6 +493,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     pdfViewerLabel: LYRA_DEFAULT_pdfViewerLabel,
     pdfViewerMissingLibrary: LYRA_DEFAULT_pdfViewerMissingLibrary,
     pdfViewerNextPage: LYRA_DEFAULT_pdfViewerNextPage,
+    pdfViewerPageHighlights: LYRA_DEFAULT_pdfViewerPageHighlights,
     pdfViewerPageOf: LYRA_DEFAULT_pdfViewerPageOf,
     pdfViewerPreviousPage: LYRA_DEFAULT_pdfViewerPreviousPage,
     pdfViewerZoomIn: LYRA_DEFAULT_pdfViewerZoomIn,
@@ -559,6 +568,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly pageTextCache = new Map<number, PdfPageTextCacheEntry>();
   private readonly pageTextTruncated = new Set<number>();
   private readonly pageSearchIndexes = new Map<number, PdfPageTextIndex>();
+  private readonly failedPageFallbacks = new Set<HTMLElement>();
+  /** Raw page text kept for search across queries; getPageText()'s own 64-page cache is not. */
+  private readonly searchCorpus = new Map<number, { readonly text: string; readonly truncated: boolean }>();
+  private searchCorpusCodeUnits = 0;
   private readonly mountedPageTextIndexes = new Map<number, PdfPageTextIndex>();
   private pdfTextScopeBuilds = 0;
   private readonly thumbnailRenderTasks = new Map<HTMLCanvasElement, { cancel(): void }>();
@@ -650,6 +663,17 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (localeChanged) {
       this.pageSearchIndexes.clear();
       this.mountedPageTextIndexes.clear();
+      this.searchCorpus.clear();
+      this.searchCorpusCodeUnits = 0;
+    }
+    if (localeChanged || changed.has('strings')) {
+      for (const fallback of this.failedPageFallbacks) {
+        if (!fallback.isConnected) {
+          this.failedPageFallbacks.delete(fallback);
+          continue;
+        }
+        fallback.textContent = this.localize('documentPreviewFailedToLoad');
+      }
     }
     this.announcements.transition(
       'load',
@@ -681,6 +705,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     // snapshot channel already dedupes that way inside publishPageViewerSnapshot(); this keeps the
     // event channel honest about the same thing.
     if (changed.has('page') && this.loadState.kind === 'ready') {
+      if (changed.get('page') !== this.page && !this.scrollDrivenPage) {
+        const numberFormat = getNumberFormat(this.effectiveLocale);
+        this.announcements.announce(
+          this.localize('pdfViewerPageOf', undefined, {
+            page: numberFormat.format(this.page),
+            total: numberFormat.format(this.loadState.pageCount),
+          }),
+        );
+      }
       if (changed.get('page') !== this.page) {
         this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
       }
@@ -1266,6 +1299,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
     this.pageTextCache.clear();
     this.pageTextTruncated.clear();
+    this.searchCorpus.clear();
+    this.searchCorpusCodeUnits = 0;
   }
 
   private async loadPageText(
@@ -1365,7 +1400,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       return this.thumbnailRenderTasks.get(canvas) === renderTask &&
         this.thumbnailRenderVersions.get(canvas) === version;
     } catch (error) {
-      if (isAbortError(error)) return false;
+      if (isPdfRenderCancellation(error)) return false;
       throw error;
     } finally {
       if (renderTask && this.thumbnailRenderTasks.get(canvas) === renderTask) {
@@ -1493,6 +1528,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     raw: string,
     maxCorpusCodeUnits = TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
     maxNormalizationWorkCodeUnits = TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits,
+    truncated = this.pageTextTruncated.has(pageNumber),
   ): PdfPageTextIndex {
     const fullLimits = maxCorpusCodeUnits === TEXT_QUOTE_LIMITS.maxCorpusCodeUnits
       && maxNormalizationWorkCodeUnits === TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits;
@@ -1509,7 +1545,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       return cached;
     }
     const created = this.createRawPageTextIndex(raw, maxCorpusCodeUnits, maxNormalizationWorkCodeUnits);
-    if (this.pageTextTruncated.has(pageNumber)) created.scope.truncated = true;
+    if (truncated) created.scope.truncated = true;
     if (cacheable) {
       this.pageSearchIndexes.set(pageNumber, created);
       if (this.pageSearchIndexes.size > PAGE_SEARCH_INDEX_CACHE_LIMIT) {
@@ -1651,11 +1687,26 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         break;
       }
       let raw: string;
-      try {
-        raw = await this.getPageText(page);
-      } catch {
-        matchCountExact = false;
-        continue;
+      let pageTruncated: boolean;
+      const remembered = this.searchCorpus.get(page);
+      if (remembered) {
+        raw = remembered.text;
+        pageTruncated = remembered.truncated;
+      } else {
+        try {
+          raw = await this.getPageText(page);
+        } catch {
+          matchCountExact = false;
+          continue;
+        }
+        pageTruncated = this.pageTextTruncated.has(page);
+        if (
+          generation === this.searchGeneration
+          && this.searchCorpusCodeUnits + raw.length <= TEXT_QUOTE_LIMITS.maxCorpusCodeUnits
+        ) {
+          this.searchCorpus.set(page, { text: raw, truncated: pageTruncated });
+          this.searchCorpusCodeUnits += raw.length;
+        }
       }
       if (generation !== this.searchGeneration) return this.searchMatches.length;
       const fullPageFits = raw.length <= remainingNormalizationWork;
@@ -1664,6 +1715,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         raw,
         Math.min(remainingCorpus, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
         Math.min(remainingNormalizationWork, TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits),
+        pageTruncated,
       );
       remainingCorpus -= pageIndex.scope.text.length;
       remainingNormalizationWork -= pageIndex.sourceWorkCodeUnits;
@@ -2139,8 +2191,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.pageRenderTasks.set(pageNumber, renderTask);
       void this.renderTextLayer(pageNumber, page, viewport, version).catch((error: unknown) => {
         if (
-          !isAbortError(error)
-          && this.isConnected
+          this.isConnected
           && this.loadState.kind === 'ready'
           && this.loadState.doc === doc
           && this.pageRenderVersions.get(pageNumber) === version
@@ -2158,8 +2209,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.setPageError(canvas, false);
     } catch (error) {
       if (
-        !isAbortError(error)
-        && this.isConnected
+        this.isConnected
         && this.loadState.kind === 'ready'
         && this.loadState.doc === doc
         && this.pageRenderVersions.get(pageNumber) === version
@@ -2181,6 +2231,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     fallback.setAttribute('part', failed ? 'page-error page-error-visible' : 'page-error');
     fallback.hidden = !failed;
     fallback.textContent = failed ? this.localize('documentPreviewFailedToLoad') : '';
+    if (failed) this.failedPageFallbacks.add(fallback);
+    else this.failedPageFallbacks.delete(fallback);
   }
 
   private async renderTextLayer(
@@ -2293,6 +2345,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       <div part="page-error" hidden></div>
       <lr-highlight-layer
         ${ref(this.highlightLayerRef(number))}
+        aria-label=${this.localize('pdfViewerPageHighlights', undefined, { page: getNumberFormat(this.effectiveLocale).format(number) })}
         style="position:absolute; inset-block-start:var(--lr-space-m); inset-inline-start:50%; transform:translateX(${highlightTransform});"
         @lr-highlight-activate=${this.onHighlightLayerActivate}
       ></lr-highlight-layer>
@@ -2337,7 +2390,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       style=${maxHeight
         ? styleMap({ '--lr-pdf-viewer-height': maxHeight })
         : nothing}
-      aria-label=${viewerSemanticLabel(this, this.name || this.localize('pdfViewerLabel')) ?? nothing}
+      aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('pdfViewerLabel')) ?? nothing}
     >${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }

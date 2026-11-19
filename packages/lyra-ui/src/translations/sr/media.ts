@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Брзина репродукције',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} од {duration}',
+  avPlayerHighlightRange: 'од {start} до {end}',
+  avPlayerHighlightAt: 'у {start}',
   attachmentTriggerAudio: 'Сними звук',
   attachmentMenuAudio: 'Сними звук',
   flagLoadError: 'Застава није доступна',

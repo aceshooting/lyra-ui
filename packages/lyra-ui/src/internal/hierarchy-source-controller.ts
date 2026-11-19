@@ -8,6 +8,7 @@ import { SourceRequestController, sourceCount, sourceRevision, type SourceReques
 import { SourceWindowController, type SourceWindowSlot } from './source-window-controller.js';
 import { yieldViewerTask } from './resource-loader.js';
 import { deepActiveElementIn } from './active-element.js';
+import { shouldIgnoreNavigationKey } from './list-navigation.js';
 
 /** Reads only an own data descriptor; hierarchy values never invoke authored getters. */
 export function hierarchyField(value: unknown, key: string): unknown {
@@ -575,7 +576,7 @@ export class HierarchySourceController<T> implements ReactiveController {
 
   keydown(event: KeyboardEvent, row: Row<T> | undefined, index: number, rtl: boolean,
     select: (row: Row<T>) => void): void {
-    if (event.altKey || event.ctrlKey || event.metaKey || this.loading || this.error) return;
+    if (shouldIgnoreNavigationKey(event) || this.loading || this.error) return;
     let target: number | undefined;
     let step = 0;
     if (event.key === 'Home') { target = 0; step = 1; }

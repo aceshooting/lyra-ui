@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အကြံပြုချက်များ သို့မဟုတ် ကတ်တလောက်စာရင်းများ အချို့ကို ချန်လှပ်ထားသည်။',
   transcriptFeedInputLimit: 'မှတ်တမ်း {total} ခုအနက် နောက်ဆုံး {count} ခုကိုသာ ထိန်းသိမ်းထားသည်။',
   codeBlockHighlightLimit: 'ရှည်လျားသော ကုဒ်ကို ကုဒ်ဖွဲ့စည်းပုံအလိုက် အရောင်ခွဲခြားဖော်ပြခြင်းမရှိဘဲ ပြထားသည်။',
+  codeBlockHighlightedLine: 'အလေးပေးထားသော လိုင်း',
+  codeBlockActiveLine: 'လက်ရှိ အလေးပေးထားသော လိုင်း',
 };
 
 registerLyraLocale('my', strings);

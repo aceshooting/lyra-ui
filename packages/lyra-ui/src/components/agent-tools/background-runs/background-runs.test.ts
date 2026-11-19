@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './background-runs.js';
 import type { BackgroundRun, LyraBackgroundRuns } from './background-runs.class.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const runs: BackgroundRun[] = [
   { id: 'queued', label: 'Index the project', description: 'Build a searchable index.', status: 'queued' },
@@ -184,4 +185,29 @@ it('opens a run through lr-run-activate, and no longer fires the removed lr-run-
   }
   el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="running"] [part="open"]')!.click();
   expect(seen).to.deep.equal(['lr-run-activate:running']);
+});
+
+it('moves focus to the row Open button when the focused Cancel button is removed', async () => {
+  const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
+  const cancel = el.shadowRoot!.querySelector('[data-run-id="running"] [part="cancel"]') as HTMLElement;
+  await focusByKeyboard(cancel);
+  el.runs = runs.map((run) => (run.id === 'running' ? { ...run, status: 'completed' as const } : run));
+  await el.updateComplete;
+  const open = el.shadowRoot!.querySelector('[data-run-id="running"] [part="open"]');
+  expect(el.shadowRoot!.activeElement === open).to.equal(true);
+});
+
+it('names actions from the run id when its label is blank', async () => {
+  const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${[{ id: 'job', status: 'running', label: '  ' }]}></lr-background-runs>`);
+  for (const button of el.shadowRoot!.querySelectorAll('[part="actions"] button')) {
+    expect(button.getAttribute('aria-label')).to.contain('job');
+  }
+});
+
+it('keeps focus on the remaining content when the final action disappears', async () => {
+  const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[part="open"]')!);
+  el.runs = [];
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('empty');
 });

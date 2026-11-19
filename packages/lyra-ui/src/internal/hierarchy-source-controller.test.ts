@@ -231,3 +231,17 @@ it('refuses to focus a disabled reveal target and accepts it after a provider re
   expect(el.shadowRoot!.querySelector('[data-source-key="n9"]')?.getAttribute('aria-disabled')).to.equal('false');
   expect(selections).to.equal(0);
 });
+
+it('leaves composing and modified keys to the browser', async () => {
+  const el = await fixture<LyraTree>(html`<lr-tree label="Keys" .treeSource=${provider()}></lr-tree>`);
+  await ready(el);
+  const rowElement = el.shadowRoot!.querySelector<HTMLElement>('[data-source-key="n0"]')!;
+  for (const init of [{ isComposing: true }, { ctrlKey: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true, ...init });
+    rowElement.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+  }
+  const plain = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true });
+  rowElement.dispatchEvent(plain);
+  expect(plain.defaultPrevented).to.equal(true);
+});

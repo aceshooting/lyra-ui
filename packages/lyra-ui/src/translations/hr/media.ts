@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Brzina reprodukcije',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} od {duration}',
+  avPlayerHighlightRange: 'od {start} do {end}',
+  avPlayerHighlightAt: 'u {start}',
   attachmentTriggerAudio: 'Snimi zvuk',
   attachmentMenuAudio: 'Snimi zvuk',
   flagLoadError: 'Zastava nije dostupna',

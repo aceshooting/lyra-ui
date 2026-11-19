@@ -33,6 +33,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatMediaTime } from '../../../internal/media-time.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
+import { labelWithVisibleText } from '../../../internal/accessible-name.js';
 import { styles } from './av-player.styles.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
@@ -50,7 +52,7 @@ import {
 } from './av-metadata.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_avPlayerTranscriptUnavailable, LYRA_DEFAULT_avPlayerWaveformUnavailable, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerHighlightAt, LYRA_DEFAULT_avPlayerHighlightRange, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_avPlayerTranscriptUnavailable, LYRA_DEFAULT_avPlayerWaveformUnavailable, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading, LYRA_DEFAULT_sourceSearchUnavailable } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -339,6 +341,7 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @csspart rate-select - The playback-rate `<select>`.
  * @csspart timeline - The waveform canvas or plain seek rail; click-to-seek and arrow-key seeking.
  *   It is disabled and removed from sequential focus until duration is positive.
+ * @csspart timeline-playhead - The non-interactive line marking the current position on the timeline; present once duration is positive.
  * @csspart timeline-marker - One clickable marker per `time-range` highlight (`data-tone`,
  *   `data-active`).
  * @csspart transcript - The virtualized cue list (`<lr-virtual-list>` itself).
@@ -393,6 +396,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     avPlayerFailedToLoad: LYRA_DEFAULT_avPlayerFailedToLoad,
+    avPlayerHighlightAt: LYRA_DEFAULT_avPlayerHighlightAt,
+    avPlayerHighlightRange: LYRA_DEFAULT_avPlayerHighlightRange,
     avPlayerLabel: LYRA_DEFAULT_avPlayerLabel,
     avPlayerPlaybackRate: LYRA_DEFAULT_avPlayerPlaybackRate,
     avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
@@ -1246,24 +1251,26 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return this.searchMatches.length;
   }
 
+  private readonly cueTextKeys = createHaystackMemo<LyraAvCue>((cue, locale) => foldSearchText(cue.text, locale));
+  private readonly cueSpeakerKeys = createHaystackMemo<LyraAvCue>((cue, locale) => foldSearchText(cue.speaker ?? '', locale));
+
   private reconcileSearchMatches(previousCues?: readonly LyraAvCue[]): void {
     const locale = this.effectiveLocale;
-    const q = this.searchQuery.trim().toLocaleLowerCase(locale);
+    const q = prepareNeedle(this.searchQuery, locale);
     const previousMatchIndex = this.searchMatches[this.activeSearchIndex];
     const previousActiveId =
       previousCues && previousMatchIndex !== undefined
         ? previousCues[previousMatchIndex]?.cueId
         : undefined;
     this.searchMatches = q
-      ? this.cues.reduce<number[]>((acc, cue, index) => {
-          if (
-            cue.text.toLocaleLowerCase(locale).includes(q) ||
-            (cue.speaker ?? '').toLocaleLowerCase(locale).includes(q)
-          ) {
-            acc.push(index);
-          }
-          return acc;
-        }, [])
+      ? (() => {
+          const texts = this.cueTextKeys(this.cues, locale);
+          const speakers = this.cueSpeakerKeys(this.cues, locale);
+          return this.cues.reduce<number[]>((acc, _cue, index) => {
+            if (texts[index]!.includes(q) || speakers[index]!.includes(q)) acc.push(index);
+            return acc;
+          }, []);
+        })()
       : [];
     this.searchMatchIndices = new Set(this.searchMatches);
     this.searchLocale = locale;
@@ -1463,13 +1470,26 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         data-tone=${h.tone ?? 'accent'}
         ?data-active=${this.activeHighlightId === h.id}
         style="inset-inline-start:${start}%;inline-size:${Math.max(0.5, end - start)}%"
-        aria-label=${h.label || this.localize('viewerHighlightLabel')}
+        aria-label=${labelWithVisibleText(h.label || this.localize('viewerHighlightLabel'), this.markerRangeText(startSeconds, endSeconds))}
         @click=${(event: MouseEvent) => {
           event.stopPropagation();
           this.onHighlightActivate(h.id, h.anchor.start);
         }}
       ></button>`;
     })}`;
+  }
+
+  private renderPlayhead(): TemplateResult | typeof nothing {
+    if (!(this.duration > 0)) return nothing;
+    const percent = finiteRange((this.currentTimeState / this.duration) * 100, 0, 0, 100);
+    return html`<span part="timeline-playhead" aria-hidden="true" style="--_lr-playhead-position:${percent}%"></span>`;
+  }
+
+  private markerRangeText(start: number, end: number): string {
+    const startText = formatMediaTime(start, this.effectiveLocale);
+    return end > start
+      ? this.localize('avPlayerHighlightRange', undefined, { start: startText, end: formatMediaTime(end, this.effectiveLocale) })
+      : this.localize('avPlayerHighlightAt', undefined, { start: startText });
   }
 
   private onTimelineClick = (event: MouseEvent): void => {
@@ -1484,7 +1504,24 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (!(this.duration > 0)) return;
     const delta = event.shiftKey ? 15 : 5;
+    const page = Math.max(15, this.duration / 10);
     switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.seek(Math.max(0, this.currentTime - delta));
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.seek(Math.min(this.duration, this.currentTime + delta));
+        break;
+      case 'PageDown':
+        event.preventDefault();
+        this.seek(Math.max(0, this.currentTime - page));
+        break;
+      case 'PageUp':
+        event.preventDefault();
+        this.seek(Math.min(this.duration, this.currentTime + page));
+        break;
       // policy-allow(rtl-arrow-keys): the time axis never mirrors -- [part='timeline'] is pinned
       // `direction: ltr` in av-player.styles.ts, matching native media controls -- so seek arrows
       // track the physical strip (left rewinds, right advances) in any text direction.
@@ -1559,8 +1596,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       @click=${() => { if (sourceMode ? this.cueSourceController.isCurrent(epoch) : this._cueSource === null) this.seek(start); }}
     >
       <span part="cue-time">${formatMediaTime(start, this.effectiveLocale)}</span>
-      ${c.speaker ? html`<span part="cue-speaker">${c.speaker}</span>` : nothing}
-      <span part="cue-text">${c.text}</span>
+      ${c.speaker ? html`<span part="cue-speaker" dir="auto">${c.speaker}</span>` : nothing}
+      <span part="cue-text" dir="auto">${c.text}</span>
     </button>`;
   };
 
@@ -1670,7 +1707,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         >
           ${this.hasWaveform ? html`<canvas ${ref(this.canvasRef)}></canvas>` : nothing}
         </div>
-        <div class="timeline-markers">${this.renderMarkers()}</div>
+        <div class="timeline-markers">${this.renderPlayhead()}${this.renderMarkers()}</div>
       </div>
       ${this._cueSource !== null && this.cueSourceController.unavailable
         ? html`<div part="error">${this.localize('avPlayerTranscriptUnavailable')}</div>` : nothing}

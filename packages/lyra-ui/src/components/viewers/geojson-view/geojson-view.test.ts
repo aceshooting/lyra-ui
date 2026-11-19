@@ -1005,7 +1005,7 @@ describe('responsive metadata', () => {
     expect(getComputedStyle(metadata).overflowX).to.equal('auto');
   });
 
-  it('declares overflow-y explicitly so the single-axis overflow-x never leaves an implicit auto vertical scrollbar', async () => {
+  it('bounds the metadata block and scrolls it on both axes', async () => {
     stubFetch({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [10, 20] },
@@ -1025,17 +1025,8 @@ describe('responsive metadata', () => {
     const metadata = el.shadowRoot!.querySelector(
       '[part="metadata"]'
     ) as HTMLElement;
-    // Per the CSS overflow spec, once overflow-x computes to a non-'visible' value, the OTHER
-    // axis's *computed* value is force-changed to 'auto' whenever it would otherwise be
-    // 'visible' -- and this coercion applies even when overflow-y: visible is declared
-    // explicitly (verified directly: `overflow-x: auto; overflow-y: visible` still computes
-    // overflowY as 'auto' in Chromium). 'visible' is therefore not an achievable computed value
-    // here, and an 'auto' value is exactly the phantom-scrollbar risk this test guards against
-    // (an unconstrained block-size means a sub-pixel rounding overflow could make 'auto' paint a
-    // vertical scrollbar). 'hidden' is the only value that both survives this coupling rule
-    // undisturbed and deterministically never renders a vertical scrollbar, matching "this part
-    // only ever needs horizontal scrolling".
-    expect(getComputedStyle(metadata).overflowY).to.equal('hidden');
+    expect(getComputedStyle(metadata).overflowY).to.equal('auto');
+    expect(getComputedStyle(metadata).maxBlockSize).not.to.equal('none');
   });
 });
 

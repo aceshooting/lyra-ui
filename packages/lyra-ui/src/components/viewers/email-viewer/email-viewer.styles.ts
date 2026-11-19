@@ -46,7 +46,12 @@ export const styles = css`
   }
   [part="body-html"] {
     contain: paint;
+    overflow-x: auto;
     overflow-wrap: anywhere;
+  }
+  [part="body-html"] img {
+    max-inline-size: 100%;
+    block-size: auto;
   }
   [part="body-text"] {
     margin: 0;

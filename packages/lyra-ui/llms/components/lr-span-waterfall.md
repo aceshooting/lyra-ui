@@ -131,8 +131,8 @@ Space).
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
-The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
-paint width would otherwise be only a few pixels.
+The painted bar follows the visible span duration, with a one-border-width floor. Its transparent
+pointer target extends to the shared icon-button size inside the track (36px by default).
 
 With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
 logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse

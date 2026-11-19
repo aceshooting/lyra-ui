@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Veloċità tar-riproduzzjoni',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} minn {duration}',
+  avPlayerHighlightRange: 'minn {start} sa {end}',
+  avPlayerHighlightAt: 'f\'{start}',
   attachmentTriggerAudio: 'Irreġistra awdjo',
   attachmentMenuAudio: 'Irreġistra awdjo',
   flagLoadError: 'Bandiera mhux disponibbli',

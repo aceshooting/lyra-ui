@@ -77,11 +77,11 @@ const x = 1;
 // logic behaves as expected — belt-and-suspenders around every real .click().
 function withNavigationBlocked<T>(run: () => T): T {
   const blockNav = (e: Event) => e.preventDefault();
-  document.addEventListener("click", blockNav, { capture: true });
+  document.addEventListener("click", blockNav);
   try {
     return run();
   } finally {
-    document.removeEventListener("click", blockNav, { capture: true });
+    document.removeEventListener("click", blockNav);
   }
 }
 

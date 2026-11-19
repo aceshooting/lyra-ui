@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Paliitin ang panel',
   dockPanelExpand: 'Palawakin ang panel',
   dockPanelResize: 'Baguhin ang laki ng panel',
+  dockPanelToggle: 'I-toggle ang panel',
   responsivePanel: 'Panel',
   breadcrumb: 'Trail ng nabigasyon',
   resizeDivider: 'Baguhin ang laki ng divider sa pagitan ng panel {a} at panel {b}',

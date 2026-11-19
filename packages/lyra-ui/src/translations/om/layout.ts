@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Paanaalii cufi',
   dockPanelExpand: 'Paanaalii bani',
   dockPanelResize: 'Hammamtaa paanaalii jijjiiri',
+  dockPanelToggle: 'Paaneela jijjiiri',
   responsivePanel: 'Paanaalii',
   breadcrumb: 'Daandii sochii',
   resizeDivider: 'Qoodduu paanaalii {a} fi paanaalii {b} gidduu jiru jijjiiri',

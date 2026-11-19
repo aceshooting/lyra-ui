@@ -1,0 +1,32 @@
+---
+'@aceshooting/lyra-ui': major
+---
+
+- Checkbox, switch, radio, slider and picker key handlers preserve modified, composing and previously handled keystrokes.
+- Holding Space activates a radio once.
+- Checkbox, switch and standalone radio events carry the user's original edit even when an input listener writes another value. Handle teardown in the input listener if disabling or removing the control, as that ends the change sequence.
+- Slider input and change events report the position that triggered each event.
+- Checkbox, radio and toggle group change events include the previous selection and the option that initiated the edit.
+- Checkbox and radio groups present errors before hints. Address the named error and hint parts when styling either message.
+- Checkbox group and combobox accept the `helpText` property and the `help-text` attribute and slot aliases.
+- A combobox accepts `defaultValue` and `default-value` as its form reset baseline.
+- Combobox selection, removal, creation and clearing emit a cancelable `lr-change-request` before committing.
+- Before a combobox renders its native input, `selectionDirection` returns `null`. Use a `null` check when reading it during initialization.
+- Select omits `aria-activedescendant` while no option is active. Use attribute presence to detect active navigation.
+- Select type-ahead and combobox filtering match accented labels with unaccented input.
+- Select and combobox format the complete accessible selection in the control's locale.
+- Select and combobox reuse the accessible selection text across unrelated renders.
+- Select and combobox keep the current option visible in forced colors. Radio buttons and switches preserve their checked foreground on hover.
+- Disabled combobox options retain their resting appearance under the pointer.
+- Combobox handles unsupported validator flags and displays its validation fallback when a validator returns an unreadable flag.
+- Combobox clears pending loading state on disconnect and can reuse cached source rows after reconnection.
+- A current combobox source that independently rejects with `AbortError` shows a retry action and emits `lr-source-error`. Superseded requests retire silently.
+- Toggle group forwards accessible name and description references to its role owner across document adoption.
+- A toggle released by a toolbar retains the `tabindex` most recently supplied by its author.
+- Radio groups omit an individually disabled checked radio from form submission and restore its value when re-enabled.
+- Radio button adornments retain their size beside long labels.
+- Horizontal sliders retain usable tracks in shrink-to-fit and narrow containers.
+- Switch hints and errors align with the label in either writing direction.
+- Reporting an invalid checkbox or radio group preserves the positions of its choices.
+- Select popups respect their allocated inline space.
+- Stacked select chips leave room for the clear button and chevron.

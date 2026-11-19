@@ -147,3 +147,15 @@ export function someNode(
 export function containsSlot(element: Element): boolean {
   return someNode(element, (node) => isElementNode(node) && node.localName === 'slot');
 }
+
+/** True when `node` is a `<slot>` or an element whose light-DOM subtree contains one. */
+export function nodeContainsSlot(node: Node): boolean {
+  return node.nodeType === 1 &&
+    ((node as Element).localName === 'slot' || (node as Element).querySelector?.('slot') != null);
+}
+
+/** True when `predicate` accepts any node of a `NodeList`/array (the roots only, not descendants). */
+export function someListedNode(nodes: ArrayLike<Node>, predicate: (node: Node) => boolean): boolean {
+  for (let index = 0; index < nodes.length; index += 1) if (predicate(nodes[index]!)) return true;
+  return false;
+}

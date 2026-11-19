@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'An tsallake wasu shawarwari ko shigarwar kundin zaɓuɓɓuka saboda an kai iyakar shigarwa.',
   transcriptFeedInputLimit: 'Sabbin shigarwa {count} daga cikin {total} kawai ake riƙewa.',
   codeBlockHighlightLimit: 'Ana nuna doguwar lambar tushe ba tare da bambanta sassan tsarinta da launi ba.',
+  codeBlockHighlightedLine: 'Layin da aka haskaka',
+  codeBlockActiveLine: 'Layin da aka haskaka mai aiki',
 };
 
 registerLyraLocale('ha', strings);

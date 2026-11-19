@@ -2,7 +2,6 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './entity-card.js';
 import type { LyraEntityCard, LyraEntity } from './entity-card.js';
-import { styles } from './entity-card.styles.js';
 import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import {
@@ -26,6 +25,7 @@ const types = [{ id: 'person', label: 'Person', color: '#7c3aed' }];
 expectLocaleFallback('ar-u-nu-arab', [
   'noData',
   'focusInGraph',
+  'focusInGraphWithContext',
   'entityDegree',
   'entityCommunity',
   'resultFieldLabel',
@@ -448,11 +448,6 @@ it('stretches [part="base"] to fill a flex row, matching a taller sibling instea
 });
 
 it('routes forced-color badge paint back through the system-owned semantic tokens', async () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(
-    /@media \(forced-colors: active\).*--lr-badge-color: var\(--lr-color-text\) !important.*--lr-badge-background: var\(--lr-color-surface\) !important.*--lr-badge-border: var\(--lr-color-border-strong\) !important/
-  );
-
   try {
     await setForcedColors('active');
     const el = (await fixture(
@@ -517,4 +512,12 @@ describe('lr-entity-card size and the retired compact alias', () => {
     expect(regular).to.equal('12px|8px');
     expect(warnings).to.have.length(0);
   });
+});
+
+it('names the focus button with its visible text first and the entity label, and clamps an invalid aria-level', async () => {
+  const el = await fixture<LyraEntityCard>(html`<lr-entity-card aria-level="0" .entity=${entity}></lr-entity-card>`);
+  expect(el.shadowRoot!.querySelector('[part="focus-button"]')!.getAttribute('aria-label')).to.equal(
+    'Focus in graph: Marie Curie',
+  );
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
 });

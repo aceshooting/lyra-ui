@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-code-block`
+
+Assign new `languages` or `languageLoaders` maps to update available grammars. The component preserves the identity of a supplied concrete map.
 
 Fenced code display with optional lazy syntax highlighting and a copy button. First-party invention
 (no Web Awesome equivalent). It lazily loads the optional `shiki` peer for syntax highlighting and
@@ -144,6 +146,10 @@ header gap — a rule that sets `display` on it must qualify itself with `:not([
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
 
+The full highlighter loads when a language needs a bundled grammar. Numbered lines keep the same
+spacing when the gutter becomes interactive. Highlighted lines have a visible edge and a localized description. Active lines announce their
+active state. Copy actions announce the localized clipboard result.
+
 **Border reaches the composed copy control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
 into the copy control's private fallback tier — but that absence is not a gap. The public
@@ -155,7 +161,10 @@ border simply has no default to relay, which is different from border theming be
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
 
-**Themeable custom properties:** `--lr-code-block-max-height` (default `none` — an independently
+**Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
+controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
+`--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack), `--lr-code-block-tab-size` (default `2` — tab width for the

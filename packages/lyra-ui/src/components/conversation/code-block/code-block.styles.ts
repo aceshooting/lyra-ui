@@ -39,7 +39,7 @@ export const styles = css`
     box-sizing: border-box;
     block-size: 100%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-code-block-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     overflow: hidden;
   }
@@ -53,8 +53,11 @@ export const styles = css`
     /* --lr-color-surface, not -brand-quiet: --lr-color-text-quiet (the toggle/copy-button color
        below) fails WCAG AA against --lr-color-brand-quiet in this palette. -surface is the same
        header background lr-json-viewer's toolbar uses with that same text color. */
-    background: var(--lr-color-surface);
+    background: var(--lr-code-block-header-bg, var(--lr-color-surface));
     font-family: var(--lr-font);
+  }
+  :host([collapsible][collapsed]) [part='header'] {
+    border-block-end: 0;
   }
   [part='toggle'] {
     /* Keep the glyph compact while giving the interactive box the shared
@@ -111,12 +114,12 @@ export const styles = css`
     font-family: var(--lr-code-block-font, var(--lr-font-mono));
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
-    color: var(--lr-color-text);
+    color: var(--lr-code-block-header-color, var(--lr-color-text));
   }
   [part='language'] {
     direction: ltr;
     unicode-bidi: isolate;
-    flex: 0 1 auto;
+    flex: none;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;
@@ -214,7 +217,7 @@ export const styles = css`
   }
   [part='pre'] {
     margin: 0;
-    padding: var(--lr-space-s) var(--lr-space-m);
+    padding: var(--lr-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     /* The body owns scrolling, so this descendant's painted box must grow to the longest unwrapped
        line, not stop at the body's visible width. The 100% minimum keeps short code filling the
        scrollport; max-content extends the background and line-state painting through the full
@@ -263,11 +266,14 @@ export const styles = css`
   [part='pre'] .line {
     display: block;
   }
+  [part='pre'].line-numbers .line {
+    line-height: max(1lh, var(--lr-size-1-5rem));
+  }
   [part='pre'] .line-number {
     display: inline-block;
     min-inline-size: var(--lr-size-2-5ch);
     margin-inline-end: var(--lr-space-s);
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-code-block-line-number-color, var(--lr-color-text-quiet));
     text-align: end;
     user-select: none;
   }
@@ -279,6 +285,17 @@ export const styles = css`
      --lr-color-warning-quiet. */
   [part='pre'] [data-highlighted] {
     background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet));
+  }
+  [part='pre'] .line:where([data-highlighted]) {
+    position: relative;
+  }
+  [part='pre'] .line:where([data-highlighted])::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 100%;
+    border-inline-start: var(--lr-border-width-medium) solid currentColor;
+    pointer-events: none;
   }
   /* The active highlight (the highlights entry matching activeHighlightId) adds an outline over any
      background -- inset, so it does not grow the line's box.
@@ -294,7 +311,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: end;
-    ${iconHitTarget}
+    min-inline-size: var(--lr-icon-button-size);
     margin: 0;
     margin-inline-end: var(--lr-space-s);
     padding: 0;
@@ -342,7 +359,7 @@ export const styles = css`
   }
   [part='body'][data-dark-theme='true'] [part='pre'] .line-number,
   [part='body'][data-dark-theme='true'] [part='pre'] button.line-gutter {
-    color: var(--lr-color-text-quiet) !important;
+    color: var(--lr-code-block-line-number-color, var(--lr-color-text-quiet)) !important;
   }
   [part='body'][data-dark-theme='true'] [part='pre'] [data-highlighted] {
     background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet)) !important;

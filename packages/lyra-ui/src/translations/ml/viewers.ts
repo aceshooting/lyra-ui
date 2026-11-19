@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF രേഖ',
   pdfViewerMissingLibrary: 'PDF ഫയലുകൾ റെൻഡർ ചെയ്യാൻ ഐച്ഛിക "pdfjs-dist" പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
   pdfViewerPageOf: '{total}ൽ പേജ് {page}',
+  pdfViewerPageHighlights: 'പേജ് {page} ഹൈലൈറ്റുകൾ',
   pdfViewerZoomIn: 'സൂം കൂട്ടുക',
   pdfViewerZoomOut: 'സൂം കുറയ്ക്കുക',
   pdfViewerPreviousPage: 'മുമ്പത്തെ പേജ്',

@@ -49,24 +49,26 @@ describe('lr-dock-panel gesture edges', () => {
     expect(changes).to.deep.equal(['340px']);
   });
 
-  it('abandons an active drag once resizing is switched off mid-gesture', async () => {
-    const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
-    const handle = handleOf(el);
-    const resized: string[] = [];
-    el.addEventListener('lr-resize', (e) => resized.push((e as CustomEvent<LyraDockPanelResizeDetail>).detail.extent));
+  for (const property of ['withoutResize', 'disabled'] as const) {
+    it(`abandons an active drag when ${property} is set mid-gesture`, async () => {
+      const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+      const handle = handleOf(el);
+      const resized: string[] = [];
+      el.addEventListener('lr-resize', (e) => resized.push((e as CustomEvent<LyraDockPanelResizeDetail>).detail.extent));
 
-    handle.dispatchEvent(new PointerEvent('pointerdown', pointer(31, { clientX: 200 })));
-    el.withoutResize = true;
-    await elementUpdated(el);
-    expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(true);
+      handle.dispatchEvent(new PointerEvent('pointerdown', pointer(31, { clientX: 200 })));
+      el[property] = true;
+      await elementUpdated(el);
+      expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(true);
 
-    el.withoutResize = false;
-    await elementUpdated(el);
-    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 31, clientX: 120 }));
-    window.dispatchEvent(new PointerEvent('pointerup', pointer(31)));
-    expect(resized).to.deep.equal([]);
-    expect(el.extent).to.equal('300px');
-  });
+      el[property] = false;
+      await elementUpdated(el);
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 31, clientX: 120 }));
+      window.dispatchEvent(new PointerEvent('pointerup', pointer(31)));
+      expect(resized).to.deep.equal([]);
+      expect(el.extent).to.equal('300px');
+    });
+  }
 
   it('ignores a toggle requested from inside its own toggle-request listener', async () => {
     const el = await dockedFixture('extent="300px" collapsible');

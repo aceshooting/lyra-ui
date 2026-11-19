@@ -40,6 +40,11 @@ equivalent).
 Fitting images remain centered; overflowing nonzoomable images begin inside the reachable body
 scroll range, so their top and bottom are available.
 
+An image that fails to load replaces the `<img>` with the localized `error` part for that `src` and
+emits one `lr-render-error`; assigning a new `src` tries again. The text `<pre>` and the filename use
+`dir="auto"`, so caller text keeps its own direction under an RTL host. While the body (or the text
+`<pre>`) overflows, it becomes a named, keyboard-focusable region; it adds no tab stop otherwise.
+
 Format dispatch is intentionally minimal: only `text/*`/`application/json` (a plain, scrollable
 `<pre>` — no syntax highlighting; compose `<lr-code-block>` yourself via the `unsupported` slot for
 that) and `image/*` (a contained `<img>`) render inline. Everything else — PDF, office documents,
@@ -778,7 +783,7 @@ entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution
 `lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
 are passive and cannot be activated.
 
-**CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
+**CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-kind` (visually hidden "File"/"Folder" text), `entry-name`, `entry-name-dir`, `entry-size`,
 `highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
 spoken copy is appended to the shared document-level polite sink only while the viewer and its
@@ -888,7 +893,13 @@ are appended to the shared document-level polite sink, which lives in the host's
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
-which writes this token inline.
+which writes this token inline. Painted highlights read `--lr-ebook-viewer-highlight-accent-bg`,
+`-success-bg`, `-warning-bg`, `-danger-bg` and `-neutral-bg` (each falling back to the matching
+shared quiet token), `--lr-ebook-viewer-highlight-active-outline` (the active highlight's stroke)
+and `--lr-ebook-viewer-search-match-bg`. A host with a definite height gives the reading area the
+remaining height; an auto-height host keeps the `10rem` minimum. The chapter iframes epub.js creates
+carry a `title` taken from `name` (or the localized region name). Changing `src` clears `location`
+unless the same update assigns a new one; a reconnect keeps it.
 
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
@@ -984,6 +995,12 @@ DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
+
+**Events (additive):** `lr-page-change` — `detail: { page, pageCount }`, fired when `page` changes
+while a presentation is shown (the same shape `<lr-pdf-viewer>` emits); `lr-slide-change` is
+unchanged. A whitespace-only `label` or `name` is ignored for the region name; an explicit
+`label=""` still clears it. The scrollable `container` becomes a named, keyboard-focusable region
+while its content overflows.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
 `notice`, `spinner`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`,
@@ -1411,7 +1428,11 @@ paint through one `<lr-highlight-layer>` per page, stacked between the canvas an
 (canvas → highlights → text layer) so starting a text selection over a cited passage keeps working.
 Pointer activation is hit-tested at the page-wrapper level (the text layer on top intercepts most
 direct pointer events); keyboard activation reaches the highlight layer's own roving-tabindex rects
-directly, since z-stacking doesn't affect tab order. Residual: a click that _ends a text-selection
+directly, since z-stacking doesn't affect tab order. Each page's highlight layer is named
+`Page N highlights` (localized `pdfViewerPageHighlights`), so the per-page groups are distinguishable.
+Page changes made by navigation (not scrolling) are announced through the shared polite sink as
+`Page N of M`. A page render that fails with an `AbortError` while still current surfaces the
+page error and `lr-render-error`; a thumbnail render cancelled by pdf.js resolves `false`. Residual: a click that _ends a text-selection
 drag_ over a highlighted passage never activates it — the selection-in-progress check exists exactly
 to tell that apart from a genuine activation click.
 
@@ -2083,6 +2104,13 @@ the box tall and scrolling) containing one `highlight-action` button per rendere
 highlights whose hit areas do not overlap keep their in-place targets. Keyboard focus and the roving
 tab stop follow a highlight's `id` when `items` is re-sorted or prepended.
 
+Enter/Space activation ignores Alt/Ctrl/Meta-modified, IME-composing and auto-repeating keys, and
+arrow navigation ignores modified or composing keys, so browser shortcuts keep working. `items` are
+snapshotted with each rectangle sanitized once; a whitespace-only item `label` is treated as absent.
+The active highlight is drawn with a heavier outline than a hovered one. Under reduced motion a
+`flash(id)` keeps the tone's own fill and shows the heavier outline for a short hold instead of an
+opaque one-frame fill.
+
 **Themeable custom properties:**
 `--lr-highlight-layer-accent-bg`, `--lr-highlight-layer-accent-outline`,
 `--lr-highlight-layer-success-bg`, `--lr-highlight-layer-success-outline`,
@@ -2118,15 +2146,18 @@ method: the original `renderPageThumbnail(page, canvas, options?)` for bitmap/ca
 The latter resolves to a `PageThumbnailRenderHandle`; the rail disposes it whenever its row,
 viewer, allocation width, status, or document identity changes.
 
-**Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row).
-`detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
+**Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row), or
+a page number was typed in mediated mode. `detail: { page }`. In wired mode the rail also sets
+`viewer.page` itself.
 
 If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
 page instead of using the rendered window's local index or being lost with the virtualized row.
 Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
 numeric type-ahead buffer is cleared on detach. Typed digits may be ASCII or the digits of the
 effective locale the page numbers are shown in. Alt/Ctrl/Meta-modified digits are left to browser or
-application shortcuts and never enter the buffer.
+application shortcuts and never enter the buffer. A typed prefix that cannot be a page (for example
+`12` in a five-page document) restarts the buffer at the latest digit instead of ignoring further
+digits. A whitespace-only `label` falls back to the localized default name.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
 button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas/DOM
@@ -2173,7 +2204,9 @@ Sanitized `text/html` output uses the passive-document profile: anchors, form co
 elements are unwrapped to ordinary text/children where safe, remote navigation/resource attributes
 are removed, and only inline base64 raster image sources render. Sanitized `image/svg+xml` output
 is likewise network-silent and non-interactive: animation is removed and only same-document
-fragment references or inline base64 raster image references survive.
+fragment references or inline base64 raster image references survive. Markdown cells render with
+remote images disabled (`without-images`), so a notebook never fetches an image or stylesheet
+from a markdown cell.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
 index; `fragment` anchors resolve a cell's own `id`. For cells with IDs, successful public anchor
 navigation scrolls the matching virtual row into the notebook allocation and applies active-cell
@@ -2236,7 +2269,10 @@ tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
-an error output), `error-output-label` (the label introducing an error output's traceback),
+an error output), `output-stream-label` (visually hidden "Error output" prefix on a stderr stream),
+`output-loading` (visually hidden loading text while sanitized output resolves),
+`output-image` (raster image output, shrinks to the cell width),
+`error-output-label` (the label introducing an error output's traceback),
 `output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
 of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
 sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The
@@ -2590,7 +2626,10 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 (`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
 `lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { highlightId }`), and
 `lr-render-error` (`detail: { error }`). In diff mode, `lr-search-change`, `lr-anchor-result`
-(`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`.
+(`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`. Side by side,
+an `anchor` assignment or `scrollToAnchor()` emits one `lr-anchor-result` for the pair of panes
+(`found` when either pane found the target). When both versions share one name, the two panes are
+named by the localized old/new version names so the regions stay distinguishable.
 
 **Slots:** none.
 

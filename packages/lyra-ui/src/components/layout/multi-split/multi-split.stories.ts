@@ -70,8 +70,9 @@ function logMultiSplitToggle(event: Event): void {
 }
 
 export const Default: Story = {
-  render: () => html`
-    <lr-multi-split
+  args: { disabled: false },
+  render: ({ disabled }) => html`
+    <lr-multi-split ?disabled=${disabled}
       style="height: 8rem; border: 1px solid var(--lr-color-border)"
     >
       <div panel-id="navigation" style="padding: 0.5rem">Panel A</div>

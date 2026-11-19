@@ -1,3 +1,4 @@
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import type { LyraWorkbookSource } from '../../../data-sources.js';
 export type { LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraTabularReadRequest, LyraSourceSearchRequest, LyraSourceSearchResult, LyraWorkbookHit } from '../../../data-sources.js';
 /** Host-owned indexed or rectangular source for this viewer. */
@@ -78,7 +79,7 @@ function cell(value: unknown, locale: string): string {
     }).format(value);
   }
   return typeof value === 'number'
-    ? getNumberFormat(locale, { useGrouping: false }).format(value)
+    ? formatChartValue(value, locale, getNumberFormat(locale, { useGrouping: false }))
     : String(value);
 }
 
@@ -340,6 +341,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   override connectedCallback(): void {
     super.connectedCallback();
     this.table.connected();
+    if (this.fetchState.kind === 'loading') this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {

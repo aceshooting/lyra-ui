@@ -34,7 +34,7 @@ shared success spellings `success`, `done`, and `complete` map to `completed`, a
 step. The component keeps its research-specific status wording and `.strings` overrides. The
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid
-record, and renders at most 100 steps. `label` sets the visible group heading and names the group
+record, and renders at most 100 steps: running and failed steps always stay, the newest others fill the rest, and a `role="note"` limit notice reports the cut. `label` sets the visible group heading and names the group
 unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
 localized default for an empty one). The `headingLevel` property and `heading-level` attribute
 (`'2'` by default; `'none'` keeps the text without heading semantics) set the heading's level.

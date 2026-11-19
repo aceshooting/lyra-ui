@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF dokument',
   pdfViewerMissingLibrary: 'Za prikaz PDF datoteka ovom pregledaču potreban je instaliran opcioni paket „pdfjs-dist“.',
   pdfViewerPageOf: 'Stranica {page} od {total}',
+  pdfViewerPageHighlights: 'Istaknuto na stranici {page}',
   pdfViewerZoomIn: 'Uvećaj',
   pdfViewerZoomOut: 'Umanji',
   pdfViewerPreviousPage: 'Prethodna stranica',

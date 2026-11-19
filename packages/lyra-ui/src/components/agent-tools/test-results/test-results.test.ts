@@ -1,5 +1,6 @@
 import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './test-results.js';
 // Registers the shipped `ar` catalog slices the `lang="ar-EG"` locale-formatting test resolves
@@ -1074,4 +1075,34 @@ it('lets a non-empty host aria-label own the results group name and role', async
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.hasAttribute('role')).to.equal(false);
   expect(base.hasAttribute('aria-label')).to.equal(false);
+});
+
+describe('lr-test-results remediation (evals batch)', () => {
+  it('lets a listener veto a filter change before the filter or its notification is written', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`);
+    const changes: unknown[] = [];
+    el.addEventListener('lr-filter-change', (event) => changes.push((event as CustomEvent).detail));
+    el.addEventListener('lr-filter-request', (event) => event.preventDefault(), { once: true });
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-toggle"][data-status="failed"]')!.click();
+    await el.updateComplete;
+    expect(el.statusFilter).to.deep.equal([]);
+    expect(changes.length).to.equal(0);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-toggle"][data-status="failed"]')!.click();
+    await el.updateComplete;
+    expect(el.statusFilter).to.deep.equal(['failed']);
+    expect(changes.length).to.equal(1);
+  });
+
+  it('announces how many tests a filter change leaves visible', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-toggle"][data-status="failed"]')!.click();
+    await waitUntil(() => sinkTexts('polite').includes('Showing 1 of 3 tests.'), 'filter result count announced');
+  });
+
+  it('names a test with a missing or blank name from a localized fallback', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${[
+      { id: 's', name: 'suite', tests: [{ id: 'a', name: '   ', status: 'passed' }] },
+    ]}></lr-test-results>`);
+    expect(el.shadowRoot!.querySelector('[part="test-name"]')!.textContent!.trim()).to.equal('Unnamed test');
+  });
 });

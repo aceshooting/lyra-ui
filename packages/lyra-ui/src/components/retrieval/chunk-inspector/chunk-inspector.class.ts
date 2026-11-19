@@ -25,7 +25,7 @@ import {
 import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_showLess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -156,6 +156,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
     chunkInspectorOpenOrdinal: LYRA_DEFAULT_chunkInspectorOpenOrdinal,
     chunkScore: LYRA_DEFAULT_chunkScore,
+    retrievalShowLessWithContext: LYRA_DEFAULT_retrievalShowLessWithContext,
+    retrievalShowMoreWithContext: LYRA_DEFAULT_retrievalShowMoreWithContext,
     scoreTierHigh: LYRA_DEFAULT_scoreTierHigh,
     scoreTierLow: LYRA_DEFAULT_scoreTierLow,
     scoreTierMedium: LYRA_DEFAULT_scoreTierMedium,
@@ -387,6 +389,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
                 part="toggle"
                 type="button"
                 aria-expanded=${expanded ? 'true' : 'false'}
+                aria-label=${this.localize(expanded ? 'retrievalShowLessWithContext' : 'retrievalShowMoreWithContext', undefined, { label: titleWithPage })}
                 @click=${() => this.toggleExpand(chunk.id)}
               >
                 ${this.localize(expanded ? 'showLess' : 'showMore')}

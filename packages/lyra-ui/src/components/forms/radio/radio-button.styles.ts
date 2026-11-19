@@ -37,6 +37,7 @@ const buttonChromeStyles = css`
      [part='label'] above deliberately keeps its wrap -- only these capped slots ellipsize. */
   [part~="start"],
   [part~="end"] {
+    flex: 0 0 auto;
     min-inline-size: 0;
     max-inline-size: 40%;
     overflow: hidden;
@@ -166,6 +167,14 @@ const buttonChromeStyles = css`
   [part~="button"]:where([part~="disabled"]) {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
+  }
+  @media (forced-colors: active) {
+    [part~="button"][part~="checked"],
+    [part~="button"][part~="checked"]:not([part~="disabled"]):is(:hover, :active) {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
+    }
   }
 `;
 

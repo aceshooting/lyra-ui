@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { PreviewDisclosureController } from '../../../internal/preview-disclosure-controller.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -147,7 +148,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.preview.handleEscape(e)) return;
-    if (e.key === ' ' && !e.repeat && e.target === this.buttonEl) {
+    if (e.key === ' ' && !shouldIgnoreActivationKey(e) && e.target === this.buttonEl) {
       e.preventDefault();
       this.emitOpen();
     }

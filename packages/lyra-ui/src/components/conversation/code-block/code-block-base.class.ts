@@ -1,3 +1,6 @@
+import { reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { PropertyValues, TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
@@ -26,7 +29,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import type { LyraCodeBlockCopyAppearance, LyraCodeBlockToggleDetail } from './code-block-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockActiveLine, LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockHighlightedLine, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -54,7 +57,9 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    codeBlockActiveLine: LYRA_DEFAULT_codeBlockActiveLine,
     codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
+    codeBlockHighlightedLine: LYRA_DEFAULT_codeBlockHighlightedLine,
     codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
@@ -112,6 +117,10 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   }
   protected readonly bodyId = nextId('code-block-body');
 
+  protected resumedMove = false;
+  private readonly teardown = new DeferredTeardown(() => this.releaseHighlight());
+  private readonly announcements = new AnnouncementSinkController(this);
+
   protected readonly interactions = new CodeBlockInteractionController({
     host: this,
     setFocusedLine: (line) => { this.focusedLine = line; },
@@ -119,9 +128,10 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     setCopyFailed: (value) => { this.copyFailed = value; },
     setDarkTheme: (value) => { this.isDarkTheme = value; },
     emitLineActivate: (line) => this.emit('lr-line-activate', { line }),
-    emitCopy: (outcome) => this.emit('lr-copy', outcome),
-    emitError: () => this.emit('lr-error', null),
-    emitCopyError: (outcome) => this.emit('lr-copy-error', outcome),
+    reportCopy: outcome => reportCopyOutcome({
+      emit: (name, detail) => this.emit(name, detail ?? null),
+      announce: ok => this.announcements.announcePolite(ok ? this.localize('copiedToClipboard') : this.localize('copyFailed')),
+    }, outcome, () => this.isConnected && (this.code ?? '') === outcome.text),
     requestToggle: (collapsed) =>
       !this.emit('lr-toggle-request', { expanded: !collapsed }, { cancelable: true })
         .defaultPrevented,
@@ -143,18 +153,25 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     super.connectedCallback();
     if (this.hasUpdated) this.refreshTheme();
     this.headerActions.observe();
+    this.resumedMove = this.teardown.cancel();
   }
 
   override disconnectedCallback(): void {
-    this.highlightToken += 1;
     super.disconnectedCallback();
+    this.teardown.schedule();
     this.headerActions.disconnect();
     this.interactions.disconnect();
+  }
+
+  protected releaseHighlight(): void {
+    this.highlightToken++;
     this.highlightedHtml = null;
   }
 
   override adoptedCallback(): void {
+    this.teardown.flush();
     super.adoptedCallback();
+    this.announcements.adopted();
     this.interactions.disconnect();
   }
 
@@ -171,6 +188,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.announcements.setExclusiveChannel(this.withoutCopyButton ? undefined : 'polite');
     this.seedFirstRenderState(() => this.refreshTheme());
     this.headerActions.sync();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
@@ -286,6 +304,17 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       line.toggleAttribute('data-highlighted', highlighted.has(number));
       line.toggleAttribute('data-active', active.has(number));
       line.part?.toggle('line-highlight', highlighted.has(number));
+      const gutter = line.querySelector('button.line-gutter');
+      if (highlighted.has(number)) {
+        const description = active.has(number) ? this.localize('codeBlockActiveLine') : this.localize('codeBlockHighlightedLine');
+        line.setAttribute('role', 'mark');
+        line.setAttribute('aria-roledescription', description);
+        gutter?.setAttribute('aria-description', description);
+      } else {
+        line.removeAttribute('role');
+        line.removeAttribute('aria-roledescription');
+        gutter?.removeAttribute('aria-description');
+      }
     }
     this.previousHighlighted = highlighted;
     this.previousActive = active;

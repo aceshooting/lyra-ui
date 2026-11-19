@@ -652,7 +652,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const projection = this.hierarchy.projection;
     const highlights = this.highlights;
     const part = node.kind === 'element' ? 'tag' : node.kind === 'attribute' ? 'attribute' : node.kind === 'comment' ? 'comment' : node.kind === 'processing-instruction' ? 'pi' : 'text';
-    return html`<span part=${part} ?data-match=${match} ?data-active-match=${active}
+    return html`<span class="syntax" part=${part} ?data-match=${match} ?data-active-match=${active}
       ?data-active=${this.activePath === node.path}
       data-highlight=${highlight ? highlight.highlight.tone ?? 'accent' : nothing}
       ?data-active-highlight=${Boolean(highlight) && highlight!.highlight.id === this.activeHighlightId}
@@ -666,7 +666,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
             source === this.treeSource && epoch === this.hierarchy.epoch && projection === this.hierarchy.projection &&
             highlights === this.highlights && this.renderedHighlights.get(node.path)?.highlight === highlight.highlight)
             this.emit('lr-highlight-activate', { highlightId: highlight.highlight.id });
-        }}>${highlight.index + 1}</button>` : nothing}`;
+        }}>${highlight.highlight.label || this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}</button>` : nothing}`;
   }
   private renderSource(): TemplateResult {
     const partial = !this.sourceSearchExact && Boolean(this.searchQuery);
@@ -1054,7 +1054,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     let matchCountExact = boundedQuery.accepted;
 
     const markAncestors = (path: PathSegment[]): void => {
-      for (let i = path.length - 1; i >= 0; i--) forceExpand.add(JSON.stringify(path.slice(0, i)));
+      for (let i = path.length - 1; i >= 0; i--) {
+        const key = JSON.stringify(path.slice(0, i));
+        if (forceExpand.has(key)) break;
+        forceExpand.add(key);
+      }
     };
 
     const walk = (el: Element, path: PathSegment[]): void => {
@@ -1399,8 +1403,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       return;
     }
     this.showCopyFeedback(key, 'error', generation, owner);
+    const { src, xml } = this;
     this.emit('lr-error');
-    this.emit('lr-copy-error', outcome);
+    if (this.isConnected && generation === this.copyGeneration && this.ownerDocument.defaultView === owner
+      && this.treeSource === undefined && this.src === src && this.xml === xml) {
+      this.emit('lr-copy-error', outcome);
+    }
   }
 
   private serializeXml(node: Node): string | null {
@@ -1519,7 +1527,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
               <span class="chevron">${chevronIcon()}</span>
             </button>`
           : html`<span part="toggle-placeholder" aria-hidden="true"></span>`}
-        <span
+        <span class="syntax"
           >&lt;<span part="tag" ?data-match=${this.searchState.tagMatches.has(pathKey)}>${el.tagName}</span
           >${Array.from(el.attributes).map(
             (a) => html` <span part="attribute"

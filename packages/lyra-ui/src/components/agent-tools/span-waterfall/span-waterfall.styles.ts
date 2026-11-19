@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -97,45 +98,43 @@ export const styles = css`
 
   [part="bar-track"] {
     position: relative;
-    /* The bar is the sole click/keyboard target for lr-span-select. Give its track the shared
-       icon-button block size so the required two-axis target floor remains contained. */
     block-size: var(--lr-icon-button-size);
   }
   [part="bar"] {
-    position: absolute;
-    inset-block: 0;
-    /* A narrow time slice still needs the shared icon-button target, but using min-inline-size
-       alone lets an endpoint target widen past the track. Size first, cap it to the track, then
-       clamp the logical start against that actual size so the same rule mirrors under RTL. */
-    --_lr-span-waterfall-target-width: min(
-      100%,
-      max(var(--_lr-span-waterfall-width), var(--lr-icon-button-size))
-    );
-    ${iconHitTarget}
-    inline-size: var(--_lr-span-waterfall-target-width);
-    inset-inline-start: min(
-      var(--_lr-span-waterfall-start),
-      calc(100% - var(--_lr-span-waterfall-target-width))
-    );
+    --_lr-span-waterfall-paint-width: max(var(--lr-border-width-thin), var(--_lr-span-waterfall-width));
+    --_lr-span-waterfall-paint-start: min(var(--_lr-span-waterfall-start), calc(100% - var(--_lr-span-waterfall-paint-width)));
+    display: block;
+    box-sizing: border-box;
+    inline-size: var(--_lr-span-waterfall-paint-width);
+    block-size: 100%;
+    margin-inline-start: var(--_lr-span-waterfall-paint-start);
     border: none;
     border-radius: var(--lr-radius-xs);
     padding: 0;
+  }
+  button[part="bar"] {
     cursor: pointer;
+  }
+  /* Position the hit area against the track so it can extend past the painted span. */
+  button[part="bar"]::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    ${iconHitTarget}
+    min-inline-size: min(100%, var(--lr-icon-button-size));
+    --_lr-span-waterfall-target-width: min(100%, max(var(--lr-icon-button-size), var(--_lr-span-waterfall-width)));
+    inline-size: var(--_lr-span-waterfall-target-width);
+    inset-inline-start: min(var(--_lr-span-waterfall-start), calc(100% - var(--_lr-span-waterfall-target-width)));
   }
   [part="bar"][hidden] {
     display: none;
   }
-  /* The hover/pressed tint is a veil on a pseudo-element, not a background swap: a bar's fill is
-     one of five things -- four solid tones, a striped gradient for running, a transparent dashed
-     box for pending -- and no single background declaration tints all five, while one translucent
-     overlay does. Mixing toward --lr-color-mix-partner (which follows the text colour) darkens the
-     veil in a light theme and lightens it in a dark one; the filter: brightness() this replaces
-     managed that only by luck, multiplying every channel, so it moved a mid-tone bar, did nothing
-     to a pure white or pure black one, and applied to the whole subtree. */
-  [part="bar"]::after {
+  button[part="bar"]::after {
     content: "";
     position: absolute;
-    inset: 0;
+    inset-block: 0;
+    inset-inline-start: var(--_lr-span-waterfall-paint-start);
+    inline-size: var(--_lr-span-waterfall-paint-width);
     border-radius: inherit;
     pointer-events: none;
     background: transparent;
@@ -155,7 +154,7 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part="bar"]:focus-visible {
+  button[part="bar"]:focus-visible::before {
     ${focusRing}
   }
   [part="bar"][data-tone="success"] {
@@ -241,6 +240,16 @@ export const styles = css`
     [part="meta"] {
       display: flex;
       gap: var(--lr-space-s);
+    }
+  }
+
+  ${forcedColorsPart("[part~='row'][data-active], [part~='source-row'][data-active]")}
+  @media (forced-colors: active) {
+    [part='bar'][data-tone] {
+      forced-color-adjust: none;
+      background: Highlight;
+      outline: var(--lr-border-width-thin) solid CanvasText;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
     }
   }
 `;

@@ -5,7 +5,8 @@ import './video.js';
 import '../video-playlist/video-playlist.js';
 import type { LyraVideo } from './video.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const VIDEO_SRC = 'https://example.test/video.mp4';
 
@@ -2831,5 +2832,135 @@ describe('lr-video coverage gap-filling', () => {
     expect(select.options[1]?.hasAttribute('lang')).to.be.true;
     expect(select.options[2]?.textContent).to.equal('Captions');
     expect(select.options[2]?.hasAttribute('lang')).to.be.false;
+  });
+});
+
+describe('lr-video remediation', () => {
+  function withDuration(el: LyraVideo, duration = 60): HTMLVideoElement {
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: duration },
+      currentTime: { configurable: true, value: 10, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    return media;
+  }
+
+  it('paints a visible keyboard focus ring for the timeline range', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    withDuration(el);
+    await el.updateComplete;
+    const progress = el.shadowRoot!.querySelector<HTMLInputElement>('[part="progress"]')!;
+    const track = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline-track"]')!;
+    await focusByKeyboard(progress);
+    expect(getComputedStyle(progress).opacity < '0.01' || Number(getComputedStyle(progress).opacity) < 0.01).to.equal(true);
+    const style = getComputedStyle(track);
+    expect(style.outlineStyle).to.not.equal('none');
+    expect(Number.parseFloat(style.outlineWidth)).to.be.greaterThan(0);
+  });
+
+  it('keeps pointer hover on the timeline visible under forced colors', async () => {
+    await setForcedColors('active');
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+      withDuration(el);
+      await el.updateComplete;
+      const progress = el.shadowRoot!.querySelector<HTMLInputElement>('[part="progress"]')!;
+      const track = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline-track"]')!;
+      await hover(progress);
+      await waitUntil(() => progress.matches(':hover'), 'the timeline never registered :hover');
+      expect(getComputedStyle(track).outlineStyle).to.not.equal('none');
+    } finally {
+      await resetMouse();
+      await setForcedColors('none');
+    }
+  });
+
+  it('moves focus to the control-bar play button when the poster play button is activated', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video poster="https://example.test/poster.jpg"></lr-video>`);
+    const stub = stubPlayback(nativeVideo(el));
+    const poster = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="poster-play-button"]')!;
+    await focusByKeyboard(poster);
+    expect(el.shadowRoot!.activeElement === poster).to.equal(true);
+    poster.click();
+    await stub.playResult;
+    nativeVideo(el).dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === button(el, 'play')).to.equal(true);
+  });
+
+  it('keeps the scrub preview inside the player at the timeline start', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = (async () => new Response(
+      'WEBVTT\n\n00:00.000 --> 00:30.000\nthumbs.jpg#xywh=0,0,160,90\n',
+      { headers: { 'content-type': 'text/vtt' } },
+    )) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video style="inline-size: 320px" thumbnails="https://example.test/cues/thumbs.vtt"></lr-video>
+      `);
+      await waitUntil(() => (el as unknown as { thumbnailCues: unknown[] }).thumbnailCues.length === 1, 'cues');
+      withDuration(el);
+      await el.updateComplete;
+      const timeline = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline"]')!;
+      const left = timeline.getBoundingClientRect().left;
+      timeline.dispatchEvent(new PointerEvent('pointermove', { clientX: left + 1, bubbles: true }));
+      await el.updateComplete;
+      const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part="thumbnail"]')!;
+      const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part~="video-wrapper"]')!;
+      expect(thumb.getBoundingClientRect().left >= wrapper.getBoundingClientRect().left - 0.5).to.equal(true);
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('restores the declared volume when the attribute is removed', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video volume="0.3"></lr-video>`);
+    expect(el.volume).to.equal(0.3);
+    el.removeAttribute('volume');
+    await el.updateComplete;
+    expect(el.volume).to.equal(1);
+    expect(nativeVideo(el).volume).to.equal(1);
+  });
+
+  it('does not start muted autoplay when reduced motion is requested', async () => {
+    await setReducedMotion('reduce');
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-muted></lr-video>`);
+      expect(nativeVideo(el).autoplay).to.equal(false);
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+    const plain = await fixture<LyraVideo>(html`<lr-video autoplay-muted></lr-video>`);
+    expect(nativeVideo(plain).autoplay).to.equal(true);
+  });
+
+  it('cancels the thumbnail body of a non-OK response', async () => {
+    const originalFetch = window.fetch;
+    let cancelled = false;
+    window.fetch = (async () => new Response(
+      new ReadableStream({ cancel() { cancelled = true; } }),
+      { status: 404 },
+    )) as typeof fetch;
+    try {
+      await fixture<LyraVideo>(html`<lr-video thumbnails="https://example.test/missing.vtt"></lr-video>`);
+      await waitUntil(() => cancelled, 'thumbnail body was never cancelled');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('isolates the caller title and caption direction', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video title="عنوان"></lr-video>`);
+    expect(el.shadowRoot!.querySelector('[part="video-title-overlay"]')!.getAttribute('dir')).to.equal('auto');
+  });
+
+  it('toggle() plays and pauses like togglePlay()', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const stub = stubPlayback(nativeVideo(el));
+    el.toggle();
+    expect(stub.playCalls).to.equal(1);
+    el.toggle();
+    expect(stub.pauseCalls).to.equal(1);
   });
 });

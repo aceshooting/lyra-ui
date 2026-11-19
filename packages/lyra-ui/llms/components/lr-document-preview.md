@@ -23,6 +23,11 @@ equivalent).
 Fitting images remain centered; overflowing nonzoomable images begin inside the reachable body
 scroll range, so their top and bottom are available.
 
+An image that fails to load replaces the `<img>` with the localized `error` part for that `src` and
+emits one `lr-render-error`; assigning a new `src` tries again. The text `<pre>` and the filename use
+`dir="auto"`, so caller text keeps its own direction under an RTL host. While the body (or the text
+`<pre>`) overflows, it becomes a named, keyboard-focusable region; it adds no tab stop otherwise.
+
 Format dispatch is intentionally minimal: only `text/*`/`application/json` (a plain, scrollable
 `<pre>` — no syntax highlighting; compose `<lr-code-block>` yourself via the `unsupported` slot for
 that) and `image/*` (a contained `<img>`) render inline. Everything else — PDF, office documents,

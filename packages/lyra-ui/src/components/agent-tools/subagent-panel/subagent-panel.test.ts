@@ -121,7 +121,7 @@ it('emits full selections plus status-appropriate cancel and retry intents', asy
 
   const retryPending = oneEvent(el, 'lr-run-retry');
   (el.shadowRoot!.querySelector('[data-run-id="review"] [part="retry"]') as HTMLButtonElement).click();
-  expect((await retryPending).detail).to.deep.equal({ runId: 'review' });
+  expect((await retryPending).detail).to.deep.equal({ runId: 'review', attempt: 1 });
 });
 
 it('activates the focused treeitem with Enter/Space and contextualizes row actions', async () => {
@@ -879,12 +879,12 @@ it('names retry actions from their visible localized labels and keeps the run co
   expect(button.textContent!.trim()).to.equal('Retry subagent');
   expect(button.getAttribute('aria-description')).to.equal('Retry Reviewer');
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
-  expect(accessibleName(button)).to.equal('Retry subagent');
+  expect(accessibleName(button)).to.equal('Retry subagent Reviewer');
   el.strings = { subagentPanelRetry: 'Relancer le sous-agent', subagentPanelRetryRun: 'Relancer {name}' };
   await el.updateComplete;
   expect(button.getAttribute('aria-description')).to.equal('Relancer Reviewer');
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
-  expect(accessibleName(button)).to.equal('Relancer le sous-agent');
+  expect(accessibleName(button)).to.equal('Relancer le sous-agent Reviewer');
 });
 
 it('leaves nested-button activation and unhandled keys to the browser', async () => {

@@ -187,6 +187,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Fágadh roinnt moltaí nó iontrálacha catalóige ar lár mar gur sroicheadh teorainn ionchuir.',
   transcriptFeedInputLimit: 'Ní choinnítear ach na {count} iontráil is nuaí as {total}.',
   codeBlockHighlightLimit: 'Taispeántar cód fada gan aibhsiú comhréire.',
+  codeBlockHighlightedLine: 'Líne aibhsithe',
+  codeBlockActiveLine: 'Líne aibhsithe ghníomhach',
 };
 
 registerLyraLocale('ga', strings);

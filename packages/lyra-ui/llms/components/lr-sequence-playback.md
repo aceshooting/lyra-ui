@@ -27,7 +27,7 @@ feedback.
 
 - `itemCount: number = 0` (attribute `item-count`)
 - `currentIndex: number = 0` (attribute `current-index`)
-- `intervalMs: number = 900` (attribute `interval-ms`)
+- `intervalMs: number = 900` (attribute `interval-ms`; `autoplay-interval` / `autoplayInterval` is a second spelling matching `lr-carousel`; removing the attribute restores the default)
 - `readonly playing: boolean` (reflected as the `playing` attribute) — whether playback is running.
   Start and stop it with `play()`, `pause()` or `toggle()`; assigning it throws in strict-mode code
   and an authored `playing` attribute starts nothing.

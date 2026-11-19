@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Một số gợi ý hoặc mục danh mục đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
   transcriptFeedInputLimit: 'Chỉ giữ lại {count} mục mới nhất trong tổng số {total} mục.',
   codeBlockHighlightLimit: 'Mã dài được hiển thị mà không tô màu cú pháp.',
+  codeBlockHighlightedLine: 'Dòng được làm nổi bật',
+  codeBlockActiveLine: 'Dòng nổi bật đang hoạt động',
 };
 
 registerLyraLocale('vi', strings);

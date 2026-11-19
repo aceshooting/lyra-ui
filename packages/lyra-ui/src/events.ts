@@ -633,11 +633,12 @@ export type LyraChangeEvent =
 export type LyraChangeDecisionRequestEvent = LyraChangeReviewEventMap['lr-change-decision-request'];
 
 /**
- * `lr-change-request` — dispatched by 4 components: `<lr-locale-picker>`, `<lr-prompt-studio>`,
- * `<lr-select>`, `<lr-tool-select-dialog>`; detail union of 4, e.g.
- * `LyraLocalePickerEventMap['lr-change-request']`.
+ * `lr-change-request` — dispatched by 5 components: `<lr-combobox>`, `<lr-locale-picker>`,
+ * `<lr-prompt-studio>`, `<lr-select>`, `<lr-tool-select-dialog>`; detail union of 5, e.g.
+ * `LyraComboboxEventMap['lr-change-request']`.
  */
 export type LyraChangeRequestEvent =
+  | LyraComboboxEventMap['lr-change-request']
   | LyraLocalePickerEventMap['lr-change-request']
   | LyraPromptStudioEventMap['lr-change-request']
   | LyraSelectEventMap['lr-change-request']
@@ -1138,13 +1139,13 @@ export type LyraEntitySelectEvent =
   | LyraProvenancePanelEventMap['lr-entity-select'];
 
 /**
- * `lr-error` — dispatched by 21 components: `<lr-animated-image>`, `<lr-artifact-panel>`,
+ * `lr-error` — dispatched by 23 components: `<lr-animated-image>`, `<lr-artifact-panel>`,
  * `<lr-avatar>`, `<lr-code-block-core>`, `<lr-code-block>`, `<lr-commit-card>`,
  * `<lr-context-inspector>`, `<lr-copy-button>`, `<lr-data-grid>`, `<lr-diff-view>`,
  * `<lr-document-compare>`, `<lr-env-list>`, `<lr-icon>`, `<lr-include>`, `<lr-json-viewer>`,
- * `<lr-message-actions>`, `<lr-selection-toolbar>`, `<lr-stack-trace>`, `<lr-terminal>`,
- * `<lr-tool-call-block>`, `<lr-xml-viewer>`; detail union of 18, e.g.
- * `LyraAnimatedImageEventMap['lr-error']`.
+ * `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-actions>`, `<lr-selection-toolbar>`,
+ * `<lr-stack-trace>`, `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`; detail union of
+ * 20, e.g. `LyraAnimatedImageEventMap['lr-error']`.
  */
 export type LyraErrorEvent =
   | LyraAnimatedImageEventMap['lr-error']
@@ -1160,6 +1161,8 @@ export type LyraErrorEvent =
   | LyraIconEventMap['lr-error']
   | LyraIncludeEventMap['lr-error']
   | LyraJsonViewerEventMap['lr-error']
+  | LyraMarkdownCoreEventMap['lr-error']
+  | LyraMarkdownEventMap['lr-error']
   | LyraMessageActionsEventMap['lr-error']
   | LyraSelectionToolbarEventMap['lr-error']
   | LyraStackTraceEventMap['lr-error']
@@ -1311,6 +1314,12 @@ export type LyraFilterChangeEvent =
   | LyraTableEventMap['lr-filter-change']
   | LyraTestResultsEventMap['lr-filter-change']
   | LyraThreadListEventMap['lr-filter-change'];
+
+/**
+ * `lr-filter-request` — dispatched by `<lr-test-results>`; detail
+ * `LyraTestResultsEventMap['lr-filter-request']`.
+ */
+export type LyraFilterRequestEvent = LyraTestResultsEventMap['lr-filter-request'];
 
 /**
  * `lr-filters-change` — dispatched by `<lr-retrieval-search>`; detail
@@ -2205,8 +2214,8 @@ export type LyraOverflowActivateEvent = LyraAvatarGroupEventMap['lr-overflow-act
 export type LyraOverflowToggleEvent = LyraChipGroupEventMap['lr-overflow-toggle'];
 
 /**
- * `lr-page-change` — dispatched by 5 components: `<lr-data-grid>`, `<lr-document-viewer>`,
- * `<lr-pagination>`, `<lr-pdf-viewer>`, `<lr-table>`; detail union of 5, e.g.
+ * `lr-page-change` — dispatched by 6 components: `<lr-data-grid>`, `<lr-document-viewer>`,
+ * `<lr-pagination>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-table>`; detail union of 6, e.g.
  * `LyraDataGridEventMap['lr-page-change']`.
  */
 export type LyraPageChangeEvent =
@@ -2214,6 +2223,7 @@ export type LyraPageChangeEvent =
   | LyraDocumentViewerEventMap['lr-page-change']
   | LyraPaginationEventMap['lr-page-change']
   | LyraPdfViewerEventMap['lr-page-change']
+  | LyraPptxViewerEventMap['lr-page-change']
   | LyraTableEventMap['lr-page-change'];
 
 /**
@@ -3755,6 +3765,7 @@ export interface LyraGlobalEventMap {
   'lr-files': LyraFilesEvent;
   'lr-filter': LyraFilterEvent;
   'lr-filter-change': LyraFilterChangeEvent;
+  'lr-filter-request': LyraFilterRequestEvent;
   'lr-filters-change': LyraFiltersChangeEvent;
   'lr-finish': LyraFinishEvent;
   'lr-fit-change': LyraFitChangeEvent;

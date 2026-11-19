@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Document PDF',
   pdfViewerMissingLibrary: 'Acest vizualizator necesită pachetul opțional „pdfjs-dist” instalat pentru a afișa fișiere PDF.',
   pdfViewerPageOf: 'Pagina {page} din {total}',
+  pdfViewerPageHighlights: 'Evidențierile paginii {page}',
   pdfViewerZoomIn: 'Mărește',
   pdfViewerZoomOut: 'Micșorează',
   pdfViewerPreviousPage: 'Pagina precedentă',

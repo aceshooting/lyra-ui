@@ -133,8 +133,12 @@ export const styles = css`
   [part='poster-play-button']:focus-visible,
   [part='controls'] button:focus-visible,
   [part='controls'] select:focus-visible,
-  [data-control='volume']:focus-visible,
-  [part='progress']:focus-visible {
+  [data-control='volume']:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part='progress']:focus-visible ~ [part='timeline-track'] {
     outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -421,6 +425,13 @@ export const styles = css`
 
     [part='controls'] select {
       max-inline-size: var(--lr-size-8rem);
+    }
+  }
+
+  @media (forced-colors: active) {
+    [part='progress']:hover:where(:not(:disabled)) ~ [part='timeline-track'],
+    [part='progress']:active:where(:not(:disabled)) ~ [part='timeline-track'] {
+      outline: var(--lr-border-width-thin) solid Highlight;
     }
   }
 

@@ -9,7 +9,7 @@ import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 
 /** The search half of the shared viewer contract -- `lr-notebook-viewer` resolves its own anchor
@@ -970,6 +970,12 @@ describe('rendering non-text outputs', () => {
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).textContent?.includes('Loading document') ?? false);
+    const loading = rowRoot(el).querySelector<HTMLElement>('[part="output-loading"]');
+    expect(loading?.textContent).to.include('Loading document');
+    const rect = loading!.getBoundingClientRect();
+    expect(rect.width).to.equal(1);
+    expect(rect.height).to.equal(1);
+    expect(getComputedStyle(loading!).clipPath).to.equal('inset(50%)');
     await aTimeout(0);
     await el.updateComplete;
     await aTimeout(0);
@@ -1296,7 +1302,10 @@ describe('event boundaries', () => {
       [codeBlock, 'lr-line-activate'],
       [codeBlock, 'lr-text-select'],
       [markdown, 'lr-render-error'],
-      [markdown, 'lr-link-click'],
+      [markdown, 'lr-link-activate'],
+      [markdown, 'lr-copy'],
+      [markdown, 'lr-copy-error'],
+      [markdown, 'lr-content-settled'],
       [markdown, 'lr-highlight-activate'],
       [markdown, 'lr-text-select'],
       [markdown, 'lr-anchor-result'],
@@ -2102,20 +2111,9 @@ it('renders output-toggle hover and keyboard focus-visible feedback', async () =
   const toggle = rowRoot(el).querySelector(
     '[part="output-toggle"]',
   ) as HTMLButtonElement;
-  toggle.scrollIntoView({ block: 'center' });
-  await aTimeout(0);
-  const box = toggle.getBoundingClientRect();
-
   try {
     expect(getComputedStyle(toggle).textDecorationLine).to.equal('none');
-    await resetMouse();
-    await sendMouse({
-      type: 'move',
-      position: [
-        Math.round(box.left + box.width / 2),
-        Math.round(box.top + box.height / 2),
-      ],
-    });
+    await hoverUntilMatched(toggle, 'the output toggle must receive the pointer');
     await waitUntil(
       () => getComputedStyle(toggle).textDecorationLine.includes('underline'),
       'the output toggle never entered its rendered hover state',
@@ -2564,4 +2562,18 @@ describe('notebook record ownership and aggregate limits', () => {
     el.notebook = valid;
     expect(await el.search('retained record')).to.equal(1);
   });
+});
+
+it('finds visible stream and traceback text across ANSI style changes', async () => {
+  const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+    nbformat: 4, nbformat_minor: 5,
+    cells: [{ cell_type: 'code', source: '', outputs: [
+      { output_type: 'error', ename: 'ValueError', evalue: 'bad input', traceback: ['stack\x1b[31mframe\x1b[0m'] },
+      { output_type: 'stream', name: 'stderr', text: ['part\x1b[3', '2mition\x1b[0m'] },
+    ] }],
+  }}></lr-notebook-viewer>`);
+  for (const query of ['ValueError', 'bad input', 'stackframe', 'partition']) {
+    expect(await el.search(query), query).to.equal(1);
+  }
+  expect(await el.search('[31m')).to.equal(0);
 });

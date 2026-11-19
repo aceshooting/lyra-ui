@@ -9,6 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { isObjectLike } from '../../../internal/object-guards.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
@@ -61,10 +62,6 @@ type QrCodeState =
   | { kind: 'loading' }
   | { kind: 'ready'; modules: QrModules; image?: HTMLImageElement }
   | { kind: 'error'; key: 'qrCodeMissingLibrary' | 'qrCodeGenerationFailed' };
-
-function isObjectLike(value: unknown): value is object {
-  return (typeof value === 'object' || typeof value === 'function') && value !== null;
-}
 
 /** Reads only a complete entry for this host. Browser callbacks are ordinarily well-formed, but
  * a partial polyfill callback must not make visibility state or canvas painting throw. */
@@ -677,21 +674,19 @@ export class LyraQrCode extends LyraElement {
     const canRoundRect = typeof ctx.roundRect === 'function';
 
     ctx.fillStyle = fill;
+    const rounded = this.radius > 0 && canRoundRect;
+    ctx.beginPath();
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
         if (!modules.get(row, col)) continue;
         const x = col * moduleSize;
         const y = row * moduleSize;
-        if (this.radius > 0 && canRoundRect) {
-          ctx.beginPath();
-          ctx.roundRect(x, y, moduleSize, moduleSize, radiusPx);
-          ctx.fill();
-        } else {
-          ctx.fillRect(x, y, moduleSize, moduleSize);
-        }
+        if (rounded) ctx.roundRect(x, y, moduleSize, moduleSize, radiusPx);
+        else ctx.rect(x, y, moduleSize, moduleSize);
       }
     }
-    if (this.loadState.image) this.drawEmbeddedImage(ctx, this.loadState.image, size);
+    ctx.fill();
+    if (this.loadState.image) this.drawEmbeddedImage(ctx, this.loadState.image, size, background);
   }
 
   /** Pure allocation seam kept private so tests can cover extreme inputs without creating a
@@ -710,6 +705,7 @@ export class LyraQrCode extends LyraElement {
     ctx: CanvasRenderingContext2D,
     image: HTMLImageElement,
     size: number,
+    background: string,
   ): void {
     const coverage = finiteRange(
       this.imageCoverage ?? DEFAULT_IMAGE_COVERAGE,
@@ -728,7 +724,7 @@ export class LyraQrCode extends LyraElement {
     const contentSize = boxSize - padding * 2;
     const boxStart = (size - boxSize) / 2;
     if (this.imageBackground?.trim()) {
-      ctx.fillStyle = resolveCanvasColor(this, this.imageBackground.trim(), this.backgroundColor());
+      ctx.fillStyle = resolveCanvasColor(this, this.imageBackground.trim(), background);
       ctx.fillRect(boxStart, boxStart, boxSize, boxSize);
     }
     if (contentSize <= 0) return;

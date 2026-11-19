@@ -184,6 +184,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Niektoré návrhy alebo položky katalógu boli vynechané, pretože sa dosiahol limit vstupu.',
   transcriptFeedInputLimit: 'Uchováva sa len najnovších {count} z {total} záznamov.',
   codeBlockHighlightLimit: 'Dlhý kód sa zobrazuje bez zvýraznenia syntaxe.',
+  codeBlockHighlightedLine: 'Zvýraznený riadok',
+  codeBlockActiveLine: 'Aktívny zvýraznený riadok',
 };
 
 registerLyraLocale('sk', strings);

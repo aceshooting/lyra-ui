@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Sažmi ploču',
   dockPanelExpand: 'Proširi ploču',
   dockPanelResize: 'Promijeni veličinu ploče',
+  dockPanelToggle: 'Prebaci ploču',
   responsivePanel: 'Ploča',
   breadcrumb: 'Putanja',
   resizeDivider: 'Promijeni veličinu razdjelnika između ploča {a} i {b}',

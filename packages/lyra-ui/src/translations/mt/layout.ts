@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Ikkollassa l-pannell',
   dockPanelExpand: 'Espandi l-pannell',
   dockPanelResize: 'Ibdel id-daqs tal-pannell',
+  dockPanelToggle: 'Ibdel il-pannell',
   responsivePanel: 'Pannell',
   breadcrumb: 'Mogħdija tan-navigazzjoni',
   resizeDivider: 'Ibdel id-daqs tad-diviżorju bejn il-pannell {a} u l-pannell {b}',

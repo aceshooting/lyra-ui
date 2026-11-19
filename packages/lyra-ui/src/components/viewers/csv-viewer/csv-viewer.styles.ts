@@ -11,9 +11,17 @@ export const styles = css`
     color: css`var(--lr-csv-viewer-highlight-color, var(--_lr-csv-viewer-highlight-color, var(--lr-color-brand)))`,
     padding: css`var(--lr-space-2xs) var(--lr-space-xs)`,
   })}
+  [part='header-row'] { flex-shrink: 0; }
   [part='rows'] {
-    --lr-virtual-list-height: var(--lr-size-20rem);
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
     min-inline-size: max-content;
+  }
+  [part='rows']::part(base) {
+    block-size: auto;
+    max-block-size: var(--lr-csv-viewer-max-height, var(--lr-size-20rem));
+    min-block-size: 0;
   }
   .empty-note,
   [part='error'] {

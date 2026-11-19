@@ -55,6 +55,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
   'lr-link-activate': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
@@ -204,6 +205,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  *   of an inline `code` span.
  * @cssprop [--lr-markdown-code-radius=calc(var(--lr-radius) * 0.5)] - Border radius of an inline
  *   `code` span.
+ * @cssprop [--lr-markdown-code-block-bg=var(--lr-markdown-code-bg, var(--lr-color-brand-quiet))] - Plain fenced code background.
  * @cssprop [--lr-markdown-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Padding of the
  *   fenced `code-block` surface.
  * @cssprop [--lr-markdown-code-block-radius=var(--lr-radius)] - Border radius of the fenced
@@ -236,6 +238,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-markdown-code-header-bg=var(--lr-color-surface)] - Code header background.
  * @cssprop [--lr-markdown-code-header-color=var(--lr-color-text-quiet)] - Code header foreground.
  * @event lr-copy - Fired after a code-header clipboard write succeeds, with its immutable outcome.
+ * @event lr-error - Fired before the detailed clipboard error when a code-header copy fails.
  * @event lr-copy-error - Fired after a code-header clipboard write fails, with its immutable outcome.
  * @csspart streaming-tail - The current uncommitted text during progressive streaming.
  * @status stable
@@ -387,7 +390,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), or a lazy loader per key, e.g.
-   *  `{ bash: () => import('@shikijs/langs/bash') }` -- called (at most once per key, memoized)
+   *  `{ bash: () => import('@shikijs/langs/bash') }` -- loaded on demand and memoized after success
    *  the first time a fenced block actually requests that language -- same shape as
    *  `<lr-code-block-core>`'s own `languages`. This component has no default/full-table
    *  highlighter to fall back to -- a fenced block whose language isn't a key here always renders

@@ -20,6 +20,7 @@ import type {
   LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import { styles } from './document-compare.styles.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import {
@@ -50,6 +51,8 @@ const DOCUMENT_COMPARE_DIFF_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
   ['unified', 'split'],
   'unified',
 );
+
+const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
 
 export interface LyraDocumentCompareEventMap
   extends Pick<LyraAnchorTargetEventMap, 'lr-text-select' | 'lr-anchor-result'> {
@@ -207,7 +210,7 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  * @event lr-download - See `LyraDocumentCompareEventMap`.
  * @event lr-render-error - See `LyraDocumentCompareEventMap`.
  * @event lr-search-change - See `LyraDocumentCompareEventMap`.
- * @event lr-anchor-result - Bubbles from the internal `<lr-diff-view>` after an anchor jump. `detail: { found }`.
+ * @event lr-anchor-result - After an anchor jump: bubbles from the internal `<lr-diff-view>`, or is emitted once for both side-by-side panes. `detail: { found }`.
  * @event lr-text-select - Bubbles from the internal `<lr-diff-view>` when a text selection ends.
  * @csspart base - The root wrapper.
  * @csspart diff - The internal `<lr-diff-view>`, rendered while `view="diff"`.
@@ -410,8 +413,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
     if (anchor != null) {
       if (changed.has('anchor') || changed.has('view') || oldSourceChanged || newSourceChanged) {
-        void this.previewOldEl?.scrollToAnchor(anchor);
-        void this.previewNewEl?.scrollToAnchor(anchor);
+        void this.jumpPanes(anchor);
       }
       return;
     }
@@ -456,11 +458,18 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     await this.updateComplete;
     if (this.diffEl) return this.diffEl.scrollToAnchor(target);
-    const found = await Promise.all([
+    return this.jumpPanes(target);
+  }
+
+  /** Jumps both side-by-side panes and reports one `lr-anchor-result` for the pair. */
+  private async jumpPanes(target: LyraAnchor | string): Promise<boolean> {
+    const results = await Promise.all([
       this.previewOldEl?.scrollToAnchor(target),
       this.previewNewEl?.scrollToAnchor(target),
     ]);
-    return found.includes(true);
+    const found = results.includes(true);
+    if (this.isConnected) this.emit('lr-anchor-result', { found });
+    return found;
   }
 
   private searchGeneration = 0;
@@ -491,7 +500,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   }
 
   private versionLabel(version: DocumentCompareVersion | undefined, fallbackKey: 'documentCompareOldVersion' | 'documentCompareNewVersion'): string {
-    return version?.name || version?.version || this.localize(fallbackKey);
+    return normalizeLabel(version?.name) ?? normalizeLabel(version?.version) ?? this.localize(fallbackKey);
   }
 
   private renderDiff(): TemplateResult {
@@ -516,7 +525,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
         filename=${version.name ?? ''}
         mime-type=${version.mimeType ?? ''}
         src=${version.uri ?? ''}
-        .highlights=${version.highlights ?? []}
+        .highlights=${version.highlights ?? EMPTY_HIGHLIGHTS}
         @lr-highlight-activate=${(e: CustomEvent<HighlightActivateDetail>) =>
           this.onHighlightActivate(side, e)}
       ></lr-document-preview>
@@ -526,13 +535,18 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   private renderSideBySide(): TemplateResult {
     const oldLabel = this.versionLabel(this.oldVersion, 'documentCompareOldVersion');
     const newLabel = this.versionLabel(this.newVersion, 'documentCompareNewVersion');
+    // Two regions with one name are indistinguishable, so identical version names fall back to
+    // the localized old/new names.
+    const distinct = oldLabel !== newLabel;
+    const oldName = distinct ? oldLabel : this.localize('documentCompareOldVersion');
+    const newName = distinct ? newLabel : this.localize('documentCompareNewVersion');
     return html`
       <div part="panes">
-        <div part="pane-old" role="region" aria-label=${oldLabel} tabindex="0" @scroll=${this.onPaneScroll('old')}>
+        <div part="pane-old" role="region" aria-label=${oldName} tabindex="0" @scroll=${this.onPaneScroll('old')}>
           <div part="pane-header">${oldLabel}</div>
           ${this.renderVersionPane(this.oldVersion, 'old')}
         </div>
-        <div part="pane-new" role="region" aria-label=${newLabel} tabindex="0" @scroll=${this.onPaneScroll('new')}>
+        <div part="pane-new" role="region" aria-label=${newName} tabindex="0" @scroll=${this.onPaneScroll('new')}>
           <div part="pane-header">${newLabel}</div>
           ${this.renderVersionPane(this.newVersion, 'new')}
         </div>

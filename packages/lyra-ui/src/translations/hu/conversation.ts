@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'A bemeneti korlát elérése miatt egyes javaslatok vagy katalógusbejegyzések kimaradtak.',
   transcriptFeedInputLimit: 'Összesen {total} bejegyzésből csak a legújabb {count} marad meg.',
   codeBlockHighlightLimit: 'A hosszú kód szintaxiskiemelés nélkül jelenik meg.',
+  codeBlockHighlightedLine: 'Kiemelt sor',
+  codeBlockActiveLine: 'Aktív kiemelt sor',
 };
 
 registerLyraLocale('hu', strings);

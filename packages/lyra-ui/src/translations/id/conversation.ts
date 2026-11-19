@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Sebagian saran atau entri katalog dihilangkan karena batas masukan tercapai.',
   transcriptFeedInputLimit: 'Hanya {count} entri terbaru dari {total} entri yang disimpan.',
   codeBlockHighlightLimit: 'Kode panjang ditampilkan tanpa penyorotan sintaks.',
+  codeBlockHighlightedLine: 'Baris yang disorot',
+  codeBlockActiveLine: 'Baris sorotan aktif',
 };
 
 registerLyraLocale('id', strings);

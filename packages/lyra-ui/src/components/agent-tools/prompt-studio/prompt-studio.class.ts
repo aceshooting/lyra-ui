@@ -13,12 +13,15 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import type { ChatMessageRole } from '../../conversation/chat-message/chat-message.class.js';
 import { styles } from './prompt-studio.styles.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedContains } from '../../../internal/composed-tree.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioMoveMessageDown, LYRA_DEFAULT_promptStudioMoveMessageUp, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessageNumbered, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Conversation message roles plus the tool-result role needed by prompt authoring. */
@@ -138,16 +141,16 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    moveDown: LYRA_DEFAULT_moveDown,
-    moveUp: LYRA_DEFAULT_moveUp,
     promptStudioAddMessage: LYRA_DEFAULT_promptStudioAddMessage,
     promptStudioLabel: LYRA_DEFAULT_promptStudioLabel,
     promptStudioMessageContent: LYRA_DEFAULT_promptStudioMessageContent,
     promptStudioMessageRole: LYRA_DEFAULT_promptStudioMessageRole,
     promptStudioMessages: LYRA_DEFAULT_promptStudioMessages,
+    promptStudioMoveMessageDown: LYRA_DEFAULT_promptStudioMoveMessageDown,
+    promptStudioMoveMessageUp: LYRA_DEFAULT_promptStudioMoveMessageUp,
     promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
     promptStudioPreviewLimit: LYRA_DEFAULT_promptStudioPreviewLimit,
-    promptStudioRemoveMessage: LYRA_DEFAULT_promptStudioRemoveMessage,
+    promptStudioRemoveMessageNumbered: LYRA_DEFAULT_promptStudioRemoveMessageNumbered,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
     promptStudioRoleTool: LYRA_DEFAULT_promptStudioRoleTool,
@@ -267,9 +270,13 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     return messages;
   }
 
+  private uniqueVersionsSource?: unknown;
+  private uniqueVersionsCache: PromptStudioVersion[] = [];
+
   private uniqueVersions(): PromptStudioVersion[] {
+    if (this.uniqueVersionsSource === this.versions) return this.uniqueVersionsCache;
     const seen = new Set<string>();
-    return (Array.isArray(this.versions) ? this.versions : []).filter((version) => {
+    const normalized = (Array.isArray(this.versions) ? this.versions : []).filter((version) => {
       if (!version || typeof version.id !== 'string' || version.id.trim().length === 0 || seen.has(version.id)) return false;
       seen.add(version.id);
       return true;
@@ -278,6 +285,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       messages: this.uniqueMessages(version.messages),
       ...(version.variables === undefined ? {} : { variables: this.variableItems(version.variables) }),
     }));
+    this.uniqueVersionsSource = this.versions;
+    this.uniqueVersionsCache = normalized;
+    return normalized;
   }
 
   private emitChange(messages = this.messages, variables = this.variables): void {
@@ -331,13 +341,23 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private removeMessage(id: string): void {
     let removed = false;
-    this.emitNormalizedChange(this.uniqueMessages().filter((message) => {
+    const messages = this.uniqueMessages();
+    const index = messages.findIndex((message) => message.id === id);
+    const active = deepActiveElementIn(this.ownerDocument);
+    const hadFocus = active !== null && composedContains(this, active);
+    const accepted = this.emitNormalizedChange(messages.filter((message) => {
       if (!removed && message.id === id) {
         removed = true;
         return false;
       }
       return true;
     }));
+    if (!accepted || !hadFocus || index < 0) return;
+    this.scheduleAfterUpdate(() => {
+      const rows = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-message-id]') ?? [])];
+      const row = rows[Math.min(index, rows.length - 1)];
+      restoreComposedFocus(this, true, row?.querySelector<HTMLElement>('[part="remove-message"]') ?? this.shadowRoot?.querySelector<HTMLElement>('[part="add-message"]'));
+    }, 'prompt-studio-message-remove-focus');
   }
 
   private addMessage(): void {
@@ -583,7 +603,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                 data-agent-action="neutral"
                 type="button"
                 ?disabled=${this.disabled || index === 0}
-                aria-label=${this.localize('moveUp')}
+                aria-label=${this.localize('promptStudioMoveMessageUp', undefined, { index: displayIndex })}
                 @click=${() => this.requestMessageMove(message.id, index, -1)}
               >
                 ${chevronIcon()}
@@ -593,25 +613,25 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                 data-agent-action="neutral"
                 type="button"
                 ?disabled=${this.disabled || index === messageCount - 1}
-                aria-label=${this.localize('moveDown')}
+                aria-label=${this.localize('promptStudioMoveMessageDown', undefined, { index: displayIndex })}
                 @click=${() => this.requestMessageMove(message.id, index, 1)}
               >
                 ${chevronIcon()}
               </button>
-              ${this.renderRemoveMessage(message.id)}
+              ${this.renderRemoveMessage(message.id, displayIndex)}
             </div>
           `
-        : this.renderRemoveMessage(message.id)}
+        : this.renderRemoveMessage(message.id, displayIndex)}
     </li>`;
   };
 
-  private renderRemoveMessage(id: string): TemplateResult {
+  private renderRemoveMessage(id: string, displayIndex: string): TemplateResult {
     return html`<button
       part="remove-message"
       data-agent-action="neutral"
       type="button"
       ?disabled=${this.disabled}
-      aria-label=${this.localize('promptStudioRemoveMessage')}
+      aria-label=${this.localize('promptStudioRemoveMessageNumbered', undefined, { index: displayIndex })}
       @click=${() => this.removeMessage(id)}
     >
       ×

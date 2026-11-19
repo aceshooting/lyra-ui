@@ -20,8 +20,8 @@
 text preserves the actual quantities while the fill clamps at the limit. A zero or invalid limit
 shows an unavailable state; usage above the limit shows an exceeded state. The component does not
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
-values are not plain attribute strings. A host `aria-label` names the group and the progressbar has
-its own localized accessible name.
+values are not plain attribute strings. A host `aria-label` names the group and its meter. Hiding the heading with `label=""` preserves
+the localized meter name. Percentages near zero or full capacity retain fractional precision.
 
 **Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 

@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Balongoli ndambo ya makanisi to makomi ya catalogue mpo motango ya kokɔtisa ekómi na ndelo.',
   transcriptFeedInputLimit: 'Kaka makomi {count} ya sika koleka kati na {total} nde ebatelami.',
   codeBlockHighlightLimit: 'Code ya molai emonisami kozanga kokesenisa syntaxe na balangi.',
+  codeBlockHighlightedLine: 'Molongo emonisami makasi',
+  codeBlockActiveLine: 'Molongo emonisami makasi ezali kosala',
 };
 
 registerLyraLocale('ln', strings);

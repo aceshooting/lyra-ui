@@ -19,7 +19,7 @@ export const styles = css`
   [part='body'] {
     box-sizing: border-box;
     overflow: auto;
-    max-block-size: var(--lr-dataset-viewer-max-height, none);
+    max-block-size: var(--lr-dataset-viewer-max-height, var(--lr-size-20rem));
   }
   /* A scroll container clips both axes and becomes the sticky header's containing block even when
      it has no height cap and therefore never scrolls. Page mode accepts page-level horizontal

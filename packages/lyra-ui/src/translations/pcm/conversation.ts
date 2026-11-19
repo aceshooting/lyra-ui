@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Dem leave some suggestion or catalog entry because input don reach im limit.',
   transcriptFeedInputLimit: 'Na only di newest {count} out of {total} entries dem dey keep.',
   codeBlockHighlightLimit: 'Long code dey show without syntax highlighting.',
+  codeBlockHighlightedLine: 'Line wey dem highlight',
+  codeBlockActiveLine: 'Line wey dem highlight (e dey active)',
 };
 
 registerLyraLocale('pcm', strings);

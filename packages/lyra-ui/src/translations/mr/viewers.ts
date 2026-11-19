@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF दस्तऐवज',
   pdfViewerMissingLibrary: 'PDF फाइल रेंडर करण्यासाठी पर्यायी "pdfjs-dist" पॅकेज आवश्यक आहे.',
   pdfViewerPageOf: '{total} पैकी पृष्ठ {page}',
+  pdfViewerPageHighlights: 'पृष्ठ {page} चे हायलाइट',
   pdfViewerZoomIn: 'मोठे करा',
   pdfViewerZoomOut: 'लहान करा',
   pdfViewerPreviousPage: 'मागील पृष्ठ',

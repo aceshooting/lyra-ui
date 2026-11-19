@@ -1,7 +1,9 @@
 import { css } from 'lit';
+import { srOnly } from '../../../internal/a11y.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
+  ${srOnly}
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   ul { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding-inline-start: 0; list-style: none; }
   [part='tree'] { padding-inline-start: 0; }
@@ -14,7 +16,7 @@ export const styles = css`
     border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding-inline-start: 0;
   }
-  [part~='node'] > :not(ul) {
+  [part~='node'] > :not(ul:not([part='constraints'])) {
     margin-inline-start: var(--_lr-schema-indent);
     max-inline-size: calc(100% - var(--_lr-schema-indent));
     box-sizing: border-box;
@@ -45,10 +47,12 @@ export const styles = css`
     background: var(--lr-json-schema-viewer-error-bg, var(--lr-color-danger-quiet));
   }
   [part='issue'][data-severity='warning'] {
+    border-inline-start-style: dashed;
     border-inline-start-color: var(--lr-json-schema-viewer-warning-border, var(--lr-color-warning));
     background: var(--lr-json-schema-viewer-warning-bg, var(--lr-color-warning-quiet));
   }
   [part='issue'][data-severity='info'] {
+    border-inline-start-style: dotted;
     border-inline-start-color: var(--lr-json-schema-viewer-info-border, var(--lr-color-brand));
     background: var(--lr-json-schema-viewer-info-bg, var(--lr-color-brand-quiet));
   }

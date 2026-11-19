@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -292,7 +292,7 @@ player's event contract: transcript rows live inside the embedded virtual list's
 root, so no selection binding is installed.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
-`timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;
+`timeline` (click-to-seek; arrow keys step, PageUp/PageDown take larger steps), `timeline-playhead` (the non-interactive current-position line), `timeline-marker` (one per `time-range` highlight;
 `data-tone`, `data-active`), `transcript` (the `<lr-virtual-list>` itself), `cue` (`aria-current`,
 `data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
@@ -354,4 +354,4 @@ ancestor.
 
 **RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
 on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
-both LTR and RTL.
+both LTR and RTL. ArrowUp/ArrowDown also seek, and PageUp/PageDown move by a tenth of the duration (at least 15 seconds).

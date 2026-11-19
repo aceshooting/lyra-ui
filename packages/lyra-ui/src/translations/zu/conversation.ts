@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Ezinye iziphakamiso noma okufakiwe kukhathalogi kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
   transcriptFeedInputLimit: 'Kugcinwa okufakiwe okusha kakhulu okungu-{count} kokungu-{total} kuphela.',
   codeBlockHighlightLimit: 'Ikhodi ende iboniswa ngaphandle kokugqamisa i-syntax.',
+  codeBlockHighlightedLine: 'Umugqa ogqanyisiwe',
+  codeBlockActiveLine: 'Umugqa ogqanyisiwe osebenzayo',
 };
 
 registerLyraLocale('zu', strings);

@@ -5,12 +5,12 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="base"] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-m);
+    gap: var(--lr-drilldown-panel-gap, var(--lr-space-m));
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -36,10 +36,10 @@ export const styles = css`
   [part="category"] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-s);
+    gap: var(--lr-drilldown-panel-category-gap, var(--lr-space-s));
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="evidence-item"],
   [part="document-item"],
@@ -51,7 +51,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-drilldown-panel-pagination-gap, var(--lr-space-xs));
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -68,6 +68,6 @@ export const styles = css`
   ::slotted([slot="runs"]) {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 `;

@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: '由於達到輸入限制，部分建議或目錄項目已被省略。',
   transcriptFeedInputLimit: '僅保留最新的 {count} 筆記錄，共 {total} 筆。',
   codeBlockHighlightLimit: '較長的程式碼會以不含語法醒目提示的方式顯示。',
+  codeBlockHighlightedLine: '醒目提示的行',
+  codeBlockActiveLine: '作用中的醒目提示行',
 };
 
 registerLyraLocale('zh-TW', strings);

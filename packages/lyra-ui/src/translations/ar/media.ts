@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'سرعة التشغيل',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} من {duration}',
+  avPlayerHighlightRange: 'من {start} إلى {end}',
+  avPlayerHighlightAt: 'عند {start}',
   attachmentTriggerAudio: 'تسجيل صوت',
   attachmentMenuAudio: 'تسجيل صوت',
   flagLoadError: 'العلم غير متاح',

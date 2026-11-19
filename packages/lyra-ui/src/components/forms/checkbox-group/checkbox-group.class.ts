@@ -1,3 +1,5 @@
+import { HostChildrenObserver } from '../../../internal/owned-observer.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -64,7 +66,7 @@ export interface LyraCheckboxGroupEventMap {
   input: Event;
   'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
   change: Event;
-  'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-change': CustomEvent<LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>>;
   'lr-checkbox-group-toggle-request': CustomEvent<
     LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>
   >;
@@ -88,11 +90,12 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @slot label - Visible group label.
  * @slot toolbar - Supplementary controls between the label and the options.
  * @slot hint - Supporting text.
+ * @slot help-text - Additional supporting text alongside the hint.
  * @slot error - Custom validation message.
  * @event {Event} input - User selection changed.
  * @event lr-input - Typed edit notification; `detail: { value: string[] }`.
  * @event {Event} change - User selection changed.
- * @event lr-change - User selection changed; detail is `{ value: string[] }`. Not fired for a
+ * @event lr-change - User selection changed; detail is `{ value, previousValue, option }`. Not fired for a
  * toggle a listener refused through `lr-checkbox-group-toggle-request`.
  * @event lr-checkbox-group-toggle-request - One owned checkbox is about to toggle;
  * `detail: { value, previousValue, option }` carries the group value that *would* result, the
@@ -130,6 +133,7 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @csspart options - Checkbox collection.
  * @csspart form-control-input - WA name for the same checkbox collection.
  * @csspart hint - Supporting text.
+ * @csspart form-control-help-text - Alias for the hint container.
  * @csspart error - Validation message.
  * @cssprop [--lr-checkbox-group-row-gap=calc(var(--lr-form-control-height) * 0.1)] - Vertical gap
  * between the group's label, options and messages, scaled by `size`.
@@ -165,8 +169,10 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-checkbox-group-toggle-request',
+    'lr-change',
   ]);
   protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-change': Object.freeze(['option']),
     'lr-checkbox-group-toggle-request': Object.freeze(['option']),
   });
 
@@ -203,6 +209,8 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   /** Visually hide the group label while preserving its accessible name. */
   @property({ attribute: 'label-display', reflect: true, useDefault: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
+  /** Supporting text used when the hint property is empty. */
+  @property({ attribute: 'help-text' }) helpText = '';
   /** SSR slot-presence hint for label content unavailable before hydration. */
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
   /** SSR slot-presence hint for hint content unavailable before hydration. */
@@ -217,16 +225,13 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   @state() private hasInteracted = false;
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private internals: ElementInternals;
   private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private labelId = nextId('checkbox-group-label');
-  private hintId = nextId('checkbox-group-hint');
-  private errorId = nextId('checkbox-group-error');
+  private readonly supportingId = nextId('checkbox-group');
   private requiredDescriptionId = nextId('checkbox-group-required');
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private requiredDescriptionLease?: AriaDescriptionLease;
@@ -244,9 +249,6 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   private pendingRestoreValues?: string[];
   /** A `value` assignment made before any checkbox child existed; applied on the next slotchange. */
   private pendingValues?: string[];
-  private childObserver?: MutationObserver;
-  private childObserverDocument?: Document;
-  private childObserverGeneration = 0;
   private childControllers = new Map<LyraCheckbox, ReactiveController>();
   // Shared with every other veto point in this library: `emit()` is synchronous, so a host that
   // answers `lr-checkbox-group-toggle-request` by assigning `value` itself finishes before the
@@ -325,6 +327,11 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   constructor() {
     super();
+    new HostChildrenObserver(this, {
+      subtree: true,
+      attributeFilter: ['checked', 'value', 'disabled', 'size', 'slot'],
+      onChange: records => this.onChildMutations(records),
+    });
     this.validityController = new FormControlController(this, {
       invalid: (init) => this.emit('lr-invalid', null, init),
       interacted: this.markInteracted,
@@ -365,7 +372,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       querySelectorAll?: (selectors: string) => NodeListOf<LyraCheckbox>;
     }).querySelectorAll;
     if (typeof querySelectorAll !== 'function') return [];
-    return Array.from(querySelectorAll.call(this, 'lr-checkbox')).filter((box) => this.ownsCheckbox(box));
+    return Array.from(querySelectorAll.call(this, tag('checkbox'))).filter((box) => this.ownsCheckbox(box));
   }
 
   private cachedBoxes?: LyraCheckbox[];
@@ -499,10 +506,12 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     this.hasInteracted = true;
     this.sync();
     const value = this.value;
-    const detail = (): Readonly<{ value: readonly string[] }> =>
-      Object.freeze({ value: Object.freeze([...value]) });
-    emitValueEvents(this, 'input', detail(), detail => this.emit('lr-input', detail));
-    emitValueEvents(this, 'change', detail(), detail => this.emit('lr-change', detail));
+    const option = event.target;
+    const previousValue = this.previousValues.get(option) ?? value;
+    this.previousValues.delete(option);
+    const detail = Object.freeze({ value: Object.freeze([...value]), previousValue, option });
+    emitValueEvents(this, 'input', { value: detail.value }, detail => this.emit('lr-input', detail));
+    emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
   };
 
   /** The group value that would result if `option` took `proposed`, in DOM order. */
@@ -513,6 +522,8 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
         .map((box) => box.value ?? 'on'),
     );
   }
+
+  private readonly previousValues = new WeakMap<LyraCheckbox, readonly string[]>();
 
   private onChildToggleRequest = (event: Event): void => {
     // Same ownership boundary as `onChildEvent`: nested groups, and interactive content slotted
@@ -531,10 +542,11 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     const option = event.target;
     const proposed = (event as CustomEvent<{ checked: boolean }>).detail.checked;
     let allowed = false;
+    const previousValue = this.value;
     requestThenCommit({
       requestDetail: {
         value: this.projectedValue(option, proposed),
-        previousValue: this.value,
+        previousValue,
         option,
       },
       emitRequest: (detail, init: { cancelable: true }) =>
@@ -548,7 +560,8 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
         allowed = !this.liveDisabled;
       },
     });
-    if (!allowed) event.preventDefault();
+    if (allowed) this.previousValues.set(option, previousValue);
+    else event.preventDefault();
   };
 
   private reconcileChildControllers(): void {
@@ -676,41 +689,10 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       this.propagateDisabled();
       this.propagateSize();
     }
-    this.armChildObserver();
     if (this.hasUpdated) {
       this.syncRequiredDescription();
       this.syncExternalDescription();
     }
-  }
-
-  private armChildObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected) return;
-    if (this.childObserver && this.childObserverDocument === ownerDocument) return;
-    this.resetChildObserver();
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.childObserverGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (
-        this.childObserver !== observer ||
-        this.childObserverDocument !== ownerDocument ||
-        this.childObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onChildMutations(records);
-    });
-    this.childObserver = observer;
-    this.childObserverDocument = ownerDocument;
-    observer.observe(this, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      attributeFilter: ['checked', 'value', 'disabled', 'size', 'slot'],
-    });
   }
 
   override disconnectedCallback(): void {
@@ -724,7 +706,6 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     this.removeEventListener('lr-checkbox-toggle-request', this.onChildToggleRequest, {
       capture: true,
     });
-    this.resetChildObserver();
     for (const [box, controller] of this.childControllers) {
       box.removeController(controller);
       box.setGroupDisabled?.(false);
@@ -740,18 +721,10 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     super.adoptedCallback();
     this.releaseExternalDescription();
     this.releaseRequiredDescription();
-    this.resetChildObserver();
     if (this.isConnected && this.hasUpdated) {
       this.syncRequiredDescription();
       this.syncExternalDescription();
     }
-  }
-
-  private resetChildObserver(): void {
-    this.childObserverGeneration += 1;
-    this.childObserver?.disconnect();
-    this.childObserver = undefined;
-    this.childObserverDocument = undefined;
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -933,15 +906,17 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
-    const hasHint = this.hasHintSlot || Boolean(this.hint) || this.withHint;
-    const hasError = this.hasErrorSlot || Boolean(this.errorText);
-    const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
-    const invalid = hasError || (this.hasInteracted && !this.internals.validity.valid);
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: this.supportingId, hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
+    const describedBy = supporting.describedBy;
+    const invalid = supporting.hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`<fieldset
       part="form-control"
       ?disabled=${this.effectiveDisabled}
       aria-label=${hostAriaLabel(this) ?? nothing}
-      aria-describedby=${described}
+      aria-describedby=${describedBy ?? nothing}
       aria-invalid=${invalid ? 'true' : 'false'}
     >
       <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></legend>
@@ -949,8 +924,10 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       <div part="options form-control-input">
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
-      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
-      <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
+      ${renderFormControlHintError({
+          ...supporting, idPrefix: this.supportingId, hint: this.hint || this.helpText,
+          errorText: this.errorText, helpTextSlot: true,
+        })}
       <span
         id=${this.requiredDescriptionId}
         class="sr-only"

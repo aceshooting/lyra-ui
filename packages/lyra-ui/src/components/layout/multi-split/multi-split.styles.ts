@@ -71,7 +71,7 @@ export const styles = css`
     min-block-size: 0;
     max-block-size: 100%;
     overflow: auto;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     /* box-sizing does not inherit across the slot boundary, so a slotted panel with its own
        padding/border would otherwise overflow the percent/flex-basis allocation computed for its
        content-box. */

@@ -26,7 +26,11 @@ paint through one `<lr-highlight-layer>` per page, stacked between the canvas an
 (canvas → highlights → text layer) so starting a text selection over a cited passage keeps working.
 Pointer activation is hit-tested at the page-wrapper level (the text layer on top intercepts most
 direct pointer events); keyboard activation reaches the highlight layer's own roving-tabindex rects
-directly, since z-stacking doesn't affect tab order. Residual: a click that _ends a text-selection
+directly, since z-stacking doesn't affect tab order. Each page's highlight layer is named
+`Page N highlights` (localized `pdfViewerPageHighlights`), so the per-page groups are distinguishable.
+Page changes made by navigation (not scrolling) are announced through the shared polite sink as
+`Page N of M`. A page render that fails with an `AbortError` while still current surfaces the
+page error and `lr-render-error`; a thumbnail render cancelled by pdf.js resolves `false`. Residual: a click that _ends a text-selection
 drag_ over a highlighted passage never activates it — the selection-in-progress check exists exactly
 to tell that apart from a genuine activation click.
 

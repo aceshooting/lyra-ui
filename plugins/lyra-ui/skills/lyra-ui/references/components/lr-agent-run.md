@@ -87,6 +87,8 @@ the run that rendered it. Replacing the run before the click handler runs discar
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
 
+The fallback task list keeps its state across equivalent step updates and handles its toggle events internally. Cancel applies to in-progress runs. A queued subagent can also be cancelled from its panel.
+
 **Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
 
 **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,

@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF-dokument',
   pdfViewerMissingLibrary: 'PDF-failide kuvamiseks vajab see vaatur valikulist paketti „pdfjs-dist”.',
   pdfViewerPageOf: 'Lehekülg {page}/{total}',
+  pdfViewerPageHighlights: 'Lehekülje {page} esiletõstud',
   pdfViewerZoomIn: 'Suurenda',
   pdfViewerZoomOut: 'Vähenda',
   pdfViewerPreviousPage: 'Eelmine lehekülg',

@@ -1059,3 +1059,27 @@ it('leaves non-arrow slider keys to the native range input', async () => {
   expect(el.currentIndex).to.equal(2);
   expect(steps).to.deep.equal([]);
 });
+
+describe('lr-sequence-playback remediation', () => {
+  it('restores the declared tick interval when interval-ms is removed', async () => {
+    const el = (await fixture(html`
+      <lr-sequence-playback item-count="1000" interval-ms="50"></lr-sequence-playback>
+    `)) as LyraSequencePlayback;
+    el.play();
+    el.removeAttribute('interval-ms');
+    // wait-reason: bounds real ticking; at the 16 ms floor this index would pass 15 inside the margin
+    await aTimeout(300);
+    el.pause();
+    expect(el.currentIndex).to.be.lessThan(3);
+  });
+
+  it('accepts autoplay-interval as a second spelling of interval-ms', async () => {
+    const el = (await fixture(html`
+      <lr-sequence-playback item-count="1000" autoplay-interval="40"></lr-sequence-playback>
+    `)) as LyraSequencePlayback;
+    expect(el.intervalMs).to.equal(40);
+    expect(el.autoplayInterval).to.equal(40);
+    el.autoplayInterval = 70;
+    expect(el.intervalMs).to.equal(70);
+  });
+});

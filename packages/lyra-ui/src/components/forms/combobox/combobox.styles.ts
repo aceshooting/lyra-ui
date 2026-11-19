@@ -1,3 +1,4 @@
+import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -515,7 +516,7 @@ export const styles = css`
      [data-active] -- the aria-activedescendant highlight -- so an arrow-keyed selected option
      showed nothing. The selected row keeps its affordance either way: that rule paints
      border-color/color/font-weight. */
-  [part="option"]:hover,
+  [part="option"]:where(:not([aria-disabled="true"])):hover,
   [part="option"][data-active] {
     background: var(
       --lr-combobox-option-active-bg,
@@ -525,7 +526,7 @@ export const styles = css`
   /* Mixing the hover tint itself, not the bare token, keeps a consumer who retinted
      --lr-combobox-option-active-bg in charge of both states: the pressed row is always their
      colour, one shared step further toward the text colour. */
-  [part="option"]:active {
+  [part="option"]:where(:not([aria-disabled="true"])):active {
     background: color-mix(
       in oklab,
       var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet)),
@@ -622,7 +623,7 @@ export const styles = css`
 
   [part="form-control"],
   [part="form-control-label"],
-  [part="hint"],
+  [part~="hint"],
   [part="error"] {
     ${formControlTextWrap}
   }
@@ -630,4 +631,5 @@ export const styles = css`
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
+  ${forcedColorsSelected}
 `;

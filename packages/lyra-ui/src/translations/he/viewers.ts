@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'מסמך PDF',
   pdfViewerMissingLibrary: 'כדי להציג קובצי PDF, יש להתקין את החבילה האופציונלית "pdfjs-dist".',
   pdfViewerPageOf: 'עמוד {page} מתוך {total}',
+  pdfViewerPageHighlights: 'הדגשות בעמוד {page}',
   pdfViewerZoomIn: 'הגדלה',
   pdfViewerZoomOut: 'הקטנה',
   pdfViewerPreviousPage: 'העמוד הקודם',

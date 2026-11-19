@@ -41,7 +41,7 @@ JSON-Schema required-property list instead of rejecting the entire tree.
 localized resource-ceiling status shown when caller-supplied validation issues exceed the rendered
 issue cap.
 
-`[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
+Each issue also begins with visually hidden localized severity text (`Error:`, `Warning:`, `Note:`) and a distinct border style, so severity never depends on colour alone. `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
 `--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this

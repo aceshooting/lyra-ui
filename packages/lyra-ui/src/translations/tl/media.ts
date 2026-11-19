@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Bilis ng playback',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} sa {duration}',
+  avPlayerHighlightRange: '{start} hanggang {end}',
+  avPlayerHighlightAt: 'sa {start}',
   attachmentTriggerAudio: 'Mag-record ng audio',
   attachmentMenuAudio: 'Mag-record ng audio',
   flagLoadError: 'Hindi available ang flag',

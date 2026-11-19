@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'May ilang mungkahi o tala sa katalogo na hindi isinama dahil naabot ang limitasyon sa input.',
   transcriptFeedInputLimit: 'Ang pinakabagong {count} sa {total} tala lang ang pinananatili.',
   codeBlockHighlightLimit: 'Ipinapakita ang mahabang code nang walang pagha-highlight ng sintaks.',
+  codeBlockHighlightedLine: 'Naka-highlight na linya',
+  codeBlockActiveLine: 'Aktibong naka-highlight na linya',
 };
 
 registerLyraLocale('tl', strings);

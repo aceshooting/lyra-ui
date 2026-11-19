@@ -444,7 +444,8 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     // into this one. Re-set to 'true' just below if this generation actually
     // reaches the fetch.
     this.setAttribute('aria-busy', 'false');
-    if (!this.src?.trim()) return; // idle no-op: no fetch, no events, content untouched
+    const src = this.src;
+    if (!src?.trim()) return; // idle no-op: no fetch, no events, content untouched
     if (!this.isConnected) return;
 
     const source = this.resolveSource();
@@ -499,7 +500,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       // to recompute any active search against the replacement fragment.
       this.requestUpdate();
       this.setAttribute('aria-busy', 'false');
-      this.emit('lr-load', { src: this.src });
+      this.emit('lr-load', { src });
     } catch (error) {
       if (
         !this.isConnected ||
@@ -529,8 +530,11 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
    * cannot observe a difference between them.
    */
   private emitError(detail: LyraIncludeErrorDetail): void {
+    const { generation, src, mode, withoutCache } = this;
     this.emit('lr-include-error', detail);
-    this.emit('lr-error', detail);
+    if (this.isConnected && this.generation === generation && this.src === src && this.mode === mode && this.withoutCache === withoutCache) {
+      this.emit('lr-error', detail);
+    }
   }
 
   override render(): TemplateResult {

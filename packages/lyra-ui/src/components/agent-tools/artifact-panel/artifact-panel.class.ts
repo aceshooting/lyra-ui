@@ -4,17 +4,16 @@ import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
-import {
-  writeClipboardText,
-  type LyraClipboardWriteFailure,
-  type LyraClipboardWriteSuccess,
-} from '../../../internal/clipboard.js';
+import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
+import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedContains } from '../../../internal/composed-tree.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { styles } from './artifact-panel.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -159,15 +158,30 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   @state() private hasCodeSlot = false;
 
-  private copyGeneration = 0;
+  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.copyText, (outcome) => {
+    const liveRegion = this.renderRoot.querySelector(tag('live-region')) as LyraLiveRegion | null;
+    reportCopyOutcome(
+      {
+        emit: (name, detail) => {
+          if (name === 'lr-copy') this.emit('lr-copy', detail as LyraClipboardWriteSuccess);
+          else if (name === 'lr-error') this.emit('lr-error');
+          else this.emit('lr-copy-error', detail as LyraClipboardWriteFailure);
+        },
+        announce: (ok) => liveRegion?.announce(this.localize(ok ? 'copied' : 'copyFailed')),
+      },
+      outcome,
+    );
+  });
+
+  private versionsCache?: { source: unknown; versions: ArtifactVersion[] };
+  private viewCoerced = false;
 
   private get normalizedVersions(): ArtifactVersion[] {
-    return firstByIdentity(Array.isArray(this.versions) ? this.versions : [], (version) => version.id);
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.copyGeneration += 1;
+    const source = this.versions;
+    if (this.versionsCache?.source === source) return this.versionsCache.versions;
+    const versions = firstByIdentity(Array.isArray(source) ? source : [], (version) => version.id);
+    this.versionsCache = { source, versions };
+    return versions;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -175,7 +189,10 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     this.seedFirstRenderState(() => {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
     });
-    if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
+    if (!this.hasCodeSlot && this.view === 'code') {
+      this.view = 'preview';
+      this.viewCoerced = this.hasUpdated;
+    }
     if (
       this.activeVersionId !== null &&
       (changed.has('versions') || changed.has('activeVersionId')) &&
@@ -192,8 +209,16 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   // even though the assigned child's own `slot` attribute never changed.
   private onCodeSlotChange = (): void => {
     this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
-    if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
+    if (!this.hasCodeSlot && this.view === 'code') this.setView('preview');
   };
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.viewCoerced) {
+      this.viewCoerced = false;
+      this.emit('lr-view-change', { view: this.view });
+    }
+  }
 
   private get accessibleLabel(): string {
     return this.label == null ? this.localize('artifactPanelLabel') : this.label;
@@ -212,50 +237,39 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     return index >= 0 ? index : versions.length - 1;
   }
 
-  private goToVersion(index: number): void {
+  private goToVersion(index: number, counterpart: 'version-previous' | 'version-next'): void {
     const versions = this.normalizedVersions;
     const version = versions[index];
     if (!version) return;
+    const active = deepActiveElementIn(this.ownerDocument);
+    const hadFocus = active !== null && composedContains(this, active);
     const isLatest = index === versions.length - 1;
     this.activeVersionId = isLatest ? null : version.id;
     this.emit('lr-version-change', { versionId: version.id });
     (this.renderRoot.querySelector(tag('live-region')) as LyraLiveRegion | null)?.announce(
       this.localize('artifactPanelVersionPosition', undefined, {
-        index: this.formatCount(index + 1),
-        count: this.formatCount(versions.length),
+        index: this.formatLocaleNumber(index + 1),
+        count: this.formatLocaleNumber(versions.length),
       }),
     );
+    if (hadFocus) {
+      void this.updateComplete.then(() =>
+        restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLElement>(`[part="${counterpart}"]`)),
+      );
+    }
   }
 
-  private onRestore = (): void => {
+  private onRestore(versionId: string): void {
     if (this.hideRestore) return;
     const versions = this.normalizedVersions;
     const index = this.currentIndex;
     const version = versions[index];
-    if (!version || this.activeVersionId === null || index === versions.length - 1) return;
+    if (!version || version.id !== versionId || this.activeVersionId === null || index === versions.length - 1) return;
     this.emit('lr-restore', { versionId: version.id });
-  };
+  }
 
-  private onCopy = async (): Promise<void> => {
-    const text = this.copyText;
-    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    const generation = ++this.copyGeneration;
-    const outcome = await writeClipboardText(owner, text);
-    if (
-      !owner ||
-      !this.isConnected ||
-      this.ownerDocument.defaultView !== owner ||
-      generation !== this.copyGeneration
-    ) return;
-    const liveRegion = this.renderRoot.querySelector(tag('live-region')) as LyraLiveRegion | null;
-    if (outcome.ok) {
-      liveRegion?.announce(this.localize('copied'));
-      this.emit('lr-copy', outcome);
-      return;
-    }
-    liveRegion?.announce(this.localize('copyFailed'));
-    this.emit('lr-error');
-    this.emit('lr-copy-error', outcome);
+  private onCopy = (): void => {
+    void this.copyFeedback.write(this.copyText);
   };
 
   private onDownload = (): void => {
@@ -308,14 +322,14 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     type="button"
                     aria-label=${this.localize('artifactPanelPreviousVersion')}
                     ?disabled=${index <= 0}
-                    @click=${() => this.goToVersion(index - 1)}
+                    @click=${() => this.goToVersion(index - 1, 'version-next')}
                   >
                     <span part="version-previous-glyph" aria-hidden="true">‹</span>
                   </button>
                   <span part="version-position"
                     >${this.localize('artifactPanelVersionPosition', undefined, {
-                      index: this.formatCount(index + 1),
-                      count: this.formatCount(versions.length),
+                      index: this.formatLocaleNumber(index + 1),
+                      count: this.formatLocaleNumber(versions.length),
                     })}</span
                   >
                   ${currentVersion?.label
@@ -326,7 +340,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     type="button"
                     aria-label=${this.localize('artifactPanelNextVersion')}
                     ?disabled=${index >= versions.length - 1}
-                    @click=${() => this.goToVersion(index + 1)}
+                    @click=${() => this.goToVersion(index + 1, 'version-previous')}
                   >
                     <span part="version-next-glyph" aria-hidden="true">›</span>
                   </button>
@@ -335,7 +349,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                         part="restore-button"
                         data-agent-action="neutral"
                         type="button"
-                        @click=${this.onRestore}
+                        @click=${() => this.onRestore(currentVersion!.id)}
                       >
                         ${this.localize('artifactPanelRestore')}
                       </button>`
@@ -345,7 +359,13 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
             : nothing}
           <slot name="actions" part="actions"></slot>
           ${this.copyText
-            ? html`<button part="copy-button" data-agent-action="neutral" type="button" @click=${this.onCopy}>${this.localize('copy')}</button>`
+            ? html`<button part="copy-button" data-agent-action="neutral" type="button" data-copy-status=${this.copyFeedback.status} @click=${this.onCopy}>${
+                this.copyFeedback.status === 'success'
+                  ? this.localize('copied')
+                  : this.copyFeedback.status === 'error'
+                    ? this.localize('copyFailed')
+                    : this.localize('copy')
+              }</button>`
             : nothing}
           ${this.downloadSrc
             ? html`<button part="download-button" data-agent-action="neutral" type="button" @click=${this.onDownload}>
@@ -366,12 +386,6 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
         </div>
       </div>
     `;
-  }
-  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
-   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
-   *  sentence. Route every user-facing number through the effective locale instead. */
-  private formatCount(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
   }
 }
 

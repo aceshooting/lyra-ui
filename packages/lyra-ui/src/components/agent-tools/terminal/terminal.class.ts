@@ -1,4 +1,6 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { composedContains } from '../../../internal/composed-tree.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -41,10 +43,10 @@ import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-targe
 import { advanceViewerSearchIndex, sameViewerSearchDetail, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
-import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
+import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel, LYRA_DEFAULT_terminalOutputTruncated } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -212,9 +214,10 @@ export interface LyraTerminalEventMap {
  *   clicked/activated.
  * @event lr-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
  *   selection ending inside the viewport. `anchor` is `null` when either selection endpoint isn't
- *   inside a currently-mounted (non-virtualized-out) line.
+ *   inside a currently-mounted (non-virtualized-out) line. Ranges outside the viewport are ignored.
  * @csspart base - The outer container.
  * @csspart toolbar - The header row, only rendered when copy/download are enabled.
+ * @csspart limit - Localized note shown once input or a line exceeded the size limits and output was omitted.
  * @csspart copy-button - The copy-to-clipboard button.
  * @csspart download-button - The download button.
  * @csspart viewport - The `role="log"` scrollable region wrapping the virtualized line list.
@@ -291,6 +294,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     terminalDownload: LYRA_DEFAULT_terminalDownload,
     terminalHighlightLine: LYRA_DEFAULT_terminalHighlightLine,
     terminalLabel: LYRA_DEFAULT_terminalLabel,
+    terminalOutputTruncated: LYRA_DEFAULT_terminalOutputTruncated,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
@@ -381,12 +385,19 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.linesRevision += 1;
   }
   @state() private scrollTargetLineNumber: number | null = null;
-  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.linesRevision, outcome => {
-    if (outcome.ok) this.emit('lr-copy', outcome);
-    else {
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-    }
+  @state() private outputOmitted = false;
+  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.linesRevision, (outcome) => {
+    reportCopyOutcome(
+      {
+        emit: (name, detail) => {
+          if (name === 'lr-copy') this.emit('lr-copy', detail as LyraClipboardWriteSuccess);
+          else if (name === 'lr-error') this.emit('lr-error');
+          else this.emit('lr-copy-error', detail as LyraClipboardWriteFailure);
+        },
+        announce: (ok) => this.sink?.announce(this.localize(ok ? 'copied' : 'copyFailed')),
+      },
+      outcome,
+    );
   });
 
   private buffer: TerminalLine[] = [];
@@ -437,6 +448,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.lastSelectedRange = undefined;
     this.downloadGeneration += 1;
     this.cancelPendingAnnouncement();
     this.sink?.release();
@@ -468,6 +480,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   // --- Buffer / cursor model -------------------------------------------------
 
   private resetBuffer(): void {
+    this.lastSelectedRange = undefined;
     this.ansiParser.reset();
     this.buffer = [];
     this.retainedCellCount = 0;
@@ -479,6 +492,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
+    this.outputOmitted = false;
   }
 
   private appendLine(): void {
@@ -614,6 +628,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       this.announcer.announce(this.pendingAnnounceText);
     }
     this.pendingOverflow = undefined;
+    if (overflow.inputCharactersDropped || overflow.lineCharactersDropped) {
+      if (!this.outputOmitted) this.sink?.announce(this.localize('terminalOutputTruncated'));
+      this.outputOmitted = true;
+    }
     if (overflow.inputCharactersDropped || overflow.lineCharactersDropped || overflow.linesDropped) this.emit('lr-overflow', overflow);
     if (notifySearch) this.emitSearchChangeIfChanged(previousSearch);
   }
@@ -849,6 +867,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   private onLineKeyDown = (e: KeyboardEvent, h: LyraHighlight): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.activateHighlight(h);
@@ -916,6 +935,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   // --- Follow tracking via virtual-list's visible-range event ---------------
 
+  private stopVirtualScroll = (e: Event): void => {
+    e.stopPropagation();
+  };
+
   private onVisibleRangeChanged = (e: CustomEvent<LyraVirtualListRange>): void => {
     e.stopPropagation();
     const atBottom = this.lines.length === 0 || e.detail.end >= this.lines.length - 1;
@@ -926,18 +949,13 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   };
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     if (e.key === 'End') this.jumpToLatest();
   };
 
-  /** Best-effort: resolves a user text selection ending inside the viewport into `lr-text-select`.
-   *  Walks each selection endpoint up to its nearest `[data-line-number]` ancestor to build a
-   *  `line-range` anchor; `anchor` is `null` when either endpoint isn't inside a currently-mounted
-   *  line (virtualized out, or the selection reaches outside the viewport entirely) -- matching
-   *  `TextSelectDetail`'s own documented "`anchor` is `null` when the selection couldn't be
-   *  anchored" case, shared by every anchor-capable viewer. Cross-shadow-boundary text selection
-   *  has known browser-support variance; this degrades to no event firing rather than a broken one
-   *  when the platform doesn't expose a usable Selection here. */
-  private onViewportPointerUp = (): void => {
+  private lastSelectedRange?: Pick<Range, 'startContainer' | 'startOffset' | 'endContainer' | 'endOffset'>;
+
+  private onViewportPointerUp = (event: PointerEvent): void => {
     // Selectable text lives inside <lr-virtual-list>'s own shadow root (renderItem's render
     // root, not this component's -- see the class doc's `line` csspart note), so a shadow-scoped
     // selection read is anchored there, not on `this.shadowRoot`. `ShadowRoot.getSelection` is a
@@ -948,15 +966,31 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const listShadow = this.renderRoot.querySelector(tag('virtual-list'))?.shadowRoot;
     const selection =
       shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? this.ownerDocument.getSelection();
-    if (!selection || selection.isCollapsed) return;
+    if (!selection || selection.isCollapsed) {
+      this.lastSelectedRange = undefined;
+      return;
+    }
     let range: Range;
     try {
       range = selection.getRangeAt(0);
     } catch {
       return;
     }
+    const ancestor = range.commonAncestorContainer;
+    const element = ancestor.nodeType === 1 ? ancestor as Element : ancestor.parentElement;
+    if (!composedContains(event.currentTarget as Element, element)) {
+      this.lastSelectedRange = undefined;
+      return;
+    }
     const text = boundedSelectionText(range);
     if (text === '') return;
+    const last = this.lastSelectedRange;
+    if (last && last.startContainer === range.startContainer && last.startOffset === range.startOffset &&
+      last.endContainer === range.endContainer && last.endOffset === range.endOffset) return;
+    this.lastSelectedRange = {
+      startContainer: range.startContainer, startOffset: range.startOffset,
+      endContainer: range.endContainer, endOffset: range.endOffset,
+    };
     const lineNumberOf = (node: Node | null): number | null => {
       let el: Node | null = node;
       while (el) {
@@ -1145,6 +1179,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
               </div>
             `
           : nothing}
+        ${this.outputOmitted ? html`<p part="limit" role="note">${this.localize('terminalOutputTruncated')}</p>` : nothing}
         <div
           part="viewport"
           role="log"
@@ -1161,6 +1196,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
             .activeItemId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.withoutWrap ? '24' : 'auto'}
             @lr-visible-range-change=${this.onVisibleRangeChanged}
+            @lr-virtual-scroll=${this.stopVirtualScroll}
           ></lr-virtual-list>
           ${!this.follow && this.lines.length > 0
             ? html`<button part="jump-to-latest" type="button" @click=${this.jumpToLatest}>

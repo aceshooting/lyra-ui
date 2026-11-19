@@ -1,5 +1,7 @@
-import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
-import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
+import { countLines, splitLines } from '../../../internal/text-lines.js';
+import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { RecordCopyFeedback, type CopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS } from './shiki-types.js';
 /**
  * Everything `<lr-code-block>` and `<lr-code-block-core>` render and compute identically:
@@ -24,8 +26,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import { chevronIcon } from '../../../internal/icons.js';
-import { svg, type SVGTemplateResult } from 'lit';
+import { chevronIcon, copyIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -84,7 +85,7 @@ function codeBlockBodyLabel(
   language: string
 ): string {
   return (
-    filename ||
+    normalizeLabel(filename) ??
     (language
       ? localize('codeRegionWithLanguage', undefined, { language })
       : localize('codeRegion'))
@@ -116,7 +117,7 @@ function addBoundedLineRange(
 /** One-based line count of `code`, the upper bound every line-addressing helper below clamps to.
  *  A trailing newline still yields the (empty) line after it, matching the rendered line count. */
 export function codeBlockLineCount(code: string): number {
-  return code.split(/\r\n|\r|\n/).length;
+  return countLines(code);
 }
 
 /** Keeps the roving-tabindex gutter's focused line inside `[1, lineCount]` after a `code` change
@@ -478,11 +479,12 @@ export function tokenizeCodeBlock(
 ): string | null {
   if (options.code.length > SHIKI_SOURCE_MAX_CODE_UNITS) return null;
   try {
-    return hl.codeToHtml(options.code, {
+    const markup = hl.codeToHtml(options.code, {
       lang: options.lang,
       themes: SHIKI_THEMES,
       transformers: [codeBlockLineTransformer(options)],
-    }) as string;
+    });
+    return typeof markup === 'string' ? markup : null;
   } catch {
     return null;
   }
@@ -640,7 +642,7 @@ export interface CodeBlockPlainCodeOptions {
 export function renderCodeBlockPlainCode(
   options: CodeBlockPlainCodeOptions
 ): TemplateResult {
-  const lines = options.code.split(/\r\n|\r|\n/);
+  const lines = splitLines(options.code);
   const interactive = options.activatableLines && options.lineNumbers;
   // The `>` sits on its own line right before the expression (and `</code` right after it, closing
   // on the following line) so no incidental whitespace text node lands inside <code> -- its
@@ -696,26 +698,6 @@ export interface LyraCodeBlockToggleDetail {
   /** Whether the code region is shown in the resulting (on `lr-toggle-request`, the proposed)
    *  state. */
   expanded: boolean;
-}
-
-/** The two-rectangle copy glyph, matching `<lr-copy-button>`'s own so the library reads as one
- *  visual language. Same 24x24 viewBox and 1.75 stroke as `internal/icons.ts`; not added to that
- *  shared set because only these two components render it and the set is imported wholesale. */
-function copyGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-  `;
 }
 
 interface CodeBlockHeaderOptions {
@@ -787,7 +769,7 @@ function renderCodeBlockHeader(
                 @click=${options.onCopy}
               >
                 ${options.copyAppearance === 'icon'
-                  ? copyGlyph()
+                  ? copyIcon()
                   : options.copyFailed
                     ? options.localize('copyFailed')
                     : options.justCopied
@@ -856,7 +838,7 @@ export function renderCodeBlockShell(
     options.hasHeaderActions;
   const bodyHidden = options.collapsible && options.collapsed;
   const bodyLabel =
-    options.accessibleLabel ??
+    normalizeLabel(options.accessibleLabel) ??
     codeBlockBodyLabel(options.localize, options.filename, options.language);
 
   // Indentation preserved from both class files' own render() -- see renderCodeBlockHeader() above.
@@ -929,9 +911,7 @@ export interface CodeBlockInteractionOptions {
   setCopyFailed: (value: boolean) => void;
   setDarkTheme: (value: boolean) => void;
   emitLineActivate: (line: number) => void;
-  emitCopy: (outcome: LyraClipboardWriteSuccess) => void;
-  emitError: () => void;
-  emitCopyError: (outcome: LyraClipboardWriteFailure) => void;
+  reportCopy: (outcome: CopyOutcome) => void;
   requestToggle: (collapsed: boolean) => boolean;
   emitToggle: (collapsed: boolean) => void;
   emitTextSelect: (selection: CodeBlockSelection) => void;
@@ -958,13 +938,7 @@ export class CodeBlockInteractionController {
   private readonly feedback: RecordCopyFeedback;
 
   constructor(private readonly options: CodeBlockInteractionOptions) {
-    this.feedback = new RecordCopyFeedback(options.host, () => options.host.code ?? '', outcome => {
-      if (outcome.ok) options.emitCopy(outcome);
-      else {
-        options.emitError();
-        options.emitCopyError(outcome);
-      }
-    }, status => {
+    this.feedback = new RecordCopyFeedback(options.host, () => options.host.code ?? '', options.reportCopy, status => {
       options.setJustCopied(status === 'success');
       options.setCopyFailed(status === 'error');
     });
@@ -1020,6 +994,11 @@ export class CodeBlockInteractionController {
   // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
   // renderCodeBlockPlainCode() while activatableLines && lineNumbers are both set).
   onLineKeyDown = (e: KeyboardEvent, line: number): void => {
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
+    if ((e.key === 'Enter' || e.key === ' ') && isRepeatedActivationKey(e)) {
+      e.preventDefault();
+      return;
+    }
     const { host } = this.options;
     if (host.code !== this.countedCode) {
       this.countedCode = host.code;

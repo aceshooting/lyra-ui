@@ -734,3 +734,9 @@ it('keeps explicit host vote writes and blocks recursive requests', async () => 
   expect(requests).to.equal(1);
   expect(el.vote).to.equal('b');
 });
+
+it('falls back to the localized pane names for whitespace-only labels', async () => {
+  const el = await fixture<LyraComparePanel>(html`<lr-compare-panel label-a="   " label-b="B model"></lr-compare-panel>`);
+  const names = [...el.shadowRoot!.querySelectorAll('[part^="pane-"][role="region"]')].map((pane) => pane.getAttribute('aria-label'));
+  expect(names).to.deep.equal(['Response A', 'B model']);
+});

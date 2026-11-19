@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Lejátszási sebesség',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} / {duration}',
+  avPlayerHighlightRange: '{start} – {end}',
+  avPlayerHighlightAt: '{start} időpontnál',
   attachmentTriggerAudio: 'Hang rögzítése',
   attachmentMenuAudio: 'Hang rögzítése',
   flagLoadError: 'A zászló nem érhető el',

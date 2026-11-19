@@ -64,7 +64,7 @@ export const styles = css`
     min-inline-size: 0;
     min-block-size: 0;
     overflow: auto;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   [part~='start'] {
@@ -85,7 +85,7 @@ export const styles = css`
   ::slotted(*) {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   [part~='divider'] {

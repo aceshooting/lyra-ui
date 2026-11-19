@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF-dokument',
   pdfViewerMissingLibrary: 'Denne fremviser kræver, at den valgfrie pakke "pdfjs-dist" er installeret, for at kunne vise PDF-filer.',
   pdfViewerPageOf: 'Side {page} af {total}',
+  pdfViewerPageHighlights: 'Fremhævninger på side {page}',
   pdfViewerZoomIn: 'Zoom ind',
   pdfViewerZoomOut: 'Zoom ud',
   pdfViewerPreviousPage: 'Forrige side',

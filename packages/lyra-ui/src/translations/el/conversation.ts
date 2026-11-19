@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: προτάσεις ή καταχωρίσεις καταλόγου.',
   transcriptFeedInputLimit: 'Διατηρούνται μόνο οι πιο πρόσφατες {count} από {total} καταχωρίσεις.',
   codeBlockHighlightLimit: 'Ο μεγάλος κώδικας εμφανίζεται χωρίς επισήμανση σύνταξης.',
+  codeBlockHighlightedLine: 'Επισημασμένη γραμμή',
+  codeBlockActiveLine: 'Ενεργή επισημασμένη γραμμή',
 };
 
 registerLyraLocale('el', strings);

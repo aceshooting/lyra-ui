@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Sommige suggesties of catalogusvermeldingen zijn weggelaten omdat de invoerlimiet is bereikt.',
   transcriptFeedInputLimit: 'Alleen de nieuwste {count} van {total} vermeldingen worden bewaard.',
   codeBlockHighlightLimit: 'Lange code wordt zonder syntaxiskleuring getoond.',
+  codeBlockHighlightedLine: 'Gemarkeerde regel',
+  codeBlockActiveLine: 'Actieve gemarkeerde regel',
 };
 
 registerLyraLocale('nl', strings);

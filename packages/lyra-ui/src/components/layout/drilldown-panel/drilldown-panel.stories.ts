@@ -133,6 +133,7 @@ export const BoundedDocumentPage: Story = {
   render: () => html`
     <lr-drilldown-panel
       active-category="documents"
+      style="--lr-drilldown-panel-gap:var(--lr-space-s);--lr-drilldown-panel-category-gap:var(--lr-space-xs);--lr-drilldown-panel-pagination-gap:var(--lr-space-s)"
       .path=${[
         {
           nodeId: "document-set",

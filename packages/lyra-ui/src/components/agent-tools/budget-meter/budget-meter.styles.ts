@@ -1,3 +1,4 @@
+import { forcedColorsDataFill } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -60,5 +61,12 @@ export const styles = css`
 
   [part='exceeded'] {
     color: var(--lr-color-danger);
+  }
+
+  ${forcedColorsDataFill}
+  @media (forced-colors: active) {
+    [part='track'] {
+      outline: var(--lr-border-width-thin) solid CanvasText;
+    }
   }
 `;

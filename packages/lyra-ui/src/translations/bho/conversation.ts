@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कुछ सुझाव भा कैटलॉग प्रविष्टि छोड़ दिहल गइल बा।',
   transcriptFeedInputLimit: '{total} में से खाली सबसे नया {count} गो प्रविष्टि रखल जाला।',
   codeBlockHighlightLimit: 'लमहर कोड बिना सिंटैक्स हाइलाइटिंग के देखावल जात बा।',
+  codeBlockHighlightedLine: 'हाइलाइट कइल गइल पंक्ति',
+  codeBlockActiveLine: 'सक्रिय हाइलाइट पंक्ति',
 };
 
 registerLyraLocale('bho', strings);

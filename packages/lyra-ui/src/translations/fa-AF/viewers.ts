@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'سند PDF',
   pdfViewerMissingLibrary: 'برای نمایش پرونده‌های PDF، بستهٔ اختیاری "pdfjs-dist" را نصب کنید.',
   pdfViewerPageOf: 'صفحهٔ {page} از {total}',
+  pdfViewerPageHighlights: 'برجسته‌های صفحهٔ {page}',
   pdfViewerZoomIn: 'بزرگ‌نمایی',
   pdfViewerZoomOut: 'کوچک‌نمایی',
   pdfViewerPreviousPage: 'صفحهٔ قبلی',

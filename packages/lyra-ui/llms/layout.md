@@ -35,6 +35,9 @@ Unconstrained panels have a zero block minimum, so long content stays inside the
 escaping into following content. Set `overflow` directly on an individual panel when its content
 needs a different scrolling surface.
 
+A focused enabled divider consumes its resize keys at either limit. Clamped steps leave sizes and persistence untouched.
+Alt, Ctrl, and Meta chords, IME composition, and previously handled key events pass through.
+
 **Properties:**
 
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
@@ -52,6 +55,7 @@ needs a different scrolling surface.
   owner-document/host, and `vw`/`vh` against the owner window), then normalized to percentages
   before the same validation applies — so `['200px', '300px']` on a 500px container initializes to
   `[40, 60]`.
+- `disabled: boolean = false` (reflected) — disables pointer and keyboard resizing on every divider.
 - `min: number = 10` (min % per panel)
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
   `orientationBreakpoint` (or always, when that's unset).
@@ -208,7 +212,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   leaves the last one open). Assigning it is silent, like `sizes`; a `sizes` assignment made
   together with it may already describe the fold (zero entries for the folded panels), otherwise a
   `sizes` value with a non-zero entry for a folded panel is rejected like any invalid layout. A
-  valid `storageKey` layout restores the set, unless this property already names panels. The
+  valid `storageKey` layout restores the set when this property is unset. An explicitly assigned
+  empty array expands every panel using its saved share. The
   responsive `collapse` pane is independent: while it is `'rail'`/`'floating'` its own state governs
   that panel, and a per-panel fold of the same panel shows again once it is `'wide'`.
 
@@ -262,7 +267,8 @@ back to the localized default.
 
 **Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
 array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
-persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly or a
+persisted layout unchanged. A listener that changes the sizes, panel sequence, or resize constraints
+supersedes the pending proposal. It is not emitted when a consumer assigns `sizes` directly or a
 keyboard/pointer proposal clamps to the already-current sizes),
 `lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
 or keyboard step commits. A genuine pointer gesture has one terminal persistence write on
@@ -445,7 +451,7 @@ multi-divider events are intentionally a different API.
 
 Both `lr-resize-request` and `lr-reposition-request` detail fields `position` and `positionInPixels` measure from the
 selected primary edge and agree with accepted public property readback, including `primary="end"`.
-Canceling preserves both prior values; direct property writes remain silent.
+Both events describe one proposal. Canceling either preserves both prior values. Direct property writes remain silent.
 
 **Properties:**
 
@@ -2079,7 +2085,8 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 - `groups?: LyraVirtualListGroup[]` (attribute: false) — renders a labeled marker at each group's
   `startIndex` as a measured virtual entry immediately before that row. Its live block size
   contributes to every following offset, so a variable-height or late-resizing marker never covers
-  the group's first row. Markers remain windowed with their rows. Groups are sorted by `startIndex`;
+  the group's first row. Each semantic row exposes its group label as an accessible description, including when its
+  marker scrolls outside the rendered window. Groups are sorted by `startIndex`;
   a non-object entry or a `startIndex` that's non-integer, out of range, or a duplicate of an earlier
   group's is silently dropped rather than rendered wrong. An entry whose
   `label` is the **empty string** renders no marker at all — it is a pure position anchor, for a host
@@ -2236,8 +2243,8 @@ math, and any row element can be recycled or removed on the next update.
 
 **Events:** `lr-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
-bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
-window away from the end, re-arms it), `lr-visible-range-change` (`detail: LyraVirtualListRange`, the
+bottom. Moving away from the bottom or appending a page re-arms the event. A short page that leaves
+the end in view can therefore trigger the next request), `lr-visible-range-change` (`detail: LyraVirtualListRange`, the
 current visible, non-overscanned item index range — fired only when it actually changes; it was
 spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
 `-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
@@ -2263,7 +2270,13 @@ rendered for an entry whose `label` is the empty string), `sticky-group` (the pi
 current group, present only while `renderStickyGroup` is set — `aria-hidden`, `inert`, and
 pointer-transparent, and it shows nothing while the viewport is above the first group)
 
-**Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
+For an embedded list that should shrink to its content, set `block-size: auto` and
+`max-block-size` on `lr-virtual-list::part(base)`. The list scrolls when its rows exceed the cap.
+If a surrounding panel owns scrolling, assign that element to `scrollElement` and set the cap
+on the panel.
+
+**Themeable custom properties:** `--lr-virtual-list-sticky-group-bg` (default
+`var(--lr-color-surface)`, the pinned `sticky-group` overlay's background), `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
 `--lr-virtual-list-row-mark-bg` (default `revert`),
@@ -3948,6 +3961,7 @@ docked case.
   separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
+- `disabled: boolean = false` (reflected) — disables resizing. The collapse toggle stays available.
 - `withoutResize: boolean = false` (reflected, attribute `without-resize`) — when set, no drag handle
   renders at all and the panel is a fixed size.
 
@@ -4005,10 +4019,11 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle keeps its localized accessible name, and a slotted glyph is not rotated.
+icons). The toggle uses the stable `dockPanelToggle` accessible name and reports state through `aria-expanded`.
+The `dockPanelCollapse` and `dockPanelExpand` strings supply its action tooltip. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
-`handle` (the draggable resize edge; only rendered when not `without-resize` and not `collapsed`),
+`handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),
 `collapse-toggle` (only rendered when `collapsible`), `rail` (wraps the `rail` slot; hidden unless
 `collapsed`)
 
@@ -4025,7 +4040,9 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. `--lr-dock-panel-handle-hit-area` sets the resize target width along the inner edge (default
+being dragged. `--lr-dock-panel-handle-color` sets the resting line color (default `var(--lr-color-border)`).
+`--lr-dock-panel-handle-size` sets its thickness (default `var(--lr-size-3px)`).
+`--lr-dock-panel-handle-hit-area` sets the resize target width along the inner edge (default
 `var(--lr-space-m)`). The target sits inside the panel's clipped edge, over its content, so precise
 pointers get exactly that width and content beside the edge stays clickable; set it to the visible
 line (for example `3px`) to give the content every pixel. Coarse or hover-less pointers get at
@@ -4069,7 +4086,7 @@ reconciliation emits neither resize event and preserves an in-range authored rel
 - Parent or flex allocation shrink, direct out-of-range property writes, and live min/max changes
   reconcile atomically. A later container grow does not silently restore an extent that was clamped
   during shrink.
-- `handle` only renders while `!withoutResize && !collapsed`; `collapse-toggle` only renders while
+- `handle` only renders while `!disabled && !withoutResize && !collapsed`; `collapse-toggle` only renders while
   `collapsible` — a panel with `without-resize` and without `collapsible` renders neither control,
   just fixed-size slotted content. Dragging is also disabled whenever `collapsed` is `true`, even
   without `without-resize`.
@@ -4333,7 +4350,8 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   activation is idempotently open rather than a toggle.
 - `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
-  explicitly empty value is used as-is
+  explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
+  combobox also has its own name and announces its active listbox option.
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
@@ -4344,10 +4362,12 @@ unregister function. Calls in the same turn are admitted together in a microtask
 pending registration. Assign `commands` for an immediate bulk update; replacing it before a queued
 batch flush supersedes that older batch.
 
-**Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
-cycling) at the ends; Home/End jump to the first/last enabled row and PageUp/PageDown by one visible
-page, as in `lr-combobox`; the active row is scrolled into view within the list. Enter selects.
-Hovering a non-disabled row also makes it active. A non-empty query announces its localized result
+**Keyboard:** ArrowUp/ArrowDown move between enabled options and stop at the ends. Home/End move
+the search caret to the start/end of the query. When the caret is already at that boundary, the
+key jumps to the first/last enabled option. PageUp/PageDown move by one visible page and scroll
+the active option into view. Enter selects the keyboard-active command once per press.
+Shift, Alt, Ctrl, and Meta chords, IME composition, and previously handled keys pass through.
+Pointer hover highlights a row visually. Click selects the hovered row. A non-empty query announces its localized result
 count through the shared polite announcement sink; a query matching nothing announces
 `commandPaletteEmpty`. Unchanged results and the initial render are silent.
 
@@ -4357,8 +4377,10 @@ with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; no
 `lr-close-request`, so `lr-hide` is not cancelable here, unlike `lr-dialog`); non-cancelable
 `lr-close` with that same reason object after closing; no-detail `lr-after-show` / `lr-after-hide`
 once the palette has rendered open / closed (it has no transition to wait for); `lr-select`
-(`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
-closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
+(`detail: { command }`, fired before invoking the command’s `onSelect` and closing the palette).
+A synchronous listener can assign a new commands array to remove, replace or disable the command
+or replace its `onSelect` callback. Any of those changes stops the pending action.
+The host re-dispatches no-detail `focus`/`blur` events whenever the search input
 gains or loses focus. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
@@ -4942,6 +4964,8 @@ source-card, document-preview, and entity-card primitives.
 - `path: readonly LyraDrilldownNode[] = []` (attribute: false) — host-owned breadcrumb trail. Each
   node uses `nodeId` and may carry readonly `evidence`, `documents`, and `entities` collections.
   Evidence records use `evidenceId`, documents use `documentId`, and entities use `entityId`.
+  When a path update removes the focused breadcrumb control, focus moves to the current crumb
+  or to the panel if the path is empty.
 - `activeCategory: LyraDrilldownCategory | '' = ''` (attribute `active-category`, reflected) —
   controlled category authority. Empty or unavailable values resolve to the first populated
   category without mutating the property. A tab interaction emits a change request; the host
@@ -4987,6 +5011,10 @@ arrowing across tabs does not request expensive categories until Enter/Space com
   preserving the preview event's domain-specific highlight identity. Raw events from owned source
   cards, previews, entity cards, and tabs are contained;
   events from consumer-owned `runs` slot content continue bubbling normally.
+
+`--lr-drilldown-panel-gap` controls spacing between the breadcrumb and content (default `var(--lr-space-m)`).
+`--lr-drilldown-panel-category-gap` spaces category entries (default `var(--lr-space-s)`).
+`--lr-drilldown-panel-pagination-gap` spaces the page controls (default `var(--lr-space-xs)`).
 
 **Slots:** `runs`. **CSS parts:** `base`, `breadcrumb`, `breadcrumb-item`, `breadcrumb-button`,
 `tabs`, `category`, `content`, `evidence-item`, `document-item`, `entity-item`, `pagination`,
@@ -5068,9 +5096,7 @@ until something else registers it, the same trade `icon-button-register.js` docu
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value,
-  including one sitting at its own declared `defaultValue`. Drives the reset button's own disabled
-  state in every `activeFiltersDisplay` mode except `'changed'`; the getter itself is unaffected by
-  `activeFiltersDisplay`.
+  including one sitting at its own declared `defaultValue`. Chip visibility is independent.
 - `hasChangedFilters: boolean` (read-only) — whether any filter's value differs from its own
   declared `defaultValue`, using the same equality `activeFiltersDisplay: 'changed'` filters its
   chip row on: a `readonly string[]` default compares positionally, everything else compares with
@@ -5095,10 +5121,10 @@ until something else registers it, the same trade `icon-button-register.js` docu
   at each index), matching this component's only other array-equality precedent (a custom adapter's
   own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
   like any other string. Removing a chip always clears that filter, unaffected by this property.
-  `'changed'` additionally gates the reset button on `hasChangedFilters` instead of
-  `hasActiveFilters`, so an untouched defaults-only bar — which renders no chip in this mode — no
-  longer offers an enabled reset that would change nothing. Enablement under `'all'` and `'hidden'`
-  is unchanged, `disabled`/`loading` still win in every mode, and `reset()` itself is untouched.
+  Reset is enabled whenever `hasChangedFilters` is true and the bar is neither disabled nor loading.
+  Clearing a defaulted filter therefore makes Reset available even with an empty chip row.
+  When Reset disables itself, keyboard focus moves to the first available control or to the bar
+  if no control remains.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -5113,7 +5139,9 @@ complete value object, plus the `filterId` that changed and (new in 12.0.0) `app
 "Date-range quick ranges" below. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
-composed controls continue bubbling normally.
+composed controls continue bubbling normally. Picker requests, popup lifecycle events and
+selection diagnostics from internal controls stay inside the bar. Controls supplied through the
+`end` slot keep their own event contracts.
 
 **Methods:** `checkValidity(): boolean` returns whether every required filter is set without
 revealing errors; `reportValidity(): boolean` returns the same state and reveals every current
@@ -5477,8 +5505,8 @@ still holds the reset button (the "clear all" action such a bar needs), the `end
 loading spinner, exactly like a bar with no filters at all.
 
 Everything else is unchanged from any other filter type. The value lives in `value` under its own
-filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables
-the reset button) and toward `invalidFilterIds` when the definition is `required`, renders a
+filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters`
+and toward `invalidFilterIds` when the definition is `required`, renders a
 removable active-filter chip subject to `activeFiltersDisplay`, and is cleared both by removing that
 chip and by `reset()`. A `required` chip-only filter is honoured in **bookkeeping only**: it joins
 `invalidFilterIds`, fails `checkValidity()` and moves `lr-validity-change`, but renders no inline

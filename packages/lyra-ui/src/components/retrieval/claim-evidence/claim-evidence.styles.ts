@@ -48,6 +48,10 @@ export const styles = css`
     border-radius: 0;
     background: transparent;
   }
+  :host([frame='plain']) [part~='claim-selected'] {
+    outline: var(--lr-border-width-medium) solid var(--lr-color-brand);
+    outline-offset: calc(-1 * var(--lr-border-width-medium));
+  }
   [part='claim-trigger'] {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;

@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF कागजात',
   pdfViewerMissingLibrary: 'PDF फाइल देखाउन वैकल्पिक "pdfjs-dist" प्याकेज स्थापना गर्नुपर्छ।',
   pdfViewerPageOf: '{total} मध्ये पृष्ठ {page}',
+  pdfViewerPageHighlights: 'पृष्ठ {page} का हाइलाइटहरू',
   pdfViewerZoomIn: 'जुम बढाउनुहोस्',
   pdfViewerZoomOut: 'जुम घटाउनुहोस्',
   pdfViewerPreviousPage: 'अघिल्लो पृष्ठ',

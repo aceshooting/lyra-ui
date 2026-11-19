@@ -90,3 +90,15 @@ describe('lr-retrieval-results provider page states', () => {
     expect(sinkTexts('assertive').length).to.equal(0);
   });
 });
+
+describe('lr-retrieval-results provider error announcements', () => {
+  it('announces an errorText that arrives after mount in provider mode', async () => {
+    const el = await fixture<LyraRetrievalResults>(html`
+      <lr-retrieval-results .dataSource=${provider(async () => ({ total: 1, rows: [entry(0)] }))}></lr-retrieval-results>
+    `);
+    await waitUntil(() => el.sourceTotal !== null);
+    el.errorText = 'Provider failed';
+    await el.updateComplete;
+    expect(sinkTexts('assertive')).to.include('Provider failed');
+  });
+});

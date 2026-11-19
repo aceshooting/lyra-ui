@@ -20,7 +20,7 @@ import type { LyraFileInputEventMap } from '../../media/file-input/file-input.cl
 import type { LyraExportFormatOption, LyraExportButtonEventMap } from '../../utility/export-button/export-button.class.js';
 import { styles } from './eval-dataset.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -484,7 +484,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private clearSelection(): void {
     this.selectedId = null;
-    this.emit('lr-example-select', { exampleId: null });
+    this.scheduleAfterUpdate(() => this.emit('lr-example-select', { exampleId: null }), 'eval-dataset-clear-selection');
   }
 
   private tagsMemo?: { examples: readonly EvalExample[]; locale: string; tags: string[] };

@@ -315,7 +315,7 @@ export const StickyGroups: Story = {
 
     const header = (label: string) => html`
       <div
-        style="padding:0.375rem 0.75rem; background:var(--lr-color-surface-raised); color:var(--lr-color-text-quiet); font-weight:600;"
+        style="padding:0.375rem 0.75rem; background:var(--lr-virtual-list-sticky-group-bg); color:var(--lr-color-text-quiet); font-weight:600;"
       >
         ${label}
       </div>
@@ -329,7 +329,7 @@ export const StickyGroups: Story = {
       </style>
       <lr-virtual-list
         id="sticky-demo-list"
-        style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
+        style="max-width:32rem; --lr-virtual-list-height:20rem; --lr-virtual-list-sticky-group-bg:var(--lr-color-surface-raised)"
         .items=${rows}
         .groups=${groupStarts}
         .renderItem=${(item: unknown, index: number) =>

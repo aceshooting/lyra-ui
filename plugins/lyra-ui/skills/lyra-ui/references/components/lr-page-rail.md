@@ -40,15 +40,18 @@ method: the original `renderPageThumbnail(page, canvas, options?)` for bitmap/ca
 The latter resolves to a `PageThumbnailRenderHandle`; the rail disposes it whenever its row,
 viewer, allocation width, status, or document identity changes.
 
-**Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row).
-`detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
+**Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row), or
+a page number was typed in mediated mode. `detail: { page }`. In wired mode the rail also sets
+`viewer.page` itself.
 
 If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
 page instead of using the rendered window's local index or being lost with the virtualized row.
 Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
 numeric type-ahead buffer is cleared on detach. Typed digits may be ASCII or the digits of the
 effective locale the page numbers are shown in. Alt/Ctrl/Meta-modified digits are left to browser or
-application shortcuts and never enter the buffer.
+application shortcuts and never enter the buffer. A typed prefix that cannot be a page (for example
+`12` in a five-page document) restarts the buffer at the latest digit instead of ignoring further
+digits. A whitespace-only `label` falls back to the localized default name.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
 button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas/DOM

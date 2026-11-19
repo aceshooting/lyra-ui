@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'د ننوتلو حد ته د رسېدو له امله ځینې وړاندیزونه یا د کتلاګ ثبتونه پرېښودل شوي دي.',
   transcriptFeedInputLimit: 'له {total} ننوتنو څخه یوازې تر ټولو نوې {count} ساتل کېږي.',
   codeBlockHighlightLimit: 'اوږد کوډ د نحوي جوړښت له رنګین ښودلو پرته ښودل کېږي.',
+  codeBlockHighlightedLine: 'روښانه شوې کرښه',
+  codeBlockActiveLine: 'فعاله روښانه شوې کرښه',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

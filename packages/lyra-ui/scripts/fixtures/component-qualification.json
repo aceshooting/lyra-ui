@@ -708,6 +708,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/activity-feed/activity-feed-contracts.test.ts",
           "src/components/agent-tools/activity-feed/activity-feed-coverage.test.ts",
           "src/components/agent-tools/activity-feed/activity-feed-scale.test.ts",
           "src/components/agent-tools/activity-feed/activity-feed-tail-cancel.test.ts",
@@ -1042,6 +1043,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/agent-question/agent-question-contracts.test.ts",
           "src/components/agent-tools/agent-question/agent-question.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -1229,6 +1231,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/agent-run/agent-run-contracts.test.ts",
           "src/components/agent-tools/agent-run/agent-run.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -3251,7 +3254,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
-              "line": 10,
+              "line": 9,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3289,6 +3292,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/archive-viewer/archive-viewer-hidden-text.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-load-lifecycle.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-register.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-transport-ownership.test.ts",
@@ -3432,16 +3436,10 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",
-              "line": 248,
-              "kind": "remote-content or trust-boundary source signal"
-            }
-          ],
-          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -3467,7 +3465,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -4218,7 +4216,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 536,
+              "line": 541,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6706,8 +6704,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
-              "test": "contains long custom quantities in a populated 320px RTL meter",
+              "file": "src/components/agent-tools/budget-meter/budget-meter-contracts.test.ts",
+              "test": "isolates repeated and reordered formatted quantities and caller units in a localized sentence",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6787,7 +6785,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/budget-meter/budget-meter.class.ts",
-              "line": 106,
+              "line": 108,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6824,6 +6822,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/budget-meter/budget-meter-contracts.test.ts",
           "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
           "src/components/agent-tools/budget-meter/budget-meter.test.ts"
         ],
@@ -7479,7 +7478,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -7515,9 +7513,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/calendar-viewer/calendar-viewer.test.ts",
+              "test": "isolates calendar fields from the surrounding direction",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -7600,7 +7603,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-              "line": 9,
+              "line": 11,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7625,7 +7628,6 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -7643,6 +7645,7 @@
           "src/components/viewers/calendar-viewer/calendar-viewer-load-lifecycle.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-peer-data-boundaries.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-remediation.test.ts",
+          "src/components/viewers/calendar-viewer/calendar-viewer-scroll-region.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -10084,6 +10087,7 @@
         "tests": [
           "src/components/forms/checkbox/checkbox-remediation.test.ts",
           "src/components/forms/checkbox/checkbox.test.ts",
+          "src/components/forms/checkbox/choice-keyboard.test.ts",
           "src/components/forms/checkbox/label-wrap.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -11623,7 +11627,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 301,
+              "line": 307,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11659,9 +11663,11 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/code-block/code-block-chrome.test.ts",
           "src/components/conversation/code-block/code-block-composition.test.ts",
           "src/components/conversation/code-block/code-block-controlled-navigation.test.ts",
           "src/components/conversation/code-block/code-block-core.test.ts",
+          "src/components/conversation/code-block/code-block-line-state.test.ts",
           "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-scale.test.ts",
           "src/components/conversation/code-block/code-block-selection-fallback.test.ts",
@@ -11669,6 +11675,7 @@
           "src/components/conversation/code-block/code-block.test.ts",
           "src/components/conversation/code-block/code-loader.test.ts",
           "src/components/conversation/code-block/greycat-language.test.ts",
+          "src/components/conversation/code-block/highlighter-recovery.test.ts",
           "src/components/conversation/code-block/shiki-dark-theme.test.ts",
           "src/components/conversation/code-block/shiki-engine-default.test.ts",
           "src/components/conversation/code-block/shiki-types-coverage.test.ts",
@@ -11833,7 +11840,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 301,
+              "line": 307,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11869,9 +11876,11 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/code-block/code-block-chrome.test.ts",
           "src/components/conversation/code-block/code-block-composition.test.ts",
           "src/components/conversation/code-block/code-block-controlled-navigation.test.ts",
           "src/components/conversation/code-block/code-block-core.test.ts",
+          "src/components/conversation/code-block/code-block-line-state.test.ts",
           "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-scale.test.ts",
           "src/components/conversation/code-block/code-block-selection-fallback.test.ts",
@@ -11879,6 +11888,7 @@
           "src/components/conversation/code-block/code-block.test.ts",
           "src/components/conversation/code-block/code-loader.test.ts",
           "src/components/conversation/code-block/greycat-language.test.ts",
+          "src/components/conversation/code-block/highlighter-recovery.test.ts",
           "src/components/conversation/code-block/shiki-dark-theme.test.ts",
           "src/components/conversation/code-block/shiki-engine-default.test.ts",
           "src/components/conversation/code-block/shiki-types-coverage.test.ts",
@@ -12410,8 +12420,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
-              "test": "force-closes when ${cause} even when lr-hide is vetoed",
+              "file": "src/components/forms/combobox/choice-catalog-interaction.test.ts",
+              "test": "finds accented select labels from an unaccented type-ahead key",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -12513,7 +12523,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2890,
+              "line": 2736,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12549,6 +12559,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/choice-catalog-interaction.test.ts",
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
@@ -12782,6 +12793,7 @@
           "src/components/layout/command-palette/command-palette-input-limit.test.ts",
           "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
           "src/components/layout/command-palette/command-palette-noop-writes.test.ts",
+          "src/components/layout/command-palette/command-palette-panel-fixes.test.ts",
           "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette-scale.test.ts",
           "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
@@ -12804,7 +12816,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "rtl",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -12853,9 +12864,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
+              "test": "isolates the signed line counts from an inherited rtl direction",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -12951,7 +12967,6 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -13900,7 +13915,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -13942,9 +13956,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/contact-viewer/contact-viewer.test.ts",
+              "test": "isolates contact names, addresses and typed values in a right-to-left document",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -14021,7 +14040,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/contact-viewer/contact-viewer.class.ts",
-              "line": 6,
+              "line": 7,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14046,7 +14065,6 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -15584,6 +15602,8 @@
         "tests": [
           "src/components/viewers/csv-viewer/csv-viewer-input.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-load-lifecycle.test.ts",
+          "src/components/viewers/csv-viewer/csv-viewer-max-height.test.ts",
+          "src/components/viewers/csv-viewer/csv-viewer-move-while-loading.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-refresh.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-register.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-scale.test.ts",
@@ -18030,7 +18050,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-compare/document-compare.class.ts",
-              "line": 472,
+              "line": 481,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18067,6 +18087,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/document-compare/document-compare-b25.test.ts",
           "src/components/viewers/document-compare/document-compare.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18347,8 +18368,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/document-preview/document-preview-remediation.test.ts",
-              "test": "reverses Arrow direction for the region-highlight-action list under dir=\"rtl\"",
+              "file": "src/components/viewers/document-preview/document-preview-b25.test.ts",
+              "test": "isolates caller text direction for the text body and the filename",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18469,6 +18490,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/document-preview/document-preview-anchor-identity.test.ts",
+          "src/components/viewers/document-preview/document-preview-b25.test.ts",
           "src/components/viewers/document-preview/document-preview-fetch-lifecycle.test.ts",
           "src/components/viewers/document-preview/document-preview-remediation.test.ts",
           "src/components/viewers/document-preview/document-preview-transport-ownership.test.ts",
@@ -18606,7 +18628,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 379,
+              "line": 409,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18646,6 +18668,7 @@
         "tests": [
           "src/components/viewers/document-viewer/anchors.test.ts",
           "src/components/viewers/document-viewer/citation-to-document.test.ts",
+          "src/components/viewers/document-viewer/document-viewer-b25.test.ts",
           "src/components/viewers/document-viewer/document-viewer-kinds.test.ts",
           "src/components/viewers/document-viewer/document-viewer.test.ts",
           "src/components/viewers/document-viewer/msg-fallback.test.ts",
@@ -18787,8 +18810,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "test": "converts and sanitizes DOCX HTML",
+              "file": "src/components/viewers/docx-viewer/docx-loader.test.ts",
+              "test": "retries a peer that failed to load instead of caching the failure",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -19506,6 +19529,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/drilldown-panel/drilldown-panel-fixes.test.ts",
           "src/components/layout/drilldown-panel/drilldown-panel-lazy.test.ts",
           "src/components/layout/drilldown-panel/drilldown-panel.test.ts"
         ],
@@ -20378,7 +20402,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "rtl",
           "reducedMotion",
           "narrowAllocation",
           "visual",
@@ -20423,9 +20446,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/email-viewer/email-viewer.test.ts",
+              "test": "isolates message header values from their right-to-left labels",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -20522,7 +20550,6 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -23256,8 +23283,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "test": "renders correctly under dir=\"rtl\" without throwing, and the controls row still reports :dir(rtl)",
+              "file": "src/components/layout/filter-bar/filter-bar-panel-fixes.test.ts",
+              "test": "isolates the label and value of a mixed-direction active chip",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23337,7 +23364,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1493,
+              "line": 1484,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23375,6 +23402,7 @@
         "tests": [
           "src/components/layout/filter-bar/filter-bar-choice-cost.test.ts",
           "src/components/layout/filter-bar/filter-bar-end-alignment.test.ts",
+          "src/components/layout/filter-bar/filter-bar-panel-fixes.test.ts",
           "src/components/layout/filter-bar/filter-bar-remediation.test.ts",
           "src/components/layout/filter-bar/filter-bar.test.ts"
         ],
@@ -25639,8 +25667,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/geojson-view/geojson-view.test.ts",
-              "test": "keeps GeoJSON metadata left-to-right under RTL",
+              "file": "src/components/viewers/geojson-view/geojson-view-scale.test.ts",
+              "test": "bounds long metadata and gives the overflowing text a keyboard stop",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25726,7 +25754,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
-              "line": 15,
+              "line": 16,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27223,8 +27251,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/highlight-layer/highlight-layer.test.ts",
-              "test": "focuses an item whose public id contains selector metacharacters",
+              "file": "src/components/viewers/highlight-layer/highlight-layer-remediation.test.ts",
+              "test": "leaves Enter alone and unactivated under ${name}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -27310,7 +27338,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-              "line": 245,
+              "line": 257,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27347,6 +27375,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/highlight-layer/highlight-layer-remediation.test.ts",
           "src/components/viewers/highlight-layer/highlight-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28930,7 +28959,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
-              "line": 820,
+              "line": 821,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32916,15 +32945,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/conversation/markdown/markdown-code-header.test.ts",
-              "test": "${name} shows a forced-colors border and honors reduced motion",
-              "kind": "reduced-motion test signal"
-            }
-          ]
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -33015,7 +33039,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/katex-loader.ts",
-              "line": 47,
+              "line": 44,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33039,6 +33063,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -33054,13 +33079,18 @@
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
+          "src/components/conversation/markdown/markdown-content-state.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
+          "src/components/conversation/markdown/markdown-document-controls.test.ts",
           "src/components/conversation/markdown/markdown-fallback-code.test.ts",
           "src/components/conversation/markdown/markdown-language-loaders.test.ts",
+          "src/components/conversation/markdown/markdown-link-routing.test.ts",
           "src/components/conversation/markdown/markdown-link-schemes.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
+          "src/components/conversation/markdown/markdown-math-options.test.ts",
+          "src/components/conversation/markdown/markdown-peer-recovery.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
           "src/components/conversation/markdown/markdown-progressive-content-boundaries.test.ts",
           "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
@@ -33164,15 +33194,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/conversation/markdown/markdown-code-header.test.ts",
-              "test": "${name} shows a forced-colors border and honors reduced motion",
-              "kind": "reduced-motion test signal"
-            }
-          ]
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -33249,7 +33274,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/katex-loader.ts",
-              "line": 47,
+              "line": 44,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33273,6 +33298,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -33288,13 +33314,18 @@
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
+          "src/components/conversation/markdown/markdown-content-state.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
+          "src/components/conversation/markdown/markdown-document-controls.test.ts",
           "src/components/conversation/markdown/markdown-fallback-code.test.ts",
           "src/components/conversation/markdown/markdown-language-loaders.test.ts",
+          "src/components/conversation/markdown/markdown-link-routing.test.ts",
           "src/components/conversation/markdown/markdown-link-schemes.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
+          "src/components/conversation/markdown/markdown-math-options.test.ts",
+          "src/components/conversation/markdown/markdown-peer-recovery.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
           "src/components/conversation/markdown/markdown-progressive-content-boundaries.test.ts",
           "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
@@ -38229,8 +38260,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "test": "keeps a stream output LTR-isolated and left-aligned under dir=\"rtl\", matching the code input",
+              "file": "src/components/viewers/notebook-viewer/notebook-viewer-output.test.ts",
+              "test": "shrinks a one-cell notebook to its content inside the height cap",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -38367,6 +38398,7 @@
           "src/components/viewers/notebook-viewer/notebook-viewer-ansi-styles.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-fallbacks.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-markup.property.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-output.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-register.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-transport-ownership.test.ts",
@@ -38665,8 +38697,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
-              "test": "force-closes when ${cause} even when lr-hide is vetoed",
+              "file": "src/components/forms/combobox/choice-catalog-interaction.test.ts",
+              "test": "finds accented select labels from an unaccented type-ahead key",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -38757,7 +38789,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2890,
+              "line": 2736,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38793,6 +38825,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/choice-catalog-interaction.test.ts",
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
@@ -39284,8 +39317,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "test": "accepts the page digits of the effective locale in type-ahead",
+              "file": "src/components/viewers/page-rail/page-rail-remediation.test.ts",
+              "test": "restarts the digit buffer when the typed prefix cannot be a page",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -39382,7 +39415,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 512,
+              "line": 515,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39420,6 +39453,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/page-rail/page-rail-fallbacks.test.ts",
+          "src/components/viewers/page-rail/page-rail-remediation.test.ts",
           "src/components/viewers/page-rail/page-rail-thumbnail-lifecycle.test.ts",
           "src/components/viewers/page-rail/page-rail.test.ts",
           "src/components/viewers/page-rail/page-viewer-snapshot.test.ts"
@@ -40069,7 +40103,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 5377,
+              "line": 5378,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -43750,7 +43784,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 411,
+              "line": 408,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44182,8 +44216,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/radio/radio-button.test.ts",
-              "test": "contains a standalone unbroken button label at 320px in LTR and RTL",
+              "file": "src/components/forms/radio/choice-form-layout.test.ts",
+              "test": "keeps a horizontal slider usable in a shrink-to-fit wrapper and a narrow allocation",
               "kind": "320px allocation test signal"
             }
           ]
@@ -44276,6 +44310,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/radio/choice-form-layout.test.ts",
           "src/components/forms/radio/radio-button.test.ts",
           "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
@@ -44364,8 +44399,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/radio/radio-button.test.ts",
-              "test": "contains a standalone unbroken button label at 320px in LTR and RTL",
+              "file": "src/components/forms/radio/choice-form-layout.test.ts",
+              "test": "keeps a horizontal slider usable in a shrink-to-fit wrapper and a narrow allocation",
               "kind": "320px allocation test signal"
             }
           ]
@@ -44469,6 +44504,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/radio/choice-form-layout.test.ts",
           "src/components/forms/radio/radio-button.test.ts",
           "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
@@ -44557,8 +44593,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/radio/radio-button.test.ts",
-              "test": "contains a standalone unbroken button label at 320px in LTR and RTL",
+              "file": "src/components/forms/radio/choice-form-layout.test.ts",
+              "test": "keeps a horizontal slider usable in a shrink-to-fit wrapper and a narrow allocation",
               "kind": "320px allocation test signal"
             }
           ]
@@ -44662,6 +44698,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/radio/choice-form-layout.test.ts",
           "src/components/forms/radio/radio-button.test.ts",
           "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
@@ -44809,7 +44846,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/rag-answer/rag-answer.class.ts",
-              "line": 178,
+              "line": 193,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47437,7 +47474,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 703,
+              "line": 709,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47639,7 +47676,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
-              "line": 286,
+              "line": 289,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48872,8 +48909,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/select/select-change-request.test.ts",
-              "test": "vetoes Enter and closed-list type-ahead through the same proposal",
+              "file": "src/components/forms/select/choice-contrast.test.ts",
+              "test": "${name} outlines the keyboard-current row in forced colors",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -49005,6 +49042,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/select/choice-contrast.test.ts",
+          "src/components/forms/select/choice-supporting-text.test.ts",
           "src/components/forms/select/option-adornment-cost.test.ts",
           "src/components/forms/select/option-refresh.test.ts",
           "src/components/forms/select/option-title.test.ts",
@@ -49363,7 +49402,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
-              "line": 201,
+              "line": 211,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50172,7 +50211,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 814,
+              "line": 809,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50729,7 +50768,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 564,
+              "line": 570,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50838,8 +50877,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/span-waterfall/span-waterfall-guards.test.ts",
-              "test": "claims no navigation key while the view window hides every span",
+              "file": "src/components/agent-tools/span-waterfall/span-waterfall-contracts.test.ts",
+              "test": "ignores modified and composing keys on the bar list without cancelling them",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -50969,6 +51008,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/span-waterfall/span-waterfall-contracts.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-guards.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-scale.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-source-scale.test.ts",
@@ -51408,8 +51448,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/split-panel/split-panel-gesture-edges.test.ts",
-              "test": "does not re-request a reposition when Home is pressed at the minimum",
+              "file": "src/components/layout/split-panel/split-panel-fixes.test.ts",
+              "test": "leaves modified and composing keys to the browser",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -51541,6 +51581,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/split-panel/split-panel-fixes.test.ts",
           "src/components/layout/split-panel/split-panel-gesture-edges.test.ts",
           "src/components/layout/split-panel/split-panel-remediation.test.ts",
           "src/components/layout/split-panel/split-panel-snap-grammar-interactions.test.ts",
@@ -51695,7 +51736,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-              "line": 17,
+              "line": 18,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52947,8 +52988,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/subagent-panel/subagent-panel.test.ts",
-              "test": "activates the focused treeitem with Enter/Space and contextualizes row actions",
+              "file": "src/components/agent-tools/subagent-panel/subagent-panel-contracts.test.ts",
+              "test": "ignores modified and composing keys on the run tree without cancelling them",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -53070,6 +53111,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/subagent-panel/subagent-panel-contracts.test.ts",
           "src/components/agent-tools/subagent-panel/subagent-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -53429,7 +53471,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
-              "line": 3,
+              "line": 4,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55411,8 +55453,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "test": "pressing End in the viewport re-engages follow via the same jump-to-latest path",
+              "file": "src/components/agent-tools/terminal/terminal-remediation.test.ts",
+              "test": "leaves modified highlight activation and modified End to the reader",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -55508,7 +55550,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 902,
+              "line": 921,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55694,7 +55736,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/test-results/test-results.class.ts",
-              "line": 467,
+              "line": 474,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56118,6 +56160,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/thinking-panel/thinking-panel-contracts.test.ts",
           "src/components/agent-tools/thinking-panel/thinking-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -58132,7 +58175,7 @@
           "evidence": [
             {
               "file": "src/components/forms/toggle-group/toggle-group.class.ts",
-              "line": 587,
+              "line": 610,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -60385,8 +60428,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/trace-tree/trace-tree-source-scale.test.ts",
-              "test": "navigates End across the full source and uses the global nonzero extent",
+              "file": "src/components/agent-tools/trace-tree/trace-tree-remediation.test.ts",
+              "test": "ignores modified and composing keys on the tree without cancelling them",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -61941,7 +61984,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.class.ts",
-              "line": 26,
+              "line": 29,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62139,7 +62182,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 424,
+              "line": 403,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62238,6 +62281,12 @@
               "file": "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
               "test": "accounts for unsorted sparse group markers before indexed rows and retires markers outside the window",
               "target": "list",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/virtual-list/virtual-list-panel-fixes.test.ts",
+              "test": "exposes the group description on each row while the group marker is outside the window",
+              "target": "el",
               "state": "populated"
             },
             {
@@ -62398,6 +62447,7 @@
           "src/components/layout/virtual-list/virtual-list-layout-fallback.test.ts",
           "src/components/layout/virtual-list/virtual-list-notification-disconnect.test.ts",
           "src/components/layout/virtual-list/virtual-list-observer-delivery.test.ts",
+          "src/components/layout/virtual-list/virtual-list-panel-fixes.test.ts",
           "src/components/layout/virtual-list/virtual-list-remediation.test.ts",
           "src/components/layout/virtual-list/virtual-list-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-scaled-scroll.test.ts",

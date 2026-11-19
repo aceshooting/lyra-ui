@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 
 /** Highlight rules installed into the embedded virtual list's shadow root: archive entry rows
  * render there, so highlight pseudos and fallback marks must be styled in that tree too. */
@@ -81,11 +82,34 @@ export const virtualListHighlightStyles = css`
       var(--lr-archive-viewer-highlight-active-outline, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
+  @media (forced-colors: active) {
+    ::highlight(lr-highlight-accent),
+    ::highlight(lr-highlight-success),
+    ::highlight(lr-highlight-warning),
+    ::highlight(lr-highlight-danger),
+    ::highlight(lr-highlight-neutral) {
+      background-color: Mark;
+      color: MarkText;
+    }
+    ::highlight(lr-highlight-active) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+    mark[data-lr-highlight-tone] {
+      background: Mark;
+      color: MarkText;
+      outline: var(--lr-border-width-thin) solid CanvasText;
+    }
+  }
 `;
 
 export const styles = css`
   :host { display: block; }
   [part='body'] { min-block-size: 0; max-block-size: var(--lr-archive-viewer-max-height, none); overflow-y: auto; overflow-x: hidden; }
+  lr-virtual-list::part(base) {
+    block-size: auto;
+    max-block-size: var(--lr-archive-viewer-max-height, var(--lr-virtual-list-height, var(--lr-size-24rem)));
+  }
   /* Entry rows come from this component's renderItem but land in the embedded lr-virtual-list's
      OWN shadow root, a boundary deeper than this stylesheet, so a bare [part='entry'] never matches
      and every row rule goes through ::part(). ::part() takes no descendant combinator either, so a
@@ -93,6 +117,7 @@ export const styles = css`
      entry-name-dir. */
   lr-virtual-list::part(entry) { display: flex; align-items: center; gap: var(--lr-space-s); box-sizing: border-box; block-size: 100%; padding: var(--lr-space-xs) var(--lr-space-m); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); font-size: var(--lr-font-size-sm); }
   lr-virtual-list::part(entry-icon) { display: inline-flex; flex: 0 0 auto; inline-size: var(--lr-size-1em); block-size: var(--lr-size-1em); color: var(--lr-color-text-quiet); }
+  lr-virtual-list::part(entry-kind) { ${visuallyHidden} }
   lr-virtual-list::part(entry-name) { flex: 1 1 auto; min-inline-size: 0; overflow: hidden; color: var(--lr-color-text); text-overflow: ellipsis; white-space: nowrap; }
   lr-virtual-list::part(entry-name-dir) { font-weight: var(--lr-font-weight-semibold); }
   lr-virtual-list::part(entry-size) { flex: 0 0 auto; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }

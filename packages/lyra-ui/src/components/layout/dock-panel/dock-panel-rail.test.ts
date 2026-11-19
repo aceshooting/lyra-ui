@@ -129,13 +129,15 @@ describe('lr-dock-panel toggle glyph slots', () => {
     expect(slot.assignedElements().map(element => element.id)).to.deep.equal(['close-glyph']);
     expect(shown(panel.querySelector('#open-glyph')!)).to.equal(false);
     expect(getComputedStyle(panel.querySelector('#close-glyph')!).transform).to.equal('none');
-    expect(toggle.getAttribute('aria-label')).to.equal('Collapse panel');
+    expect(toggle.getAttribute('aria-label')).to.equal('Toggle panel');
+    expect(toggle.getAttribute('title')).to.equal('Collapse panel');
 
     panel.collapsed = true;
     await elementUpdated(panel);
     expect(toggle.querySelector('slot')!.assignedElements().map(element => element.id)).to.deep.equal(['open-glyph']);
     expect(shown(panel.querySelector('#close-glyph')!)).to.equal(false);
-    expect(toggle.getAttribute('aria-label')).to.equal('Expand panel');
+    expect(toggle.getAttribute('aria-label')).to.equal('Toggle panel');
+    expect(toggle.getAttribute('title')).to.equal('Expand panel');
   });
 
   it('keeps the rotated chevron when no glyph is slotted', async () => {

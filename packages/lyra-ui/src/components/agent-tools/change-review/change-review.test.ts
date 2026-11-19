@@ -139,3 +139,17 @@ it('shows a renamed file path and diffs a hunk without text as empty, tolerating
   expect([diff.oldText, diff.newText]).to.deep.equal(['', '']);
   expect(el.shadowRoot!.querySelectorAll('[part="hunk"]').length).to.equal(1);
 });
+
+it('names each hunk decision button with its hunk, falls back for a blank hunk label, and isolates paths', async () => {
+  const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${[
+    { id: 'f', path: 'src/a.ts', hunks: [
+      { id: 'h1', label: '   ', before: 'a', after: 'b' },
+      { id: 'h2', label: 'Header', before: 'c', after: 'd' },
+    ] },
+  ] as unknown as ChangeReviewFile[]}></lr-change-review>`);
+  const sections = [...el.shadowRoot!.querySelectorAll('[part="hunk"]')];
+  expect(sections.map((section) => section.getAttribute('aria-label'))).to.deep.equal(['Change 1', 'Header']);
+  const names = [...el.shadowRoot!.querySelectorAll('[part="decision"]')].map((button) => button.getAttribute('aria-label'));
+  expect(names).to.deep.equal(['Keep Change 1', 'Discard Change 1', 'Keep Header', 'Discard Header']);
+  expect(el.shadowRoot!.querySelector('[part="file-header"] bdi') != null).to.equal(true);
+});

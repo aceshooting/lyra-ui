@@ -616,7 +616,7 @@ it("keeps the native editing facade safe before the internal input exists", () =
   expect(el.input === null).to.be.true;
   expect(el.selectionStart).to.equal(null);
   expect(el.selectionEnd).to.equal(null);
-  expect(el.selectionDirection).to.equal(undefined);
+  expect(el.selectionDirection).to.equal(null);
   expect(() => {
     el.selectionStart = 0;
     el.selectionEnd = 0;
@@ -1092,8 +1092,8 @@ it("uses shared svg icons instead of literal glyphs for chevron, clear, and tag-
   expect(removeBtn.querySelector("svg") !== null).to.be.true;
   expect(removeBtn.textContent?.trim()).to.equal("");
 
-  // The chevron is rotated to a "down" glyph via its wrapping part, not the svg itself.
-  expect(styles.cssText).to.match(/\[part=["']expand-icon["']\]\s+svg/);
+  const rotation = new DOMMatrixReadOnly(getComputedStyle(expandIcon.querySelector('svg')!).transform);
+  expect([rotation.a, rotation.b, rotation.c, rotation.d]).to.deep.equal([0, 1, -1, 0]);
 });
 
 it("keeps gap/radius defaults private and consumes inherited public hooks first", () => {
@@ -1119,7 +1119,7 @@ it("hides the error and hint parts when empty, shows them once populated", async
   const errorPart = el.shadowRoot!.querySelector(
     '[part="error"]'
   ) as HTMLElement;
-  const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintPart = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   // Neither part can rely on `:empty` — each always contains a literal
   // `<slot>` child element, so `:empty` never matches regardless of
   // assigned/text content (same bug class fixed for lr-stat).
@@ -3473,12 +3473,7 @@ it("silently drops a source rejection that arrives after disconnect", async () =
   }
 });
 
-it("swallows an AbortError the source rejects with while its request is still current, without warning", async () => {
-  // Deliberately reject the *current* (not superseded) request: aborting via a newer runSource()
-  // call, disconnect, or adoption all also bump the internal request token, so the earlier
-  // "stale response" guard would return first and this AbortError-specific branch would never be
-  // reached. A source can independently reject with an AbortError (e.g. its own unrelated
-  // cancellation) while still being this component's current, non-superseded request.
+it("reports an independent AbortError for the current source request", async () => {
   const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
   let reject!: (err: unknown) => void;
   el.source = () =>
@@ -3495,13 +3490,14 @@ it("swallows an AbortError the source rejects with while its request is still cu
     warned = true;
   };
   try {
-    reject(new DOMException("aborted", "AbortError"));
+    const error = new DOMException("aborted", "AbortError");
+    const failures: unknown[] = [];
+    el.addEventListener('lr-source-error', event => failures.push(event.detail.error));
+    reject(error);
     await aTimeout(0);
-    expect(warned, "an AbortError must not be warned about").to.be.false;
-    expect(
-      el.shadowRoot!.querySelector(".source-error") === null,
-      "an AbortError must not surface the failure state"
-    ).to.equal(true);
+    expect(failures).to.deep.equal([error]);
+    expect(warned).to.equal(true);
+    expect(el.shadowRoot!.querySelector(".source-error") !== null).to.equal(true);
   } finally {
     console.warn = originalWarn;
   }

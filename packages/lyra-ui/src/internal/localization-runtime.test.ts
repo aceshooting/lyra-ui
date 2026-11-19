@@ -13,6 +13,7 @@ import {
   resolveLocalizedParts,
   resolveLyraLocale,
   resolveLyraString,
+  resolveLyraStringWithLocale,
   setLyraLocale,
   trustedLyraDefaultStrings,
 } from './localization-runtime.js';
@@ -512,4 +513,19 @@ it('preserves literal adjacent code units when selecting a rich-text separator f
   });
   expect(calls).to.equal(1);
   expect(parts).to.deep.equal([literal, literal, '']);
+});
+
+describe('numeric interpolation', () => {
+  it('formats a numeric value with the resolved locale numerals and leaves strings untouched', () => {
+    const arabic = resolveLyraStringWithLocale(() => 'ar-EG-u-nu-arab', 'k', undefined, 'N {count} {name}', { count: 12, name: '12' });
+    expect(arabic).to.equal('N ١٢ 12');
+  });
+
+  it('keeps plain integers, decimals and negative zero in ASCII form without grouping', () => {
+    const format = (count: number): string => resolveLyraStringWithLocale(() => 'en', 'k', undefined, '{count}', { count });
+    expect(format(1234567)).to.equal('1234567');
+    expect(format(0.25)).to.equal('0.25');
+    expect(format(-0)).to.equal('0');
+    expect(format(Number.POSITIVE_INFINITY)).to.equal('Infinity');
+  });
 });

@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -163,11 +164,25 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   private initialStateAnnounced = false;
   private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
-  private slotObserver?: MutationObserver;
+  /** @internal */
+  protected readonly slotObserver = new HostChildrenObserver(this, {
+    subtree: true,
+    attributeFilter: ['slot'],
+    onChange: (records) => {
+      if (
+        records.some((record) =>
+          record.type === 'childList' ? record.target === this : record.target.parentNode === this
+        )
+      ) {
+        this.requestUpdate();
+      }
+    },
+  });
 
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
     this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
@@ -182,37 +197,11 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
         this.announcePresentedState();
       }
     );
-    // A realm without MutationObserver loses only slotted-content change tracking, so bail out
-    // rather than falling back to a bare global identifier that throws a ReferenceError out of
-    // connectedCallback and takes the whole component down with it.
-    const MutationObserverCtor =
-      this.ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    this.slotObserver = new MutationObserverCtor((records) => {
-      if (
-        this.isConnected &&
-        records.some((record) =>
-          record.type === 'childList'
-            ? record.target === this
-            : record.target.parentNode === this
-        )
-      ) {
-        this.requestUpdate();
-      }
-    });
-    this.slotObserver.observe(this, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['slot'],
-    });
   }
 
   override disconnectedCallback(): void {
     this.isMounting = true;
     this.connectionGeneration += 1;
-    this.slotObserver?.disconnect();
-    this.slotObserver = undefined;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     super.disconnectedCallback();

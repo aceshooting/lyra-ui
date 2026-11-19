@@ -1,3 +1,4 @@
+import { bdi } from '../../../internal/bidi.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -247,11 +248,11 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
         part="contact-name"
         role=${headingLevel ? 'heading' : nothing}
         aria-level=${headingLevel ?? nothing}
-      >${contact.fn || this.localize('contactViewerUnnamedContact')}</div>
-      ${contact.org.length ? html`<p part="contact-org">${this.localize('contactViewerOrganization', undefined, { value: this.formatList(contact.org) })}</p>` : nothing}
-      ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${this.formatTypedValue(tel.value, tel.types)}</li>`)}</ul>` : nothing}
-      ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${this.formatTypedValue(email.value, email.types)}</li>`)}</ul>` : nothing}
-      ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${this.formatTypedValue(this.formatAddress(address), address.types)}</li>`)}</ul>` : nothing}
+      >${bdi(contact.fn || this.localize('contactViewerUnnamedContact'))}</div>
+      ${contact.org.length ? html`<p part="contact-org">${bdi(this.localize('contactViewerOrganization', undefined, { value: this.formatList(contact.org) }))}</p>` : nothing}
+      ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${bdi(this.formatTypedValue(tel.value, tel.types))}</li>`)}</ul>` : nothing}
+      ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${bdi(this.formatTypedValue(email.value, email.types))}</li>`)}</ul>` : nothing}
+      ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${bdi(this.formatTypedValue(this.formatAddress(address), address.types))}</li>`)}</ul>` : nothing}
     </article>`;
   }
 

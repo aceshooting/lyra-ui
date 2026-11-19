@@ -1,9 +1,9 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { Citation } from '../../../ai/types.js';
 import type { ContextMeterSegment, ContextMeterTone } from '../../data/context-meter/context-meter.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
@@ -12,18 +12,12 @@ import type {
   LyraExportFormatOption,
   LyraExportButtonEventMap,
 } from '../../utility/export-button/export-button.class.js';
-import '../../data/context-meter/context-meter.class.js';
-import '../../utility/copy-button/copy-button.class.js';
-import '../../utility/export-button/export-button.class.js';
-import '../../retrieval/citation-badge/citation-badge.class.js';
-import '../../overlays/empty/empty.class.js';
 import { styles } from './context-inspector.styles.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorLimit, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -99,9 +93,6 @@ function normalizeRedactions(
   return merged;
 }
 
-function formatCount(n: number, locale: string): string {
-  return getNumberFormat(locale, { maximumFractionDigits: 0 }).format(finiteCount(n));
-}
 
 /** Ceiling on segment rows actually mounted into the DOM, matching this family's established
  *  `MAX_RENDERED_*` convention (`trace-tree`/`span-waterfall`'s `MAX_RENDERED_LYRA_SPANS`,
@@ -178,7 +169,6 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     contextInspectorCopyLabel: LYRA_DEFAULT_contextInspectorCopyLabel,
     contextInspectorEmpty: LYRA_DEFAULT_contextInspectorEmpty,
     contextInspectorLabel: LYRA_DEFAULT_contextInspectorLabel,
@@ -187,15 +177,6 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     contextInspectorSegmentTokens: LYRA_DEFAULT_contextInspectorSegmentTokens,
     contextInspectorTruncated: LYRA_DEFAULT_contextInspectorTruncated,
     contextInspectorTruncatedCount: LYRA_DEFAULT_contextInspectorTruncatedCount,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -203,6 +184,14 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   protected static override readonly ownedCollectionProperties = Object.freeze(['segments', 'exportFormats']);
 
   static override styles = [LyraElement.styles, styles];
+
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const text = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
+    this.limitAnnouncements.transition('limit', text ? 'limited' : 'complete', text, 'polite');
+  }
 
   /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn,
    *  ...). Empty/blank ids are omitted and duplicates normalize first-wins before metering,
@@ -278,9 +267,10 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     for (const r of redactions) {
       if (r.start > cursor) nodes.push(text.slice(cursor, r.start));
       nodes.push(
-        html`<mark part="redaction" title=${r.reason || this.localize('contextInspectorRedacted')}
-          >${text.slice(r.start, r.end)}</mark
-        >`,
+        html`<span class="sr-only">${this.localize('contextInspectorRedacted')}</span
+          ><mark part="redaction" title=${r.reason || this.localize('contextInspectorRedacted')}
+            >${text.slice(r.start, r.end)}</mark
+          >`,
       );
       cursor = r.end;
     }
@@ -292,7 +282,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     const text =
       segment.omittedTokens != null
         ? this.localize('contextInspectorTruncatedCount', undefined, {
-            count: formatCount(segment.omittedTokens, this.effectiveLocale),
+            count: this.formatLocaleNumber(finiteCount(segment.omittedTokens), { maximumFractionDigits: 0 }),
           })
         : this.localize('contextInspectorTruncated');
     return html`<div part="truncation-boundary" role="note">${text}</div>`;
@@ -300,7 +290,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
 
   private renderSegment(segment: ContextInspectorSegment, citationIndex: number): TemplateResult {
     const tokensText = this.localize('contextInspectorSegmentTokens', undefined, {
-      tokens: formatCount(segment.tokens, this.effectiveLocale),
+      tokens: this.formatLocaleNumber(finiteCount(segment.tokens), { maximumFractionDigits: 0 }),
     });
     return html`
       <div part="segment" role="listitem">
@@ -361,8 +351,8 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
           })}
         </div>
         ${truncated
-          ? html`<p part="limit">${this.localize('contextInspectorLimit', undefined, {
-                count: formatCount(MAX_RENDERED_SEGMENTS, this.effectiveLocale),
+          ? html`<p part="limit" role="note">${this.localize('contextInspectorLimit', undefined, {
+                count: this.formatLocaleNumber(MAX_RENDERED_SEGMENTS),
               })}</p>`
           : nothing}
       </div>

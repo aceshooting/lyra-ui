@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Kasi ya uchezaji',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} kati ya {duration}',
+  avPlayerHighlightRange: '{start} hadi {end}',
+  avPlayerHighlightAt: 'kwenye {start}',
   attachmentTriggerAudio: 'Rekodi sauti',
   attachmentMenuAudio: 'Rekodi sauti',
   flagLoadError: 'Bendera haipatikani',

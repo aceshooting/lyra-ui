@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Енгізу шегіне жеткендіктен, кейбір ұсыныстар немесе каталог жазбалары алынып тасталды.',
   transcriptFeedInputLimit: '{total} жазбаның ең жаңа {count} жазбасы ғана сақталады.',
   codeBlockHighlightLimit: 'Ұзын код синтаксисті ерекшелеусіз көрсетіледі.',
+  codeBlockHighlightedLine: 'Бөлектелген жол',
+  codeBlockActiveLine: 'Белсенді бөлектелген жол',
 };
 
 registerLyraLocale('kk', strings);

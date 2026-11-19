@@ -6,6 +6,7 @@ import type {
   MessagePartInterruption,
   ToolInvocation,
 } from './types.js';
+import { isSafeNonArrayObject as isRecord } from '../internal/object-guards.js';
 import { positiveInteger } from '../internal/numbers.js';
 import {
   createProviderSnapshotBudget,
@@ -225,10 +226,6 @@ function snapshotLimits(limits: Readonly<AgentStreamLimits>, maxBytes = limits.m
 function ownValue<T>(value: unknown, limits: Readonly<AgentStreamLimits>): OwnedValue<T> | null {
   const result = snapshotProviderValue<T>(value, createProviderSnapshotBudget(snapshotLimits(limits)));
   return result.ok ? { value: result.value, bytes: result.bytes } : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function validIdentifier(value: unknown, limits: Readonly<AgentStreamLimits>): value is string {

@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੁਝ ਸੁਝਾਅ ਜਾਂ ਕੈਟਾਲਾਗ ਐਂਟਰੀਆਂ ਛੱਡ ਦਿੱਤੀਆਂ ਗਈਆਂ ਹਨ।',
   transcriptFeedInputLimit: '{total} ਐਂਟਰੀਆਂ ਵਿੱਚੋਂ ਸਿਰਫ਼ ਸਭ ਤੋਂ ਨਵੀਆਂ {count} ਰੱਖੀਆਂ ਜਾਂਦੀਆਂ ਹਨ।',
   codeBlockHighlightLimit: 'ਲੰਮਾ ਕੋਡ ਸਿੰਟੈਕਸ ਹਾਈਲਾਈਟਿੰਗ ਤੋਂ ਬਿਨਾਂ ਦਿਖਾਇਆ ਜਾਂਦਾ ਹੈ।',
+  codeBlockHighlightedLine: 'ਹਾਈਲਾਈਟ ਕੀਤੀ ਲਾਈਨ',
+  codeBlockActiveLine: 'ਸਰਗਰਮ ਹਾਈਲਾਈਟ ਕੀਤੀ ਲਾਈਨ',
 };
 
 registerLyraLocale('pa', strings);

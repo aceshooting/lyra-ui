@@ -1,3 +1,6 @@
+import { shouldIgnoreNavigationKey } from './list-navigation.js';
+import { capturePointer, releasePointer } from './pointer-capture.js';
+
 /** Shared interaction math for vertical column separators. The component owns its width storage
  * and event detail, while this module keeps keyboard and pointer geometry consistent. */
 export function columnResizeWidth(width: number, minimum: number, maximum: number): number {
@@ -24,6 +27,7 @@ export function columnResizeKeyboardWidth(
   rtl: boolean,
   allowBounds = true,
 ): number | undefined {
+  if (shouldIgnoreNavigationKey(event)) return undefined;
   if (allowBounds && event.key === 'Home') return minimum;
   if (allowBounds && event.key === 'End' && Number.isFinite(maximum)) return maximum;
   if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return undefined;
@@ -60,11 +64,7 @@ export class ColumnResizePointerSession {
     if (!owner) return false;
     this.stop();
     this.active = { handle, owner, pointerId: event.pointerId };
-    try {
-      handle.setPointerCapture?.(event.pointerId);
-    } catch {
-      // Synthetic events and a pointer canceled during dispatch need no native capture.
-    }
+    capturePointer(handle, event.pointerId);
     owner.addEventListener('pointermove', this.handleMove);
     owner.addEventListener('pointerup', this.handleCommit);
     owner.addEventListener('pointercancel', this.handleCancel);
@@ -90,11 +90,7 @@ export class ColumnResizePointerSession {
     active.handle.removeEventListener('pointerup', this.handleCommit);
     active.handle.removeEventListener('pointercancel', this.handleCancel);
     active.handle.removeEventListener('lostpointercapture', this.handleCancel);
-    try {
-      active.handle.releasePointerCapture?.(active.pointerId);
-    } catch {
-      // Capture can already be gone after cancellation, removal, or adoption.
-    }
+    releasePointer(active.handle, active.pointerId);
   }
 
   private readonly handleMove = (event: PointerEvent): void => {

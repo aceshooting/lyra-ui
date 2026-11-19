@@ -37,7 +37,7 @@ Set ids and each set's nested chunk ids are canonicalized independently. Malform
 later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,
 controlled selection, rendering, or events.
 
-**Events:** `lr-chunk-select` (`{ setId, chunk }`).
+**Events:** `lr-chunk-select` (`{ setId, chunk, chunkId, sourceId }`; `chunkId`/`sourceId` match `lr-chunk-open` on the sibling retrieval components).
 
 **CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
 `chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`,

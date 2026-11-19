@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Tài liệu PDF',
   pdfViewerMissingLibrary: 'Cần cài gói tùy chọn "pdfjs-dist" để hiển thị tệp PDF trong trình xem.',
   pdfViewerPageOf: 'Trang {page} trên {total}',
+  pdfViewerPageHighlights: 'Phần đánh dấu của trang {page}',
   pdfViewerZoomIn: 'Phóng to',
   pdfViewerZoomOut: 'Thu nhỏ',
   pdfViewerPreviousPage: 'Trang trước',

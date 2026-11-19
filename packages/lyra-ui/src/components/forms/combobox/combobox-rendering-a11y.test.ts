@@ -438,7 +438,7 @@ it("renders errorText in var(--lr-color-danger), distinct from and alongside the
   const errorPart = el.shadowRoot!.querySelector(
     '[part="error"]'
   ) as HTMLElement;
-  const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintPart = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   expect(errorPart !== null).to.be.true;
   expect(errorPart.textContent).to.contain("Selection required");
   expect(hintPart.textContent).to.contain("Pick a fruit");
@@ -2217,7 +2217,7 @@ it("preserves rendered label, hint and error behavior through shared slot change
   const label = el.shadowRoot!.querySelector(
     '[part="form-control-label"]'
   ) as HTMLElement;
-  const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(label.hidden).to.be.false;
   expect(hint.hidden).to.be.false;

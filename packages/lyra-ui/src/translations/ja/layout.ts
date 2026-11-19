@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'パネルを折りたたむ',
   dockPanelExpand: 'パネルを展開',
   dockPanelResize: 'パネルのサイズを変更',
+  dockPanelToggle: 'パネルを切り替え',
   responsivePanel: 'パネル',
   breadcrumb: 'パンくずリスト',
   resizeDivider: 'パネル {a} とパネル {b} の間の仕切りをサイズ変更',

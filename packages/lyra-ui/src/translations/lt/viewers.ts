@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF dokumentas',
   pdfViewerMissingLibrary: 'Kad galėtų atvaizduoti PDF failus, šiai peržiūros priemonei reikia įdiegti pasirenkamą paketą „pdfjs-dist“.',
   pdfViewerPageOf: '{page} puslapis iš {total}',
+  pdfViewerPageHighlights: '{page} puslapio paryškinimai',
   pdfViewerZoomIn: 'Artinti',
   pdfViewerZoomOut: 'Tolinti',
   pdfViewerPreviousPage: 'Ankstesnis puslapis',

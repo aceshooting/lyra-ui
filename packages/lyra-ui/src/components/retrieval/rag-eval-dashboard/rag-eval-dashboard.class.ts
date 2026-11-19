@@ -1,4 +1,6 @@
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
+import { formatAdaptiveShare } from '../../../internal/locale-number.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { property } from 'lit/decorators.js';
@@ -298,10 +300,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   ): string {
     if (raw === undefined || !Number.isFinite(raw)) return this.localize('noData');
     if (metric.format === 'percent') {
-      return getNumberFormat(this.effectiveLocale, {
-        style: 'percent',
-        maximumFractionDigits: 1,
-      }).format(finiteRange(raw, 0, 0, 1));
+      return formatAdaptiveShare(this.effectiveLocale, finiteRange(raw, 0, 0, 1));
     }
     return getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 3,
@@ -390,7 +389,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     const derived = this.derived(runs, metrics);
     const slices = derived.slices;
     const visibleLabel =
-      this.label == null ? this.localize('ragEvalDashboardLabel') : this.label;
+      this.label === '' ? '' : (normalizeLabel(this.label) ?? this.localize('ragEvalDashboardLabel'));
     const level = resolveHeadingLevel(this.headingLevel);
     const runsLevel = level && String(Math.min(6, +level + 1));
     const label = retrievalSemanticLabel(this, visibleLabel);
@@ -418,7 +417,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           aria-label=${label ?? nothing}
         >
           ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
-          <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
+          <div part="heading" role=${level && visibleLabel ? 'heading' : nothing} aria-level=${level && visibleLabel ? level : nothing}>${visibleLabel}</div>
           ${this.renderSlices(derived.visibleSlices, slices.length)}
           <lr-empty
             part="empty"
@@ -446,7 +445,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         aria-label=${label ?? nothing}
       >
         ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
-        <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
+        <div part="heading" role=${level && visibleLabel ? 'heading' : nothing} aria-level=${level && visibleLabel ? level : nothing}>${visibleLabel}</div>
         ${this.renderSlices(derived.visibleSlices, slices.length)}
         <div part="metrics">
           ${metrics.map((metric) => {

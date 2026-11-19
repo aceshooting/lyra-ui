@@ -1,5 +1,6 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -20,7 +21,8 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   lr-virtual-list::part(base) {
-    max-block-size: calc(var(--lr-notebook-viewer-max-height, none) - 2 * var(--lr-border-width-thin));
+    block-size: auto;
+    max-block-size: calc(var(--lr-notebook-viewer-max-height, var(--lr-virtual-list-height, var(--lr-size-24rem))) - 2 * var(--lr-border-width-thin));
   }
   /* Every cell part below is emitted by renderCell()/renderOutput() but committed into
      <lr-virtual-list>'s OWN shadow root, so a bare [part='...'] selector here resolves against
@@ -133,6 +135,8 @@ export const styles = css`
     unicode-bidi: isolate;
   }
   lr-virtual-list::part(output-error) {
+    border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-danger);
+    padding-inline-start: var(--lr-space-xs);
     color: var(--lr-color-danger);
   }
   /* block display gives the label its own line ahead of the traceback text without baking a
@@ -141,6 +145,12 @@ export const styles = css`
     display: block;
     font-weight: var(--lr-font-weight-semibold);
   }
+  lr-virtual-list::part(output-image) {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+  lr-virtual-list::part(output-loading),
+  lr-virtual-list::part(output-stream-label) { ${visuallyHidden} }
   lr-virtual-list::part(output-toggle) {
     align-self: flex-start;
     border: none;
@@ -166,6 +176,8 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='error'] {
+    border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-danger);
+    padding-inline-start: var(--lr-space-xs);
     color: var(--lr-color-danger);
     padding: var(--lr-space-l);
     text-align: center;
@@ -179,6 +191,17 @@ export const styles = css`
   /* Container-query evaluation walks the flat tree, so it crosses the <lr-virtual-list> shadow
      boundary and still resolves against the :host container above -- these narrow-allocation
      ::part() rules keep working. */
+  @media (forced-colors: active) {
+    lr-virtual-list::part(cell-active),
+    lr-virtual-list::part(cell-highlighted),
+    lr-virtual-list::part(cell-highlight-active) {
+      outline: var(--lr-border-width-thin) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
+    lr-virtual-list::part(cell-active) {
+      border-inline-start: var(--lr-border-width-thick) solid Highlight;
+    }
+  }
   @container ${mediumContainerQuery} {
     lr-virtual-list::part(cell) {
       grid-template-columns: 1fr;

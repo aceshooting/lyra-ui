@@ -1206,3 +1206,13 @@ it('lr-retrieval-trace drops evidence-row chrome under frame="plain" and tighten
   await el.updateComplete;
   expect(getComputedStyle(row()).borderTopWidth).to.equal('0px');
 });
+
+it('keeps a visible outline on the active evidence row when frame is plain', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-trace frame="plain" .stages=${STAGES} active-stage-id="rewrite"></lr-retrieval-trace>`
+  )) as LyraRetrievalTrace;
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="evidence-row"][data-active]') as HTMLElement;
+  expect(getComputedStyle(row).outlineStyle).to.equal('solid');
+  expect(getComputedStyle(row).borderTopWidth).to.equal('0px');
+});

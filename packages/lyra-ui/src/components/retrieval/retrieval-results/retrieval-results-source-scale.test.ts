@@ -382,3 +382,13 @@ it('skips revealing a located row once an error replaces the provider list', asy
   expect(el.activeChunkId).to.equal('c50');
   expect(el.shadowRoot!.textContent).not.to.contain('Results unavailable');
 });
+it('announces when the 10000-row selection limit refuses another row', async () => {
+  const selected = Array.from({ length: 10000 }, (_, i) => `c${900000 + i}`);
+  const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .selectedChunkIds=${selected} .dataSource=${source()}></lr-retrieval-results>`);
+  const control = await checkbox(el, 'c0');
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="source-selection-status"]') === null);
+  control.click();
+  const polite = () => document.querySelector('[data-lr-live-region="polite"]')!.lastElementChild?.textContent;
+  await waitUntil(() => polite() === 'You can select at most 10,000 results.');
+  expect(el.selectedChunkIds.length).to.equal(10000);
+});

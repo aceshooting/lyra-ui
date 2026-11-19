@@ -96,6 +96,29 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  [part='status'][data-status='running'] {
+    color: var(--lr-color-brand);
+    font-weight: var(--lr-font-weight-semibold);
+  }
+  [part='status'][data-status='failed'] {
+    color: var(--lr-color-danger);
+    font-weight: var(--lr-font-weight-semibold);
+  }
+  @media (forced-colors: active) {
+    [part='progress']::before {
+      forced-color-adjust: none;
+      background-color: Highlight;
+    }
+    [part='progress'] {
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part='status'][data-status='running'],
+    [part='status'][data-status='failed'] {
+      color: CanvasText;
+      text-decoration: underline;
+    }
+  }
+
   [part='limit'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);

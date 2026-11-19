@@ -33,6 +33,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'chunkInspectorOpenOrdinal',
   'scoreTierMedium',
   'showMore',
+  'retrievalShowMoreWithContext',
   'valueInvalid',
   'valueTruncated',
 ]);
@@ -2314,4 +2315,30 @@ describe('review fixes', () => {
     const text = el.shadowRoot!.querySelector('[part="metadata"]')!.textContent!;
     expect(text.length).to.be.lessThan(2_000);
   });
+});
+
+it('announces the first error that arrives after the element was moved', async () => {
+  const el = (await fixture(html`<lr-retrieval-results announce></lr-retrieval-results>`)) as LyraRetrievalResults;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  el.errorText = 'Failure after the move';
+  await el.updateComplete;
+  const sink = document.querySelector('[data-lr-live-region="assertive"]')!;
+  expect(sink.lastElementChild?.textContent).to.equal('Failure after the move');
+});
+
+it('keeps focus inside the component when the focused Load more button is replaced by the spinner', async () => {
+  const el = (await fixture(html`<lr-retrieval-results has-more .chunks=${chunks}></lr-retrieval-results>`)) as LyraRetrievalResults;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('[part="load-more"]') as HTMLButtonElement;
+  await focusByKeyboard(button);
+  expect(el.shadowRoot!.activeElement).to.equal(button);
+  el.loading = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="load-more"]') == null).to.equal(true);
+  const active = el.shadowRoot!.activeElement ?? (document.activeElement === el ? el : null);
+  expect(active, 'focus is not dropped to body').to.not.equal(null);
 });

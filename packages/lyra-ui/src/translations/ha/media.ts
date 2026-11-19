@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Saurin kunnawa',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} cikin {duration}',
+  avPlayerHighlightRange: 'daga {start} zuwa {end}',
+  avPlayerHighlightAt: 'a {start}',
   attachmentTriggerAudio: 'Yi rikodin sauti',
   attachmentMenuAudio: 'Yi rikodin sauti',
   flagLoadError: 'Ba a samun tuta',

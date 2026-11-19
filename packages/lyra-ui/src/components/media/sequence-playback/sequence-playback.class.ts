@@ -14,6 +14,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings/media.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+const DEFAULT_INTERVAL_MS = 900;
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
 const INVALID_INTERVAL_WARNING_KEY = 'lyra-sequence-playback-invalid-interval';
 const INVALID_INTERVAL_WARNING =
@@ -89,7 +90,16 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   @property({ type: Number, attribute: 'current-index' }) currentIndex = 0;
   /** Delay between ticks, in milliseconds, while playing. Clamped to the timer-safe range in
    *  `scheduleTick()`. */
-  @property({ type: Number, attribute: 'interval-ms' }) intervalMs = 900;
+  @property({ type: Number, attribute: 'interval-ms' }) intervalMs = DEFAULT_INTERVAL_MS;
+
+  /** Second spelling of `intervalMs`, matching `lr-carousel`'s `autoplay-interval`. */
+  @property({ type: Number, attribute: 'autoplay-interval', noAccessor: true })
+  get autoplayInterval(): number {
+    return this.intervalMs;
+  }
+  set autoplayInterval(value: number) {
+    this.intervalMs = value;
+  }
 
   /** Stops standalone playback on the last item instead of wrapping. Starting again from that
    *  item restarts at zero. Read on every tick; dormant while a source clock owns playback. */
@@ -292,7 +302,8 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   // `interval-ms` live takes effect on the very next step instead of only
   // after a pause/play cycle.
   private scheduleTick(): void {
-    const rawDelay = this.intervalMs;
+    const authoredDelay: number | null = this.intervalMs;
+    const rawDelay = authoredDelay ?? DEFAULT_INTERVAL_MS;
     const delay = finiteDuration(rawDelay, MIN_INTERVAL_MS, MIN_INTERVAL_MS);
     if (delay !== rawDelay) warnInvalidInterval();
     // Self-identifying: a synchronous pause()+play() (or a synchronous

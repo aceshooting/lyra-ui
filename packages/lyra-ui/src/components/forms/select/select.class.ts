@@ -1,7 +1,9 @@
+import { positionIndex } from '../../../internal/keyed-index.js';
+import { foldSearchText } from '../../../internal/search-haystack.js';
 import { capOptionRows } from '../../../internal/option-selection.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -24,7 +26,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
-import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { PositioningStrategyState, positioningStrategyConverter, resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import type {
   LyraPickerDetailValue,
   LyraPickerValue,
@@ -43,9 +45,9 @@ import { setCustomState, syncValidityStates } from '../../../internal/custom-sta
 import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { styles } from './select.styles.js';
@@ -62,7 +64,6 @@ import {
 import {
   declaredDefaultConverter,
   omittedEmptyStringConverter,
-  optionalLiteralSetConverter,
 } from '../../../internal/converters.js';
 import {
   getFormOwner,
@@ -115,12 +116,6 @@ function normalizeSelectionValues(
  *  positioning vocabulary `positioningStrategy` uses. */
 export type { LyraPickerDetailValue, LyraPickerValue, PlaceStrategy };
 
-/** Unsupported values resolve to *absent* so the control's own mirrored default stays the
- *  fallback, rather than a member baked into the converter. */
-const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
-  'absolute',
-  'fixed',
-]);
 
 /** Renders one selected option's chip in `multiple` mode. Whatever it returns replaces the
  *  built-in `[part='tag']` chip for that option, so a caller that wants the default styling
@@ -622,7 +617,7 @@ export class LyraSelect<
    * @default undefined
    */
   @property({ reflect: true }) sync?: PlaceSync;
-  private _positioningStrategy?: PlaceStrategy;
+  private readonly strategy = new PositioningStrategyState(this, 'absolute');
   /**
    * CSS positioning scheme the listbox is laid out with -- the one property `<lr-select>`,
    * `<lr-dropdown>` and `<lr-popover>` all spell the same way. `absolute` (this control's mirrored
@@ -640,26 +635,13 @@ export class LyraSelect<
   @property({
     attribute: 'positioning-strategy',
     reflect: true,
-    converter: POSITIONING_STRATEGY,
+    converter: positioningStrategyConverter,
   })
   get positioningStrategy(): PlaceStrategy {
-    return this._positioningStrategy ?? 'absolute';
+    return this.strategy.value;
   }
   set positioningStrategy(next: PlaceStrategy) {
-    const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
-    const old = this.positioningStrategy;
-    // Recorded even when it matches the already-resolved value: an author who explicitly writes
-    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
-    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
-    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
-    this._positioningStrategy = normalized;
-    if (normalized === old) return;
-    this.requestUpdate('positioningStrategy', old);
-    // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
-    // value without going through its own setter.
-    if ((old === 'fixed') !== (normalized === 'fixed')) {
-      this.requestUpdate('hoist', old === 'fixed');
-    }
+    this.strategy.set(next);
   }
   /**
    * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
@@ -671,10 +653,10 @@ export class LyraSelect<
    */
   @property({ type: Boolean, reflect: true })
   get hoist(): boolean {
-    return this.positioningStrategy === 'fixed';
+    return this.strategy.hoist;
   }
   set hoist(next: boolean) {
-    this.positioningStrategy = next ? 'fixed' : 'absolute';
+    this.strategy.setHoist(next);
   }
   /**
    * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
@@ -786,6 +768,13 @@ export class LyraSelect<
     if (previous && previous.inputs.length === inputs.length && previous.inputs.every((input, index) => Object.is(input, inputs[index]))) return previous.value as T;
     const value = compute(); this.optionMemo.set(key, { inputs, value }); return value;
   }
+  private get selectedLabels(): string {
+    return this.memoOption('selectedLabels', [
+      this._selected, this.options, this._selectedOptions, this.optionsObserved,
+      this.getUnknownLabel, this.loading, this.effectiveLocale, this.strings, this.callbackRefreshEpoch,
+    ], () => getListFormat(this.effectiveLocale, { type: 'unit' }).format(this._selected.map((value, index) => this.labelFor(value, index))));
+  }
+
   private get optionIndex() {
     return this.memoOption('index', [this.options], () => {
       const values = new Map<string, LyraOption>(); const positions = new Map<LyraOption, number>();
@@ -1570,16 +1559,10 @@ export class LyraSelect<
     return this.validityController.checkValidity(() => this.updateValidity());
   }
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    this.updateValidity();
-    // Marked explicitly rather than left to the `installInteractionOnInvalid()` listener: that
-    // listener only fires when the check actually fails, but a `reportValidity()` call on an
-    // already-valid control still counts as interaction (native `:user-valid` matches on it too).
-    // A submission attempt reaches the same listener without ever calling this method at all --
-    // it drives `ElementInternals` directly. `checkValidity()` deliberately marks neither path:
-    // it is the silent query, and wraps its own call in `withStaticValidityCheck()` accordingly.
-    this.markInteracted();
-    return this.internals.reportValidity();
+    return this.validityController.reportValidity(() => {
+      this.updateValidity();
+      this.markInteracted();
+    });
   }
 
   /**
@@ -1951,8 +1934,9 @@ export class LyraSelect<
       this.unknownOptionCache.clear();
       return [];
     }
-    for (const key of [...this.unknownOptionCache.keys()]) {
-      if (!values.includes(key)) this.unknownOptionCache.delete(key);
+    const retained = new Set(values);
+    for (const key of this.unknownOptionCache.keys()) {
+      if (!retained.has(key)) this.unknownOptionCache.delete(key);
     }
     return values.map((value) => {
       let option = this.unknownOptionCache.get(value);
@@ -2171,7 +2155,7 @@ export class LyraSelect<
       placement: rtlAwarePlacement(this.placement, this),
       ...topLayerPlacement(
         this.topLayer,
-        resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+        resolveEffectivePositioningStrategy(this, this.strategy.authored, 'absolute'),
       ),
       sync: this.sync,
     });
@@ -2524,15 +2508,16 @@ export class LyraSelect<
       : this._selectedOptions[this._selectedOptions.length - 1];
     const currentIndex = navigable.indexOf(currentOption as LyraOption);
     const labels = this.memoOption('typeAheadLabels', [navigable, this.effectiveLocale], () => {
-      const locale = resolveIntlLocale(this.effectiveLocale);
-      return new Map(navigable.map(option => [option, option.label.toLocaleLowerCase(locale)]));
+      const locale = this.effectiveLocale;
+      return new Map(navigable.map(option => [option, foldSearchText(option.label, locale)]));
     });
+    const prefix = foldSearchText(this.typeBuffer.text, this.effectiveLocale);
     let match: number | null = null;
     for (let step = 1; step <= navigable.length; step++) {
       const index = (currentIndex + step + navigable.length) % navigable.length;
       const option = navigable[index]!;
       if ((this.open || !this.multiple || !this.selectedIndex.members.has(option)) &&
-          labels.get(option)?.startsWith(this.typeBuffer.text)) { match = index; break; }
+          labels.get(option)?.startsWith(prefix)) { match = index; break; }
     }
     if (match === null) return;
     const candidate = navigable[match]!;
@@ -2541,7 +2526,7 @@ export class LyraSelect<
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     const navigable = this.navigableOptions();
     const move = (): number | null => resolveListMove(e, {
       count: navigable.length,
@@ -2793,13 +2778,10 @@ export class LyraSelect<
     const active =
       this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active
-      ? `${this.listId}-opt-${options.indexOf(active)}`
+      ? `${this.listId}-opt-${positionIndex(options).get(active)}`
       : '';
     const selectedLabel =
       this._selected.length > 0 ? this.labelFor(this._selected[0]!) : '';
-    const selectedLabels = this._selected
-      .map((value, index) => this.labelFor(value, index))
-      .join(', ');
     // A cleared single value ('') that no option claims shows the placeholder, like a fresh select.
     const hasValue = this._selected.length > 0 &&
       (this.multiple || this._selected[0] !== '' || this.resolvedLabelFor('', 0) !== undefined);
@@ -2822,14 +2804,10 @@ export class LyraSelect<
         : this._selected;
     const overflow = this._selected.length - shownValues.length;
     const showClear = (this.withClear || this.clearable) && hasValue;
-    const hasHint =
-      this.slotPresence.has('hint') ||
-      this.slotPresence.has('help-text') ||
-      (this.hint ?? '').length > 0 ||
-      (this.helpText ?? '').length > 0 ||
-      this.withHint;
-    const hasError =
-      this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: 'select', hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
     const hasLabel =
       this.slotPresence.has('label') || (this.label ?? '').length > 0 || this.withLabel;
     // A single navigable option has no popup to expand into -- when opted in via
@@ -2845,8 +2823,7 @@ export class LyraSelect<
     const describedBy = this.localDescriptionIds = [
       this.required && isSingleOption ? requiredTextId : '',
       this.multiple && hasValue ? this.valueTextId : '',
-      hasError ? 'select-error' : '',
-      hasHint ? 'select-hint' : '',
+      supporting.describedBy,
     ]
       .filter(Boolean)
       .join(' ');
@@ -2882,12 +2859,12 @@ export class LyraSelect<
               ? 'true'
               : 'false'}
             aria-controls=${isSingleOption ? nothing : this.listId}
-            aria-activedescendant=${isSingleOption ? nothing : activeId}
+            aria-activedescendant=${isSingleOption ? nothing : activeId || nothing}
             aria-label=${this.getAttribute('aria-label') ??
             (hasLabel ? nothing : this.placeholder || this.localize('select'))}
             aria-describedby=${describedBy || nothing}
             aria-required=${isSingleOption ? nothing : this.required ? 'true' : 'false'}
-            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid)
+            aria-invalid=${supporting.hasError || (this.touched && !this.internals.validity.valid)
               ? 'true'
               : 'false'}
             ?disabled=${this.effectiveDisabled}
@@ -2919,7 +2896,7 @@ export class LyraSelect<
               >${hasValue && !this.multiple
                 ? selectedLabel
                 : this.multiple && hasValue
-                ? selectedLabels
+                ? this.selectedLabels
                 : emptyDisplayText}${singleValueUnknown
                 ? html`<span part="unknown-value">${this.localize('notInCatalog')}</span>`
                 : ''}</span
@@ -2990,7 +2967,10 @@ export class LyraSelect<
           ${this.listboxRendered ? html`${this.renderRows(options, activeId)}${this.optionWindow.overflow > 0
             ? html`<div part="option-overflow">${this.localize('selectSelectedOverflow', undefined, { n: getNumberFormat(this.effectiveLocale).format(this.optionWindow.overflow) })}</div>` : nothing}` : nothing}
         </div>
-        ${renderFormControlHintError({ idPrefix: 'select', hint: this.hint || this.helpText, errorText: this.errorText, hasHint, hasError, helpTextSlot: true })}
+        ${renderFormControlHintError({
+          ...supporting, idPrefix: 'select', hint: this.hint || this.helpText,
+          errorText: this.errorText, helpTextSlot: true,
+        })}
       </div>
       <slot
         @slotchange=${this.collectOptions}

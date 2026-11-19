@@ -15,6 +15,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import {
   regionHighlightLabel,
@@ -383,6 +384,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   @state() private hasUnsupportedSlot = false;
   @state() private textFetch: TextFetchState = IDLE_TEXT_FETCH;
+  /** The `src` whose image failed to load; a different `src` clears the failure. */
+  @state() private imageFailedSrc: string | null = null;
+  private readonly scrollRegions = new Map<Element, { child: Element | null; name: string; dispose: () => void }>();
 
   // Bumped on every fetchText() call so a stale in-flight fetch (superseded
   // by a newer src/mime-type/status before it settles) can detect it's no
@@ -397,6 +401,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.hasUpdated) this.syncScrollRegions();
     const moved = this.detached.cancel();
     if (this.hasUpdated && this.src && classifyFormat(this.mimeType) === 'text' && (!moved || this.textFetch.kind === 'loading')) {
       this.textFetch = IDLE_TEXT_FETCH;
@@ -410,6 +415,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   override disconnectedCallback(): void {
     if (this.textFetch.kind === 'loading') this.generation++;
     this.announcements.disconnect();
+    this.disposeScrollRegions();
     super.disconnectedCallback();
     this.detached.schedule();
   }
@@ -446,9 +452,30 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     }
   }
 
+  private syncScrollRegions(): void {
+    const live = new Set<Element>(this.renderRoot.querySelectorAll('[part="body"], pre.text'));
+    const name = this.filename || this.localize('documentPreviewGenericFile');
+    for (const el of live) {
+      const child = el.firstElementChild;
+      const existing = this.scrollRegions.get(el);
+      if (existing?.child === child && existing.name === name) continue;
+      existing?.dispose();
+      this.scrollRegions.set(el, { child, name, dispose: makeScrollRegionFocusable(el as HTMLElement, name) });
+    }
+    for (const [el, region] of this.scrollRegions) {
+      if (!live.has(el)) { region.dispose(); this.scrollRegions.delete(el); }
+    }
+  }
+
+  private disposeScrollRegions(): void {
+    for (const region of this.scrollRegions.values()) region.dispose();
+    this.scrollRegions.clear();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncAnnouncementState();
+    this.syncScrollRegions();
 
     const safeTextSrc = safeFetchUrl(this.src);
     const shouldFetchText =
@@ -488,6 +515,10 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
         'error',
         this.errorText || this.localize('documentPreviewGenericError'),
       );
+      return;
+    }
+    if (classifyFormat(this.mimeType) === 'image' && this.imageFailedSrc === this.src && this.src !== '') {
+      this.announcements.transition('preview', 'error', this.localize('documentPreviewFailedToLoad'));
       return;
     }
     if (classifyFormat(this.mimeType) !== 'text' || this.src === '') {
@@ -622,7 +653,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this.invalidUrlReportedFor = null;
     switch (this.textFetch.kind) {
       case 'loaded':
-        return html`<pre class="text">${this.textFetch.text}</pre>`;
+        return html`<pre class="text" dir="auto">${this.textFetch.text}</pre>`;
       case 'error':
         return this.renderError(this.textFetch.message());
       case 'loading':
@@ -637,10 +668,17 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     const src = safeMediaSrc(this.src);
     if (src === null) return this.renderDownloadFallback();
+    if (this.imageFailedSrc === this.src) return this.renderError(this.localize('documentPreviewFailedToLoad'));
     return this.renderZoomableWrapper(
-      html`<img src=${src} alt=${this.alt ?? (this.filename || this.localize('documentPreviewAlt'))} />`,
+      html`<img src=${src} alt=${this.alt ?? (this.filename || this.localize('documentPreviewAlt'))} @error=${this.onImageError} />`,
     );
   }
+
+  private readonly onImageError = (): void => {
+    if (this.imageFailedSrc === this.src) return;
+    this.imageFailedSrc = this.src;
+    this.emit('lr-render-error', { error: new LyraUserFacingError(this.localize('documentPreviewFailedToLoad')) });
+  };
 
   private stopPanZoomEvent(event: Event): void {
     event.stopPropagation();
@@ -802,7 +840,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           : nothing}
       >
         <div part="header" ?hidden=${!this.filename}>
-          <span part="filename" title=${this.filename}>${this.filename}</span>
+          <span part="filename" dir="auto" title=${this.filename}>${this.filename}</span>
         </div>
         <div part="body">${this.renderBody()}</div>
       </div>

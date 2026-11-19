@@ -1360,3 +1360,39 @@ it("contains the composed lr-segmented's lr-activate on a real repeat pick of th
     "this component owns its own event surface; the child's raw event never escapes"
   ).to.equal(0);
 });
+
+it('ignores modified and already-handled Enter in the query field', async () => {
+  const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+  let submitted = 0;
+  el.addEventListener('lr-search', () => submitted++);
+  for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }]) {
+    const ev = enterKeydown(init);
+    queryInputOf(el).dispatchEvent(ev);
+    expect(ev.defaultPrevented, JSON.stringify(init)).to.be.false;
+  }
+  const handled = enterKeydown();
+  handled.preventDefault();
+  queryInputOf(el).dispatchEvent(handled);
+  await el.updateComplete;
+  expect(submitted).to.equal(0);
+});
+
+it('names the query field from the localized search label when the placeholder is blank', async () => {
+  for (const placeholder of ['', '   ']) {
+    const el = (await fixture(html`<lr-retrieval-search placeholder=${placeholder}></lr-retrieval-search>`)) as LyraRetrievalSearch;
+    expect(nativeQueryInputOf(el).getAttribute('aria-label'), JSON.stringify(placeholder)).to.equal('Search');
+  }
+});
+
+it('announces the first error that arrives after the element was moved', async () => {
+  const el = (await fixture(html`<lr-retrieval-search announce></lr-retrieval-search>`)) as LyraRetrievalSearch;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  el.errorText = 'Failure after the move';
+  await el.updateComplete;
+  const sink = document.querySelector('[data-lr-live-region="assertive"]')!;
+  expect(sink.lastElementChild?.textContent).to.equal('Failure after the move');
+});

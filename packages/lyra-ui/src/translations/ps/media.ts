@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'د غږولو چټکتیا',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} د {duration} څخه',
+  avPlayerHighlightRange: 'له {start} څخه تر {end} پورې',
+  avPlayerHighlightAt: 'په {start} کې',
   attachmentTriggerAudio: 'غږ ثبتول',
   attachmentMenuAudio: 'غږ ثبتول',
   flagLoadError: 'بیرغ نشته',

@@ -1,7 +1,7 @@
 import { expect, fixture } from '@open-wc/testing';
 import { LyraImageViewer } from '../components/media/image-viewer/image-viewer.js';
 import { LyraVideo } from '../components/media/video/video.js';
-import type { LyraPanoramaCamera, LyraPanoramaHotspot } from './media-panorama.js';
+import { PanoramaController, type LyraPanoramaCamera, type LyraPanoramaHotspot } from './media-panorama.js';
 void LyraImageViewer;
 void LyraVideo;
 
@@ -64,3 +64,32 @@ for (const tag of ['lr-image-viewer', 'lr-video'] as const) {
     });
   }
 }
+
+describe('panorama keyboard camera', () => {
+  it('leaves modified and composing keys alone and still steers on a plain key', () => {
+    const cameras: LyraPanoramaCamera[] = [];
+    const host = document.body.appendChild(document.createElement('div'));
+    const controller = new PanoramaController(host, {
+      changed: () => {},
+      updated: () => Promise.resolve(),
+      localize: (key) => key,
+      direction: () => 'ltr',
+      camera: (camera) => cameras.push(camera),
+      pick: () => {},
+      fallback: () => {},
+    });
+    controller.ready = true;
+    host.addEventListener('keydown', (event) => controller.keydown(event, 'ltr'));
+    for (const init of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true }]) {
+      const event = new KeyboardEvent('keydown', { key: '=', cancelable: true, ...init });
+      host.dispatchEvent(event);
+      expect(event.defaultPrevented).to.equal(false);
+    }
+    expect(cameras.length).to.equal(0);
+    const plain = new KeyboardEvent('keydown', { key: '=', cancelable: true });
+    host.dispatchEvent(plain);
+    expect(plain.defaultPrevented).to.equal(true);
+    expect(cameras.length).to.equal(1);
+    host.remove();
+  });
+});

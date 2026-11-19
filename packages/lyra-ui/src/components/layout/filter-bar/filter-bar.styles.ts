@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -181,8 +182,6 @@ export const styles = css`
      in the DOM -- and therefore keeps naming its control -- while the text itself is clipped away,
      reclaiming the stacked label row for a narrow panel, dialog or split pane.
 
-     Three structural notes:
-
      - The query is UNNAMED, and must stay that way. Every element it targets sits behind at least
        one shadow boundary relative to this stylesheet: the ::part arm reaches into the composed
        control's own shadow root, and the checkbox-menu arm's label span is slotted into the
@@ -195,14 +194,6 @@ export const styles = css`
        control between the bar and its label may become one; the wide-allocation test is the guard,
        since each field is far narrower than the threshold and would clip immediately.
 
-     - The geometry below is the same hairline-box + inset(50%) clip the shared .sr-only class uses
-       (internal/a11y.ts's srOnly, already composed into this component's own styles). It is
-       re-typed here rather than reused because neither reuse path exists: a container query cannot
-       toggle a class, and for every filter type except 'checkbox-menu' the label element lives in
-       the COMPOSED control's shadow root, where an unscoped .sr-only rule of this component's
-       never applies. The ::part arm is what reaches it, and an outer ::part rule beats the inner
-       tree's own normal declarations regardless of specificity.
-
      - The threshold is a literal, uniquely among this component's themeable values. A container
        query's prelude is an at-rule prelude, where var() is never substituted -- a
        @container (max-inline-size: var(--token)) rule parses and then silently never matches, which
@@ -211,16 +202,7 @@ export const styles = css`
   @container ${mediumContainerQuery} {
     [data-label-auto]::part(form-control-label),
     [data-label-auto] [part='filter-control-label'] {
-      position: absolute;
-      inline-size: var(--lr-size-1px);
-      block-size: var(--lr-size-1px);
-      padding: 0;
-      margin-inline: calc(-1 * var(--lr-size-1px));
-      margin-block: calc(-1 * var(--lr-size-1px));
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-      border: 0;
+      ${visuallyHidden}
     }
   }
 `;

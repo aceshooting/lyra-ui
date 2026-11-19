@@ -21,6 +21,8 @@ import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal
 import { nextId } from '../../../internal/a11y.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { SeparatorDragController, separatorArrowDirection, separatorCoordinate, separatorDelta } from '../../../internal/separator-drag.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
@@ -109,6 +111,8 @@ interface DragState {
    *  move cannot cause a write of the unchanged layout. */
   acceptedResize: boolean;
 }
+
+const EMPTY_COLLAPSED_PANELS: readonly string[] = Object.freeze([]);
 
 /** A fixed-pixel-range constraint for one panel; index-aligned with `sizes`/
  *  `panelConstraints`. Either bound may be omitted to leave that side
@@ -627,8 +631,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  one panel always stays open: a set naming every panel leaves the last one open. Assigning this
    *  property is silent, like assigning `sizes`; `collapsePanel()`/`expandPanel()`/`togglePanel()`
    *  apply a change immediately, persist it under `storageKey`, and announce it. A valid stored
-   *  layout restores the collapsed set too, unless this property already names panels. */
-  @property({ attribute: false }) collapsedPanels: readonly string[] = [];
+   *  layout restores the collapsed set when this property is unset. An explicit empty array expands all panels. */
+  @property({ attribute: false })
+  get collapsedPanels(): readonly string[] { return this.authoredCollapsedPanels ?? EMPTY_COLLAPSED_PANELS; }
+  set collapsedPanels(value: readonly string[]) { this.authoredCollapsedPanels = value; }
+  private authoredCollapsedPanels?: readonly string[];
+
+  /** Disables pointer and keyboard resizing of all dividers. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Internal hydration seed reflected into declarative output so a property-driven server render
    * and the browser's first reuse pass agree before assigned children can be observed. */
@@ -770,7 +780,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     HTMLElement,
     PanelOwnershipSnapshot
   >();
-  private panelOwnershipObserver?: MutationObserver;
+  private readonly panelOwnershipObserver = new OwnedMutationObserver(this, records => {
+    const changed = records.some((record) => {
+      const panel = record.target as HTMLElement;
+      return this.panelProjectionDiverged(panel, this.panelOwnership.get(panel)!);
+    });
+    if (changed) this.requestUpdate();
+  });
   private constraintIssueKey = '';
   private constraintConfigVersion = 0;
   private renderConstraintBounds: Array<{ min: number; max: number }> = [];
@@ -786,6 +802,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private gutterObserverFrame?: number;
   private gutterObserverDocument?: Document;
   private gutterObservedDividers: HTMLElement[] = [];
+  private readonly gutterExtents = new Map<Element, number>();
+  private gutterOrientation?: LyraOrientation;
   private gutterObservedContainerSize = 0;
   /** Owns breakpoint resolution, basis selection, and the viewport `MediaQueryList` lifecycle
    *  (including teardown on disconnect) — see `OrientationBreakpointController`. */
@@ -1829,7 +1847,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       if (expandedSize !== undefined) this.expandedSizes.set(panelId, expandedSize);
     }
     // An authored set wins over the stored one; `syncCollapsedLayout()` then refolds toward it.
-    if (restoredCollapsed.length > 0 && this.collapsedPanels.length === 0) {
+    if (restoredCollapsed.length > 0 && this.authoredCollapsedPanels === undefined) {
       this.collapsedPanels = restoredCollapsed;
     }
     return true;
@@ -2033,36 +2051,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     });
   }
 
-  private resetPanelOwnershipObserver(): void {
-    this.panelOwnershipObserver?.disconnect();
-    this.panelOwnershipObserver = undefined;
-  }
-
   private observeOwnedPanels(): void {
-    this.resetPanelOwnershipObserver();
-    const ownerDocument = this.ownerDocument;
-    const MutationObserverConstructor =
-      ownerDocument.defaultView?.MutationObserver;
-    if (
-      !MutationObserverConstructor ||
-      !this.isConnected ||
-      this.ownedPanels.length === 0
-    ) {
-      return;
-    }
-    const observer = new MutationObserverConstructor((records) => {
-      // No staleness guard: every path that retires this observer (disconnect, adoption, a rebuild)
-      // calls disconnect(), which discards queued records, so it never reports after retirement.
-      const changed = records.some((record) => {
-        const panel = record.target as HTMLElement;
-        const snapshot = this.panelOwnership.get(panel);
-        return snapshot ? this.panelProjectionDiverged(panel, snapshot) : false;
-      });
-      if (changed) this.requestUpdate();
-    });
-    this.panelOwnershipObserver = observer;
+    this.panelOwnershipObserver.clear();
     for (const panel of this.ownedPanels) {
-      observer.observe(panel, {
+      this.panelOwnershipObserver.observe(panel, {
         attributes: true,
         attributeFilter: ['style', 'hidden', ...OWNED_PANEL_ATTRIBUTES],
       });
@@ -2123,7 +2115,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private releaseOwnedPanels(): void {
-    this.resetPanelOwnershipObserver();
+    this.panelOwnershipObserver.clear();
     for (const panel of this.ownedPanels) {
       const snapshot = this.panelOwnership.get(panel);
       if (snapshot) this.restorePanelOwnership(panel, snapshot);
@@ -2155,25 +2147,30 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.gutterResizeObserver = undefined;
     this.gutterObserverDocument = undefined;
     this.gutterObservedDividers = [];
+    this.gutterExtents.clear();
+    this.gutterOrientation = undefined;
     this.baseEl?.style.removeProperty('--_lr-multi-split-gutters');
   }
 
   /** Read CSS box dimensions in the divider's own font context, before any visual transform.
    *  Panels can have different fonts, so inheriting an unresolved em token would change its size. */
-  private updateGutterBudget(): void {
+  private updateGutterBudget(changed: readonly Element[] = this.gutterObservedDividers): void {
     const view = this.ownerDocument.defaultView;
     const base = this.baseEl;
     if (!view || !base) return;
-    const vertical = this.effectiveOrientation === 'vertical';
-    const gutters = this.gutterObservedDividers.reduce((total, divider) => {
+    const vertical = this.gutterOrientation === 'vertical';
+    for (const divider of changed) {
+      if (divider === base) continue;
       const style = view.getComputedStyle(divider);
       const properties = vertical
         ? ['height', 'padding-top', 'padding-bottom', 'border-top-width', 'border-bottom-width']
         : ['width', 'padding-left', 'padding-right', 'border-left-width', 'border-right-width'];
       const boxProperties = style.boxSizing === 'border-box' ? properties.slice(0, 1) : properties;
-      return total + boxProperties.reduce((size, property) =>
-        size + finiteRange(parseFloat(style.getPropertyValue(property)), 0, 0), 0);
-    }, 0);
+      this.gutterExtents.set(divider, boxProperties.reduce((size, property) =>
+        size + finiteRange(parseFloat(style.getPropertyValue(property)), 0, 0), 0));
+    }
+    let gutters = 0;
+    for (const size of this.gutterExtents.values()) gutters += size;
     const value = `${gutters}px`;
     if (base.style.getPropertyValue('--_lr-multi-split-gutters') !== value) {
       base.style.setProperty('--_lr-multi-split-gutters', value);
@@ -2191,13 +2188,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (
       this.gutterResizeObserver &&
       this.gutterObserverDocument === ownerDocument &&
+      this.gutterOrientation === this.effectiveOrientation &&
       dividers.length === this.gutterObservedDividers.length &&
       dividers.every((divider, index) => divider === this.gutterObservedDividers[index])
-    ) {
-      this.updateGutterBudget();
-      return;
-    }
+    ) return;
     this.resetGutterObserver();
+    this.gutterOrientation = this.effectiveOrientation;
     this.gutterObservedDividers = dividers;
     this.gutterObserverDocument = ownerDocument;
     this.gutterObservedContainerSize = this.getContainerSize();
@@ -2205,9 +2201,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const ownerWindow = ownerDocument.defaultView;
     const ResizeObserverConstructor = ownerWindow?.ResizeObserver;
     if (!ownerWindow || !ResizeObserverConstructor) return;
-    const observer = new ResizeObserverConstructor(() => {
+    const observer = new ResizeObserverConstructor(entries => {
       if (this.gutterResizeObserver !== observer || !this.isConnected || this.ownerDocument !== ownerDocument) return;
-      this.updateGutterBudget();
+      this.updateGutterBudget(entries.map(entry => entry.target));
       const size = this.getContainerSize();
       if (size !== this.gutterObservedContainerSize) {
         this.gutterObservedContainerSize = size;
@@ -2262,6 +2258,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  adjacent to the currently-collapsed pane (its other side has nothing
    *  meaningful to resize against while the pane is rail/floating-width). */
   private isDividerDisabled(index: number): boolean {
+    if (this.disabled) return true;
     if (this.collapseActive) {
       const adjacent = this.collapsingIndex === 0 ? 0 : this.panelCount - 2;
       if (index === adjacent) return true;
@@ -2606,19 +2603,37 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  existing `lr-resize` notification remains the non-cancelable post-commit
    *  signal, so property-driven layouts stay silent while hosts can veto an
    *  interaction before it changes their persistence-facing state. */
-  private requestResize(next: number[], commit: boolean): boolean {
+  private requestResize(next: number[], commit: boolean, index: number): boolean {
     if (
       next.length === this.sizes.length &&
       next.every((size, index) => Math.abs(size - this.sizes[index]!) <= 1e-9)
     ) {
       return false;
     }
+    const before = this.sizes;
+    const constraints = this.panelConstraints;
+    const minimum = this.min;
+    const collapsed = this.collapsedPanels;
+    const containerSize = this.getContainerSize();
+    const orientation = this.orientation;
+    const axis = this.effectiveOrientation;
+    const direction = this.effectiveDirection;
     const request = this.emit(
       'lr-resize-request',
       { sizes: [...next] },
       { cancelable: true }
     );
-    if (request.defaultPrevented) return false;
+    if (
+      request.defaultPrevented ||
+      !this.isConnected ||
+      this.sizes !== before ||
+      this.panelConstraints !== constraints || this.min !== minimum ||
+      this.collapsedPanels !== collapsed || this.isDividerDisabled(index) ||
+      this.getContainerSize() !== containerSize ||
+      !this.samePanelSequence([...this.children].filter(child => child !== this.nativeModal.helperMount) as HTMLElement[]) ||
+      this.panelCount !== next.length ||
+      this.orientation !== orientation || this.effectiveOrientation !== axis || this.effectiveDirection !== direction
+    ) return false;
     this.sizes = next;
     this.emit('lr-resize', { sizes: [...this.sizes] });
     if (commit) this.settle();
@@ -2630,9 +2645,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.emit('lr-resize-change', { sizes: [...this.sizes] });
   }
 
-  private applyDelta(index: number, delta: number, commit: boolean): boolean {
-    const pair = this.dividerPair(index);
-    if (!pair) return false;
+  private applyDelta(index: number, delta: number): void {
+    const pair = this.dividerPair(index)!;
     const next = this.clampPair(
       this.sizes,
       pair[0],
@@ -2640,15 +2654,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       delta,
       this.getContainerSize()
     );
-    const changed =
-      next.length !== this.sizes.length ||
-      next.some(
-        (size, currentIndex) =>
-          Math.abs(size - this.sizes[currentIndex]!) > 1e-9
-      );
-    if (!changed) return false;
-    this.requestResize(next, commit);
-    return true;
+    this.requestResize(next, true, index);
   }
 
   /** The collapsing pane's light-DOM element itself — the `'floating'`
@@ -2831,7 +2837,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const next = [...this.sizes];
     next[leading] = pairedA;
     next[trailing] = pairedB;
-    if (!this.requestResize(next, false)) return;
+    if (!this.requestResize(next, false, drag.index)) return;
     drag.appliedDelta += pairedA - priorValue;
     drag.acceptedResize = true;
   };
@@ -2851,23 +2857,23 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   private onDividerKeyDown = (e: KeyboardEvent, index: number): void => {
     // Same rail/floating-adjacent guard as onPointerDown.
-    if (this.isDividerDisabled(index) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    if (this.isDividerDisabled(index) || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     const direction = separatorArrowDirection(
       e,
       this.effectiveOrientation === 'vertical' ? 'block' : 'inline',
       this.effectiveOrientation === 'horizontal' && isRtl(this),
     );
     if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
       const { min, max } = this.dividerValueRange(index);
       const current = this.sizes[this.dividerPair(index)?.[0] ?? index];
       if (current !== undefined) {
         const target = e.key === 'Home' ? min : max;
-        if (this.applyDelta(index, target - current, true)) e.preventDefault();
+        this.applyDelta(index, target - current);
       }
-    } else if (direction === 1) {
-      if (this.applyDelta(index, KEYBOARD_STEP, true)) e.preventDefault();
-    } else if (direction === -1) {
-      if (this.applyDelta(index, -KEYBOARD_STEP, true)) e.preventDefault();
+    } else if (direction === 1 || direction === -1) {
+      e.preventDefault();
+      this.applyDelta(index, direction * KEYBOARD_STEP);
     }
   };
 

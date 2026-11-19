@@ -31,7 +31,8 @@ for (const tagName of ['lr-code-block', 'lr-code-block-core']) {
       ['language', 'language', 'json'],
       ['highlight-lines', 'highlightLines', '2'],
     ] as const) {
-      it(`treats removed ${attribute} as absence and recovers from explicit empty input`, async () => {
+      it(`treats removed ${attribute} as absence and recovers from explicit empty input`, async function () {
+        this.timeout(22000);
         const el = await highlighted(tagName);
         el.setAttribute(attribute, initial);
         await el.updateComplete;

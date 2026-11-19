@@ -1,4 +1,5 @@
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, svg, nothing, type TemplateResult, type PropertyValues, type SVGTemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -658,6 +659,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     if (this.treeSource !== undefined || e.currentTarget !== this.renderRoot.querySelector('[role=tree]')) return;
     const rows = this.buildRows();
     if (rows.length === 0) return;

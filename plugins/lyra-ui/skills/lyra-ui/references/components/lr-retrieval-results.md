@@ -73,7 +73,7 @@ distinct occurrence keys may show repeated canonical IDs, while selection still 
 Canonical `lookup` must always return `key === value.id`; page occurrence keys never become selected
 IDs. Provider order is preserved in the visible page.
 
-Up to 10,000 explicit `selectedChunkIds` resolve globally in sequential batches of at most 500;
+Selecting a row beyond the 10,000-id ceiling is refused and announced politely with the localized `retrievalResultsSelectionLimit` message. Up to 10,000 explicit `selectedChunkIds` resolve globally in sequential batches of at most 500;
 blanks/duplicates normalize before lookup. Off-page IDs remain selected while unresolved, and only
 a successful global absence proof removes an ID. Complete canonical records are ordered by
 provider `order`, independently of page/query order. The selected-record cache and pending user

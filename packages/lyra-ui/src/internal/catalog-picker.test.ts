@@ -539,3 +539,54 @@ it('leaves modified editable navigation to the native input', () => {
   expect(end.defaultPrevented).to.equal(true);
   expect(controller.activeIndex).to.equal(1);
 });
+
+describe('commitValue', () => {
+  function commitPicker() {
+    const host = document.createElement('div') as unknown as PickerHost;
+    const renderRoot = host.attachShadow({ mode: 'open' });
+    Object.defineProperties(host, {
+      effectiveDisabled: { configurable: true, value: false },
+      renderRoot: { configurable: true, value: renderRoot },
+      updateComplete: { configurable: true, value: Promise.resolve(true) },
+    });
+    const order: string[] = [];
+    for (const type of ['input', 'change']) host.addEventListener(type, () => order.push(type));
+    const catalog = Object.freeze([Object.freeze({ id: 'a', label: 'A' }), Object.freeze({ id: 'b', label: 'B' })]);
+    const controller = new CatalogPickerController(host, {
+      catalog: () => catalog,
+      allowCustom: () => false,
+      isReadonly: () => false,
+      locale: () => 'en',
+      searchableFields: (entry) => [entry.id, entry.label],
+      emitInput: () => order.push('lr-input'),
+      emitChange: () => order.push('lr-change'),
+      onValueChange: () => {},
+      onDefaultValueChange: () => {},
+      onStateChange: () => {},
+    });
+    return { controller, order };
+  }
+
+  it('emits the native pair before the library event, change last', () => {
+    const { controller, order } = commitPicker();
+    controller.commitValue('a');
+    expect(order).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  });
+
+  it('emits nothing when the activated value is already committed', () => {
+    const { controller, order } = commitPicker();
+    controller.commitValue('a');
+    order.length = 0;
+    controller.commitValue('a');
+    expect(order).to.deep.equal([]);
+  });
+});
+
+describe('filterCatalogEntries folding', () => {
+  it('matches regardless of accents and case', () => {
+    const entries = [{ id: 'a', label: 'Café Crème' }, { id: 'b', label: 'Tea' }];
+    const fields = (entry: { id: string; label: string }): string[] => [entry.label];
+    expect(filterCatalogEntries(entries, 'cafe creme', 'en', fields).map((entry) => entry.id)).to.deep.equal(['a']);
+    expect(filterCatalogEntries(entries, 'CAFÉ', 'en', fields).map((entry) => entry.id)).to.deep.equal(['a']);
+  });
+});

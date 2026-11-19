@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: '再生速度',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{duration} 中 {current}',
+  avPlayerHighlightRange: '{start} から {end}',
+  avPlayerHighlightAt: '{start} 時点',
   attachmentTriggerAudio: '音声を録音',
   attachmentMenuAudio: '音声を録音',
   flagLoadError: '国旗を表示できません',

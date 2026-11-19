@@ -90,6 +90,8 @@ it('reports unavailable and partial search honestly and rejects oversized source
   expect(await el.search('missing')).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="search-status"]')?.textContent).to.include('Search unavailable');
   expect(detail?.matchCountExact).to.equal(false);
+  const status = el.shadowRoot!.querySelector('[part="search-status"]')!;
+  expect(parseFloat(getComputedStyle(status).paddingInlineStart)).to.be.greaterThan(0);
   provider.search = async () => ({ hits: [{ key: 'k9' }], total: null, exhaustive: false });
   expect(await el.search('partial')).to.equal(1); expect(detail?.matchCountExact).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part="search-status"]')).not.to.equal(null);
@@ -354,11 +356,14 @@ function canonicalSource() {
 it('resolves canonical element and exact attribute anchors and paints only their matching highlights', async () => {
   const { provider, reveals } = canonicalSource();
   const highlight = { id: 'attribute', anchor: { kind: 'node-path' as const, path: [0, '@id'] }, label: 'Exact attribute' };
-  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .strings=${strings} .treeSource=${provider} .highlights=${[highlight]}></lr-xml-viewer>`);
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer style="--lr-xml-viewer-highlight-accent-bg:rgb(51, 68, 85);--lr-transition-interactive:none" .strings=${strings} .treeSource=${provider} .highlights=${[highlight]}></lr-xml-viewer>`);
   await ready(el);
   expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, '@id'] })).to.equal(true);
   expect(reveals.at(-1)).to.equal('[0,"@id"]');
   const attribute = Array.from(el.shadowRoot!.querySelectorAll('[part~="source-row"]')).find(row => row.getAttribute('data-source-key') === '[0,"@id"]')!;
+  expect(getComputedStyle(attribute).backgroundColor).to.equal('rgb(51, 68, 85)');
+  const button = attribute.querySelector('[part="highlight-action"]')!;
+  expect(getComputedStyle(button).getPropertyValue('--_lr-xml-viewer-highlight-background').trim()).to.equal('rgb(51, 68, 85)');
   expect(attribute.querySelector('[part="attribute"][data-active]')).not.to.equal(null);
   expect(attribute.querySelector('[data-highlight]')).not.to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(1);

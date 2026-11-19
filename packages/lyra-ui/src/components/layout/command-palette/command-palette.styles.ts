@@ -207,11 +207,7 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
   }
-  /* Full specificity on the [data-active='true'] compound, deliberately: (0,3,0) is what it takes
-     to beat the resting [part='command'][data-active='true'] rule directly above ((0,2,0)). In
-     :where() it drops to (0,1,0), the resting fill wins, and the highlighted row shows no press at
-     all -- which is every row a pointer presses, since mouseenter moves the highlight to whatever
-     row is hovered. */
+  /* The held fill takes precedence when the pointer presses the keyboard-active option. */
   [part="command"][data-active="true"]:active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,

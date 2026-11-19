@@ -58,6 +58,8 @@ the composed parameter form owns field validation. Collection values and emitted
 | `error` | Unsupported-schema explanation. |
 
 
+The nested parameter form exposes `lr-validity-change` for synchronous validation observers. A blank heading preserves the localized group name.
+
 **Events:** non-cancelable `lr-question-input` (`detail: { requestId, value }`) reports draft edits. Non-cancelable `lr-question-response` (`detail: { requestId, action, content? }`) reports a response; accepted content contains validated fields, while decline/cancel omit `content`.
 ```html
 <lr-agent-question request-id="contact" requester="Research server"

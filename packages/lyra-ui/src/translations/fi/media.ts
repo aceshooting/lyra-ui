@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Toistonopeus',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current}/{duration}',
+  avPlayerHighlightRange: '{start}–{end}',
+  avPlayerHighlightAt: 'kohdassa {start}',
   attachmentTriggerAudio: 'Äänitä',
   attachmentMenuAudio: 'Äänitä',
   flagLoadError: 'Lippu ei käytettävissä',

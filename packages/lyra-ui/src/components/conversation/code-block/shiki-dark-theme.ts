@@ -1,3 +1,4 @@
+import { relativeLuminance } from '../../../internal/color-math.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { flattenedThemeParent, THEME_ATTRIBUTES } from '../../../internal/theme-observation.js';
 
@@ -33,14 +34,6 @@ function toRgb(
   ctx.fillRect(0, 0, 1, 1);
   const [red, green, blue, alpha] = ctx.getImageData(0, 0, 1, 1).data;
   return alpha === 0 ? null : [red!, green!, blue!];
-}
-
-function relativeLuminance([r, g, b]: [number, number, number]): number {
-  const [lr, lg, lb] = [r, g, b].map((channel) => {
-    const value = channel / 255;
-    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * lr! + 0.7152 * lg! + 0.0722 * lb!;
 }
 
 /** Whether `host`'s currently resolved `--lr-color-*` palette is a dark scheme -- i.e. the active

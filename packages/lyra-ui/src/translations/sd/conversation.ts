@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ڪجهه تجويزون يا ڪيٽلاگ داخلائون ڇڏيون ويون آهن.',
   transcriptFeedInputLimit: '{total} داخلائن مان صرف سڀ کان نيون {count} رکيون وڃن ٿيون.',
   codeBlockHighlightLimit: 'ڊگهو ڪوڊ سنٽيڪس هاءِ لائٽنگ کان سواءِ ڏيکاريو وڃي ٿو.',
+  codeBlockHighlightedLine: 'نمايان لڪير',
+  codeBlockActiveLine: 'فعال نمايان لڪير',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

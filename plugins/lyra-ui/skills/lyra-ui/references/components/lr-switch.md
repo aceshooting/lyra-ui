@@ -25,6 +25,9 @@ CSS parts), mirroring `<lr-select>`'s pattern for those two pieces — left unse
 Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
 control's visible, clickable label (same as `<lr-checkbox>`).
 
+Value event details capture the user’s edit. Disabling or removing the control during
+`input` ends that interaction before `change`.
+
 Host `aria-describedby` references resolve onto the internal `role="switch"` before its local
 error/hint guidance. The relationship tracks missing IDs, target replacement/removal/reinsertion,
 reconnect, and document adoption. Removing `hint`, `help-text`, or `error-text` safely omits that

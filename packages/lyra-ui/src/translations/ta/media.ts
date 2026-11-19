@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'இயக்க வேகம்',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{duration}-இல் {current}',
+  avPlayerHighlightRange: '{start} முதல் {end} வரை',
+  avPlayerHighlightAt: '{start} இல்',
   attachmentTriggerAudio: 'ஒலியைப் பதிவு செய்',
   attachmentMenuAudio: 'ஒலியைப் பதிவு செய்',
   flagLoadError: 'கொடி கிடைக்கவில்லை',

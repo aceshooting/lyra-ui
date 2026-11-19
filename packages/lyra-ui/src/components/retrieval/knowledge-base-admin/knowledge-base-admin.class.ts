@@ -1,4 +1,5 @@
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveListMove, isRovingTargetAvailable } from '../../../internal/list-navigation.js';
 import { collectionSupport, publicCollectionTruncation, snapshotEventDetail } from '../../../internal/collection-snapshot.js';
@@ -210,7 +211,9 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     this.focusSourcesAfterUpdate =
       shadowFocusTarget(this)?.matches('[role="tab"]') ?? false;
     this.activeTab = 'sources';
-    this.emit('lr-tab-change', { activeTab: 'sources' });
+    this.scheduleAfterUpdate(() => {
+      if (this.activeTab === 'sources') this.emit('lr-tab-change', { activeTab: 'sources' });
+    }, 'tab-correction');
   }
 
   private lastInputNotice = '';
@@ -299,9 +302,14 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     if (current()) this.emit(name as never, snapshot as never);
   }
 
+  /** Child events this component does not declare stay inside it. */
+  private readonly containChildEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   override render(): TemplateResult {
     const visibleLabel =
-      this.label == null ? this.localize('knowledgeBaseAdminLabel') : this.label;
+      this.label === '' ? '' : (normalizeLabel(this.label) ?? this.localize('knowledgeBaseAdminLabel'));
     // A host aria-label wins over the internal tablist's computed accessible name; the visible
     // heading keeps showing `visibleLabel`, and the tablist is never left unnamed.
     const tablistLabel =
@@ -317,7 +325,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     const level = resolveHeadingLevel(this.headingLevel);
     const childLevel = level ? (String(Math.min(6, +level + 1)) as LyraHeadingLevel) : 'none';
     return html`<section part="base">
-      <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
+      <div part="heading" role=${level && visibleLabel ? 'heading' : nothing} aria-level=${level && visibleLabel ? level : nothing}>${visibleLabel}</div>
       ${notice ? html`<p part="input-limit" role="note">${notice}</p>` : nothing}
       <div part="tabs" role="tablist" aria-label=${tablistLabel}>
         <button
@@ -372,6 +380,10 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
                 this.forward(event, 'lr-source-pause', current(event), () => event.detail)}
               @lr-source-delete=${(event: CustomEvent<{ sourceId: string }>) =>
                 this.forward(event, 'lr-source-delete', current(event), () => event.detail)}
+              @lr-sort-request=${this.containChildEvent}
+              @lr-sort=${this.containChildEvent}
+              @lr-retry-request=${this.containChildEvent}
+              @lr-page-change=${this.containChildEvent}
             ></lr-knowledge-base>`
           : nothing}
       </div>
@@ -395,6 +407,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
                   @lr-cancel=${(
                     event: CustomEvent<CancelEventDetail & { itemId: string }>
                   ) => this.forward(event, 'lr-ingestion-cancel', current(event), () => event.detail)}
+                  @lr-item-action=${this.containChildEvent}
                 ></lr-ingestion-queue>`
               : nothing}
           </div>`}

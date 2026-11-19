@@ -1,6 +1,8 @@
 import { css } from 'lit';
+import { srOnly } from '../../../internal/a11y.js';
 
 export const styles = css`
+  ${srOnly}
   :host {
     display: block;
     inline-size: 100%;
@@ -85,6 +87,7 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     padding-inline: var(--lr-size-0-125rem);
     font-family: var(--lr-font-mono);
+    text-decoration: underline wavy;
   }
 
   [part='truncation-boundary'] {

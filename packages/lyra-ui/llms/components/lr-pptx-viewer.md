@@ -76,6 +76,12 @@ highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
+**Events (additive):** `lr-page-change` — `detail: { page, pageCount }`, fired when `page` changes
+while a presentation is shown (the same shape `<lr-pdf-viewer>` emits); `lr-slide-change` is
+unchanged. A whitespace-only `label` or `name` is ignored for the region name; an explicit
+`label=""` still clears it. The scrollable `container` becomes a named, keyboard-focusable region
+while its content overflows.
+
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
 `notice`, `spinner`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`,
 `next-button`, `next-icon`, `container`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the

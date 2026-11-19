@@ -187,6 +187,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Xi suġġerimenti jew entrati tal-katalgu tħallew barra għax intlaħaq limitu tal-input.',
   transcriptFeedInputLimit: 'Jinżammu biss l-aktar {count} entrati riċenti minn {total}.',
   codeBlockHighlightLimit: 'Il-kodiċi twil jintwera mingħajr enfasi tas-sintassi.',
+  codeBlockHighlightedLine: 'Linja enfasizzata',
+  codeBlockActiveLine: 'Linja enfasizzata attiva',
 };
 
 registerLyraLocale('mt', strings);

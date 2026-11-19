@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Sawetara saran utawa entri katalog ora dilebokake amarga wates input wis tekan.',
   transcriptFeedInputLimit: 'Mung {count} entri paling anyar saka {total} sing disimpen.',
   codeBlockHighlightLimit: 'Kode dawa ditampilake tanpa panyorotan sintaks.',
+  codeBlockHighlightedLine: 'Baris sing disorot',
+  codeBlockActiveLine: 'Baris sorotan aktif',
 };
 
 registerLyraLocale('jv', strings);

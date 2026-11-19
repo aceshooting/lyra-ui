@@ -214,6 +214,11 @@ export const styles = css`
   }
 
   ${formControlSupportingText}
+  [part~="hint"], [part="error"] {
+    margin-inline-start: calc(max(var(--lr-icon-button-size),
+      var(--width, var(--lr-switch-track-inline-size, var(--_lr-switch-track-inline-size)))) +
+      var(--lr-switch-gap, var(--lr-space-s)));
+  }
 
   @media (prefers-reduced-motion: reduce) {
     [part~="track"],
@@ -228,5 +233,15 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: break-word;
+  }
+  @media (forced-colors: active) {
+    [part~="track"][part~="checked"],
+    :host(:not(:disabled)) .switch-layout:is(:hover, :active) [part~="track"][part~="checked"] {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+    [part~="track"][part~="checked"] [part="thumb"] {
+      background: HighlightText;
+    }
   }
 `;

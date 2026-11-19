@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Idokhumenti ye-PDF',
   pdfViewerMissingLibrary: 'Lesi sibukeli sidinga ukufakwa kwephakheji ethi "pdfjs-dist" ukuze sibonise amafayela e-PDF.',
   pdfViewerPageOf: 'Ikhasi {page} kwangu-{total}',
+  pdfViewerPageHighlights: 'Okugqanyisiwe kwekhasi {page}',
   pdfViewerZoomIn: 'Khulisa ukusondeza',
   pdfViewerZoomOut: 'Nciphisa ukusondeza',
   pdfViewerPreviousPage: 'Ikhasi elidlule',

@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Nokre framlegg eller katalogoppføringar vart utelatne fordi ei inndatagrense vart nådd.',
   transcriptFeedInputLimit: 'Berre dei nyaste {count} av {total} oppføringar blir tekne vare på.',
   codeBlockHighlightLimit: 'Lang kode blir vist utan syntaksutheving.',
+  codeBlockHighlightedLine: 'Utheva linje',
+  codeBlockActiveLine: 'Aktiv utheva linje',
 };
 
 registerLyraLocale('nn', strings);

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Ijro tezligi',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} / {duration}',
+  avPlayerHighlightRange: '{start} dan {end} gacha',
+  avPlayerHighlightAt: '{start} da',
   attachmentTriggerAudio: 'Audio yozib olish',
   attachmentMenuAudio: 'Audio yozib olish',
   flagLoadError: 'Bayroq mavjud emas',

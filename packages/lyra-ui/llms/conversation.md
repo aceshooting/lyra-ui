@@ -1,3 +1,4 @@
+
 ## Migrating removed conversation aliases
 
 The aliases removed in 23.0.0 no longer control rendering. Use the documented `without-*` controls
@@ -19,6 +20,9 @@ canonical request and activation events described in each component section.
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
 
 ## `lr-markdown`
+
+Assign new `languages` or `languageLoaders` maps to update available grammars. The component preserves the identity of a supplied concrete map.
+Math rendering caps explicit sizes at 20 em and macro expansion at 1,000. Targeted HTML forms receive the same `rel` protection as links.
 
 Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on
 two optional peer dependencies — `marked` (parsing) and `dompurify` (sanitizing) — both lazy-loaded
@@ -118,10 +122,12 @@ uses for its own `[part="body"]`.
   Images are governed by `withoutImages`, not by this list. Changing it re-renders.
   `<lr-markdown link-schemes="https"></lr-markdown>` keeps only `https:` links;
   `link-schemes="https relative"` also keeps same-site paths.
+- A direct `<script type="text/markdown">` can supply the initial document through the first
+  render. Assigning `content`, including an empty string, takes precedence on every connection.
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
   whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
-  intercepted on click and reported via `lr-link-activate` instead of navigating; empty (the default)
-  means every link is treated as external
+  routed through `lr-link-activate` on an unmodified primary click. Modified clicks and clicks
+  already handled by another listener keep their normal behavior. An empty prefix disables routing.
 - `headingOffset: number = 0` (attribute `heading-offset`) — added to every rendered heading's
   source `token.depth` before emitting `<h${depth}>` (e.g. `heading-offset="2"` renders a source `#`
   as `<h3>`); clamped to `[1, 6]` so a source `######` with a positive offset stays at `<h6>` rather
@@ -236,7 +242,8 @@ defers highlighting until completion; progressive streaming highlights settled b
   never fire this. If an intercepted link overlaps a painted highlight,
   `lr-highlight-activate` fires first for pointer and Enter activation.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
-  fallback matrix below), or `math` is set but the `katex` peer isn't installed
+  fallback matrix below), or `math` is set but the `katex` peer isn't installed. Listeners can
+  inspect the rendered fallback and assign new content or configuration to recover.
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
 - `lr-text-select` (`detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`) — a text
   selection inside the rendered content ended; `anchor` is a `text-quote` anchor scoped to the
@@ -251,7 +258,8 @@ defers highlighting until completion; progressive streaming highlights settled b
   light-DOM `MutationObserver` on that container can never see a property-driven update rendered
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 - `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
-  code-block copy chrome; both bubble and are composed. If an outcome listener disconnects the
+  code-block copy chrome. Both bubble and are composed. A failed write emits `lr-error` with null
+  detail before `lr-copy-error`. If an outcome listener disconnects the
   element, disables the header, or starts another copy, superseded feedback is canceled.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -309,7 +317,8 @@ code/code-block font, resolving through the library's shared monospace stack so 
 `--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
 `var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced
 `code-block` surface, so a consumer can retheme either or both together without repainting every
-other surface that reads the shared brand-quiet token), `--lr-markdown-code-padding` (default
+other surface that reads the shared brand-quiet token), `--lr-markdown-code-block-bg`
+(overrides the background of plain fenced code independently, including in a dark palette), `--lr-markdown-code-padding` (default
 `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)` — inline `code` span padding),
 `--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
 radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the
@@ -432,6 +441,9 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 
 ## `lr-markdown-core`
 
+Assign a new `languages` map to update available grammars.
+Math rendering caps explicit sizes at 20 em and macro expansion at 1,000. Targeted HTML forms receive the same `rel` protection as links.
+
 A build-lean sibling of `<lr-markdown>` above, for a consumer whose `languages` map already covers
 every language it will ever render — mirrors `<lr-code-block-core>`'s relationship to
 `<lr-code-block>`. The full `<lr-markdown>` module references `loadShikiHighlighter()` for languages
@@ -441,7 +453,8 @@ This component's own module never imports or calls that function; it only calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
-Direction behaves exactly as described for `<lr-markdown>` (**Direction** above).
+Direction behaves exactly as described for `<lr-markdown>` (**Direction** above). Plain fences accept
+`--lr-markdown-code-block-bg` in both palettes.
 
 Removing `content` clears the document and its empty-document tab stop, including while streaming.
 The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
@@ -481,8 +494,8 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
 block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
-`() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
-fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
+`() => import('@shikijs/langs/bash')`). Successful loads are shared per key. A later request retries
+a failed load, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`, `maxHeight: string = ''` (attribute `max-height`) — same CSS-length scroll
 cap on `[part="content"]` as `<lr-markdown>`'s own; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
@@ -503,7 +516,7 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-activate`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
+`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-error`, `lr-copy-error` — identical detail shapes to
 `<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
@@ -2177,6 +2190,8 @@ something that announces state _transitions_ instead. The Stop button gets a nor
 
 ## `lr-code-block`
 
+Assign new `languages` or `languageLoaders` maps to update available grammars. The component preserves the identity of a supplied concrete map.
+
 Fenced code display with optional lazy syntax highlighting and a copy button. First-party invention
 (no Web Awesome equivalent). It lazily loads the optional `shiki` peer for syntax highlighting and
 includes a compact GreyCat/GCL grammar because
@@ -2305,6 +2320,10 @@ header gap — a rule that sets `display` on it must qualify itself with `:not([
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
 
+The full highlighter loads when a language needs a bundled grammar. Numbered lines keep the same
+spacing when the gutter becomes interactive. Highlighted lines have a visible edge and a localized description. Active lines announce their
+active state. Copy actions announce the localized clipboard result.
+
 **Border reaches the composed copy control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
 into the copy control's private fallback tier — but that absence is not a gap. The public
@@ -2316,7 +2335,10 @@ border simply has no default to relay, which is different from border theming be
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
 
-**Themeable custom properties:** `--lr-code-block-max-height` (default `none` — an independently
+**Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
+controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
+`--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack), `--lr-code-block-tab-size` (default `2` — tab width for the
@@ -2417,6 +2439,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 ## `lr-code-block-core`
 
+Assign a new `languages` map to update available grammars. The component takes a snapshot of the supplied map.
+
 A build-lean sibling of `<lr-code-block>` above, for a consumer whose `languages` map already
 covers every language it will ever render. Where `<lr-code-block>` can call
 `loadShikiHighlighter()` — the default ~200-language dynamic-import table loader, whose bundled
@@ -2483,9 +2507,9 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   contract, identical to `<lr-code-block>`.
 - `languages: Readonly<Record<string, ShikiLanguageSource>> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
-  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
-  per highlighter/key pair, memoized, the first time this code block requests that language;
-  unused loaders do not run. Empty
+  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }`. Concurrent requests
+  share a load per highlighter and key. Successful loads are cached, and a later request retries
+  a failure. Unused loaders do not run. Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback, and so
   does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
@@ -2514,7 +2538,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button`, `limit` —
 identical set to `<lr-code-block>`.
 
-**Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
+**Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
+`--lr-code-block-radius`, `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
+`--lr-code-block-line-number-color`. `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),

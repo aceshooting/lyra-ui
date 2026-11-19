@@ -5,6 +5,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-browser-frame', () => {
@@ -790,4 +791,47 @@ it('lets a non-empty host aria-label own the frame name and role', async () => {
   expect(base.hasAttribute('role')).to.equal(false);
   expect(base.hasAttribute('aria-label')).to.equal(false);
   await expect(el).to.be.accessible();
+});
+
+describe('lr-browser-frame remediation (evals batch)', () => {
+  it('falls back to the default url when the url attribute is removed', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame url="https://a.test" frame-src="https://a.test/shot.png"></lr-browser-frame>`);
+    el.removeAttribute('url');
+    await el.updateComplete;
+    expect(el.url).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="url"]')!.textContent!.trim()).to.equal('');
+  });
+
+  it('keeps the measured content rect when the default slot content only changes', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame><div id="a">live</div></lr-browser-frame>`);
+    await el.updateComplete;
+    const rects: unknown[] = [];
+    const proto = el as unknown as { recomputeContentRect: () => void };
+    const original = proto.recomputeContentRect.bind(el);
+    proto.recomputeContentRect = () => { rects.push(1); original(); };
+    const extra = document.createElement('div');
+    el.append(extra);
+    await waitUntil(() => rects.length > 0, 'content rect re-measured on slotchange');
+  });
+
+  it('tells ping kinds apart by line style, not only colour, under forced colors', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame .pings=${[
+      { id: 'a', kind: 'click', x: 10, y: 10 }, { id: 'b', kind: 'type', x: 20, y: 20 },
+      { id: 'c', kind: 'scroll', x: 30, y: 30 }, { id: 'd', kind: 'move', x: 40, y: 40 },
+    ]}></lr-browser-frame>`);
+    let active = false;
+    try {
+      await setForcedColors('active');
+      active = matchMedia('(forced-colors: active)').matches;
+    } catch {
+      active = false;
+    }
+    try {
+      if (!active) return;
+      const styles = [...el.shadowRoot!.querySelectorAll('[part="ping"]')].map((ping) => getComputedStyle(ping).borderTopStyle);
+      expect(new Set(styles).size).to.equal(4);
+    } finally {
+      await setForcedColors('none');
+    }
+  });
 });

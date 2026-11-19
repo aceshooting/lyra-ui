@@ -508,3 +508,14 @@ it('renders a segment whose redactions field is malformed instead of blanking th
   `);
   expect(el.shadowRoot!.querySelectorAll('[part="segment"]').length).to.equal(2);
 });
+
+it('exposes a redacted range to assistive technology as text, not only as a highlight', async () => {
+  const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
+  el.segments = [{ id: 's1', label: 'X', text: 'key=SECRET end', tokens: 1, redactions: [{ start: 4, end: 10, reason: 'API key' }] }];
+  await el.updateComplete;
+  const mark = el.shadowRoot!.querySelector('[part="redaction"]') as HTMLElement;
+  const cue = mark.previousElementSibling as HTMLElement;
+  expect(cue.textContent).to.equal('Redacted');
+  expect(getComputedStyle(cue).position).to.equal('absolute');
+  expect(getComputedStyle(mark).textDecorationLine).to.equal('underline');
+});

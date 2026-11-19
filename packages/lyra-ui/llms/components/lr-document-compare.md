@@ -73,7 +73,10 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 (`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
 `lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { highlightId }`), and
 `lr-render-error` (`detail: { error }`). In diff mode, `lr-search-change`, `lr-anchor-result`
-(`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`.
+(`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`. Side by side,
+an `anchor` assignment or `scrollToAnchor()` emits one `lr-anchor-result` for the pair of panes
+(`found` when either pane found the target). When both versions share one name, the two panes are
+named by the localized old/new version names so the regions stay distinguishable.
 
 **Slots:** none.
 

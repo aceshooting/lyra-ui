@@ -1,3 +1,6 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
@@ -12,12 +15,12 @@ import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } f
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
-import { CheckedFormAssociated } from '../../../internal/form-associated.js';
+import { CheckedFormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -269,9 +272,6 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
   // a bare slotted text label, e.g. `<lr-checkbox>Accept terms</lr-checkbox>`.
   @state() private hasLabelSlot = false;
   private readonly slotPresence = new SlotPresenceController(this);
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasHelpTextSlot(): boolean { return this.slotPresence.has('help-text'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly labelTextObserver = new AccessibleTextController(
     this, [], () => this.recomputeHasLabelSlot(), ['slot'],
   );
@@ -342,7 +342,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
+    return isLiveDisabled(this);
   }
 
   get indeterminate(): boolean {
@@ -475,10 +475,11 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
         this.setInteracted(true);
         this.checked = proposed;
         this.indeterminate = false;
-        dispatchNativeEvent(this, 'input');
-        this.emit('lr-input', { checked: this.checked, value: this.value });
-        dispatchNativeEvent(this, 'change');
-        this.emit('lr-change', { checked: this.checked, value: this.value });
+        const connected = this.isConnected;
+        const detail = { checked: this.checked, value: this.value };
+        emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
+        if (this.isConnected !== connected || isLiveDisabled(this)) return;
+        emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
       },
     });
   }
@@ -499,8 +500,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
-    if (e.repeat) return;
+    if (this.liveDisabled || e.defaultPrevented || shouldIgnoreActivationKey(e)) return;
     // Native checkboxes toggle with Space. Enter remains available to the
     // surrounding form's own keyboard behavior.
     if (e.key === ' ' || e.key === 'Spacebar') {
@@ -582,18 +582,18 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
 
   override render(): TemplateResult {
     const mixed = this.indeterminate;
-    const hasHint = this.withHint || this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText);
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: 'checkbox', hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
     const controlParts = [
       'box',
       'control',
       this.checked ? 'checked control--checked' : '',
       mixed ? 'indeterminate control--indeterminate' : '',
     ].filter(Boolean).join(' ');
-    const describedBy = [hasError ? 'checkbox-error' : '', hasHint ? 'checkbox-hint' : '']
-      .filter(Boolean)
-      .join(' ');
-    const invalid = hasError || (this.hasInteracted && !this.internals.validity.valid);
+    const describedBy = supporting.describedBy;
+    const invalid = supporting.hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`
       <div part="form-control">
         <span class="checkbox-layout" part="row" @click=${this.onClick}>
@@ -621,13 +621,10 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
             <slot @slotchange=${this.onSlotChange}></slot>
           </span>
         </span>
-        <div id="checkbox-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div id="checkbox-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
-          ${this.hint || this.helpText}<slot name="hint"></slot
-          ><slot name="help-text"></slot>
-        </div>
+        ${renderFormControlHintError({
+          ...supporting, idPrefix: 'checkbox', hint: this.hint || this.helpText,
+          errorText: this.errorText, helpTextSlot: true,
+        })}
       </div>
     `;
   }

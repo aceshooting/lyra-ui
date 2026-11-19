@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Vissa förslag eller katalogposter utelämnades eftersom indatagränsen nåddes.',
   transcriptFeedInputLimit: 'Endast de senaste {count} av {total} poster behålls.',
   codeBlockHighlightLimit: 'Lång kod visas utan syntaxmarkering.',
+  codeBlockHighlightedLine: 'Markerad rad',
+  codeBlockActiveLine: 'Aktiv markerad rad',
 };
 
 registerLyraLocale('sv', strings);

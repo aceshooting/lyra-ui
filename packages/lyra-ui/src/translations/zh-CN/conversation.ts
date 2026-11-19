@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: '由于达到输入限制，部分建议或目录条目已被省略。',
   transcriptFeedInputLimit: '仅保留最新的 {count} 条记录，共 {total} 条。',
   codeBlockHighlightLimit: '较长的代码会以无语法高亮的形式显示。',
+  codeBlockHighlightedLine: '高亮行',
+  codeBlockActiveLine: '活动高亮行',
 };
 
 registerLyraLocale('zh-CN', strings);

@@ -1859,7 +1859,7 @@ describe("active-region cssprop escape hatch", () => {
     const wrapper = (await fixture(html`<div style=${style}>
       <lr-document-preview
         mime-type="image/png"
-        src="https://example.test/photo.png"
+        src=${IMAGE_DATA_URI}
       ></lr-document-preview>
     </div>`)) as HTMLElement;
     const el = wrapper.querySelector(

@@ -1,3 +1,4 @@
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { twoFrames, twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -1909,5 +1910,36 @@ it('retains an unmatched public search issued while a remote XML document is loa
     expect(event.detail).to.deep.include({ query: 'missing', matchCount: 0, activeIndex: -1 });
     expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
     expect(await el.search('present')).to.equal(1);
+  } finally { restore(); }
+});
+
+it('keeps XML syntax left-to-right inside a right-to-left viewer', async () => {
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer dir="rtl" .xml=${'<root label="مرحبا">text</root>'}></lr-xml-viewer>`);
+  const syntax = el.shadowRoot!.querySelector('[part="attribute"]')!.parentElement!;
+  expect(getComputedStyle(syntax).direction).to.equal('ltr');
+  expect(getComputedStyle(syntax).unicodeBidi).to.equal('isolate');
+});
+
+it('outlines a highlighted XML node in forced colors', async () => {
+  await setForcedColors('active');
+  try {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .xml=${'<root/>'}
+      .highlights=${[{ id: 'root', anchor: { kind: 'node-path', path: [] } }]}></lr-xml-viewer>`);
+    const row = el.shadowRoot!.querySelector('[part="node"][data-highlight]')!;
+    expect(getComputedStyle(row).outlineStyle).to.equal('solid');
+  } finally { await setForcedColors('none'); }
+});
+
+it('stops reporting a clipboard failure when the first listener disconnects the viewer', async () => {
+  const restore = stubClipboard(navigator, { writeText: async () => { throw new Error('denied'); } });
+  try {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`);
+    const first = oneEvent(el, 'lr-error');
+    let details = 0;
+    el.addEventListener('lr-error', () => el.remove());
+    el.addEventListener('lr-copy-error', () => details++);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] button')!.click();
+    await first;
+    expect(details).to.equal(0);
   } finally { restore(); }
 });

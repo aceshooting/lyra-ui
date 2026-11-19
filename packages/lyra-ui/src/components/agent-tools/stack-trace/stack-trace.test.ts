@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { glyphRect } from '../../../../test/geometry.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -276,6 +277,7 @@ describe('lr-stack-trace', () => {
     const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
     const clipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     const originalSetTimeout = window.setTimeout;
+    const delegateTimeout = window.setTimeout.bind(window) as Window['setTimeout'];
     const originalClearTimeout = window.clearTimeout;
     let queued: (() => void) | undefined;
     try {
@@ -283,11 +285,12 @@ describe('lr-stack-trace', () => {
         configurable: true,
         value: { writeText: () => Promise.resolve() },
       });
-      window.setTimeout = ((handler: TimerHandler) => {
+      window.setTimeout = ((handler: TimerHandler, delay?: number) => {
+        if (delay !== COPY_FEEDBACK_MS) return delegateTimeout(handler, delay);
         if (typeof handler === 'function') queued = handler as () => void;
         return 812;
       }) as typeof window.setTimeout;
-      window.clearTimeout = (() => undefined) as typeof window.clearTimeout;
+      window.clearTimeout = (handle) => { if (handle !== 812) originalClearTimeout.call(window, handle); };
       const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
 
       button.click();
@@ -406,12 +409,14 @@ describe('lr-stack-trace', () => {
         configurable: true,
         value: { writeText: () => Promise.resolve() },
       });
-      frameWindow.setTimeout = ((handler: TimerHandler) => {
+      frameWindow.setTimeout = ((handler: TimerHandler, delay?: number) => {
+        if (delay !== COPY_FEEDBACK_MS) return originalSetTimeout.call(frameWindow, handler, delay);
         if (typeof handler === 'function') queued = handler as () => void;
         return 994;
       }) as typeof frameWindow.setTimeout;
       frameWindow.clearTimeout = ((handle?: number) => {
-        if (handle !== undefined) cleared.push(handle);
+        if (handle === 994) cleared.push(handle);
+        else originalClearTimeout.call(frameWindow, handle);
       }) as typeof frameWindow.clearTimeout;
       el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
       frameDocument.body.append(frameDocument.adoptNode(el));

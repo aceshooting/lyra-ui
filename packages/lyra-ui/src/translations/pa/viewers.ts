@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF ਦਸਤਾਵੇਜ਼',
   pdfViewerMissingLibrary: 'PDF ਫ਼ਾਈਲਾਂ ਰੈਂਡਰ ਕਰਨ ਲਈ ਇਸ ਦਰਸ਼ਕ ਨੂੰ ਵਿਕਲਪਿਕ "pdfjs-dist" ਪੈਕੇਜ ਚਾਹੀਦਾ ਹੈ।',
   pdfViewerPageOf: '{total} ਪੰਨਿਆਂ ਵਿੱਚੋਂ ਪੰਨਾ {page}',
+  pdfViewerPageHighlights: 'ਪੰਨਾ {page} ਦੀਆਂ ਹਾਈਲਾਈਟਾਂ',
   pdfViewerZoomIn: 'ਜ਼ੂਮ ਵਧਾਓ',
   pdfViewerZoomOut: 'ਜ਼ੂਮ ਘਟਾਓ',
   pdfViewerPreviousPage: 'ਪਿਛਲਾ ਪੰਨਾ',

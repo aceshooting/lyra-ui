@@ -372,7 +372,7 @@ it("wires hint/error text to aria-describedby on the radiogroup", async () => {
   expect(errorId).to.be.ok;
   expect(base.getAttribute("aria-invalid")).to.equal("true");
   expect(base.getAttribute("aria-describedby")).to.equal(
-    `${hintId} ${errorId}`
+    `${errorId} ${hintId}`
   );
 });
 

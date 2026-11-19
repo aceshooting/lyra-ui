@@ -2,6 +2,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './commit-card.js';
 import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 async function settleClipboard(el: LyraCommitCard): Promise<void> {
@@ -216,7 +218,8 @@ describe('lr-commit-card', () => {
         configurable: true,
         value: { writeText: () => Promise.resolve() },
       });
-      frameWindow.setTimeout = ((handler: TimerHandler) => {
+      frameWindow.setTimeout = ((handler: TimerHandler, delay?: number) => {
+        if (delay !== COPY_FEEDBACK_MS) return 993;
         if (typeof handler === 'function') queued = handler as () => void;
         return 992;
       }) as typeof frameWindow.setTimeout;
@@ -235,7 +238,7 @@ describe('lr-commit-card', () => {
 
       document.body.append(document.adoptNode(el));
       await el.updateComplete;
-      expect(cleared).to.deep.equal([992]);
+      expect(cleared.filter((handle) => handle === 992)).to.deep.equal([992]);
       button.click();
       await settleClipboard(el);
       queued!();
@@ -873,4 +876,47 @@ it('returns successful clipboard feedback to its resting text and accessible nam
     if (original) Object.defineProperty(navigator, 'clipboard', original);
     else Reflect.deleteProperty(navigator, 'clipboard');
   }
+});
+
+describe('lr-commit-card remediation (evals batch)', () => {
+  it('announces the copy outcome to assistive technology', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.resolve() } });
+    try {
+      const el = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1234567890"></lr-commit-card>`);
+      const listener = oneEvent(el, 'lr-copy');
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await listener;
+      await waitUntil(() => sinkTexts('polite').includes('Copied!'), 'copy outcome announced');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('lets a listener resolve the toggle request itself without a second commit', async () => {
+    const files: CommitFileChange[] = [{ path: 'a.ts', additions: 1, deletions: 0 }];
+    const el = await fixture<LyraCommitCard>(html`<lr-commit-card .files=${files}></lr-commit-card>`);
+    const toggled: unknown[] = [];
+    el.addEventListener('lr-toggle', (event) => toggled.push((event as CustomEvent).detail));
+    el.addEventListener('lr-toggle-request', () => { el.filesExpanded = true; }, { once: true });
+    (el.shadowRoot!.querySelector('[part="files-toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.filesExpanded).to.equal(true);
+    expect(toggled.length).to.equal(0);
+    (el.shadowRoot!.querySelector('[part="files-toggle"]') as HTMLButtonElement).click();
+    expect(el.filesExpanded).to.equal(false);
+    expect(toggled.length).to.equal(1);
+  });
+
+  it('isolates the signed line counts from an inherited rtl direction', async () => {
+    const files: CommitFileChange[] = [{ path: 'a.ts', additions: 2, deletions: 3 }];
+    const el = await fixture<LyraCommitCard>(html`<div dir="rtl"><lr-commit-card files-expanded .files=${files}></lr-commit-card></div>`);
+    const card = el.querySelector('lr-commit-card') as LyraCommitCard;
+    for (const part of ['additions', 'deletions', 'file-additions', 'file-deletions']) {
+      const node = card.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(getComputedStyle(node).direction).to.equal('ltr');
+      expect(getComputedStyle(node).unicodeBidi).to.equal('isolate');
+    }
+  });
 });

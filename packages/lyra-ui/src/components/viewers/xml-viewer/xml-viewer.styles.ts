@@ -31,7 +31,8 @@ export const styles = css`
   [part='tree'] {
     padding: var(--lr-space-xs);
   }
-  [part='limit'] {
+  [part='limit'],
+  [part='search-status'] {
     margin: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
     color: var(--lr-color-text-quiet);
@@ -48,10 +49,12 @@ export const styles = css`
   /* --lr-xml-viewer-match-color, not the bare --lr-color-warning, so a consumer retints this
      non-active search match without touching every warning-toned surface on the page reading that
      shared token -- as --lr-xml-viewer-active-match-color does below for the active match. */
-  [part='node'][data-match] {
+  [part='node'][data-match],
+  [part='source-row']:has([data-match]) {
     outline: var(--lr-border-width-thin) dashed var(--lr-xml-viewer-match-color, var(--lr-color-warning));
   }
-  [part='node'][data-active-match] {
+  [part='node'][data-active-match],
+  [part='source-row']:has([data-active-match]) {
     outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-active-match-color, var(--lr-color-warning));
   }
   /* Host-supplied highlights. Each tone resolves into one private carrier so the row tint and the
@@ -59,40 +62,57 @@ export const styles = css`
      same quiet fill tokens, built to sit behind body text at an accessible contrast ratio. Neutral
      takes --lr-color-surface-raised, not --lr-color-surface: tinting a row with the viewer's own
      background would render it unhighlighted. */
-  [part='node'][data-highlight] {
+  [part='node'][data-highlight],
+  [part='source-row']:has([data-highlight]) {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-accent-bg,
       var(--lr-color-brand-quiet)
     );
     background: var(--_lr-xml-viewer-highlight-background);
   }
-  [part='node'][data-highlight='success'] {
+  [part='node'][data-highlight='success'],
+  [part='source-row']:has([data-highlight='success']) {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-success-bg,
       var(--lr-color-success-quiet)
     );
   }
-  [part='node'][data-highlight='warning'] {
+  [part='node'][data-highlight='warning'],
+  [part='source-row']:has([data-highlight='warning']) {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-warning-bg,
       var(--lr-color-warning-quiet)
     );
   }
-  [part='node'][data-highlight='danger'] {
+  [part='node'][data-highlight='danger'],
+  [part='source-row']:has([data-highlight='danger']) {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-danger-bg,
       var(--lr-color-danger-quiet)
     );
   }
-  [part='node'][data-highlight='neutral'] {
+  [part='node'][data-highlight='neutral'],
+  [part='source-row']:has([data-highlight='neutral']) {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-neutral-bg,
       var(--lr-color-surface-raised)
     );
   }
-  [part='node'][data-active-highlight] {
+  [part='node'][data-active-highlight],
+  [part='source-row']:has([data-active-highlight]) {
     outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-highlight-active-outline, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  @media (forced-colors: active) {
+    [part='node'][data-highlight],
+    [part='source-row']:has([data-highlight]) {
+      outline: var(--lr-border-width-thin) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
+    [part='node'][data-active-highlight],
+    [part='source-row']:has([data-active-highlight]) {
+      outline-color: CanvasText;
+    }
   }
   [part='highlight-action'] {
     ${iconHitTarget}
@@ -155,6 +175,10 @@ export const styles = css`
     font-style: italic;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+  }
+  .syntax {
+    direction: ltr;
+    unicode-bidi: isolate;
   }
   .preview {
     color: var(--lr-color-text-quiet);

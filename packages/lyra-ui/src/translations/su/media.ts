@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Laju playback',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} tina {duration}',
+  avPlayerHighlightRange: '{start} nepi ka {end}',
+  avPlayerHighlightAt: 'dina {start}',
   attachmentTriggerAudio: 'Rékam audio',
   attachmentMenuAudio: 'Rékam audio',
   flagLoadError: 'Bandéra teu sadia',

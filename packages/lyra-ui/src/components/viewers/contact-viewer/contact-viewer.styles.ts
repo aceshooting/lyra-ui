@@ -13,6 +13,10 @@ export const styles = css`
     max-block-size: var(--lr-contact-viewer-max-height, none);
     padding: var(--lr-space-m);
   }
+  [part="body"] > .empty-note,
+  [part="body"] > [part="error"] {
+    padding: 0;
+  }
   [part="contact"] {
     display: flex;
     flex-direction: column;

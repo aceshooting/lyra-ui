@@ -2,6 +2,9 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { containShadowChildEvent } from '../../../internal/child-event-containment.js';
+import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -331,10 +334,14 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
       this.hasHeaderSlot = this.hasSlotted('header');
       this.hasSummarySlot = this.hasSlotted('summary');
     });
-    if (changed.has('run') && this.run?.id !== this.previousRunId) {
-      this.retryAttempt = 0;
+    if (changed.has('run')) {
+      if (this.run?.id !== this.previousRunId) this.retryAttempt = 0;
+      this.updateTaskItems(runSteps(this.run));
     }
+    this.focusWasInside = captureComposedFocusRepair(this, this) !== null;
   }
+
+  private focusWasInside = false;
 
   private hasSlotted(name: string): boolean {
     return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
@@ -355,6 +362,9 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.focusWasInside) {
+      restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLElement>('[part="cancel-button"], [part="retry-button"]'));
+    }
     if (changed.has('run')) this.handleRunChange();
   }
 
@@ -435,6 +445,24 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     return !this.withoutRetry && (kind === 'error' || kind === 'cancelled');
   }
 
+  private taskItemsCache: TaskItem[] = [];
+
+  private updateTaskItems(steps: readonly AgentStep[]): void {
+    const next = steps.map(toTaskItem);
+    const previous = this.taskItemsCache;
+    const same = next.length === previous.length && next.every((item, index) => {
+      const old = previous[index]!;
+      return item.id === old.id && item.label === old.label && item.status === old.status && item.detail === old.detail;
+    });
+    if (!same) this.taskItemsCache = next;
+  }
+
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const root = super.createRenderRoot();
+    for (const type of ['lr-toggle', 'lr-toggle-request']) root.addEventListener(type, containShadowChildEvent);
+    return root;
+  }
+
   private onRunAction(event: Event, run: AgentRun, runId: string, retry: boolean): void {
     if (!(event.currentTarget as HTMLButtonElement).isConnected ||
       this.run !== run || run.id !== runId) return;
@@ -448,7 +476,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   override render(): TemplateResult {
     const run = this.run;
     if (!run) {
-      return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
+      return html`<div part="base"><lr-empty part="empty" tabindex="-1" heading=${this.localize('noData')}></lr-empty></div>`;
     }
 
     const runId = run.id;
@@ -468,7 +496,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
           <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
           ${!this.hasHeaderSlot
             ? html`
-                <div part="status">
+                <div part="status" tabindex="-1">
                   <lr-badge
                     part="status-badge"
                     variant=${this.statusVariants[kind] ?? AGENT_STATUS_VARIANTS[kind] ?? 'neutral'}
@@ -532,7 +560,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
         <div part="body">
           <slot part="tasks" name="tasks"
             >${steps.length > 0
-              ? html`<lr-task-list .items=${steps.map(toTaskItem)}></lr-task-list>`
+              ? html`<lr-task-list .items=${this.taskItemsCache}></lr-task-list>`
               : nothing}</slot
           >
           <slot part="tools" name="tools"></slot>

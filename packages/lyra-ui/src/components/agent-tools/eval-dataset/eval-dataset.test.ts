@@ -857,3 +857,23 @@ it('announces newly truncated example ownership in the adopted document and stay
     frame.remove();
   }
 });
+
+it('reports a selection cleared by an examples change after the update, not from inside it', async () => {
+  const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('lr-table')!;
+  const selectListener = oneEvent(el, 'lr-example-select');
+  (grid.shadowRoot!.querySelectorAll('tbody tr[part="row"]')[1] as HTMLElement).click();
+  await selectListener;
+  await el.updateComplete;
+  const events: (string | null)[] = [];
+  const removeDisabledAtEmit: boolean[] = [];
+  el.addEventListener('lr-example-select', (event) => {
+    events.push((event as CustomEvent<{ exampleId: string | null }>).detail.exampleId);
+    removeDisabledAtEmit.push(el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.disabled);
+  });
+  el.examples = [examples()[0]!];
+  await waitUntil(() => events.length > 0, 'selection clear reported');
+  expect(events).to.deep.equal([null]);
+  expect(removeDisabledAtEmit).to.deep.equal([true]);
+});

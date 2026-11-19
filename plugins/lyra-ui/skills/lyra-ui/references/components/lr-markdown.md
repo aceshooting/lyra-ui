@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-markdown`
+
+Assign new `languages` or `languageLoaders` maps to update available grammars. The component preserves the identity of a supplied concrete map.
+Math rendering caps explicit sizes at 20 em and macro expansion at 1,000. Targeted HTML forms receive the same `rel` protection as links.
 
 Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on
 two optional peer dependencies — `marked` (parsing) and `dompurify` (sanitizing) — both lazy-loaded
@@ -114,10 +117,12 @@ uses for its own `[part="body"]`.
   Images are governed by `withoutImages`, not by this list. Changing it re-renders.
   `<lr-markdown link-schemes="https"></lr-markdown>` keeps only `https:` links;
   `link-schemes="https relative"` also keeps same-site paths.
+- A direct `<script type="text/markdown">` can supply the initial document through the first
+  render. Assigning `content`, including an empty string, takes precedence on every connection.
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
   whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
-  intercepted on click and reported via `lr-link-activate` instead of navigating; empty (the default)
-  means every link is treated as external
+  routed through `lr-link-activate` on an unmodified primary click. Modified clicks and clicks
+  already handled by another listener keep their normal behavior. An empty prefix disables routing.
 - `headingOffset: number = 0` (attribute `heading-offset`) — added to every rendered heading's
   source `token.depth` before emitting `<h${depth}>` (e.g. `heading-offset="2"` renders a source `#`
   as `<h3>`); clamped to `[1, 6]` so a source `######` with a positive offset stays at `<h6>` rather
@@ -232,7 +237,8 @@ defers highlighting until completion; progressive streaming highlights settled b
   never fire this. If an intercepted link overlaps a painted highlight,
   `lr-highlight-activate` fires first for pointer and Enter activation.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
-  fallback matrix below), or `math` is set but the `katex` peer isn't installed
+  fallback matrix below), or `math` is set but the `katex` peer isn't installed. Listeners can
+  inspect the rendered fallback and assign new content or configuration to recover.
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
 - `lr-text-select` (`detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`) — a text
   selection inside the rendered content ended; `anchor` is a `text-quote` anchor scoped to the
@@ -247,7 +253,8 @@ defers highlighting until completion; progressive streaming highlights settled b
   light-DOM `MutationObserver` on that container can never see a property-driven update rendered
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 - `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
-  code-block copy chrome; both bubble and are composed. If an outcome listener disconnects the
+  code-block copy chrome. Both bubble and are composed. A failed write emits `lr-error` with null
+  detail before `lr-copy-error`. If an outcome listener disconnects the
   element, disables the header, or starts another copy, superseded feedback is canceled.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -305,7 +312,8 @@ code/code-block font, resolving through the library's shared monospace stack so 
 `--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
 `var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced
 `code-block` surface, so a consumer can retheme either or both together without repainting every
-other surface that reads the shared brand-quiet token), `--lr-markdown-code-padding` (default
+other surface that reads the shared brand-quiet token), `--lr-markdown-code-block-bg`
+(overrides the background of plain fenced code independently, including in a dark palette), `--lr-markdown-code-padding` (default
 `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)` — inline `code` span padding),
 `--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
 radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the

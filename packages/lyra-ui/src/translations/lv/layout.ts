@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Sakļaut paneli',
   dockPanelExpand: 'Izvērst paneli',
   dockPanelResize: 'Mainīt paneļa izmēru',
+  dockPanelToggle: 'Pārslēgt paneli',
   responsivePanel: 'Panelis',
   breadcrumb: 'Navigācijas ceļš',
   resizeDivider: 'Mainīt atdalītāja starp paneli {a} un paneli {b} novietojumu',

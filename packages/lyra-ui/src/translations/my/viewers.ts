@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF စာတမ်း',
   pdfViewerMissingLibrary: 'PDF ဖိုင်များ ပြသရန် ဤကြည့်ကိရိယာတွင် ရွေးချယ်နိုင်သော "pdfjs-dist" ပက်ကေ့ဂျ် ထည့်သွင်းထားရန် လိုအပ်သည်။',
   pdfViewerPageOf: 'စုစုပေါင်း {total} စာမျက်နှာအနက် {page} ခုမြောက်',
+  pdfViewerPageHighlights: 'စာမျက်နှာ {page} ၏ အသားပေးချက်များ',
   pdfViewerZoomIn: 'ချဲ့ရန်',
   pdfViewerZoomOut: 'ချုံ့ရန်',
   pdfViewerPreviousPage: 'ယခင်စာမျက်နှာ',

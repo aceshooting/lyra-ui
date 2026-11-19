@@ -122,6 +122,11 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  *   `highlights`.
  * @csspart line-button - A gutter line-number button, only rendered while `activatable-lines` and
  *   `line-numbers` are both set.
+ * @cssprop [--lr-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Code padding.
+ * @cssprop [--lr-code-block-radius=var(--lr-radius)] - Frame corner radius.
+ * @cssprop [--lr-code-block-header-bg=var(--lr-color-surface)] - Header background.
+ * @cssprop [--lr-code-block-header-color=var(--lr-color-text)] - Filename color.
+ * @cssprop [--lr-code-block-line-number-color=var(--lr-color-text-quiet)] - Line number color.
  * @cssprop [--lr-code-block-max-height=none] - Scroll cap applied to `body`. The `max-height`
  *   attribute, when set, writes this same property inline on `body` and therefore wins.
  * @cssprop [--lr-code-block-font=var(--lr-font-mono)] - Monospace family for the rendered `pre`
@@ -263,7 +268,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), or a lazy loader per key, e.g.
-   *  `{ bash: () => import('@shikijs/langs/bash') }` -- called (at most once per key, memoized)
+   *  `{ bash: () => import('@shikijs/langs/bash') }` -- loaded on demand and memoized after success
    *  the first time a fenced block actually requests that language, instead of requiring every
    *  grammar to already be imported before the map can be bound at all. This component has no
    *  default/full-table fallback highlighter -- a `language` absent from this map always renders
@@ -286,9 +291,10 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.resumedMove) return;
     const languages = this.languages;
     const generation = this.activateLanguages(languages);
-    if (Object.keys(languages).length === 0) return;
+    if (!languages || Object.keys(languages).length === 0) return;
     void loadShikiHighlighterCore(resolvedShikiLanguages(languages)).then(() => {
       // loadShikiHighlighterCore() is a shared, cached-by-languages promise --
       // it can resolve well after this element has disconnected (or been torn
@@ -307,8 +313,8 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
     });
   }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
+  protected override releaseHighlight(): void {
+    super.releaseHighlight();
     this.activeLanguages = undefined;
     this.highlighterGeneration += 1;
     this.shikiReady = false;

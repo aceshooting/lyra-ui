@@ -48,8 +48,7 @@ export const groupStyles = css`
     color: var(--lr-color-danger);
   }
   :host(:state(user-invalid)) [part~="radios"] {
-    padding: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid
+    outline: var(--lr-border-width-thin) solid
       var(--lr-radio-group-invalid-border, var(--lr-color-danger));
     border-radius: var(--lr-radius);
   }

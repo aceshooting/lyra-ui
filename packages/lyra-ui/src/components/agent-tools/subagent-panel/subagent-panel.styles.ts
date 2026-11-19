@@ -1,3 +1,4 @@
+import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -36,7 +37,7 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part='run-trigger']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
+  [part='run-trigger']:focus-visible { ${focusRingInsetOffset} }
   [part='label'], [part='task'], [part='model'] { min-inline-size: 0; overflow-wrap: break-word; }
   [part='task'], [part='model'] { grid-column: 1 / -1; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='progress'] {
@@ -89,5 +90,22 @@ export const styles = css`
     [part='status'] { min-inline-size: 0; max-inline-size: 100%; }
     [part='run-row'] { grid-template-columns: 1fr; }
     [part='actions'] { border-block-start: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); }
+  }
+
+  @media (forced-colors: active) {
+    [part~='run-selected'] {
+      outline: var(--lr-focus-ring-width) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    }
+    [part='progress'] > span {
+      forced-color-adjust: none;
+      box-sizing: border-box;
+      background: Highlight;
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part='progress'] {
+      background: Canvas;
+      outline: var(--lr-border-width-thin) solid CanvasText;
+    }
   }
 `;

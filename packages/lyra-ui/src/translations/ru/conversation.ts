@@ -184,6 +184,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Некоторые предложения или записи каталога были опущены из-за достижения ограничения на входные данные.',
   transcriptFeedInputLimit: 'Сохраняются только {count} самых новых записей из {total}.',
   codeBlockHighlightLimit: 'Длинный код отображается без подсветки синтаксиса.',
+  codeBlockHighlightedLine: 'Выделенная строка',
+  codeBlockActiveLine: 'Активная выделенная строка',
 };
 
 registerLyraLocale('ru', strings);

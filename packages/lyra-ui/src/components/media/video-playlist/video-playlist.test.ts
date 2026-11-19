@@ -7,6 +7,8 @@ import type {
   LyraVideoPlaylistItem,
 } from './video-playlist.js';
 import type { LyraVideo } from '../video/video.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
@@ -1616,3 +1618,43 @@ it('reconciles children without an unhandled error when shadowRoot.activeElement
 });
 
 expectStaleAttribute('lr-video-playlist', 'auto-advance');
+
+describe('lr-video-playlist remediation', () => {
+  const pair = () => html`
+    <lr-video-playlist>
+      <lr-video title="First" src="https://example.test/a.mp4"></lr-video>
+      <lr-video title="Second" src="https://example.test/b.mp4"></lr-video>
+    </lr-video-playlist>
+  `;
+
+  it('keeps focus inside the playlist when the focused video is swapped out', async () => {
+    const el = await fixture<LyraVideoPlaylist>(pair());
+    await settle(el);
+    const first = childVideos(el)[0]!;
+    const play = first.shadowRoot!.querySelector<HTMLButtonElement>('[data-control="play"], [part="poster-play-button"]')!;
+    await focusByKeyboard(play);
+    expect(first.shadowRoot!.activeElement === play).to.equal(true);
+    el.next();
+    await settle(el);
+    await aTimeout(0);
+    const active = deepActiveElementIn(document);
+    const inside = active !== null && active !== document.body && (el.contains(active) || el.shadowRoot!.contains(active));
+    expect(inside).to.equal(true);
+  });
+
+  it('isolates the row title direction and clamps arrow keys at the ends', async () => {
+    const el = await fixture<LyraVideoPlaylist>(pair());
+    await settle(el);
+    const rows = items(el);
+    expect(rows[0]!.querySelector('[part="playlist-title"]')!.getAttribute('dir')).to.equal('auto');
+    await focusByKeyboard(rows[1]!);
+    rows[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await settle(el);
+    expect(el.shadowRoot!.activeElement === rows[1]).to.equal(true);
+    const home = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true });
+    rows[1]!.dispatchEvent(home);
+    await settle(el);
+    expect(home.defaultPrevented).to.equal(true);
+    expect(el.shadowRoot!.activeElement === rows[0]).to.equal(true);
+  });
+});

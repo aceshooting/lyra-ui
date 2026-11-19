@@ -599,3 +599,54 @@ it('keeps modified/composing keys out of tab activation and skips inert tabs', a
   expect(panel.getAttribute('aria-labelledby')).to.equal(tabs[0]!.id);
   expect(tabs[0]!.getAttribute('aria-selected')).to.equal('true');
 });
+
+
+describe('blank label', () => {
+  it('falls back to the localized default heading for a whitespace-only label and drops the heading role for an empty one', async () => {
+    const base = (await fixture(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`)) as HTMLElement;
+    const spaced = (await fixture(html`<lr-knowledge-base-admin label="   " heading-level="2"></lr-knowledge-base-admin>`)) as HTMLElement;
+    const part = (el: HTMLElement) => el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+    expect(part(spaced).textContent!.trim()).to.not.equal('');
+    expect(part(spaced).textContent!.trim()).to.equal(part(base).textContent!.trim());
+    expect(part(spaced).getAttribute('role')).to.equal('heading');
+    const empty = (await fixture(html`<lr-knowledge-base-admin label="" heading-level="2"></lr-knowledge-base-admin>`)) as HTMLElement;
+    expect(part(empty).hasAttribute('role')).to.equal(false);
+    expect(part(empty).hasAttribute('aria-level')).to.equal(false);
+  });
+});
+
+describe('tab correction timing', () => {
+  it('emits lr-tab-change only after the corrected tab is rendered', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin active-tab="ingestion"></lr-knowledge-base-admin>`
+    )) as LyraKnowledgeBaseAdmin;
+    let tabsAtEmit = -1;
+    el.addEventListener('lr-tab-change', () => {
+      tabsAtEmit = el.shadowRoot!.querySelectorAll('[role="tab"]').length;
+    });
+    el.withoutIngestion = true;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(tabsAtEmit).to.equal(1);
+  });
+});
+
+describe('child event containment', () => {
+  it('keeps undeclared events of the embedded knowledge base and ingestion queue inside', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
+    )) as LyraKnowledgeBaseAdmin;
+    const seen: string[] = [];
+    const names = ['lr-sort-request', 'lr-sort', 'lr-retry-request', 'lr-page-change', 'lr-item-action'];
+    for (const name of names) el.addEventListener(name, () => seen.push(name));
+    const kb = el.shadowRoot!.querySelector('lr-knowledge-base')!;
+    for (const name of names.slice(0, 4)) {
+      kb.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+    }
+    el.activeTab = 'ingestion';
+    await el.updateComplete;
+    const queue = el.shadowRoot!.querySelector('lr-ingestion-queue')!;
+    queue.dispatchEvent(new CustomEvent('lr-item-action', { bubbles: true, composed: true }));
+    expect(seen).to.deep.equal([]);
+  });
+});

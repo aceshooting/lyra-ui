@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Kunja kidirisha',
   dockPanelExpand: 'Panua kidirisha',
   dockPanelResize: 'Badilisha ukubwa wa kidirisha',
+  dockPanelToggle: 'Badilisha kidirisha',
   responsivePanel: 'Kidirisha',
   breadcrumb: 'Njia ya urambazaji',
   resizeDivider: 'Badilisha ukubwa wa kigawanya kati ya vidirisha {a} na {b}',

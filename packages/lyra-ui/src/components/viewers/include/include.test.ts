@@ -1221,3 +1221,25 @@ it('selects nested template content after adoption into another document', () =>
     iframe.remove();
   }
 });
+
+it('stops the second failure event when the include source changes during dispatch', async () => {
+  const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+  let aliases = 0;
+  el.addEventListener('lr-error', () => aliases++);
+  el.addEventListener('lr-include-error', () => { el.src = ''; });
+  const failure = oneEvent(el, 'lr-include-error');
+  el.src = '#absent-section';
+  await failure;
+  expect(aliases).to.equal(0);
+});
+
+it('reports the committed include source when inserting the fragment changes src', async () => {
+  const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+  const target = await fixture<HTMLElement>(html`<div id="captured-section"><p>One</p></div>`);
+  const replace = el.replaceChildren.bind(el);
+  el.replaceChildren = (...nodes) => { replace(...nodes); el.src = ''; };
+  const loaded = oneEvent(el, 'lr-load');
+  el.src = '#' + target.id;
+  expect((await loaded).detail.src).to.equal('#captured-section');
+  expect(el.textContent).to.include('One');
+});

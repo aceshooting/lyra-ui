@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'ପ୍ଲେବ୍ୟାକ୍ ଗତି',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{duration}ରୁ {current}',
+  avPlayerHighlightRange: '{start} ରୁ {end} ପର୍ଯ୍ୟନ୍ତ',
+  avPlayerHighlightAt: '{start} ରେ',
   attachmentTriggerAudio: 'ଅଡିଓ ରେକର୍ଡ କରନ୍ତୁ',
   attachmentMenuAudio: 'ଅଡିଓ ରେକର୍ଡ କରନ୍ତୁ',
   flagLoadError: 'ପତାକା ଉପଲବ୍ଧ ନାହିଁ',

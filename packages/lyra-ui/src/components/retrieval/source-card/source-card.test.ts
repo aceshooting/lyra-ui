@@ -743,3 +743,14 @@ it('stretches its bordered base to a taller grid neighbour', async () => {
   expect(Math.round(base.getBoundingClientRect().height)).to.equal(Math.round(short!.getBoundingClientRect().height));
   expect(short!.getBoundingClientRect().height).to.be.greaterThan(100);
 });
+
+it('keeps the visible toggle text first in the accessible name and appends the source title', async () => {
+  const el = (await fixture(
+    html`<lr-source-card heading="a.pdf"><span slot="full">Full text.</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  expect(toggle.getAttribute('aria-label')).to.equal('Show more: a.pdf');
+  toggle.click();
+  await el.updateComplete;
+  expect(toggle.getAttribute('aria-label')).to.equal('Show less: a.pdf');
+});

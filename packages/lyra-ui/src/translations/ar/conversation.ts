@@ -190,6 +190,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'حُذف بعض الاقتراحات أو إدخالات الكتالوج لبلوغ حد الإدخال.',
   transcriptFeedInputLimit: 'يُحتفظ بأحدث {count} من أصل {total} إدخالًا فقط.',
   codeBlockHighlightLimit: 'يُعرض الكود الطويل دون تلوين الصياغة البرمجية.',
+  codeBlockHighlightedLine: 'سطر مميّز',
+  codeBlockActiveLine: 'سطر مميّز نشط',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

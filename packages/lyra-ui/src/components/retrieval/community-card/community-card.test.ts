@@ -27,6 +27,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'noData',
   'communityMemberCount',
   'communityDrillIn',
+  'communityDrillInWithContext',
   'showMoreCount',
 ]);
 it('renders the noData empty state when community is null (the default)', async () => {
@@ -465,4 +466,18 @@ it('forwards a host aria-level to its title heading and restores level 3 on remo
   el.removeAttribute('aria-level');
   await el.updateComplete;
   expect(title()).to.equal('3');
+});
+
+it('names the drill button with its visible text first and the community title', async () => {
+  const el = await fixture<LyraCommunityCard>(html`<lr-community-card .community=${community}></lr-community-card>`);
+  const drill = el.shadowRoot!.querySelector('[part="drill-button"]')!;
+  expect(drill.getAttribute('aria-label')).to.equal('Explore community: Nobel laureates');
+});
+
+it('pluralizes the member count and falls back to level 3 for an invalid aria-level', async () => {
+  const el = await fixture<LyraCommunityCard>(
+    html`<lr-community-card aria-level="9" .community=${{ ...community, memberCount: 1 }}></lr-community-card>`,
+  );
+  expect(el.shadowRoot!.querySelector('[part="member-count"]')!.textContent!.trim()).to.equal('1 member');
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
 });

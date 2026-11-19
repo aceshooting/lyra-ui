@@ -1,3 +1,4 @@
+
 ## Breaking changes, fixes, and renames in 9.0.0
 
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
@@ -1703,8 +1704,8 @@ Space).
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
-The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
-paint width would otherwise be only a few pixels.
+The painted bar follows the visible span duration, with a one-border-width floor. Its transparent
+pointer target extends to the shared icon-button size inside the track (36px by default).
 
 With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
 logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
@@ -1784,8 +1785,9 @@ deeper source rows fail visibly. The component never traverses `value.children` 
 metadata, and `row.key` must equal the nonblank `value.id`.
 
 Source values copy only own data fields `id`, `label`, `status` and optional `detail`.
-Accessor-backed fields reject; nonstring label/detail normalize to empty text and unknown status
-to `'pending'`. A normalized row's key, parent key, id, label and detail share a 65,536 UTF-16-unit
+Accessor-backed fields reject; nonstring label/detail normalize to empty text. The shared terminal spellings are accepted for
+`status` (`done`/`completed`/`complete` as `success`, `failed` as `error`, `cancelled` as `incomplete`);
+any other unknown status becomes `'pending'`. A normalized row's key, parent key, id, label and detail share a 65,536 UTF-16-unit
 budget. Retained rows, focused reserve and pending admission share a 2,000,000-unit payload
 ceiling. Four 100-row pages retain at most 400 rows plus one focused row; at most 301 rows mount,
 with at most two physical range reads. Projection work permits one physical call and only the
@@ -1981,8 +1983,10 @@ server-side or other handling),
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
-text, anchor, rects }`).
-
+text, anchor, rects }`). The terminal reports a selection inside its viewport once for unchanged endpoints.
+User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
+release following silently. Copy outcomes are announced. When an input or line exceeds the character
+limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
 `download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries
@@ -2536,8 +2540,8 @@ so appending matching slotted content after the component's first render immedia
 row's disclosure.
 
 **Events:** cancelable `lr-toggle-request` (`detail: { suiteId, testId, expanded }`, the requested state), `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
-activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
-component updates its own `statusFilter` first, then emits),
+activated), cancelable `lr-filter-request` (`detail: { statuses: TestStatus[] }`, the requested filter set; `preventDefault()` keeps the current filter), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
+component updates its own `statusFilter` first, then emits). A filter change announces how many tests remain shown,
 and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }`, a row's failure
 detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
 globally unique. Manual expansion state is keyed by that same suite+test pair.
@@ -2921,7 +2925,7 @@ nothing itself), `lr-copy`
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
 non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
-**View changes:** `lr-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`.
+**View changes:** `lr-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`. When the `code` slot disappears while `view="code"`, the view falls back to `preview` and `lr-view-change` reports it. Copy shows visible `Copied!`/`Copy failed` feedback on the button, and Restore acts only on the version it was rendered for.
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
@@ -3029,6 +3033,8 @@ the run that rendered it. Replacing the run before the click handler runs discar
 
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
+
+The fallback task list keeps its state across equivalent step updates and handles its toggle events internally. Cancel applies to in-progress runs. A queued subagent can also be cancelled from its panel.
 
 **Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
 
@@ -4079,7 +4085,7 @@ JSON-Schema required-property list instead of rejecting the entire tree.
 localized resource-ceiling status shown when caller-supplied validation issues exceed the rendered
 issue cap.
 
-`[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
+Each issue also begins with visually hidden localized severity text (`Error:`, `Warning:`, `Note:`) and a distinct border style, so severity never depends on colour alone. `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
 `--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
@@ -4142,7 +4148,8 @@ Empty/blank run ids are omitted and later duplicate ids are ignored before hiera
 counts, selection, and events.
 
 **Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), and
-`lr-run-retry` (`{ runId }`). Cancel and Retry check that the rendered run still exists and allows
+`lr-run-retry` (`{ runId, attempt }`; `attempt` counts requests for that displayed run,
+starting at 1. Removing a run from the displayed set resets its counter). Cancel and Retry check that the rendered run still exists and allows
 that action before emitting.
 
 **Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request. Unknown status kinds render title-cased.
@@ -5000,6 +5007,8 @@ the composed parameter form owns field validation. Collection values and emitted
 | `error` | Unsupported-schema explanation. |
 
 
+The nested parameter form exposes `lr-validity-change` for synchronous validation observers. A blank heading preserves the localized group name.
+
 **Events:** non-cancelable `lr-question-input` (`detail: { requestId, value }`) reports draft edits. Non-cancelable `lr-question-response` (`detail: { requestId, action, content? }`) reports a response; accepted content contains validated fields, while decline/cancel omit `content`.
 ```html
 <lr-agent-question request-id="contact" requester="Research server"
@@ -5215,8 +5224,8 @@ element.addEventListener('lr-run-cancel', (event) => {
 text preserves the actual quantities while the fill clamps at the limit. A zero or invalid limit
 shows an unavailable state; usage above the limit shows an exceeded state. The component does not
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
-values are not plain attribute strings. A host `aria-label` names the group and the progressbar has
-its own localized accessible name.
+values are not plain attribute strings. A host `aria-label` names the group and its meter. Hiding the heading with `label=""` preserves
+the localized meter name. Percentages near zero or full capacity retain fractional precision.
 
 **Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 

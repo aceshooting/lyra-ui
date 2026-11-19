@@ -1032,3 +1032,18 @@ it('registers an image/svg+xml renderer that matches .svg files and renders the 
   expect(viewer.anchor).to.be.null;
   expect(viewer.highlights).to.deep.equal([]);
 });
+
+it('exposes a keyboard stop while the drawing overflows its capped body', async () => {
+  const original = window.fetch;
+  window.fetch = async () => new Response('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="700"><rect width="200" height="700"/></svg>');
+  try {
+    const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer max-height="200px" name="Drawing" src="/drawing.svg"></lr-svg-viewer>`);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="svg"]'));
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    await waitUntil(() => body.tabIndex === 0);
+    expect(body.getAttribute('aria-label')).to.equal('Drawing');
+    el.maxHeight = '';
+    await el.updateComplete;
+    await waitUntil(() => !body.hasAttribute('tabindex'));
+  } finally { window.fetch = original; }
+});

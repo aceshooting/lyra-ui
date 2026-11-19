@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF документ',
   pdfViewerMissingLibrary: 'За показване на PDF файлове прегледът изисква инсталиран незадължителен пакет „pdfjs-dist“.',
   pdfViewerPageOf: 'Страница {page} от {total}',
+  pdfViewerPageHighlights: 'Маркирани места на страница {page}',
   pdfViewerZoomIn: 'Увеличи',
   pdfViewerZoomOut: 'Намали',
   pdfViewerPreviousPage: 'Предишна страница',

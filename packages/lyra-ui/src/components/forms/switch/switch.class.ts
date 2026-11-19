@@ -1,6 +1,9 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -10,12 +13,12 @@ import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './switch.styles.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
-import { CheckedFormAssociated } from '../../../internal/form-associated.js';
+import { CheckedFormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -226,9 +229,6 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
   // `hasLabelSlot` above, and as `<lr-select>`'s identical hint/error parts) and reflected via
   // the `hidden` attribute.
   private readonly slotPresence = new SlotPresenceController(this);
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasHelpTextSlot(): boolean { return this.slotPresence.has('help-text'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly labelTextObserver = new AccessibleTextController(
     this, [''], () => this.recomputeHasLabelSlot(), ['slot'],
   );
@@ -256,7 +256,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
+    return isLiveDisabled(this);
   }
 
   /** Activates the internal switch control, toggling it the same as a real click -- mirrors
@@ -277,29 +277,10 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
     this[VALIDITY_ANCHOR]()?.blur();
   }
 
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-
-  private syncExternalDescription(): void {
-    if (!this.isConnected) return;
-    const target = this[VALIDITY_ANCHOR]();
-    if (!target) return;
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    this.syncExternalDescription();
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
+  private readonly description = new HostDescriptionController(this, () => this[VALIDITY_ANCHOR]());
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
     this.addEventListener('slotchange', this.onLabelSlotChange);
     if (this.hasUpdated) {
       // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
@@ -314,12 +295,10 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.labelTextObserver.adopted();
-    this.releaseExternalDescription();
-    if (this.hasUpdated) this.syncExternalDescription();
+    this.description.adopted();
   }
 
   override disconnectedCallback(): void {
-    this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     super.disconnectedCallback();
   }
@@ -352,15 +331,11 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
         // which is the native `:user-invalid` timing.
         this.setInteracted(true);
         this.checked = next;
-        // Native `input` then `change`, then the library alias -- the same order (and the same
-        // rationale) as `<lr-checkbox>`'s `toggle()`. A boolean control that emitted only the
-        // `lr-`-prefixed alias is invisible to every form library, validation helper, and
-        // `<form>`-level `change` listener that binds the native names, which is the ordinary way
-        // a consumer observes a control they did not write.
-        dispatchNativeEvent(this, 'input');
-        this.emit('lr-input', { checked: this.checked, value: this.value });
-        dispatchNativeEvent(this, 'change');
-        this.emit('lr-change', { checked: this.checked, value: this.value });
+        const connected = this.isConnected;
+        const detail = { checked: this.checked, value: this.value };
+        emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
+        if (this.isConnected !== connected || isLiveDisabled(this)) return;
+        emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
       },
     });
   }
@@ -409,8 +384,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
-    if (e.repeat) return;
+    if (this.liveDisabled || e.defaultPrevented || shouldIgnoreActivationKey(e)) return;
     if (e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       this.setFromUser(!this.checked);
@@ -460,13 +434,12 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
   override render(): TemplateResult {
-    const hasHint = this.withHint || this.hasHintSlot || this.hasHelpTextSlot ||
-      (this.hint ?? '').length > 0 || (this.helpText ?? '').length > 0;
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? 'switch-error' : '', hasHint ? 'switch-hint' : '']
-      .filter(Boolean)
-      .join(' ');
-    const invalid = hasError || (this.hasInteracted && !this.internals.validity.valid);
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: 'switch', hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
+    const describedBy = supporting.describedBy;
+    const invalid = supporting.hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`
       <div part="form-control">
         <span class="switch-layout" part="row" @click=${this.onClick}>
@@ -494,13 +467,10 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
             <slot @slotchange=${this.onSlotChange}></slot>
           </span>
         </span>
-        <div id="switch-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div id="switch-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
-          ${this.hint || this.helpText}<slot name="hint"></slot
-          ><slot name="help-text"></slot>
-        </div>
+        ${renderFormControlHintError({
+          ...supporting, idPrefix: 'switch', hint: this.hint || this.helpText,
+          errorText: this.errorText, helpTextSlot: true,
+        })}
       </div>
     `;
   }

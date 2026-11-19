@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'سرعت پخش',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} از {duration}',
+  avPlayerHighlightRange: 'از {start} تا {end}',
+  avPlayerHighlightAt: 'در {start}',
   attachmentTriggerAudio: 'ضبط صدا',
   attachmentMenuAudio: 'ضبط صدا',
   flagLoadError: 'پرچم در دسترس نیست',

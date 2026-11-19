@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Yaadawwan yookaan galmeewwan kaataalogii tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
   transcriptFeedInputLimit: 'Galmeewwan {total} keessaa haaraan {count} qofa kuufamu.',
   codeBlockHighlightLimit: 'Koodiin dheeraan sintaksii isaa halluudhaan adda baasuu malee agarsiifama.',
+  codeBlockHighlightedLine: 'Sarara calaqqisiifame',
+  codeBlockActiveLine: 'Sarara calaqqisiifame hojii irra jiru',
 };
 
 registerLyraLocale('om', strings);

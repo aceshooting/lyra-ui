@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
 import {
   clearDocxDepsCache,
   getDocxDepsIfLoaded,
@@ -112,5 +113,22 @@ describe('loadDocxDeps()', () => {
     const second = await loadDocxDeps();
     expect(first).to.equal(second);
     expect(getDocxDepsIfLoaded()).to.equal(second);
+  });
+
+  it('retries a peer that failed to load instead of caching the failure', async () => {
+    const warnings = captureDevWarnings();
+    try {
+      __setDompurifyImporterForTesting(() => Promise.reject(new Error('offline')));
+      const failed = await loadDocxDeps();
+      expect(failed.DOMPurify).to.equal(undefined);
+      expect(getDocxDepsIfLoaded()).to.equal(undefined);
+      __setDompurifyImporterForTesting(() => Promise.resolve({ default: { sanitize: (html: string) => html } }));
+      const recovered = await loadDocxDeps();
+      expect(recovered.DOMPurify?.sanitize).to.exist;
+      expect(getDocxDepsIfLoaded()).to.equal(recovered);
+    } finally {
+      __setDompurifyImporterForTesting(undefined);
+      warnings.restore();
+    }
   });
 });

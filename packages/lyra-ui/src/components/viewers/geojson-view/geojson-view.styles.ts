@@ -17,6 +17,7 @@ export const styles = css`
   /* The danger tone every sibling document viewer gives its own failure text (lr-docx-viewer,
      lr-email-viewer, lr-html-viewer, lr-archive-viewer). Without it the text inherits the plain
      body colour, leaving a sighted user no signal that a parse or fetch failed. */
+  .empty-note,
   [part='error'] {
     margin: 0;
     padding: var(--lr-space-l);
@@ -24,6 +25,8 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     text-align: center;
   }
+
+  .empty-note { color: var(--lr-color-text-quiet); }
 
   /* A missing optional peer is a degraded-but-working state, not a failure -- the JSON fallback
      below it still renders the data -- so it takes the warning tone rather than danger. */
@@ -56,8 +59,11 @@ export const styles = css`
     inline-size: 100%;
     max-inline-size: 100%;
     min-inline-size: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+    max-block-size: var(--lr-size-20rem);
+    margin: 0;
+    overflow: auto;
+    font-family: var(--lr-font-mono);
+    font-size: var(--lr-font-size-sm);
     white-space: pre;
   }
 `;

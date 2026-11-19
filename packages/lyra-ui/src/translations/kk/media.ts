@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Ойнату жылдамдығы',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} / {duration}',
+  avPlayerHighlightRange: '{start} бастап {end} дейін',
+  avPlayerHighlightAt: '{start} кезінде',
   attachmentTriggerAudio: 'Дыбыс жазу',
   attachmentMenuAudio: 'Дыбыс жазу',
   flagLoadError: 'Жалау қолжетімсіз',

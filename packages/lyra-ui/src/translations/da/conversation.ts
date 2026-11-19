@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Nogle forslag eller katalogposter blev udeladt, fordi en grænse for input blev nået.',
   transcriptFeedInputLimit: 'Kun de nyeste {count} af {total} poster bevares.',
   codeBlockHighlightLimit: 'Lang kode vises uden syntaksfremhævning.',
+  codeBlockHighlightedLine: 'Fremhævet linje',
+  codeBlockActiveLine: 'Aktiv fremhævet linje',
 };
 
 registerLyraLocale('da', strings);

@@ -485,7 +485,7 @@ export class LyraFlag extends LyraElement {
       const fallbackAlt = hostAriaLabel(this) ?? this.label ?? '';
       return html`<slot name="fallback"
         >${fallbackUrl
-          ? html`<img part="fallback-image" src=${fallbackUrl} alt=${fallbackAlt} />`
+          ? html`<img part="fallback-image" src=${fallbackUrl} alt=${fallbackAlt} /><span class="ring" aria-hidden="true"></span>`
           : nothing}</slot
       >`;
     }
@@ -502,7 +502,11 @@ export class LyraFlag extends LyraElement {
       ${state.status === 'loading'
         ? html`
             <span class="sr-only">${this.localize('loading')}</span>
-            <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
+            <lr-skeleton
+              shape=${this.shape === 'circle' ? 'circle' : 'rect'}
+              .announce=${false}
+              style="--lr-skeleton-border-radius: var(--lr-flag-radius, calc(var(--lr-radius) * 0.33))"
+            ></lr-skeleton>
           `
         : null}
       ${url
@@ -520,6 +524,7 @@ export class LyraFlag extends LyraElement {
             />`,
           )
         : null}
+      ${state.status === 'loaded' ? html`<span class="ring" aria-hidden="true"></span>` : null}
     `;
   }
 }

@@ -269,7 +269,7 @@ feedback.
 
 - `itemCount: number = 0` (attribute `item-count`)
 - `currentIndex: number = 0` (attribute `current-index`)
-- `intervalMs: number = 900` (attribute `interval-ms`)
+- `intervalMs: number = 900` (attribute `interval-ms`; `autoplay-interval` / `autoplayInterval` is a second spelling matching `lr-carousel`; removing the attribute restores the default)
 - `readonly playing: boolean` (reflected as the `playing` attribute) — whether playback is running.
   Start and stop it with `play()`, `pause()` or `toggle()`; assigning it throws in strict-mode code
   and an authored `playing` attribute starts nothing.
@@ -5248,7 +5248,7 @@ player's event contract: transcript rows live inside the embedded virtual list's
 root, so no selection binding is installed.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
-`timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;
+`timeline` (click-to-seek; arrow keys step, PageUp/PageDown take larger steps), `timeline-playhead` (the non-interactive current-position line), `timeline-marker` (one per `time-range` highlight;
 `data-tone`, `data-active`), `transcript` (the `<lr-virtual-list>` itself), `cue` (`aria-current`,
 `data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
@@ -5310,7 +5310,7 @@ ancestor.
 
 **RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
 on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
-both LTR and RTL.
+both LTR and RTL. ArrowUp/ArrowDown also seek, and PageUp/PageDown move by a tenth of the duration (at least 15 seconds).
 
 ## `lr-video`
 
@@ -5344,7 +5344,7 @@ resting paint under hover and press. Once media duration makes progress availabl
 its token-driven hover and press feedback.
 
 **Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
-`autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
+`autoplay-muted`; skipped while the user prefers reduced motion), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
 `currentTime`; HTML exposes it as lowercase `currenttime`, with legacy `current-time` also
 accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
@@ -5374,7 +5374,7 @@ control-bar play toggle is hidden until the poster is dismissed.
 canonical upstream-compatible authoring type.
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
 `play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
-`togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
+`togglePlay()` (alias `toggle()`, matching `lr-av-player`), `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
 promise/rejection and reject with an owner-realm `DOMException` named `NotSupportedError` when the
 capability is absent. `load()` is a

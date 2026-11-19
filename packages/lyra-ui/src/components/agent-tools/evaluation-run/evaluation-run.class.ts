@@ -20,7 +20,7 @@ import type {
   ToolTimelineRenderErrorDetail,
   LyraToolTimelineEventMap,
 } from '../tool-timeline/tool-timeline.class.js';
-import { firstByIdentityMemo } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { styles } from './evaluation-run.styles.js';
 import {
   agentStatusKind,
@@ -416,7 +416,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   }
 
   private exampleTimeline(exampleId: string): LyraToolTimeline | null {
-    return this.renderRoot.querySelector<LyraToolTimeline>(`[part="tool-trace"][data-example-id="${CSS.escape(exampleId)}"]`);
+    return this.renderRoot?.querySelector<LyraToolTimeline>(`[part="tool-trace"][data-example-id="${CSS.escape(exampleId)}"]`) ?? null;
   }
 
   /** Closes the vetoed tool approval of example `exampleId` after the host persisted the decision;
@@ -565,7 +565,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
       >
         <span slot="summary" part="example-summary">
           <span part="example-label">${this.exampleLabel(example, index)}</span>
-          <lr-badge part="example-status" variant=${agentStatusVariant(example.status, AGENT_STATUS_VARIANTS[kind] ?? 'neutral')}>${this.statusText(example.status)}</lr-badge>
+          <lr-badge part="example-status" variant=${agentStatusVariant(example.status, ((Object.prototype.hasOwnProperty.call(AGENT_STATUS_VARIANTS, kind) ? AGENT_STATUS_VARIANTS[kind] : undefined) ?? 'neutral'))}>${this.statusText(example.status)}</lr-badge>
           ${message !== undefined ? html`<span part="example-status-message">${message}</span>` : nothing}
         </span>
         ${expanded

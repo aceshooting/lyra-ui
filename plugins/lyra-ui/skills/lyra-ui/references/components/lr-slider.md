@@ -27,6 +27,8 @@ on `[part~="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
 seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
+The `lr-input` and `lr-change` details retain the positions that triggered their corresponding native
+events, including when a listener assigns another value synchronously.
 
 Secondary mouse buttons leave the value and input/change events untouched. Primary mouse, touch and
 pen gestures remain supported, including concurrent pointers.

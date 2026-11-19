@@ -10,6 +10,9 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { shouldIgnoreActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -32,11 +35,15 @@ export interface HighlightLayerItem {
   readonly tone?: LyraHighlightTone;
 }
 
+const MAX_ITEMS = 10_000;
+/** Minimum time the reduced-motion flash cue stays visible when there is no animation to follow. */
+const FLASH_HOLD_MS = 600;
+
 function snapshotItems(value: unknown): readonly HighlightLayerItem[] {
   if (!Array.isArray(value)) return Object.freeze([]);
   const output: HighlightLayerItem[] = [];
   const seenIds = new Set<string>();
-  const length = Math.min(value.length, 10_000);
+  const length = Math.min(value.length, MAX_ITEMS);
   for (let index = 0; index < length; index += 1) {
     try {
       const candidate: unknown = value[index];
@@ -45,9 +52,16 @@ function snapshotItems(value: unknown): readonly HighlightLayerItem[] {
       if (typeof rawId !== 'string') continue;
       const id = rawId.trim();
       if (id.length === 0 || seenIds.has(id)) continue;
-      if (!Array.isArray((candidate as { rects?: unknown }).rects)) continue;
+      const rawRects = (candidate as { rects?: unknown }).rects;
+      if (!Array.isArray(rawRects)) continue;
       seenIds.add(id);
-      output.push(rawId === id ? candidate as HighlightLayerItem : { ...candidate, id } as HighlightLayerItem);
+      const rects: SafePercentRect[] = [];
+      for (let rectIndex = 0; rectIndex < rawRects.length; rectIndex += 1) {
+        const rect = sanitizePercentRect(rawRects[rectIndex]);
+        if (rect === undefined) continue;
+        rects.push(Object.freeze(rect));
+      }
+      output.push(Object.freeze({ ...candidate, id, rects: Object.freeze(rects) }) as HighlightLayerItem);
     } catch {
       // A malformed record must not prevent later valid highlights from rendering.
     }
@@ -158,9 +172,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       const previousItems = changed.get('items') as readonly HighlightLayerItem[] | undefined;
       if (this.focusedId !== null && positionOf(this.items, this.focusedId) < 0) {
         const previousIndex = positionOf(previousItems, this.focusedId);
-        const renderedIndexes = this.itemIndexesWithRects(
-          this.items.map((item) => this.safeRects(item)),
-        );
+        const renderedIndexes = this.itemIndexesWithRects(this.items.map((item) => item.rects));
         const nextIndex = renderedIndexes.reduce<number | null>((nearest, index) => {
           if (nearest === null) return index;
           return Math.abs(index - previousIndex) < Math.abs(nearest - previousIndex) ? index : nearest;
@@ -210,7 +222,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       { host: this },
     ) ?? 0;
     const boxes = this.items
-      .flatMap((item, index) => this.safeRects(item).map((rect) => {
+      .flatMap((item, index) => item.rects.map((rect) => {
         const boxWidth = Math.max((rect.width / 100) * width, min);
         const boxHeight = Math.max((rect.height / 100) * height, min);
         const left = ((rect.x + rect.width / 2) / 100) * width - boxWidth / 2;
@@ -260,12 +272,13 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
         computed.animationDelay,
       );
       this.flashTimerWindow = ownerWindow;
+      const holdMs = durationMs > 0 && !prefersReducedMotion(this) ? durationMs : FLASH_HOLD_MS;
       this.flashTimer = ownerWindow.setTimeout(() => {
         if (generation !== this.flashGeneration || this.flashTimerWindow !== ownerWindow) return;
         this.flashTimer = undefined;
         this.flashTimerWindow = undefined;
         this.flashingId = null;
-      }, durationMs);
+      }, holdMs);
     });
   }
 
@@ -277,13 +290,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this.flashingId = null;
   }
 
-  private safeRects(item: HighlightLayerItem): SafePercentRect[] {
-    return item.rects
-      .map(sanitizePercentRect)
-      .filter((rect): rect is SafePercentRect => rect !== undefined);
-  }
-
-  private itemIndexesWithRects(rectsByItem: readonly SafePercentRect[][]): number[] {
+  private itemIndexesWithRects(rectsByItem: readonly (readonly SafePercentRect[])[]): number[] {
     const indexes: number[] = [];
     rectsByItem.forEach((rects, index) => {
       if (rects.length > 0) indexes.push(index);
@@ -291,7 +298,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     return indexes;
   }
 
-  private tabStopIndex(rectsByItem: readonly SafePercentRect[][]): number | null {
+  private tabStopIndex(rectsByItem: readonly (readonly SafePercentRect[])[]): number | null {
     const renderedIndexes = this.itemIndexesWithRects(rectsByItem);
     if (renderedIndexes.length === 0) return null;
     if (this.focusedId !== null) {
@@ -337,17 +344,16 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   private onRectKeyDown(e: KeyboardEvent, itemIndex: number): void {
     if (e.key === 'Enter' || e.key === ' ') {
+      if (shouldIgnoreActivationKey(e)) return;
       e.preventDefault();
       this.onRectClick(this.items[itemIndex]!.id);
       return;
     }
-    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (shouldIgnoreNavigationKey(e) || e.shiftKey) return;
     const rtl = this.effectiveDirection === 'rtl';
     const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
     const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
-    const renderedIndexes = this.itemIndexesWithRects(
-      this.items.map((item) => this.safeRects(item)),
-    );
+    const renderedIndexes = this.itemIndexesWithRects(this.items.map((item) => item.rects));
     const position = renderedIndexes.indexOf(itemIndex);
     let nextIndex: number | undefined;
     if (forward) nextIndex = renderedIndexes[Math.min(renderedIndexes.length - 1, position + 1)];
@@ -362,8 +368,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   private rectLabel(item: HighlightLayerItem, index: number, total: number): string {
     const numberFormat = getNumberFormat(this.effectiveLocale);
-    return item.label
-      ? this.localize('highlightWithLabel', undefined, { label: item.label })
+    const label = normalizeLabel(item.label);
+    return label
+      ? this.localize('highlightWithLabel', undefined, { label })
       : this.localize('highlightOfTotal', undefined, {
           index: numberFormat.format(index + 1),
           total: numberFormat.format(total),
@@ -372,7 +379,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   override render(): TemplateResult | typeof nothing {
     if (this.items.length === 0) return nothing;
-    const rectsByItem = this.items.map((item) => this.safeRects(item));
+    const rectsByItem = this.items.map((item) => item.rects);
     const renderedIndexes = this.itemIndexesWithRects(rectsByItem);
     if (renderedIndexes.length === 0) return nothing;
     const tabStop = this.tabStopIndex(rectsByItem);
@@ -385,7 +392,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     const interactive = !this.withoutInteraction;
     const useActionList = interactive && this.actionList;
     const ariaLabel = interactive
-      ? hostAriaLabel(this) ?? this.localize('highlightLayerLabel')
+      ? hostAriaLabel(this) === ''
+        ? ''
+        : resolveAccessibleName(this, this.localize('highlightLayerLabel'))
       : undefined;
     return html`
       <div

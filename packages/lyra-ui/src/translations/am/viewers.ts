@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF ሰነድ',
   pdfViewerMissingLibrary: 'PDF ፋይሎችን ለማሳየት መመልከቻው አማራጭ "pdfjs-dist" ጥቅል እንዲጫን ይፈልጋል።',
   pdfViewerPageOf: 'ከ{total} ገጾች {page}ኛ',
+  pdfViewerPageHighlights: 'የገጽ {page} ድምቀቶች',
   pdfViewerZoomIn: 'አሳድግ',
   pdfViewerZoomOut: 'አሳንስ',
   pdfViewerPreviousPage: 'ቀዳሚ ገጽ',

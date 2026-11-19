@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF દસ્તાવેજ',
   pdfViewerMissingLibrary: 'PDF ફાઇલો દર્શાવવા માટે વૈકલ્પિક "pdfjs-dist" પૅકેજ ઇન્સ્ટોલ કરવું જરૂરી છે.',
   pdfViewerPageOf: '{total}માંથી પૃષ્ઠ {page}',
+  pdfViewerPageHighlights: 'પૃષ્ઠ {page} ની હાઇલાઇટ્સ',
   pdfViewerZoomIn: 'મોટું કરો',
   pdfViewerZoomOut: 'નાનું કરો',
   pdfViewerPreviousPage: 'પહેલું પૃષ્ઠ',

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Tốc độ phát',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} trên {duration}',
+  avPlayerHighlightRange: 'từ {start} đến {end}',
+  avPlayerHighlightAt: 'tại {start}',
   attachmentTriggerAudio: 'Ghi âm',
   attachmentMenuAudio: 'Ghi âm',
   flagLoadError: 'Không thể tải cờ.',

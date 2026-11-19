@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 
 export const styles = css`
   :host {
@@ -30,6 +31,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: transparent;
     color: var(--lr-color-text);
+    font: inherit;
     cursor: pointer;
     box-sizing: border-box;
     transition: background-color var(--lr-transition-fast);
@@ -120,4 +122,5 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text-quiet);
   }
+  ${forcedColorsPart("lr-virtual-list::part(page-current)")}
 `;

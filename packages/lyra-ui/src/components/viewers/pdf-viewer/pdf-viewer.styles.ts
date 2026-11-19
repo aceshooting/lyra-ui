@@ -25,16 +25,17 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: transparent;
     color: var(--lr-color-text);
+    font: inherit;
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  [part="toolbar"] button:hover {
+  [part="toolbar"] button:hover:not(:disabled) {
     background: var(
       --lr-pdf-viewer-toolbar-button-hover-bg,
       var(--lr-color-surface)
     );
   }
-  [part="toolbar"] button:active {
+  [part="toolbar"] button:active:not(:disabled) {
     background: color-mix(
       in oklab,
       var(--lr-pdf-viewer-toolbar-button-hover-bg, var(--lr-color-surface)),
@@ -103,6 +104,9 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-danger);
     text-align: center;
+  }
+  :host(:dir(rtl)) lr-virtual-list::part(page-error) {
+    translate: 50% 0;
   }
   lr-virtual-list::part(page-error-visible) {
     display: flex;

@@ -1,7 +1,12 @@
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
+import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
+import { observeValidatorAttributes, runFormValidators } from '../../../internal/form-validator-runtime.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { capOptionRows } from '../../../internal/option-selection.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
-import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { AutocorrectState, installNativeInputModeAliases, installNativeSelectionAccessors, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -45,16 +50,16 @@ import {
   autocorrectConverter,
   literalSetConverter,
   omittedEmptyStringConverter,
-  optionalLiteralSetConverter,
   spellcheckConverter,
 } from '../../../internal/converters.js';
 import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
-import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { PositioningStrategyState, positioningStrategyConverter, resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
   getFormOwner,
   isBarredFromValidation,
+  isLiveDisabled,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -113,10 +118,6 @@ function normalizeSelectionValues(
 }
 export type LyraComboboxPlacement = 'top' | 'bottom';
 
-/** Unsupported values resolve to *absent*, so the listbox falls back to this control's own
- *  default rather than to a member baked into the converter. */
-const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>(['absolute', 'fixed']);
-
 /** The full shared `LyraAppearance` vocabulary, matching `<lr-select>`'s trigger. A value outside
  *  this set -- a typo, or any other unsupported string -- clamps to the documented `'outlined'`
  *  default; see `appearance`'s own doc comment. */
@@ -165,21 +166,6 @@ export type LyraComboboxValidator =
     }
   | LyraComboboxObjectValidator;
 
-const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<
-  keyof ValidityStateFlags
->([
-  'badInput',
-  'customError',
-  'patternMismatch',
-  'rangeOverflow',
-  'rangeUnderflow',
-  'stepMismatch',
-  'tooLong',
-  'tooShort',
-  'typeMismatch',
-  'valueMissing',
-]);
-
 /** Let Lit's `useDefault` restore this component's false default on attribute removal. The shared
  * native converter intentionally treats a missing attribute as true for true-default controls. */
 const comboboxSpellcheckConverter = {
@@ -198,10 +184,6 @@ const comboboxSpellcheckConverter = {
  */
 function adornmentContent(value: unknown): unknown {
   return typeof value === 'string' || typeof value === 'number' ? html`<span>${value}</span>` : value;
-}
-
-function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
-  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
 }
 
 export interface ComboboxSourceRow {
@@ -422,6 +404,7 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
       readonly data: readonly unknown[];
     }>
   >;
+  'lr-change-request': LyraComboboxEventMap<Multiple>['lr-change'];
   'lr-activate': CustomEvent<{ value: string }>;
   'lr-source-error': CustomEvent<{ error: unknown; query: string }>;
   'lr-retry-request': CustomEvent<null>;
@@ -501,6 +484,7 @@ export type LyraComboboxSourceErrorEvent =
  * @slot - `<lr-option>` elements.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
+ * @slot help-text - Additional supporting text alongside the hint.
  * @slot error - Custom error content.
  * @slot start - Adornment at the inline-start of the trigger row, before the selected-value tags
  *   and the filter input. Slotted content is decorative chrome, not an option: `collectOptions()`
@@ -515,6 +499,7 @@ export type LyraComboboxSourceErrorEvent =
  * committed a selection change.
  * @event lr-input - Selection changed; detail is `{ value, previousValue, data }`. Values narrow
  * with `multiple`; `data` is index-aligned with `value`, retaining each caller payload by identity.
+ * @event lr-change-request - Cancelable selection proposal with `{ value, previousValue, data }`. Veto it or write the controlled value to handle the change.
  * @event lr-change - Selection committed, with the same detail as `lr-input`. Programmatic
  * writes and filter edits do not emit selection events.
  * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
@@ -623,6 +608,7 @@ export type LyraComboboxSourceErrorEvent =
  *   `source-error-actions` forwarded from the composed `<lr-empty>`.
  * @csspart retry-button - The retry control inside the failed-load state.
  * @csspart hint - The hint message.
+ * @csspart form-control-help-text - Alias for the hint container.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
  * @cssprop [--lr-combobox-color=inherit] - Trigger text color. Defaults to the inherited text
  *   color, and to `--lr-color-on-brand` under `appearance="accent"`.
@@ -763,6 +749,7 @@ export class LyraCombobox<
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',
     'lr-change',
+    'lr-change-request',
   ]);
   /** `data` carries opaque per-row caller payload -- preserve each item's identity through the
    *  frozen event envelope instead of recursively cloning unknown data, the same policy
@@ -770,6 +757,7 @@ export class LyraCombobox<
   protected static override readonly identityEventDetailCollectionItems = Object.freeze({
     'lr-input': Object.freeze(['data']),
     'lr-change': Object.freeze(['data']),
+    'lr-change-request': Object.freeze(['data']),
   });
 
   static formAssociated = true;
@@ -782,6 +770,7 @@ export class LyraCombobox<
     required: { type: Boolean, reflect: true, noAccessor: true },
     readonly: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
+    defaultValue: { attribute: 'default-value', noAccessor: true },
     name: {
       reflect: true,
       noAccessor: true,
@@ -807,6 +796,8 @@ export class LyraCombobox<
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
+  /** Supporting text used when the hint property is empty. */
+  @property({ attribute: 'help-text' }) helpText = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** Whether the listbox is open. Disabled, readonly, or below-minimum queries reject direct
    * reopen attempts, including a synchronous fieldset cascade. */
@@ -909,7 +900,7 @@ export class LyraCombobox<
    * @default undefined
    */
   @property({ reflect: true }) sync?: PlaceSync;
-  private _positioningStrategy?: PlaceStrategy;
+  private readonly strategy = new PositioningStrategyState(this, 'fixed');
   /**
    * CSS positioning scheme the listbox is laid out with -- the property `<lr-select>`,
    * `<lr-popover>`, `<lr-dropdown>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way.
@@ -931,19 +922,13 @@ export class LyraCombobox<
   @property({
     attribute: 'positioning-strategy',
     reflect: true,
-    converter: POSITIONING_STRATEGY,
+    converter: positioningStrategyConverter,
   })
   get positioningStrategy(): PlaceStrategy {
-    return this._positioningStrategy ?? 'fixed';
+    return this.strategy.value;
   }
   set positioningStrategy(next: PlaceStrategy) {
-    const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'fixed';
-    const old = this.positioningStrategy;
-    // Recorded even when it matches the default: an author who explicitly writes the default
-    // still authored a value, and the shared resolver has to tell that apart from "unset" --
-    // only "unset" falls through to a cascading ancestor override.
-    this._positioningStrategy = normalized;
-    if (normalized !== old) this.requestUpdate('positioningStrategy', old);
+    this.strategy.set(next);
   }
   /**
    * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
@@ -1003,7 +988,7 @@ export class LyraCombobox<
   @property({ converter: comboboxSpellcheckConverter, useDefault: true })
   override spellcheck = false;
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Optional no-match copy override. Omission localizes `noMatches`; a supplied string, including
    * `"No matches"` or `""`, renders verbatim. */
   @property({ attribute: 'empty-text' }) emptyText?: string;
@@ -1023,27 +1008,14 @@ export class LyraCombobox<
   /** Web Awesome's boolean `autocorrect` IDL; its HTML attribute uses `on`/`off`. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean) {
-    this.autocorrectValue = Boolean(next);
-    // Attribute presence controls whether the native hint is omitted, so removing an `on`
-    // attribute must render even though the normalized boolean remains `true`.
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
   /** Lowercase mapped IDL aliases for the remaining camel-case native spellings. */
-  get inputmode(): string {
-    return this.inputMode;
-  }
-  set inputmode(next: string) {
-    this.inputMode = next ?? '';
-  }
-  get enterkeyhint(): string {
-    return this.enterKeyHint;
-  }
-  set enterkeyhint(next: string) {
-    this.enterKeyHint = next ?? '';
-  }
+  declare inputmode: string;
+  declare enterkeyhint: string;
 
   /** Live text in the native filter input. Programmatic writes are event-silent.
    * @default '' */
@@ -1090,10 +1062,7 @@ export class LyraCombobox<
   // Bumped whenever validity is recomputed outside a property write (an observed-attribute change
   // seen by a `validators` entry), so `updated()`'s `data-invalid` reflection re-runs for it.
   @state() private validityRevision = 0;
-  private validatorAttributeObserver?: {
-    observer: MutationObserver;
-    owner: Window;
-  };
+  private validatorAttributeObserver?: () => void;
   // Applies to `form-control-label` too: leaving that box visible would orphan its required
   // asterisk. The default option slot keeps its identity-aware collection handler below.
   private readonly slotPresence = new SlotPresenceController(this);
@@ -1215,6 +1184,7 @@ export class LyraCombobox<
   // property assignment never does).
   private _defaultSelected: string[] = [];
   private _defaultCaptured = false;
+  private explicitDefault = false;
   // A restored value must win over declarative selected markup collected by
   // the first asynchronous slotchange. Cleared by the next ordinary value write.
   private _restoredStateActive = false;
@@ -1295,34 +1265,13 @@ export class LyraCombobox<
     return this.inputEl ?? null;
   }
 
-  get selectionStart(): number | null {
-    return this.inputEl?.selectionStart ?? null;
-  }
-
-  set selectionStart(value: number | null) {
-    if (this.inputEl) this.inputEl.selectionStart = value;
-  }
-
-  get selectionEnd(): number | null {
-    return this.inputEl?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.inputEl) this.inputEl.selectionEnd = value;
-  }
-
-  get selectionDirection(): LyraComboboxSelectionDirection | null {
-    return this.inputEl
-      ?.selectionDirection as LyraComboboxSelectionDirection | null;
-  }
-
-  set selectionDirection(value: LyraComboboxSelectionDirection | null) {
-    if (this.inputEl) this.inputEl.selectionDirection = value;
-  }
+  declare selectionStart: number | null;
+  declare selectionEnd: number | null;
+  declare selectionDirection: LyraComboboxSelectionDirection | null;
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
+    return isLiveDisabled(this);
   }
 
   /** A disabled or readonly control cannot stay open, so closing it is policy, not a request. */
@@ -1350,17 +1299,8 @@ export class LyraCombobox<
     void this.show();
   }
 
-  select(): void {
-    this.inputEl?.select();
-  }
-
-  setSelectionRange(
-    start: number | null,
-    end: number | null,
-    direction?: LyraComboboxSelectionDirection
-  ): void {
-    this.inputEl?.setSelectionRange(start, end, direction);
-  }
+  declare select: () => void;
+  declare setSelectionRange: (start: number | null, end: number | null, direction?: LyraComboboxSelectionDirection) => void;
 
   setRangeText(replacement: string): void;
   setRangeText(
@@ -1437,6 +1377,7 @@ export class LyraCombobox<
     this.popupController.unbindPointer();
     this.clearSourceTimer();
     this.sourceToken += 1;
+    this.sourceLoading = false;
     this.sourceAbort?.abort();
     this.sourceAbort = undefined;
     this.sourceErrorAnnouncements.adopted();
@@ -1624,9 +1565,29 @@ export class LyraCombobox<
     this.setValue(next, true);
   }
 
+  /** The form reset selection. A pristine combobox tracks changes to this value.
+   * @default ''
+   * @type {string | string[]} */
+  get defaultValue(): LyraPickerValue<Multiple> {
+    return (this.multiple ? [...this._defaultSelected] : this._defaultSelected[0] ?? '') as LyraPickerValue<Multiple>;
+  }
+  set defaultValue(next: LyraPickerValue<Multiple> | null | undefined) {
+    const old = this.defaultValue;
+    this.explicitDefault = true;
+    const values = normalizeSelectionValues(next);
+    this._defaultSelected = this.multiple ? values : values.slice(0, 1);
+    if (!this._valueDirty && !this._restoredStateActive) {
+      this.setValue(this._defaultSelected, false);
+    }
+    this.requestUpdate('defaultValue', old);
+  }
+
+  private readonly selectionGuard = new VetoWriteGuard();
+  private requestingSelection = false;
   private previousSelection: readonly string[] = [];
 
   private setValue(next: string | string[] | null | undefined, dirty: boolean, preferred?: LyraOption): void {
+    markVetoGuardWrite(this.selectionGuard);
     this.pendingSelectedWrites.clear();
     const old = this._selected;
     this.previousSelection = old;
@@ -1790,12 +1751,15 @@ export class LyraCombobox<
    *  nothing resolves -- so a caller needing index alignment with `value` (the `data` field of
    *  `input`/`change`/`lr-change`'s detail) never has to guess which value a dropped row
    *  belonged to. */
-  private resolveSelectedRowSlots(): Array<ComboboxSourceRow | undefined> {
+  private resolveSelectedRowSlots(
+    values: readonly string[] = this.committed,
+    proposed?: ComboboxSourceRow,
+  ): Array<ComboboxSourceRow | undefined> {
     let rows: Map<string, ComboboxSourceRow> | undefined;
-    return this.committed.map(
-      (value) => this._selectedRowCache.get(value) ??
-        (rows ??= this.rowsByValue(new Set(this.committed))).get(value)
-    );
+    return values.map(value => {
+      if (proposed?.value === value) return proposed;
+      return this._selectedRowCache.get(value) ?? (rows ??= this.rowsByValue(new Set(values))).get(value);
+    });
   }
 
   /** Every value in `multiple` mode, else only the first: earlier multiple history stays hidden. */
@@ -1826,6 +1790,7 @@ export class LyraCombobox<
   }
 
   set selectedRows(next: readonly ComboboxSourceRow[]) {
+    markVetoGuardWrite(this.selectionGuard);
     const values: string[] = [];
     const seen = new Set<string>();
     if (Array.isArray(next)) {
@@ -1858,137 +1823,14 @@ export class LyraCombobox<
     return isBarredFromValidation(this, this.internals);
   }
 
-  /** Runs `validators` in order and returns the first failure. Mirrors `lr-date-input`'s reading of
-   *  the same contract: a thrown validator fails closed with the generic localized message rather
-   *  than escaping into the caller that happened to write `value`. */
-  private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
-    // Validators are declared against the un-narrowed class (`LyraFormValidator<LyraCombobox>`),
-    // which `this` is not assignable to while `Multiple` is an unresolved type parameter. Resolved
-    // once here rather than cast at each of the call sites below.
-    const self = this as unknown as LyraCombobox<boolean>;
-    const current = self.value;
-    for (const validator of Array.isArray(this.validators)
-      ? this.validators
-      : []) {
-      let result: LyraComboboxValidatorResult;
-      try {
-        if (
-          typeof validator === 'object' &&
-          validator !== null &&
-          'checkValidity' in validator
-        ) {
-          const checked = validator.checkValidity(this as never);
-          if (checked?.isValid === true) continue;
-          const flags: ValidityStateFlags = {};
-          for (const key of Array.isArray(checked?.invalidKeys)
-            ? checked.invalidKeys
-            : []) {
-            if (isValidityFlagKey(key)) flags[key] = true;
-          }
-          if (!Object.values(flags).some(Boolean)) flags.customError = true;
-          let message =
-            typeof checked?.message === 'string' ? checked.message : '';
-          if (!message && typeof validator.message === 'string')
-            message = validator.message;
-          if (!message && typeof validator.message === 'function') {
-            message = validator.message(this as never);
-          }
-          return { flags, message: message || this.localize('valueInvalid') };
-        }
-        result =
-          typeof validator === 'function'
-            ? validator(current, self)
-            : validator?.validate(current, self);
-      } catch {
-        return {
-          flags: { customError: true },
-          message: this.localize('valueInvalid'),
-        };
-      }
-      if (result === undefined || result === true) continue;
-      if (typeof result === 'string')
-        return { flags: { customError: true }, message: result };
-      if (result === false)
-        return {
-          flags: { customError: true },
-          message: this.localize('valueInvalid'),
-        };
-      if (
-        result &&
-        typeof result === 'object' &&
-        Object.values(result).some(Boolean)
-      ) {
-        return { flags: result, message: this.localize('valueInvalid') };
-      }
-    }
-    return {};
-  }
-
-  /** Watches the host attributes any object validator listed in `observedAttributes`, so changing
-   *  one revalidates live. Bound to the owning window so a re-parent into another document (or a
-   *  disconnect) can never leave the previous document's observer firing into this host. */
   private syncValidatorAttributeObserver(): void {
-    this.disconnectValidatorAttributeObserver();
-    const owner = this.ownerDocument.defaultView;
-    const MutationObserverCtor = owner?.MutationObserver;
-    if (
-      !this.isConnected ||
-      !owner ||
-      typeof MutationObserverCtor !== 'function'
-    )
-      return;
-
-    const attributes = new Set<string>();
-    for (const validator of Array.isArray(this.validators)
-      ? this.validators
-      : []) {
-      if (
-        typeof validator !== 'object' ||
-        validator === null ||
-        !('checkValidity' in validator)
-      )
-        continue;
-      let observed: unknown;
-      try {
-        observed = validator.observedAttributes;
-      } catch {
-        continue;
-      }
-      if (!Array.isArray(observed)) continue;
-      for (const name of observed) {
-        if (typeof name === 'string' && name.length > 0) attributes.add(name);
-      }
-    }
-    if (attributes.size === 0) return;
-
-    const binding = {} as { observer: MutationObserver; owner: Window };
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.validatorAttributeObserver !== binding ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner
-      )
-        return;
-      this.updateValidity();
-      this.validityRevision++;
-    });
-    binding.observer = observer;
-    binding.owner = owner;
-    try {
-      observer.observe(this, {
-        attributes: true,
-        attributeFilter: [...attributes],
-      });
-      this.validatorAttributeObserver = binding;
-    } catch {
-      observer.disconnect();
-    }
-  }
-
-  private disconnectValidatorAttributeObserver(): void {
-    const binding = this.validatorAttributeObserver;
-    this.validatorAttributeObserver = undefined;
-    binding?.observer.disconnect();
+    this.validatorAttributeObserver?.();
+    this.validatorAttributeObserver = this.isConnected
+      ? observeValidatorAttributes(this, this.validators, () => {
+          this.updateValidity();
+          this.validityRevision++;
+        })
+      : undefined;
   }
 
   private updateValidity(): void {
@@ -2007,7 +1849,7 @@ export class LyraCombobox<
       flags.valueMissing = true;
       message = () => this.localize('comboboxRequired');
     }
-    const configured = this.validatorResult();
+    const configured = runFormValidators(this.validators, this.value, this, () => this.localize('valueInvalid'));
     if (configured.flags) Object.assign(flags, configured.flags);
     if (configured.message) message = configured.message;
     this.validityController.setValidity(flags, message);
@@ -2070,7 +1912,7 @@ export class LyraCombobox<
     this._restoredStateActive = false;
     this._valueDirty = false;
     const resetValues =
-      this._defaultSelected.length > 0
+      this.explicitDefault || this._defaultSelected.length > 0
         ? this._defaultSelected
         : this.options
             .filter((option) => wasOptionInitiallySelected(option))
@@ -2143,15 +1985,11 @@ export class LyraCombobox<
     return this.validityController.checkValidity(() => this.updateValidity());
   }
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // Reporting is what a submit attempt does, and a failed submit is precisely when native
-    // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
-    // `FormAssociated` mixin. (A submission attempt itself never calls this method -- it drives
-    // `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.)
-    this.touched = true;
-    this.updateValidity();
-    this.syncCustomStates();
-    return this.internals.reportValidity();
+    return this.validityController.reportValidity(() => {
+      this.touched = true;
+      this.updateValidity();
+      this.syncCustomStates();
+    });
   }
 
   /**
@@ -2174,16 +2012,19 @@ export class LyraCombobox<
   }
 
   override disconnectedCallback(): void {
+    markVetoGuardWrite(this.selectionGuard);
     this.pendingSelectedWrites.clear();
     this.listboxHidden = true;
     this.releaseExternalDescription();
     this.popupController.cancel();
     this.listboxPositioned = false;
-    this.disconnectValidatorAttributeObserver();
+    this.validatorAttributeObserver?.();
+    this.validatorAttributeObserver = undefined;
     super.disconnectedCallback();
     this.invalidateListboxPositioning();
     this.clearSourceTimer();
     this.sourceToken += 1;
+    this.sourceLoading = false;
     // Cancel any in-flight source request so its fetch is aborted on disconnect.
     this.sourceAbort?.abort();
     this.sourceAbort = undefined;
@@ -2222,15 +2063,12 @@ export class LyraCombobox<
     this.adornmentClones = new WeakMap();
     this.normalizeActiveIndex();
     this.applyPendingSelectedRows();
+    if (this.explicitDefault) {
+      this.reflectSelected();
+      return;
+    }
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
-      // Seed the initial selection — and the reset default — from
-      // declarative `<lr-option selected>` markup — mirrors native
-      // `<select><option selected>`, which was previously silently ignored.
-      // This is the only place `_defaultSelected` is set; picking an option
-      // later (the `value` setter) never redefines the reset default, so an
-      // initially-unselected combobox always resets back to empty even
-      // after the user has picked something.
       const allDefaults = this.options
         .filter((option) => option.defaultSelected)
         .map((option) => option.value);
@@ -2307,6 +2145,7 @@ export class LyraCombobox<
   }
 
   private refreshOptionDefaults(): void {
+    if (this.explicitDefault) return;
     const declared = this.options
       .filter((option) => option.defaultSelected)
       .map((option) => option.value);
@@ -2330,6 +2169,13 @@ export class LyraCombobox<
     if (previous && previous.inputs.length === inputs.length && previous.inputs.every((input, index) => Object.is(input, inputs[index]))) return previous.value as T;
     const value = compute(); this.optionMemo.set(key, { inputs, value }); return value;
   }
+  private get selectedLabels(): string {
+    return this.memoOption('selectedLabels', [
+      this._selected, this.options, this.asyncRows, this.source, this.sourceEverSettled, this.optionsObserved,
+      this.getUnknownLabel, this.loading, this.effectiveLocale, this.strings, this.callbackRefreshEpoch,
+    ], () => getListFormat(this.effectiveLocale, { type: 'unit' }).format(this._selected.map(value => this.labelFor(value))));
+  }
+
   private get optionIndex() {
     return this.memoOption('index', [this.options], () => {
       const values = new Map<string, LyraOption>();
@@ -2346,9 +2192,9 @@ export class LyraCombobox<
   }
   private get searchCorpus() {
     return this.memoOption('corpus', [this.options, this.effectiveLocale], () => this.options.map(option => ({
-      label: option.label.toLocaleLowerCase(this.effectiveLocale),
-      search: option.searchText.toLocaleLowerCase(this.effectiveLocale),
-      value: option.value.toLocaleLowerCase(this.effectiveLocale),
+      label: foldSearchText(option.label, this.effectiveLocale),
+      search: foldSearchText(option.searchText, this.effectiveLocale),
+      value: foldSearchText(option.value, this.effectiveLocale),
     })));
   }
   private pendingSelectedWrites = new Map<LyraOption, { selected: boolean; value: string }>();
@@ -2391,6 +2237,7 @@ export class LyraCombobox<
     const option = e.composedPath().find(isLyraOptionElement);
     if (isOptionSelectedWrite(e) && isLyraOptionElement(option) && this.optionIndex.members.has(option)) {
       this._valueDirty = true; this._restoredStateActive = false;
+      markVetoGuardWrite(this.selectionGuard);
       this.pendingSelectedWrites.delete(option);
       this.pendingSelectedWrites.set(option, { selected: option.selected, value: option.value });
       if (!this.selectedWritesQueued) {
@@ -2620,7 +2467,7 @@ export class LyraCombobox<
   private get unknownRows(): ComboboxSourceRow[] {
     if (!this.withUnknownOption) return [];
     const locale = this.effectiveLocale;
-    const query = this.query.trim().toLocaleLowerCase(locale);
+    const query = prepareNeedle(this.query, locale);
     return this.committed
       .filter((value) => this.isUnknownValue(value))
       .map((value) => ({
@@ -2632,8 +2479,8 @@ export class LyraCombobox<
       .filter(
         (row) =>
           !query ||
-          row.label.toLocaleLowerCase(locale).includes(query) ||
-          row.value.toLocaleLowerCase(locale).includes(query)
+          foldSearchText(row.label, locale).includes(query) ||
+          foldSearchText(row.value, locale).includes(query)
       );
   }
 
@@ -2643,9 +2490,9 @@ export class LyraCombobox<
     const inputValue = this.query.trim();
     if (!inputValue) return undefined;
     const locale = this.effectiveLocale;
-    const folded = inputValue.toLocaleLowerCase(locale);
+    const folded = foldSearchText(inputValue, locale);
     const exact = this.source
-      ? this.memoOption('asyncExact', [this.asyncRows, locale], () => new Set(this.asyncRows.flatMap(row => [row.value.toLocaleLowerCase(locale), row.label.toLocaleLowerCase(locale)]))).has(folded)
+      ? this.memoOption('asyncExact', [this.asyncRows, locale], () => new Set(this.asyncRows.flatMap(row => [foldSearchText(row.value, locale), foldSearchText(row.label, locale)]))).has(folded)
       : this.searchCorpus.some(row => row.value === folded || row.label === folded);
     if (exact) return undefined;
     return {
@@ -2665,10 +2512,14 @@ export class LyraCombobox<
     });
   }
 
+  private navigableRows(rows: readonly ComboboxSourceRow[]): readonly ComboboxSourceRow[] {
+    return this.memoOption('navigableRows', [rows], () => rows.filter(row => !row.disabled));
+  }
+
   /** Filtered suggestions capped to `maxRender`, keeping the current selection visible. */
   private lastRenderedRows: readonly ComboboxSourceRow[] = [];
   private get renderedRows(): { rows: readonly ComboboxSourceRow[]; overflow: number } {
-    const active = this.lastRenderedRows.filter(row => !row.disabled)[this.activeIndex]?.value;
+    const active = this.navigableRows(this.lastRenderedRows)[this.activeIndex]?.value;
     const result = this.memoOption('renderedRows', [this.callbackRefreshEpoch, this.options, this.asyncRows, this.source, this.query,
       this._selected, this.multiple, this.maxRender, this._sourceTotal, this.withUnknownOption,
       this.allowCreate, this.filter, this.getUnknownLabel, this.loading, this.sourceEverSettled,
@@ -2706,25 +2557,20 @@ export class LyraCombobox<
    *  changes, and async responses all pass through this one clamp. */
   private normalizeActiveIndex(): void {
     if (this.activeIndex < 0) return;
-    const navigableCount = this.renderedRows.rows.filter(
-      (row) => !row.disabled
-    ).length;
+    const navigableCount = this.navigableRows(this.renderedRows.rows).length;
     const next =
       navigableCount > 0 ? Math.min(this.activeIndex, navigableCount - 1) : -1;
     if (next !== this.activeIndex) this.activeIndex = next;
   }
 
   private get filtered(): LyraOption[] {
-    // `toLocaleLowerCase()` (not the invariant-Unicode `toLowerCase()`) so a
-    // `tr`/`az` locale's dotted/dotless I case-folds the way that locale
-    // actually expects -- matches `<lr-table>`'s identical filter fold.
     const locale = this.effectiveLocale;
-    const q = this.query.trim().toLocaleLowerCase(locale);
+    const q = this.filter ? this.query.trim().toLocaleLowerCase(locale) : prepareNeedle(this.query, locale);
     const selectedLabel = !this.multiple
       ? this.labelFor(this._selected[0] ?? '') ?? ''
       : '';
-    const effective =
-      q && q === selectedLabel.toLocaleLowerCase(locale) ? '' : q;
+    const foldedLabel = this.filter ? selectedLabel.toLocaleLowerCase(locale) : foldSearchText(selectedLabel, locale);
+    const effective = q === foldedLabel ? '' : q;
     if (!effective) return this.options;
     return this.memoOption('filtered', [this.options, this.filter, effective, locale, this.callbackRefreshEpoch], () => {
       const filter = this.filter;
@@ -2902,7 +2748,7 @@ export class LyraCombobox<
         placement: `${this.placement}-start`,
         ...topLayerPlacement(
           this.topLayer,
-          resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'fixed'),
+          resolveEffectivePositioningStrategy(this, this.strategy.authored, 'fixed'),
         ),
         sync: this.sync,
         onPlaced: () => {
@@ -3102,6 +2948,32 @@ export class LyraCombobox<
     this.value = next as LyraPickerValue<Multiple> | null | undefined;
   }
 
+  private acceptsSelection(values: string[], row?: ComboboxSourceRow): boolean {
+    if (this.requestingSelection) return false;
+    const self = this as unknown as LyraCombobox<boolean>;
+    const { multiple, open, source, sourceToken } = this;
+    const data = this.resolveSelectedRowSlots(values, row).map(option => option?.data);
+    const option = row && this.sourceOptionsByRow.get(row);
+    let accepted = false;
+    this.requestingSelection = true;
+    try {
+      requestThenCommit({
+        requestDetail: { value: multiple ? values : values[0] ?? '', previousValue: self.value, data },
+        emitRequest: (detail, init: { cancelable: true }) => self.emit('lr-change-request', detail, init),
+        guard: this.selectionGuard,
+        commit: () => {
+          if (this.interactionBarred || this.multiple !== multiple || this.open !== open || this.source !== source || this.sourceToken !== sourceToken) return;
+          if (option && (!this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])')?.assignedElements({ flatten: true }).includes(option) ||
+              option.disabled || option.closest('[inert]') || option.value !== row?.value || !Object.is(option.data, row?.data))) return;
+          accepted = true;
+        },
+      });
+    } finally {
+      this.requestingSelection = false;
+    }
+    return accepted;
+  }
+
   /** Runs the cancelable option-creation contract, then performs its default append/select behavior. */
   private createOption(inputValue: string): void {
     if (this.liveDisabled || this.readonly) return;
@@ -3112,14 +2984,14 @@ export class LyraCombobox<
     ) as LyraOption;
     option.setAttribute('value', inputValue);
     option.textContent = inputValue;
-    this.append(option);
-    this.pickRow({ value: inputValue, label: inputValue });
+    this.pickRow({ value: inputValue, label: inputValue }, option);
   }
 
   /** Commits arbitrary text in the single-select custom-value mode without adding an option. */
   private commitCustomValue(inputValue: string): void {
     if (this.liveDisabled || this.readonly || this.multiple || !inputValue) return;
     const selectionChanged = this._selected[0] !== inputValue;
+    if (selectionChanged && !this.acceptsSelection([inputValue])) return;
     this.touched = true;
     this._selectedLabelCache.set(inputValue, inputValue);
     this.assignValue(inputValue);
@@ -3129,55 +3001,41 @@ export class LyraCombobox<
     if (selectionChanged) this.emitValueEvents();
   }
 
-  private pickRow(row: ComboboxSourceRow): void {
+  private pickRow(row: ComboboxSourceRow, createdOption?: LyraOption): void {
     const sourceOption = this.sourceOptionsByRow.get(row);
     if (this.liveDisabled || this.readonly || row.disabled || (sourceOption && (sourceOption.disabled || sourceOption.closest('[inert]')))) return;
     if (row.createInput !== undefined) {
       this.createOption(row.createInput);
       return;
     }
-    this.touched = true;
-    // A synthetic unmatched-value row is derived FROM the committed value (`unknownRows`), so
-    // picking it is not evidence the value is known -- caching its label would make
-    // `isUnknownValue()` report it as a sanctioned pick from then on, permanently retiring the
-    // `[part="unknown-value"]` badge and the row itself for a value that still matches nothing.
-    // `_selectedRowCache` is skipped for the same reason: it backs the public `selectedRows`,
-    // which must never hand back a row this component invented. `lr-select` keeps the same
-    // separation by routing the identical click through `selectUnknownValue()`.
-    const synthetic = row.unknownValue !== undefined;
-    const selectionChanged = this.multiple || this._selected[0] !== row.value;
-    if (this.multiple) {
-      const set = new Set(this._selected);
-      if (set.has(row.value)) {
-        set.delete(row.value);
-        this._selectedRowCache.delete(row.value);
-      } else {
-        set.add(row.value);
-        if (!synthetic) {
-          this._selectedLabelCache.set(row.value, row.label);
-          this._selectedRowCache.set(row.value, row);
-        }
-      }
-      this.assignValue([...set]);
-      this.query = '';
-      this.explicitInputValue = false;
-    } else {
-      if (!synthetic) {
-        this._selectedLabelCache.set(row.value, row.label);
-        this._selectedRowCache.clear();
-        this._selectedRowCache.set(row.value, row);
-      }
-      this.setValue(row.value, true, sourceOption);
-      this.query = '';
-      this.explicitInputValue = false;
-      void this.hide();
+    const selected = new Set(this._selected);
+    const removing = this.multiple && selected.has(row.value);
+    if (removing) selected.delete(row.value);
+    else selected.add(row.value);
+    const values = this.multiple ? [...selected] : [row.value];
+    const changed = this.multiple || this._selected[0] !== row.value;
+    if (changed && !this.acceptsSelection(values, row)) return;
+    if (createdOption) {
+      if (!this.allowCreate) return;
+      this.append(createdOption);
     }
+    this.touched = true;
+    if (removing) this._selectedRowCache.delete(row.value);
+    else if (row.unknownValue === undefined) {
+      this._selectedLabelCache.set(row.value, row.label);
+      if (!this.multiple) this._selectedRowCache.clear();
+      this._selectedRowCache.set(row.value, row);
+    }
+    this.setValue(values, true, sourceOption);
+    this.query = '';
+    this.explicitInputValue = false;
+    if (!this.multiple) void this.hide();
     // The query resets to '' above but `asyncRows` doesn't refresh on its
     // own -- re-run `source` so the listbox (still open in multiple mode,
     // and whatever `asyncRows` holds for the next time it reopens in single
     // mode) matches the now-empty input instead of the stale prior query.
     if (this.source) this.runSource(this.query);
-    if (selectionChanged) this.emitValueEvents();
+    if (changed) this.emitValueEvents();
     // Every activation of an available row reports, including the re-pick of the current selection
     // that `change`/`lr-change` are defined to stay silent for. See the class doc's `lr-activate`
     // entry.
@@ -3194,6 +3052,7 @@ export class LyraCombobox<
     if (this.liveDisabled || this.readonly) return;
     if (index < 0 || index >= this._selected.length) return;
     const next = this._selected.filter((_, i) => i !== index);
+    if (!this.acceptsSelection(next)) return;
     this.touched = true;
     this.assignValue(next);
     this.emitValueEvents();
@@ -3211,6 +3070,7 @@ export class LyraCombobox<
     const hadSelection = this._selected.length > 0;
     const queryChanged = this.query !== '';
     if (!hadSelection && !queryChanged) return;
+    if (hadSelection && !this.acceptsSelection([])) return;
     if (hadSelection) {
       this.touched = true;
       this.assignValue([]);
@@ -3362,25 +3222,12 @@ export class LyraCombobox<
         ) {
           return;
         }
-        // A caller that forwarded the signal to fetch() surfaces cancellation as an AbortError;
-        // that is expected teardown, not a source failure, so don't warn about it.
-        if (
-          typeof err === 'object' &&
-          err !== null &&
-          'name' in err &&
-          err.name === 'AbortError'
-        ) {
-          return;
-        }
         this.asyncRows = [];
         this._sourceTotal = 0;
         this._sourceTruncated = false;
         this.activeIndex = -1;
-        this.sourceFailed = true;
-        // A rejection is still a real settle -- the alternative (staying "not yet known" forever)
-        // would strand the trigger showing a loading placeholder for a query that has already
-        // failed and will not resolve on its own, with the retry state as the only way out.
         this.sourceEverSettled = true;
+        this.sourceFailed = true;
         this.sourceErrorAnnouncements.announceAssertive(
           this.localize('comboboxLoadError')
         );
@@ -3436,9 +3283,9 @@ export class LyraCombobox<
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey || this.liveDisabled || this.readonly) return;
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e) || this.liveDisabled || this.readonly) return;
     const navigable = ['ArrowDown', 'ArrowUp', 'Enter', 'End'].includes(e.key)
-      ? this.renderedRows.rows.filter((r) => !r.disabled)
+      ? this.navigableRows(this.renderedRows.rows)
       : [];
     switch (e.key) {
       case 'ArrowDown':
@@ -3446,7 +3293,8 @@ export class LyraCombobox<
         if (!this.meetsMinimumQuery(this.query)) return;
         e.preventDefault();
         if (!this.open) {
-          this.activeIndex = navigable.findIndex((row) => this.committed.includes(row.value));
+          const selected = new Set(this.committed);
+          this.activeIndex = navigable.findIndex(row => selected.has(row.value));
           void this.show();
           return;
         }
@@ -3631,7 +3479,7 @@ export class LyraCombobox<
 
   /** One built-in selected chip, or the consumer's safe Lit/DOM/text replacement. */
   private renderTag(value: string, index: number): unknown {
-    const option = this.options.find((candidate) => candidate.value === value);
+    const option = this.optionIndex.values.get(value);
     if (this.getTag && option) return this.getTag(option, index);
     const label = this.labelFor(value);
     const unknown = this.isUnknownValue(value);
@@ -3702,21 +3550,20 @@ export class LyraCombobox<
     // `multiple` mode -- outside those, a closed single-select shows the *selected label*, so a
     // button gated on the bare `query !== ''` would offer to clear text the user cannot see.
     const hasVisibleQuery = this.query !== '' && (this.open || this.multiple);
-    const hasHint =
-      this.withHint || this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError =
-      this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence, idPrefix: 'combobox', hint: this.hint,
+      errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
+    });
     const hasLabel =
       this.withLabel || this.slotPresence.has('label') || (this.label ?? '').length > 0;
     const describedBy = this.localDescriptionIds = [
       this.multiple && hasValue ? 'combobox-value' : '',
-      hasError ? 'combobox-error' : '',
-      hasHint ? 'combobox-hint' : '',
+      supporting.describedBy,
     ]
       .filter(Boolean)
       .join(' ');
     const invalid =
-      hasError || (this.touched && !this.internals.validity.valid);
+      supporting.hasError || (this.touched && !this.internals.validity.valid);
 
     return html`
       <div part="form-control">
@@ -3748,7 +3595,7 @@ export class LyraCombobox<
             </div>
             ${this.multiple && hasValue
               ? html`<span id="combobox-value" class="sr-only"
-                  >${this._selected.map((value) => this.labelFor(value)).join(', ')}</span
+                  >${this.selectedLabels}</span
                 >`
               : ''}
             <input
@@ -3883,7 +3730,10 @@ export class LyraCombobox<
                     )}</div>`
                 : ''}`}
         </div>
-        ${renderFormControlHintError({ idPrefix: 'combobox', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
+        ${renderFormControlHintError({
+          ...supporting, idPrefix: 'combobox', hint: this.hint || this.helpText,
+          errorText: this.errorText, helpTextSlot: true,
+        })}
       </div>
       <slot
         @slotchange=${this.collectOptions}
@@ -3893,6 +3743,9 @@ export class LyraCombobox<
     `;
   }
 }
+
+installNativeInputModeAliases(LyraCombobox.prototype);
+installNativeSelectionAccessors(LyraCombobox.prototype, host => host.input);
 
 declare global {
   interface HTMLElementTagNameMap {

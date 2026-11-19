@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'جمع‌کردن پنل',
   dockPanelExpand: 'بازکردن پنل',
   dockPanelResize: 'تغییر اندازهٔ پنل',
+  dockPanelToggle: 'تغییر وضعیت پنل',
   responsivePanel: 'پنل',
   breadcrumb: 'مسیر صفحه',
   resizeDivider: 'تغییر اندازهٔ جداکنندهٔ پنل {a} و پنل {b}',

@@ -1109,3 +1109,18 @@ describe('lr-knowledge-base heading level', () => {
     expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
   });
 });
+
+
+describe('blank label', () => {
+  it('falls back to the localized default heading for a whitespace-only label and drops the heading role for an empty one', async () => {
+    const base = (await fixture(html`<lr-knowledge-base></lr-knowledge-base>`)) as HTMLElement;
+    const spaced = (await fixture(html`<lr-knowledge-base label="   " heading-level="2"></lr-knowledge-base>`)) as HTMLElement;
+    const part = (el: HTMLElement) => el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+    expect(part(spaced).textContent!.trim()).to.not.equal('');
+    expect(part(spaced).textContent!.trim()).to.equal(part(base).textContent!.trim());
+    expect(part(spaced).getAttribute('role')).to.equal('heading');
+    const empty = (await fixture(html`<lr-knowledge-base label="" heading-level="2"></lr-knowledge-base>`)) as HTMLElement;
+    expect(part(empty).hasAttribute('role')).to.equal(false);
+    expect(part(empty).hasAttribute('aria-level')).to.equal(false);
+  });
+});

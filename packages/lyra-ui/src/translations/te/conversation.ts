@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ఇన్‌పుట్ పరిమితి చేరుకోవడంతో కొన్ని సూచనలు లేదా కేటలాగ్ నమోదులు వదిలివేయబడ్డాయి.',
   transcriptFeedInputLimit: '{total} నమోదులలో అత్యంత కొత్త {count} మాత్రమే ఉంచబడతాయి.',
   codeBlockHighlightLimit: 'పొడవైన కోడ్ సింటాక్స్ హైలైటింగ్ లేకుండా చూపబడుతుంది.',
+  codeBlockHighlightedLine: 'హైలైట్ చేసిన లైన్',
+  codeBlockActiveLine: 'క్రియాశీల హైలైట్ చేసిన లైన్',
 };
 
 registerLyraLocale('te', strings);

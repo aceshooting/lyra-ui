@@ -1,3 +1,4 @@
+import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -129,10 +130,12 @@ export const styles = css`
     padding: var(--lr-markdown-code-padding, var(--lr-size-0-125rem) var(--lr-size-0-3125rem));
   }
   [part='code-block'] {
+    font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
+    line-height: var(--lr-line-height-normal);
     margin-block: 0 var(--lr-space-s);
     padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
-    background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
+    background: var(--lr-markdown-code-block-bg, var(--lr-markdown-code-bg, var(--lr-color-brand-quiet)));
     white-space: pre;
     overflow-wrap: normal;
     overflow-x: auto;
@@ -182,8 +185,8 @@ export const styles = css`
    * --lr-color-text/--lr-color-surface rather than the OS-level prefers-color-scheme query, so a
    * consumer setting --lr-theme-color-* explicitly still gets the dark shiki palette.
    */
-  [part='content'][data-dark-theme='true'] [part='code-block'],
-  [part='content'][data-dark-theme='true'] [part='code-block'] span {
+  [part='content'][data-dark-theme='true'] [part='code-block'].shiki,
+  [part='content'][data-dark-theme='true'] [part='code-block'] span[style*='--shiki-dark'] {
     color: var(--shiki-dark, inherit) !important;
     background-color: var(--shiki-dark-bg, transparent) !important;
   }
@@ -330,35 +333,40 @@ export const styles = css`
   [part~='code-block-copy']:where([data-lr-code-chrome]) {
     margin-inline-start: auto;
     ${iconHitTarget}
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    ${iconAction}
     flex-shrink: 0;
-    padding: 0;
-    border: none;
-    border-radius: var(--lr-radius);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
+    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    --_lr-icon-button-color-hover-default: var(--lr-color-brand);
+    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]) svg {
     inline-size: var(--lr-size-1em);
     block-size: var(--lr-size-1em);
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]:hover) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    ${iconActionHover}
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]:active) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    ${iconActionActive}
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   @media (forced-colors: active) {
+    ::highlight(lr-highlight-accent), ::highlight(lr-highlight-success), ::highlight(lr-highlight-warning),
+    ::highlight(lr-highlight-danger), ::highlight(lr-highlight-neutral) {
+      text-decoration: underline;
+    }
+    [part='content'] mark[data-lr-highlight-tone] {
+      text-decoration: underline;
+    }
+    [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
+      text-decoration: double underline;
+    }
+    ::highlight(lr-highlight-active) {
+      text-decoration: double underline;
+    }
     [part~='code-block-copy']:where([data-lr-code-chrome]) {
       border: var(--lr-border-width-thin) solid ButtonText;
     }

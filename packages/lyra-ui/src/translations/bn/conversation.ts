@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় কিছু উপাদান বাদ দেওয়া হয়েছে: পরামর্শ বা ক্যাটালগের এন্ট্রি।',
   transcriptFeedInputLimit: '{total}টি এন্ট্রির মধ্যে শুধু সবচেয়ে সাম্প্রতিক {count}টি রাখা হয়।',
   codeBlockHighlightLimit: 'দীর্ঘ কোড সিনট্যাক্স হাইলাইটিং ছাড়াই দেখানো হয়।',
+  codeBlockHighlightedLine: 'হাইলাইট করা লাইন',
+  codeBlockActiveLine: 'সক্রিয় হাইলাইট করা লাইন',
 };
 
 registerLyraLocale('bn', strings);

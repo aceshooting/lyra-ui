@@ -1,3 +1,4 @@
+import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -405,6 +406,10 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     cursor: pointer;
   }
+  .control[data-clearable] > [part="tags"] {
+    margin-inline-end: calc(var(--lr-select-expand-size, var(--_lr-select-expand-size)) +
+      var(--lr-icon-button-size) + var(--lr-border-width-thin));
+  }
   .control[data-clearable] [part="trigger"] {
     padding-inline-end: var(--lr-icon-button-size);
   }
@@ -433,6 +438,9 @@ export const styles = css`
     cursor: not-allowed;
   }
 
+  [part="end"][hidden] + [part="expand-icon"] {
+    margin-inline-start: auto;
+  }
   [part="expand-icon"] {
     flex: 0 0 auto;
     display: inline-flex;
@@ -500,7 +508,8 @@ export const styles = css`
     );
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
-      var(--lr-size-28rem)
+      var(--lr-size-28rem),
+      var(--lr-positioner-available-inline-size, 100vw)
     );
   }
   /* place()'s sync writes the trigger's own width as an inline style, which already wins the
@@ -707,4 +716,5 @@ export const styles = css`
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
+  ${forcedColorsSelected}
 `;

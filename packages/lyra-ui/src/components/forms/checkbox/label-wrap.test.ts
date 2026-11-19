@@ -17,7 +17,7 @@ const cases: ReadonlyArray<readonly [string, string, string]> = [
   ['lr-radio-group label', '<lr-radio-group label="Streaming enabled"><lr-radio value="a">A</lr-radio></lr-radio-group>', '[part~="label"]'],
   ['lr-radio-group hint', '<lr-radio-group label="L" hint="Streaming enabled"><lr-radio value="a">A</lr-radio></lr-radio-group>', '[part~="hint"]'],
   ['lr-checkbox-group label', '<lr-checkbox-group label="Streaming enabled"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>', '[part~="form-control-label"]'],
-  ['lr-checkbox-group hint', '<lr-checkbox-group label="L" hint="Streaming enabled"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>', '[part="hint"]'],
+  ['lr-checkbox-group hint', '<lr-checkbox-group label="L" hint="Streaming enabled"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>', '[part~="hint"]'],
   ['lr-color-picker', '<lr-color-picker label="Streaming enabled"></lr-color-picker>', '[part~="form-control-label"]'],
   ['lr-slider label', '<lr-slider label="Streaming enabled"></lr-slider>', '[part~="label"]'],
   ['lr-slider hint', '<lr-slider label="L" hint="Streaming enabled"></lr-slider>', '[part~="hint"]'],

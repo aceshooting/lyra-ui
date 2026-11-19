@@ -2305,7 +2305,7 @@ describe('reset button enablement under activeFiltersDisplay', () => {
     expect(resetButton(el).disabled, 'one filter moved off its default').to.equal(false);
   });
 
-  it('keeps reset enabled for the identical all-defaults bar under "all" and "hidden" (non-regression)', async () => {
+  it('disables reset at defaults in both "all" and "hidden" modes', async () => {
     for (const display of ['all', 'hidden'] as const) {
       const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
         active-filters-display=${display}
@@ -2313,21 +2313,18 @@ describe('reset button enablement under activeFiltersDisplay', () => {
         .value=${atDefaults()}
       ></lr-filter-bar>`);
 
-      expect(
-        resetButton(el).disabled,
-        `${display} gates reset on hasActiveFilters, exactly as it always has`
-      ).to.equal(false);
+      expect(resetButton(el).disabled).to.equal(true);
     }
   });
 
-  it('keeps reset enabled for an all-defaults bar with activeFiltersDisplay left unset (unset-regression)', async () => {
+  it('disables reset at defaults with the chip display mode unset', async () => {
     const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
       .filters=${defaultedFilters()}
       .value=${atDefaults()}
     ></lr-filter-bar>`);
 
     expect(el.activeFiltersDisplay).to.equal('all');
-    expect(resetButton(el).disabled).to.equal(false);
+    expect(resetButton(el).disabled).to.equal(true);
   });
 
   it('still lets disabled/loading disable reset under "changed"', async () => {
@@ -5085,14 +5082,12 @@ describe("'checkbox-menu' filter type", () => {
       html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
     );
     const trigger = menu(el).querySelector('lr-button') as HTMLElement;
-    // ArrowDown, not click: the dropdown's documented keyboard contract is what opens the menu
-    // *and* moves focus onto its first enabled row. A pointer open deliberately leaves focus put.
+    const shown = oneEvent(menu(el), 'lr-after-show');
     trigger.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true })
     );
-    await el.updateComplete;
-    await menu(el).updateComplete;
-    await nextFrame();
+    await shown;
+    expect(deepActive() === items(el)[0], 'keyboard open focuses the first menu row').to.equal(true);
 
     const press = (key: string): void => {
       const focused = deepActive();

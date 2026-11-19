@@ -2413,3 +2413,74 @@ describe('lr-pptx-viewer load and search races', () => {
     }
   });
 });
+
+describe('lr-pptx-viewer remediation', () => {
+  it('emits lr-page-change when a slide change moves the page', async () => {
+    const fake = fakeModule(3);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const changed = oneEvent(el, 'lr-page-change');
+      el.page = 3;
+      expect((await changed).detail).to.deep.equal({ page: 3, pageCount: 3 });
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows an error when the renderer rejects with an AbortError while the load is current', async () => {
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => ({
+        PptxViewer: { open: () => Promise.reject(new DOMException('peer aborted', 'AbortError')) },
+        RECOMMENDED_ZIP_LIMITS: {},
+      }) as never;
+      const failed = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/deck.pptx';
+      await failed;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    } finally {
+      restore();
+    }
+  });
+
+  it('names the region with name for a whitespace-only label and keeps an explicit empty label', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer name="Quarterly" label="   "></lr-pptx-viewer>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Quarterly');
+    el.label = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  });
+
+  it('composes the shared viewer frame', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    const style = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);
+    expect(style.display).to.equal('flex');
+    expect(style.overflow).to.equal('hidden');
+    expect(parseFloat(style.borderTopWidth)).to.be.greaterThan(0);
+    expect(style.minWidth).to.equal('0px');
+  });
+
+  it('makes an overflowing slide container keyboard scrollable', async () => {
+    const fake = fakeModule(2);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer max-height="5rem" name="Deck"></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const container = el.shadowRoot!.querySelector<HTMLElement>('[part="container"]')!;
+      const filler = document.createElement('div');
+      filler.style.blockSize = '2000px';
+      container.append(filler);
+      await waitUntil(() => container.getAttribute('tabindex') === '0', 'overflowing container never became focusable');
+      expect(container.getAttribute('aria-label')).to.equal('Deck');
+    } finally {
+      restore();
+    }
+  });
+});

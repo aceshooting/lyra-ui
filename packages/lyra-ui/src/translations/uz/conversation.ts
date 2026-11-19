@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Kiritish chegarasiga yetilgani sababli ayrim takliflar yoki katalog yozuvlari tushirib qoldirildi.',
   transcriptFeedInputLimit: '{total} ta yozuvdan faqat eng yangi {count} tasi saqlanadi.',
   codeBlockHighlightLimit: 'Uzun kod sintaksisni ajratib koʻrsatishsiz koʻrsatiladi.',
+  codeBlockHighlightedLine: 'Ajratib ko‘rsatilgan qator',
+  codeBlockActiveLine: 'Faol ajratilgan qator',
 };
 
 registerLyraLocale('uz', strings);

@@ -5,14 +5,10 @@ export const styles = css`
     display: block;
   }
   [part="base"] {
-    display: flex;
-    flex-direction: column;
     gap: var(--lr-space-s);
-    box-sizing: border-box;
-    overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* Fills a definite host height so the reading area can use it; an auto-height host is unchanged. */
+    block-size: 100%;
+    min-block-size: 0;
   }
   [part="toolbar"] {
     display: flex;

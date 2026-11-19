@@ -84,9 +84,7 @@ until something else registers it, the same trade `icon-button-register.js` docu
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value,
-  including one sitting at its own declared `defaultValue`. Drives the reset button's own disabled
-  state in every `activeFiltersDisplay` mode except `'changed'`; the getter itself is unaffected by
-  `activeFiltersDisplay`.
+  including one sitting at its own declared `defaultValue`. Chip visibility is independent.
 - `hasChangedFilters: boolean` (read-only) — whether any filter's value differs from its own
   declared `defaultValue`, using the same equality `activeFiltersDisplay: 'changed'` filters its
   chip row on: a `readonly string[]` default compares positionally, everything else compares with
@@ -111,10 +109,10 @@ until something else registers it, the same trade `icon-button-register.js` docu
   at each index), matching this component's only other array-equality precedent (a custom adapter's
   own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
   like any other string. Removing a chip always clears that filter, unaffected by this property.
-  `'changed'` additionally gates the reset button on `hasChangedFilters` instead of
-  `hasActiveFilters`, so an untouched defaults-only bar — which renders no chip in this mode — no
-  longer offers an enabled reset that would change nothing. Enablement under `'all'` and `'hidden'`
-  is unchanged, `disabled`/`loading` still win in every mode, and `reset()` itself is untouched.
+  Reset is enabled whenever `hasChangedFilters` is true and the bar is neither disabled nor loading.
+  Clearing a defaulted filter therefore makes Reset available even with an empty chip row.
+  When Reset disables itself, keyboard focus moves to the first available control or to the bar
+  if no control remains.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -129,7 +127,9 @@ complete value object, plus the `filterId` that changed and (new in 12.0.0) `app
 "Date-range quick ranges" below. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
-composed controls continue bubbling normally.
+composed controls continue bubbling normally. Picker requests, popup lifecycle events and
+selection diagnostics from internal controls stay inside the bar. Controls supplied through the
+`end` slot keep their own event contracts.
 
 **Methods:** `checkValidity(): boolean` returns whether every required filter is set without
 revealing errors; `reportValidity(): boolean` returns the same state and reveals every current
@@ -493,8 +493,8 @@ still holds the reset button (the "clear all" action such a bar needs), the `end
 loading spinner, exactly like a bar with no filters at all.
 
 Everything else is unchanged from any other filter type. The value lives in `value` under its own
-filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables
-the reset button) and toward `invalidFilterIds` when the definition is `required`, renders a
+filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters`
+and toward `invalidFilterIds` when the definition is `required`, renders a
 removable active-filter chip subject to `activeFiltersDisplay`, and is cleared both by removing that
 chip and by `reset()`. A `required` chip-only filter is honoured in **bookkeeping only**: it joins
 `invalidFilterIds`, fails `checkValidity()` and moves `lr-validity-change`, but renders no inline

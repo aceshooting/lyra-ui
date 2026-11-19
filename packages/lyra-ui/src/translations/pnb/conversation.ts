@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کجھ تجویزاں یا کیٹلاگ اندراج چھڈ دتے گئے نیں۔',
   transcriptFeedInputLimit: '{total} اندراجاں وچوں صرف سب توں نویں {count} رکھے جاندے نیں۔',
   codeBlockHighlightLimit: 'لمبا کوڈ سنٹیکس ہائی لائٹنگ توں بغیر وکھایا جاندا اے۔',
+  codeBlockHighlightedLine: 'نمایاں لائن',
+  codeBlockActiveLine: 'فعال نمایاں لائن',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

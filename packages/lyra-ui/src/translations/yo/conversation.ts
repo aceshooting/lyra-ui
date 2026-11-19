@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'A yọ àwọn àbá tàbí àkọsílẹ̀ katalọ́ọ̀gù kan kúrò nítorí a ti dé ààlà ìwọlé.',
   transcriptFeedInputLimit: 'Àwọn àkọsílẹ̀ {count} tuntun jù lọ nínú {total} nìkan ni a ń pa mọ́.',
   codeBlockHighlightLimit: 'A ń ṣàfihàn kóòdù gígùn láì lo àwọ̀ láti fi ìlànà ìkọ̀wé kóòdù hàn.',
+  codeBlockHighlightedLine: 'Ila ti a ṣe afihan',
+  codeBlockActiveLine: 'Ila ti a ṣe afihan ti n ṣiṣẹ',
 };
 
 registerLyraLocale('yo', strings);

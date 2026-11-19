@@ -11,6 +11,7 @@ import {
   flattenedParentElement,
   ownerView,
 } from './composed-tree.js';
+import { nodeContainsSlot, someListedNode } from './dom-guards.js';
 import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 const INHERITED_CONTEXT_ATTRIBUTES = [
@@ -99,20 +100,6 @@ const hostSubscriptions = new WeakMap<Element, InheritedContextSubscription>();
 const pendingSubscriptions = new Set<InheritedContextSubscription>();
 let flushQueued = false;
 
-function containsSlot(node: Node): boolean {
-  return (
-    node.nodeType === 1 &&
-    ((node as Element).localName === 'slot' ||
-      (typeof (node as Element).querySelector === 'function' &&
-        (node as Element).querySelector('slot') !== null))
-  );
-}
-
-function someNode(nodes: NodeList, predicate: (node: Node) => boolean): boolean {
-  for (let index = 0; index < nodes.length; index += 1) if (predicate(nodes[index]!)) return true;
-  return false;
-}
-
 function observationTarget(root: Node): Node | null {
   if (root.nodeType === 9) return (root as Document).documentElement;
   return root.nodeType === 11 ? root : null;
@@ -182,8 +169,8 @@ function createRootObservation(
             // removed slot's own slotchange fires outside this root. Ordinary template commits
             // (rows inserted, moved, removed) re-derive nothing.
             flattenedTreeMoved ||=
-              someNode(record.addedNodes, containsSlot) ||
-              someNode(record.removedNodes, containsSlot);
+              someListedNode(record.addedNodes, nodeContainsSlot) ||
+              someListedNode(record.removedNodes, nodeContainsSlot);
             continue;
           }
           if (

@@ -1,4 +1,6 @@
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -731,8 +733,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     renderLit(this.renderActionItems(canSync, canPause), menu);
   }
 
+  private readonly statusAnnouncements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // A failed page is announced by the table that replaces the status line.
+    const loading = this.sourceMode && !this.sourceResult && !this.sourcePages.state.error && !this.sourceFailure;
+    this.statusAnnouncements.transition('source-status', loading ? 'loading' : 'idle', loading ? this.localize('loading') : '');
     for (const [dropdown, admission] of this.openActionMenus) {
       if (!dropdown.isConnected || !(dropdown as HTMLElement & { open: boolean }).open) {
         this.openActionMenus.delete(dropdown);
@@ -914,7 +921,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     if (source && !state.pending && (this.sourceResult || failed)) this.sourceTableShown = true;
     const columns = this.tableColumns();
     const heading =
-      this.label == null ? this.localize('knowledgeBaseHeading') : this.label;
+      this.label === '' ? '' : (normalizeLabel(this.label) ?? this.localize('knowledgeBaseHeading'));
     // An explicitly blank heading is a visual choice; the grid still needs a name.
     const tableLabel =
       heading.trim() === '' ? this.localize('knowledgeBaseHeading') : heading;
@@ -922,7 +929,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     return html`
       <div part="base">
         <div part="toolbar">
-          <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${heading}</div>
+          <div part="heading" role=${level && heading ? 'heading' : nothing} aria-level=${level && heading ? level : nothing}>${heading}</div>
           ${!this.withoutCreate
             ? html`<lr-button
                 part="create-button"

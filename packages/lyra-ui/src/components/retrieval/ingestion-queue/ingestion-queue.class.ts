@@ -641,6 +641,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
     // Acquired on connect, not on the first failure: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all.
     this.sink ??= acquireAnnouncementSink('assertive', {

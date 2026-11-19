@@ -1,4 +1,5 @@
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
@@ -33,9 +34,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsInputLimit, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsInputLimit, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_retrievalResultsSelectionLimit, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSelectionFailed, LYRA_DEFAULT_sourceSelectionLoading, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const MAX_SOURCE_SELECTION = 10_000;
 
 export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 /** A complete updated selection, both as bare ids and as one deterministic canonical
@@ -241,6 +244,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     loading: LYRA_DEFAULT_loading,
     retrievalResultsInputLimit: LYRA_DEFAULT_retrievalResultsInputLimit,
     retrievalResultsSelectRowOrdinal: LYRA_DEFAULT_retrievalResultsSelectRowOrdinal,
+    retrievalResultsSelectionLimit: LYRA_DEFAULT_retrievalResultsSelectionLimit,
     retry: LYRA_DEFAULT_retry,
     sourceSelectionFailed: LYRA_DEFAULT_sourceSelectionFailed,
     sourceSelectionLoading: LYRA_DEFAULT_sourceSelectionLoading,
@@ -640,6 +644,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
   private isMounting = true;
+  private loadMoreHadFocus = false;
   private initialStateAnnounced = false;
   private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
@@ -689,6 +694,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
     this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
@@ -755,6 +761,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('loading') && this.loading) {
+      this.loadMoreHadFocus = this.deepActiveElement()?.matches('[part="load-more"]') === true;
+    }
     this.syncSource();
     if (this.sourceMode) { this.acceptSourcePage(); this.syncSourceSelection(); this.syncSourceActive(); return; }
     const refresh = this.explicitRefresh;
@@ -846,7 +855,17 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (this.loadMoreHadFocus && changed.has('loading')) {
+      this.loadMoreHadFocus = false;
+      restoreComposedFocus(this, true);
+    }
     if (this.sourceMode) {
+      const sourceMounting = this.isMounting;
+      this.isMounting = false;
+      if (!sourceMounting && changed.has('errorText') && this.errorText !== '' && this.isConnected) {
+        this.initialStateAnnounced = true;
+        this.errorAnnouncementSink?.announce(this.errorText);
+      }
       const status = this.sourcePages.state.pending ? this.localize('loading') : !this.sourcePages.state.result ? this.localize('tableLoadFailed')
         : this.sourcePages.state.selectionPending ? this.localize('sourceSelectionLoading') : this.sourceSelectionFailed ? this.localize('sourceSelectionFailed') : '';
       if (this.sourceStatusInitialized && status && status !== this.sourceStatus) this.emptyAnnouncementSink?.announce(status);
@@ -1082,7 +1101,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (!this.currentSourceRow(chunk) || this.sourceSelectionBlocked) return;
     if (this.sourceMode) {
       const next = new Set(this.selectedChunkIds);
-      if (next.has(chunk.id)) next.delete(chunk.id); else if (next.size < 10_000) next.add(chunk.id);
+      if (next.has(chunk.id)) next.delete(chunk.id);
+      else if (next.size < MAX_SOURCE_SELECTION) next.add(chunk.id);
+      else this.emptyAnnouncementSink?.announce(this.localize('retrievalResultsSelectionLimit', undefined, {
+        count: getNumberFormat(this.effectiveLocale).format(MAX_SOURCE_SELECTION),
+      }));
       this.selectedChunkIds = [...next]; this.sourceSelectionEvent = this.selectedChunkIds;
       return;
     }

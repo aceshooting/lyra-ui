@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF belgesi',
   pdfViewerMissingLibrary: 'PDF dosyalarını görüntülemek için bu görüntüleyicinin isteğe bağlı "pdfjs-dist" paketine ihtiyacı vardır.',
   pdfViewerPageOf: '{total} sayfadan {page}. sayfa',
+  pdfViewerPageHighlights: '{page}. sayfanın vurguları',
   pdfViewerZoomIn: 'Yakınlaştır',
   pdfViewerZoomOut: 'Uzaklaştır',
   pdfViewerPreviousPage: 'Önceki sayfa',

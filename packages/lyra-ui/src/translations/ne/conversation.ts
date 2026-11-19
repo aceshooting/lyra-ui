@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'इनपुट सीमा पुगेकाले केही सुझाव वा क्याटलग प्रविष्टिहरू छोडिएका छन्।',
   transcriptFeedInputLimit: '{total} प्रविष्टिमध्ये सबैभन्दा नयाँ {count} मात्र राखिन्छन्।',
   codeBlockHighlightLimit: 'लामो कोड सिन्ट्याक्स हाइलाइटिङबिना देखाइन्छ।',
+  codeBlockHighlightedLine: 'हाइलाइट गरिएको पङ्क्ति',
+  codeBlockActiveLine: 'सक्रिय हाइलाइट गरिएको पङ्क्ति',
 };
 
 registerLyraLocale('ne', strings);

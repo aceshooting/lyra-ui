@@ -11,7 +11,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
-import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
+import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -197,12 +197,18 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @state() private boundedSource = '';
   @state() private parseTruncated = false;
   @state() private expandedInternalRuns = new Set<string>();
-  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.trace ?? '', outcome => {
-    if (outcome.ok) this.emit('lr-copy', outcome);
-    else {
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-    }
+  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.trace ?? '', (outcome) => {
+    reportCopyOutcome(
+      {
+        emit: (name, detail) => {
+          if (name === 'lr-copy') this.emit('lr-copy', detail as LyraClipboardWriteSuccess);
+          else if (name === 'lr-error') this.emit('lr-error');
+          else this.emit('lr-copy-error', detail as LyraClipboardWriteFailure);
+        },
+        announce: (ok) => this.announcements.announcePolite(this.localize(ok ? 'copied' : 'copyFailed')),
+      },
+      outcome,
+    );
   });
 
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });

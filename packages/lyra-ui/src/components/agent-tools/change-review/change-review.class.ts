@@ -1,16 +1,20 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { bdi } from '../../../internal/bidi.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { styles } from './change-review.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscardHunk, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKeepHunk, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -65,10 +69,12 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     changeReviewDiscard: LYRA_DEFAULT_changeReviewDiscard,
+    changeReviewDiscardHunk: LYRA_DEFAULT_changeReviewDiscardHunk,
     changeReviewDiscarded: LYRA_DEFAULT_changeReviewDiscarded,
     changeReviewEmpty: LYRA_DEFAULT_changeReviewEmpty,
     changeReviewHunk: LYRA_DEFAULT_changeReviewHunk,
     changeReviewKeep: LYRA_DEFAULT_changeReviewKeep,
+    changeReviewKeepHunk: LYRA_DEFAULT_changeReviewKeepHunk,
     changeReviewKept: LYRA_DEFAULT_changeReviewKept,
     changeReviewLabel: LYRA_DEFAULT_changeReviewLabel,
     changeReviewLimit: LYRA_DEFAULT_changeReviewLimit,
@@ -97,6 +103,14 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   private hunks(file: ChangeReviewFile): ChangeReviewHunk[] {
     return firstByIdentity(Array.isArray(file.hunks) ? file.hunks : [], (hunk) => hunk.id);
   }
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const text = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
+    this.limitAnnouncements.transition('limit', text ? 'limited' : 'complete', text, 'polite');
+  }
+
   private decision(hunk: ChangeReviewHunk): ChangeReviewDecision {
     return hunk.decision === 'keep' || hunk.decision === 'discard' ? hunk.decision : 'pending';
   }
@@ -115,7 +129,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   }
   private renderHunk(file: ChangeReviewFile, hunk: ChangeReviewHunk, index: number): TemplateResult {
     const decision = this.decision(hunk);
-    const label = hunk.label ?? this.localize('changeReviewHunk', undefined, {
+    const label = normalizeLabel(hunk.label) ?? this.localize('changeReviewHunk', undefined, {
       index: getNumberFormat(this.effectiveLocale).format(index + 1),
     });
     return html`<section part="hunk" aria-label=${label}>
@@ -127,6 +141,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
       ${this.readonly ? nothing : html`<div part="actions">
         ${(['keep', 'discard'] as const).map((next) => html`<button part="decision" data-agent-action="neutral" type="button"
           data-decision=${next} aria-pressed=${decision === next ? 'true' : 'false'}
+          aria-label=${this.localize(next === 'keep' ? 'changeReviewKeepHunk' : 'changeReviewDiscardHunk', undefined, { label })}
           ?disabled=${this.disabled} @click=${() => this.decide(file, hunk, next)}>${this.localize(next === 'keep' ? 'changeReviewKeep' : 'changeReviewDiscard')}</button>`)}
       </div>`}
     </section>`;
@@ -144,14 +159,14 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
     });
     const label = this.label ?? this.localize('changeReviewLabel');
     const level = resolveHeadingLevel(this.headingLevel ?? '2');
-    return html`<div part="base" role="group" aria-label=${this.getAttribute('aria-label') ?? label}>
+    return html`<div part="base" role="group" aria-label=${ifDefined(resolveAccessibleName(this, label))}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${visible.length === 0 ? html`<p part="empty">${this.localize('changeReviewEmpty')}</p>` : repeat(visible, ({ file }) => file.id, ({ file, hunks }) => html`
         <details part="file" open>
-          <summary part="file-header">${file.path}${file.previousPath ? html`<span part="previous-path">${file.previousPath}</span>` : nothing}</summary>
+          <summary part="file-header">${bdi(file.path)}${file.previousPath ? html`<span part="previous-path">${bdi(file.previousPath)}</span>` : nothing}</summary>
           ${repeat(hunks, (hunk) => hunk.id, (hunk, index) => this.renderHunk(file, hunk, index))}
         </details>`)}
-      ${limited ? html`<p part="limit">${this.localize('changeReviewLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(MAX_CHANGES) })}</p>` : nothing}
+      ${limited ? html`<p part="limit" role="note">${this.localize('changeReviewLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(MAX_CHANGES) })}</p>` : nothing}
     </div>`;
   }
 }

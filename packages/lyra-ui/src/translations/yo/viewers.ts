@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Ìwé PDF',
   pdfViewerMissingLibrary: 'Olùwò yìí nílò àpò "pdfjs-dist" àṣàyàn láti fi àwọn fáìlì PDF hàn.',
   pdfViewerPageOf: 'Ojúewé {page} nínú {total}',
+  pdfViewerPageHighlights: 'Àwọn àfihàn ojúewé {page}',
   pdfViewerZoomIn: 'Mú ìfẹ̀ pọ̀ sí i',
   pdfViewerZoomOut: 'Din ìfẹ̀ sílẹ̀',
   pdfViewerPreviousPage: 'Ojúewé tó ṣáájú',

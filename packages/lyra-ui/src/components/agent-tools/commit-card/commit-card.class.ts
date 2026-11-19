@@ -4,17 +4,18 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
-import { GIT_STATUSES, type GitStatus } from '../../data/file-tree/file-tree.class.js';
+import { GIT_STATUSES, type GitStatus } from '../../data/file-tree/file-tree-status.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
-import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
+import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardFilesLimit, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -173,7 +174,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     const truncated = this.filesExpanded && this.normalizedFiles.length > MAX_RENDERED_FILES;
     if (this.limitAnnouncementInitialized && truncated && !this.previouslyTruncated) {
       this.limitAnnouncements.announcePolite(this.localize('commitCardFilesLimit', undefined, {
-        count: this.formatCount(MAX_RENDERED_FILES),
+        count: this.formatLocaleNumber(MAX_RENDERED_FILES),
       }));
     }
     this.limitAnnouncementInitialized = true;
@@ -190,7 +191,18 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   @property({ attribute: false }) files: readonly CommitFileChange[] = [];
   /** Whether the per-file list is shown. Defaults to `false` (collapsed), matching the
    *  positive-polarity `expanded` convention every sibling component uses. */
-  @property({ type: Boolean, attribute: 'files-expanded', reflect: true }) filesExpanded = false;
+  @property({ type: Boolean, attribute: 'files-expanded', reflect: true })
+  get filesExpanded(): boolean {
+    return this.filesOpen;
+  }
+  set filesExpanded(next: boolean) {
+    const previous = this.filesOpen;
+    this.filesOpen = next;
+    markVetoGuardWrite(this.filesWriteGuard);
+    this.requestUpdate('filesExpanded', previous);
+  }
+  private filesOpen = false;
+  private readonly filesWriteGuard = new VetoWriteGuard();
   /** Hides the hash copy button. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
 
@@ -210,21 +222,34 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private readonly copyFeedback = new RecordCopyFeedback(this, () => this.hash, outcome => {
-    if (outcome.ok) this.emit('lr-copy', outcome);
-    else {
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-    }
+    reportCopyOutcome(
+      {
+        emit: (name, detail) => {
+          if (name === 'lr-copy') this.emit('lr-copy', detail as LyraClipboardWriteSuccess);
+          else if (name === 'lr-error') this.emit('lr-error');
+          else this.emit('lr-copy-error', detail as LyraClipboardWriteFailure);
+        },
+        announce: (ok) =>
+          this.limitAnnouncements.announce(this.localize(ok ? 'copied' : 'copyFailed'), ok ? 'polite' : 'assertive'),
+      },
+      outcome,
+    );
   });
 
+  private normalizedCache?: { source: unknown; files: CommitFileChange[] };
+
   private get normalizedFiles(): CommitFileChange[] {
-    return firstByIdentity(Array.isArray(this.files) ? this.files : [], (file) => file.path)
+    const source = this.files;
+    if (this.normalizedCache?.source === source) return this.normalizedCache.files;
+    const files = firstByIdentity(Array.isArray(source) ? source : [], (file) => file.path)
       .map((file) => {
         if (file.status === undefined || GIT_STATUSES.has(file.status)) return file;
         const retained = { ...file };
         delete retained.status;
         return retained;
       });
+    this.normalizedCache = { source, files };
+    return files;
   }
 
   override adoptedCallback(): void {
@@ -275,9 +300,15 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   private toggleFiles = (): void => {
     const expanded = !this.filesExpanded;
-    if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
-    this.filesExpanded = expanded;
-    this.emit('lr-toggle', { expanded, collapsed: !expanded });
+    requestThenCommit({
+      requestDetail: { expanded },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-toggle-request', detail, init),
+      guard: this.filesWriteGuard,
+      commit: () => {
+        this.filesExpanded = expanded;
+        this.emit('lr-toggle', { expanded, collapsed: !expanded });
+      },
+    });
   };
 
   override render(): TemplateResult {
@@ -308,11 +339,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
           ${files.length > 0
             ? html`<span part="diffstat"
                 ><span class="sr-only">${this.localize('commitCardDiffSummary', undefined, {
-                  additions: this.formatCount(additions),
-                  deletions: this.formatCount(deletions),
-                  files: this.formatCount(files.length),
+                  additions: this.formatLocaleNumber(additions),
+                  deletions: this.formatLocaleNumber(deletions),
+                  files: this.formatLocaleNumber(files.length),
                 })}</span><span aria-hidden="true"
-                  ><span part="additions">+${this.formatCount(additions)}</span> <span part="deletions">-${this.formatCount(deletions)}</span></span
+                  ><span part="additions" dir="ltr">+${this.formatLocaleNumber(additions)}</span> <span part="deletions" dir="ltr">-${this.formatLocaleNumber(deletions)}</span></span
                 >
               </span>`
             : nothing}
@@ -347,8 +378,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 @click=${this.toggleFiles}
               >
                 ${this.filesExpanded
-                  ? this.localize('commitCardHideFiles', undefined, { count: this.formatCount(files.length) })
-                  : this.localize('commitCardShowFiles', undefined, { count: this.formatCount(files.length) })}
+                  ? this.localize('commitCardHideFiles', undefined, { count: this.formatLocaleNumber(files.length) })
+                  : this.localize('commitCardShowFiles', undefined, { count: this.formatLocaleNumber(files.length) })}
               </button>
               ${this.filesExpanded
                 ? files.slice(0, MAX_RENDERED_FILES).map((f) => {
@@ -369,8 +400,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                             : ''}${f.path}</span
                         >
                         <span class="file-stats">
-                          <span part="file-additions">+${this.formatCount(additions)}</span>
-                          <span part="file-deletions">-${this.formatCount(deletions)}</span>
+                          <span part="file-additions" dir="ltr">+${this.formatLocaleNumber(additions)}</span>
+                          <span part="file-deletions" dir="ltr">-${this.formatLocaleNumber(deletions)}</span>
                         </span>
                       </button>
                     `;
@@ -378,19 +409,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 : nothing}
               ${this.filesExpanded && files.length > MAX_RENDERED_FILES
                 ? html`<p part="limit" role="note">${this.localize('commitCardFilesLimit', undefined, {
-                    count: this.formatCount(MAX_RENDERED_FILES),
+                    count: this.formatLocaleNumber(MAX_RENDERED_FILES),
                   })}</p>`
                 : nothing}
             `
           : nothing}
       </div>
     `;
-  }
-  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
-   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
-   *  sentence. Route every user-facing number through the effective locale instead. */
-  private formatCount(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
   }
 }
 

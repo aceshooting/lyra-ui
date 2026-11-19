@@ -18,7 +18,6 @@ export const styles = css`
     block-size: 100%;
     inline-size: 100%;
     border-radius: var(--lr-flag-radius, calc(var(--lr-radius) * 0.33));
-    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border-subtle) inset;
     object-fit: var(--lr-flag-object-fit, cover);
   }
   /* The img carries hidden for the whole loading phase, so the skeleton stands alone.
@@ -32,6 +31,18 @@ export const styles = css`
      keeps a below-the-fold flag deferring. No "until-found" carve-out (unlike lr-random-content's
      slotted candidates): the element is the component's own, the attribute never author-set, and
      half-fetched image bytes are not for find-in-page to reveal. */
+  /* An inset box-shadow on a replaced <img> paints beneath the image content, so the ring is its
+     own overlay above it. */
+  .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--lr-flag-radius, calc(var(--lr-radius) * 0.33));
+    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border-subtle) inset;
+    pointer-events: none;
+  }
+  :host([shape='circle']) .ring {
+    border-radius: 50%;
+  }
   [part='image'][hidden] {
     position: absolute;
     inset: 0;
@@ -66,8 +77,7 @@ export const styles = css`
   }
 
   @media (forced-colors: active) {
-    [part='image'],
-    [part='fallback-image'] {
+    .ring {
       box-shadow: 0 0 0 var(--lr-border-width-thin) CanvasText inset;
     }
     [part='error'] {

@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: '收起面板',
   dockPanelExpand: '展开面板',
   dockPanelResize: '调整面板大小',
+  dockPanelToggle: '切换面板',
   responsivePanel: '面板',
   breadcrumb: '面包屑导航',
   resizeDivider: '调整面板{a}与面板{b}之间的分隔条',

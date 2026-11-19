@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF-asiakirja',
   pdfViewerMissingLibrary: 'Tämä katselin tarvitsee valinnaisen ”pdfjs-dist”-paketin PDF-tiedostojen piirtämiseen.',
   pdfViewerPageOf: 'Sivu {page}/{total}',
+  pdfViewerPageHighlights: 'Sivun {page} korostukset',
   pdfViewerZoomIn: 'Lähennä',
   pdfViewerZoomOut: 'Loitonna',
   pdfViewerPreviousPage: 'Edellinen sivu',

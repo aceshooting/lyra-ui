@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Strni podokno',
   dockPanelExpand: 'Razširi podokno',
   dockPanelResize: 'Spremeni velikost podokna',
+  dockPanelToggle: 'Preklopi ploščo',
   responsivePanel: 'Podokno',
   breadcrumb: 'Drobtinice',
   resizeDivider: 'Spremeni velikost ločila med podoknom {a} in podoknom {b}',

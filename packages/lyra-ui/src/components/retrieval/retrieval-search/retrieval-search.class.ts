@@ -1,5 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -272,6 +274,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
     this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
@@ -446,12 +449,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   };
 
   private onQueryKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Enter') return;
-    // An IME composition step (e.g. confirming a Japanese/Chinese/Korean candidate) must never be
-    // treated as "the user pressed Enter to search" -- keyCode 229 is a defense-in-depth fallback
-    // for browsers that report isComposing inconsistently on the compositionend-adjacent keydown.
-    // Mirrors <lr-chat-composer>'s identical guard.
-    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key !== 'Enter' || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     e.preventDefault();
     if (!e.repeat) this.submit();
   };
@@ -501,6 +499,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             clearable
             .size=${this.size ?? 'm'}
             placeholder=${this.placeholder == null ? this.localize('search') : this.placeholder}
+            .accessibleLabel=${normalizeLabel(this.placeholder) ?? this.localize('search')}
             .value=${this.query}
             @input=${this.stopOwnedEvent}
             @change=${this.stopOwnedEvent}

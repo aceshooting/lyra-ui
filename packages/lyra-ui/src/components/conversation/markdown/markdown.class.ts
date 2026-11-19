@@ -1,5 +1,6 @@
 import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
+import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -58,6 +59,7 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
   'lr-link-activate': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
@@ -155,11 +157,11 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * missing `katex` peer renders the literal, unparsed TeX source (delimiters included) and fires one
  * `lr-render-error`.
  *
- * Migrating a `<wa-markdown><script type="text/markdown">...</script></wa-markdown>` usage: on
- * connect, a direct `<script type="text/markdown">` child's text is read once and adopted as
+ * Migrating a `<wa-markdown><script type="text/markdown">...</script></wa-markdown>` usage: before
+ * the first render, a direct `<script type="text/markdown">` child's text is read once and adopted as
  * `content` (leading/trailing whitespace trimmed) -- but only while `content` has never been
  * authored (no `content` attribute/property set, including an explicitly empty one). Setting
- * `content` -- then or later -- always wins; the script child is not re-read after connect, so
+ * `content` -- then or later -- always wins; the script child is not re-read after that render, so
  * mutating its text in place has no effect. Prefer the reactive `content` property directly for
  * anything that updates after first connect.
  *
@@ -210,6 +212,7 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  *   of an inline `code` span.
  * @cssprop [--lr-markdown-code-radius=calc(var(--lr-radius) * 0.5)] - Border radius of an inline
  *   `code` span.
+ * @cssprop [--lr-markdown-code-block-bg=var(--lr-markdown-code-bg, var(--lr-color-brand-quiet))] - Plain fenced code background.
  * @cssprop [--lr-markdown-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Padding of the
  *   fenced `code-block` surface.
  * @cssprop [--lr-markdown-code-block-radius=var(--lr-radius)] - Border radius of the fenced
@@ -242,6 +245,7 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-markdown-code-header-bg=var(--lr-color-surface)] - Code header background.
  * @cssprop [--lr-markdown-code-header-color=var(--lr-color-text-quiet)] - Code header foreground.
  * @event lr-copy - Fired after a code-header clipboard write succeeds, with its immutable outcome.
+ * @event lr-error - Fired before the detailed clipboard error when a code-header copy fails.
  * @event lr-copy-error - Fired after a code-header clipboard write fails, with its immutable outcome.
  * @csspart streaming-tail - The current uncommitted text during progressive streaming.
  * @status stable
@@ -292,7 +296,14 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   }
 
   /** The Markdown source to render. Removing the attribute clears the document and its tab stop. */
-  @property() override content = '';
+  @property()
+  override get content(): string { return this.source; }
+  override set content(value: string) {
+    this.mayAdoptScript = false;
+    this.source = value;
+  }
+  private source = '';
+  private mayAdoptScript = true;
 
   /** Tab-stop width used when converting tabs in leading indentation to spaces before parsing.
    *  Defaults to `4`; non-finite values fall back to that default and finite values are truncated
@@ -429,20 +440,12 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    * height instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) override maxHeight = '';
 
-  // Reads a wa-markdown-style script-child once at connect -- see the class JSDoc's migration
-  // paragraph. Scoped to lr-markdown only (lr-markdown-core mirrors nothing and has no such
-  // migration obligation), so this stays local to this subclass rather than the shared runtime base.
-  override connectedCallback(): void {
-    this.adoptScriptContent();
-    super.connectedCallback();
-  }
-
-  private adoptScriptContent(): void {
-    if (this.hasAttribute('content') || this.content) return;
-    const script = this.querySelector(':scope > script[type="text/markdown"]');
-    const text = script?.textContent;
-    if (text == null) return;
-    this.content = text.trim();
+  protected override willUpdate(changed: PropertyValues): void {
+    if (!this.hasUpdated && this.mayAdoptScript) {
+      const script = this.querySelector(':scope > script[type="text/markdown"]');
+      if (script) this.content = script.textContent.trim();
+    }
+    super.willUpdate(changed);
   }
 
   // Deliberately not tagged internal -- these implement MarkdownRuntimeBase's own abstract

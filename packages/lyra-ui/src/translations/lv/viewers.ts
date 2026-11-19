@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF dokuments',
   pdfViewerMissingLibrary: 'Lai atveidotu PDF failus, šim skatītājam ir jāinstalē neobligātā pakotne “pdfjs-dist”.',
   pdfViewerPageOf: 'Lapa {page} no {total}',
+  pdfViewerPageHighlights: '{page}. lapas izcēlumi',
   pdfViewerZoomIn: 'Tuvināt',
   pdfViewerZoomOut: 'Tālināt',
   pdfViewerPreviousPage: 'Iepriekšējā lapa',

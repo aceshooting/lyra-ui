@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,6 +42,7 @@ docked case.
   separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
+- `disabled: boolean = false` (reflected) — disables resizing. The collapse toggle stays available.
 - `withoutResize: boolean = false` (reflected, attribute `without-resize`) — when set, no drag handle
   renders at all and the panel is a fixed size.
 
@@ -99,10 +100,11 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle keeps its localized accessible name, and a slotted glyph is not rotated.
+icons). The toggle uses the stable `dockPanelToggle` accessible name and reports state through `aria-expanded`.
+The `dockPanelCollapse` and `dockPanelExpand` strings supply its action tooltip. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
-`handle` (the draggable resize edge; only rendered when not `without-resize` and not `collapsed`),
+`handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),
 `collapse-toggle` (only rendered when `collapsible`), `rail` (wraps the `rail` slot; hidden unless
 `collapsed`)
 
@@ -119,7 +121,9 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. `--lr-dock-panel-handle-hit-area` sets the resize target width along the inner edge (default
+being dragged. `--lr-dock-panel-handle-color` sets the resting line color (default `var(--lr-color-border)`).
+`--lr-dock-panel-handle-size` sets its thickness (default `var(--lr-size-3px)`).
+`--lr-dock-panel-handle-hit-area` sets the resize target width along the inner edge (default
 `var(--lr-space-m)`). The target sits inside the panel's clipped edge, over its content, so precise
 pointers get exactly that width and content beside the edge stays clickable; set it to the visible
 line (for example `3px`) to give the content every pixel. Coarse or hover-less pointers get at
@@ -163,7 +167,7 @@ reconciliation emits neither resize event and preserves an in-range authored rel
 - Parent or flex allocation shrink, direct out-of-range property writes, and live min/max changes
   reconcile atomically. A later container grow does not silently restore an extent that was clamped
   during shrink.
-- `handle` only renders while `!withoutResize && !collapsed`; `collapse-toggle` only renders while
+- `handle` only renders while `!disabled && !withoutResize && !collapsed`; `collapse-toggle` only renders while
   `collapsible` — a panel with `without-resize` and without `collapsible` renders neither control,
   just fixed-size slotted content. Dragging is also disabled whenever `collapsed` is `true`, even
   without `without-resize`.

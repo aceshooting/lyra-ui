@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Replega el tauler',
   dockPanelExpand: 'Desplega el tauler',
   dockPanelResize: 'Redimensiona el tauler',
+  dockPanelToggle: 'Commuta el tauler',
   responsivePanel: 'Tauler',
   breadcrumb: 'Ruta de navegació',
   resizeDivider: 'Redimensiona el separador entre el tauler {a} i el tauler {b}',

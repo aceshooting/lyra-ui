@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Saffisa taphannaa',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} / {duration}',
+  avPlayerHighlightRange: '{start} irraa hanga {end}',
+  avPlayerHighlightAt: '{start} irratti',
   attachmentTriggerAudio: 'Sagalee waraabi',
   attachmentMenuAudio: 'Sagalee waraabi',
   flagLoadError: 'Alaabni hin argamu',

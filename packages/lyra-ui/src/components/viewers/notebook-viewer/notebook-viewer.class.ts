@@ -10,7 +10,6 @@ import { DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTa
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -322,7 +321,22 @@ function visibleMarkupText(markup: string): string {
 /** Searches only what `renderOutput()` shows for each output. */
 function* notebookOutputSearchParts(outputs: readonly NotebookOutput[]): Generator<string> {
   for (const output of outputs) {
-    yield* notebookSearchTextParts(output.text);
+    if (output.output_type === 'stream' || output.output_type === 'error') {
+      const parser = createAnsiParser();
+      const parts = output.output_type === 'stream'
+        ? notebookSearchTextParts(output.text)
+        : [`${output.ename ?? ''}: ${output.evalue ?? ''}`, ...(output.traceback ?? [])];
+      let first = true;
+      for (const part of parts) {
+        if (!first && output.output_type === 'error') yield '\n';
+        first = false;
+        for (let offset = 0; offset < part.length; offset += 4096) {
+          for (const segment of parser.push(part.slice(offset, offset + 4096))) yield segment.text;
+        }
+      }
+      yield ' ';
+      continue;
+    }
     const data = output.data;
     if (data && Object.prototype.hasOwnProperty.call(data, 'text/plain')) {
       yield* notebookSearchTextParts(data['text/plain']);
@@ -547,6 +561,9 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @csspart output - One output (`data-output-type`, `data-stream`).
  * @csspart output-error - Added alongside `output` on a stderr stream or an error output.
  * @csspart error-output-label - The label introducing an error output's traceback.
+ * @csspart output-image - Raster image output; shrinks to the cell width.
+ * @csspart output-loading - Visually hidden loading text shown while sanitized output resolves.
+ * @csspart output-stream-label - Visually hidden "Error output" prefix on a stderr stream.
  * @csspart output-toggle - Expands/collapses a long text output.
  * @csspart error - The error region.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
@@ -613,7 +630,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   protected static override readonly identityCollectionObjectProperties =
     Object.freeze(['notebook']);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, specialistTokens, styles, viewerLoadingStyles];
 
   /** URL to fetch and parse as a notebook. Ignored while `notebook` is present. */
   @property() src = '';
@@ -1078,7 +1095,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     const shown = expanded ? text : lines.slice(0, outputCollapseLines).join('\n');
     const part = tone === 'danger' ? 'output output-error' : 'output';
     return html`<div part=${part} data-output-type="stream" data-stream=${tone === 'danger' ? 'stderr' : 'stdout'}
-      >${this.renderAnsiText(shown)}${collapsible
+      >${tone === 'danger' ? html`<span part="output-stream-label">${this.localize('notebookViewerErrorOutput')}</span>` : nothing}${this.renderAnsiText(shown)}${collapsible
         ? html`<button
             part="output-toggle"
             type="button"
@@ -1113,10 +1130,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         index: getNumberFormat(this.effectiveLocale).format(cellIndex + 1),
       });
     if (data['image/png']) {
-      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/png;base64,${joinText(data['image/png'])}" alt=${mediaName} /></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><img part="output-image" src="data:image/png;base64,${joinText(data['image/png'])}" alt=${mediaName} /></div>`;
     }
     if (data['image/jpeg']) {
-      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${mediaName} /></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><img part="output-image" src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${mediaName} /></div>`;
     }
     if (data['image/svg+xml']) {
       // The image role goes on the SANITIZED result only. role="img" makes every descendant
@@ -1134,7 +1151,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['text/html']), 'html', key, joinText(data['text/plain']))}</div>`;
     }
     if (data['application/json']) {
-      const parsed = typeof data['application/json'] === 'string' ? JSON.parse(joinText(data['application/json'])) : data['application/json'];
+      const parsed = typeof data['application/json'] === 'string' ? this.parsedJsonOutput(output, data['application/json']) : data['application/json'];
       return html`<div part="output" data-output-type=${output.output_type}><lr-json-viewer
         .data=${parsed}
         expand-depth="1"
@@ -1154,6 +1171,13 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
    *  `dompurify` peer), which can't resolve inside a synchronous `render()` pass -- `renderSanitized()`
    *  kicks off the async work on first render and repaints via `requestUpdate()` once it resolves. */
   private sanitizedOutputCache = new Map<string, string | null>();
+  private readonly jsonOutputs = new WeakMap<object, unknown>();
+
+  private parsedJsonOutput(output: object, text: string): unknown {
+    if (!this.jsonOutputs.has(output)) this.jsonOutputs.set(output, JSON.parse(joinText(text)));
+    return this.jsonOutputs.get(output);
+  }
+
   private sanitizationTasks = new Map<string, Promise<void>>();
 
   private async ensureSanitized(raw: string, profile: SanitizeProfile): Promise<void> {
@@ -1212,7 +1236,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     const cached = this.sanitizedOutputCache.get(cacheKey);
     if (cached === undefined) {
       void this.ensureSanitized(raw, profile);
-      return html`<span class="sr-only">${this.localize('loadingDocument')}</span>`;
+      return html`<span part="output-loading">${this.localize('loadingDocument')}</span>`;
     }
     if (cached === null) {
       // A failed optional peer must fail closed visibly with localized ordinary text while the
@@ -1253,8 +1277,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
           ? html`<lr-markdown
               .content=${joinSource(c.source)}
               html-mode="sanitize"
+              .withoutImages=${true}
               @lr-render-error=${this.stopOwnedEvent}
-              @lr-link-click=${this.stopOwnedEvent}
+              @lr-link-activate=${this.stopOwnedEvent}
+              @lr-copy=${this.stopOwnedEvent}
+              @lr-copy-error=${this.stopOwnedEvent}
+              @lr-content-settled=${this.stopOwnedEvent}
               @lr-highlight-activate=${this.stopOwnedEvent}
               @lr-text-select=${this.stopOwnedEvent}
               @lr-anchor-result=${this.stopOwnedEvent}
@@ -1306,7 +1334,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         // Rows read viewer state (expanded outputs, highlights, sanitizer status, strings) while the
         // cells array is unchanged, so a fresh renderItem is the list's per-render invalidation.
         ? html`<lr-virtual-list
-            exportparts="cell:cell, cell-active:cell-active, cell-highlighted:cell-highlighted, cell-highlighted-accent:cell-highlighted-accent, cell-highlighted-success:cell-highlighted-success, cell-highlighted-warning:cell-highlighted-warning, cell-highlighted-danger:cell-highlighted-danger, cell-highlighted-neutral:cell-highlighted-neutral, cell-highlight-active:cell-highlight-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
+            exportparts="cell:cell, cell-active:cell-active, cell-highlighted:cell-highlighted, cell-highlighted-accent:cell-highlighted-accent, cell-highlighted-success:cell-highlighted-success, cell-highlighted-warning:cell-highlighted-warning, cell-highlighted-danger:cell-highlighted-danger, cell-highlighted-neutral:cell-highlighted-neutral, cell-highlight-active:cell-highlight-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, output-loading:output-loading, output-image:output-image, output-stream-label:output-stream-label, error-output-label:error-output-label, output-toggle:output-toggle"
             .items=${this.loadState.doc.cells}
             .renderItem=${(cell: unknown, index: number) => this.renderCell(cell, index)}
             .keyFunction=${this.cellKey}

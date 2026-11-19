@@ -181,6 +181,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Unele sugestii sau intrări din catalog au fost omise deoarece a fost atinsă limita de intrare.',
   transcriptFeedInputLimit: 'Sunt păstrate doar cele mai recente {count} din {total} de înregistrări.',
   codeBlockHighlightLimit: 'Codul lung este afișat fără evidențierea sintaxei.',
+  codeBlockHighlightedLine: 'Linie evidențiată',
+  codeBlockActiveLine: 'Linie evidențiată activă',
 };
 
 registerLyraLocale('ro', strings);

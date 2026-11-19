@@ -16,6 +16,7 @@ import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
+  readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { Slugger } from '../../../internal/slugger.js';
@@ -45,6 +46,8 @@ import type {
   LyraHighlightTone,
 } from '../document-viewer/anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
@@ -126,17 +129,10 @@ function normalizeDocxConversion(value: unknown): NormalizedDocxConversion | nul
     || !isArrayValue(diagnostics.value)
   )
     return null;
-  const length = getOwnDataDescriptor(diagnostics.value, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR
-    || length === UNSAFE_OWN_DATA_DESCRIPTOR
-    || typeof length.value !== 'number'
-    || !Number.isSafeInteger(length.value)
-    || length.value < 0
-  )
-    return null;
+  const length = readOwnArrayLength(diagnostics.value);
+  if (length === undefined) return null;
   const messages: unknown[] = [];
-  const count = Math.min(length.value, MAX_DOCX_CONVERSION_MESSAGES);
+  const count = Math.min(length, MAX_DOCX_CONVERSION_MESSAGES);
   for (let index = 0; index < count; index += 1) {
     const entry = getOwnDataDescriptor(diagnostics.value, String(index));
     if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
@@ -310,9 +306,23 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private readonly detached = new DeferredTeardown(() => this.releaseDetachedDocument());
 
+  private scrollRegion?: { el: HTMLElement; child: Element | null; name: string; dispose: () => void };
+
+  private syncScrollRegion(): void {
+    const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    if (!el) return;
+    const name = normalizeLabel(this.name) ?? this.localize('docxViewerLabel');
+    const child = el.firstElementChild;
+    const current = this.scrollRegion;
+    if (current?.el === el && current.child === child && current.name === name) return;
+    current?.dispose();
+    this.scrollRegion = { el, child, name, dispose: makeScrollRegionFocusable(el, name) };
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.hasUpdated) this.syncScrollRegion();
     const moved = this.detached.cancel();
     if (moved) {
       // The mixin's disconnect released the selection listener; the content itself stayed.
@@ -328,6 +338,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   override disconnectedCallback(): void {
     if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.announcements.disconnect();
+    this.scrollRegion?.dispose();
+    this.scrollRegion = undefined;
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.detached.schedule();
   }
@@ -355,6 +367,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     const locale = this.effectiveLocale;
     const localeChanged = this.textIndexLocale !== undefined && this.textIndexLocale !== locale;
     this.textIndexLocale = locale;
@@ -750,9 +763,16 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   // is fully replaced on every content change, so a per-node listener would need re-attaching on
   // every render anyway.
   private onContentClick = (e: MouseEvent): void => {
+    const selection = this.ownerDocument.defaultView?.getSelection();
+    if (selection && !selection.isCollapsed) return;
     const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
-    if (highlightId) this.emit('lr-highlight-activate', { highlightId });
+    if (highlightId) this.activateHighlight(highlightId);
   };
+
+  private activateHighlight(highlightId: string): void {
+    this.activeHighlightId = highlightId;
+    this.emit('lr-highlight-activate', { highlightId });
+  }
 
   private highlightActionLabel(highlight: LyraHighlight): string {
     return this.localize('highlightWithLabel', undefined, {
@@ -773,8 +793,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         ? resolved.range.commonAncestorContainer as Element
         : resolved.range.commonAncestorContainer.parentElement;
     target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
-    this.activeHighlightId = highlight.id;
-    this.emit('lr-highlight-activate', { highlightId: highlight.id });
+    this.activateHighlight(highlight.id);
   }
 
   private renderHighlightActions(): TemplateResult | typeof nothing {
@@ -954,7 +973,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
           <div
             part="content"
             role=${viewerSemanticRole(this, 'document') ?? nothing}
-            aria-label=${viewerSemanticLabel(this, this.name || this.localize('docxViewerLabel')) ?? nothing}
+            aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('docxViewerLabel')) ?? nothing}
             @click=${this.onContentClick}
           >
             ${this.fetchState.content}

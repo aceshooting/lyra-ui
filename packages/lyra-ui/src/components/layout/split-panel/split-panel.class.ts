@@ -3,6 +3,8 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { SeparatorDragController, separatorArrowDirection, separatorCoordinate, separatorDelta } from '../../../internal/separator-drag.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -593,7 +595,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     if (resizeRequest.defaultPrevented || request.defaultPrevented || this.resizeWriteGuard.touched) return false;
     const currentBounds = this.constraintBounds();
     if (
-      this.drag !== snapshot.drag ||
+      !this.isConnected || this.drag !== snapshot.drag ||
       this.resizeRequestSequence !== requestSequence ||
       this.disabled || this.disabled !== snapshot.disabled ||
       this.primary !== snapshot.primary ||
@@ -918,7 +920,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
-    if (this.disabled || this.availableSize <= 0 || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+    if (this.disabled || this.availableSize <= 0 || event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const current = this.positionInPixels;
     if (current == null) return;
 
@@ -944,13 +946,11 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   private get separatorLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel !== null) return hostLabel;
     const number = getNumberFormat(this.effectiveLocale);
-    return this.localize('resizeDivider', undefined, {
+    return resolveAccessibleName(this, this.localize('resizeDivider', undefined, {
       a: number.format(1),
       b: number.format(2),
-    });
+    }))!;
   }
 
   private resizeValueText(position: number): string {

@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF 文件',
   pdfViewerMissingLibrary: '此檢視器需要安裝可選的 "pdfjs-dist" 套件才能渲染 PDF 檔案。',
   pdfViewerPageOf: '第{page}頁，共{total}頁',
+  pdfViewerPageHighlights: '第{page}頁高亮',
   pdfViewerZoomIn: '放大',
   pdfViewerZoomOut: '縮小',
   pdfViewerPreviousPage: '上一頁',

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Kacepetan puter maneh',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} saka {duration}',
+  avPlayerHighlightRange: '{start} nganti {end}',
+  avPlayerHighlightAt: 'ing {start}',
   attachmentTriggerAudio: 'Rekam audio',
   attachmentMenuAudio: 'Rekam audio',
   flagLoadError: 'Gendéra ora kasedhiya',

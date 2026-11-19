@@ -1,6 +1,7 @@
+import { checkIcon } from '../../../internal/icons.js';
 import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 import { composedParentElement } from '../../../internal/active-element.js';
-import { html, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
@@ -20,26 +21,6 @@ import {
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
 import { styles } from './option.styles.js';
-
-const GLYPH_VIEW_BOX = '0 0 24 24';
-const GLYPH_STROKE_WIDTH = '1.75';
-
-function checkmarkGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${GLYPH_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${GLYPH_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="5 12.5 10 17.5 19 6.5"></polyline></svg>
-  `;
-}
 
 export interface LyraOptionEventMap {
   'lr-option-change': CustomEvent<null>;
@@ -481,7 +462,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     return html`
       <div part="base">
         <span part="checked-icon" aria-hidden="true" inert ?hidden=${!this.selected}>
-          ${checkmarkGlyph()}
+          ${checkIcon()}
         </span>
         <span part="start prefix" aria-hidden="true" inert ?hidden=${!hasStart}>
           <slot name="start"></slot><slot name="prefix"></slot>

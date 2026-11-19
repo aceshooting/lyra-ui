@@ -184,6 +184,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Pominięto niektóre sugestie lub wpisy katalogu, ponieważ osiągnięto limit danych wejściowych.',
   transcriptFeedInputLimit: 'Zachowywanych jest tylko {count} najnowszych spośród {total} wpisów.',
   codeBlockHighlightLimit: 'Długi kod jest wyświetlany bez podświetlania składni.',
+  codeBlockHighlightedLine: 'Wyróżniony wiersz',
+  codeBlockActiveLine: 'Aktywny wyróżniony wiersz',
 };
 
 registerLyraLocale('pl', strings);

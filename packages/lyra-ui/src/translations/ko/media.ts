@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: '재생 속도',
   avPlayerRateOption: '{rate}배',
   avPlayerPosition: '{duration} 중 {current}',
+  avPlayerHighlightRange: '{start}부터 {end}까지',
+  avPlayerHighlightAt: '{start}에',
   attachmentTriggerAudio: '오디오 녹음',
   attachmentMenuAudio: '오디오 녹음',
   flagLoadError: '플래그를 사용할 수 없음',

@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'ପ୍ୟାନେଲ୍ ସଙ୍କୁଚିତ କରନ୍ତୁ',
   dockPanelExpand: 'ପ୍ୟାନେଲ୍ ପ୍ରସାରଣ କରନ୍ତୁ',
   dockPanelResize: 'ପ୍ୟାନେଲ୍‌ର ଆକାର ବଦଳାନ୍ତୁ',
+  dockPanelToggle: 'ପ୍ୟାନେଲ୍ ଟୋଗଲ୍ କରନ୍ତୁ',
   responsivePanel: 'ପ୍ୟାନେଲ୍',
   breadcrumb: 'ବ୍ରେଡକ୍ରମ୍',
   resizeDivider: 'ପ୍ୟାନେଲ୍ {a} ଓ ପ୍ୟାନେଲ୍ {b} ମଧ୍ୟରେ ଥିବା ବିଭାଜକର ଆକାର ବଦଳାନ୍ତୁ',

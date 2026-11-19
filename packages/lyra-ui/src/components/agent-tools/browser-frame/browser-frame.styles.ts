@@ -128,6 +128,12 @@ export const styles = css`
   [part='ping'][data-kind='move'] {
     border-color: var(--lr-browser-frame-ping-move-color, var(--lr-color-text-quiet));
   }
+  @media (forced-colors: active) {
+    [part='ping'][data-kind='click'] { border-style: solid; }
+    [part='ping'][data-kind='type'] { border-style: dashed; }
+    [part='ping'][data-kind='scroll'] { border-style: dotted; }
+    [part='ping'][data-kind='move'] { border-style: double; }
+  }
   @container ${compactContainerQuery} {
     [part='url'] {
       flex-basis: 100%;

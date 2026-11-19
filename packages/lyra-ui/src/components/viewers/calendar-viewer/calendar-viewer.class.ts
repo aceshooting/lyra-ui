@@ -1,3 +1,5 @@
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { bdi } from '../../../internal/bidi.js';
 import { utcDate } from '../../forms/date-picker/calendar-core.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -69,6 +71,8 @@ function formatEventTime(event: ParsedCalendarEvent, locale: string): string {
     ? formatter.formatRange(event.start, event.end)
     : formatter.format(event.start);
 }
+
+type IcalLibrary = NonNullable<Awaited<ReturnType<typeof loadIcal>>>;
 
 function parseCalendarTime(time: IcalTimeApi | undefined): {
   value: Date;
@@ -177,8 +181,19 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
 
+  private releaseScrollRegion?: () => void;
+
+  private syncScrollRegion(): void {
+    this.releaseScrollRegion?.();
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    this.releaseScrollRegion = body && this.isConnected
+      ? makeScrollRegionFocusable(body, this.name.trim() || this.localize('calendarViewerLabel'))
+      : undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
     // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
@@ -194,6 +209,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   override disconnectedCallback(): void {
     if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
+    this.releaseScrollRegion?.();
+    this.releaseScrollRegion = undefined;
     super.disconnectedCallback();
     this.detached.schedule();
   }
@@ -206,6 +223,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     this.announcements.transition(
       'load',
       this.fetchState.kind,
@@ -231,9 +249,11 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const ical = await this.requireIcal(generation, signal);
+      if (!ical) return;
       const source = await readResponseText(response);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const events = await this.parse(source, generation, signal);
+      const events = this.parse(source, ical);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!events) return;
       if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', events };
@@ -244,7 +264,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     }
   }
 
-  private async parse(source: string, generation: number, signal: AbortSignal | undefined): Promise<ParsedCalendarEvent[] | undefined> {
+  private async requireIcal(generation: number, signal: AbortSignal | undefined): Promise<IcalLibrary | undefined> {
     const ical = await loadIcal();
     if (signal?.aborted || !this.isConnected || generation !== this.generation) return undefined;
     if (!ical) {
@@ -253,6 +273,10 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
         (localize) => localize('calendarViewerMissingParser'),
       );
     }
+    return ical;
+  }
+
+  private parse(source: string, ical: IcalLibrary): ParsedCalendarEvent[] {
     // Count events before the peer materializes the whole (up to 25 MB) calendar tree.
     if ((source.match(/^BEGIN:VEVENT\r?$/gim)?.length ?? 0) > MAX_CALENDAR_EVENTS) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
@@ -263,6 +287,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       throw new LyraResourceLimitError('The calendar contains too many events.');
     }
     let renderedChars = 0;
+    const text = (value: unknown): string => typeof value === 'string' ? value : '';
     const events = subcomponents.map((subcomponent) => {
       const event = new ical.Event(subcomponent);
       const parsedStart = eventTime(() => event.startDate);
@@ -271,10 +296,10 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
         parsedStart.kind !== parsedEnd.kind
         || parsedEnd.value.getTime() < parsedStart.value.getTime()
       ) ? null : parsedEnd;
-      const uid = event.uid ?? '';
-      const summary = event.summary ?? '';
-      const location = event.location ?? '';
-      const description = event.description ?? '';
+      const uid = text(event.uid);
+      const summary = text(event.summary);
+      const location = text(event.location);
+      const description = text(event.description);
       renderedChars += uid.length + summary.length + location.length + description.length;
       if (renderedChars > MAX_CALENDAR_RENDERED_CHARS) {
         throw new LyraResourceLimitError('The calendar contains too much rendered text.');
@@ -294,7 +319,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   }
 
   private renderEvent(event: ParsedCalendarEvent): TemplateResult {
-    return html`<li part="event"><span part="event-summary">${event.summary || this.localize('calendarViewerNoSummary')}</span><span part="event-time">${formatEventTime(event, this.effectiveLocale)}</span>${event.location ? html`<span part="event-location">${event.location}</span>` : nothing}${event.description ? html`<p part="event-description">${event.description}</p>` : nothing}</li>`;
+    return html`<li part="event"><span part="event-summary">${bdi(event.summary || this.localize('calendarViewerNoSummary'))}</span><span part="event-time">${bdi(formatEventTime(event, this.effectiveLocale))}</span>${event.location ? html`<span part="event-location">${bdi(event.location)}</span>` : nothing}${event.description ? html`<p part="event-description">${bdi(event.description)}</p>` : nothing}</li>`;
   }
 
   private renderBody(): TemplateResult {

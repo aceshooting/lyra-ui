@@ -293,13 +293,13 @@ export const styles = css`
     );
     -webkit-mask: radial-gradient(
       farthest-side,
-      transparent calc(100% - var(--lr-size-3px)),
-      var(--lr-mask-opaque) calc(100% - var(--lr-size-3px))
+      transparent calc(100% - var(--lr-border-width-thick)),
+      var(--lr-mask-opaque) calc(100% - var(--lr-border-width-thick))
     );
     mask: radial-gradient(
       farthest-side,
-      transparent calc(100% - var(--lr-size-3px)),
-      var(--lr-mask-opaque) calc(100% - var(--lr-size-3px))
+      transparent calc(100% - var(--lr-border-width-thick)),
+      var(--lr-mask-opaque) calc(100% - var(--lr-border-width-thick))
     );
   }
   .spinner-text {

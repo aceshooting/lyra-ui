@@ -579,3 +579,31 @@ describe('lr-rag-eval-dashboard heading level', () => {
     expect(levels()).to.deep.equal([null, null]);
   });
 });
+
+
+describe('blank label', () => {
+  it('falls back to the localized default heading for a whitespace-only label and drops the heading role for an empty one', async () => {
+    const base = (await fixture(html`<lr-rag-eval-dashboard  .runs=${runs}></lr-rag-eval-dashboard>`)) as HTMLElement;
+    const spaced = (await fixture(html`<lr-rag-eval-dashboard label="   " heading-level="2"  .runs=${runs}></lr-rag-eval-dashboard>`)) as HTMLElement;
+    const part = (el: HTMLElement) => el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+    expect(part(spaced).textContent!.trim()).to.not.equal('');
+    expect(part(spaced).textContent!.trim()).to.equal(part(base).textContent!.trim());
+    expect(part(spaced).getAttribute('role')).to.equal('heading');
+    const empty = (await fixture(html`<lr-rag-eval-dashboard label="" heading-level="2"  .runs=${runs}></lr-rag-eval-dashboard>`)) as HTMLElement;
+    expect(part(empty).hasAttribute('role')).to.equal(false);
+    expect(part(empty).hasAttribute('aria-level')).to.equal(false);
+  });
+});
+
+it('never rounds a small nonzero percent metric to 0%', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      locale="en-US"
+      metric-id="coverage"
+      .metrics=${[{ id: 'coverage', label: 'Coverage', category: 'generation', format: 'percent' }]}
+      .runs=${[{ id: 'run', label: 'Run', metrics: { coverage: 0.0004 } }]}
+    ></lr-rag-eval-dashboard>
+  `);
+  const values = [...el.shadowRoot!.querySelectorAll('lr-stat')].map((stat) => stat.value);
+  expect(values).to.deep.equal(['<0.1%']);
+});

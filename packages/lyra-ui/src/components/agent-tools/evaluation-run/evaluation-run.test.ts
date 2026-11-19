@@ -824,3 +824,18 @@ it('lets a non-empty host aria-label own the run region name and role', async ()
   expect(base.hasAttribute('aria-label')).to.equal(false);
   expect(el.shadowRoot!.querySelectorAll('[part~="example"]').length).to.be.greaterThan(0);
 });
+
+describe('lr-eval-run remediation (evals batch)', () => {
+  it('does not throw from the approval helpers on an element that has not rendered', () => {
+    const el = document.createElement('lr-eval-run') as LyraEvalRun;
+    expect(() => el.finalizePendingApproval('x')).to.not.throw();
+    expect(() => el.revertPendingApproval('x')).to.not.throw();
+  });
+
+  it('renders an application-defined status kind that collides with an Object.prototype name as neutral', async () => {
+    const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${[
+      { id: 'e1', label: 'One', input: 'in', status: { kind: 'constructor' } },
+    ]}></lr-eval-run>`);
+    expect(el.shadowRoot!.querySelector('[part="example-status"]')!.getAttribute('variant')).to.equal('neutral');
+  });
+});

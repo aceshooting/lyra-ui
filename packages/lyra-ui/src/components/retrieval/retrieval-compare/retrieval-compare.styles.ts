@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, focusRingInsetOffset, hoverFill, activeFill, interactiveTransition, disabledControl } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -64,7 +64,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part~='chunk']:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part~='chunk-selected'] {
     border-color: var(--lr-retrieval-compare-selected-border, var(--lr-color-brand));
@@ -120,6 +120,10 @@ export const styles = css`
     border-radius: 0;
     background: transparent;
   }
+  :host([frame='plain']) [part~='chunk-selected'] {
+    outline: var(--lr-border-width-medium) solid var(--lr-retrieval-compare-selected-border, var(--lr-color-brand));
+    outline-offset: calc(-1 * var(--lr-border-width-medium));
+  }
   [part='pagination'] {
     display: flex;
     flex-wrap: wrap;
@@ -136,11 +140,12 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    ${interactiveTransition}
   }
-  [part='page-button']:hover:where(:not(:disabled)) { background: var(--lr-color-surface-raised); }
-  [part='page-button']:active:where(:not(:disabled)) { background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='page-button']:hover:where(:not(:disabled)) { background: ${hoverFill('var(--lr-color-surface)')}; }
+  [part='page-button']:active:where(:not(:disabled)) { background: ${activeFill('var(--lr-color-surface)')}; }
   [part='page-button']:focus-visible { ${focusRing} }
-  [part='page-button']:disabled { opacity: var(--lr-opacity-disabled); cursor: default; }
+  [part='page-button']:disabled { ${disabledControl} }
   [part='page-status'],
   [part='input-limit'],
   [part='result-limit'] {

@@ -11,7 +11,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -159,7 +159,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.requestUpdate('frameSrc', old);
   }
 
-  @property() url = '';
+  @property({ useDefault: true }) url = '';
   /** The browser session's connection/streaming lifecycle phase. */
   private _phase: LyraStreamPhase = 'idle';
 
@@ -359,8 +359,13 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   // Idempotent: recomputing the same boolean (and re-clearing the already-`null` `contentRect`)
   // from the same light-DOM children a second time changes nothing observable.
   private collectDefaultSlotContent(): void {
-    this.hasDefaultSlotContent = Array.from(this.children).some((el) => !el.getAttribute('slot'));
-    this.contentRect = null;
+    const next = Array.from(this.children).some((el) => !el.getAttribute('slot'));
+    if (next !== this.hasDefaultSlotContent) {
+      this.hasDefaultSlotContent = next;
+      this.contentRect = null;
+    } else {
+      this.recomputeContentRect();
+    }
     this.requestUpdate();
   }
 

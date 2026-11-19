@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -26,6 +26,12 @@ export const styles = css`
     border: 0;
     border-radius: 0;
     background: transparent;
+  }
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
   [part='toolbar'] {
     display: flex;
@@ -141,7 +147,7 @@ export const styles = css`
     background: var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface));
   }
   lr-virtual-list::part(line):focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   /* The log's half of the density escape above: the same one-hop ::part() selector as the base
      rule, plus the host attribute selector, so it outranks it on specificity and source order. */

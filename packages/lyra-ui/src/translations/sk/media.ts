@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Rýchlosť prehrávania',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} z {duration}',
+  avPlayerHighlightRange: 'od {start} do {end}',
+  avPlayerHighlightAt: 'v {start}',
   attachmentTriggerAudio: 'Nahrať zvuk',
   attachmentMenuAudio: 'Nahrať zvuk',
   flagLoadError: 'Vlajka nie je k dispozícii',

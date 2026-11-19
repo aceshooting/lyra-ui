@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Document PDF',
   pdfViewerMissingLibrary: 'Cette visionneuse nécessite le paquet optionnel "pdfjs-dist" pour afficher les fichiers PDF.',
   pdfViewerPageOf: 'Page {page} sur {total}',
+  pdfViewerPageHighlights: 'Surlignages de la page {page}',
   pdfViewerZoomIn: 'Zoom avant',
   pdfViewerZoomOut: 'Zoom arrière',
   pdfViewerPreviousPage: 'Page précédente',

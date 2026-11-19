@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Kitisá panneau',
   dockPanelExpand: 'Kolisá panneau',
   dockPanelResize: 'Bongola bonene ya panneau',
+  dockPanelToggle: 'Balusa panneau',
   responsivePanel: 'Panneau',
   breadcrumb: 'Fil d’Ariane',
   resizeDivider: 'Bongola bonene ya séparateur kati ya panneau {a} na panneau {b}',

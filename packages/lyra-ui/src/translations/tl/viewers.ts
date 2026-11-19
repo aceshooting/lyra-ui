@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Dokumento ng PDF',
   pdfViewerMissingLibrary: 'Kailangang mai-install ang opsyonal na package na "pdfjs-dist" upang maipakita ang mga PDF file.',
   pdfViewerPageOf: 'Pahina {page} sa {total}',
+  pdfViewerPageHighlights: 'Mga highlight ng pahina {page}',
   pdfViewerZoomIn: 'Lakihan',
   pdfViewerZoomOut: 'Bawasan ang laki',
   pdfViewerPreviousPage: 'Nakaraang pahina',

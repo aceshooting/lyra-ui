@@ -9,11 +9,12 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
+import { isolateText } from '../../../internal/bidi.js';
 import { styles } from './schema-viewer.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerRequired, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueError, LYRA_DEFAULT_schemaViewerIssueInfo, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerIssueWarning, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerRequired, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface JsonSchemaNode {
@@ -190,7 +191,10 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     ...super.defaultStrings,
     schemaViewerCircular: LYRA_DEFAULT_schemaViewerCircular,
     schemaViewerEmpty: LYRA_DEFAULT_schemaViewerEmpty,
+    schemaViewerIssueError: LYRA_DEFAULT_schemaViewerIssueError,
+    schemaViewerIssueInfo: LYRA_DEFAULT_schemaViewerIssueInfo,
     schemaViewerIssueLimit: LYRA_DEFAULT_schemaViewerIssueLimit,
+    schemaViewerIssueWarning: LYRA_DEFAULT_schemaViewerIssueWarning,
     schemaViewerLabel: LYRA_DEFAULT_schemaViewerLabel,
     schemaViewerLimit: LYRA_DEFAULT_schemaViewerLimit,
     schemaViewerRequired: LYRA_DEFAULT_schemaViewerRequired,
@@ -596,7 +600,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
           @click=${() =>
             this.emit('lr-schema-select', { schemaPath: path, schema })}
         >
-          <strong part="name">${name}</strong>
+          <strong part="name">${isolateText(name, 'ltr')}</strong>
           ${type
             ? html`<lr-badge part="type" variant="neutral"
                 >${this.localize('schemaViewerType', undefined, {
@@ -615,12 +619,13 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
           : nothing}
         ${constraints.length
           ? html`<ul part="constraints">
-              ${constraints.map((row) => html`<li>${row}</li>`)}
+              ${constraints.map((row) => html`<li>${isolateText(row, 'ltr')}</li>`)}
             </ul>`
           : nothing}
         ${issues.map(
           (issue) =>
             html`<p part="issue" data-severity=${issue.severity ?? 'error'}>
+              <span class="sr-only">${this.issueSeverityLabel(issue.severity)}</span>
               ${issue.message}
             </p>`
         )}
@@ -642,6 +647,12 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
           : nothing}
       </li>
     `;
+  }
+
+  private issueSeverityLabel(severity: SchemaValidationIssue['severity']): string {
+    if (severity === 'warning') return this.localize('schemaViewerIssueWarning');
+    if (severity === 'info') return this.localize('schemaViewerIssueInfo');
+    return this.localize('schemaViewerIssueError');
   }
 
   override render(): TemplateResult {

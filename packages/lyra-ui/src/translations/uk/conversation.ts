@@ -184,6 +184,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Деякі пропозиції або записи каталогу пропущено через досягнення обмеження вхідних даних.',
   transcriptFeedInputLimit: 'Зберігаються лише {count} найновіших записів із {total}.',
   codeBlockHighlightLimit: 'Довгий код показується без підсвічування синтаксису.',
+  codeBlockHighlightedLine: 'Виділений рядок',
+  codeBlockActiveLine: 'Активний виділений рядок',
 };
 
 registerLyraLocale('uk', strings);

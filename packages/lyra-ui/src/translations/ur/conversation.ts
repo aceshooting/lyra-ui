@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے کچھ تجاویز یا کیٹلاگ اندراجات چھوڑ دیے گئے ہیں۔',
   transcriptFeedInputLimit: '{total} اندراجات میں سے صرف تازہ ترین {count} محفوظ رکھے جاتے ہیں۔',
   codeBlockHighlightLimit: 'طویل کوڈ سنٹیکس ہائی لائٹنگ کے بغیر دکھایا جاتا ہے۔',
+  codeBlockHighlightedLine: 'نمایاں لائن',
+  codeBlockActiveLine: 'فعال نمایاں لائن',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

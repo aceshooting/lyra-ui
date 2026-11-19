@@ -18,9 +18,17 @@ export const styles = css`
     outlineOffset: css`var(--lr-spreadsheet-viewer-highlight-outline-offset, calc(-1 * var(--lr-border-width-medium)))`,
     cellCursor: false,
   })}
+  [part='header-row'] { flex-shrink: 0; }
   [part='rows'] {
-    --lr-virtual-list-height: var(--lr-size-20rem);
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
     min-inline-size: max-content;
+  }
+  [part='rows']::part(base) {
+    block-size: auto;
+    max-block-size: var(--lr-spreadsheet-viewer-max-height, var(--lr-size-20rem));
+    min-block-size: 0;
   }
   .empty-note,
   [part='error'] {

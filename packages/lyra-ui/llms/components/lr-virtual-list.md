@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -70,7 +70,8 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 - `groups?: LyraVirtualListGroup[]` (attribute: false) — renders a labeled marker at each group's
   `startIndex` as a measured virtual entry immediately before that row. Its live block size
   contributes to every following offset, so a variable-height or late-resizing marker never covers
-  the group's first row. Markers remain windowed with their rows. Groups are sorted by `startIndex`;
+  the group's first row. Each semantic row exposes its group label as an accessible description, including when its
+  marker scrolls outside the rendered window. Groups are sorted by `startIndex`;
   a non-object entry or a `startIndex` that's non-integer, out of range, or a duplicate of an earlier
   group's is silently dropped rather than rendered wrong. An entry whose
   `label` is the **empty string** renders no marker at all — it is a pure position anchor, for a host
@@ -227,8 +228,8 @@ math, and any row element can be recycled or removed on the next update.
 
 **Events:** `lr-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
-bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
-window away from the end, re-arms it), `lr-visible-range-change` (`detail: LyraVirtualListRange`, the
+bottom. Moving away from the bottom or appending a page re-arms the event. A short page that leaves
+the end in view can therefore trigger the next request), `lr-visible-range-change` (`detail: LyraVirtualListRange`, the
 current visible, non-overscanned item index range — fired only when it actually changes; it was
 spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
 `-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
@@ -254,7 +255,13 @@ rendered for an entry whose `label` is the empty string), `sticky-group` (the pi
 current group, present only while `renderStickyGroup` is set — `aria-hidden`, `inert`, and
 pointer-transparent, and it shows nothing while the viewport is above the first group)
 
-**Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
+For an embedded list that should shrink to its content, set `block-size: auto` and
+`max-block-size` on `lr-virtual-list::part(base)`. The list scrolls when its rows exceed the cap.
+If a surrounding panel owns scrolling, assign that element to `scrollElement` and set the cap
+on the panel.
+
+**Themeable custom properties:** `--lr-virtual-list-sticky-group-bg` (default
+`var(--lr-color-surface)`, the pinned `sticky-group` overlay's background), `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
 `--lr-virtual-list-row-mark-bg` (default `revert`),

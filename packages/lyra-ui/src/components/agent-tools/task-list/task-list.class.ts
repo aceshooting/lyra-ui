@@ -1,4 +1,6 @@
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTaskSourceSummary } from '../../../data-sources.js';
+import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
+import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { createHierarchySummarySource, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
@@ -39,9 +41,9 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAU
 export type TaskStatus = 'pending' | 'running' | 'success' | 'error' | 'incomplete';
 
 function normalizeTaskStatus(value: unknown): TaskStatus {
-  return value === 'running' || value === 'success' || value === 'error' || value === 'incomplete'
-    ? value
-    : 'pending';
+  if (value === 'running' || value === 'success' || value === 'error' || value === 'incomplete') return value;
+  const terminal = normalizeAgentTerminalStatus(value);
+  return terminal === 'cancelled' ? 'incomplete' : terminal ?? 'pending';
 }
 
 const DEEP_NESTING_WARNING_KEY = 'lyra-task-list-nesting-depth';
@@ -619,6 +621,10 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.get('collapsed') === false && this.collapsed) {
+      const body = this.renderRoot.querySelector('[part="body"]');
+      if (body) repairComposedFocus(body, () => [this.renderRoot.querySelector<HTMLElement>('button[part="header"]')]);
+    }
     this.syncSource();
     if (this.treeSource !== undefined) { this.clearPendingReorder(); return; }
     if (changed.has('reorderable') && !this.reorderable) this.clearPendingReorder();
@@ -785,7 +791,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    * controls (and a nested row bubbling through its parent row) to the focused control itself. */
   private onItemKeyDown(event: KeyboardEvent, item: TaskItem, parentId: string | null): void {
     if (this.treeSource !== undefined || !(event.currentTarget as Element)?.isConnected || event.composedPath()[0] !== event.currentTarget) return;
-    if (!this.canReorderItems() || !(event.ctrlKey || event.metaKey)) return;
+    if (!this.canReorderItems() || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey ||
+        event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     // ArrowUp/ArrowDown describe sibling order and do not swap under RTL.
     event.preventDefault();

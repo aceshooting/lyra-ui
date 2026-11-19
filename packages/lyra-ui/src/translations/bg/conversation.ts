@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Някои предложения или записи от каталога са пропуснати, защото е достигнато ограничение за входните данни.',
   transcriptFeedInputLimit: 'Запазени са само най-новите {count} от {total} записа.',
   codeBlockHighlightLimit: 'Дългият код се показва без оцветяване на синтаксиса.',
+  codeBlockHighlightedLine: 'Откроен ред',
+  codeBlockActiveLine: 'Активен откроен ред',
 };
 
 registerLyraLocale('bg', strings);

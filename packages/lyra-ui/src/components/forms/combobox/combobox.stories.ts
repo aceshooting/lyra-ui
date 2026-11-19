@@ -27,10 +27,22 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const ControlledSelection: Story = {
+  render: () => html`
+    <lr-combobox label="Delivery" default-value="standard" help-text="Express delivery is unavailable."
+      @lr-change-request=${(event: CustomEvent<{ value: string }>) => {
+        if (event.detail.value === 'express') event.preventDefault();
+      }}>
+      <lr-option value="standard">Standard</lr-option>
+      <lr-option value="express">Express (unavailable)</lr-option>
+    </lr-combobox>`,
+};
+
 export const Default: Story = {
   render: () => html`
     <lr-combobox
       label="Fruit"
+      default-value="a"
       placeholder="Pick one…"
       clearable
       style="max-width: 20rem"

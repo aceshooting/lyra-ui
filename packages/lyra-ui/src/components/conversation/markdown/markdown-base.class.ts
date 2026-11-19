@@ -1,3 +1,4 @@
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { PropertyValues, TemplateResult } from 'lit';
 import { normalizeShikiLanguage } from '../code-block/shiki-types.js';
 import { state } from 'lit/decorators.js';
@@ -77,7 +78,7 @@ import {
   type PendingHighlight,
   type ResolvedHighlightRange,
 } from './markdown-shared.js';
-import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings/conversation.generated.js';
@@ -149,6 +150,7 @@ export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-link-activate': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
@@ -302,8 +304,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       getContentRoot: () => this.contentRoot(),
       localize: this.boundLocalize,
       buildHeader: (frame, language) => renderMarkdownCodeHeader(frame, language),
-      emitCopy: (outcome) => this.emit('lr-copy', outcome),
-      emitCopyError: (outcome) => this.emit('lr-copy-error', outcome),
+      emit: (name, detail) => this.emit(name, detail ?? null),
     });
   }
 
@@ -317,6 +318,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.isDarkTheme = resolveMarkdownDarkTheme(this);
   }
 
+  private readonly teardown = new DeferredTeardown(() => this.releaseHighlightState());
+  private repaintAfterConnect = false;
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.markdownVariant.connectedInstances.add(this);
@@ -325,8 +329,19 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       const contentRoot = this.contentRoot();
       if (contentRoot) this.bindTextSelection(contentRoot);
     }
+    this.repaintAfterConnect = this.hasUpdated && this.highlights.length > 0;
+    if (this.repaintAfterConnect) {
+      this.textQuoteIndexCache = undefined;
+      this.requestUpdate();
+    }
+    const moved = this.teardown.cancel();
     beginMarkdownDepsLoad(this, (resolved) => {
+      const retained = moved && this.deps === resolved;
       this.deps = resolved;
+      if (retained) {
+        if (this.progressiveSession && this.streaming) this.scheduleStreamingRender();
+        return;
+      }
       this.renderMarkdown();
       // A failed/missing peer can leave renderedHtml at the same fallback value. The dependency
       // settlement still changes aria-busy, so it must independently schedule an update.
@@ -337,9 +352,15 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   override disconnectedCallback(): void {
     this.markdownVariant.connectedInstances.delete(this);
     super.disconnectedCallback();
+    this.cancelStreamingRender();
+    this.cancelHighlightRepaint();
+    this.teardown.schedule();
+  }
+
+  private releaseHighlightState(): void {
     this.highlightToken++;
     this.completedHighlights = new Map();
-    this.cancelStreamingRender();
+    this.resolvedHighlightRanges = [];
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
     this.textQuoteIndexCache = undefined;
@@ -350,6 +371,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   }
 
   override adoptedCallback(): void {
+    this.teardown.flush();
     super.adoptedCallback();
     this.codeHeader.hostAdopted();
     this.quoteScope?.builder.disconnect(); this.quoteScope = undefined;
@@ -376,7 +398,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (active?.matches(selector)) {
       this.rememberedFocus = { node: active, index: [...this.renderRoot.querySelectorAll(selector)].indexOf(active), selector };
     }
-    if (changed.has('math')) this.mathFailureReported = false;
+    if (this.hasUpdated && changed.has('math')) this.mathFailureReported = false;
     if (!this.deps || !markdownNeedsReparse(changed)) return;
     const progressive = normalizeMarkdownStreamingRender(this.streamingRender) === 'progressive';
     const configurationChanged = [...changed.keys()].some((key) =>
@@ -397,7 +419,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     } else {
       this.cancelStreamingRender();
       if (changed.has('content') && !changed.has('streaming') || configurationChanged) this.resetProgressiveMarkdown();
-      this.renderMarkdown();
+      this.renderingDuringUpdate = true;
+      try { this.renderMarkdown(); }
+      finally { this.renderingDuringUpdate = false; }
     }
   }
 
@@ -502,8 +526,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     const remembered = this.rememberedFocus;
     this.rememberedFocus = undefined;
     if (remembered && !remembered.node.isConnected) {
-      let active = this.ownerDocument.activeElement;
-      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      const active = deepActiveElementIn(this.ownerDocument);
       if (!active || active === this.ownerDocument.body || active === this.ownerDocument.documentElement) {
         const target = this.renderRoot.querySelectorAll<HTMLElement>(remembered.selector)[remembered.index];
         if (target) target.focus({ preventScroll: true });
@@ -522,11 +545,12 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       else this.textQuoteIndexCache = undefined;
     }
     if (
-      renderedContentChanged ||
+      this.repaintAfterConnect || renderedContentChanged ||
       changed.has('highlights') ||
       changed.has('activeHighlightId') ||
       (localeChanged && this.highlights.length > 0)
     ) {
+      this.repaintAfterConnect = false;
       if (this.streaming && this.progressiveSession && renderedContentChanged &&
         !changed.has('highlights') && !changed.has('activeHighlightId') && !localeChanged) this.scheduleHighlightRepaint();
       else { this.cancelHighlightRepaint(); this.repaintHighlights(); }
@@ -584,7 +608,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       this.renderedHtml = null;
       this.resetProgressiveMarkdown();
       this.codeHeader.setBlocks([]);
-      this.emit('lr-render-error', { error: outcome.error });
+      this.reportRenderError(outcome.error);
       return;
     }
     const mode = normalizeMarkdownHtmlMode(this.htmlMode);
@@ -693,10 +717,18 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       this.markdownVariant.katexState.startLoad(this.handleKatexResolved);
   }
 
+  private renderingDuringUpdate = false;
+
+  private reportRenderError(error: unknown): void {
+    const notify = () => this.emit('lr-render-error', { error });
+    if (!this.hasUpdated || this.renderingDuringUpdate) this.scheduleAfterUpdate(notify, 'lr-render-error');
+    else notify();
+  }
+
   private reportMathFailure(): void {
     if (this.mathFailureReported) return;
     this.mathFailureReported = true;
-    this.emit('lr-render-error', { error: markdownMathPeerError(this.markdownVariant.tag) });
+    this.reportRenderError(markdownMathPeerError(this.markdownVariant.tag));
   }
 
   private grammarCacheKey(key: string): string {

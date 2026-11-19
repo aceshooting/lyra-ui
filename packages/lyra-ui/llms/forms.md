@@ -1,3 +1,4 @@
+
 ## Setter-only `null` clearing in 8.0.0
 
 Several mapped string IDLs accept `null` on assignment without widening their read type. This is a
@@ -603,7 +604,8 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error.
+never shows the raw error. An independently rejected `AbortError` from the current source displays
+the same retry action. Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
@@ -697,6 +699,16 @@ secondary line, when `sub` is set), `option-badge` (an async row's trailing meta
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
 `retry-button`, `error`, `hint`
+
+The `help-text` attribute, `helpText` property and `help-text` slot supply supporting text.
+The hint container also exposes the `form-control-help-text` part.
+The selection getters return `null` before the input renders.
+
+A pristine combobox follows its `defaultValue` property or `default-value` attribute. Form reset restores
+that default after a user or programmatic edit. Assign an array for multiple selections.
+
+`lr-change-request` carries the proposed `value`, the `previousValue`, and the aligned row `data`.
+Calling `preventDefault()` or assigning `value` during the request suppresses the built-in selection change.
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
 `lr-input`/`lr-change` event detail `value` and `previousValue` narrow to `string` when
@@ -949,7 +961,8 @@ its own single/multiple value, reset, and option synchronization. The trigger is
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
 combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's
-shared nonmodal overlay stack.
+shared nonmodal overlay stack. The trigger has an `aria-activedescendant` attribute only while
+an option is active. Type-ahead accepts unaccented input for accented option labels.
 Session-history/autofill restoration assigns the stored string through the same synchronous
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
@@ -4668,6 +4681,9 @@ A boolean form control. `role="checkbox"` with an `aria-checked` that can also b
 visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associated via
 `ElementInternals`, click and Space toggle) but with checkbox semantics.
 
+Value event details capture the user’s edit. Disabling or removing the control during
+`input` ends that interaction before `change`.
+
 Removing `error-text` safely omits the message while preserving native `null` property readback.
 Explicit empty text stays empty; later supplied text renders normally.
 
@@ -4879,6 +4895,9 @@ CSS parts), mirroring `<lr-select>`'s pattern for those two pieces — left unse
 Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
 control's visible, clickable label (same as `<lr-checkbox>`).
 
+Value event details capture the user’s edit. Disabling or removing the control during
+`input` ends that interaction before `change`.
+
 Host `aria-describedby` references resolve onto the internal `role="switch"` before its local
 error/hint guidance. The relationship tracks missing IDs, target replacement/removal/reinsertion,
 reconnect, and document adoption. Removing `hint`, `help-text`, or `error-text` safely omits that
@@ -5064,6 +5083,8 @@ on `[part~="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
 seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
+The `lr-input` and `lr-change` details retain the positions that triggered their corresponding native
+events, including when a listener assigns another value synchronously.
 
 Secondary mouse buttons leave the value and input/change events untouched. Primary mouse, touch and
 pen gestures remain supported, including concurrent pointers.
@@ -5361,6 +5382,9 @@ is present for upstream form-surface parity but adds no missing-value constraint
 ## `lr-radio`
 
 A form-associated single-choice control. Use it alone or inside `lr-radio-group`.
+
+Value event details capture the user’s edit. Disabling or removing the control during
+`input` ends that interaction before `change`.
 
 An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
 For example, assigning `checked = false` to an already-unchecked radio prevents a later
@@ -5823,6 +5847,9 @@ hint/error guidance. References track unresolved IDs, target replacement/removal
 reconnect, and document adoption. Group descriptions remain on the group; child radios can carry
 their own separately authored descriptions.
 
+The error precedes the hint in the rendered control and in its accessible description.
+An individually disabled radio keeps its checked value and is omitted from form submission.
+
 **Properties:** `label`, `hint`, `helpText` (`help-text`, Shoelace alias), `errorText`
 (`error-text`), `name` (empty by default, with the empty attribute omitted), live `value`, reflected
 `defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`
@@ -5860,7 +5887,7 @@ label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 a bubbling/composed `Event` named `input`, `lr-input`, a bubbling/composed `Event` named
 `change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
 `event.target.value`);
-both prefixed aliases carry `{ value, option, radio }`. `option` and its retained `radio` alias
+both prefixed aliases carry `{ value, option, radio }`. The committed `lr-change` also includes the previous group value in `previousValue`. `option` and its retained `radio` alias
 reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
@@ -5933,9 +5960,14 @@ Awesome's unset-default behavior.
 
 **Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
 alongside slotted hint/error content, like every other group.
+The `help-text` attribute and `helpText` property supply the fallback for an empty `hint`.
+The `help-text` slot adds supporting content to the `form-control-help-text` part.
+The error precedes the hint in the fieldset and in its accessible description.
+
 **Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
 `lr-change`. The native `input` and `change` are plain `Event` objects. Both `lr-input` and
-`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings.
+`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings. The committed
+`lr-change` also identifies the checkbox in `detail.option` and the earlier selection in `detail.previousValue`.
 The owned child's corresponding events are
 consumed at the group boundary, so an ancestor does not receive a second, differently shaped
 sequence.
@@ -7643,7 +7675,7 @@ button): state is conveyed by `aria-pressed` alone, so a "Mute"/"Unmute" swap is
 **Events:**
 
 - `lr-toggle-toggle-request` — cancelable; a user activation (click, Enter on keydown, Space on keyup, or host `click()`) is about to flip `pressed`.
-- `lr-change` — not cancelable; after a committed user toggle.
+- `lr-change` is the sole value notification after a committed user toggle.
 - `lr-toolbar-actions-change` — no detail; the toggle joined or left an `lr-toggle-group`.
 - `focus` / `blur` — relayed once from the internal button, bubbling and composed.
 
@@ -7763,13 +7795,13 @@ when `detail.value.length === 0`.
 **Events:**
 
 - `lr-toggle-group-toggle-request` — cancelable; an owned toggle is about to flip.
-- `lr-change` — not cancelable; after a committed user change, with single-mode exclusivity applied.
+- `lr-change` is the sole value notification after a committed user change, with single-mode exclusivity applied.
 
 The request's `detail: { value, previousValue, option }` (`LyraToggleGroupToggleRequestDetail`) is
 the group value that **would** result, the value as it stands, and the toggle the user acted on (kept
 by identity). `preventDefault()` keeps every toggle unchanged and no `lr-change` follows; assigning the
 group's `value` from a listener resolves the request the same way. `lr-change` carries
-`detail: { value }`. Both details are detached, frozen snapshots. The group **consumes each owned
+`{ value, previousValue, option }`. Both details are detached, frozen snapshots. The group **consumes each owned
 toggle's `lr-toggle-toggle-request` and `lr-change`** and republishes them as these two events, so an
 ancestor never receives two differently shaped sequences for one interaction, and a listener on an
 individual grouped toggle receives neither. Programmatic `value`, `pressed` and `selection-mode`

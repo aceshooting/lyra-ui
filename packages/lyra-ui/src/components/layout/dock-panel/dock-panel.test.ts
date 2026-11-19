@@ -1602,11 +1602,13 @@ describe("aria-label localization", () => {
     const handle = el.shadowRoot!.querySelector('[part="handle"]')!;
     const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]')!;
     expect(handle.getAttribute("aria-label")).to.equal("Resize panel");
-    expect(toggle.getAttribute("aria-label")).to.equal("Collapse panel");
+    expect(toggle.getAttribute("aria-label")).to.equal("Toggle panel");
+    expect(toggle.getAttribute("title")).to.equal("Collapse panel");
 
     el.collapsed = true;
     await elementUpdated(el);
-    expect(toggle.getAttribute("aria-label")).to.equal("Expand panel");
+    expect(toggle.getAttribute("aria-label")).to.equal("Toggle panel");
+    expect(toggle.getAttribute("title")).to.equal("Expand panel");
   });
 
   it("honors a strings override for dockPanelResize/dockPanelCollapse/dockPanelExpand", async () => {
@@ -1616,6 +1618,7 @@ describe("aria-label localization", () => {
           collapsible
           .strings=${{
             dockPanelResize: "Redimensionner le panneau",
+            dockPanelToggle: "Afficher ou masquer le panneau",
             dockPanelCollapse: "Réduire le panneau",
             dockPanelExpand: "Agrandir le panneau",
           }}
@@ -1629,11 +1632,13 @@ describe("aria-label localization", () => {
     expect(handle.getAttribute("aria-label")).to.equal(
       "Redimensionner le panneau"
     );
-    expect(toggle.getAttribute("aria-label")).to.equal("Réduire le panneau");
+    expect(toggle.getAttribute("aria-label")).to.equal("Afficher ou masquer le panneau");
+    expect(toggle.getAttribute("title")).to.equal("Réduire le panneau");
 
     el.collapsed = true;
     await elementUpdated(el);
-    expect(toggle.getAttribute("aria-label")).to.equal("Agrandir le panneau");
+    expect(toggle.getAttribute("aria-label")).to.equal("Afficher ou masquer le panneau");
+    expect(toggle.getAttribute("title")).to.equal("Agrandir le panneau");
   });
 
   it('localizes the handle pixel value while retaining its numeric ARIA value', async () => {

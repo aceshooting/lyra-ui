@@ -1,3 +1,5 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -11,6 +13,8 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 // every key they incidentally touch (chunkInspectorLabel, sourcePageSuffix, chunkScore,
 // scoreTierHigh, showMore) instead of tripping the partial-catalog fallback warning.
 import '../../../translations/ar.js';
+// The shipped 'ar' catalog does not yet translate the per-chunk toggle name.
+for (const locale of ['ar-u-nu-arab', 'ar-EG']) expectLocaleFallback(locale, ['retrievalShowMoreWithContext']);
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -252,6 +256,8 @@ it('routes every localized string through this.localize(), provable via a .strin
         chunkScore: 'Pertinence {percent}%',
         scoreTierHigh: 'Pertinence élevée',
         showMore: 'Voir plus',
+        retrievalShowMoreWithContext: 'Voir plus : {label}',
+        retrievalShowLessWithContext: 'Voir moins : {label}',
         showLess: 'Voir moins',
         untitledSource: 'Source sans titre',
       }}
@@ -727,5 +733,24 @@ it('marks the current row with an outline under forced colors', async () => {
     expect(getComputedStyle(current).outlineStyle).to.equal('solid');
   } finally {
     await setForcedColors('none');
+  }
+});
+
+it('names each per-chunk expand toggle with its visible text first and the chunk title', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  await el.updateComplete;
+  const names = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')].map((t) => t.getAttribute('aria-label'));
+  expect(names.length).to.be.greaterThan(1);
+  expect(new Set(names).size, names.join('|')).to.equal(names.length);
+  for (const name of names) expect(name!.startsWith('Show more')).to.equal(true);
+});
+
+it('draws the open-button and toggle focus rings inside the chunk row', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  await el.updateComplete;
+  for (const part of ['open-button', 'toggle']) {
+    const control = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement;
+    await focusByKeyboard(control);
+    expect(parseFloat(getComputedStyle(control).outlineOffset), part).to.be.lessThan(0);
   }
 });

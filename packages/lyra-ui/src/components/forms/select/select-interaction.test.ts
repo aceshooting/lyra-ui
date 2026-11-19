@@ -660,7 +660,7 @@ it("prefers the following option on an equal-distance rehome and clears the curs
     '[part="option"][data-active]'
   );
   expect(active === null).to.equal(true);
-  expect(trigger(el).getAttribute("aria-activedescendant")).to.equal("");
+  expect(trigger(el).hasAttribute('aria-activedescendant')).to.equal(false);
 });
 
 

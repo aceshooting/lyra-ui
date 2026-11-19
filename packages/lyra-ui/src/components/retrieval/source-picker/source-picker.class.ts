@@ -25,7 +25,7 @@ import {
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourcePickerMatches, LYRA_DEFAULT_sourcePickerSelection } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourcePickerLimit, LYRA_DEFAULT_sourcePickerMatches, LYRA_DEFAULT_sourcePickerSelection } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -149,6 +149,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     select: LYRA_DEFAULT_select,
     selectAllSources: LYRA_DEFAULT_selectAllSources,
     sourceListDefaultLabel: LYRA_DEFAULT_sourceListDefaultLabel,
+    sourcePickerLimit: LYRA_DEFAULT_sourcePickerLimit,
     sourcePickerMatches: LYRA_DEFAULT_sourcePickerMatches,
     sourcePickerSelection: LYRA_DEFAULT_sourcePickerSelection,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
@@ -219,6 +220,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private announcementSink?: AnnouncementSink;
   private isMounting = true;
   private lastFilterAnnouncement = '';
+  private wasLimited = false;
 
   private get sourceEntries(): readonly LyraSourceEntry[] {
     return Array.isArray(this.sources) ? this.sources : EMPTY_SOURCE_ENTRIES;
@@ -232,6 +234,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
     this.announcementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
@@ -488,6 +491,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    const limited = this.sourceEntries.length > 0 && this.sourceModel.limited;
+    if (!wasMounting && limited && !this.wasLimited) this.announcementSink?.announce(this.localize('sourcePickerLimit'));
+    this.wasLimited = limited;
     if (wasMounting || (!changed.has('query') && !changed.has('sources')))
       return;
     if (!this.isFiltering()) {
@@ -795,7 +801,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               )}
             </div>`}
         ${this.sourceModel.limited
-          ? html`<div part="limit">${this.localize('valueInvalid')}</div>`
+          ? html`<div part="limit" role="note">${this.localize('sourcePickerLimit')}</div>`
           : nothing}
       </div>
     `;

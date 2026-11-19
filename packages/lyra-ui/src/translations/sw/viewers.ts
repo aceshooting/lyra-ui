@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Waraka wa PDF',
   pdfViewerMissingLibrary: 'Kitazamaji hiki kinahitaji kifurushi cha hiari "pdfjs-dist" kisakinishwe ili kuonyesha faili za PDF.',
   pdfViewerPageOf: 'Ukurasa {page} kati ya {total}',
+  pdfViewerPageHighlights: 'Vivutio vya ukurasa {page}',
   pdfViewerZoomIn: 'Kuza',
   pdfViewerZoomOut: 'Punguza ukubwa',
   pdfViewerPreviousPage: 'Ukurasa uliotangulia',

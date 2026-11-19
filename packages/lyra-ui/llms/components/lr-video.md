@@ -46,7 +46,7 @@ resting paint under hover and press. Once media duration makes progress availabl
 its token-driven hover and press feedback.
 
 **Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
-`autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
+`autoplay-muted`; skipped while the user prefers reduced motion), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
 `currentTime`; HTML exposes it as lowercase `currenttime`, with legacy `current-time` also
 accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
@@ -76,7 +76,7 @@ control-bar play toggle is hidden until the poster is dismissed.
 canonical upstream-compatible authoring type.
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
 `play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
-`togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
+`togglePlay()` (alias `toggle()`, matching `lr-av-player`), `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
 promise/rejection and reject with an owner-realm `DOMException` named `NotSupportedError` when the
 capability is absent. `load()` is a

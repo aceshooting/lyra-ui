@@ -1,16 +1,18 @@
 import { setNativeRangeText } from './native-text-control.js';
 import { waitForTransitionSettle } from './css-motion-time.js';
-import { getOwnDataDescriptor } from './data-descriptors.js';
+import { getOwnDataDescriptor, readOwnDataValue } from './data-descriptors.js';
 import { CATALOG_ROW_LIMIT } from './selection-catalog.js';
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
 import { deferredPlace } from './anchored-overlay-runtime.js';
 import { resolveIntlLocale } from './intl-cache.js';
+import { foldSearchText, prepareNeedle } from './search-haystack.js';
 import { prefersReducedMotion } from './motion.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from './positioning-strategy.js';
 import { TypeAheadBuffer } from './type-ahead-buffer.js';
-import { resolveListMove } from './list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from './list-navigation.js';
+import { emitValueEvents as emitSharedValueEvents } from './value-events.js';
 import { PopupController } from './popup-controller.js';
 
 /** The common public row vocabulary for catalog-backed controls. */
@@ -41,11 +43,6 @@ export type LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
 export type DisplayCatalogEntry<T extends LyraCatalogEntry> = T & { synthetic: boolean };
 
 const normalizedCatalogs = new WeakMap<object, readonly LyraCatalogEntry[]>();
-
-function ownDataValue(target: object, key: PropertyKey): unknown {
-  const descriptor = getOwnDataDescriptor(target, key);
-  return typeof descriptor === 'symbol' ? undefined : descriptor.value;
-}
 
 /** Retain admitted identity fields plus own enumerable data; accessors are skipped, never run. */
 function ownDataCopy(entry: object, id: string, label: string): object {
@@ -80,17 +77,17 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
   if (known) return known as T[];
   const normalized: T[] = [];
   const seen = new Set<string>();
-  const length = ownDataValue(catalog, 'length');
+  const length = readOwnDataValue(catalog, 'length');
   const count = typeof length === 'number' ? Math.min(length, CATALOG_ROW_LIMIT) : 0;
   for (let index = 0; index < count; index += 1) {
-    const entry = ownDataValue(catalog, String(index));
+    const entry = readOwnDataValue(catalog, String(index));
     let id: unknown;
     let label: unknown;
     if (typeof entry === 'string') {
       id = label = entry;
     } else if (entry !== null && typeof entry === 'object') {
-      id = ownDataValue(entry, 'id');
-      label = ownDataValue(entry, 'label');
+      id = readOwnDataValue(entry, 'id');
+      label = readOwnDataValue(entry, 'label');
     } else {
       continue;
     }
@@ -136,12 +133,9 @@ export function filterCatalogEntries<T>(
   locale: string,
   fields: (entry: T) => readonly string[],
 ): T[] {
-  const intlLocale = resolveIntlLocale(locale);
-  const normalized = query.trim().toLocaleLowerCase(intlLocale);
-  if (!normalized) return [...entries];
-  return entries.filter((entry) =>
-    fields(entry).some((value) => value.toLocaleLowerCase(intlLocale).includes(normalized)),
-  );
+  const needle = prepareNeedle(query, locale);
+  if (!needle) return [...entries];
+  return entries.filter((entry) => fields(entry).some((value) => foldSearchText(value, locale).includes(needle)));
 }
 
 interface CatalogPickerChangeDetail {
@@ -519,11 +513,16 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   commitValue(next: string): void {
     if (this.isReadonly) return;
+    if (next === this._value) {
+      this.hide();
+      return;
+    }
     const inCatalog = this.indexesFor(this.normalizedCatalog).has(next);
     this.value = next;
     this.hide();
-    this.options.emitChange({ value: next, inCatalog });
-    this.emitValueEvents({ value: next, inCatalog });
+    const detail = { value: next, inCatalog };
+    emitSharedValueEvents(this.host, 'input', detail, this.options.emitInput);
+    emitSharedValueEvents(this.host, 'change', detail, this.options.emitChange);
   }
 
   emitValueEvents(detail: CatalogPickerChangeDetail = { value: this._value, inCatalog: this.indexesFor(this.normalizedCatalog).has(this._value) }): void {
@@ -598,7 +597,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   handleTriggerKeyDown(event: KeyboardEvent): void {
-    if (event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (shouldIgnoreNavigationKey(event)) return;
     if (this.typeAhead(event)) return;
     const rows = this.effectiveEntries;
     switch (event.key) {
@@ -637,7 +636,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   handleInputKeyDown(event: KeyboardEvent): void {
-    if (event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (shouldIgnoreNavigationKey(event) || event.shiftKey) return;
     const rows = this.filteredEntries;
     switch (event.key) {
       case 'ArrowDown':

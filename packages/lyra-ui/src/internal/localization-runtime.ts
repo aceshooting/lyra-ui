@@ -1,7 +1,8 @@
 import { canonicalizeLocaleTag } from './locale-tag.js';
 import { warnLocaleFallback } from './dev-warning.js';
 import { domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
-import { getPluralRules } from './intl-cache.js';
+import { readOwnDataValue } from './data-descriptors.js';
+import { getNumberFormat, getPluralRules } from './intl-cache.js';
 import { isPlainRecord } from './object-guards.js';
 import type {
   LyraLocaleDirection,
@@ -422,18 +423,6 @@ const PLURAL_CATEGORIES = new Set<string>([
 ]);
 const trustedMessageRecords = new WeakSet<object>();
 
-function ownDataValue(
-  record: Record<string, unknown>,
-  key: string
-): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
   if (!isPlainRecord(value)) return undefined;
   const snapshot = Object.create(null) as Record<string, string>;
@@ -443,7 +432,7 @@ function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
       if (++count > PLURAL_CATEGORIES.size || !PLURAL_CATEGORIES.has(key))
         return undefined;
       if (!Object.prototype.hasOwnProperty.call(value, key)) return undefined;
-      const entry = ownDataValue(value, key);
+      const entry = readOwnDataValue(value, key);
       if (typeof entry !== 'string') return undefined;
       snapshot[key] = entry;
     }
@@ -516,9 +505,9 @@ function snapshotLocaleMeta(
   if (meta === undefined) return undefined;
   if (!isPlainRecord(meta)) return Object.freeze({});
   const snapshot: LyraLocaleMeta = {};
-  const dir = ownDataValue(meta, 'dir');
+  const dir = readOwnDataValue(meta, 'dir');
   if (dir === 'ltr' || dir === 'rtl') snapshot.dir = dir;
-  const name = ownDataValue(meta, 'name');
+  const name = readOwnDataValue(meta, 'name');
   if (typeof name === 'string') snapshot.name = name;
   return Object.freeze(snapshot);
 }
@@ -578,7 +567,7 @@ function safeMessageAt(source: unknown, key: string): LyraMessage | undefined {
   if (trustedMessageRecords.has(source)) {
     return (source as Record<string, LyraMessage | undefined>)[key];
   }
-  return snapshotMessage(ownDataValue(source, key));
+  return snapshotMessage(readOwnDataValue(source, key));
 }
 
 function deliverLocaleListeners(
@@ -1262,9 +1251,11 @@ export function resolveLyraStringWithLocale(
   return text.replace(/\{(\w+)\}/g, (match, name: string) => {
     try {
       const value = values[name];
-      return typeof value === 'string' || typeof value === 'number'
-        ? String(value)
-        : match;
+      if (typeof value === 'string') return value;
+      if (typeof value !== 'number') return match;
+      if (!Number.isFinite(value)) return String(value);
+      locale ??= resolveLocale();
+      return getNumberFormat(locale, { useGrouping: false, maximumFractionDigits: 20 }).format(value + 0);
     } catch {
       return match;
     }

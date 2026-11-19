@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,7 +56,7 @@ entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution
 `lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
 are passive and cannot be activated.
 
-**CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
+**CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-kind` (visually hidden "File"/"Folder" text), `entry-name`, `entry-name-dir`, `entry-size`,
 `highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
 spoken copy is appended to the shared document-level polite sink only while the viewer and its

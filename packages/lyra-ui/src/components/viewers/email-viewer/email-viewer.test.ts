@@ -2028,3 +2028,57 @@ it('omits detached and unsupported peer attachment bytes while preserving usable
     __setEmailDepsForTesting(undefined);
   }
 });
+
+it('isolates message header values from their right-to-left labels', async () => {
+  const { el, restore } = await loaded(SAMPLE_EML);
+  try {
+    el.dir = 'rtl';
+    for (const part of ['from', 'to', 'subject', 'date']) {
+      expect(el.shadowRoot!.querySelector(`[part="${part}"] bdi`)?.getAttribute('dir'), part).to.equal('auto');
+    }
+  } finally { restore(); }
+});
+
+it('keeps wide preformatted content horizontally scrollable', async () => {
+  const { el, restore } = await loaded(SAMPLE_EML.replace('<p>Totals are <strong>up 12%</strong>.</p>', '<pre>' + 'column'.repeat(120) + '</pre>'));
+  try {
+    
+    el.style.inlineSize = '200px';
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="body-html"] pre'));
+    const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="body-html"]')!;
+    expect(surface.scrollWidth).to.be.greaterThan(surface.clientWidth);
+    expect(getComputedStyle(surface).overflowX).to.equal('auto');
+    surface.scrollLeft = 80;
+    expect(surface.scrollLeft).to.be.greaterThan(0);
+  } finally { restore(); }
+});
+
+it('makes an overflowing message body keyboard scrollable with its current name', async () => {
+  const { el, restore } = await loaded(TEXT_EML.replace('See you at noon.', Array.from({ length: 50 }, () => 'Message text').join('\r\n')));
+  try {
+    el.maxHeight = '64px';
+    el.name = 'Correspondence';
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    await waitUntil(() => body.tabIndex === 0);
+    expect(body.getAttribute('aria-label')).to.equal('Correspondence');
+    el.name = 'Archive';
+    await el.updateComplete;
+    expect(body.getAttribute('aria-label')).to.equal('Archive');
+  } finally { restore(); }
+});
+
+it('reports a missing parser peer without downloading the message body', async () => {
+  __setEmailDepsForTesting({ PostalMime: undefined, DOMPurify: undefined } as never);
+  const original = window.fetch;
+  const response = new Response('Subject: x\r\n\r\nbody');
+  window.fetch = (() => Promise.resolve(response)) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="/m.eml"></lr-email-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(response.bodyUsed).to.equal(false);
+  } finally {
+    window.fetch = original;
+    __setEmailDepsForTesting(undefined);
+  }
+});

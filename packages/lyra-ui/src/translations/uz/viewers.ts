@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'PDF hujjati',
   pdfViewerMissingLibrary: 'PDF fayllarni chiqarish uchun koʻruvchiga ixtiyoriy "pdfjs-dist" paketini oʻrnatish kerak.',
   pdfViewerPageOf: '{total} tadan {page}-sahifa',
+  pdfViewerPageHighlights: '{page}-sahifadagi ajratmalar',
   pdfViewerZoomIn: 'Kattalashtirish',
   pdfViewerZoomOut: 'Kichraytirish',
   pdfViewerPreviousPage: 'Oldingi sahifa',

@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Ọsọ ịkpọgharị',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} n’ime {duration}',
+  avPlayerHighlightRange: 'site na {start} ruo {end}',
+  avPlayerHighlightAt: 'na {start}',
   attachmentTriggerAudio: 'Dekọọ ọdịyo',
   attachmentMenuAudio: 'Dekọọ ọdịyo',
   flagLoadError: 'Ọkọlọtọ adịghị',

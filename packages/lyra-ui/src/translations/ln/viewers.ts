@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   pdfViewerLabel: 'Mokanda PDF',
   pdfViewerMissingLibrary: 'Motali oyo esengaka paquet "pdfjs-dist" mpo na ko afficher ba fichier PDF.',
   pdfViewerPageOf: 'Lokasa {page} kati na {total}',
+  pdfViewerPageHighlights: 'Ba eteni emonisami ya lokasa {page}',
   pdfViewerZoomIn: 'Bakisa zoom',
   pdfViewerZoomOut: 'Kitisa zoom',
   pdfViewerPreviousPage: 'Lokasa eleki',

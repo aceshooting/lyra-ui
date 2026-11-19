@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   avPlayerPlaybackRate: 'Ταχύτητα αναπαραγωγής',
   avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} από {duration}',
+  avPlayerHighlightRange: 'από {start} έως {end}',
+  avPlayerHighlightAt: 'στο {start}',
   attachmentTriggerAudio: 'Εγγραφή ήχου',
   attachmentMenuAudio: 'Εγγραφή ήχου',
   flagLoadError: 'Η σημαία δεν είναι διαθέσιμη',

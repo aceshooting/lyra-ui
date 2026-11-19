@@ -50,6 +50,9 @@ Unconstrained panels have a zero block minimum, so long content stays inside the
 escaping into following content. Set `overflow` directly on an individual panel when its content
 needs a different scrolling surface.
 
+A focused enabled divider consumes its resize keys at either limit. Clamped steps leave sizes and persistence untouched.
+Alt, Ctrl, and Meta chords, IME composition, and previously handled key events pass through.
+
 **Properties:**
 
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
@@ -67,6 +70,7 @@ needs a different scrolling surface.
   owner-document/host, and `vw`/`vh` against the owner window), then normalized to percentages
   before the same validation applies — so `['200px', '300px']` on a 500px container initializes to
   `[40, 60]`.
+- `disabled: boolean = false` (reflected) — disables pointer and keyboard resizing on every divider.
 - `min: number = 10` (min % per panel)
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
   `orientationBreakpoint` (or always, when that's unset).
@@ -223,7 +227,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   leaves the last one open). Assigning it is silent, like `sizes`; a `sizes` assignment made
   together with it may already describe the fold (zero entries for the folded panels), otherwise a
   `sizes` value with a non-zero entry for a folded panel is rejected like any invalid layout. A
-  valid `storageKey` layout restores the set, unless this property already names panels. The
+  valid `storageKey` layout restores the set when this property is unset. An explicitly assigned
+  empty array expands every panel using its saved share. The
   responsive `collapse` pane is independent: while it is `'rail'`/`'floating'` its own state governs
   that panel, and a per-panel fold of the same panel shows again once it is `'wide'`.
 
@@ -277,7 +282,8 @@ back to the localized default.
 
 **Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
 array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
-persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly or a
+persisted layout unchanged. A listener that changes the sizes, panel sequence, or resize constraints
+supersedes the pending proposal. It is not emitted when a consumer assigns `sizes` directly or a
 keyboard/pointer proposal clamps to the already-current sizes),
 `lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
 or keyboard step commits. A genuine pointer gesture has one terminal persistence write on

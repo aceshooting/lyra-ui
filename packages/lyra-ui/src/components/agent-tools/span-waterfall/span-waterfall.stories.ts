@@ -33,7 +33,7 @@ const meta: Meta = {
   title: 'Observability/Span Waterfall',
   component: 'lr-span-waterfall',
   tags: ['autodocs'],
-  parameters: { docs: { description: { component: 'Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including surrounding whitespace. The first valid admitted duplicate continues to win. Every interactive span bar retains a 24px target in both axes, even when a very short duration paints more narrowly on the timeline.' } } },
+  parameters: { docs: { description: { component: 'Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including surrounding whitespace. The first valid admitted duplicate continues to win. Every interactive span bar retains the shared icon-button target in both axes while the painted width follows its duration.' } } },
 };
 export default meta;
 type Story = StoryObj;

@@ -36,6 +36,7 @@ const strings: LyraLocaleStrings = {
   dockPanelCollapse: 'Panel összecsukása',
   dockPanelExpand: 'Panel kibontása',
   dockPanelResize: 'Panel átméretezése',
+  dockPanelToggle: 'Panel be- és kikapcsolása',
   responsivePanel: 'Panel',
   breadcrumb: 'Morzsamenü',
   resizeDivider: 'Elválasztó átméretezése a panelek között: {a} és {b}',

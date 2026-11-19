@@ -175,6 +175,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: '입력 한도에 도달하여 일부 제안 또는 카탈로그 항목이 생략되었습니다.',
   transcriptFeedInputLimit: '총 {total}개 항목 중 최신 {count}개만 유지됩니다.',
   codeBlockHighlightLimit: '긴 코드는 구문 강조 없이 표시됩니다.',
+  codeBlockHighlightedLine: '강조 표시된 줄',
+  codeBlockActiveLine: '활성 강조 표시 줄',
 };
 
 registerLyraLocale('ko', strings);

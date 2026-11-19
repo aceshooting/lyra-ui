@@ -178,6 +178,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'Osa ehdotuksista tai luettelomerkinnöistä jätettiin pois syöterajan täyttymisen vuoksi.',
   transcriptFeedInputLimit: 'Vain uusimmat {count} merkintää yhteensä {total} merkinnästä säilytetään.',
   codeBlockHighlightLimit: 'Pitkä koodi näytetään ilman syntaksin korostusta.',
+  codeBlockHighlightedLine: 'Korostettu rivi',
+  codeBlockActiveLine: 'Aktiivinen korostettu rivi',
 };
 
 registerLyraLocale('fi', strings);

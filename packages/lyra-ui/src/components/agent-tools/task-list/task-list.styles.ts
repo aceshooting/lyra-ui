@@ -1,3 +1,4 @@
+import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -157,8 +158,7 @@ export const styles = [
       );
     }
     [part="item"][tabindex]:focus-visible {
-      outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-      outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+      ${focusRingInsetOffset}
     }
     [part="item"][data-depth="1"] {
       margin-inline-start: var(--lr-space-l);

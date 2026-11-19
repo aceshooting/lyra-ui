@@ -1202,3 +1202,23 @@ it('re-homes its limit announcements when adopted into another document', async 
     frame.remove();
   }
 });
+
+it('speaks each issue severity as text, isolates names and constraints, and indents constraints with their node', async () => {
+  const el = (await fixture(html`
+    <lr-json-schema-viewer
+      .schema=${{ type: 'object', properties: { child: { type: 'string', pattern: '^a+$' } } }}
+      .issues=${[
+        { path: '/properties/child', message: 'Bad', severity: 'warning' },
+        { path: '/properties/child', message: 'Nope' },
+        { path: '/properties/child', message: 'FYI', severity: 'info' },
+      ]}
+    ></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
+  const issues = [...el.shadowRoot!.querySelectorAll('[part="issue"]')].map((node) => node.textContent!.replace(/\s+/g, ' ').trim());
+  expect(issues).to.deep.equal(['Warning: Bad', 'Error: Nope', 'Note: FYI']);
+  expect(el.shadowRoot!.querySelector('[part="name"] bdi') != null).to.equal(true);
+  const constraints = el.shadowRoot!.querySelector('[part="constraints"]') as HTMLElement;
+  const trigger = constraints.parentElement!.querySelector('[part="node-trigger"]') as HTMLElement;
+  expect(getComputedStyle(constraints).marginInlineStart).to.equal(getComputedStyle(trigger).marginInlineStart);
+  expect(getComputedStyle(constraints).marginInlineStart).to.not.equal('0px');
+});

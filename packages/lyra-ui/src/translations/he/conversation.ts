@@ -181,6 +181,8 @@ const strings: LyraLocaleStrings = {
   promptInputInputLimit: 'חלק מההצעות או רשומות הקטלוג הושמטו משום שהקלט הגיע למגבלה.',
   transcriptFeedInputLimit: 'רק {count} הרשומות החדשות ביותר מתוך {total} נשמרות.',
   codeBlockHighlightLimit: 'קוד ארוך מוצג ללא הדגשת תחביר.',
+  codeBlockHighlightedLine: 'שורה מודגשת',
+  codeBlockActiveLine: 'שורה מודגשת פעילה',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

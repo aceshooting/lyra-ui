@@ -1,4 +1,5 @@
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { formatAdaptiveShare } from '../../../internal/locale-number.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
@@ -45,7 +46,7 @@ export interface RetrievalComparisonSet {
 }
 
 export interface LyraRetrievalCompareEventMap {
-  'lr-chunk-select': CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk }>>;
+  'lr-chunk-select': CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk; chunkId: string; sourceId: string }>>;
 }
 
 /**
@@ -58,7 +59,7 @@ export interface LyraRetrievalCompareEventMap {
  * each retained set, blank chunk ids and later duplicates are likewise ignored. First records win.
  *
  * @customElement lr-retrieval-compare
- * @event lr-chunk-select - A result was activated. `detail: { setId, chunk }`.
+ * @event lr-chunk-select - A result was activated. `detail: { setId, chunk, chunkId, sourceId }`; `chunkId` and `sourceId` match the detail of `lr-chunk-open` on the sibling retrieval components.
  * @csspart base - The named comparison region.
  * @csspart overlap - Pairwise top-k Jaccard overlap for the current page of at most eight sets.
  * @csspart input-limit - The input-admission loss notice.
@@ -274,11 +275,15 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     );
   }
 
-  private formatScore(value: number): string {
+  private formatOverlap(ratio: number): string {
     return getNumberFormat(this.effectiveLocale, {
       style: 'percent',
       maximumFractionDigits: 1,
-    }).format(finiteRange(value, 0, 0, 1));
+    }).format(finiteRange(ratio, 0, 0, 1));
+  }
+
+  private formatScore(value: number): string {
+    return formatAdaptiveShare(this.effectiveLocale, finiteRange(value, 0, 0, 1));
   }
 
   private overlaps(sets: readonly RetrievalComparisonSet[], ordered: ReadonlyMap<string, RetrievalChunk[]>): ComparisonOverlap[] {
@@ -345,7 +350,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
                   aria-labelledby="${id}-rank ${id}-title"
                   aria-describedby="${id}-text ${id}-scores"
                   @click=${() =>
-                    this.emit('lr-chunk-select', { setId: set.id, chunk })}
+                    this.emit('lr-chunk-select', { setId: set.id, chunk, chunkId: chunk.id, sourceId: chunk.source.id })}
                 >
                   <span part="chunk-rank" id="${id}-rank"
                     >${this.localize('retrievalCompareRank', undefined, {
@@ -413,7 +418,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         ${inputLimit}
         ${this.renderPagination()}
         ${this.visibleOverlaps.map(summary => html`<p part="overlap">${this.localize('retrievalCompareOverlap', undefined, {
-          left: summary.left, right: summary.right, percent: this.formatScore(summary.ratio),
+          left: summary.left, right: summary.right, percent: this.formatOverlap(summary.ratio),
         })}</p>`)}
         <div part="sets">
           ${repeat(sets, set => set.id, (set, index) =>

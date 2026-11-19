@@ -1,3 +1,4 @@
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
@@ -187,8 +188,19 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   private generation = 0;
   private readonly announcements = new ViewerAnnouncementController(this);
 
+  private releaseScrollRegion?: () => void;
+
+  private syncScrollRegion(): void {
+    this.releaseScrollRegion?.();
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    this.releaseScrollRegion = body && this.isConnected
+      ? makeScrollRegionFocusable(body, this.name.trim() || this.localize('svgViewerLabel'))
+      : undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
     // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
@@ -205,6 +217,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   override disconnectedCallback(): void {
     if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
+    this.releaseScrollRegion?.();
+    this.releaseScrollRegion = undefined;
     super.disconnectedCallback();
     this.detached.schedule();
   }
@@ -217,6 +231,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     this.announcements.transition(
       'load',
       this.fetchState.kind,

@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { resolveHeadingLevel } from '../../../internal/heading-level.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -14,7 +15,7 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './community-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityDrillInWithContext, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_noData, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -84,6 +85,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     communityDrillIn: LYRA_DEFAULT_communityDrillIn,
+    communityDrillInWithContext: LYRA_DEFAULT_communityDrillInWithContext,
     communityMemberCount: LYRA_DEFAULT_communityMemberCount,
     noData: LYRA_DEFAULT_noData,
     showMoreCount: LYRA_DEFAULT_showMoreCount,
@@ -171,7 +173,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     return html`
       <div part="base">
         <div part="header">
-          <span part="title" role="heading" aria-level=${this.getAttribute('aria-level') || '3'}
+          <span part="title" role="heading" aria-level=${resolveHeadingLevel(this.getAttribute('aria-level') || '3') ?? '3'}
             ><button type="button" @click=${this.onDrill}>
               ${titleText}
             </button></span
@@ -179,11 +181,16 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
           <span part="member-count"
             >${this.localize('communityMemberCount', undefined, {
               count: numberFormat.format(memberCount),
+              pluralCount: memberCount,
             })}</span
           >
           <div part="actions">
             <slot name="actions"></slot>
-            <lr-button part="drill-button" size="s" @click=${this.onDrill}
+            <lr-button
+              part="drill-button"
+              size="s"
+              aria-label=${this.localize('communityDrillInWithContext', undefined, { label: titleText })}
+              @click=${this.onDrill}
               >${this.localize('communityDrillIn')}</lr-button
             >
           </div>
