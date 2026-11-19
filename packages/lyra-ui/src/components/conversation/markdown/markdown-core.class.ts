@@ -237,6 +237,16 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart code-block-copy-error - Additional copy-button token during failed confirmation.
  * @cssprop [--lr-markdown-code-header-bg=var(--lr-color-surface)] - Code header background.
  * @cssprop [--lr-markdown-code-header-color=var(--lr-color-text-quiet)] - Code header foreground.
+ * @cssprop --lr-icon-button-bg - Code-block action button background in the resting state.
+ * @cssprop --lr-icon-button-bg-active - Code-block action button background while pressed.
+ * @cssprop --lr-icon-button-bg-hover - Code-block action button background on hover.
+ * @cssprop --lr-icon-button-border - Code-block action button border in the resting state.
+ * @cssprop --lr-icon-button-border-active - Code-block action button border while pressed.
+ * @cssprop --lr-icon-button-border-hover - Code-block action button border on hover.
+ * @cssprop --lr-icon-button-color - Code-block action button foreground in the resting state.
+ * @cssprop --lr-icon-button-color-active - Code-block action button foreground while pressed.
+ * @cssprop --lr-icon-button-color-hover - Code-block action button foreground on hover.
+ * @cssprop --lr-icon-button-radius - Code-block action button corner radius.
  * @event lr-copy - Fired after a code-header clipboard write succeeds, with its immutable outcome.
  * @event lr-error - Fired before the detailed clipboard error when a code-header copy fails.
  * @event lr-copy-error - Fired after a code-header clipboard write fails, with its immutable outcome.

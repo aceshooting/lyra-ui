@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './timeline-item.styles.js';
 import type { LyraMessageKey } from '../../../internal/localization-types.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
@@ -166,7 +167,7 @@ export class LyraTimelineItem extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   /** When this event happened. Accepts a `Date`, anything `new Date()` can parse (e.g. an ISO 8601
    *  string), or epoch milliseconds. Invalid/unparseable input normalizes to "unset" -- no timestamp

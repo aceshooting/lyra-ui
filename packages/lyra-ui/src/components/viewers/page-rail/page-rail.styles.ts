@@ -122,5 +122,5 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text-quiet);
   }
-  ${forcedColorsPart("lr-virtual-list::part(page-current)")}
+  ${forcedColorsPart('lr-virtual-list::part(page-current)')}
 `;

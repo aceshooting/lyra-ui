@@ -8,7 +8,7 @@
     "javascriptHeadroomPercent": 2,
     "cssHeadroomPercent": 4,
     "assetHeadroomPercent": 0,
-    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file. Segmented field labels, hints and forwarded-slot naming, together with the chart no-glyph fallback and its accessible-name cleanup, bring chat-composition lazy JavaScript to 1,035,535 raw and 293,712 gzip bytes. Only these two exceeded ceilings advance to the next 64-byte boundary; eager-loading limits, all other passing metrics and external dependency inventories remain unchanged. The select consumed-key fix and shared tree size styles add 31 raw lazy bytes to the preceding prepared build. The current chat-composition lazy JavaScript measures 1,035,590 bytes, so only its raw ceiling advances to 1,035,648, the next 64-byte boundary; the gzip ceiling and every other limit stay unchanged. The shared component helpers and repairs in the library bring chat-composition lazy JavaScript to 1,041,533 raw and 295,748 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, and every other limit stays unchanged."
+    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file. Segmented field labels, hints and forwarded-slot naming, together with the chart no-glyph fallback and its accessible-name cleanup, bring chat-composition lazy JavaScript to 1,035,535 raw and 293,712 gzip bytes. Only these two exceeded ceilings advance to the next 64-byte boundary; eager-loading limits, all other passing metrics and external dependency inventories remain unchanged. The select consumed-key fix and shared tree size styles add 31 raw lazy bytes to the preceding prepared build. The current chat-composition lazy JavaScript measures 1,035,590 bytes, so only its raw ceiling advances to 1,035,648, the next 64-byte boundary; the gzip ceiling and every other limit stay unchanged. The shared component helpers and repairs in the library bring chat-composition lazy JavaScript to 1,041,533 raw and 295,748 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, and every other limit stays unchanged. Library-wide accessibility, lifecycle and localization repairs bring gen-view eager JavaScript to 185,520 raw bytes, gen-view lazy JavaScript to 856,852 raw and 249,123 gzip bytes, and chat-composition eager JavaScript to 517,232 raw and 162,850 gzip bytes; these five exceeded ceilings advance to the 2% review limit above their measurements."
   },
   "profiles": {
     "parser": {
@@ -88,10 +88,10 @@
     },
     "gen-view": {
       "measured": {
-        "eagerJsBytes": 181846,
+        "eagerJsBytes": 185520,
         "eagerJsGzipBytes": 56842,
-        "lazyJsBytes": 837714,
-        "lazyJsGzipBytes": 243842,
+        "lazyJsBytes": 856852,
+        "lazyJsGzipBytes": 249123,
         "eagerCssBytes": 0,
         "eagerCssGzipBytes": 0,
         "lazyCssBytes": 0,
@@ -99,10 +99,10 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 185482,
+        "eagerJsBytes": 189230,
         "eagerJsGzipBytes": 56896,
-        "lazyJsBytes": 854468,
-        "lazyJsGzipBytes": 248718,
+        "lazyJsBytes": 873989,
+        "lazyJsGzipBytes": 254105,
         "eagerCssBytes": 0,
         "eagerCssGzipBytes": 0,
         "lazyCssBytes": 0,
@@ -113,8 +113,8 @@
     },
     "chat-composition": {
       "measured": {
-        "eagerJsBytes": 505088,
-        "eagerJsGzipBytes": 158483,
+        "eagerJsBytes": 517232,
+        "eagerJsGzipBytes": 162850,
         "lazyJsBytes": 1041533,
         "lazyJsGzipBytes": 295748,
         "eagerCssBytes": 103994,
@@ -124,8 +124,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 515189,
-        "eagerJsGzipBytes": 161652,
+        "eagerJsBytes": 527576,
+        "eagerJsGzipBytes": 166107,
         "lazyJsBytes": 1041536,
         "lazyJsGzipBytes": 295808,
         "eagerCssBytes": 108153,

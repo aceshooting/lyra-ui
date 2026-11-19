@@ -5,6 +5,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import '../../overlays/badge/badge.class.js';
@@ -207,7 +208,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     'issues',
   ]);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-schema-select',
   ]);
