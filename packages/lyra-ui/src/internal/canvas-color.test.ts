@@ -136,6 +136,21 @@ describe('readCanvasRgba', () => {
       frame.remove();
     }
   });
+  it('replaces a failed document canvas and keeps its replacement when a supplied context fails', () => {
+    const doc = document.implementation.createHTMLDocument();
+    const unreadable = doc.createElement('canvas').getContext('2d')!;
+    unreadable.getImageData = () => { throw new DOMException('Canvas pixels are unavailable', 'SecurityError'); };
+    const createElementNS = doc.createElementNS.bind(doc);
+    let created = 0;
+    doc.createElementNS = ((...args: Parameters<Document['createElementNS']>) =>
+      ++created === 1 ? unreadable.canvas : createElementNS(...args)) as Document['createElementNS'];
+
+    expect(readCanvasRgba(doc, 'red')).to.equal(undefined);
+    expect(readCanvasRgba(doc, 'blue')).to.deep.equal([0, 0, 255, 1]);
+    expect(readCanvasRgba(doc, 'red', unreadable)).to.equal(undefined);
+    expect(readCanvasRgba(doc, 'lime')).to.deep.equal([0, 255, 0, 1]);
+    expect(created).to.equal(2);
+  });
   it('reads through a supplied context and restores its drawing state', () => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;

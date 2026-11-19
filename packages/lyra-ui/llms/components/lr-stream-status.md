@@ -114,8 +114,8 @@ Internally, the inactivity timer runs only while `phase === 'streaming'`. It's (
 `'stalled'`) and on every subsequent `recordActivity()` call while already streaming; it's disarmed
 the instant the effective phase becomes anything else, including a host-driven transport transition away from
 `'streaming'` — so a stale timer can never fire a stall transition after the host has already moved
-on. Phase transitions into/out of `'stalled'` are announced through an internal
-`<lr-live-region>` rather than a hand-rolled `aria-live` region: entering `'stalled'` announces
+on. The live region announces the localized phase text politely after mount. For transitions
+into and out of a stall it uses dedicated announcements. Entering `'stalled'` announces
 "Connection stalled." with `mode="assertive"` (a stall can need the user's attention before they
 give up and navigate away). Leaving `'stalled'` always announces with `mode="polite"` (good news
 doesn't need to interrupt), but the _wording_ depends on the destination phase: "Connection

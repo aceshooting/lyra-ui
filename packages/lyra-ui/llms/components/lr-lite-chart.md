@@ -211,6 +211,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   grouped-bar gaps are bounded within the remaining category width so supported multi-series groups
   retain positive, nonoverlapping bars for ratios below 1. A ratio of 1 reserves the whole slot as
   gap and leaves zero-width bars.
+- `scaleType` (attribute `scale-type`) is an alias for `scale`.
 - `scale: 'linear' | 'sqrt' | 'logarithmic' = 'linear'` — `'sqrt'` (**bar type only**) maps a bar's
   value to height via `Math.sqrt(value / domainMax)` instead of the standard linear `niceDomain`
   fraction (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars

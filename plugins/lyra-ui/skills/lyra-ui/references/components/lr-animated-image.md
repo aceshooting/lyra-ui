@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,7 +65,11 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 `var(--lr-icon-button-size)`), `--lr-animated-image-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)`), `--lr-animated-image-max-height` (default
 `var(--lr-size-20rem)` — caps the rendered media's block-size, same contract as
-`--lr-media-card-max-height`).
+`--lr-media-card-max-height`), `--lr-animated-image-control-box-bg` (default
+`color-mix(in srgb, var(--lr-color-surface) 78%, transparent)` — the resting scrim behind the
+button), and `--lr-animated-image-play-button-hover-bg` / `--lr-animated-image-play-button-active-bg`
+(defaults: the opaque surface, and that surface mixed toward `--lr-color-mix-partner` by
+`--lr-color-mix-active`) for the hovered and pressed button.
 
 **Optional peer deps:** none.
 

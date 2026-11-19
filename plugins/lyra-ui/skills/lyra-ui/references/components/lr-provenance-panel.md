@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,8 +39,8 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` carries `{ section, expanded }` for a section header or
-`{ section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
+**Events:** `lr-toggle` carries `{ kind: 'section', section, expanded }` for a section header or
+`{ kind: 'chunk', section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
 re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
@@ -53,7 +53,8 @@ edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the 
 
 **Slots:** none.
 
-**CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
+**CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `toggle` (the header's
+chevron; rotated while expanded, mirrored under RTL), `count` (a section's
 full item-count badge), `body` (stable `aria-controls` target; heavy rows mount only while expanded),
 `limit` (localized notice above 500 rows per section), `entity-row` (the wrapping row of entity chips
 inside the entities section), `empty` (shown when every section is empty).

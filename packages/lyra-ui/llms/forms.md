@@ -1,4 +1,3 @@
-
 ## Setter-only `null` clearing in 8.0.0
 
 Several mapped string IDLs accept `null` on assignment without widening their read type. This is a
@@ -171,6 +170,9 @@ When `multiple` becomes false, the public value, live option flags, popup `aria-
 retained multiple-selection history returns if multiple is enabled again without another selection
 write. A populated `multiple` combobox describes its input by every committed label (visually
 hidden), so the tags collapsed behind "+N" are announced too.
+Equal-valued suggestions can be selected independently in multiple mode. Each activation toggles
+one occurrence, and each selected row supplies its own label and data. Use `FormData#getAll()` to
+read repeated submitted values.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
@@ -5291,10 +5293,9 @@ value readout, label, references, error, and hint as those flex items wrap.
   cross-axis extent of `[part="base"]`: its block size when horizontal, its inline size when
   vertical.
 
-`--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
-track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
-token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
-consumer value set on any ancestor is never shadowed. `--lr-slider-tooltip-distance` carries the
+`--lr-slider-track-length` (default `var(--lr-size-10rem)`) sets the block size of the vertical
+track row, including the space reserved for the endpoint hit targets. A horizontal track row
+fills its inline allocation. Set the token on the slider or an ancestor. `--lr-slider-tooltip-distance` carries the
 finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
 than overriding this runtime value. The thumb has independent paint hooks:
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
@@ -5392,6 +5393,8 @@ is present for upstream form-surface parity but adds no missing-value constraint
   minimum at **every** tier, while a 40px _visible_ thumb would make two range handles overlap
   across 40px of track and hijack track clicks. The pseudo-element has no DOM node of its own, so a
   pointerdown inside it still reports the thumb as `e.target`.
+- The track reserves room at both ends for the thumb and hit target. An inactive value bubble
+  takes up no layout space.
 
 ---
 
@@ -6031,7 +6034,7 @@ one `::after` rule described under "The required-field marker" above, not a copy
 `--lr-form-control-required-content`, `--lr-form-control-required-color` and
 `--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`. It
 marks the **group**, not the individual checkboxes: an owned `<lr-checkbox>` has no label box of
-its own and paints nothing. With no group label text the legend is hidden and no glyph is painted.
+its own and paints nothing. With no group label text the legend is hidden and no glyph is painted. Also `form-control-help-text` (an alias for the `hint` container).
 
 **Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
@@ -6638,7 +6641,7 @@ The eyedropper aliases are also addressable individually as `eyedropper-button__
 above, not a copy of it, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
 here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
-painted.
+painted. Also `swatch-check` (the check-mark icon inside the selected swatch).
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.25rem`,

@@ -51,7 +51,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Mês',
   knownDateYear: 'Ano',
   exportFormatMenuLabel: '{label}: formato',
-  exportFailed: 'Não foi possível exportar',
+  exportFailed: 'Falha na exportação',
   mentionSuggestions: 'Sugestões',
   mentionResultCount: {
     one: '{count} sugestão',

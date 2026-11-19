@@ -4,7 +4,7 @@ import type { DropSessionController, DropSessionState } from '../../../internal/
 import type { FileIntakeRejected, FileIntakeResult } from './accept.js';
 export {
   classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes, DEFAULT_MAX_FILES, DEFAULT_MAX_FILE_SIZE_BYTES, DEFAULT_MAX_TOTAL_SIZE_BYTES,
-  type FileIntakeLimits, type FileIntakeRejected, type FileIntakeResult,
+  type FileIntakeRejected, type FileIntakeResult,
 } from './accept.js';
 
 /** Frozen `lr-files` detail; `remaining*` is the allowance left under the limit (`null` while unset). */

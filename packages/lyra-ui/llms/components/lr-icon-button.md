@@ -73,6 +73,10 @@ rather than being empty — override it per instance with `.strings` or app-wide
 `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a button whose purpose
 isn't generic. Slotted content is re-checked on `slotchange`, not on text edits inside it.
 
+For icon-only toggles (mute, favorite, pin), assign the non-reflected `pressed` property (`true`,
+`false`, `'mixed'` or `null`), as on `lr-button`; it renders `aria-pressed` on the internal
+`<button>` and wins over a host `aria-pressed` attribute.
+
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
 mute, favorite, or pin, and reaches the `<button>` rendering only — a link icon-button (`href` set)

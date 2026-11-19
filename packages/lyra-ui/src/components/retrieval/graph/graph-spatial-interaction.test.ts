@@ -439,7 +439,7 @@ function expectForcedColorAdjustNone(element: Element): void {
 }
 
 it('paints the configured hover fill on its spatial-control', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-graph']>(html`<lr-graph view="list" .nodes=${[{id:'a'}]} style="--lr-graph-spatial-control-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-graph>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-graph']>(html`<lr-graph data-lr-theme-scope view="list" .nodes=${[{id:'a'}]} style="--lr-graph-spatial-control-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-graph>`);
   const button = el.shadowRoot!.querySelector('[part="spatial-control"]:not(:disabled)')!;
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');

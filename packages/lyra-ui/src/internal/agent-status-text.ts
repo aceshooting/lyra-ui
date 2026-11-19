@@ -24,8 +24,7 @@ export function agentStatusText(localize: (key: string) => string, kind: unknown
     }
   }
   const text = typeof name === 'string' && name !== '' ? name : 'idle';
-  const key = Object.hasOwn(STATUS_LABEL_KEYS, text) ? STATUS_LABEL_KEYS[text as AgentStatusKind] : undefined;
-  return key !== undefined
-    ? localize(key)
+  return Object.hasOwn(STATUS_LABEL_KEYS, text)
+    ? localize(STATUS_LABEL_KEYS[text as AgentStatusKind]!)
     : text.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

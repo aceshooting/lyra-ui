@@ -202,6 +202,9 @@ export interface LyraAppRailItemEventMap {
  *   `padding-inline-start`. Applied once per nesting level -- a doubly-nested `children` list
  *   compounds two insets automatically, since each level's own `[part="children"]` applies the
  *   token again. Logical, so it mirrors under `dir="rtl"` with no separate rule.
+ * @cssprop --lr-overlay-border - Shared floating-surface edge colour of the panel.
+ * @cssprop --lr-overlay-radius - Shared floating-surface corner radius of the panel.
+ * @cssprop --lr-overlay-surface - Shared floating-surface fill of the panel.
  * @status stable
  * @since 4.0.0
  */

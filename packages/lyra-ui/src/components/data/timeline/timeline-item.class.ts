@@ -351,7 +351,7 @@ export class LyraTimelineItem extends LyraElement {
           <div part="header">
             <span part="title"
               >${variantKey
-                ? html`<span class="sr-only" data-variant-name>${this.localize(variantKey)}: </span>`
+                ? html`<span class="sr-only" data-variant-name>${this.localize(VARIANT_NAME_KEYS[this._variant]!)}: </span>`
                 : nothing}<slot></slot
             ></span>
             <span part="timestamp" ?hidden=${!showTimestamp}>

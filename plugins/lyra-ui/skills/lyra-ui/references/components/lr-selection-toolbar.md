@@ -16,6 +16,10 @@
 
 ## `lr-selection-toolbar`
 
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+Copy announces its localized result. When two actions overlap, only the latest activation can update feedback or emit its completion events.
+
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
 `DocumentLocator` into ask, quote, cite, and copy actions. The toolbar is positioned in viewport
 coordinates; inside a transformed, filtered or contained ancestor (a per-message toolbar in a

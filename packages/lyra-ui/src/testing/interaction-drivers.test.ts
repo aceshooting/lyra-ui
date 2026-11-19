@@ -377,7 +377,7 @@ describe('chooseSwatch', () => {
     const seen = recordEvents(el, ['lr-change', 'lr-activate']);
     const changed = oneEvent(el, 'lr-change');
     await chooseSwatch(el, 'ruby');
-    expect((await changed).detail).to.deep.equal({ value: 'ruby' });
+    expect((await changed).detail).to.deep.equal({ value: 'ruby', previousValue: 'emerald' });
     expect(seen).to.deep.equal(['lr-change', 'lr-activate']);
     expect(el.value).to.equal('ruby');
     const selected = el.shadowRoot!.querySelector<HTMLElement>('[part~="swatch-selected"]');

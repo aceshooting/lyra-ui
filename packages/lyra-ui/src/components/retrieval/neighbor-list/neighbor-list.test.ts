@@ -867,7 +867,7 @@ for (const virtualizeAt of [0, 100]) {
 }
 
 it('paints the configured hover fill on its node-label', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-neighbor-list']>(html`<lr-neighbor-list .rows=${rows} style="--lr-neighbor-list-node-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-neighbor-list>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-neighbor-list']>(html`<lr-neighbor-list data-lr-theme-scope .rows=${rows} style="--lr-neighbor-list-node-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-neighbor-list>`);
   const button = el.shadowRoot!.querySelector('[part="node-label"]')!;
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');

@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-tool-timeline`
+
+If a review or result view fails to load, `part="load-error"` displays `toolTimelineLoadError`. Activating the review or reopening the details retries the download.
+
+`disabled` prevents review actions. `lr-tool-approval-open` and `lr-tool-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
 
 Chronological list of agent tool/function calls composed from tool-call, result, and approval
 primitives, with retry counts and sensitive-field redaction.
@@ -51,7 +55,8 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
-- `grouped: boolean = false` (reflected) — wraps the timeline in one initially closed disclosure.
+- `grouped: boolean = false` (reflected) — wraps the timeline in one initially closed disclosure. Its
+  default summary words the group by its worst status (`toolCallBlockHeader*`), like a single call block.
   The summary lists distinct tool display names in chronological order with a locale-aware
   conjunction. The first status present in `error`, `denied`, `running`, `pending`, `incomplete`,
   `success` order supplies the group glyph and accessible status text. Empty timelines still show
@@ -130,7 +135,7 @@ group status.
 and rendered-window notices), `group` (the grouped disclosure), and `group-summary` (its glyph and
 summary content, with the aggregate status in `data-status`).
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
-repeated bare "Details" label.
+repeated bare "Details" label. Also `load-error` (the localized fallback shown when a review or result view fails to load).
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the

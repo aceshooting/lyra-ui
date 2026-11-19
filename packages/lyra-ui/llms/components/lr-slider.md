@@ -219,10 +219,9 @@ value readout, label, references, error, and hint as those flex items wrap.
   cross-axis extent of `[part="base"]`: its block size when horizontal, its inline size when
   vertical.
 
-`--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
-track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
-token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
-consumer value set on any ancestor is never shadowed. `--lr-slider-tooltip-distance` carries the
+`--lr-slider-track-length` (default `var(--lr-size-10rem)`) sets the block size of the vertical
+track row, including the space reserved for the endpoint hit targets. A horizontal track row
+fills its inline allocation. Set the token on the slider or an ancestor. `--lr-slider-tooltip-distance` carries the
 finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
 than overriding this runtime value. The thumb has independent paint hooks:
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
@@ -320,5 +319,7 @@ is present for upstream form-surface parity but adds no missing-value constraint
   minimum at **every** tier, while a 40px _visible_ thumb would make two range handles overlap
   across 40px of track and hijack track clicks. The pseudo-element has no DOM node of its own, so a
   pointerdown inside it still reports the thumb as `e.target`.
+- The track reserves room at both ends for the thumb and hit target. An inactive value bubble
+  takes up no layout space.
 
 ---

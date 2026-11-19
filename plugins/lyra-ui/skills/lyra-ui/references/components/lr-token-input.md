@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,10 +65,15 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) — zero leaves every token mounted,
-preserving the default. Positive values bound mounted tokens while retaining the focused or editing
-token; `token-overflow` displays a localized count for the rest. Non-finite values restore the
-unlimited default. The value array and form submission still include every token.
+`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) bounds the number of mounted
+tokens while retaining the focused or editing token. `token-overflow` displays a localized count
+for the rest. Set `max-tokens-visible="0"` to mount every token. Non-finite values restore the
+200-token default. The value array and form submission include every token.
+The native text hints `autocomplete`, `inputmode` (`inputMode`), and `enterkeyhint`
+(`enterKeyHint`) go to both the draft input and the inline token editor. Empty values leave the
+optional native attributes unset. The default accessible name is localized as "Tokens" when the
+field has no label, accessible-name override, or nonblank placeholder.
+
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
 `start`/`end`.
@@ -167,7 +172,9 @@ above, not a copy of it, so `--lr-form-control-required-content`,
 here exactly as they do on `lr-input`. It marks the control, not an individual token. With no label
 text the part is hidden and no glyph is painted.
 
-**Themeable custom properties:** `--lr-token-input-padding` (the input-wrapper padding, scaled by
+**Themeable custom properties:** `--lr-token-input-placeholder-color` defaults to
+`--lr-color-text-quiet` and styles both native placeholders.
+`--lr-token-input-padding` (the input-wrapper padding, scaled by
 `size`), `--lr-token-input-font-size` (the input-wrapper and token font size, scaled by `size`),
 `--lr-token-input-control-min-height` (the input-wrapper's block-size floor, scaled by `size`),
 `--lr-token-input-control-height` (exact input-wrapper height — undeclared by default, leaving the

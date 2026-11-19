@@ -35,6 +35,9 @@ The date-picker class module also exports three helpers from
 - `inclusiveDayCount(from: Date, to: Date): number` counts calendar days between valid dates in
   either order, including both endpoints and avoiding daylight-saving-hour differences.
 
+`lr-date-input` forwards its `strings` to the popup calendar, so `previousMonth`/`nextMonth`
+relabel its navigation; the popup's `view` and `focused-date` stay internal.
+
 For `lr-date-input`, host `aria-describedby` targets resolve in the host's root and describe the
 native combobox input through element references, before its existing error and hint descriptions.
 Replacement, removal, reinsertion, newly resolved IDs, reconnect, and adoption update those
@@ -181,13 +184,16 @@ RTL), Home/End move to the first/last enabled period in the current page, and En
 into the focused period. Moving beyond a selection-grid edge opens the adjacent period page;
 disabled periods never receive the roving focus. A period is enabled only when it contains at least
 one date selectable under the active bounds, past/future limits, disabled dates/weekdays, predicate,
-and pending-range limits; activating an unavailable period is a no-op.
+and pending-range limits; activating an unavailable period is a no-op. The previous and next
+buttons announce the displayed month or period titles. The cell for today, or for the period
+containing today, carries `aria-current="date"` independently of the selection.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
-values. Their typed aliases `lr-input` and `lr-change` carry `{ value }` after the corresponding
+values. Their typed aliases `lr-input` and `lr-change` carry `{ value, previousValue }` after the corresponding
 native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
-`lr-clear` (no detail) follows `clear()`'s `input`/`change`.
+`lr-clear` (no detail) follows `clear()`'s `input`/`change`. A date input keeps the embedded calendar's
+`lr-view-change` inside its popup.
 
 **Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
 `day-YYYY-MM-DD` slot is also accepted as a Lyra extension and takes precedence over `dayContent`.
@@ -334,9 +340,9 @@ access.
 internal native date input.
 
 **Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
-`lr-input` and `lr-change` carry `{ value }`. `focus`/`blur` are
+`lr-input` and `lr-change` carry `{ value, previousValue }` in ISO form. During an uncommitted text edit both refer to the committed date. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
-bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
+bubbling, composed, and non-cancelable. Method calls and live `open` property or attribute changes emit cancelable `lr-show`/`lr-hide` requests.
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
 settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
 it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open

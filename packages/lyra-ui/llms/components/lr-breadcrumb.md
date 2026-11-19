@@ -9,13 +9,17 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-breadcrumb-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-breadcrumb` and `lr-breadcrumb-item`
+
+The `lr-breadcrumb-item` styling hooks include `--lr-breadcrumb-item-separator-gap`, `--lr-breadcrumb-item-separator-color`, `--lr-breadcrumb-item-hover-color`.
+
+The `lr-breadcrumb` styling hooks include `--lr-breadcrumb-gap`.
 
 Responsive navigation trail primitives.
 

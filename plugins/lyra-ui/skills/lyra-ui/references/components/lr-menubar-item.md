@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 2 custom properties — see `lr-menubar.md`
+- **Themeable via** 2 parts, 4 custom properties — see `lr-menubar.md`
 - **Documented with** `lr-menubar`: see [lr-menubar.md](./lr-menubar.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

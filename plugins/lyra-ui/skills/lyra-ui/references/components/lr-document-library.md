@@ -37,7 +37,7 @@ explicitly empty query also clears filtering and a later query applies normally.
 by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary as `lr-table`.
 
 **Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (at most the first
-10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
+10,000 source positions by default and 10,000 tags per document are retained; document records, nested tags,
 and dates are snapshotted on assignment; malformed records (including missing/non-string names or
 non-string tag entries), blank ids, and later duplicate ids are omitted first-wins before filters,
 counts, selection, rows, and events; reads return one stable detached snapshot per assignment, so
@@ -67,6 +67,9 @@ The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: st
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
 readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
 The component's `filter` property uses this same callback contract.
+
+Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.
+The default local filter ignores case and accents. Local sorts place missing values last in either direction and preserve the order of ties. Provider row tags use the active locale's list formatting.
 
 **Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
 (default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
@@ -197,7 +200,7 @@ newer requests wait instead of overlapping it. The host owns callback cost and b
   result/total notification; programmatic assignments are silent and no `matchCount` is fabricated.
 - `lr-sort-request` — cancelable; proposes frozen readonly `{ phase: 'request', sortKey, sortDir }`.
 - `lr-sort` — non-cancelable; an accepted sort commits the same fields with `phase: 'commit'`.
-- `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
+- `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds, selectedRowKeys }`, with both keys referencing the same array.
 - `lr-open` — non-cancelable; frozen readonly `{ documentId }`.
 - `lr-retry-request` — cancelable, `detail: null`; the nested table's built-in retry button was
   activated while a host or provider load error is shown. The library contains the child's request, then

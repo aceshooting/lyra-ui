@@ -16,6 +16,8 @@
 
 ## `lr-audio-visualizer`
 
+Whitespace-only name overrides use the same fallback as an omitted name.
+
 A presentational, canvas-drawn voice-activity visualization (bars or waveform) — the
 LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream` (lazily wired to a
 WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute levels (e.g.

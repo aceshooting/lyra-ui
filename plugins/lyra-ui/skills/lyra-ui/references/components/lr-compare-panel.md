@@ -44,7 +44,9 @@ output), and `prompt` (optional shared-input header above both panes).
 
 **Events:** `lr-vote-request` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
 This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
-the prior vote.
+the prior vote. `lr-vote-change` (`detail: { vote, itemId }`) follows once an accepted user vote is
+committed; it never fires for a vetoed request or a host assignment. Each pane is a tab stop only
+while its response overflows the height cap.
 
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the

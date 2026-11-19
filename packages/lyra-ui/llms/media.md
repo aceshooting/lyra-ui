@@ -1,4 +1,3 @@
-
 ## Breaking changes in 10.0.0
 
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
@@ -437,6 +436,8 @@ already-bound hosts fail before ownership transfer. See the shared clock utiliti
 scheduling, live/replay, disposal and error-code contracts.
 
 ## `lr-map`
+
+The map's popups and overlay panels size against the available viewport space through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`, set by the shared positioner.
 
 A MapLibre-compatible wrapper using the optional `@aceshooting/lyra-map` modular engine by default,
 with a declarative legend, a single choropleth GeoJSON fill layer, markers,
@@ -2812,6 +2813,8 @@ in the surrounding page or scene list.
 
 ## `lr-map-anchor`
 
+The popup is sized by the shared positioner through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`. Its built-in close button is themed with `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`, `--lr-map-popup-close-button-active-bg` and `--lr-map-popup-close-button-active-color`.
+
 Experimental. An independent panel of rich, interactive content anchored to a coordinate of its
 `lr-map`. Whoever owns it opens, moves and closes it without touching the map's other anchors or
 its `anchor` slot, so several feature-detail panels, owned by separate modules, can be open at once.
@@ -3513,7 +3516,8 @@ a focused zoom control.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants ending in `-hover` and `-active`.
+variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
+`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
 
 **Properties:**
 
@@ -3617,7 +3621,8 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants ending in `-hover` and `-active`.
+variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
+`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
 
 **Properties:**
 
@@ -3654,7 +3659,8 @@ component's own keyboard target — a bare host `.focus()` would otherwise be a 
 relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
 `relatedTarget`).
 
-**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
+**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and `error` (the localized message shown in place of an image that
+failed to load). The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
 `zoom` on every render (not a fixed "100%"). Its accessible name includes both the localized reset
 action and that visible percentage, so the visible label is contained in the computed name.
@@ -4051,7 +4057,7 @@ above.
 **CSS parts:** `base` (a `<button>` for `kind="image"`, a plain wrapper `<div>` for `kind="video"`,
 an `<a>` or `<span>` for the file-chip fallback depending on href safety), `media` (the `<img>`/
 `<video>`), `file-icon`, `filename` (file-chip fallback only), `open-button` (video only — see
-below).
+below), `media-error` (the localized message shown in place of media that failed to load).
 
 **Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
@@ -4905,7 +4911,8 @@ later highlight in document order wins. Keyboard navigation between highlights i
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants ending in `-hover` and `-active`.
+variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
+`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,6 +22,12 @@ shows an unavailable state; usage above the limit shows an exceeded state. The c
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
 values are not plain attribute strings. A host `aria-label` names the group and its meter. Hiding the heading with `label=""` preserves
 the localized meter name. Percentages near zero or full capacity retain fractional precision.
+
+The default `frame="card"` draws an outer border. Use `frame="plain"` inside an existing
+card. Small sizes reduce padding from the default `size="m"`. The custom properties
+`--lr-budget-meter-border-color`, `--lr-budget-meter-radius` and `--lr-budget-meter-track-bg`
+style the card and track. `--lr-budget-meter-fill` colors usage up to the limit and
+`--lr-budget-meter-exceeded-fill` colors usage above it.
 
 **Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 

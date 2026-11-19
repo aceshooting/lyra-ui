@@ -55,7 +55,6 @@ const regionalOverrideKeys = [
   'imageViewerAnnotationHint',
   'imageViewerFitActual',
   'mapMissingLibrary',
-  'memoryPanelAddWithContext',
   'noMatchesQuery',
   'pdfViewerMissingLibrary',
   'pdfViewerZoomIn',

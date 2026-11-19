@@ -10,8 +10,7 @@ const renderedPosition = (host: Element): string => {
 };
 
 const openCombobox = async (el: LyraCombobox): Promise<void> => {
-  el.open = true;
-  await el.updateComplete;
+  await el.show();
 };
 
 describe('positioning-strategy on lr-combobox', () => {

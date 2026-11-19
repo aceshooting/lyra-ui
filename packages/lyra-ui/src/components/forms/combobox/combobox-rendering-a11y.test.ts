@@ -668,8 +668,7 @@ it("renders structured async-row adornments and preserves selected opaque data",
       data: payload,
     },
   ];
-  el.open = true;
-  await el.updateComplete;
+  await el.show();
   await settleComboboxSource(el);
   await el.updateComplete;
 

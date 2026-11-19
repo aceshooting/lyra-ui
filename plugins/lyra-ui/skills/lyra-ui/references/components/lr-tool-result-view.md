@@ -16,6 +16,8 @@
 
 ## `lr-tool-result-view`
 
+Unknown status values resolve to `success`. A committed status change emits `lr-status-change` with `{ status }`.
+
 Renders a tool call's result via whichever custom renderer a host app has registered for it,
 falling back to `<lr-json-viewer>` whenever no renderer matches, a candidate renderer's
 `matches()` predicate throws during dispatch, a renderer's optional `load()` rejects, or its

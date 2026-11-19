@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Жіберу сәтсіз аяқталды',
   chatFailedAnnounce: 'Хабарламаны жіберу сәтсіз аяқталды.',
   chatCompleteAnnounce: 'Хабарлама аяқталды.',
-  expandCode: 'Кодты жаю',
-  collapseCode: 'Кодты жию',
   copyCode: 'Кодты көшіру',
   copiedToClipboard: 'Алмасу буферіне көшірілді',
   codeRegion: 'Код',

@@ -60,8 +60,8 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     codeBlockActiveLine: LYRA_DEFAULT_codeBlockActiveLine,
-    codeBlockHighlightedLine: LYRA_DEFAULT_codeBlockHighlightedLine,
     codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
+    codeBlockHighlightedLine: LYRA_DEFAULT_codeBlockHighlightedLine,
     codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
     codeBlockToggle: LYRA_DEFAULT_codeBlockToggle,
     codeRegion: LYRA_DEFAULT_codeRegion,

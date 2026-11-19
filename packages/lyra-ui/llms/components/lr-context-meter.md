@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,9 +73,8 @@ boolean }[]`. `value` is an _absolute_
   and its legend row; every other control renders `aria-pressed="false"`. Meaningful only while
   `interactive` is set. Uncontrolled by default: an activation nobody vetoes toggles the index here
   itself. `preventDefault()` on `lr-segment-activate-request` suppresses that write, which is how a consumer
-  that owns the selection takes control. Without a veto, the default toggle uses the latest selection,
-  including any synchronous host assignment. A
-  non-integer or out-of-range entry selects nothing rather than throwing.
+  that owns the selection takes control. A synchronous assignment to `selectedIndices` also
+  takes control of the selection. Non-integer and out-of-range entries are ignored.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
 using `effectiveLocale` (up to three fraction digits, more below one, so a small quantity never reads
@@ -90,7 +89,11 @@ that state entirely to the consumer. Never emitted in the default presentational
 event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
 own handler sees the pre-activation value. Reentrant activation during dispatch is ignored.
 Replacing the segment collection, disabling interaction, or disconnecting during dispatch cancels
-the default write.
+the default write. `lr-segment-selection-change` reports the committed selection as
+`{ selectedIndices: readonly number[] }` after a default toggle. The event is noncancelable.
+
+When segment input exceeds the admission limit, `[part="limit"]` displays the retained and supplied
+counts using the `contextMeterInputLimit` message. Later limit changes are announced politely.
 
 **Slots:** none.
 
@@ -110,7 +113,7 @@ empty pair is DERIVED and carries no built-in treatment — it is the hook for y
 this bucket" styling, and a zero band stays actionable. The disabled pair is DECLARED: that control
 renders genuinely disabled (no tab stop, no hover or press affordance) and activating it emits no
 `lr-segment-activate-request`. Inertness is never inferred from a zero value, because a zero band is
-legitimately clickable in a budget meter
+legitimately clickable in a budget meter. Also `limit` (the notice showing how many segments were admitted when input exceeded the limit).
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the

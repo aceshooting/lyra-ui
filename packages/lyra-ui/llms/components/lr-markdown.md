@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -305,7 +305,11 @@ isolated. In progressive streaming a text tail follows the page direction while 
 preview uses code direction. Bidi formatting characters inside code (for example U+202E) are
 rendered as authored, not neutralized.
 
-**Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
+**Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
+on both logical axes (default `var(--lr-icon-button-size)`). `--lr-markdown-code-copy-bg`,
+`--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
+button background for its resting, hovered, and pressed states. Shared icon-button state tokens
+take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
 property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
@@ -428,8 +432,10 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---
+
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius` for their background, border, foreground and corner radius in the resting, hover and pressed states.

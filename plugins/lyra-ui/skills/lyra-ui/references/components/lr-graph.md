@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 35 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 41 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-graph`
+
+Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-fill` to customize the hovered control background.
 
 **Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
 or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests
@@ -381,8 +383,10 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 **Events:** `lr-node-activate` (`detail: { nodeId, x, y, z? }`, where `x` and `y` are the clicked node's current
 local drawing coordinates in 2D; spatial/list activation uses world x/y/z), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId,
 edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
-`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
-`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, edgeId? }`, same hover contract),
+`lr-node-leave` (`detail: { nodeId }`, hover start/end), and `lr-edge-enter`/`lr-edge-leave`
+(`detail: { sourceNodeId, targetNodeId, edgeId? }`). The SVG suppresses new hover during a drag, pan, or camera tween.
+Leaving an already-hovered node or edge still ends its hover. Canvas emits hover events on hit-identity changes and exit.
+Other events include
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
@@ -416,6 +420,8 @@ interaction surface), `spatial-instructions` (camera keyboard instructions), `sp
 visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
 `spatial-page-count` (localized total and page status), `spatial-pagination` (page controls),
 `custom-node-notice` (custom body availability/refusal), and `glow-notice` (halo availability).
+The source toolbar exposes `source-kind`, `source-search`, `search-clear`, `source-direction`, `source-action`, and `source-incident`.
+
 Source-mode parts: `source-navigator` (global query, record list and pagination), `source-row`
 (a mounted record activation button), `source-row-active` (the navigator's roving tab stop),
 `source-status` (loading, unavailable-record or error text), and `source-coverage` (full-source

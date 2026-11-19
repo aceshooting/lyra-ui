@@ -52,6 +52,8 @@ independent concepts.
   `lr-before-page-change` fires first. Existing readers of `detail.page` keep working; code that
   asserted the exact one-key detail object must accept `{ page, pageSize }`.
 
+The pager revalidates the requested page after `lr-before-page-change` returns. A synchronous disable, disconnect, or total change that makes the destination unavailable cancels the commit. The compact field grows for longer page numbers, and unavailable link-mode controls keep their link role.
+
 **Properties and getters:**
 
 - `page: number = 1` (reflected) — the currently applied page. Runtime values are presented within

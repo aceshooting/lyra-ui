@@ -1,6 +1,9 @@
 import { css } from 'lit';
 
-/** Shared viewport host frame for modal surfaces promoted with the Popover API. */
+/**
+ * Shared viewport host frame for modal surfaces promoted with the Popover API. It sets no `color`:
+ * the host keeps the theme scope's text token, which already outranks the popover's UA colour.
+ */
 export const modalHostStyles = css`
   display: none;
   position: fixed;
@@ -10,7 +13,6 @@ export const modalHostStyles = css`
   margin: 0;
   border: none;
   background: transparent;
-  color: inherit;
   overflow: visible;
   inline-size: auto;
   block-size: auto;

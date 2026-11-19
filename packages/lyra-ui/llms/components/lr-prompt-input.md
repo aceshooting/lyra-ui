@@ -16,6 +16,12 @@
 
 ## `lr-prompt-input`
 
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+In `readonly` mode the built-in pickers and prompt queue preserve their values. Queue pagination and attachment previews remain available.
+
+An omitted attachment, attachment capability, source, selected source ID or queue item shows the localized `promptInputCollectionLimit` notice. Moving the caret out of a pending suggestion range dismisses that suggestion on selection.
+
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
 upload, retrieval, or model call. It is deliberately not form-associated: the complete interaction

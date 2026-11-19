@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 18 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -224,7 +224,8 @@ canvas capability becomes available.
 - `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
   zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
   A data update while zoomed keeps the zoomed range. `resetZoom()` and changes that rebuild the
-  chart instance, such as a chart-type or plugin change, reset it.
+  chart instance, such as a chart-type or plugin change, reset it. If the reset button has keyboard
+  focus when it disappears, focus returns to the canvas.
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.
@@ -666,7 +667,7 @@ undefined, value: unknown }`). For scatter/bubble points, `label` prefers the pe
 `value` is the complete `LyraChartPoint`, including optional `r`, `id`, and `label`. A primitive
 `id` survives the same pointer, data-table, and keyboard activation paths; invalid ids are omitted.
 `lr-datum-activate` emits the same activation with `kind: 'bar'|'point'|'segment'|'slice'` for
-family-wide handling. For scatter/bubble, both events carry the same `LyraChartPoint` value,
+family-wide handling. A canvas line chart reports `segment`, while an SVG lite line chart activates a point mark and reports `point`. For scatter/bubble, both events carry the same `LyraChartPoint` value,
 including a string or finite-number `id` when supplied; invalid ids are omitted. The public
 `LyraChartPoint.id` type is `string | number`, while the activation event's heterogeneous `value`
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
@@ -739,7 +740,8 @@ canvas tooltip has no CSS part), `legend` (the
 wrapping DOM legend), `legend-item` (a dataset/category visibility button), `legend-item-hidden`
 (added while the dataset/category is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
-bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
+bounded-alternative truncation notices), `data-table`, `data-table-button` (activates a value in the generated table),
+`data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
 notice), `limit` (input-admission notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition

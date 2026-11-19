@@ -8,10 +8,6 @@
  * stale entry therefore fails closed instead of silently becoming permanent configuration.
  */
 export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
-  // Not form-associated at all: form-associated.ts only reaches these graphs transitively through the
-  // composed form controls they render, and each of those owns its own slice.
-  'src/components/conversation/agent-workspace/agent-workspace.class.ts': Object.freeze(['fieldRequired']),
-
   // These pickers drive ElementInternals through non-mixin helpers from form-associated.ts. Its
   // unrelated FormAssociated export owns the fieldRequired lookup; none of these classes invokes it.
   'src/components/conversation/model-select/model-select.class.ts': Object.freeze(['fieldRequired']),

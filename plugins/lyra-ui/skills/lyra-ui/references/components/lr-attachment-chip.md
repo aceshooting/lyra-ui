@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,14 +91,13 @@ coalesce into one update.
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
   localized default (`'Untitled file'` in English)
 
-The component identifies _which_ attachment an action event is about through `attachmentId`. Set
-`attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
-and `file` is set, a stable attachment id is
-derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
-generated internal id is used as a last resort. Give duplicate occurrences distinct `attachment-id` values if their actions need to target different chips.
+Attachment actions carry a stable id for the lifetime of each chip, including separate chips for
+the same file. Set `attachment-id` to preserve an application id across component replacement.
+To retain metadata-based ids, explicitly set `attachment-id` from the file name, size and last-modified time.
 
 A chip requests attachment preview with `lr-preview-request`. Its `name` and `src` correspond to
-`filename` and `src` on a media card’s `lr-media-open` event.
+`filename` and `src` on a media card’s `lr-media-open` event. The email viewer’s `lr-attachment-open`
+provides `detail.attachment.filename`, `mimeType`, and an optional `content` Blob.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`; the button is not rendered while
 `without-remove-button` is set), `lr-retry`
@@ -229,5 +228,7 @@ previous entry, reassigning `file` several times before the next paint leaks not
 - `previewSrc` is used only when `file` is unset. A preview action is omitted when neither a real
   `File` nor `preview-src` supplies a source. The viewer's footer omits its download link for unsafe
   source schemes.
+
+Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners.
 
 ---

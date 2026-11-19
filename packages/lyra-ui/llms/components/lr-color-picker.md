@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 44 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -176,9 +176,9 @@ unchanged.
 and names both the trigger and dialog; a host `aria-label` remains the strongest naming override.
 
 **Events:** each serialized value-changing edit emits a bubbling/composed native `InputEvent` named
-`input`, followed by the no-detail `lr-input` compatibility alias. A completed interaction emits
+`input`, followed by `lr-input` with `{ value, previousValue }` for that edit. A completed interaction emits
 one bubbling/composed native `Event` named `change`, followed by `lr-change` with
-`detail: { value }`. The commit pair occurs on pointer release, key release, swatch click, an
+`detail: { value, previousValue }`. On commit, `previousValue` is the value at the start of the interaction. The commit pair occurs on pointer release, key release, swatch click, an
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
 Pointer drags are reversible previews: `pointercancel`, lost pointer capture, mid-gesture
@@ -238,7 +238,7 @@ The eyedropper aliases are also addressable individually as `eyedropper-button__
 above, not a copy of it, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
 here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
-painted.
+painted. Also `swatch-check` (the check-mark icon inside the selected swatch).
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.25rem`,
@@ -312,7 +312,8 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
   `var(--lr-color-surface)`.
 - `--lr-color-picker-swatch-disabled-opacity` — Opacity of a palette swatch whose own entry sets
-  `disabled`. Default: `0.5`.
+  `disabled`. Default: `var(--lr-opacity-disabled)`.
+- `::part(swatch-check)` — The check-mark icon inside the selected palette swatch.
 
 ```html
 <lr-color-picker

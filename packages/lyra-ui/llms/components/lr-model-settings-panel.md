@@ -9,12 +9,17 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-model-settings-panel`
+
+`readonly` locks both controls. `size` sets the shared picker and slider size, with a default of `m`.
+The panel supplies localized field labels and a model placeholder. Use the standalone controls for custom validation text or field labels.
+
+When an updated temperature range or step corrects the current value, the panel emits `lr-change` after rendering the corrected slider. `--lr-model-settings-panel-bg`, `--lr-model-settings-panel-border-color`, `--lr-model-settings-panel-radius` and `--lr-model-settings-panel-padding` style its frame.
 
 A fixed composition of `<lr-model-select>` and `<lr-slider>` into one agent-configuration card:
 pick a provider's model, then tune its sampling temperature. First-party invention (no Web Awesome

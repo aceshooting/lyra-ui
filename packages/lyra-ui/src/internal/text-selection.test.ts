@@ -16,13 +16,13 @@ describe('text-selection', () => {
   });
 
   it('reads normalized, bounded text across elements and copies finite rects', async () => {
-    const root = await fixture<HTMLDivElement>(html`<div><p>Alpha   beta</p><p>gam­ma <b>delta</b></p></div>`);
+    const root = await fixture<HTMLDivElement>(html`<div><p>Alpha   beta</p><p>foot&shy;ball <b>delta</b></p></div>`);
     const range = document.createRange();
     range.selectNodeContents(root);
-    expect(boundedSelectionText(range)).to.equal('Alpha betagamma delta');
+    expect(boundedSelectionText(range)).to.equal('Alpha betafootball delta');
     expect(boundedSelectionText(range, 5)).to.equal('Alpha');
     expect(boundedSelectionText(range, 0)).to.equal('');
-    expect(boundedSelectionText(range, Number.NaN)).to.equal('Alpha betagamma delta');
+    expect(boundedSelectionText(range, Number.NaN)).to.equal('Alpha betafootball delta');
     const text = root.querySelector('p')!.firstChild!;
     const inner = document.createRange();
     inner.setStart(text, 2);

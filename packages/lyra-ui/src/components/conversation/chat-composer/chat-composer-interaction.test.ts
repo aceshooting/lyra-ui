@@ -46,7 +46,7 @@ it('falls back to a localized name for whitespace-only overrides', async () => {
 });
 
 it('themes its focused border independently of the resting border', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-chat-composer']>(html`<lr-chat-composer
+  const el = await fixture<HTMLElementTagNameMap['lr-chat-composer']>(html`<lr-chat-composer data-lr-theme-scope
     style="--lr-transition-fast:0s; --lr-chat-composer-border-color:rgb(1, 2, 3); --lr-chat-composer-focus-border-color:rgb(4, 5, 6)"></lr-chat-composer>`);
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(getComputedStyle(base).borderTopColor).to.equal('rgb(1, 2, 3)');

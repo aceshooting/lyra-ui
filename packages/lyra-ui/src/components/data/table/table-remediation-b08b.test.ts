@@ -2,9 +2,10 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { resolvedColorToken } from '../../../../test/color-contrast.js';
 import './table.js';
 import type { LyraTable } from './table.js';
-import { installTableTestHooks, type Row, columns, rows } from '../../../../test/table.js';
+import { installTableTestHooks, type Row, columns, editableColumns, rows } from '../../../../test/table.js';
 installTableTestHooks();
 
 describe('table clipped focus rings', () => {
@@ -85,6 +86,26 @@ it('honors row and header hover colors and their interactive transitions', async
       expect(getComputedStyle(target).transitionDuration).to.contain('0.02s');
     }
   } finally { await resetMouse(); }
+});
+
+it('keeps unfilled row, editable-cell and load-more text in step with a theme change', async () => {
+  const scope = await fixture<HTMLElement>(html`<div data-lr-mode="light"><lr-table has-more .rows=${rows}
+    .columns=${[editableColumns[0]!, columns[1]!]}></lr-table></div>`);
+  const table = scope.querySelector<LyraTable<Row>>('lr-table')!;
+  await table.updateComplete;
+  const root = table.shadowRoot!;
+  const row = root.querySelector<HTMLElement>('[data-row-key]')!;
+  const editable = row.querySelector<HTMLElement>('[data-editable]')!;
+  const plain = row.querySelector<HTMLElement>('[part="cell"]:not([data-editable])')!;
+  const more = root.querySelector<HTMLElement>('[part="more-button"]')!;
+  const light = getComputedStyle(table).color;
+  scope.setAttribute('data-lr-mode', 'dark');
+  const text = getComputedStyle(table).color;
+  expect(text).to.not.equal(light);
+  for (const [name, part] of [['row', row], ['editable cell', editable], ['cell', plain]] as const) {
+    expect(getComputedStyle(part).color, name).to.equal(text);
+  }
+  expect(getComputedStyle(more).color).to.equal(resolvedColorToken(root, '--lr-color-brand'));
 });
 
 it('pages through available rows from a header and skips unavailable editable cells', async () => {

@@ -44,6 +44,9 @@ must never be mirrored.
 
 **Properties:**
 
+- `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing
+  and clearing. Setting it discards an in-progress stroke.
+
 - `name: string = ''` (reflected) — the form entry name.
 - `label: string = ''` — visible label text, before the `label` slot.
 - `hint: string = ''` — hint text, before the `hint` slot.
@@ -55,6 +58,8 @@ must never be mirrored.
   restore one: own data is copied without invoking accessors or iterators, non-finite points are
   dropped, and coordinates are clamped to 0–1. Only the first `SIGNATURE_PAD_MAX_STROKES` (256)
   stroke positions and `SIGNATURE_PAD_MAX_POINTS` (2048) point positions per stroke are inspected.
+  Drawing follows the same limits. A polite announcement reports a refused stroke or the first
+  refused point in the active stroke.
   Assigning the current array is a no-op.
 - `value: string` (read-only) — PNG data URL, `''` while empty: black ink on a transparent
   background, 1024 px on the long side at the surface's last measured aspect ratio (3:1 before the
@@ -67,6 +72,8 @@ must never be mirrored.
 and `click()` focus the drawing surface (both do nothing while disabled), and `blur()` blurs it.
 
 **Events:**
+
+- `lr-clear` follows the change pair when the user empties the pad with its Clear button.
 
 - `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
   pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting

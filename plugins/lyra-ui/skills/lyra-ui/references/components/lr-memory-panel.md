@@ -51,8 +51,11 @@ omitted without hiding later valid memories.
 
 At most 500 items per section render as `item` rows; a section's list past that length renders a
 localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
-The primary Add action in short-term memory and Remove action in long-term memory each rove within
-their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain reachable by Tab.
+Short-term Add and Remove actions share one Tab stop. Inline arrows switch between the two actions,
+and Up/Down and Home/End move between rows within the current column. Long-term Remove actions share
+one Tab stop and use the same row keys. Expand buttons remain reachable by Tab.
+The Add button's accessible name begins with the visible `memoryPanelAdd` label and includes the
+item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{label}`.
 
 **Events:**
 
@@ -62,8 +65,9 @@ their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
-  Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
+- `lr-toggle` carries `{ kind: 'memory', expanded, itemId, memoryId, scope }` for a memory item's
+  own disclosure. Nested provenance toggles retain their `kind` and `section` and add the owning
+  `memoryId` and `scope`.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details

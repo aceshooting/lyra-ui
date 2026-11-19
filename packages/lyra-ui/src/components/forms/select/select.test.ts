@@ -1234,13 +1234,8 @@ describe("multiple", () => {
     const el = (await fixture(multi())) as LyraSelect;
     el.label = "Fruit";
     el.value = ["a", "b"];
-    el.open = true;
-    await el.updateComplete;
-    // See the identical comment on the single-select "is accessible while open" test above --
-    // `[part='listbox']`'s opacity transition is still running at this point.
-    el.shadowRoot!.querySelector('[part="listbox"]')
-      ?.getAnimations()
-      .forEach((animation) => animation.finish());
+    await el.show();
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="listbox"]')!).opacity).to.equal('1');
     await expect(el).to.be.accessible();
   });
 });

@@ -22,7 +22,8 @@ const orientationValues = literalSetConverter(['horizontal', 'vertical'], 'horiz
 export class LyraDivider extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   private _orientation: LyraDividerOrientation = 'horizontal';
-  /** Base orientation. The vertical shorthand takes precedence when present. */
+  /** Base orientation. The vertical shorthand takes precedence when present.
+   * @default 'horizontal' */
   @property({ reflect: true, converter: orientationValues })
   get orientation(): LyraDividerOrientation { return this._orientation; }
   set orientation(value: LyraDividerOrientation) {

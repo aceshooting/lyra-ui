@@ -16,6 +16,9 @@
 
 ## `lr-copy-button`
 
+For delegated copy failures, listen for `lr-copy-error`. A slotted icon can also emit `lr-error`.
+Compare `event.composedPath()[0]` with the copy button to identify its own detail-less notification.
+
 A standalone copy-to-clipboard affordance for a plain text `value` or a source element selected by
 `from`. Its built-in icon button swaps to a confirmation or failure glyph once the Clipboard API
 settles; a consumer-provided default-slot trigger can replace that button. The component takes no

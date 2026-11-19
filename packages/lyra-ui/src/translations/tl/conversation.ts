@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Hindi naipadala',
   chatFailedAnnounce: 'Hindi naipadala ang mensahe.',
   chatCompleteAnnounce: 'Kumpleto na ang mensahe.',
-  expandCode: 'Palawakin ang code',
-  collapseCode: 'Paliitin ang code',
   copyCode: 'Kopyahin ang code',
   copiedToClipboard: 'Nakopya sa clipboard',
   codeRegion: 'Code',

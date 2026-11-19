@@ -22,6 +22,9 @@ Removing `label` omits the visible SVG label in radial, linear, and ring shapes 
 localized gauge name unless `aria-label` is authored. The property retains removal `null`;
 explicitly empty labels remain empty and later labels render normally.
 
+The linear gauge keeps caption proportions as the track resizes. The radial and ring shapes remain
+square when constrained by their container.
+
 **Properties:**
 
 - `value: number = 0`

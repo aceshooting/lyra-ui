@@ -2635,6 +2635,7 @@ it('themes only the checked track border through --lr-switch-checked-track-borde
 
   el.checked = true;
   await el.updateComplete;
+  await waitUntil(() => getComputedStyle(track).borderTopColor === 'rgb(4, 5, 6)');
   expect(getComputedStyle(track).borderTopColor).to.equal('rgb(4, 5, 6)');
   expect(getComputedStyle(track).borderStyle).to.equal('dashed');
 });

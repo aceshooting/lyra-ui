@@ -311,7 +311,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private syncScrollRegion(): void {
     const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
-    if (!el) return;
+    if (!el || !this.isConnected) return;
     const name = normalizeLabel(this.name) ?? this.localize('docxViewerLabel');
     const child = el.firstElementChild;
     const current = this.scrollRegion;

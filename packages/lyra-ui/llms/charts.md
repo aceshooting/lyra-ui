@@ -1,4 +1,3 @@
-
 ## Synchronized categorical charts
 
 `lr-chart` and `lr-lite-chart` accept `syncGroup: string = ''` (attribute `sync-group`). Give
@@ -2324,6 +2323,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartInstance extends RuntimeChart {
     // Inherited from RuntimeChart.
+    render?(): void;
     data: {
       labels?: unknown[];
       datasets: LyraChartDatasetConfiguration[];

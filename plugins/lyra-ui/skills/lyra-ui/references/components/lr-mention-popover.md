@@ -16,6 +16,9 @@
 
 ## `lr-mention-popover`
 
+The composing text control owns the insertion range. Recheck the live caret and query before applying a selected
+suggestion if the user can move the caret while the list stays open.
+
 The `more-results` CSS part exposes the additional-results message.
 
 Suggestion listboxes follow the [shared surface treatment](../shared/styles-and-tokens.md);
@@ -127,7 +130,7 @@ source admission omits candidates).
 (keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
 repainting every other component that reuses the same shared token.
-`--lr-mention-popover-option-disabled-opacity` (default `0.5`) — opacity of a row whose `items`
+`--lr-mention-popover-option-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a row whose `items`
 entry sets `disabled`. `--lr-mention-popover-option-active-color` (default `var(--lr-color-brand)`)
 — text color of the `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
 `--lr-mention-popover-option-active-bg`: the same component-scoped indirection over

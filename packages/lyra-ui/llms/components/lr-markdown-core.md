@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -104,6 +104,7 @@ anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`,
 `streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
+`--lr-markdown-content-min-size` and the three `--lr-markdown-code-copy-bg*` state tokens.
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
 `maxHeight` property sets this token inline) and its code-surface tokens —
 `--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
@@ -143,7 +144,7 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -160,3 +161,5 @@ The shared `--lr-markdown-task-checkbox-size` hook defaults to `var(--lr-size-0-
 keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-header-bg`
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
+
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds.

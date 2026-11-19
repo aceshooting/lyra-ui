@@ -109,6 +109,14 @@ it("makes a capped, overflowing tree a named keyboard tab stop", async () => {
   el.setAttribute('aria-label', 'Details');
   await el.updateComplete;
   expect(base.getAttribute('aria-label')).to.equal('Details');
+  const parent = el.parentElement!;
+  el.remove();
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(base.hasAttribute('tabindex')).to.equal(false);
+  parent.append(el);
+  await waitUntil(() => base.getAttribute('tabindex') === '0', 'region not re-armed after reconnect');
+  expect(base.getAttribute('aria-label')).to.equal('Details');
 });
 
 it("paints the toggle hover fill differently from the row hover fill", async () => {

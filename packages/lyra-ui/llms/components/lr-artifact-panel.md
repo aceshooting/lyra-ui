@@ -55,7 +55,8 @@ slot has assigned content. Assigning `view='code'` without assigned code content
 `preview`, including after mount. `actions` — extra header controls, rendered between the version
 navigation and the built-in copy/download buttons.
 
-**Events:** `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
+**Events:** cancelable `lr-view-change-request` (`detail: { view, previousView }`, before a toggle
+press changes `view`; `preventDefault()` keeps the current view), `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
 fired when the previous/next navigation moves to a different version; not fired when a `versions`
 reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
 since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {

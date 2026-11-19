@@ -780,7 +780,7 @@ it('applies card and plain frames and reflects compact density', async () => {
 });
 
 it('uses the themed hover and pressed colors on an unselected handoff', async () => {
-  const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} style="--lr-transition-fast: 0s; --lr-agent-trace-handoff-hover-bg: rgb(5, 10, 15); --lr-agent-trace-handoff-pressed-bg: rgb(10, 20, 30)"></lr-agent-trace>`);
+  const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace data-lr-theme-scope .spans=${SPANS} style="--lr-transition-fast: 0s; --lr-agent-trace-handoff-hover-bg: rgb(5, 10, 15); --lr-agent-trace-handoff-pressed-bg: rgb(10, 20, 30)"></lr-agent-trace>`);
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="handoff"]')!;
   try {
     await hoverUntilMatched(button, 'handoff hover');

@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-model-select`
+
+`--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
+
+While typing, `lr-input` includes the draft string in `detail.query`. Its `value` and `inCatalog` fields describe the committed selection. Enter commits the draft. Escape or leaving the control dismisses it. Picking the current model closes the list without emitting a change.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -268,7 +272,7 @@ use, not on `:host`, so it isn't tied to `size`. The selected row
 `--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
-without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `0.5`)
+without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `var(--lr-opacity-disabled)`)
 — opacity of an option row whose catalog entry sets `disabled`. `--lr-model-select-max-inline-size` (default
 `var(--lr-size-24rem)`) publishes the host's own width ceiling, which was previously a hard-wired
 literal: set a length to retune it, or `none` to let the control fill its container the way

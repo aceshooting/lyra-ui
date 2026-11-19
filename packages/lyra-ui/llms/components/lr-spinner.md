@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-spinner`
+
+Set `--lr-spinner-track-color` and `--lr-spinner-indicator-color` to style the ring. The corresponding upstream aliases supply their defaults.
 
 An indeterminate busy indicator with a localized, deliberately non-live `role="progressbar"`
 name. Mounting ordinary loading UI therefore does not create a false status announcement.

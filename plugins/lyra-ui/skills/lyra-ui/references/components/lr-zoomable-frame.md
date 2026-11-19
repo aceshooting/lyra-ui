@@ -24,9 +24,9 @@ Focus on either zoom control does not enter the iframe browsing context, and `bl
 a focused zoom control.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
-`--lr-icon-button-bg`, and `--lr-icon-button-color`, plus the hover and pressed variants
-`--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-bg-hover`,
-`--lr-icon-button-bg-active`, `--lr-icon-button-color-hover`, and `--lr-icon-button-color-active`.
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
+`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
 
 **Properties:**
 
@@ -75,7 +75,7 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`) when `zoomIn()`/`zoomOut()` (buttons or keys)
-change `zoom`; assigning `zoom` stays silent. Internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
+change `zoom`. The event reports the last action that reaches the rendered frame. Direct assignments stay silent. Internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
 `FocusEvent`s (bubbling and composed, preserving external `relatedTarget`; a transition to or from an internal zoom control uses `null` because retargeting that control to the host would suppress the relay);
 native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes

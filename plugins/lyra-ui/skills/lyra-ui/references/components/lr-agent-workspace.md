@@ -9,12 +9,20 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 17 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-agent-workspace`
+
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). The workspace forwards the events listed below. Listen directly on a built-in child for its other control, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
+
+`headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level. Details headings use the next level up to six. Use `none` to omit heading semantics, or `label=""` to omit the visible title. Host `aria-labelledby` and `aria-describedby` name and describe the workspace region.
+
+`--lr-agent-workspace-bg`, `--lr-agent-workspace-border-color`, `--lr-agent-workspace-radius` and `--lr-agent-workspace-padding` style the workspace frame.
 
 Responsive, fully controlled shell for an AI conversation and its supporting run, tool, retrieval,
 grounding, and context state: transcript + composer in the main pane, and a details pane composing

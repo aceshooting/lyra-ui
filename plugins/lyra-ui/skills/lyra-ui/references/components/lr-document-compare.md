@@ -42,6 +42,11 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
   attribute: false) — optional syntax highlighting forwarded to the diff. A runtime non-string
   `language` is treated as `''` without coercion.
+- `languageLoaders?: LyraDiffView['languageLoaders']` (attribute: false) and
+  `contextLines?: number` (attribute `context-lines`) — forwarded to the diff view: lazy grammar
+  loaders, and how many unchanged lines stay visible around each change (unset shows every line).
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the highlight id
+  marked active in both side-by-side preview panes.
 - `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
   side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
   turns that off.
@@ -52,7 +57,8 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   `--lr-document-compare-pane-max-height` declaratively, giving each `view="side-by-side"` pane its
   maximum block size before it scrolls internally. The value is sanitized as a CSS length, so an
   invalid one is ignored and the token default applies; the unset default `''` also defers to the
-  token, so setting nothing preserves existing behaviour.
+  token, so setting nothing preserves existing behaviour. In `view="diff"` it caps the diff view's
+  own block size instead.
 
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
@@ -75,7 +81,9 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 `lr-render-error` (`detail: { error }`). In diff mode, `lr-search-change`, `lr-anchor-result`
 (`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`. Side by side,
 an `anchor` assignment or `scrollToAnchor()` emits one `lr-anchor-result` for the pair of panes
-(`found` when either pane found the target). When both versions share one name, the two panes are
+(`found` when either pane found the target). Pane events bubble unchanged from the pane's
+`lr-document-preview`; to tell the side, look for the `[part="pane-old"]` or `[part="pane-new"]`
+element in `event.composedPath()`. When both versions share one name, the two panes are
 named by the localized old/new version names so the regions stay distinguishable.
 
 **Slots:** none.

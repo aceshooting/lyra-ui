@@ -18,6 +18,11 @@ import {
 import { menubarItemOwner, type MenubarItemOwner } from './menubar-shared.js';
 import { styles } from './menubar-item.styles.js';
 
+export interface LyraMenubarItemEventMap {
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+}
+
 /**
  * A menu title or plain action in an application menubar. Its host owns menuitem semantics;
  * the visual label is inert and an optional slotted menu opens below the title. Use a native
@@ -38,7 +43,7 @@ import { styles } from './menubar-item.styles.js';
  * @status experimental
  * @since 21.0.0
  */
-export class LyraMenubarItem extends LyraElement<{ 'lr-show': CustomEvent<null>; 'lr-hide': CustomEvent<null> }> {
+export class LyraMenubarItem extends LyraElement<LyraMenubarItemEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Prevents focus traversal and activation. */

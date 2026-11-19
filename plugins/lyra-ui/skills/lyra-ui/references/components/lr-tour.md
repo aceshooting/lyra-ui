@@ -16,6 +16,10 @@
 
 ## `lr-tour`
 
+`lr-tour-step-activate` fires after a changed step index renders. Its detail contains `previousIndex`, `index`,
+`step` and `via` (`next`, `back`, `goto` or `api` for a direct write). A vetoed move emits no activation.
+If a target mounts while its step is already open, assign `tour.steps = [...tour.steps]` to resolve it again.
+
 A spotlight-and-step guided walkthrough for first-run onboarding: each step anchors a popover to a
 target element elsewhere in the page via the shared Floating UI positioner, over a dimmed
 full-viewport backdrop with a cutout/ring around the current target, with Next/Previous/Skip

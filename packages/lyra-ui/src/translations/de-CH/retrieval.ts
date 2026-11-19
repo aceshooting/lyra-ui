@@ -8,7 +8,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   graphMissingLibrary: 'Für diese Komponente muss das optionale Paket «d3» installiert sein, um den Graphen darzustellen.',
-  memoryPanelAddWithContext: '«{label}» zum Langzeitgedächtnis hinzufügen',
 };
 
 registerLyraLocaleDelta('de-CH', 'de', strings, { dir: 'ltr' });

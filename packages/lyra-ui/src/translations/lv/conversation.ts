@@ -40,8 +40,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Neizdevās nosūtīt',
   chatFailedAnnounce: 'Ziņojumu neizdevās nosūtīt.',
   chatCompleteAnnounce: 'Ziņojums pabeigts.',
-  expandCode: 'Izvērst kodu',
-  collapseCode: 'Sakļaut kodu',
   copyCode: 'Kopēt kodu',
   copiedToClipboard: 'Nokopēts starpliktuvē',
   codeRegion: 'Kods',

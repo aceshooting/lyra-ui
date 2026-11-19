@@ -11,6 +11,8 @@ import {
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import {
+  anchoredPopupOpen,
+  anchoredPopupReveal,
   overlaySurface,
   overlaySurfaceControlEdge,
 } from '../../../internal/overlay-surface.styles.js';
@@ -490,12 +492,11 @@ export const styles = css`
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     /* Retain layout during the outgoing transition. Once it settles, hidden removes the
        closed popup from layout so its stale position cannot enlarge an ancestor's scroll area. */
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(var(--lr-size-neg-0-25rem));
-    transition: opacity var(--hide-duration, var(--lr-transition-fast)),
-      transform var(--hide-duration, var(--lr-transition-fast)),
-      visibility var(--hide-duration, var(--lr-transition-fast));
+    ${anchoredPopupReveal}
+    --_lr-select-popup-transition: var(--hide-duration, var(--lr-transition-fast));
+    transition: opacity var(--_lr-select-popup-transition),
+      transform var(--_lr-select-popup-transition),
+      visibility var(--_lr-select-popup-transition);
   }
   /* Content-sized default: at least readable (12rem), never a page-spanning wall of text (28rem).
      Scoped away from a width-synced listbox below, whose own inline size is the trigger's width --
@@ -526,12 +527,8 @@ export const styles = css`
     position: fixed;
   }
   :host([open]) [part="listbox"][data-positioned] {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity var(--show-duration, var(--lr-transition-fast)),
-      transform var(--show-duration, var(--lr-transition-fast)),
-      visibility var(--show-duration, var(--lr-transition-fast));
+    ${anchoredPopupOpen}
+    --_lr-select-popup-transition: var(--show-duration, var(--lr-transition-fast));
   }
   /* A disabled form control cannot retain even the outgoing visibility frame of an ordinary
      close transition: fieldset-cascaded disablement uses :disabled too, unlike [disabled]. */

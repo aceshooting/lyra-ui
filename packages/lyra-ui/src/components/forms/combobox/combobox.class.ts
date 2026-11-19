@@ -221,6 +221,8 @@ export interface ComboboxSourceResult {
   readonly total?: number;
 }
 
+type ComboboxOccurrence = LyraOption | ComboboxSourceRow;
+
 /** Async row provider for a remote-backed combobox. Receives the current query and an options bag
  *  carrying an `AbortSignal` and the component's hard row ceiling. Forward the signal to
  *  `fetch(url, { signal })` and honor `limit` when practical. A legacy bare row array remains valid;
@@ -462,6 +464,7 @@ export type LyraComboboxSourceErrorEvent =
  * Composing keys stay with text editing. Inert source options and their inert ancestors are
  * unavailable through popup rows; named option adornment mutations refresh their presentation.
  * Single mode exposes one selected occurrence while retaining backing multiple-selection history.
+ * In multiple mode, selecting a suggestion affects only that occurrence of its value.
  *
  * Assigning `undefined`/`null` to `value` clears the selection; every string, including `''`, is
  * instead a candidate value resolved against the current local options/async rows -- an
@@ -1167,8 +1170,10 @@ export class LyraCombobox<
    * so a veto remains an atomic no-op for the query, active row, and async result set. */
   private closeCleanupPending = false;
   private _selected: string[] = [];
+  private multiplePreferences: readonly (ComboboxOccurrence | undefined)[] = [];
   private singleSelectedOption?: LyraOption;
   private readonly sourceOptionsByRow = new WeakMap<ComboboxSourceRow, LyraOption>();
+  private readonly unknownOccurrenceIndices = new WeakMap<ComboboxSourceRow, number>();
   private _valueDirty = false;
   private _multiple = false;
   private _disabled = false;
@@ -1412,6 +1417,7 @@ export class LyraCombobox<
       this.sourceFailed = false;
       this.sourceEverSettled = false;
       this.asyncRows = [];
+      this.multiplePreferences = [];
       this._sourceTotal = 0;
       this._sourceTruncated = false;
       this.activeIndex = -1;
@@ -1586,7 +1592,12 @@ export class LyraCombobox<
   private requestingSelection = false;
   private previousSelection: readonly string[] = [];
 
-  private setValue(next: string | string[] | null | undefined, dirty: boolean, preferred?: LyraOption): void {
+  private setValue(
+    next: string | string[] | null | undefined,
+    dirty: boolean,
+    preferred?: LyraOption,
+    multiplePreferences: readonly (ComboboxOccurrence | undefined)[] = [],
+  ): void {
     markVetoGuardWrite(this.selectionGuard);
     this.pendingSelectedWrites.clear();
     const old = this._selected;
@@ -1597,6 +1608,7 @@ export class LyraCombobox<
       this._valueDirty = true;
     }
     this._selected = normalizeSelectionValues(next);
+    this.multiplePreferences = multiplePreferences;
     const selected = new Set(this._selected);
     if (selected.size > 0) {
       const rows = this.rowsByValue(selected);
@@ -1755,11 +1767,57 @@ export class LyraCombobox<
     values: readonly string[] = this.committed,
     proposed?: ComboboxSourceRow,
   ): Array<ComboboxSourceRow | undefined> {
+    if (values === this._selected && this.multiple && proposed === undefined) {
+      return this.multipleOccurrences.map((occurrence, index) => this.rowForOccurrence(occurrence, values[index]!));
+    }
     let rows: Map<string, ComboboxSourceRow> | undefined;
     return values.map(value => {
       if (proposed?.value === value) return proposed;
+      if (!this.source && !this.multiple && this.singleSelectedOption?.value === value) {
+        return this.rowForOption(this.singleSelectedOption, false);
+      }
       return this._selectedRowCache.get(value) ?? (rows ??= this.rowsByValue(new Set(values))).get(value);
     });
+  }
+
+  private get multipleOccurrences(): readonly (ComboboxOccurrence | undefined)[] {
+    const catalog = this.source ? this.asyncRows : this.options;
+    return this.memoOption('multipleOccurrences', [catalog, this._selected, this.multiplePreferences], () => {
+      const remaining = new Map<string, Set<ComboboxOccurrence>>();
+      for (const value of this._selected) remaining.set(value, new Set());
+      if (remaining.size === 0) return [];
+      for (const occurrence of catalog) remaining.get(occurrence.value)?.add(occurrence);
+
+      const preferred = this._selected.map((value, index) => {
+        const occurrence = this.multiplePreferences[index];
+        if (occurrence?.value !== value) return undefined;
+        const matches = remaining.get(value)!;
+        if (matches.delete(occurrence)) return occurrence;
+        if (!this.source || isLyraOptionElement(occurrence)) return undefined;
+        for (const row of matches) {
+          if (row.label === occurrence.label && Object.is(row.data, occurrence.data)) {
+            matches.delete(row);
+            return row;
+          }
+        }
+        return occurrence;
+      });
+      return this._selected.map((value, index) => {
+        if (preferred[index]) return preferred[index];
+        const matches = remaining.get(value)!;
+        const occurrence = matches.values().next().value;
+        if (occurrence) matches.delete(occurrence);
+        return occurrence;
+      });
+    });
+  }
+
+  private rowForOccurrence(
+    occurrence: ComboboxOccurrence | undefined,
+    value: string,
+  ): ComboboxSourceRow | undefined {
+    if (isLyraOptionElement(occurrence)) return this.rowForOption(occurrence, false);
+    return occurrence ?? this._selectedRowCache.get(value);
   }
 
   /** Every value in `multiple` mode, else only the first: earlier multiple history stays hidden. */
@@ -1919,17 +1977,18 @@ export class LyraCombobox<
             .map((option) => option.value);
     if (this._defaultSelected.length === 0 && resetValues.length > 0)
       this._defaultSelected = [...resetValues];
-    const defaults = new Set(resetValues);
-    for (const option of this.options) {
-      option[RESET_OPTION_SELECTED_FROM_OWNER](defaults.has(option.value));
-    }
-    // `.slice(0, 1)` -- not `resetValues[0] ?? ''` -- so an empty reset target stays an empty
-    // array rather than the sentinel `''`, which setValue()/normalizeSelectionValues() now treats
-    // as a real candidate value rather than "clear".
-    this.setValue(
-      this.multiple ? [...resetValues] : resetValues.slice(0, 1),
-      false
+    const defaultOptions = this.explicitDefault ? [] : this.options.filter(
+      (option) => option.defaultSelected || wasOptionInitiallySelected(option),
     );
+    this.setValue(
+      this.multiple ? resetValues : resetValues.slice(0, 1),
+      false,
+      defaultOptions[0],
+      defaultOptions,
+    );
+    for (const option of this.options) {
+      option[RESET_OPTION_SELECTED_FROM_OWNER](option.selected);
+    }
     this.query = '';
     this.explicitInputValue = false;
   }
@@ -2069,47 +2128,34 @@ export class LyraCombobox<
     }
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
-      const allDefaults = this.options
-        .filter((option) => option.defaultSelected)
-        .map((option) => option.value);
-      const allLive = this.options
-        .filter((option) => option.selected)
-        .map((option) => option.value);
+      const allDefaults = this.options.filter((option) => option.defaultSelected);
+      const allLive = this.options.filter((option) => option.selected);
       const defaults = this.multiple ? allDefaults : allDefaults.slice(0, 1);
       const live = this.multiple ? allLive : allLive.slice(0, 1);
       const initialLive = this.options
-        .filter((option) => wasOptionInitiallySelected(option))
-        .map((option) => option.value);
+        .filter((option) => wasOptionInitiallySelected(option));
       const optionDirty = this.options.some((option) =>
         isOptionSelectedDirty(option)
       );
       const dirtySelected = this.options.filter(
         (option) => isOptionSelectedDirty(option) && option.selected
       );
-      const dirtyValues = dirtySelected.map((option) => option.value);
-      this._defaultSelected = [
-        ...(defaults.length > 0
-          ? defaults
-          : initialLive.length > 0
-          ? initialLive
-          : live),
-      ];
+      this._defaultSelected = (defaults.length > 0
+        ? defaults
+        : initialLive.length > 0 ? initialLive : live).map((option) => option.value);
       const fromDefaults = defaults.length > 0;
       const initial = optionDirty
         ? this.multiple
           ? allLive
-          : dirtyValues.slice(-1)[0]
-          ? dirtyValues.slice(-1)
+          : dirtySelected.length > 0
+          ? dirtySelected.slice(-1)
           : live
         : fromDefaults
         ? defaults
         : live;
       if (initial.length && !this._restoredStateActive && !this._valueDirty) {
-        // safe: initial.length is truthy, so initial[0] exists.
-        const next = this.multiple ? initial : initial[0]!;
-        if (fromDefaults && !optionDirty) this.setValue(next, false);
-        else this.assignValue(next);
-        return; // The selection write already called reflectSelected().
+        this.setValue(initial.map((option) => option.value), !fromDefaults || optionDirty, initial[0], initial);
+        return;
       }
       if (optionDirty) this._valueDirty = true;
     } else {
@@ -2126,19 +2172,26 @@ export class LyraCombobox<
           !previous.has(option) && option.selected && !option.defaultSelected
       );
       this.refreshOptionDefaults();
-      const eligible = [
-        ...(!this._restoredStateActive && !this._valueDirty ? newDefaults : []),
-        ...(!this._restoredStateActive ? newLive : []),
+      const eligible = this._restoredStateActive ? [] : [
+        ...(!this._valueDirty ? newDefaults : []),
+        ...newLive,
       ];
       if (eligible.length) {
-        const values = eligible.map((option) => option.value);
-        const next = this.multiple
-          ? [...new Set([...this._selected, ...values])]
-          : // safe: eligible.length is truthy, so the last value exists.
-            values[values.length - 1]!;
-        if (newLive.length > 0) this.assignValue(next);
-        else this.setValue(next, false);
-        return; // `value=`'s setter already called reflectSelected()
+        if (this.multiple) {
+          const occurrences = this.multipleOccurrences;
+          const selected = new Set(occurrences);
+          const additions = eligible.filter((option) => !selected.has(option));
+          this.setValue(
+            [...this._selected, ...additions.map((option) => option.value)],
+            newLive.length > 0,
+            undefined,
+            [...occurrences, ...additions],
+          );
+        } else {
+          const newest = eligible[eligible.length - 1]!;
+          this.setValue(newest.value, newLive.length > 0, newest);
+        }
+        return;
       }
     }
     this.reflectSelected();
@@ -2146,15 +2199,10 @@ export class LyraCombobox<
 
   private refreshOptionDefaults(): void {
     if (this.explicitDefault) return;
-    const declared = this.options
-      .filter((option) => option.defaultSelected)
-      .map((option) => option.value);
-    this._defaultSelected = this.multiple ? declared : declared.slice(0, 1);
+    const declared = this.options.filter((option) => option.defaultSelected);
+    this._defaultSelected = (this.multiple ? declared : declared.slice(0, 1)).map((option) => option.value);
     if (!this._valueDirty && !this._restoredStateActive) {
-      // `_defaultSelected` is already capped to at most one entry in single mode, so spreading it
-      // (rather than `this._defaultSelected[0] ?? ''`) commits an empty array -- not the sentinel
-      // `''` -- when there is no default.
-      this.setValue([...this._defaultSelected], false);
+      this.setValue(this._defaultSelected, false, declared[0], declared);
     }
   }
 
@@ -2173,7 +2221,7 @@ export class LyraCombobox<
     return this.memoOption('selectedLabels', [
       this._selected, this.options, this.asyncRows, this.source, this.sourceEverSettled, this.optionsObserved,
       this.getUnknownLabel, this.loading, this.effectiveLocale, this.strings, this.callbackRefreshEpoch,
-    ], () => getListFormat(this.effectiveLocale, { type: 'unit' }).format(this._selected.map(value => this.labelFor(value))));
+    ], () => getListFormat(this.effectiveLocale, { type: 'unit' }).format(this._selected.map((value, index) => this.labelFor(value, index))));
   }
 
   private get optionIndex() {
@@ -2204,12 +2252,20 @@ export class LyraCombobox<
     const writes = [...this.pendingSelectedWrites]; this.pendingSelectedWrites.clear();
     if (!this.isConnected || writes.length === 0) return;
     if (this.multiple) {
-      const values = new Set(this._selected);
+      const values = [...this._selected];
+      const occurrences = [...this.multipleOccurrences];
       for (const [option, write] of writes) {
         if (!this.optionIndex.members.has(option)) continue;
-        if (write.selected) values.add(write.value); else values.delete(write.value);
+        const index = occurrences.indexOf(option);
+        if (write.selected && index < 0) {
+          occurrences.push(option);
+          values.push(write.value);
+        } else if (!write.selected && index >= 0) {
+          occurrences.splice(index, 1);
+          values.splice(index, 1);
+        }
       }
-      this.setValue([...values], true);
+      this.setValue(values, true, undefined, occurrences);
     } else {
       let value = this._selected[0]; let option = this.singleSelectedOption;
       for (const [candidate, write] of writes) {
@@ -2269,16 +2325,20 @@ export class LyraCombobox<
 
   private reflectSelected(): void {
     const value = this._selected[0];
+    const first = this.multiplePreferences[0];
+    if (!this.multiple && isLyraOptionElement(first) && first.value === value && this.optionIndex.members.has(first)) {
+      this.singleSelectedOption = first;
+    }
     if (!this.singleSelectedOption || !this.optionIndex.members.has(this.singleSelectedOption) || this.singleSelectedOption.value !== value) {
       this.singleSelectedOption = value === undefined ? undefined : this.optionIndex.values.get(value);
     }
-    const selected = new Set(this._selected);
+    const selected = this.multiple ? new Set(this.multipleOccurrences) : undefined;
     for (const option of this.options) {
-      option[SET_OPTION_SELECTED_FROM_OWNER](this.multiple ? selected.has(option.value) : option === this.singleSelectedOption);
+      option[SET_OPTION_SELECTED_FROM_OWNER](selected ? selected.has(option) : option === this.singleSelectedOption);
     }
   }
 
-  private labelFor(value: string): string {
+  private labelFor(value: string, occurrenceIndex?: number): string {
     // An explicitly blank (or whitespace-only) label carries no useful information -- fall
     // through to the next candidate (ultimately the raw value) exactly as a missing label would,
     // rather than rendering/announcing an empty segment.
@@ -2309,6 +2369,7 @@ export class LyraCombobox<
     // the badge cannot compensate). A resolved-but-still-unmatched value falls all the way through
     // to the raw value below, same as always.
     return (
+      (occurrenceIndex === undefined ? undefined : nonBlank(this.multipleOccurrences[occurrenceIndex]?.label)) ??
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value ? nonBlank(this.singleSelectedOption.label) : undefined) ??
       nonBlank(this._selectedLabelCache.get(value)) ??
       nonBlank(this.optionIndex.values.get(value)?.label) ??
@@ -2469,13 +2530,17 @@ export class LyraCombobox<
     const locale = this.effectiveLocale;
     const query = prepareNeedle(this.query, locale);
     return this.committed
-      .filter((value) => this.isUnknownValue(value))
-      .map((value) => ({
-        value,
-        label: this.labelFor(value),
-        badge: this.localize('notInCatalog'),
-        unknownValue: value,
-      }))
+      .flatMap((value, index) => {
+        if (!this.isUnknownValue(value)) return [];
+        const row = {
+          value,
+          label: this.labelFor(value),
+          badge: this.localize('notInCatalog'),
+          unknownValue: value,
+        };
+        this.unknownOccurrenceIndices.set(row, index);
+        return [row];
+      })
       .filter(
         (row) =>
           !query ||
@@ -2503,10 +2568,14 @@ export class LyraCombobox<
   }
 
   /** Cap source identities before projecting local option data and cloning adornments. */
-  private capRows<T extends { value: string }>(all: readonly T[], activeValue?: string): { rows: readonly T[]; overflow: number } {
-    return this.memoOption('capRows', [all, this.maxRender, this._selected, this.multiple, activeValue], () => {
+  private capRows<T extends ComboboxOccurrence>(all: readonly T[], activeValue?: string): { rows: readonly T[]; overflow: number } {
+    const occurrences = this.multiple ? this.multipleOccurrences : undefined;
+    return this.memoOption('capRows', [all, this.maxRender, this._selected, occurrences, activeValue], () => {
       const selected = new Set(this.committed);
-      const retained = all.filter(row => selected.has(row.value));
+      const selectedOccurrences = new Set(occurrences);
+      const retained = occurrences
+        ? all.filter(row => selectedOccurrences.has(row))
+        : all.filter(row => selected.has(row.value));
       const active = activeValue === undefined ? undefined : all.find(row => row.value === activeValue);
       return capOptionRows(all, this.maxRender, active ? [active, ...retained] : retained);
     });
@@ -2521,7 +2590,7 @@ export class LyraCombobox<
   private get renderedRows(): { rows: readonly ComboboxSourceRow[]; overflow: number } {
     const active = this.navigableRows(this.lastRenderedRows)[this.activeIndex]?.value;
     const result = this.memoOption('renderedRows', [this.callbackRefreshEpoch, this.options, this.asyncRows, this.source, this.query,
-      this._selected, this.multiple, this.maxRender, this._sourceTotal, this.withUnknownOption,
+      this._selected, this.multiple, this.multiplePreferences, this.maxRender, this._sourceTotal, this.withUnknownOption,
       this.allowCreate, this.filter, this.getUnknownLabel, this.loading, this.sourceEverSettled,
       this.effectiveLocale, this.strings, active], () => this.computeRenderedRows(active));
     this.lastRenderedRows = result.rows;
@@ -2948,11 +3017,18 @@ export class LyraCombobox<
     this.value = next as LyraPickerValue<Multiple> | null | undefined;
   }
 
-  private acceptsSelection(values: string[], row?: ComboboxSourceRow): boolean {
+  private acceptsSelection(
+    values: string[],
+    row?: ComboboxSourceRow,
+    occurrences?: readonly (ComboboxOccurrence | undefined)[],
+  ): boolean {
     if (this.requestingSelection) return false;
     const self = this as unknown as LyraCombobox<boolean>;
     const { multiple, open, source, sourceToken } = this;
-    const data = this.resolveSelectedRowSlots(values, row).map(option => option?.data);
+    const proposedRows = occurrences
+      ? occurrences.map((occurrence, index) => this.rowForOccurrence(occurrence, values[index]!))
+      : this.resolveSelectedRowSlots(values, row);
+    const data = proposedRows.map(option => option?.data);
     const option = row && this.sourceOptionsByRow.get(row);
     let accepted = false;
     this.requestingSelection = true;
@@ -3008,25 +3084,36 @@ export class LyraCombobox<
       this.createOption(row.createInput);
       return;
     }
-    const selected = new Set(this._selected);
-    const removing = this.multiple && selected.has(row.value);
-    if (removing) selected.delete(row.value);
-    else selected.add(row.value);
-    const values = this.multiple ? [...selected] : [row.value];
+    const values = this.multiple ? [...this._selected] : [row.value];
+    const occurrences = this.multiple ? [...this.multipleOccurrences] : undefined;
+    const occurrence = sourceOption ?? row;
+    const index = occurrences
+      ? (this.unknownOccurrenceIndices.get(row) ?? occurrences.indexOf(occurrence))
+      : -1;
+    if (occurrences) {
+      if (index >= 0) {
+        values.splice(index, 1);
+        occurrences.splice(index, 1);
+      } else {
+        values.push(row.value);
+        occurrences.push(occurrence);
+      }
+    }
     const changed = this.multiple || this._selected[0] !== row.value;
-    if (changed && !this.acceptsSelection(values, row)) return;
+    if (changed && !this.acceptsSelection(values, row, occurrences)) return;
     if (createdOption) {
       if (!this.allowCreate) return;
       this.append(createdOption);
+      if (occurrences) occurrences[occurrences.length - 1] = createdOption;
     }
     this.touched = true;
-    if (removing) this._selectedRowCache.delete(row.value);
-    else if (row.unknownValue === undefined) {
+    if (index >= 0 && !values.includes(row.value)) this._selectedRowCache.delete(row.value);
+    else if (index < 0 && row.unknownValue === undefined) {
       this._selectedLabelCache.set(row.value, row.label);
       if (!this.multiple) this._selectedRowCache.clear();
       this._selectedRowCache.set(row.value, row);
     }
-    this.setValue(values, true, sourceOption);
+    this.setValue(values, true, sourceOption, occurrences);
     this.query = '';
     this.explicitInputValue = false;
     if (!this.multiple) void this.hide();
@@ -3052,9 +3139,10 @@ export class LyraCombobox<
     if (this.liveDisabled || this.readonly) return;
     if (index < 0 || index >= this._selected.length) return;
     const next = this._selected.filter((_, i) => i !== index);
-    if (!this.acceptsSelection(next)) return;
+    const occurrences = this.multipleOccurrences.filter((_, i) => i !== index);
+    if (!this.acceptsSelection(next, undefined, occurrences)) return;
     this.touched = true;
-    this.assignValue(next);
+    this.setValue(next, true, undefined, occurrences);
     this.emitValueEvents();
   }
 
@@ -3408,6 +3496,7 @@ export class LyraCombobox<
     let currentGroupRows: TemplateResult[] = [];
     let groupIndex = 0;
     const selectedSet = new Set(this.committed);
+    const selectedOccurrences = this.multiple ? new Set(this.multipleOccurrences) : undefined;
     const flushGroup = (): void => {
       if (!currentGroupRows.length) return;
       if (currentGroup) {
@@ -3427,9 +3516,12 @@ export class LyraCombobox<
         currentGroup = o.group;
       }
       const id = `${this.listId}-opt-${i}`;
-      const selected = this.multiple || this.source
-        ? selectedSet.has(o.value)
-        : this.singleSelectedOption !== undefined && this.sourceOptionsByRow.get(o) === this.singleSelectedOption;
+      const sourceOption = this.sourceOptionsByRow.get(o);
+      const selected = selectedOccurrences
+        ? selectedOccurrences.has(sourceOption ?? o) || this.unknownOccurrenceIndices.has(o)
+        : this.source || o.unknownValue !== undefined
+          ? selectedSet.has(o.value)
+          : this.singleSelectedOption !== undefined && sourceOption === this.singleSelectedOption;
       if (selected && !this.multiple) selectedSet.delete(o.value);
       currentGroupRows.push(
         html`<div
@@ -3479,9 +3571,10 @@ export class LyraCombobox<
 
   /** One built-in selected chip, or the consumer's safe Lit/DOM/text replacement. */
   private renderTag(value: string, index: number): unknown {
-    const option = this.optionIndex.values.get(value);
+    const occurrence = this.multipleOccurrences[index];
+    const option = isLyraOptionElement(occurrence) ? occurrence : this.optionIndex.values.get(value);
     if (this.getTag && option) return this.getTag(option, index);
-    const label = this.labelFor(value);
+    const label = this.labelFor(value, index);
     const unknown = this.isUnknownValue(value);
     return html`<span part="tag" title=${option?.title || nothing} ?data-unknown-value=${unknown}>
       <span part="tag-label"

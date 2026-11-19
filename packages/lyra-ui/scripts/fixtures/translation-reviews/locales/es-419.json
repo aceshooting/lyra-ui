@@ -2,18 +2,18 @@
   "locale": "es-419",
   "direction": "ltr",
   "source": {
-    "keyCount": 1680,
-    "sha256": "sha256:4bbcc0eda2daeee31135a20415d4a25f544fe1b3040cbf9e135280818540d4e7"
+    "keyCount": 1712,
+    "sha256": "sha256:7a01f27d32f7efa31e93a065efa64d21d6076a6ce7b72c257b88eaa1d5b3b741"
   },
   "catalog": {
-    "keyCount": 1680,
-    "sha256": "sha256:1685733aa16fbe4c5e42dd5c4b1d786f688f68b9ab014187b375c9653f029c9e"
+    "keyCount": 1712,
+    "sha256": "sha256:b6e8c2176c845c4fffbd464831fa022148497f938f410943ddf04a66ec9e9f8f"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-11-16",
-    "evidence": "Original es-419 (Latin American Spanish) difference catalog: 61 regional overrides drafted over Spanish (es) for Latin American terminology and verb usage (celular, video, ingrese, presione, Enter, simple past for completed events such as \"No se pudo cargar\"). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of two panorama keyboard-instruction and hotspot messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of eleven three-dimensional chart table, axis and keyboard-instruction messages: this catalog inherits es with authored regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of thirteen 3D model viewer label, instruction, status and camera-control messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of five map interaction-activation and drawing-measurement messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review.\n\n2026-10-26: Resolved seven genView messages through the existing Spanish parent catalog; no duplicate override was needed.\n\n2026-10-28 bounded AI-assisted increment: added the mapGlobe and mapTerrain control labels and the graphCustomNodesError, graphCustomNodesUnavailable and graphGlowUnavailable notices. This regional catalog inherits the five messages from es without new regional overrides. These five messages have no placeholders or plural branches. No human or native-speaker authorship is claimed.\n\n2026-10-29 bounded AI-assisted scene increment: This catalog inherits these fourteen messages from es without new regional overrides. The {page} and {pages} placeholders in mapScenePage are preserved; the other thirteen messages have no placeholders or plural branches. No human or native-speaker authorship is claimed.\n\n2026-11-02 bounded AI-assisted scene increment: This catalog inherits mapScenePartial (\"Some scene objects are not drawn, or are drawn without their altitude.\"), the lr-map scene panel status text, also announced to assistive technology, shown when only part of the scene can be drawn, for example when three-dimensional models are not rendered or elevated paths and arcs are drawn flat along their ground track, from es without a new regional override. The message has no placeholders or plural branches. No human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
+    "evidence": "Original es-419 (Latin American Spanish) difference catalog: 61 regional overrides drafted over Spanish (es) for Latin American terminology and verb usage (celular, video, ingrese, presione, Enter, simple past for completed events such as \"No se pudo cargar\"). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of two panorama keyboard-instruction and hotspot messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of eleven three-dimensional chart table, axis and keyboard-instruction messages: this catalog inherits es with authored regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of thirteen 3D model viewer label, instruction, status and camera-control messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of five map interaction-activation and drawing-measurement messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review.\n\n2026-10-26: Resolved seven genView messages through the existing Spanish parent catalog; no duplicate override was needed.\n\n2026-10-28 bounded AI-assisted increment: added the mapGlobe and mapTerrain control labels and the graphCustomNodesError, graphCustomNodesUnavailable and graphGlowUnavailable notices. This regional catalog inherits the five messages from es without new regional overrides. These five messages have no placeholders or plural branches. No human or native-speaker authorship is claimed.\n\n2026-10-29 bounded AI-assisted scene increment: This catalog inherits these fourteen messages from es without new regional overrides. The {page} and {pages} placeholders in mapScenePage are preserved; the other thirteen messages have no placeholders or plural branches. No human or native-speaker authorship is claimed.\n\n2026-11-02 bounded AI-assisted scene increment: This catalog inherits mapScenePartial (\"Some scene objects are not drawn, or are drawn without their altitude.\"), the lr-map scene panel status text, also announced to assistive technology, shown when only part of the scene can be drawn, for example when three-dimensional models are not rendered or elevated paths and arcs are drawn flat along their ground track, from es without a new regional override. The message has no placeholders or plural branches. No human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
   },
   "reviewer": {
     "status": "approved",
@@ -109,6 +109,10 @@
     {
       "messagePath": "contextMeterSegmentLabel",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "conversationActionWithTitle",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for conversationActionWithTitle is appropriate for the es-419 catalog's UI register."
     },
     {
       "messagePath": "diffViewOldLabel",
@@ -239,6 +243,10 @@
       "rationale": "'array' names the JSON specification's own type name for an array value; Spanish uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
     },
     {
+      "messagePath": "jsonViewerLabel",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for jsonViewerLabel is appropriate for the es-419 catalog's UI register."
+    },
+    {
       "messagePath": "kbdAltWord",
       "rationale": "'Alt' is the conventional printed/spoken name of the Alt modifier key; Spanish keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
     },
@@ -261,6 +269,10 @@
     {
       "messagePath": "kbdEscapeWord",
       "rationale": "'Escape' is the conventional printed/spoken name of the Escape key; Spanish keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdShortcutSeparator",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for kbdShortcutSeparator is appropriate for the es-419 catalog's UI register."
     },
     {
       "messagePath": "knowledgeBasePermissionEditor",
@@ -301,6 +313,10 @@
     {
       "messagePath": "mapSquareMeters",
       "rationale": "International SI unit symbol, which this locale writes unchanged."
+    },
+    {
+      "messagePath": "memoryPanelAddAccessibleName",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for memoryPanelAddAccessibleName is appropriate for the es-419 catalog's UI register."
     },
     {
       "messagePath": "neighborGroupHeader",
@@ -383,12 +399,20 @@
       "rationale": "'Error' names a generic error status label; Spanish uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
     },
     {
+      "messagePath": "stepperStateError",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for stepperStateError is appropriate for the es-419 catalog's UI register."
+    },
+    {
       "messagePath": "tableRowTotal",
       "rationale": "'Total' is a conventional totals-column heading in the es catalog; its spelling is shared with English rather than leftover English prose."
     },
     {
       "messagePath": "taskListStepIncompleteAnnounce",
       "rationale": "Formatting template only: {label} and {status} are supplied values, with a punctuation separator and no natural-language words; the identical text preserves the status announcement format."
+    },
+    {
+      "messagePath": "tokenInputLabel",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for tokenInputLabel is appropriate for the es-419 catalog's UI register."
     },
     {
       "messagePath": "toolCallBlockErrorLabel",

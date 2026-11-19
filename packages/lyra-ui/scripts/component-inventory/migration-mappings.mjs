@@ -201,23 +201,6 @@ const WA_DATA_GRID_V9_DRIFT = [
   },
 ];
 
-const WA_FILE_INPUT_V9_DRIFT = [
-  {
-    code: 'readonly-mismatch',
-    section: 'properties',
-    member: 'dragging',
-    expected: false,
-    actual: true,
-  },
-  {
-    code: 'readonly-mismatch',
-    section: 'properties',
-    member: 'fileCount',
-    expected: false,
-    actual: true,
-  },
-];
-
 const shoelaceLifecycleCancelabilityDrift = (hideCancelable) => [
   {
     code: 'cancelability-mismatch',
@@ -391,8 +374,8 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra exposes dragging and fileCount as getter-only derived state. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.',
-      expectedDrift: WA_FILE_INPUT_V9_DRIFT,
+        'Lyra derives dragging and fileCount and ignores assignments to either. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.',
+      expectedDrift: [],
     },
   ],
   [

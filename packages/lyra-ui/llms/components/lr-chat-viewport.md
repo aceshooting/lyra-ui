@@ -86,8 +86,9 @@ root); wins over `label` and the localized default.
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 
-**Events:** `lr-follow-change` — `detail: { following }`, fired whenever `follow` flips (user
-scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
+**Events.** `lr-follow-change` carries `detail: { following }` when scrolling releases or resumes
+follow, or the user activates the jump button. Handle direct `follow` writes and calls to
+`scrollToBottom()` at their call sites if the application tracks those changes.
 
 Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
 the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,

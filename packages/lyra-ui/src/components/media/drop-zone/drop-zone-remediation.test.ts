@@ -93,7 +93,7 @@ it('keeps announcing after moving to another document', async () => {
 
 it('tints accepted and rejected drags like lr-file-input', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div>
-    <lr-drop-zone style="--lr-transition-fast: 0s"></lr-drop-zone>
+    <lr-drop-zone data-lr-theme-scope style="--lr-transition-fast: 0s"></lr-drop-zone>
     <span id="accept" style="background: color-mix(in srgb, var(--lr-color-success) 8%, transparent)"></span>
     <span id="reject" style="background: color-mix(in srgb, var(--lr-color-danger) 8%, transparent)"></span>
   </div>`);

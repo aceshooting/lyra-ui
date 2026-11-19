@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 18 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,7 +54,10 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 maxSamples?)` appends finite raw samples and keeps a rolling window of the newest `maxSamples`
 (at most 10,000, also the default; an assigned `values` array longer than that keeps its newest
 10,000 samples, with a localized `limit` notice). The bounded immutable window reuses existing
-canonical samples without re-admission. Use `distribution` below to represent a larger whole-source distribution.
+canonical samples without re-admission. Each completed batch copies each retained sample once into the
+new window. When the evicted samples contain neither endpoint and new samples fall inside the existing range,
+the histogram reuses its range labels and adjusts counts for just the added and removed samples.
+Use `distribution` below to represent a larger whole-source distribution.
 Appends inspect newest positions first and stop once the retained window is full. Invalid-heavy
 batches yield after 10,000 inspected positions and may finish asynchronously. Concurrent appends
 apply in call order; assigning `values` or disconnecting cancels unfinished batches. Pending input
@@ -115,7 +118,7 @@ and `distribution` supplies bin categories rather than a spatial route.
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line during synchronization; the native canvas
 tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-button`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).

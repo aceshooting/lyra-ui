@@ -171,7 +171,10 @@ self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
-data mode only: built-in icon buttons rendered into each row's `actions` slot. `withArchived: boolean
+data mode only: built-in icon buttons rendered into each row's `actions` slot. Their accessible
+names combine the localized action with the thread title (or the ID when the title is blank).
+Override the `conversationActionWithTitle` string to change how the action and title are combined.
+`withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off.

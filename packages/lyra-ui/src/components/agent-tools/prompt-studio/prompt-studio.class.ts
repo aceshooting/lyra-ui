@@ -22,7 +22,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioLargeWorkspace, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioMoveMessageDown, LYRA_DEFAULT_promptStudioMoveMessageUp, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessageNumbered, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Conversation message roles plus the tool-result role needed by prompt authoring. */
@@ -144,18 +144,16 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    moveDown: LYRA_DEFAULT_moveDown,
-    moveUp: LYRA_DEFAULT_moveUp,
     promptStudioAddMessage: LYRA_DEFAULT_promptStudioAddMessage,
     promptStudioLabel: LYRA_DEFAULT_promptStudioLabel,
     promptStudioLargeWorkspace: LYRA_DEFAULT_promptStudioLargeWorkspace,
     promptStudioMessageContent: LYRA_DEFAULT_promptStudioMessageContent,
     promptStudioMessageRole: LYRA_DEFAULT_promptStudioMessageRole,
     promptStudioMessages: LYRA_DEFAULT_promptStudioMessages,
-    promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
-    promptStudioPreviewLimit: LYRA_DEFAULT_promptStudioPreviewLimit,
     promptStudioMoveMessageDown: LYRA_DEFAULT_promptStudioMoveMessageDown,
     promptStudioMoveMessageUp: LYRA_DEFAULT_promptStudioMoveMessageUp,
+    promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
+    promptStudioPreviewLimit: LYRA_DEFAULT_promptStudioPreviewLimit,
     promptStudioRemoveMessageNumbered: LYRA_DEFAULT_promptStudioRemoveMessageNumbered,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,

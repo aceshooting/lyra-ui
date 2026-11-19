@@ -37,7 +37,7 @@ it('reports the typed query while preserving the committed value', async () => {
 });
 
 it('themes the hover and pressed backgrounds independently', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-model-select']>(html`<lr-model-select .catalog=${[{ id: 'a', label: 'Alpha' }]}
+  const el = await fixture<HTMLElementTagNameMap['lr-model-select']>(html`<lr-model-select data-lr-theme-scope .catalog=${[{ id: 'a', label: 'Alpha' }]}
     style="--lr-transition-fast:0s; --lr-model-select-trigger-hover-bg:rgb(11, 22, 33); --lr-model-select-trigger-active-bg:rgb(33, 22, 11)"></lr-model-select>`);
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
   try {

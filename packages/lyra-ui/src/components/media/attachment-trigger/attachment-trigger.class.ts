@@ -16,6 +16,7 @@ import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes } from '../file-input/accept.js';
 import type { LyraFileInputRejectedFile } from '../file-input/file-input.class.js';
+import type { LyraMessageKey } from '../../../internal/localization-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage } from '../../../internal/default-strings/media.generated.js';
@@ -116,18 +117,28 @@ function audioIcon(): SVGTemplateResult {
 interface CapabilityMeta {
   /** Icon shown on the single-capability trigger button and next to the menu item. */
   icon: () => SVGTemplateResult;
-  /** Localization key for the single-capability trigger button's `aria-label`. */
-  triggerKey: string;
-  /** Localization key for the multi-capability menu item's label text. */
-  menuKey: string;
 }
 
 const CAPABILITY_META: Record<LyraAttachmentCapability, CapabilityMeta> = {
-  files: { icon: paperclipIcon, triggerKey: 'attachmentTriggerFiles', menuKey: 'attachmentMenuFiles' },
-  image: { icon: imageIcon, triggerKey: 'attachmentTriggerImage', menuKey: 'attachmentMenuImage' },
-  camera: { icon: cameraIcon, triggerKey: 'attachmentTriggerCamera', menuKey: 'attachmentMenuCamera' },
-  audio: { icon: audioIcon, triggerKey: 'attachmentTriggerAudio', menuKey: 'attachmentMenuAudio' },
+  files: { icon: paperclipIcon },
+  image: { icon: imageIcon },
+  camera: { icon: cameraIcon },
+  audio: { icon: audioIcon },
 };
+
+const ATTACHMENT_TRIGGER_KEYS = {
+  files: 'attachmentTriggerFiles',
+  image: 'attachmentTriggerImage',
+  camera: 'attachmentTriggerCamera',
+  audio: 'attachmentTriggerAudio',
+} as const satisfies Record<LyraAttachmentCapability, LyraMessageKey>;
+
+const ATTACHMENT_MENU_KEYS = {
+  files: 'attachmentMenuFiles',
+  image: 'attachmentMenuImage',
+  camera: 'attachmentMenuCamera',
+  audio: 'attachmentMenuAudio',
+} as const satisfies Record<LyraAttachmentCapability, LyraMessageKey>;
 
 const OWNED_CAPABILITY_SNAPSHOTS = new WeakSet<object>();
 
@@ -589,7 +600,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const label = normalizeLabel(this.hostAccessibleLabel) ?? this.localize(meta.triggerKey);
+    const label = normalizeLabel(this.hostAccessibleLabel) ?? this.localize(ATTACHMENT_TRIGGER_KEYS[capability]);
     return html`
       <lr-icon-button
         part="trigger"
@@ -638,7 +649,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
             return html`
               <lr-menu-item value=${capability} ?disabled=${this.disabled}>
                 <span slot="icon">${meta.icon()}</span>
-                ${this.localize(meta.menuKey)}
+                ${this.localize(ATTACHMENT_MENU_KEYS[capability])}
               </lr-menu-item>
             `;
           })}

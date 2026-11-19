@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,7 +27,9 @@ AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id,
 AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
-`metricId: string | null = null`; `label?: string` — omission localizes the heading while an
+`metricId: string | null = null` — `null` and `''` select the first metric. A non-empty unmatched
+id leaves the selection empty and shows the localized `metric-unavailable` note until the id
+matches. Clear `metricId` to use the first available metric as a fallback. `label?: string` — omission localizes the heading while an
 explicit empty string renders no heading/name; `withoutChart: boolean = false` (attribute
 `without-chart`, reflected) suppresses the metric trend chart; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
@@ -43,7 +45,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
-`run-label`, `run-meta`, `run-status`, `run-status-message`, `limit` (shown when run history exceeds
+`run-label`, `run-meta`, `run-status`, `run-status-message`, `metric-unavailable`, `limit` (shown when run history exceeds
 `maxRenderedRuns`), `empty`.
 
 **Additional API surface:**

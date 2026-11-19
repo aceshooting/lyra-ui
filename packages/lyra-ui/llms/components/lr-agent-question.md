@@ -21,6 +21,10 @@ and MCP form-elicitation actions. Set `request-id`, `requester` (server/agent pr
 `.schema: FlatToolParamSchema`, and optional `.value: ToolParamFormValue`. `label` overrides the
 localized heading; `disabled` defaults false and `status` defaults `'pending'`.
 
+Without a schema, the action buttons can submit an empty response. Supplying a supported
+schema loads the field controls before the question's `updateComplete` resolves. For
+server-rendered fields, import `@aceshooting/lyra-ui/components/lr-tool-param-form.js` before rendering.
+
 The component composes `lr-tool-param-form` with the flat MCP 2025-11-25 schema subset: strings,
 numbers/integers, booleans, titled or untitled single/multiple string-enum choices, defaults,
 required fields, Unicode string lengths, supported formats, numeric bounds and selection counts.

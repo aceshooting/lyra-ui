@@ -5,6 +5,9 @@ import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/
 
 export const styles = css`
   :where([part='row']:not(:has([data-sticky])), [part='header-cell'][data-sortable], [part='row-expand-toggle'], [part='filter'], [part='cell-editor'], [part='more-button'], [part='reveal-columns-button']) { transition: var(--lr-transition-interactive); }
+  /* These parts paint no resting fill under their text, so only the hover fill animates: animated
+     text would trail a theme change over the table surface, which switches at once. */
+  :where([part='row'], [part='row-expand-toggle'], [part='more-button'], [part='reveal-columns-button']) { transition-property: background-color; }
   @media (prefers-reduced-motion: reduce), (forced-colors: active) {
     :where([part='row']:not(:has([data-sticky])), [part='header-cell'][data-sortable], [part='row-expand-toggle'], [part='filter'], [part='cell-editor'], [part='more-button'], [part='reveal-columns-button']) { transition: none; }
   }
@@ -408,6 +411,7 @@ export const styles = css`
      part in this stylesheet. */
   [part='cell'][data-editable] {
     transition: var(--lr-transition-interactive);
+    transition-property: background-color;
   }
   :where([part='cell'][data-editable]):hover {
     cursor: pointer;

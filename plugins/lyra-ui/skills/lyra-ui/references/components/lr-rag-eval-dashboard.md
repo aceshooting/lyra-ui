@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,7 +23,8 @@ localized no-data text if no run in the current slice provides a finite measurem
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`; the first metric is used when
-unset, while an id that matches no metric selects none and renders no chart); `slice: string = ''`;
+unset, while an id that matches no metric selects none, renders no chart and shows the localized
+`metric-unavailable` state); `slice: string = ''`;
 `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`, the run-history heading sits one
 level below; `'none'` keeps the visible text without heading semantics); `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
@@ -32,7 +33,8 @@ while an explicitly empty host label stays empty on the region);
 `chartHeight: string = '220px'` (attribute `chart-height`).
 
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
-`'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
+`'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`; a
+percent value is a fraction shown as-is, so 1.5 reads 150% and -0.2 reads -20%, matching the chart.
 `LyraRagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
 The bounded run-history buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End;
 activation still emits the existing run events.
@@ -58,7 +60,8 @@ corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice that only the most recent 500
+`chart`, `metric-unavailable` (an unmatched controlled `metricId`), `runs`, `runs-heading`, `run`,
+`limit` (localized notice that only the most recent 500
 filtered runs are shown), `input-limit`, `slices-limit`, `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default

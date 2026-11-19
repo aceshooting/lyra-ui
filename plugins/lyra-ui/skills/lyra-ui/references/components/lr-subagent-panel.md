@@ -20,6 +20,9 @@ Controlled nested-agent hierarchy with lifecycle badges, task/model context, gua
 selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cycles and orphan
 parents remain renderable instead of recursing forever.
 
+Arrow keys navigate the tree from a row or its main trigger. Cancel and Retry keep native
+button keyboard behavior. The displayed truncation notice has the `note` role.
+
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
 `selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
 accessible-name override for the `role="tree"` element, where omission reads back `undefined` and

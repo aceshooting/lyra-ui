@@ -35,6 +35,11 @@ and `lr-option.js` for both ordinary and searchable controls. The searchable `lr
 without registering option itself.
 The default picker entries register select and option synchronously.
 
+Listen on the country picker in compact or searchable mode for `lr-show` and `lr-hide` requests
+and their settled `lr-after-show` and `lr-after-hide` events. Cancel an ordinary popup request
+with `preventDefault()`. `lr-activate` carries the activated country code in `detail.value`,
+including a repeated pick. `lr-clear` fires when the clear button empties the selection.
+
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
 trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts
 may display regional-indicator letters; the visible country name remains the identifying text.

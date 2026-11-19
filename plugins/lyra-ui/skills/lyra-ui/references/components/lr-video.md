@@ -53,7 +53,9 @@ accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: 
 'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`,
 `readonly playing: boolean` (live state reflected as the `playing` attribute; drive it with `play()`
 and `pause()`, since assigning it throws in strict-mode code), `poster: string = ''`, `preload: 'auto'
-| 'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
+| 'metadata' | 'none' = 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`;
+clamped to the native `0.0625..16` range, removing the attribute restores `1`, and native rate
+changes update it, matching `lr-av-player`), `src: string = ''`, `thumbnails: string = ''`, `title: string =
 ''`, and `volume: number = 1`. The private native `<video>` always carries `playsinline`; native
 browser controls stay disabled because the selected Lyra preset owns the control surface.
 `autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently
@@ -105,9 +107,11 @@ flat-tree descendants. An accidentally supplied link, button, or input therefore
 nested action or second keyboard stop. `controls-start` and `controls-after-play` remain ordinary
 composition slots and may intentionally contain interactive controls.
 
-A declarative host `aria-label` or `title` remains the component's overall name and is not copied to
-the private native video; that element receives the localized player-purpose name. An explicitly
-empty host `aria-label` is preserved exactly as an empty native-video name. Caption/subtitle tracks
+A non-blank host `aria-label` names the whole player: the host takes a `region` role to carry it,
+and the private native video receives the localized player-purpose name (key `videoPlayerLabel`).
+Without one, the native video is named by `title` (attribute or property alike), falling back to
+that localized name; whitespace-only values count as absent. An explicitly empty host `aria-label`
+is preserved exactly as an empty native-video name. Caption/subtitle tracks
 selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
 without asking the browser to paint a duplicate native caption layer.
 
@@ -120,11 +124,12 @@ viewport), `panorama-engine` (the optional renderer container), `panorama-notice
 renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
 with one `panorama-hotspot` button per hotspot, and `panorama-page` (a hotspot page action).
 
-The `progress` range carries `aria-label` and points through `aria-describedby` to a localized
-`{current} of {duration}` description (key `avPlayerPosition`, shared with `lr-av-player`) built
-from the same locale-formatted clock times as the visible labels. This deliberately avoids relying
-on `aria-valuetext`, which browsers ignore on native range semantics. Before duration is available,
-the same range remains in the DOM as a disabled `0..0` control with its description intact,
+The `progress` range carries `aria-label` and a localized `{current} of {duration}`
+`aria-valuetext` (key `avPlayerPosition`, shared with `lr-av-player`) built from the same
+locale-formatted clock times as the visible labels, so assistive technology announces a time rather
+than a raw number of seconds; `aria-describedby` points to the same text. The volume range's
+`aria-valuetext` is its locale-formatted percentage. Before duration is available, the same range
+remains in the DOM as a disabled `0..0` control with its value text and description intact,
 avoiding a disappearing/reappearing semantic target.
 
 **Themeable custom properties:** `--controls-background` (default

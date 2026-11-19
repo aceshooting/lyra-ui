@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 57 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 57 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -325,14 +325,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
   `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (attribute: false) —
-  accessible name for one row's expand/collapse chevron, read once per render for that row,
-  exactly like a column's `editLabel`/`cellTitle`; consumer-owned text used verbatim, never
-  passed through localization. Omit it and every chevron shares the same localized
-  `expand`/`collapse` name, which carries no row context — fine for a handful of rows, but each
-  chevron is its own Tab stop, so a long table otherwise announces the same two names over and
-  over with no way to tell the rows apart. There is no default row context to derive one from
-  here: this component has no row-header notion (`rowKey` is an opaque identity, not a label)
+- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (property only) supplies the name for a row's disclosure. The default includes the row key through `dataGridExpandRow` or `dataGridCollapseRow`. Supply a callback for a more descriptive row name.
 - `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
   mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
   `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
@@ -401,11 +394,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
   unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
-- `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
-  while `priority`-hidden columns are hidden; omission renders localized
-  `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
-- `columnsHideLabel?: string` (attribute `columns-hide-label`) — the same button's label once
-  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim.
+- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) set the action tooltip for showing or hiding additional columns. An explicit empty string omits that tooltip. The visible name stays constant in both states and uses `tableAdditionalColumns`. Read `aria-expanded` for its state.
 
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
@@ -440,6 +429,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
+Page Up and Page Down move focus by a page through available rows. The default text filter ignores case and accents and announces the filtered count. `--lr-table-row-hover-bg`, `--lr-table-row-active-bg`, `--lr-table-sortable-header-hover-bg` and `--lr-table-sortable-header-active-bg` control their respective pointer states.
+
 **Methods:**
 
 - `rowElement(rowKey)` — the rendered `<tr>` for one row key, or `null` when that row is not in the
@@ -470,6 +461,8 @@ row) and `data-expanded-row-key` (on the panel row) are a type-tagged encoding o
 same way. The panel deliberately does **not** repeat `data-row-key`, so a `[data-row-key]` query
 still resolves exactly one element per row. Prefer these three methods over building a selector from
 any of the attributes — a consumer-supplied key is not safe to interpolate into CSS unescaped.
+
+The table emits a cancelable `lr-page-request` with a one-based `{ page }` before applying a pager change. Preventing it preserves the current page and suppresses `lr-page-change`.
 
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
@@ -667,13 +660,12 @@ declaration to retheme every internal scroll container in the library, including
   neither renders nor re-sorts; assign a new `columns` array.
 - Single/multiple selection both use `selectedRowKeys`. No checkbox column is synthesized;
   implement bulk selection through `headerCell()`/`cell()`.
-- Host `aria-label` (or native `ariaLabel`) names the internal `<table role="grid">` verbatim,
-  bypassing localization; its presence wins even when empty. `caption: string = ''` supplies an
+- Host `aria-label` (or native `ariaLabel`) names the internal `<table role="grid">`. An explicitly empty string suppresses the name. Whitespace-only values fall back to the caption. `caption: string = ''` supplies an
   optional visible `<caption>` (`caption` part); without a host label it also names the grid through
   `aria-labelledby`.
   Without either name, first render issues one development-only `console.warn`; production and
   unknown/unbundled runtimes stay silent.
-- `revealColumnsLabel`/`columnsHideLabel` only label `[part='reveal-columns-button']`, which
+- `revealColumnsLabel`/`columnsHideLabel` only set the tooltip on `[part='reveal-columns-button']`, which
   requires a `priority` column. Setting either without one is inert and issues the same one-time,
   development-only warning; production and unknown/unbundled runtimes stay silent.
 - Headers and body rows each have one roving `tabindex="0"`. Left/Right/Home/End navigate headers;

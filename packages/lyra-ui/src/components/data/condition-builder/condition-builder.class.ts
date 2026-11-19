@@ -19,7 +19,6 @@ import { finiteNumber } from '../../../internal/numbers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_queryBuilderAddCondition, LYRA_DEFAULT_queryBuilderBooleanFalse, LYRA_DEFAULT_queryBuilderBooleanTrue, LYRA_DEFAULT_queryBuilderCombinatorAnd, LYRA_DEFAULT_queryBuilderCombinatorLabel, LYRA_DEFAULT_queryBuilderCombinatorOr, LYRA_DEFAULT_queryBuilderConditionAdded, LYRA_DEFAULT_queryBuilderConditionInvalid, LYRA_DEFAULT_queryBuilderConditionRemoved, LYRA_DEFAULT_queryBuilderEmpty, LYRA_DEFAULT_queryBuilderFieldLabel, LYRA_DEFAULT_queryBuilderFieldPlaceholder, LYRA_DEFAULT_queryBuilderLabel, LYRA_DEFAULT_queryBuilderNoFields, LYRA_DEFAULT_queryBuilderOperatorAfter, LYRA_DEFAULT_queryBuilderOperatorBefore, LYRA_DEFAULT_queryBuilderOperatorContains, LYRA_DEFAULT_queryBuilderOperatorEndsWith, LYRA_DEFAULT_queryBuilderOperatorEquals, LYRA_DEFAULT_queryBuilderOperatorGreaterThan, LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorIn, LYRA_DEFAULT_queryBuilderOperatorIsEmpty, LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty, LYRA_DEFAULT_queryBuilderOperatorLabel, LYRA_DEFAULT_queryBuilderOperatorLessThan, LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorNotEquals, LYRA_DEFAULT_queryBuilderOperatorNotIn, LYRA_DEFAULT_queryBuilderOperatorOnOrAfter, LYRA_DEFAULT_queryBuilderOperatorOnOrBefore, LYRA_DEFAULT_queryBuilderOperatorPlaceholder, LYRA_DEFAULT_queryBuilderOperatorStartsWith, LYRA_DEFAULT_queryBuilderRemoveCondition, LYRA_DEFAULT_queryBuilderRowControlName, LYRA_DEFAULT_queryBuilderValueLabel, LYRA_DEFAULT_queryBuilderValuePlaceholder } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Events the owned pickers raise beyond the shared list; none is part of this component's contract. */
@@ -367,14 +366,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
     queryBuilderAddCondition: LYRA_DEFAULT_queryBuilderAddCondition,
     queryBuilderBooleanFalse: LYRA_DEFAULT_queryBuilderBooleanFalse,
     queryBuilderBooleanTrue: LYRA_DEFAULT_queryBuilderBooleanTrue,
@@ -412,8 +403,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     queryBuilderRowControlName: LYRA_DEFAULT_queryBuilderRowControlName,
     queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
     queryBuilderValuePlaceholder: LYRA_DEFAULT_queryBuilderValuePlaceholder,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -722,9 +711,9 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     return this.localize('queryBuilderConditionInvalid', undefined, { index: this.formatLocaleNumber(index + 1) });
   }
 
-  private rowControlName(key: 'queryBuilderFieldLabel' | 'queryBuilderOperatorLabel' | 'queryBuilderValueLabel', index: number): string {
+  private rowControlName(name: string, index: number): string {
     return this.localize('queryBuilderRowControlName', undefined, {
-      name: this.localize(key),
+      name,
       index: this.formatLocaleNumber(index + 1),
     });
   }
@@ -735,7 +724,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     index: number,
     validationCode?: ConditionBuilderValidationIssueCode,
   ): TemplateResult {
-    const valueLabel = this.rowControlName('queryBuilderValueLabel', index);
+    const valueLabel = this.rowControlName(this.localize('queryBuilderValueLabel'), index);
     const valueError = validationCode === 'value-type' || validationCode === 'operator-arity' ? this.issueText(index) : nothing;
     if (!field || condition.operator === '' || isUnaryOperator(condition.operator)) {
       return html`<span part="value" class="value-placeholder" aria-hidden="true"></span>`;
@@ -883,7 +872,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         <lr-select
           part="field-select"
           size="s"
-          aria-label=${this.rowControlName('queryBuilderFieldLabel', index)}
+          aria-label=${this.rowControlName(this.localize('queryBuilderFieldLabel'), index)}
           error-text=${validationCode === 'field-unavailable' ? this.issueText(index) : nothing}
           placeholder=${this.localize('queryBuilderFieldPlaceholder')}
           .value=${condition.field}
@@ -899,7 +888,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         <lr-select
           part="operator-select"
           size="s"
-          aria-label=${this.rowControlName('queryBuilderOperatorLabel', index)}
+          aria-label=${this.rowControlName(this.localize('queryBuilderOperatorLabel'), index)}
           error-text=${validationCode === 'operator-not-allowed' ? this.issueText(index) : nothing}
           placeholder=${this.localize('queryBuilderOperatorPlaceholder')}
           .value=${condition.operator}

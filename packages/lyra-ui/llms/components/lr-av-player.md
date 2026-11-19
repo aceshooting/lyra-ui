@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -342,16 +342,25 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Three further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
 color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
 step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background
 of the `cue-current` row the playhead is inside, and `--lr-av-player-cue-active-match-color`
 (default `var(--lr-color-warning)`) is the outline of the `cue-active-match` row, leaving the other
-matches' dashed outline on the shared warning token. All three are inline `var()` fallbacks at the
+matches' dashed outline on `--lr-av-player-cue-match-color` (default `var(--lr-color-warning)`).
+`--lr-av-player-rate-select-hover-bg` (default `var(--lr-color-brand-quiet)`) paints the hovered
+`rate-select`, and `--lr-av-player-rate-select-active-bg` its pressed state (default: a mix from the
+hover value). All are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so any of them can be set on the element or on any
 ancestor.
 
 **RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
 on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
 both LTR and RTL. ArrowUp/ArrowDown also seek, and PageUp/PageDown move by a tenth of the duration (at least 15 seconds).
+
+**Accessible-name vocabulary across media:** each media component keeps the attribute its native
+or upstream counterpart uses for its caller-facing name: `lr-av-player` `name`, `lr-video` `title`,
+`lr-animated-image` `alt`, and `lr-flag`/`lr-qr-code` `label`. These are one concept under
+different names, so map them by component rather than expecting a shared `label`; each section
+documents how a host `aria-label` combines with it.

@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Kunne ikke sende',
   chatFailedAnnounce: 'Meldingen kunne ikke sendes.',
   chatCompleteAnnounce: 'Meldingen er ferdig.',
-  expandCode: 'Utvid kode',
-  collapseCode: 'Skjul kode',
   copyCode: 'Kopier kode',
   copiedToClipboard: 'Kopiert til utklippstavlen',
   codeRegion: 'Kode',

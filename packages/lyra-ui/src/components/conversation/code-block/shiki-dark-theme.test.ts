@@ -463,7 +463,7 @@ describe('platform failures around the resolved theme', () => {
 });
 
 it('compares the luminance of a green foreground and a red surface', async () => {
-  const host = await fixture<HTMLElement>(html`<div style="--lr-color-text:lime;--lr-color-surface:red"></div>`);
+  const host = await fixture<HTMLElement>(html`<div data-lr-theme-scope style="--lr-color-text:lime;--lr-color-surface:red"></div>`);
   expect(resolveIsDarkTheme(host)).to.equal(true);
   host.style.setProperty('--lr-color-text', 'red');
   host.style.setProperty('--lr-color-surface', 'lime');

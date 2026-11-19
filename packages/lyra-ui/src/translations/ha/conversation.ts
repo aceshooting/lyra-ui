@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'An kasa aikawa',
   chatFailedAnnounce: 'An kasa aika saƙon.',
   chatCompleteAnnounce: 'An kammala saƙon.',
-  expandCode: 'Faɗaɗa lambar kwamfuta',
-  collapseCode: 'Rage lambar kwamfuta',
   copyCode: 'Kwafi lambar kwamfuta',
   copiedToClipboard: 'An kwafa zuwa allon riƙewa',
   codeRegion: 'Lambar kwamfuta',

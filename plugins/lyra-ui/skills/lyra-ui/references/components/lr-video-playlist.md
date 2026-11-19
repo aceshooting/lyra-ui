@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,7 +65,11 @@ are not playlist items.
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
 `var(--lr-color-brand)`) and `--lr-video-playlist-item-current-bg` (default
 `var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
-its hover and press mix from the current background rather than the plain-row surface.
+its hover and press mix from the current background rather than the plain-row surface. Other rows
+take `--lr-video-playlist-item-hover-bg`, `--lr-video-playlist-item-hover-border-color` (default
+`var(--lr-color-border-strong)`) and `--lr-video-playlist-item-active-bg` under the pointer; the
+background defaults are the surface mixed toward `--lr-color-mix-partner` by `--lr-color-mix-hover`
+and `--lr-color-mix-active`.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

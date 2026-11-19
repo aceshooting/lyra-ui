@@ -130,7 +130,10 @@ and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }
 detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
 globally unique. Manual expansion state is keyed by that same suite+test pair.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
-repeated row controls remain distinguishable.
+repeated row controls remain distinguishable. The name follows the action (`testResultsExpandTest`
+/ `testResultsCollapseTest`) while `aria-expanded` carries the state, and the visible label reads
+`expand`/`collapse`; override the visible action and its contextual name together so the visible
+words stay inside the accessible name. Provider rows of one suite share a single named list.
 
 Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
 adjacent localized status word carries the meaning. Running rows use the decorative spinner.

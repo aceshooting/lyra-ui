@@ -2627,6 +2627,16 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-activity-feed-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-activity-feed-header-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-activity-feed-live-status-color",
             "deprecated": null,
             "hasDefault": true,
@@ -2920,6 +2930,10 @@
           },
           {
             "name": "metric",
+            "deprecated": null
+          },
+          {
+            "name": "metric-unavailable",
             "deprecated": null
           },
           {
@@ -3743,6 +3757,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -3770,6 +3794,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 500
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "with-cost",
@@ -3814,6 +3848,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "hiddenKinds",
             "attribute": null,
             "type": "readonly LyraSpan['kind'][]",
@@ -3851,6 +3895,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 500
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "spans",
@@ -3956,6 +4010,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-agent-trace-handoff-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-agent-trace-handoff-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -4115,6 +4179,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "composer-disabled",
+            "property": "composerDisabled",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "composer-enterkeyhint",
@@ -4283,6 +4357,16 @@
             "default": true
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -4422,6 +4506,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "composerDisabled",
+            "attribute": "composer-disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "composerEnterKeyHint",
@@ -4608,6 +4702,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "label",
@@ -4909,7 +5013,28 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-agent-workspace-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-agent-workspace-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-agent-workspace-padding",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-agent-workspace-radius",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -4990,6 +5115,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "filled-outlined"
+          },
+          {
             "name": "closable",
             "property": "closable",
             "type": "boolean",
@@ -5069,6 +5204,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "filled-outlined"
+          },
           {
             "name": "closable",
             "attribute": "closable",
@@ -5172,6 +5317,18 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-close",
+            "type": "CustomEvent<{ reason: NotificationDismissReason }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-close-request",
+            "type": "CustomEvent<{ reason: NotificationDismissReason }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-hide",
             "type": "CustomEvent<null>",
             "cancelable": "always",
@@ -5208,6 +5365,16 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-alert-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-alert-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-alert-close-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -5218,6 +5385,71 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          },
+          {
+            "name": "--lr-alert-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-alert-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-alert-shadow",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -5527,6 +5759,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-animated-image-control-box-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-surface) 78%, transparent)"
+          },
+          {
             "name": "--lr-animated-image-control-box-size",
             "deprecated": null,
             "hasDefault": false
@@ -5540,6 +5778,18 @@
             "name": "--lr-animated-image-max-height",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-animated-image-play-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-animated-image-play-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-surface) 100%, transparent)"
           }
         ],
         "cssStates": [],
@@ -7059,6 +7309,11 @@
             "default": "var(--lr-shadow-l)"
           },
           {
+            "name": "--lr-app-rail-pin-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-app-rail-pin-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -7069,6 +7324,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-app-rail-pin-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-app-rail-pin-pressed-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-app-rail-resizer-active-bg",
@@ -7091,6 +7356,21 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-app-rail-toggle-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-app-rail-toggle-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-app-rail-toggle-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-app-rail-toggle-hover-bg",
@@ -7799,6 +8079,11 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-app-rail-item-current-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-app-rail-item-current-indicator-color",
             "deprecated": null,
             "hasDefault": true,
@@ -7898,6 +8183,21 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
@@ -7975,6 +8275,26 @@
       "surface": {
         "attributes": [
           {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -8007,7 +8327,7 @@
             "name": "readonly",
             "property": "readonly",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -8025,6 +8345,26 @@
           }
         ],
         "properties": [
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
           {
             "name": "label",
             "attribute": "label",
@@ -8068,7 +8408,7 @@
             "attribute": "readonly",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -8104,8 +8444,14 @@
           },
           {
             "name": "lr-approval-decision-request",
-            "type": "CustomEvent<ToolApprovalEventDetail & { args?: unknown }>",
-            "cancelable": "always",
+            "type": "CustomEvent<ToolApprovalEventDetail & { args?: unknown; waitUntil?: ApprovalWaitUntil }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-approval-open",
+            "type": "CustomEvent<{ invocationId: string }>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -8199,7 +8545,9 @@
         "moduleExports": [],
         "form": {
           "associated": false,
-          "properties": [],
+          "properties": [
+            "disabled"
+          ],
           "methods": []
         },
         "native": {
@@ -8878,6 +9226,12 @@
             "type": "CustomEvent<{ view: ArtifactPanelView }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-view-change-request",
+            "type": "CustomEvent<{ view: ArtifactPanelView; previousView: ArtifactPanelView }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -9459,6 +9813,18 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-attachment-chip-action-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-attachment-chip-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-text) 8%, transparent)"
+          },
+          {
             "name": "--lr-attachment-chip-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -9511,6 +9877,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-transition-ambient)"
+          },
+          {
+            "name": "--lr-attachment-chip-thumbnail-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "calc(var(--lr-radius) * 0.6)"
+          },
+          {
+            "name": "--lr-attachment-chip-thumbnail-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           }
         ],
         "cssStates": [],
@@ -10894,6 +11272,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-av-player-cue-match-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-warning)"
+          },
+          {
             "name": "--lr-av-player-marker-active-color",
             "deprecated": null,
             "hasDefault": true,
@@ -10933,6 +11317,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in srgb, var(--lr-color-warning) 35%, transparent)"
+          },
+          {
+            "name": "--lr-av-player-rate-select-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-av-player-rate-select-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-av-player-rate-select-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-av-player-transcript-height",
@@ -11621,6 +12017,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-size-m)"
+          },
+          {
+            "name": "--lr-avatar-group-badge-hover-ring-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-avatar-group-overlap",
@@ -13053,6 +13455,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-button",
+            "deprecated": null
+          },
+          {
             "name": "data-table-toggle",
             "deprecated": null
           },
@@ -14383,7 +14789,13 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-breadcrumb-gap",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -14622,6 +15034,21 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-breadcrumb-item-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-breadcrumb-item-separator-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-breadcrumb-item-separator-gap",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -14852,6 +15279,10 @@
           },
           {
             "name": "frame",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -15763,6 +16194,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-button",
+            "deprecated": null
+          },
+          {
             "name": "data-table-toggle",
             "deprecated": null
           },
@@ -16115,6 +16550,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "heading-level",
             "property": "headingLevel",
             "type": "LyraHeadingLevel",
@@ -16154,6 +16599,16 @@
             "default": ""
           },
           {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
             "name": "unit",
             "property": "unit",
             "type": "string | undefined",
@@ -16174,6 +16629,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
           {
             "name": "headingLevel",
             "attribute": "heading-level",
@@ -16212,6 +16677,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "unit",
@@ -16282,7 +16757,33 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-budget-meter-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-budget-meter-exceeded-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-budget-meter-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-budget-meter-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-budget-meter-track-bg",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -17606,6 +18107,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -17637,6 +18148,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "label",
             "attribute": "label",
@@ -17720,7 +18241,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-calendar",
+            "kind": "event",
+            "name": "lr-view-change",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-month-change",
+              "usage": "@lr-month-change"
+            },
+            "removalNotBefore": "33.0.0",
+            "rationale": "The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -17883,9 +18418,28 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-month-change",
+            "type": "CustomEvent<{ viewDate: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-view-change",
             "type": "CustomEvent<{ viewDate: string }>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-calendar",
+              "kind": "event",
+              "name": "lr-view-change",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-month-change",
+                "usage": "@lr-month-change"
+              },
+              "removalNotBefore": "33.0.0",
+              "rationale": "The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration."
+            },
             "constructor": "CustomEvent"
           }
         ],
@@ -18031,6 +18585,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-calendar-event-hover-tint",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-calendar-nav-active-bg",
@@ -18729,7 +19288,7 @@
             "name": "--lr-callout-close-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
             "name": "--lr-callout-color",
@@ -20260,7 +20819,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-change-review-file-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-change-review-file-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-container)"
+          },
+          {
+            "name": "--lr-change-review-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -20910,7 +21488,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "scaleType",
@@ -21216,6 +21795,10 @@
           },
           {
             "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-table-button",
             "deprecated": null
           },
           {
@@ -21737,8 +22320,7 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "type",
@@ -21815,8 +22397,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "type",
@@ -21868,6 +22449,12 @@
             "name": "lr-chart-row-select",
             "type": "CustomEvent<LyraChart3dSelectDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-chart-row-select-request",
+            "type": "CustomEvent<LyraChart3dSelectDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -21941,6 +22528,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-chart-3d-control-active-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-chart-3d-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
             "name": "--lr-chart-3d-height",
             "deprecated": null,
             "hasDefault": true,
@@ -21957,6 +22556,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "0.5rem"
+          },
+          {
+            "name": "--lr-chart-3d-selected-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-chart-3d-selected-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
           }
         ],
         "cssStates": [],
@@ -22549,6 +23160,15 @@
             "default": false
           },
           {
+            "name": "select",
+            "attribute": null,
+            "type": "() => void",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "selectionDirection",
             "attribute": null,
             "type": "ChatComposerSelectionDirection | null",
@@ -22570,6 +23190,15 @@
             "name": "selectionStart",
             "attribute": null,
             "type": "number | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "setSelectionRange",
+            "attribute": null,
+            "type": "(start: number | null, end: number | null, direction?: ChatComposerSelectionDirection) => void",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -22887,6 +23516,12 @@
             "default": "var(--lr-color-on-brand)"
           },
           {
+            "name": "--lr-chat-composer-focus-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-chat-composer-focus-shadow",
             "deprecated": null,
             "hasDefault": true,
@@ -23021,15 +23656,6 @@
             ]
           },
           {
-            "name": "select",
-            "overloads": [
-              {
-                "parameters": [],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
             "name": "setCustomValidity",
             "overloads": [
               {
@@ -23118,34 +23744,6 @@
                 "returnType": "void"
               }
             ]
-          },
-          {
-            "name": "setSelectionRange",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "start",
-                    "type": "number | null",
-                    "optional": false,
-                    "hasDefault": false
-                  },
-                  {
-                    "name": "end",
-                    "type": "number | null",
-                    "optional": false,
-                    "hasDefault": false
-                  },
-                  {
-                    "name": "direction",
-                    "type": "ChatComposerSelectionDirection",
-                    "optional": true,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              }
-            ]
           }
         ],
         "staticProperties": [],
@@ -23210,9 +23808,7 @@
             "blur",
             "click",
             "focus",
-            "select",
-            "setRangeText",
-            "setSelectionRange"
+            "setRangeText"
           ]
         }
       }
@@ -26559,6 +27155,21 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-chip-group-overflow-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chip-group-overflow-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chip-group-overflow-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-chip-group-overflow-expanded-border-style",
             "deprecated": null,
             "hasDefault": true,
@@ -27911,6 +28522,23 @@
             "default": "var(--lr-font-mono)"
           },
           {
+            "name": "--lr-code-block-gutter-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-code-block-gutter-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-code-block-gutter-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-code-block-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -27969,6 +28597,23 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 2
+          },
+          {
+            "name": "--lr-code-block-toggle-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-code-block-toggle-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-code-block-toggle-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -28471,6 +29116,23 @@
             "default": "var(--lr-font-mono)"
           },
           {
+            "name": "--lr-code-block-gutter-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-code-block-gutter-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-code-block-gutter-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-code-block-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -28529,6 +29191,23 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 2
+          },
+          {
+            "name": "--lr-code-block-toggle-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-code-block-toggle-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-code-block-toggle-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -30444,7 +31123,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -30456,7 +31135,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -30631,6 +31310,10 @@
             "deprecated": null
           },
           {
+            "name": "swatch-check",
+            "deprecated": null
+          },
+          {
             "name": "swatch-selected",
             "deprecated": null
           },
@@ -30771,7 +31454,7 @@
             "name": "--lr-color-picker-swatch-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-color-picker-swatch-size",
@@ -34367,6 +35050,12 @@
         ],
         "events": [
           {
+            "name": "lr-vote-change",
+            "type": "CustomEvent<{ vote: CompareVote; itemId: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-vote-request",
             "type": "CustomEvent<{ choice: CompareVote; itemId: string }>",
             "cancelable": "always",
@@ -35152,6 +35841,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-decision-negative-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-decision-positive-color",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -35354,7 +36053,23 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-decision-legend-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-decision-negative-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-decision-positive-color",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -36489,8 +37204,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "shape",
@@ -36528,6 +37242,12 @@
             "name": "lr-segment-activate-request",
             "type": "CustomEvent<LyraContextMeterSegmentActivateDetail>",
             "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-segment-selection-change",
+            "type": "CustomEvent<{ readonly selectedIndices: readonly number[] }>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           }
         ],
@@ -36570,6 +37290,10 @@
           },
           {
             "name": "legend-value",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -36737,6 +37461,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -36768,6 +37502,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "label",
             "attribute": "label",
@@ -38425,10 +39169,35 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-activate",
+            "type": "unknown",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-after-hide",
+            "type": "unknown",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "unknown",
+            "cancelable": "never"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-clear",
+            "type": "unknown",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-hide",
+            "type": "unknown",
+            "cancelable": "never"
           },
           {
             "name": "lr-input",
@@ -38441,6 +39210,11 @@
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
+            "type": "unknown",
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -40371,7 +41145,8 @@
           "lr-button",
           "lr-dropdown",
           "lr-dropdown-item",
-          "lr-empty"
+          "lr-empty",
+          "lr-pagination"
         ],
         "transitive": [
           "lr-menu",
@@ -40398,6 +41173,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "outlined"
+          },
+          {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocorrect",
+            "property": "autoCorrect",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "child-rows",
@@ -40467,6 +41262,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "has-next",
+            "property": "hasNext",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "label",
@@ -40543,6 +41348,26 @@
             "property": "paginate",
             "type": "boolean",
             "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "pagination-format",
+            "property": "paginationFormat",
+            "type": "LyraPaginationFormat",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "standard"
+          },
+          {
+            "name": "pagination-with-summary",
+            "property": "paginationWithSummary",
+            "type": "boolean",
+            "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -40638,6 +41463,16 @@
             "default": false
           },
           {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "striped",
             "property": "striped",
             "type": "boolean",
@@ -40656,6 +41491,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": -1
+          },
+          {
+            "name": "unknown-total",
+            "property": "unknownTotal",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "with-column-menu",
@@ -40708,6 +41553,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "outlined"
+          },
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autoCorrect",
+            "attribute": "autocorrect",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "childRows",
@@ -40863,6 +41728,16 @@
             "default": null
           },
           {
+            "name": "hasNext",
+            "attribute": "has-next",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string | null",
@@ -40957,6 +41832,26 @@
             "type": "boolean",
             "readonly": false,
             "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "paginationFormat",
+            "attribute": "pagination-format",
+            "type": "LyraPaginationFormat",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "standard"
+          },
+          {
+            "name": "paginationWithSummary",
+            "attribute": "pagination-with-summary",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -41137,6 +42032,16 @@
             "default": false
           },
           {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "striped",
             "attribute": "striped",
             "type": "boolean",
@@ -41155,6 +42060,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": -1
+          },
+          {
+            "name": "unknownTotal",
+            "attribute": "unknown-total",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "withColumnMenu",
@@ -41227,6 +42142,18 @@
             "type": "FocusEvent",
             "cancelable": "never",
             "constructor": "FocusEvent"
+          },
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<Readonly<{ value: number }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-before-page-change",
+            "type": "CustomEvent<DataGridPageDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-cell-click",
@@ -41343,6 +42270,18 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-row-expand-request",
+            "type": "CustomEvent<Readonly<DataGridRowDetail<Row> & { expanded: boolean }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-row-expand-toggle",
+            "type": "CustomEvent<Readonly<DataGridRowDetail<Row> & { expanded: boolean }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-row-select",
             "type": "CustomEvent<Readonly<DataGridSelectionDetail<Row>>>",
             "cancelable": "never",
@@ -41351,6 +42290,24 @@
           {
             "name": "lr-search-change",
             "type": "CustomEvent<Readonly<{ searchTerm: string }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-selection-change",
+            "type": "CustomEvent<Readonly<DataGridSelectionDetail<Row>>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-selection-request",
+            "type": "CustomEvent<Readonly<{ selectedRowKeys: readonly DataGridKey[] }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-sort",
+            "type": "CustomEvent<Readonly<{ phase: 'commit'; sortKey: string; sortDir: 'asc' | 'desc' | null; sort: DataGridSortingState }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -41535,7 +42492,15 @@
             "deprecated": null
           },
           {
+            "name": "page-input",
+            "deprecated": null
+          },
+          {
             "name": "page-size",
+            "deprecated": null
+          },
+          {
+            "name": "page-summary",
             "deprecated": null
           },
           {
@@ -43616,6 +44581,15 @@
             "default": false
           },
           {
+            "name": "select",
+            "attribute": null,
+            "type": "() => void",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "selectionDirection",
             "attribute": null,
             "type": "LyraDateInputSelectionDirection | null",
@@ -43637,6 +44611,15 @@
             "name": "selectionStart",
             "attribute": null,
             "type": "number | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "setSelectionRange",
+            "attribute": null,
+            "type": "( start: number | null, end: number | null, direction?: LyraDateInputSelectionDirection ) => void",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -43917,7 +44900,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -43935,7 +44918,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -44367,7 +45350,7 @@
                 "parameters": [
                   {
                     "name": "restoreFocus",
-                    "type": "boolean",
+                    "type": "unknown",
                     "optional": false,
                     "hasDefault": true,
                     "default": false
@@ -44388,15 +45371,6 @@
           },
           {
             "name": "resetValidity",
-            "overloads": [
-              {
-                "parameters": [],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
-            "name": "select",
             "overloads": [
               {
                 "parameters": [],
@@ -44495,34 +45469,6 @@
             ]
           },
           {
-            "name": "setSelectionRange",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "start",
-                    "type": "number | null",
-                    "optional": false,
-                    "hasDefault": false
-                  },
-                  {
-                    "name": "end",
-                    "type": "number | null",
-                    "optional": false,
-                    "hasDefault": false
-                  },
-                  {
-                    "name": "direction",
-                    "type": "LyraDateInputSelectionDirection",
-                    "optional": true,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
             "name": "show",
             "overloads": [
               {
@@ -44567,9 +45513,7 @@
             "blur",
             "click",
             "focus",
-            "select",
-            "setRangeText",
-            "setSelectionRange"
+            "setRangeText"
           ]
         }
       }
@@ -45240,7 +46184,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -45258,7 +46202,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -46955,7 +47899,7 @@
             "name": "copyable",
             "property": "copyable",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -47056,7 +48000,7 @@
             "attribute": "copyable",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -47250,6 +48194,26 @@
             "default": "var(--lr-color-success)"
           },
           {
+            "name": "--lr-diff-view-copy-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-diff-view-copy-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-diff-view-copy-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-diff-view-copy-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-diff-view-fold-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -47272,6 +48236,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-diff-view-highlight-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-diff-view-highlight-action-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-diff-view-highlight-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-diff-view-highlight-action-hover-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-diff-view-highlight-active-outline",
@@ -47326,6 +48310,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -47987,6 +48991,25 @@
       "surface": {
         "attributes": [
           {
+            "name": "active-highlight-id",
+            "property": "activeHighlightId",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "context-lines",
+            "property": "contextLines",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "copyable",
             "property": "copyable",
             "type": "boolean",
@@ -48059,6 +49082,16 @@
         ],
         "properties": [
           {
+            "name": "activeHighlightId",
+            "attribute": "active-highlight-id",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "anchor",
             "attribute": null,
             "type": "LyraAnchor | string | null",
@@ -48067,6 +49100,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "contextLines",
+            "attribute": "context-lines",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "copyable",
@@ -48097,6 +49139,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "languageLoaders",
+            "attribute": null,
+            "type": "LyraDiffView['languageLoaders'] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "languages",
@@ -48446,6 +49497,15 @@
             "default": ""
           },
           {
+            "name": "max-documents",
+            "property": "maxDocuments",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "search-term",
             "property": "searchTerm",
             "type": "string",
@@ -48543,6 +49603,15 @@
             "hasDefault": false
           },
           {
+            "name": "documentsTruncated",
+            "attribute": null,
+            "type": "number",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "error",
             "attribute": "error",
             "type": "boolean",
@@ -48608,6 +49677,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "maxDocuments",
+            "attribute": "max-documents",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "searchTerm",
@@ -49442,6 +50520,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "active-highlight-id",
+            "property": "activeHighlightId",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "alt",
             "property": "alt",
             "type": "string | undefined",
@@ -49502,6 +50590,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "activeHighlightId",
+            "attribute": "active-highlight-id",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "alt",
             "attribute": "alt",
@@ -51032,6 +52130,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-button",
+            "deprecated": null
+          },
+          {
             "name": "data-table-toggle",
             "deprecated": null
           },
@@ -52546,7 +53648,7 @@
             "name": "dragging",
             "attribute": null,
             "type": "boolean",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
@@ -52720,7 +53822,7 @@
             "name": "--lr-drop-zone-accept-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in srgb, var(--lr-color-success) 12%, transparent)"
+            "default": "color-mix(in srgb, var(--lr-color-success) 8%, transparent)"
           },
           {
             "name": "--lr-drop-zone-accept-border-color",
@@ -52780,7 +53882,7 @@
             "name": "--lr-drop-zone-reject-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in srgb, var(--lr-color-danger) 12%, transparent)"
+            "default": "color-mix(in srgb, var(--lr-color-danger) 8%, transparent)"
           },
           {
             "name": "--lr-drop-zone-reject-border-color",
@@ -53934,6 +55036,12 @@
             "composed": true
           },
           {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-menu-item-change-request",
             "type": "CustomEvent<MenuItemChangeDetail>",
             "cancelable": "always",
@@ -53942,6 +55050,12 @@
           {
             "name": "lr-menu-item-state-change",
             "type": "CustomEvent<MenuItemStateChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -55009,7 +56123,9 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
+        "direct": [
+          "lr-graph-legend"
+        ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -55339,6 +56455,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "360px"
+          },
+          {
+            "name": "--lr-embedding-explorer-page-disabled-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-embedding-explorer-row-selected-fill",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-embedding-explorer-selected-stroke",
@@ -55771,6 +56897,12 @@
             "constructor": "InputEvent"
           },
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "never",
@@ -55897,6 +57029,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-size-lg)"
+          },
+          {
+            "name": "--lr-emoji-picker-grid-max-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-16rem)"
           },
           {
             "name": "--lr-emoji-picker-hover-bg",
@@ -57282,7 +58420,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>",
+            "type": "CustomEvent< | { kind: 'section'; section: Section; expanded: boolean; itemId?: undefined } | { kind: 'chunk'; section: 'chunks'; expanded: boolean; itemId: string } >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -57947,6 +59085,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-example-select-request",
+            "type": "CustomEvent<{ exampleId: string; previousExampleId: string | null }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-export-request",
             "type": "CustomEvent<{ format: string }>",
             "cancelable": "never",
@@ -58572,6 +59716,12 @@
         "slots": [],
         "events": [
           {
+            "name": "lr-example-citation-open",
+            "type": "CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-example-citation-select",
             "type": "CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>",
             "cancelable": "never",
@@ -58679,6 +59829,10 @@
           },
           {
             "name": "live-region",
+            "deprecated": null
+          },
+          {
+            "name": "load-error",
             "deprecated": null
           },
           {
@@ -59164,6 +60318,26 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-export-button-menu-item-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-menu-item-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-menu-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-menu-item-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-export-button-radius",
             "deprecated": null,
             "hasDefault": true,
@@ -59471,10 +60645,22 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-file-icon-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
             "name": "--lr-file-icon-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-file-icon-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-file-icon-size",
@@ -59891,7 +61077,7 @@
             "name": "dragging",
             "attribute": null,
             "type": "boolean",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
@@ -59920,7 +61106,7 @@
             "name": "fileCount",
             "attribute": null,
             "type": "number",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
@@ -60395,6 +61581,17 @@
             "default": "var(--lr-font-size-sm)"
           },
           {
+            "name": "--lr-file-input-dropzone-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-file-input-dropzone-active-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-file-input-dropzone-hover-border-color)"
+          },
+          {
             "name": "--lr-file-input-dropzone-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -60431,6 +61628,12 @@
             "default": "var(--lr-space-l)"
           },
           {
+            "name": "--lr-file-input-file-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
             "name": "--lr-file-input-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -60459,6 +61662,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-file-input-thumbnail-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-file-input-thumbnail-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-form-control-focus-shadow",
@@ -66604,7 +67819,27 @@
             "deprecated": null
           },
           {
+            "name": "search-clear",
+            "deprecated": null
+          },
+          {
+            "name": "source-action",
+            "deprecated": null
+          },
+          {
             "name": "source-coverage",
+            "deprecated": null
+          },
+          {
+            "name": "source-direction",
+            "deprecated": null
+          },
+          {
+            "name": "source-incident",
+            "deprecated": null
+          },
+          {
+            "name": "source-kind",
             "deprecated": null
           },
           {
@@ -66617,6 +67852,10 @@
           },
           {
             "name": "source-row-active",
+            "deprecated": null
+          },
+          {
+            "name": "source-search",
             "deprecated": null
           },
           {
@@ -66766,6 +68005,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-graph-spatial-control-hover-fill",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -67064,6 +68308,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0.5
+          },
+          {
+            "name": "--lr-graph-legend-item-hover-fill",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -70488,6 +71737,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-button",
+            "deprecated": null
+          },
+          {
             "name": "data-table-toggle",
             "deprecated": null
           },
@@ -72134,6 +73387,16 @@
             "default": ""
           },
           {
+            "name": "pressed",
+            "attribute": null,
+            "type": "boolean | 'mixed' | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "rel",
             "attribute": "rel",
             "type": "string | undefined",
@@ -73257,13 +74520,13 @@
             "name": "--lr-icon-button-bg-active",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-icon-button-border",
@@ -73330,6 +74593,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-image-viewer-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-image-viewer-highlight-active-border-width",
@@ -76246,6 +77515,12 @@
             "default": "var(--lr-size-12rem)"
           },
           {
+            "name": "--lr-json-schema-viewer-selected-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-json-schema-viewer-selected-border",
             "deprecated": null,
             "hasDefault": true,
@@ -76577,6 +77852,26 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-json-viewer-active-outline",
             "deprecated": null,
             "hasDefault": true,
@@ -76587,6 +77882,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning)"
+          },
+          {
+            "name": "--lr-json-viewer-copy-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-json-viewer-copy-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-json-viewer-copy-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-json-viewer-copy-hover-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-json-viewer-font",
@@ -76629,6 +77944,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-json-viewer-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-json-viewer-toggle-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-json-viewer-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-json-viewer-toggle-hover-color",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -76830,7 +78165,23 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-kbd-key-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-kbd-key-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-kbd-key-color",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -78261,6 +79612,12 @@
             "composed": true
           },
           {
+            "name": "lr-hidden-types-change-request",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-node-activate",
             "type": "CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>",
             "cancelable": "never",
@@ -78406,6 +79763,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-24rem)"
+          },
+          {
+            "name": "--lr-knowledge-graph-explorer-source-action-hover-fill",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -79884,12 +81246,32 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-lightbox-control-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-lightbox-control-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-lightbox-control-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
             "name": "--lr-lightbox-control-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-lightbox-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-lightbox-control-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -80810,6 +82192,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-button",
+            "deprecated": null
+          },
+          {
             "name": "data-table-toggle",
             "deprecated": null
           },
@@ -81319,6 +82705,15 @@
             "default": "linear"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraLiteChartScale",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "skip-zero",
             "property": "skipZero",
             "type": "boolean",
@@ -81635,7 +83030,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "roundedBars",
@@ -81656,6 +83052,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "linear"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraLiteChartScale",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "selectedIndices",
@@ -83451,6 +84856,15 @@
             "default": false
           },
           {
+            "name": "aria-busy",
+            "property": "aria-busy",
+            "type": "unknown",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "center",
             "property": "center",
             "type": "readonly [number, number]",
@@ -83603,8 +85017,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": true
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -83641,8 +85054,7 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "projection",
@@ -83976,8 +85388,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": true
+            "hasDefault": false
           },
           {
             "name": "legendProjection",
@@ -84002,7 +85413,7 @@
             "name": "map",
             "attribute": null,
             "type": "LyraMapInstance | undefined",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -84030,7 +85441,7 @@
             "name": "markersTruncated",
             "attribute": null,
             "type": "boolean",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -84080,8 +85491,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "projection",
@@ -84114,7 +85524,7 @@
             "name": "styleLayers",
             "attribute": null,
             "type": "readonly LyraMapStyleLayer[]",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -84133,7 +85543,7 @@
             "name": "styleSources",
             "attribute": null,
             "type": "readonly LyraMapStyleSource[]",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -84181,6 +85591,12 @@
             "name": "lr-map-anchor-close",
             "type": "CustomEvent<LyraMapAnchorCloseDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-anchor-close-request",
+            "type": "CustomEvent<LyraMapAnchorCloseDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -84317,6 +85733,18 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-pick-cancel",
+            "type": "CustomEvent<Readonly<{ source: 'control' }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-pick-cancel-request",
+            "type": "CustomEvent<Readonly<{ source: 'control' }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-pointer-leave",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -84332,6 +85760,12 @@
             "name": "lr-map-projection-change",
             "type": "CustomEvent<LyraMapProjectionChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-projection-change-request",
+            "type": "CustomEvent<LyraMapProjectionChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -84356,6 +85790,12 @@
             "name": "lr-map-terrain-change",
             "type": "CustomEvent<LyraMapTerrainChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-terrain-change-request",
+            "type": "CustomEvent<LyraMapTerrainChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -84737,6 +86177,16 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-map-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-map-choropleth-fill-opacity",
             "deprecated": null,
             "hasDefault": true,
@@ -84747,6 +86197,40 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-map-drawing-fill-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
+            "name": "--lr-map-drawing-preview-dash",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2 2"
+          },
+          {
+            "name": "--lr-map-drawing-stroke-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 2
+          },
+          {
+            "name": "--lr-map-drawing-vertex-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-drawing-vertex-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-drawing-vertex-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 5
           },
           {
             "name": "--lr-map-height",
@@ -84795,6 +86279,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "block"
+          },
+          {
+            "name": "--lr-positioner-available-block-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-inline-size",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -85202,7 +86696,34 @@
         "profile": "published-experimental",
         "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
         "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-map-anchor",
+            "kind": "event",
+            "name": "lr-close",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-map-anchor-dismiss",
+              "usage": "@lr-map-anchor-dismiss"
+            },
+            "removalNotBefore": "33.0.0",
+            "rationale": "The component-prefixed dismiss event carries the same frozen reason detail; the older name remains emitted during migration."
+          },
+          {
+            "tag": "lr-map-anchor",
+            "kind": "event",
+            "name": "lr-close-request",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-map-anchor-dismiss-request",
+              "usage": "@lr-map-anchor-dismiss-request"
+            },
+            "removalNotBefore": "33.0.0",
+            "rationale": "The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -85353,10 +86874,48 @@
             "name": "lr-close",
             "type": "CustomEvent<LyraMapAnchorCloseDetail>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-map-anchor",
+              "kind": "event",
+              "name": "lr-close",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-map-anchor-dismiss",
+                "usage": "@lr-map-anchor-dismiss"
+              },
+              "removalNotBefore": "33.0.0",
+              "rationale": "The component-prefixed dismiss event carries the same frozen reason detail; the older name remains emitted during migration."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-close-request",
+            "type": "CustomEvent<LyraMapAnchorCloseDetail>",
+            "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-map-anchor",
+              "kind": "event",
+              "name": "lr-close-request",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-map-anchor-dismiss-request",
+                "usage": "@lr-map-anchor-dismiss-request"
+              },
+              "removalNotBefore": "33.0.0",
+              "rationale": "The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-anchor-dismiss",
+            "type": "CustomEvent<LyraMapAnchorCloseDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-anchor-dismiss-request",
             "type": "CustomEvent<LyraMapAnchorCloseDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -85380,7 +86939,38 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-map-popup-close-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-popup-close-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-popup-close-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-popup-close-button-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-block-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [
           {
             "name": "placed",
@@ -86048,6 +87638,56 @@
             "default": 2
           },
           {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-markdown-code-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -86072,6 +87712,23 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-markdown-code-copy-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-markdown-code-copy-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-markdown-code-copy-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-markdown-code-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -86094,6 +87751,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-radius) * 0.5)"
+          },
+          {
+            "name": "--lr-markdown-content-min-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-markdown-font-mono",
@@ -86129,7 +87792,7 @@
             "name": "--lr-markdown-highlight-neutral-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface)"
+            "default": "var(--lr-color-surface-raised)"
           },
           {
             "name": "--lr-markdown-highlight-success-bg",
@@ -86846,6 +88509,56 @@
             "default": 2
           },
           {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-markdown-code-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -86870,6 +88583,23 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-markdown-code-copy-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-markdown-code-copy-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-markdown-code-copy-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-markdown-code-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -86892,6 +88622,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-radius) * 0.5)"
+          },
+          {
+            "name": "--lr-markdown-content-min-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-markdown-font-mono",
@@ -86927,7 +88663,7 @@
             "name": "--lr-markdown-highlight-neutral-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface)"
+            "default": "var(--lr-color-surface-raised)"
           },
           {
             "name": "--lr-markdown-highlight-success-bg",
@@ -87276,7 +89012,13 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-mcp-app-frame-height",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -87727,6 +89469,12 @@
             "default": "var(--lr-color-surface)"
           },
           {
+            "name": "--lr-media-card-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-media-card-max-height",
             "deprecated": null,
             "hasDefault": true,
@@ -88036,7 +89784,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ expanded: boolean; itemId?: string; memoryId?: string; scope?: MemoryScope; section?: 'entities' | 'relationships' | 'communities' | 'chunks' }>",
+            "type": "CustomEvent< | { kind: 'memory'; expanded: boolean; itemId: string; memoryId: string; scope: MemoryScope; section?: undefined } | (LyraProvenancePanelEventMap['lr-toggle']['detail'] & { memoryId: string; scope: MemoryScope }) >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -88418,7 +90166,7 @@
             "name": "--lr-mention-popover-option-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-overlay-border",
@@ -89046,6 +90794,12 @@
         ],
         "events": [
           {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-menu-item-change-request",
             "type": "CustomEvent<MenuItemChangeDetail>",
             "cancelable": "always",
@@ -89054,6 +90808,12 @@
           {
             "name": "lr-menu-item-state-change",
             "type": "CustomEvent<MenuItemStateChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -89363,7 +91123,18 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-menu-label-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menu-label-padding",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -89420,6 +91191,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "frame",
             "property": "frame",
             "type": "LyraFrame",
@@ -89470,6 +91251,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "frame",
             "attribute": "frame",
@@ -89549,6 +91340,36 @@
           },
           {
             "name": "--lr-menu-min-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menubar-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menubar-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menubar-gap",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menubar-padding",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menubar-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menubar-shadow",
             "deprecated": null,
             "hasDefault": false
           }
@@ -89648,6 +91469,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "menuOpen",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [
@@ -89660,7 +91490,20 @@
             "deprecated": null
           }
         ],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "base",
@@ -89679,10 +91522,20 @@
             "default": "color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
+            "name": "--lr-menubar-item-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-menubar-item-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-menubar-item-hover-color",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -91137,6 +92990,10 @@
             "deprecated": null
           },
           {
+            "name": "disclosure",
+            "deprecated": null
+          },
+          {
             "name": "empty",
             "deprecated": null
           },
@@ -91203,6 +93060,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-mind-map-label-halo",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-mind-map-node-hover-halo",
             "deprecated": null,
             "hasDefault": true,
@@ -91213,6 +93076,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "6rem"
+          },
+          {
+            "name": "--lr-mind-map-source-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "20rem"
           }
         ],
         "cssStates": [],
@@ -91832,7 +93701,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
+            "type": "CustomEvent<{ value: string; inCatalog: boolean; query?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -91997,7 +93866,7 @@
             "name": "--lr-model-select-option-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-model-select-option-selected-bg",
@@ -92048,6 +93917,11 @@
             "default": "var(--lr-form-control-radius)"
           },
           {
+            "name": "--lr-model-select-trigger-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-model-select-trigger-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -92063,6 +93937,12 @@
             "name": "--lr-model-select-trigger-height",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-model-select-trigger-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-model-select-trigger-hover-border-color",
@@ -92514,6 +94394,26 @@
             "default": ""
           },
           {
+            "name": "readonly",
+            "property": "readonly",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
             "name": "temperature",
             "property": "temperature",
             "type": "number",
@@ -92624,6 +94524,26 @@
             "default": ""
           },
           {
+            "name": "readonly",
+            "attribute": "readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
             "name": "temperature",
             "attribute": "temperature",
             "type": "number",
@@ -92709,10 +94629,30 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-model-settings-panel-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-model-settings-panel-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-model-settings-panel-max-inline-size",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-28rem)"
+          },
+          {
+            "name": "--lr-model-settings-panel-padding",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-model-settings-panel-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -95940,10 +97880,25 @@
             "default": "var(--lr-size-0-375rem)"
           },
           {
+            "name": "--lr-navigation-menu-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-navigation-menu-toggle-active-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-navigation-menu-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-navigation-menu-toggle-hover-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-positioning-strategy",
@@ -96743,7 +98698,13 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-neighbor-list-node-hover-fill",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -97090,6 +99051,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-input-action-color, var(--lr-color-text-quiet))"
+          },
+          {
+            "name": "--lr-node-palette-item-hover-fill",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-node-palette-search-font-size",
@@ -100557,6 +102523,12 @@
             "default": "•"
           },
           {
+            "name": "--lr-otp-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-otp-input-segment-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -103034,13 +105006,13 @@
             "name": "--lr-icon-button-bg-active",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-icon-button-border",
@@ -103083,6 +105055,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-pan-zoom-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-pan-zoom-min-block-size",
@@ -103315,7 +105293,13 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-path-strip-action-hover-fill",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -104163,7 +106147,23 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-decision-legend-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-decision-negative-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-decision-positive-color",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -104314,6 +106314,12 @@
             "type": "CustomEvent<{ ruleId: string; decision: PermissionRuleDecision }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-permission-rule-change-request",
+            "type": "CustomEvent<{ ruleId: string; decision: PermissionRuleDecision }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -104362,7 +106368,13 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-decision-legend-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -105454,6 +107466,12 @@
             "name": "--lr-phone-input-padding-block",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-phone-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-phone-input-radius",
@@ -106571,6 +108589,10 @@
           },
           {
             "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-table-button",
             "deprecated": null
           },
           {
@@ -107711,6 +109733,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-button",
+            "deprecated": null
+          },
+          {
             "name": "data-table-toggle",
             "deprecated": null
           },
@@ -108367,6 +110393,26 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-poll-status-due-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -108391,6 +110437,29 @@
           },
           {
             "name": "--lr-poll-status-pause-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-poll-status-refresh-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-poll-status-refresh-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-poll-status-refresh-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-poll-status-refresh-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -112252,7 +114321,28 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-prompt-queue-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-prompt-queue-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-prompt-queue-padding",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-prompt-queue-radius",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -112684,6 +114774,10 @@
             "deprecated": null
           },
           {
+            "name": "size-notice",
+            "deprecated": null
+          },
+          {
             "name": "toolbar",
             "deprecated": null
           },
@@ -112907,7 +115001,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>",
+            "type": "CustomEvent< | { kind: 'section'; section: Section; expanded: boolean; itemId?: undefined } | { kind: 'chunk'; section: 'chunks'; expanded: boolean; itemId: string } >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -112943,6 +115037,10 @@
           },
           {
             "name": "section",
+            "deprecated": null
+          },
+          {
+            "name": "toggle",
             "deprecated": null
           }
         ],
@@ -113076,6 +115174,16 @@
             "hasDefault": false
           },
           {
+            "name": "stream-only",
+            "property": "streamOnly",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "timeslice-ms",
             "property": "timesliceMs",
             "type": "number",
@@ -113194,6 +115302,16 @@
             "hasDefault": false
           },
           {
+            "name": "streamOnly",
+            "attribute": "stream-only",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "timesliceMs",
             "attribute": "timeslice-ms",
             "type": "number",
@@ -113308,6 +115426,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-3rem)"
+          },
+          {
+            "name": "--lr-push-to-talk-trigger-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-push-to-talk-trigger-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-push-to-talk-trigger-recording-border-color",
@@ -114607,6 +116736,10 @@
           },
           {
             "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-table-button",
             "deprecated": null
           },
           {
@@ -118100,6 +120233,10 @@
             "deprecated": null
           },
           {
+            "name": "metric-unavailable",
+            "deprecated": null
+          },
+          {
             "name": "metrics",
             "deprecated": null
           },
@@ -118430,6 +120567,46 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-0-5em)"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-random-content-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-random-content-action-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-random-content-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-random-content-action-hover-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-random-content-animation-duration",
@@ -119265,6 +121442,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -119344,6 +121531,25 @@
         ],
         "properties": [
           {
+            "name": "captureOptions",
+            "attribute": null,
+            "type": "Readonly<Partial<Pick<LyraPushToTalk, 'mode' | 'deviceId' | 'mimeType' | 'timesliceMs' | 'maxDurationMs' | 'withoutTimer' | 'audioConstraints'>>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "entries",
             "attribute": null,
             "type": "readonly LyraTranscriptEntry[]",
@@ -119420,6 +121626,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "transcriptOptions",
+            "attribute": null,
+            "type": "Readonly<Partial<Pick<LyraTranscriptFeed, 'follow' | 'withTimestamps' | 'formatTimestamp' | 'maxRenderedEntries'>>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "voiceState",
@@ -119577,7 +121792,9 @@
         "moduleExports": [],
         "form": {
           "associated": false,
-          "properties": [],
+          "properties": [
+            "disabled"
+          ],
           "methods": []
         },
         "native": {
@@ -122863,7 +125080,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ expanded: boolean; itemId: string; stageId?: string }>",
+            "type": "CustomEvent< | { kind: 'stage'; expanded: boolean; itemId: string; stageId?: undefined } | { kind: 'chunk'; expanded: boolean; itemId: string; stageId: string } >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -123373,13 +125590,13 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<Readonly<{ value: RubricValue }>>",
+            "type": "CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<Readonly<{ value: RubricValue }>>",
+            "type": "CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -123628,6 +125845,15 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "checkValidity",
             "overloads": [
               {
@@ -123772,6 +125998,7 @@
             "input"
           ],
           "delegatedMethods": [
+            "blur",
             "click",
             "focus"
           ]
@@ -124595,6 +126822,10 @@
           },
           {
             "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-table-button",
             "deprecated": null
           },
           {
@@ -125441,6 +127672,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "omittedItems",
+            "attribute": null,
+            "type": "number",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "size",
@@ -127870,6 +130110,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-sequence-playback-play-button-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           }
         ],
         "cssStates": [],
@@ -128396,6 +130642,16 @@
             "hasDefault": false
           },
           {
+            "name": "readonly",
+            "property": "readonly",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "required",
             "property": "required",
             "type": "boolean",
@@ -128475,6 +130731,16 @@
             "hasDefault": false
           },
           {
+            "name": "readonly",
+            "attribute": "readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "required",
             "attribute": "required",
             "type": "boolean",
@@ -128543,6 +130809,12 @@
           },
           {
             "name": "lr-change",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -131353,6 +133625,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -131370,6 +133652,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "max-nodes",
+            "property": "maxNodes",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 500
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "view-end-ms",
@@ -131414,6 +133716,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string | undefined",
@@ -131431,6 +133743,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "maxNodes",
+            "attribute": "max-nodes",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 500
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "spans",
@@ -131962,6 +134294,21 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-border-width-medium)"
+          },
+          {
+            "name": "--lr-sparkline-fill-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-sparkline-line-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-sparkline-line-width",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -132129,10 +134476,20 @@
             "default": "var(--lr-transition-ambient)"
           },
           {
+            "name": "--lr-spinner-indicator-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-spinner-size",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-1-25rem)"
+          },
+          {
+            "name": "--lr-spinner-track-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-spinner-track-width",
@@ -133795,6 +136152,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "row",
             "deprecated": null
           },
@@ -133933,6 +136294,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-stat-value-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-stat-value-success-color",
             "deprecated": null,
             "hasDefault": true,
@@ -134018,6 +136385,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -134110,6 +136486,15 @@
             "hasDefault": false
           },
           {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -134128,6 +136513,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "vertical"
+          },
+          {
+            "name": "omittedSteps",
+            "attribute": null,
+            "type": "number",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "orientation",
@@ -136822,7 +139216,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string }>",
+            "type": "CustomEvent<{ value: string; previousValue: string | null }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -137966,7 +140360,18 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-tab-close-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-tab-close-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -138112,6 +140517,15 @@
             "default": false
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -138211,6 +140625,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -139884,6 +142307,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-page-request",
+            "type": "CustomEvent<Readonly<{ page: number }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-priority-columns-visibility-change",
             "type": "CustomEvent<Readonly<{ visible: boolean }>>",
             "cancelable": "never",
@@ -140277,7 +142706,17 @@
             "default": "var(--lr-size-3rem)"
           },
           {
+            "name": "--lr-table-row-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-table-row-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-table-row-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
@@ -140297,6 +142736,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
+          },
+          {
+            "name": "--lr-table-sortable-header-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-table-sortable-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-table-sticky-offset",
@@ -143579,6 +146028,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-padding-inline)"
+          },
+          {
+            "name": "--lr-textarea-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-textarea-radius",
@@ -148976,6 +151431,18 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-close",
+            "type": "CustomEvent<{ reason: NotificationDismissReason }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-close-request",
+            "type": "CustomEvent<{ reason: NotificationDismissReason }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-hide",
             "type": "CustomEvent<null>",
             "cancelable": "always",
@@ -149046,6 +151513,56 @@
           },
           {
             "name": "--hide-duration",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
             "deprecated": null,
             "hasDefault": false
           },
@@ -149927,6 +152444,16 @@
             "default": ""
           },
           {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "autocorrect",
             "property": "autocorrect",
             "type": "boolean",
@@ -149973,6 +152500,16 @@
             "hasDefault": false
           },
           {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "error-text",
             "property": "errorText",
             "type": "string",
@@ -149995,6 +152532,16 @@
           {
             "name": "hint",
             "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -150040,7 +152587,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 0
+            "default": 200
           },
           {
             "name": "name",
@@ -150151,6 +152698,16 @@
             "default": ""
           },
           {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "autocorrect",
             "attribute": "autocorrect",
             "type": "boolean",
@@ -150215,6 +152772,16 @@
             "hasDefault": false
           },
           {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "errorText",
             "attribute": "error-text",
             "type": "string",
@@ -150237,6 +152804,16 @@
           {
             "name": "hint",
             "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -150291,7 +152868,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 0
+            "default": 200
           },
           {
             "name": "name",
@@ -150692,6 +153269,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-token-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-token-input-radius",
             "deprecated": null,
             "hasDefault": true,
@@ -151073,6 +153656,16 @@
             "default": "off"
           },
           {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "enterkeyhint",
             "property": "enterKeyHint",
             "type": "string",
@@ -151081,6 +153674,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "inputmode",
@@ -151233,6 +153836,16 @@
             "default": "off"
           },
           {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "enterKeyHint",
             "attribute": "enterkeyhint",
             "type": "string",
@@ -151241,6 +153854,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "inputMode",
@@ -151383,6 +154006,12 @@
             "type": "CustomEvent<{ waitUntil: ToolApprovalDialogWaitUntil }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-request-close",
+            "type": "CustomEvent<{ source: 'escape' | 'backdrop' }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -151485,6 +154114,21 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-tool-approval-dialog-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -151560,7 +154204,9 @@
         "moduleExports": [],
         "form": {
           "associated": false,
-          "properties": [],
+          "properties": [
+            "disabled"
+          ],
           "methods": []
         },
         "native": {
@@ -152194,6 +154840,12 @@
           }
         ],
         "events": [
+          {
+            "name": "lr-tool-activate",
+            "type": "CustomEvent<{ invocationId: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
           {
             "name": "lr-tool-call-chip-select",
             "type": "CustomEvent<ToolChipSelectDetail>",
@@ -153093,6 +155745,12 @@
         ],
         "events": [
           {
+            "name": "lr-after-maximize-change",
+            "type": "CustomEvent<{ readonly maximized: boolean }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-close",
             "type": "CustomEvent<LyraToolResultDialogCloseDetail>",
             "cancelable": "never",
@@ -153101,6 +155759,12 @@
           {
             "name": "lr-maximize-change-request",
             "type": "CustomEvent<{ readonly maximized: boolean }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-request-close",
+            "type": "CustomEvent<{ source: 'escape' | 'backdrop' | 'close-button' }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -153156,6 +155820,71 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-tool-result-dialog-denied-bg",
             "deprecated": null,
@@ -153384,8 +156113,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "success"
+            "hasDefault": false
           },
           {
             "name": "tool-name",
@@ -153462,8 +156190,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "success"
+            "hasDefault": false
           },
           {
             "name": "toolName",
@@ -153481,6 +156208,12 @@
           {
             "name": "lr-render-error",
             "type": "CustomEvent<{ toolName: string; error: unknown }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-status-change",
+            "type": "CustomEvent<{status: ToolStatus}>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -153609,6 +156342,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "inputmode",
@@ -153751,6 +156494,16 @@
             "default": null
           },
           {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
+          {
             "name": "inputMode",
             "attribute": "inputmode",
             "type": "string",
@@ -153885,6 +156638,12 @@
             "type": "CustomEvent<LyraToolSelectDialogCloseDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-request-close",
+            "type": "CustomEvent<{ source: 'escape' | 'backdrop' }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -153994,6 +156753,71 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-tool-select-dialog-body-hover-outline-color",
             "deprecated": null,
@@ -154177,6 +157001,16 @@
             "default": false
           },
           {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "group-summary",
             "property": "groupSummary",
             "type": "string",
@@ -154211,6 +157045,16 @@
           {
             "name": "approvalReadonly",
             "attribute": "approval-readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -154291,9 +157135,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-tool-approval-close",
+            "type": "CustomEvent<ToolTimelineActivateDetail & {reason: string}>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-tool-approval-decide-request",
             "type": "CustomEvent<ToolTimelineApprovalDetail>",
             "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-tool-approval-open",
+            "type": "CustomEvent<ToolTimelineActivateDetail>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -154378,6 +157234,10 @@
           },
           {
             "name": "limit",
+            "deprecated": null
+          },
+          {
+            "name": "load-error",
             "deprecated": null
           }
         ],
@@ -154493,7 +157353,9 @@
         "moduleExports": [],
         "form": {
           "associated": false,
-          "properties": [],
+          "properties": [
+            "disabled"
+          ],
           "methods": []
         },
         "native": {
@@ -155057,7 +157919,14 @@
           {
             "name": "--lr-overlay-radius",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-overlay-shadow-anchored",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-m)"
           },
           {
             "name": "--lr-overlay-surface",
@@ -155209,8 +158078,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": 0
+            "hasDefault": false
           },
           {
             "name": "aria-label",
@@ -155300,8 +158168,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": 0
+            "hasDefault": false
           },
           {
             "name": "distance",
@@ -155408,8 +158275,14 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-tour-step-activate",
+            "type": "CustomEvent<{ readonly via: StepNavigation | 'api'; readonly previousIndex: number; readonly index: number; readonly step: Readonly<LyraTourStep>; }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-tour-step-change-request",
-            "type": "CustomEvent<{ readonly index: number; readonly previousIndex: number; readonly step: Readonly<LyraTourStep>; readonly via: 'next' | 'back' | 'goto'; }>",
+            "type": "CustomEvent<{ readonly index: number; readonly previousIndex: number; readonly step: Readonly<LyraTourStep>; readonly via: StepNavigation; }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -155675,6 +158548,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -155702,6 +158585,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 500
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "with-cost",
@@ -155746,6 +158639,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "hiddenKinds",
             "attribute": null,
             "type": "readonly LyraSpan['kind'][]",
@@ -155783,6 +158686,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 500
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "spans",
@@ -155986,6 +158899,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-trace-tree-row-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-trace-tree-row-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-trace-tree-running-color",
@@ -159057,6 +161980,16 @@
             "default": false
           },
           {
+            "name": "playback-rate",
+            "property": "playbackRate",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
             "name": "poster",
             "property": "poster",
             "type": "string",
@@ -159253,6 +162186,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "playbackRate",
+            "attribute": "playback-rate",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "playing",
@@ -160012,6 +162955,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-video-playlist-item-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
             "name": "--lr-video-playlist-item-current-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -160022,6 +162971,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-video-playlist-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          },
+          {
+            "name": "--lr-video-playlist-item-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-strong)"
           }
         ],
         "cssStates": [],
@@ -161550,7 +164511,7 @@
             "name": "--lr-voice-picker-option-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-voice-picker-option-selected-bg",
@@ -161625,6 +164586,11 @@
             "default": "var(--lr-form-control-radius)"
           },
           {
+            "name": "--lr-voice-picker-trigger-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-voice-picker-trigger-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -161640,6 +164606,12 @@
             "name": "--lr-voice-picker-trigger-height",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-voice-picker-trigger-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-voice-picker-trigger-hover-border-color",
@@ -223478,7 +226450,7 @@
       "upstreamTier": "pro",
       "targetTag": "lr-file-input",
       "classification": "warning-required",
-      "rationale": "Lyra exposes dragging and fileCount as getter-only derived state. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.",
+      "rationale": "Lyra derives dragging and fileCount and ignores assignments to either. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -223620,22 +226592,7 @@
           }
         ]
       },
-      "drift": [
-        {
-          "code": "readonly-mismatch",
-          "section": "properties",
-          "member": "dragging",
-          "expected": false,
-          "actual": true
-        },
-        {
-          "code": "readonly-mismatch",
-          "section": "properties",
-          "member": "fileCount",
-          "expected": false,
-          "actual": true
-        }
-      ]
+      "drift": []
     },
     {
       "upstream": "webawesome",

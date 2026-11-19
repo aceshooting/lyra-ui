@@ -98,8 +98,9 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-**Events:** native `input` on user edits and native `change` on a complete commit; compatibility
-aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
+**Events:** native `input` on user edits and native `change` when the committed value changes,
+including when clearing a segment changes a previously complete time to an empty value.
+The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
 `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.

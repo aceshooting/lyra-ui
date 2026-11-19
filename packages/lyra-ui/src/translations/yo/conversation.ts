@@ -38,8 +38,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Ríránṣẹ́ kùnà',
   chatFailedAnnounce: 'Rírán ìfiránṣẹ́ kùnà.',
   chatCompleteAnnounce: 'Ìfiránṣẹ́ parí.',
-  expandCode: 'Fẹ kóòdù sí i',
-  collapseCode: 'Kó kóòdù jọ',
   copyCode: 'Dàkọ kóòdù',
   copiedToClipboard: 'A ti dà á kọ sínú àtẹ ìkọ̀wé',
   codeRegion: 'Kóòdù',

@@ -109,6 +109,10 @@ export interface LyraRandomContentEventMap {
  * @cssprop [--lr-random-content-animation-translate=var(--lr-size-0-5em)] - Translation distance for directional animations.
  * @cssprop [--lr-random-content-item-gap=var(--lr-space-s)] - Gap between simultaneously selected items.
  * @cssprop [--lr-random-content-item-alignment=flex-start] - Cross-axis alignment of selected items.
+ * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
  * @status stable
  * @since 4.0.0
  */

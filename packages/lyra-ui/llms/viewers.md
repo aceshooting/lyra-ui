@@ -899,7 +899,8 @@ are appended to the shared document-level polite sink, which lives in the host's
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
 which writes this token inline. Painted highlights read `--lr-ebook-viewer-highlight-accent-bg`,
-`-success-bg`, `-warning-bg`, `-danger-bg` and `-neutral-bg` (each falling back to the matching
+`--lr-ebook-viewer-highlight-success-bg`, `--lr-ebook-viewer-highlight-warning-bg`,
+`--lr-ebook-viewer-highlight-danger-bg` and `--lr-ebook-viewer-highlight-neutral-bg` (each falling back to the matching
 shared quiet token), `--lr-ebook-viewer-highlight-active-outline` (the active highlight's stroke)
 and `--lr-ebook-viewer-search-match-bg`. A host with a definite height gives the reading area the
 remaining height; an auto-height host keeps the `10rem` minimum. The chapter iframes epub.js creates

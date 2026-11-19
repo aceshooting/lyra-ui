@@ -891,7 +891,7 @@ describe('lr-animated-image remediation', () => {
 describe('control state tokens', () => {
   it('paints the control scrim and the hovered and pressed play button from their own tokens', async () => {
     const el = (await fixture(html`
-      <lr-animated-image
+      <lr-animated-image data-lr-theme-scope
         alt="Pixel"
         ignore-reduced-motion
         style="inline-size: 160px; block-size: 100px; --lr-transition-fast: 0s; --lr-animated-image-control-box-bg: rgb(1, 2, 3); --lr-animated-image-play-button-hover-bg: rgb(10, 20, 30); --lr-animated-image-play-button-active-bg: rgb(70, 80, 90)"

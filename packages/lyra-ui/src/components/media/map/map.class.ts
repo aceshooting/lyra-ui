@@ -3007,6 +3007,8 @@ export interface LyraMapEventMap {
  * @csspart scene-item - An interactive button or noninteractive object row.
  * @csspart scene-pagination - Scene page navigation and page summary.
  * @csspart scene-status - Localized accepted scene or rejected update status.
+ * @cssprop --lr-positioner-available-block-size - Available block size the positioner publishes on the floating popup; caps the popup height.
+ * @cssprop --lr-positioner-available-inline-size - Available inline size the positioner publishes on the floating popup; caps the popup width.
  * @status stable
  * @since 4.0.0
  */

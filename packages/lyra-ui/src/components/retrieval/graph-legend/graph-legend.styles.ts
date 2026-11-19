@@ -57,8 +57,8 @@ export const styles = css`
     color: var(--lr-graph-legend-hidden-color, var(--lr-color-text-quiet));
   }
   [part='swatch'] {
-    inline-size: 0.75em;
-    block-size: 0.75em;
+    inline-size: var(--lr-size-0-75em);
+    block-size: var(--lr-size-0-75em);
     flex: 0 0 auto;
     display: block;
     color: var(--lr-color-text);

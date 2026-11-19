@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-tooltip`
+
+The bubble paints from `--lr-tooltip-bg` and deliberately sits outside the shared overlay-surface family: it
+advertises `--lr-overlay-surface` and `--lr-overlay-border` only because its rules live in the stylesheet module
+`lr-popover` also composes, and it draws no border.
 
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
 interactions open it is configurable; by default it is hover and focus. Focus
@@ -144,13 +148,11 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
 
-`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
-because its rules live in the stylesheet module `lr-popover` also composes, but a tooltip bubble is
-a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
-panel, so it keeps painting from `--lr-tooltip-bg`/`--lr-tooltip-color`, draws no border,
-and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
+The bubble paints its high-contrast label with `--lr-tooltip-bg` and `--lr-tooltip-color`.
+Its corner radius follows `--lr-overlay-radius` (default `--lr-radius-xs`) and its shadow follows
+`--lr-overlay-shadow-anchored` (default `--lr-shadow-m`).
 
-`--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
+With `--lr-positioning-strategy`, the tooltip honors the same cascading
 `absolute`/`fixed` override `<lr-popover>` documents (`llms/components/lr-popover.md`), ahead of
 its own mirrored `absolute`
 default, when neither `positioning-strategy` nor `hoist` is authored on the instance.

@@ -1,5 +1,6 @@
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, elementUpdated, waitUntil } from "@open-wc/testing";
 import "./slider.js";
 import type { LyraSlider } from "./slider.js";
@@ -1255,6 +1256,8 @@ it('keeps number-first formatted readout, tooltip and range ends in reading orde
   await slider.updateComplete;
   const value = slider.shadowRoot!.querySelector('[part="value"]')!;
   expect(paintsHeadFirst(value, '2 MiB/s', 1)).to.equal(true);
+  await focusByKeyboard(slider.shadowRoot!.querySelector<HTMLElement>('[role="slider"]')!);
+  await slider.updateComplete;
   const tip = slider.shadowRoot!.querySelector('[part="tooltip__content"]');
   expect(tip).to.not.equal(null);
   expect(paintsHeadFirst(tip!, '2 MiB/s', 1)).to.equal(true);

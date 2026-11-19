@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-permission-rules`
+
+`lr-permission-rule-change-request` carries `{ ruleId, decision }`. Cancel it to suppress the subsequent `lr-permission-rule-change` notification.
+
+Set `--lr-decision-legend-font-size` to size the panel legend.
 
 `lr-permission-rules` presents an ordered, controlled set of host-defined permission rules. Each
 rule has a stable `id`, visible `label`, optional `description`, visible caller-supplied `scope`,
@@ -22,8 +26,9 @@ and `decision: 'allow' | 'ask' | 'deny'`. The native select emits
 `lr-permission-rule-change` with `{ ruleId, decision }`; the component never evaluates policy or
 changes the supplied decision. Reassign a new `.rules` array after host updates. Blank identities
 are skipped, duplicate identities retain the first valid item, and at most 100 rows are mounted.
-`disabled` and `readonly` both prevent interaction. `label` names the visible group; host
-`aria-label` overrides the internal fieldset name.
+`disabled` removes the decision selects from interaction; `readonly` keeps them focusable and
+announced as read-only, and refuses every change. A blank rule `label` names its select from the
+`scope`. `label` names the visible group; host `aria-label` overrides the internal fieldset name.
 
 **CSS parts:**
 

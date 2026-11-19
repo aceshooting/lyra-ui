@@ -27,7 +27,7 @@ it('orders internal error and hint descriptions in both editing modes', async ()
 });
 
 it('themes the hover and pressed backgrounds independently', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-voice-picker']>(html`<lr-voice-picker .catalog=${[{ id: 'a', label: 'Alpha' }]}
+  const el = await fixture<HTMLElementTagNameMap['lr-voice-picker']>(html`<lr-voice-picker data-lr-theme-scope .catalog=${[{ id: 'a', label: 'Alpha' }]}
     style="--lr-transition-fast:0s; --lr-voice-picker-trigger-hover-bg:rgb(11, 22, 33); --lr-voice-picker-trigger-active-bg:rgb(33, 22, 11)"></lr-voice-picker>`);
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
   try {

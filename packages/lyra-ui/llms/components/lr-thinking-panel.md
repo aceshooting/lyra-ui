@@ -22,6 +22,8 @@ equivalent). Same collapsible header-button-plus-region shape as `<lr-source-lis
 slot is entirely free-form (a consumer-composed `<lr-streaming-text>`, `<lr-markdown>`, or
 plain text) — this component has no dependency on either.
 
+A host `aria-label` names the scrollable transcript. The visible header continues to use `label`.
+
 **Properties:**
 
 - `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English

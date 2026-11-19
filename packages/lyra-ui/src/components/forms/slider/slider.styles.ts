@@ -27,9 +27,24 @@ export const styles = css`
   [part~="base"] {
     position: relative;
     flex: 1 1 auto;
-    inline-size: var(--lr-size-4rem);
+    inline-size: calc(var(--lr-size-4rem) + var(--_lr-slider-inline-reserve));
     min-inline-size: 0;
     block-size: var(--lr-slider-row-size, var(--_lr-slider-row-size));
+  }
+  [part~="base"],
+  [part~="thumb"] {
+    --_lr-slider-hit-size: max(
+      var(--lr-size-28px),
+      calc(var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size)) * 1.75)
+    );
+    --_lr-slider-thumb-inline: var(--thumb-width, var(--thumb-size, var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size))));
+    --_lr-slider-thumb-block: var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size))));
+    --_lr-slider-inline-reserve: max(var(--_lr-slider-hit-size), var(--_lr-slider-thumb-inline));
+  }
+  .track-axis {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: min(50%, calc(var(--_lr-slider-inline-reserve) / 2));
   }
   [part="track"] {
     position: absolute;
@@ -108,20 +123,8 @@ export const styles = css`
   [part~="thumb"] {
     position: absolute;
     inset-block-start: 50%;
-    inline-size: var(
-      --thumb-width,
-      var(
-        --thumb-size,
-        var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size))
-      )
-    );
-    block-size: var(
-      --thumb-height,
-      var(
-        --thumb-size,
-        var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size))
-      )
-    );
+    inline-size: var(--_lr-slider-thumb-inline);
+    block-size: var(--_lr-slider-thumb-block);
     border-radius: 50%;
     background: var(--lr-slider-thumb-bg, var(--lr-color-brand));
     border: var(--lr-border-width-medium) solid
@@ -129,6 +132,7 @@ export const styles = css`
     /* Resting chrome, not an overlay: a knob on its own track sits one step above it, not at the
        anchored-panel tier. */
     box-shadow: var(--lr-shadow-s);
+    transition: var(--lr-transition-interactive), box-shadow var(--lr-transition-fast);
     transform: translate(-50%, -50%);
     cursor: grab;
     touch-action: none;
@@ -153,14 +157,8 @@ export const styles = css`
     inset-inline-start: 50%;
     /* A floor, not a fixed size: the drag area never drops below 28px however small the tier
        makes the dot, and grows past it at larger tiers. */
-    inline-size: max(
-      var(--lr-size-28px),
-      calc(var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size)) * 1.75)
-    );
-    block-size: max(
-      var(--lr-size-28px),
-      calc(var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size)) * 1.75)
-    );
+    inline-size: var(--_lr-slider-hit-size);
+    block-size: var(--_lr-slider-hit-size);
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }
@@ -208,7 +206,7 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     pointer-events: none;
-    opacity: 0;
+    display: none;
     transition: opacity var(--lr-transition-fast);
   }
   [part~="tooltip"][data-placement="top"] {
@@ -344,7 +342,12 @@ export const styles = css`
           )), -50%);
   }
   [part~="tooltip-visible"] {
-    opacity: 1;
+    display: block;
+  }
+  @starting-style {
+    [part~="tooltip-visible"] {
+      opacity: 0;
+    }
   }
   [part="tooltip__arrow"] {
     position: absolute;
@@ -463,6 +466,10 @@ export const styles = css`
     inline-size: var(--lr-slider-row-size, var(--_lr-slider-row-size));
     block-size: var(--lr-slider-track-length, var(--lr-size-10rem));
   }
+  :host([orientation="vertical"]) .track-axis {
+    inset-inline: 0;
+    inset-block: min(50%, calc(max(var(--_lr-slider-hit-size), var(--_lr-slider-thumb-block)) / 2));
+  }
   :host([orientation="vertical"]) [part="track"] {
     inset-inline: auto;
     inset-inline-start: 50%;
@@ -542,6 +549,7 @@ export const styles = css`
     cursor: default;
   }
   @media (prefers-reduced-motion: reduce) {
+    [part~="thumb"],
     [part~="tooltip"] {
       transition: none;
     }

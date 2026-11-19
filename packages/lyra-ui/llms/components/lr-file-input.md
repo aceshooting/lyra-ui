@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,7 +45,7 @@ height for that content and the dropzone's minimum size.
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count. Drag events update `dragging`. Assigning either getter in strict mode throws a `TypeError`.
+  updates the selected-file count. Drag events update `dragging`. Assigning either is ignored, so a framework binding that spreads every property cannot throw.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -351,5 +351,7 @@ an extension-only `accept` list.
   accept/reject decision (and `rejected[].reason`) is always the one made at actual drop time.
 - the click/keyboard-to-browse path is correctly operable (`role="button"`, `tabindex` 0/-1 by
   disabled, `aria-disabled`, Enter/Space handling).
+
+Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
 
 ---

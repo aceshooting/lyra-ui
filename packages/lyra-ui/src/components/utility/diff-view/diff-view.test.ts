@@ -1979,6 +1979,14 @@ describe('search and scrollToAnchor', () => {
     el.setAttribute('aria-label', 'Details');
     await el.updateComplete;
     expect(base.getAttribute('aria-label')).to.equal('Details');
+    const parent = el.parentElement!;
+    el.remove();
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(base.hasAttribute('tabindex')).to.equal(false);
+    parent.append(el);
+    await waitUntil(() => base.getAttribute('tabindex') === '0', 'region not re-armed after reconnect');
+    expect(base.getAttribute('aria-label')).to.equal('Details');
     const roomy = (await fixture(
       html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
     )) as LyraDiffView;

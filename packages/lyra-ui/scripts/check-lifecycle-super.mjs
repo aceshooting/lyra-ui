@@ -124,11 +124,18 @@ export function findLifecycleSuperOmissions(source) {
   // replacement manages its own parts; calling the adapter would also render the entire value.
   // Resolve only top-level value imports and direct bases, so a shadowed or intermediate
   // implementation cannot bypass the superclass policy merely by using the name Directive.
+  // AsyncDirective inherits the same adapter, so its direct subclasses replace it the same way.
+  const directiveModules = new Map([
+    ['lit/directive.js', 'Directive'],
+    ['lit-html/directive.js', 'Directive'],
+    ['lit/async-directive.js', 'AsyncDirective'],
+    ['lit-html/async-directive.js', 'AsyncDirective'],
+  ]);
   const directiveBindings = new Set(parsed.program.body
     .filter(node => node.type === 'ImportDeclaration' && node.importKind !== 'type' &&
-      ['lit/directive.js', 'lit-html/directive.js'].includes(node.source.value))
+      directiveModules.has(node.source.value))
     .flatMap(node => node.specifiers.filter(specifier => specifier.type === 'ImportSpecifier' &&
-      specifier.importKind !== 'type' && methodName(specifier.imported) === 'Directive')
+      specifier.importKind !== 'type' && methodName(specifier.imported) === directiveModules.get(node.source.value))
       .map(specifier => specifier.local.name)));
   const replaceableDirectiveUpdates = new Set();
   for (const statement of parsed.program.body) {

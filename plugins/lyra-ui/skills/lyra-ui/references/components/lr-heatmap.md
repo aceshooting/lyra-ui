@@ -650,6 +650,8 @@ color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-fo
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).
 
+Escape dismisses the hover tooltip while preserving focus.
+
 **Optional peer deps:** none.
 
 ```html

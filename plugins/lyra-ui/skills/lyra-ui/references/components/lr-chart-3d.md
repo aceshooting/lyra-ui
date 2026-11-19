@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
-- **Themeable via** 15 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -101,7 +101,7 @@ When a point label is absent or contains only whitespace, the point ID names its
   when an ancestor's attributes, the box size or a color-scheme, forced-colors or reduced-motion
   preference changes. Categories use `--lr-color-chart-1` to `--lr-color-chart-8` and wrap after eight.
 
-**Events:** `lr-chart-row-select` (`detail: { id, index }`, frozen — the activated row's ID and its
+**Events:** Cancel `lr-chart-row-select-request` to keep the current selection. An accepted request emits `lr-chart-row-select` (`detail: { id, index }`, frozen — the activated row's ID and its
 original zero-based index in the source columns; user activation only), `lr-camera-change`
 (`detail: { camera: LyraChart3dCamera }`, frozen — user gestures and the Fit control; programmatic
 `camera`, `fit()` and `focusRow()` are silent) and `lr-engine-fallback`
@@ -116,6 +116,8 @@ table page to a visible row and aims the camera at it, returning `false` for an 
 `engine-notice` (loading, fallback or software-rendering feedback), `toolbar`, `cursor`, `fit-button`
 (only while the renderer is ready), `instructions`, `table-container`, `table`, `row`, `row-button`,
 `pagination`, `page-button`, `empty` and `error`.
+
+The row selection uses `--lr-chart-3d-selected-bg` and `--lr-chart-3d-selected-color`. Use `--lr-chart-3d-control-hover-bg` for hovered controls and `--lr-chart-3d-control-active-border-color` for the pressed border.
 
 **Themeable custom properties:** `--lr-chart-3d-height` (default `var(--lr-size-24rem)`, the
 viewport's block size), `--lr-chart-3d-point-size` (default `var(--lr-space-s)`) and

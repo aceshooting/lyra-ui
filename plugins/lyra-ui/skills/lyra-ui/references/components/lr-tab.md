@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,6 +17,8 @@
 ## `lr-tab`
 
 One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
+
+The close button of a closable tab is themed with `--lr-tab-close-hover-bg` and `--lr-tab-close-active-bg`.
 
 A **declarative descriptor, not the interactive control**: the group renders the real `role="tab"`
 button and projects this element's content into it, so the whole ARIA and roving-tabindex contract
@@ -71,7 +73,8 @@ inside the real `role="tab"` button. Rendering another focusable button there wo
 nested-interactive accessibility violation and break the APG's one-stop roving-tabindex model. The
 glyph carries a localized `title`, stays out of the accessible name, and stops propagation so
 closing an inactive tab never selects it first. Keyboard users focus the same real tab button and
-press Delete, advertised through `aria-keyshortcuts`. Remove the corresponding `<lr-tab>` and
+press Delete, advertised through `aria-keyshortcuts`. A separate action following the tablist uses
+`tabCloseAction` (English `Close {label}`) for screen readers. Remove the corresponding `<lr-tab>` and
 `<lr-tab-panel>` in an `lr-close` listener; the group then reconciles selection automatically.
 
 ```html

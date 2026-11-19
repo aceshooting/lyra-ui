@@ -16,6 +16,8 @@
 
 ## `lr-tool-param-form`
 
+Parameter inputs use the shared form-control sizing tokens. Validation messages update with the active locale or `.strings` override.
+
 Its supported flat schema now additionally includes: `minLength`/`maxLength` (Unicode code points),
 `format: 'email' | 'uri' | 'date' | 'date-time'`, finite inclusive `minimum`/`maximum`, `enumNames`,
 string `oneOf: [{ const, title }]`, and `type:'array'` for multiple string-enum choices.
@@ -182,9 +184,9 @@ cannot follow `::part()`), so it is not a selector hook you can use from outside
 fields render as `<lr-select>` controls (number fields as `<lr-number-input>`) with their own
 label, hint and error, so `description`/`error` parts belong to text fields and the form. A choice
 error lists the displayed labels of up to 10 single-choice options, else a short invalid-selection
-message. The outer schema validator owns
-presence, so the nested control stays `.required=false` while its host receives
-`aria-required="true"` for a required property.
+message. Required fields set the nested control’s `required` property, which paints its marker and
+exposes `aria-required="true"` on the inner control. Use the aggregate form’s `checkValidity()` to
+validate JSON Schema property presence. A blank field title falls back to its property key.
 
 **CSS parts:** `base` (the aggregate `role="group"`), `field`, `label`, `control`, `description`,
 `error`, `unsupported`, `empty`.
@@ -235,8 +237,7 @@ difference between an absent optional property and an explicit `false`. Enum and
 descriptions/errors flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. The outer
 component owns JSON Schema validity: `required` means an own property is present, so `''`, `0`, and
 `false` are valid present values. Use `{ type: 'boolean', const: true }` together with `required`
-for a must-confirm field; the select still does not impose its own nonempty semantics, while the
-outer validator enforces both presence and the exact `true` value.
+for a must-confirm field. The outer validator enforces both presence and the exact `true` value.
 
 Visible field and root validation errors remain ordinary descriptive text. When user interaction or
 `reportValidity()` makes one or more new errors visible, their distinct messages are coalesced into
@@ -245,7 +246,7 @@ establish a silent baseline, so pre-existing validation state is not replayed.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
-value is a whole object: the value present on first connection is cloned as the native default, and
+value is a whole object: the value present at the first render is captured as the native default, and
 `formResetCallback()` restores a fresh clone of that default while clearing touched/interaction state.
 Consumer-set custom validity remains in force until explicitly cleared, matching native controls. The
 `formDisabledCallback(disabled)` tracks inherited fieldset state separately from the author-owned

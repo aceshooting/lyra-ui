@@ -24,9 +24,9 @@ not a delta — this component does no accumulation or ordering of its own.
 **Direction.** Markdown mode inherits `<lr-markdown>`'s code direction (see its **Direction**
 paragraph), including the isolated fenced runs and code spans of the streaming plain-text view,
 and the forwarded `code-block`/`inline-code` parts accept an outer `direction` override once the
-content has settled. Plain `content-mode`, including a fenced block shown as plain text, follows
-the page direction; use `content-mode="markdown"` when code must read left-to-right while
-streaming.
+content has settled. In plain mode, the first strong character sets the direction of the text,
+including text that contains literal fences. Use `content-mode="markdown"` to give code its own
+left-to-right direction inside mixed-direction content.
 
 **Properties:**
 

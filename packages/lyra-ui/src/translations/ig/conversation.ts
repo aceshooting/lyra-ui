@@ -38,8 +38,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Iziga ozi emeghị nke ọma',
   chatFailedAnnounce: 'Iziga ozi emeghị nke ọma.',
   chatCompleteAnnounce: 'Emechaala ozi.',
-  expandCode: 'Mụbaa koodu',
-  collapseCode: 'Kpọkọọ koodu',
   copyCode: 'Detuo koodu',
   copiedToClipboard: 'E detuola ya na klipbọọdụ',
   codeRegion: 'Koodu',

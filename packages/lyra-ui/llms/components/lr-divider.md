@@ -16,6 +16,8 @@
 
 ## `lr-divider`
 
+Unsupported orientation values normalize to `horizontal`. The boolean `vertical` shorthand wins while present.
+
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 

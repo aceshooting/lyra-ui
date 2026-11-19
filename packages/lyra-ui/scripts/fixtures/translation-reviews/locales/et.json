@@ -2,18 +2,18 @@
   "locale": "et",
   "direction": "ltr",
   "source": {
-    "keyCount": 1680,
-    "sha256": "sha256:4bbcc0eda2daeee31135a20415d4a25f544fe1b3040cbf9e135280818540d4e7"
+    "keyCount": 1712,
+    "sha256": "sha256:7a01f27d32f7efa31e93a065efa64d21d6076a6ce7b72c257b88eaa1d5b3b741"
   },
   "catalog": {
-    "keyCount": 1680,
-    "sha256": "sha256:c43ce57a26dca428ec429a80816b298370c5ce6352572ad5fd71390e2e490e18"
+    "keyCount": 1712,
+    "sha256": "sha256:95f69851119febc60b09010a6d038e9c814d6df561e241fb7943c0e1f43e7943"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-11-16",
-    "evidence": "Original Estonian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
+    "evidence": "Original Estonian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
   },
   "reviewer": {
     "status": "approved",
@@ -103,6 +103,10 @@
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
+      "messagePath": "conversationActionWithTitle",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for conversationActionWithTitle is appropriate for the et catalog's UI register."
+    },
+    {
       "messagePath": "emailViewerGroupAddress",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
@@ -187,6 +191,10 @@
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
+      "messagePath": "jsonViewerLabel",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for jsonViewerLabel is appropriate for the et catalog's UI register."
+    },
+    {
       "messagePath": "kbdAltWord",
       "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
     },
@@ -255,6 +263,10 @@
       "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
     },
     {
+      "messagePath": "kbdShortcutSeparator",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for kbdShortcutSeparator is appropriate for the et catalog's UI register."
+    },
+    {
       "messagePath": "kbdTabWord",
       "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
     },
@@ -289,6 +301,10 @@
     {
       "messagePath": "mapSquareMeters",
       "rationale": "International SI unit symbol, which this locale writes unchanged."
+    },
+    {
+      "messagePath": "memoryPanelAddAccessibleName",
+      "rationale": "The supplied locale allowlist confirms that the shared wording for memoryPanelAddAccessibleName is appropriate for the et catalog's UI register."
     },
     {
       "messagePath": "neighborGroupHeader",

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -98,6 +98,10 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
+The collapse control uses the stable `codeBlockToggle` string and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
+
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -117,7 +121,8 @@ identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
 `--lr-code-block-radius`, `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
-`--lr-code-block-line-number-color`. `--lr-code-block-max-height`
+`--lr-code-block-line-number-color`, and the `--lr-code-block-toggle-bg*` and
+`--lr-code-block-gutter-bg*` state tokens. `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),
@@ -166,3 +171,5 @@ const view = html`<lr-code-block-core
   optimization: callers must not depend on distinct frozen map objects producing distinct cores.
 
 ---
+
+**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons.

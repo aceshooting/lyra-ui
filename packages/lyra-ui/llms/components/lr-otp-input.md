@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -156,7 +156,8 @@ required-field marker" above), not a copy of it, so `--lr-form-control-required-
 here too.
 `segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
 
-**Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
+**Themeable custom properties:** `--lr-otp-input-placeholder-color` styles empty mask glyphs
+and defaults to `--lr-color-text-quiet`. `--mask-char` (mapped mask-glyph alias, defaulting to the retained
 `--lr-otp-input-mask-char`; the value must be a _quoted_ CSS string), `--segment-border-radius`
 (default `var(--lr-form-control-radius, var(--lr-radius))`), `--segment-gap` (default
 `var(--lr-space-xs)`, ignored by `contained`), and `--segment-size` (default `2.5em` at standalone

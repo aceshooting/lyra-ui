@@ -53,6 +53,10 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   the sorted inspector list. The open-button name includes this ordinal, title, and score tier. Setting it marks the inspector as one row of that list, so it renders without its own
   group, list or listitem semantics.
 
+In a standalone inspector with multiple chunks, the row actions share one Tab stop. Up/Down and
+Home/End move between chunks, including rows outside the virtualized window. Inline arrows switch
+between Open and Show more/less, following the reading direction.
+
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-toggle` (`detail: { expanded, itemId }`, a chunk's text

@@ -61,7 +61,7 @@ reimplemented.
   up. The default slot is not a drop target while a target is bound.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
-- `readonly dragging: boolean` — `true` during an active drag session. Assigning this getter in strict mode throws a `TypeError`.
+- `readonly dragging: boolean` — `true` during an active drag session. Assignment is ignored, so a framework binding that spreads every property cannot throw.
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
   can match a neighboring small-tier `lr-file-input` in the same dense layout.
@@ -102,9 +102,9 @@ its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-ove
 `--lr-drop-zone-overlay-padding` (default `var(--lr-space-l)`, retuned per `size` tier),
 `--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
 `--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
-`color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and
+`color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) and
 `--lr-drop-zone-reject-border-color`/`--lr-drop-zone-reject-bg` (defaults `var(--lr-color-danger)`/
-`color-mix(in srgb, var(--lr-color-danger) 12%, transparent)`) — independently overridable on the
+`color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — independently overridable on the
 element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
 
 **Optional peer deps:** none.

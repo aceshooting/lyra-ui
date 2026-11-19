@@ -1086,7 +1086,7 @@ describe('lr-sequence-playback remediation', () => {
 
 describe('play-button hover token', () => {
   it('paints the hovered play-button border from its own token', async () => {
-    const el = (await fixture(html`<lr-sequence-playback
+    const el = (await fixture(html`<lr-sequence-playback data-lr-theme-scope
       item-count="3"
       style="--lr-transition-fast: 0s; --lr-sequence-playback-play-button-hover-border-color: rgb(40, 50, 60)"
     ></lr-sequence-playback>`)) as LyraSequencePlayback;

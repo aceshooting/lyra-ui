@@ -9,17 +9,20 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-confirm-bar`
 
+Set `--lr-decision-positive-color` and `--lr-decision-negative-color` to theme the two settled states across decision panels.
+
+Argument disclosure and JSON viewer elements register on the first client render with `args`. For server-rendered argument viewers, import the `details` and `json-viewer` registration entries before rendering.
+
 An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
 `lr-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
-focus. It raises the dialog's `lr-approve-request`/`lr-deny-request` events, but only the bar's
-details carry `waitUntil()`. It uses the same
+focus. Both controls emit `lr-approve-request` and `lr-deny-request` with `detail.waitUntil()`. They share the
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
 semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and

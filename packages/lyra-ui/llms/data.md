@@ -1,4 +1,3 @@
-
 ## `lr-sparkline`
 
 Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default allocation is one
@@ -225,7 +224,7 @@ not just the bare value); each
 Present metric and row labels expose the `term` role; their named values expose `definition`,
 which supports these accessible names. A unit-only headline value also exposes `definition`
 and includes the unit in its name. Values without a label or unit remain plain text; setting
-`exactValue` still adds the existing focus stop and exact-value tooltip in an unlinked stat.
+`exactValue` still adds the existing focus stop and exact-value tooltip in an unlinked stat. Also `limit` (the notice showing how many rows were admitted when input exceeded the limit).
 
 **Themeable custom properties:** `--lr-stat-bg` (default `var(--lr-color-surface)`) is
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
@@ -589,7 +588,7 @@ for styling and inspection. Check delivery on the shared light-DOM region in `<b
 
 Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
 localized loading text to that shared polite sink, including repeated loading cycles. The visible
-`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`.
+`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`. Also `page-summary` (the localized range for the current page) and `page-input` (the compact pager's page-jump input).
 
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
@@ -650,6 +649,8 @@ string; templates and Nodes fall back to the raw value. Server export/copy inclu
 rows because the browser does not possess unloaded pages.
 
 ---
+
+**Additional members:** `autoCorrect` (attribute `autocorrect`, default empty) forwards the native `autocorrect` attribute to the toolbar search and column-filter inputs (Safari/WebKit).
 
 ## `lr-table`
 
@@ -4525,7 +4526,7 @@ empty pair is DERIVED and carries no built-in treatment — it is the hook for y
 this bucket" styling, and a zero band stays actionable. The disabled pair is DECLARED: that control
 renders genuinely disabled (no tab stop, no hover or press affordance) and activating it emits no
 `lr-segment-activate-request`. Inertness is never inferred from a zero value, because a zero band is
-legitimately clickable in a budget meter
+legitimately clickable in a budget meter. Also `limit` (the notice showing how many segments were admitted when input exceeded the limit).
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
@@ -5720,6 +5721,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibrarySelectionChangeDetail {
+    readonly selectedRowKeys: readonly string[];
     readonly documentIds: readonly string[];
   }`
   Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.

@@ -349,6 +349,7 @@ describe('slider tooltip placement', () => {
       it(`keeps a ${placement} bubble clear of the thumb in ${direction}`, async () => {
         const wrapper = await fixture<HTMLElement>(`<div dir="${direction}" style="inline-size: 300px; padding: 40px"><lr-slider with-tooltip tooltip-placement="${placement}" value="40" aria-label="Level"></lr-slider></div>`);
         const slider = wrapper.querySelector<LyraSlider>('lr-slider')!;
+        await focusByKeyboard(thumb(slider));
         await slider.updateComplete;
         const handle = thumb(slider).getBoundingClientRect();
         const bubble = slider.shadowRoot!.querySelector<HTMLElement>('[part~="tooltip"]')!.getBoundingClientRect();

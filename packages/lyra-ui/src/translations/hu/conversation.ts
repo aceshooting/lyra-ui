@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'A küldés sikertelen',
   chatFailedAnnounce: 'Az üzenet elküldése sikertelen.',
   chatCompleteAnnounce: 'Az üzenet elkészült.',
-  expandCode: 'Kód kibontása',
-  collapseCode: 'Kód összecsukása',
   copyCode: 'Kód másolása',
   copiedToClipboard: 'Vágólapra másolva',
   codeRegion: 'Kód',

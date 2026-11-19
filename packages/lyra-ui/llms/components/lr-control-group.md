@@ -16,6 +16,8 @@
 
 ## `lr-control-group`
 
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
+
 Semantic grouping for mixed controls and actions. It keeps slotted children in a wrapping
 inline-flex row and centers children with different intrinsic heights. Use it for dashboard
 toolbars that combine segmented controls, selects, buttons, and other interactive elements.

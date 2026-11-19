@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-poll-status`
+
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
 
 A "next scheduled refresh" countdown with built-in pause and optional manual refresh controls: a ticking
 `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at zero, and a
@@ -70,8 +72,10 @@ repainting every other component that reuses the same shared success token. `--l
 `var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
 `--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
 brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
-hover/pressed paint independently of those same shared brand tokens; these pause-specific
-overrides do not affect the refresh button, which uses shared brand tokens. Plus shared tokens —
+hover/pressed paint independently of those same shared brand tokens; the matching
+`--lr-poll-status-refresh-hover-bg`, `--lr-poll-status-refresh-hover-color`,
+`--lr-poll-status-refresh-active-bg` and `--lr-poll-status-refresh-active-color` tokens do the same
+for the `refresh-button`. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.

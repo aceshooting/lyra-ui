@@ -23,7 +23,9 @@ speaker notes, and several advanced effects are not rendered.
 **Properties:** `src: string = ''`, `name: string = ''`, `label?: string`, `page: number = 1`
 (reflected, one-based current slide), and `maxHeight: string = ''` (attribute `max-height`). Assigning
 `page` while ready navigates to that slide. Omitting `label` reads back `undefined` and falls back to
-`name`, then a localized default; an explicit empty string clears it. A host
+`name`, then a localized default; an explicit empty string clears it. `name` is also the visible
+header text, while `label` only names the region (other viewers spell the same accessible-name
+override `label`; media spell their text alternative `alt`). A host
 `aria-label` takes precedence over
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,

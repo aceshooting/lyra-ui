@@ -26,7 +26,8 @@ string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/Ar
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and keyboard focus on a
 cell shows the same `[part="tooltip"]` detail that pointer hover does (a click-focused cell keeps no
 tooltip once the pointer leaves). That tooltip is positioned from the
-active cell, not from the center of the whole strip. The tooltip is visual only and is not
+active cell and stays inside the strip. Escape dismisses it while preserving focus. Enabled cells
+provide the `sequenceStripCellKeyboardHelp` keyboard activation hint. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are actionable: clicking a
 cell, or pressing Enter/Space on the roving cell, emits `lr-item-activate`. Selection is controlled,

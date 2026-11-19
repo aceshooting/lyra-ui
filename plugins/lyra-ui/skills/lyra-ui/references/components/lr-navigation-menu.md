@@ -9,13 +9,17 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-navigation-menu-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-navigation-menu`
+
+The `lr-navigation-menu` styling hooks include `--lr-navigation-menu-toggle-hover-bg`, `--lr-navigation-menu-toggle-hover-color`, `--lr-navigation-menu-toggle-active-bg`.
+
+Item disclosure events bubble to the menu. In a menu listener, check `event.target === event.currentTarget` before handling or canceling the menu’s own disclosure.
 
 Floating navigation disclosures follow the [shared surface treatment](../shared/styles-and-tokens.md);
 inline disclosures retain their flow presentation.

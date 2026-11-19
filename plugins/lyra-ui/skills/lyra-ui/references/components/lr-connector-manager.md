@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-connector-manager`
+
+Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-connector-manager` displays host-owned connector records and emits explicit requests through
 `lr-connector-action` (`{ connectorId, action: 'connect' | 'disconnect' | 'retry' }`). A

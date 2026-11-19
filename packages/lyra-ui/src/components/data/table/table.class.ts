@@ -48,7 +48,7 @@ import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -853,13 +853,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     dataGridCollapseRow: LYRA_DEFAULT_dataGridCollapseRow,
     dataGridExpandRow: LYRA_DEFAULT_dataGridExpandRow,
-    expand: LYRA_DEFAULT_expand,
+    details: LYRA_DEFAULT_details,
     loadMore: LYRA_DEFAULT_loadMore,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
@@ -873,9 +871,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
-    tableAdditionalColumns: LYRA_DEFAULT_tableAdditionalColumns,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,
+    tableAdditionalColumns: LYRA_DEFAULT_tableAdditionalColumns,
     tableEditCell: LYRA_DEFAULT_tableEditCell,
     tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
     tableFilterPlaceholder: LYRA_DEFAULT_tableFilterPlaceholder,
@@ -884,6 +882,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     tableLoadingMore: LYRA_DEFAULT_tableLoadingMore,
     tableRowLimit: LYRA_DEFAULT_tableRowLimit,
     tableRowTotal: LYRA_DEFAULT_tableRowTotal,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

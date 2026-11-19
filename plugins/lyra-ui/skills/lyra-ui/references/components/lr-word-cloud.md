@@ -25,8 +25,8 @@ its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
 focus cursor to the next word in **declaration order** (not weight/placement order),
 `ArrowLeft`/`ArrowUp` to the previous, `Home`/`End` to the first/last, and `Enter`/`Space` fires
-`lr-word-activate` for the currently-focused word. Tab focus silently establishes the first word,
-so immediate Enter/Space always works without requiring a preparatory arrow key. A
+`lr-word-activate` for the currently-focused word. Tab focus announces the current word, starting with the first word on initial entry.
+Enter/Space can activate it immediately. A
 `[part="focus-ring"]` `<rect>` is drawn around the focused word, and a
 shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
 and repeated edge movements append repeated announcements even when their text is identical.

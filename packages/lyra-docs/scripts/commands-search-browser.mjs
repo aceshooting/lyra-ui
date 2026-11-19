@@ -22,7 +22,7 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
     await palette(id).getByRole('dialog').waitFor({ state: 'visible' });
     assert.equal(await palette(id).getAttribute('hotkey'), '');
     await assertNoAxeViolations(page, id);
-    await palette(id).getByRole('searchbox').fill('Bold');
+    await palette(id).getByRole('combobox').fill('Bold');
     await page.keyboard.press('Enter');
     await palette(id).getByRole('dialog').waitFor({ state: 'hidden' });
     assert.equal(await host(id).evaluate(element => element.snapshot().commands.bold.active), true);
@@ -142,7 +142,7 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
           { [`docxEditor${key[0].toUpperCase()}${key.slice(1)}`]: label });
         await page.waitForFunction(({ id, key, label }) => document.getElementById(id).shadowRoot
           .querySelector('[part="command-palette"]').commands.some(row => row.commandId === key && row.label === label), { id, key, label });
-        await palette(id).getByRole('searchbox').fill(label); await page.keyboard.press('Enter');
+        await palette(id).getByRole('combobox').fill(label); await page.keyboard.press('Enter');
         await palette(id).getByRole('dialog').waitFor({ state: 'hidden' });
         assert.equal(await host(id).locator('[part="document-panel-heading"]').textContent(), label);
         assert.deepEqual(await host(id).evaluate(element => element.snapshot().revision), before);
@@ -211,7 +211,7 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
       bold: element.commands.find(row => row.commandId === 'bold'), find: element.commands.find(row => row.commandId === 'find') }));
     assert.equal(rows.bold.disabled, true); assert.ok(rows.bold.description.includes('read-only'));
     assert.equal(rows.find.disabled, false);
-    await palette(id).getByRole('searchbox').fill('Find and replace'); await page.keyboard.press('Enter');
+    await palette(id).getByRole('combobox').fill('Find and replace'); await page.keyboard.press('Enter');
     await host(id).locator('[part="find-query"]').getByRole('searchbox').fill('Café');
     await host(id).locator('[part="find-submit"]').click();
     await host(id).locator('[part="find-match"]').first().click();

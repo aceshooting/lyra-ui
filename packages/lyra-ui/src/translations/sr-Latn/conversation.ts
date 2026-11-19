@@ -40,8 +40,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Slanje nije uspelo',
   chatFailedAnnounce: 'Poruka nije poslata.',
   chatCompleteAnnounce: 'Poruka je dovršena.',
-  expandCode: 'Proširi kod',
-  collapseCode: 'Skupi kod',
   copyCode: 'Kopiraj kod',
   copiedToClipboard: 'Kopirano u privremenu memoriju',
   codeRegion: 'Kod',

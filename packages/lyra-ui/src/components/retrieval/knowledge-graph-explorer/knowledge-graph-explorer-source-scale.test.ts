@@ -331,7 +331,7 @@ it('reports a zero match count for a whitespace-only source search intent', asyn
 });
 
 it('paints the configured hover fill on its source-clear', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-knowledge-graph-explorer']>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${provider().source} .nodeTypes=${[{id:'person',label:'Person'}]} .hiddenTypes=${['person']} style="--lr-knowledge-graph-explorer-source-action-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-knowledge-graph-explorer>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-knowledge-graph-explorer']>(html`<lr-knowledge-graph-explorer data-lr-theme-scope view="list" .graphSource=${provider().source} .nodeTypes=${[{id:'person',label:'Person'}]} .hiddenTypes=${['person']} style="--lr-knowledge-graph-explorer-source-action-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-knowledge-graph-explorer>`);
   const button = el.shadowRoot!.querySelector('[part="source-clear"]')!;
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');

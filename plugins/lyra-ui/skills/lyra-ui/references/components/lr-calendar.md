@@ -7,9 +7,9 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-view-change` since `unreleased`; use event `@lr-month-change`; removal not before `33.0.0` — The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration.
 - **Optional peers** none
-- **Themeable via** 20 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,7 +61,7 @@ localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an 
 buttons.
 
 For a large event archive, let the host query the displayed month and replace `events` with a
-bounded result. Listen for `lr-view-change.detail.viewDate` from the previous/next buttons and
+bounded result. Listen for `lr-month-change.detail.viewDate` from the previous/next buttons and
 out-of-grid keyboard moves. Assigning `viewDate` programmatically does not emit that event, so the
 host must also call its loader for a programmatic jump. The host owns request cancellation and
 obsolete-result checks: abort superseded month/page fetches and ignore results whose date window
@@ -83,10 +83,12 @@ from the paged table; the calendar remains a bounded month/day preview.
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7, PageUp/PageDown by one month (clamping
 the day), Home/End to the month's first/last day; stepping past the rendered grid rolls
-`viewDate` to the target's month and emits `lr-view-change`. Enter/Space select.
+`viewDate` to the target's month and emits `lr-month-change`. Enter/Space select.
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
-`lr-view-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
+`lr-month-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
+`lr-view-change` is deprecated and still fires with the same detail. Use `lr-month-change` for
+calendar-specific listeners.
 
 **Slots:** none.
 
@@ -100,7 +102,8 @@ view when the visible month's events exceed the 500-event render ceiling), `limi
 notice), and `empty` (the agenda
 view's localized "no events" message).
 
-**Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
+**Themeable custom properties:** `--lr-calendar-event-hover-tint` overlays a month-view event fill on hover.
+`--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size
 ≤ 28rem); `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) for a selected
 day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and

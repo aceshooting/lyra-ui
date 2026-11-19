@@ -9,12 +9,21 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-json-viewer`
+
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
+Local searches ignore case and accents in keys and values. Navigating a match scrolls the viewer within
+its own bounds. An overflowing tree becomes a keyboard tab stop named by the host’s `aria-label` or the
+localized `jsonViewerLabel`. `--lr-json-viewer-toggle-hover-bg`, `--lr-json-viewer-toggle-hover-color`,
+`--lr-json-viewer-toggle-active-bg`, `--lr-json-viewer-toggle-active-color`,
+`--lr-json-viewer-copy-hover-bg`, `--lr-json-viewer-copy-hover-color`,
+`--lr-json-viewer-copy-active-bg` and `--lr-json-viewer-copy-active-color` set the action colors independently of the row.
 
 A collapsible, copyable tree view for an arbitrary JSON-serializable value (object, array, string,
 number, boolean, null, or `undefined`). Serves as a fallback renderer wherever a raw payload needs
@@ -169,7 +178,7 @@ also apply. The flat source rows own logical treeitem semantics.
   ```
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
-- `query: string = ''` — with `treeSource` unset, case-insensitive substring match against
+- `query: string = ''` — with `treeSource` unset, case- and accent-insensitive substring match against
   keys/values; matches are highlighted and their ancestors auto-expanded. Source matching is
   provider-owned as described above
 

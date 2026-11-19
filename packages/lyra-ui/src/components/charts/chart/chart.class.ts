@@ -116,7 +116,7 @@ import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartPreparedSummary, LYRA_DEFAULT_chartPreparedUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -1021,12 +1021,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartAxisTotal: LYRA_DEFAULT_chartAxisTotal,
     chartBubblePointCoordinates: LYRA_DEFAULT_chartBubblePointCoordinates,
     chartCategory: LYRA_DEFAULT_chartCategory,
-    chartLegend: LYRA_DEFAULT_chartLegend,
     chartData: LYRA_DEFAULT_chartData,
     chartDataLabelsUnavailable: LYRA_DEFAULT_chartDataLabelsUnavailable,
     chartDataSampled: LYRA_DEFAULT_chartDataSampled,
     chartInputLimit: LYRA_DEFAULT_chartInputLimit,
     chartLabeledPoint: LYRA_DEFAULT_chartLabeledPoint,
+    chartLegend: LYRA_DEFAULT_chartLegend,
     chartMissingLibrary: LYRA_DEFAULT_chartMissingLibrary,
     chartPlotSampled: LYRA_DEFAULT_chartPlotSampled,
     chartPointCoordinates: LYRA_DEFAULT_chartPointCoordinates,

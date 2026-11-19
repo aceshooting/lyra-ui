@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,7 +45,7 @@ and later MIME values restore detection.
   the host as a whole while its nested button/link keeps a purpose-specific localized action name. A property-only assignment names the nested action and updates reactively when no host label is present, without creating a host attribute. An explicit
   empty string behaves like the unset `null` default — both fall through to the generated
   purpose-specific name. Image alt text and the native video's own purpose label remain independent;
-  an explicitly empty host still leaves every interactive descendant named.
+  an explicitly empty host still leaves every interactive descendant named. File links include their visible filename in the action name, including the localized untitled fallback.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
@@ -178,5 +178,7 @@ the video's own native controls bubble up and spuriously fire `lr-media-open`.
 - `kind` only reflects to the host attribute when explicitly set — CSS keying off the
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
   not `:host([kind=...])`, since the latter won't see an auto-detected kind.
+
+`--lr-media-card-hover-border-color` sets the hovered border of an image or file action.
 
 ---

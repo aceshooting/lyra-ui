@@ -18,11 +18,11 @@ import type { LyraRating } from './rating/rating.js';
 
 describe('overlays remediation', () => {
   it('returns null from public render-root getters before first connection', () => {
-    expect((document.createElement('lr-rating') as LyraRating).rating).to.equal(null);
-    expect((document.createElement('lr-toast') as unknown as { stack: unknown }).stack).to.equal(null);
+    expect((document.createElement('lr-rating') as LyraRating).rating === null).to.equal(true);
+    expect((document.createElement('lr-toast') as unknown as { stack: unknown }).stack === null).to.equal(true);
     expect(
-      (document.createElement('lr-toast-item') as unknown as { toastItemElement: unknown }).toastItemElement
-    ).to.equal(null);
+      (document.createElement('lr-toast-item') as unknown as { toastItemElement: unknown }).toastItemElement === null
+    ).to.equal(true);
   });
 
   it('restores the declared arrow-padding default when the attribute is removed', async () => {

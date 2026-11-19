@@ -2946,7 +2946,7 @@ it('leaves the first toggle activation to the button and consumes repeated Enter
 
 it('themes the hover and pressed backgrounds independently', async () => {
   const restore = stubSuccessfulCapture();
-  const el = await fixture<HTMLElementTagNameMap['lr-push-to-talk']>(html`<lr-push-to-talk mode="toggle"
+  const el = await fixture<HTMLElementTagNameMap['lr-push-to-talk']>(html`<lr-push-to-talk data-lr-theme-scope mode="toggle"
     style="--lr-transition-fast:0s; --lr-push-to-talk-trigger-hover-bg:rgb(11, 22, 33); --lr-push-to-talk-trigger-active-bg:rgb(33, 22, 11)"></lr-push-to-talk>`);
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
   try {

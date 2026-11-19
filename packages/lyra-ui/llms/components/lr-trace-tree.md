@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,6 +19,13 @@
 A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style): kind icon,
 name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
 columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
+
+The host `aria-label` names the inner trace tree. The default `frame="plain"` leaves the
+outer border off. Set `frame="card"` to draw it. The default density is `size="m"`, and small
+sizes use tighter spacing.
+
+`--lr-trace-tree-row-hover-bg` and `--lr-trace-tree-row-pressed-bg`
+set the row's pointer feedback.
 
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.

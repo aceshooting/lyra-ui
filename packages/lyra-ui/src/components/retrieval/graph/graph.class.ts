@@ -546,6 +546,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
@@ -613,7 +614,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
     retry: LYRA_DEFAULT_retry,
-    clear: LYRA_DEFAULT_clear,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     zoomIn: LYRA_DEFAULT_zoomIn,

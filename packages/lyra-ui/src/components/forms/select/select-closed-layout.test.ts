@@ -34,17 +34,19 @@ for (const kind of ['select', 'combobox'] as const) {
 
   it(`preserves ${kind} popup transitions while removing the settled closed layout`, async () => {
     const control = await fixture<LyraSelect | LyraCombobox>(kind === 'select'
-      ? html`<lr-select label="Choice" style="--show-duration: 1s; --hide-duration: 1s"><lr-option value="a">Apple</lr-option><lr-option value="b">Banana</lr-option></lr-select>`
+      ? html`<lr-select label="Choice" style="--show-duration: 1s; --hide-duration: 2s"><lr-option value="a">Apple</lr-option><lr-option value="b">Banana</lr-option></lr-select>`
       : html`<lr-combobox label="Choice" style="--show-duration: 1s; --hide-duration: 1s"><lr-option value="a">Apple</lr-option><lr-option value="b">Banana</lr-option></lr-combobox>`);
     const panel = control.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
     for (let cycle = 0; cycle < 2; cycle++) {
       const shown = control.show();
       await waitUntil(() => panel.getAnimations().length > 0, `opening transition starts on cycle ${cycle}`);
+      if (kind === 'select') expect(getComputedStyle(panel).transitionDuration).to.equal('1s, 1s, 1s');
       panel.getAnimations().forEach((animation) => animation.finish());
       await shown;
       expect(getComputedStyle(panel).visibility).to.equal('visible');
       const hidden = control.hide();
       await waitUntil(() => panel.getAnimations().length > 0, 'closing transition starts');
+      if (kind === 'select') expect(getComputedStyle(panel).transitionDuration).to.equal('2s, 2s, 2s');
       expect(panel.getBoundingClientRect().width).to.be.greaterThan(0);
       panel.getAnimations().forEach((animation) => animation.finish());
       await hidden;

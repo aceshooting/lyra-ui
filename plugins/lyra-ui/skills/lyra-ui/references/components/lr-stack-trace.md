@@ -23,6 +23,11 @@ behind a count-labeled toggle. A malformed or non-safe-integer location remains 
 non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
 (no Web Awesome equivalent).
 
+The internal-frame disclosure keeps the same count-based name while `aria-expanded` reports
+its state. Customize that name with `stackTraceInternalFrames` and its `{count}` placeholder.
+Existing per-instance `stackTraceShowFrames` and `stackTraceHideFrames` overrides take effect
+when a stable per-instance label is absent.
+
 Direction: function names (`::part(frame-function)`) and locations (`::part(frame-location)`) carry `dir="ltr"`, so `Object.<anonymous>` and file paths read left-to-right inside a right-to-left document; the frame button itself follows the page direction.
 
 Removing the `trace` attribute clears parsed content and copies empty text; the property retains

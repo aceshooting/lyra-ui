@@ -377,7 +377,47 @@
       "lr-visually-hidden"
     ]
   },
-  "deprecations": [],
+  "deprecations": [
+    {
+      "tag": "lr-calendar",
+      "kind": "event",
+      "name": "lr-view-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-month-change",
+        "usage": "@lr-month-change"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration."
+    },
+    {
+      "tag": "lr-map-anchor",
+      "kind": "event",
+      "name": "lr-close",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-map-anchor-dismiss",
+        "usage": "@lr-map-anchor-dismiss"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The component-prefixed dismiss event carries the same frozen reason detail; the older name remains emitted during migration."
+    },
+    {
+      "tag": "lr-map-anchor",
+      "kind": "event",
+      "name": "lr-close-request",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-map-anchor-dismiss-request",
+        "usage": "@lr-map-anchor-dismiss-request"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration."
+    }
+  ],
   "exportDeprecations": [],
   "history": {
     "source": "git-release-manifests",
@@ -37235,7 +37275,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "d982a8c962a74984fc40bd7a4e88194480da478ddebd74e74f5dcea209eb1b89",
+      "manifestSha256": "a4163823b9ec072c021a065e476ccea99d0361f38c759031b7999a58ce93c301",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

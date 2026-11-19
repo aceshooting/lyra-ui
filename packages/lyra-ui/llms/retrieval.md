@@ -1,4 +1,3 @@
-
 ## Current event migration
 
 Listen for `lr-entity-select` from community cards and relationship paths, and for
@@ -1641,7 +1640,7 @@ keyboard descent).
 
 **Slots:** none.
 
-**CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
+**CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `disclosure` (the plus or minus on a topic with children), `link`
 (parent-child connector), `focus-ring` (keyboard focus ring), `limit` (the "showing N of M"
 render-cap notice, present above 500 legacy visible nodes and always in source mode),
 `input-limit` (legacy input-admission notice), `live-region` (visually hidden

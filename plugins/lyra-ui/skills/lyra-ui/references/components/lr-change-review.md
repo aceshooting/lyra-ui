@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,6 +50,9 @@ remain readable in both states. Optional `label` overrides the localized heading
 
 
 **Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), reports a keep/discard action; the host applies it by replacing `files`.
+**Custom properties:** `--lr-change-review-file-border-color` (default `var(--lr-color-border)`),
+`--lr-change-review-file-radius` (default `var(--lr-radius-container)`) and
+`--lr-change-review-header-hover-bg` (default `var(--lr-color-surface-raised)`; the pressed fill mixes from it).
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');

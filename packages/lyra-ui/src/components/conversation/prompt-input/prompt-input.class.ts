@@ -73,7 +73,6 @@ import { styles } from './prompt-input.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputCollectionLimit, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputInputLimit, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const promptItemId = (item: { id: string }): string => item.id;
@@ -205,7 +204,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
     promptInputCollectionLimit: LYRA_DEFAULT_promptInputCollectionLimit,
     promptInputControls: LYRA_DEFAULT_promptInputControls,

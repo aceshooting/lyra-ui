@@ -79,8 +79,8 @@ extra host controls rendered in the footer beside Submit/Skip.
 **Rebinding:** re-binding the same `keys`, `value` or `defaultValue` object (every Lit parent render does) is ignored, so the reviewer's entries survive; assign a new object to replace the value.
 
 **Events:** rubric-owned native `input` and `change` notifications precede their `lr-input`
-(`detail: { value }`) and `lr-change` (`detail: { value }` after a user commit) aliases;
-the native events carry no detail, so read the aggregate `event.target.value`.
+and `lr-change` aliases. Both carry `{ value, previousValue }` snapshots of the aggregate form.
+The native events carry no detail, so read the aggregate `event.target.value`.
 `lr-validity-change` (frozen
 `detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
 errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
@@ -103,7 +103,8 @@ clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
 so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
 `focus(options?)` moves focus to that same active field, matching `click()`'s target; this is also
-what lets the native `autofocus` attribute reach the rubric.
+what lets the native `autofocus` attribute reach the rubric. Call `blur()` to release focus from
+the currently focused editor.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `form-control` (aggregate chrome wrapper),
 `aggregate-label` / `form-control-label`, `fields` / `form-control-input`, `aggregate-hint` /

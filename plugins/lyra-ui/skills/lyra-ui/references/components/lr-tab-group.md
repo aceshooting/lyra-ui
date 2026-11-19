@@ -17,6 +17,12 @@
 
 ## `lr-tab-group`
 
+Screen-reader users can activate the named close button for each closable tab after the tablist, including for an inactive tab. Keyboard users can press Delete on the focused tab.
+
+A descriptor’s `aria-labelledby` or `aria-label` names its rendered tab. The default slot supplies the fallback name.
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
+
 A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
 
 With manual activation, removing the focused unselected tab rehomes actual focus to a valid survivor

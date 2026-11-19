@@ -42,8 +42,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Ma ntbagħatx',
   chatFailedAnnounce: 'Il-messaġġ ma ntbagħatx.',
   chatCompleteAnnounce: 'Il-messaġġ komplut.',
-  expandCode: 'Espandi l-kodiċi',
-  collapseCode: 'Ikkollassa l-kodiċi',
   copyCode: 'Ikkopja l-kodiċi',
   copiedToClipboard: 'Ikkupjat fil-clipboard',
   codeRegion: 'Kodiċi',

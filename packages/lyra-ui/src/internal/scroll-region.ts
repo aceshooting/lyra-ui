@@ -13,6 +13,8 @@ function overflows(el: HTMLElement): boolean {
  * overflows, and none of them otherwise, so a short body adds no tab stop. Re-measures on resize
  * of the element and its children. Returns a disposer that disconnects the observer and removes
  * what was added. A pre-existing author `tabindex`/`role`/`aria-label` is never overwritten.
+ * Call it only while `el` is connected: Lit also runs `updated()` on a detached host, so a host
+ * syncing from there checks `isConnected` and re-syncs on reconnect.
  */
 export function makeScrollRegionFocusable(el: HTMLElement, name: string | undefined): () => void {
   const label = normalizeLabel(name);

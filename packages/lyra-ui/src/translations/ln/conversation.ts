@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Ekokaki kotinda te',
   chatFailedAnnounce: 'Message ekokaki kotindama te.',
   chatCompleteAnnounce: 'Message esili.',
-  expandCode: 'Kolisá code',
-  collapseCode: 'Kitisá code',
   copyCode: 'Kopiá code',
   copiedToClipboard: 'Ekopami na presse-papier',
   codeRegion: 'Makomi ya code',

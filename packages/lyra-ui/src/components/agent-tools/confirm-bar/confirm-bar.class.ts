@@ -27,7 +27,7 @@ import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ConfirmBarDecision = ApprovalDecision | null;
@@ -246,7 +246,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     confirmApprovedAnnounce: LYRA_DEFAULT_confirmApprovedAnnounce,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
     confirmDeniedAnnounce: LYRA_DEFAULT_confirmDeniedAnnounce,
-    copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
@@ -260,9 +259,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
     toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
-    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
-    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
-    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

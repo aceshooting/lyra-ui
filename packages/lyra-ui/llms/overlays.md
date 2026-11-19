@@ -1,4 +1,3 @@
-
 ## Breaking changes in 10.0.0
 
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
@@ -241,6 +240,8 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 **Optional peer deps:** none.
 
 ### `lr-toast-item`
+
+The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
 
 A dismissal emits cancelable `lr-hide`, then cancelable `lr-close-request`. The committed `lr-close` and the request carry `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 
@@ -1846,6 +1847,10 @@ or to remember it on every new one:
 
 ## `lr-tooltip`
 
+The bubble paints from `--lr-tooltip-bg` and deliberately sits outside the shared overlay-surface family: it
+advertises `--lr-overlay-surface` and `--lr-overlay-border` only because its rules live in the stylesheet module
+`lr-popover` also composes, and it draws no border.
+
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
 interactions open it is configurable; by default it is hover and focus. Focus
 means keyboard focus; see `trigger`.
@@ -2831,6 +2836,8 @@ the remove button's `:hover` fill).
 ```
 
 ## `lr-alert`
+
+The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
 
 The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 

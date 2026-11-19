@@ -68,7 +68,7 @@ it('retries the media after src changes', async () => {
 
 it('does not paint the pressed fill under frame="plain"', async () => {
   const src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
-  const el = await fixture<LyraMediaCard>(html`<lr-media-card kind="image" frame="plain" style="--lr-media-card-active-bg: red; --lr-transition-fast: 0s" src=${src}></lr-media-card>`);
+  const el = await fixture<LyraMediaCard>(html`<lr-media-card data-lr-theme-scope kind="image" frame="plain" style="--lr-media-card-active-bg: red; --lr-transition-fast: 0s" src=${src}></lr-media-card>`);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   await resetMouse();
   try {
@@ -121,7 +121,7 @@ it('keeps announcing after moving to another document', async () => {
 });
 
 it('paints the hovered border from its public token', async () => {
-  const el = await fixture<LyraMediaCard>(html`<lr-media-card src="/file" style="--lr-transition-fast: 0s; --lr-media-card-hover-border-color: rgb(1, 2, 3)"></lr-media-card>`);
+  const el = await fixture<LyraMediaCard>(html`<lr-media-card data-lr-theme-scope src="/file" style="--lr-transition-fast: 0s; --lr-media-card-hover-border-color: rgb(1, 2, 3)"></lr-media-card>`);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   await resetMouse();
   try {

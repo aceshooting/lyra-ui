@@ -9,13 +9,17 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menubar-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-menubar` / `lr-menubar-item`
+
+The `lr-menubar` styling hooks include `--lr-menubar-gap`, `--lr-menubar-padding`, `--lr-menubar-bg`, `--lr-menubar-border`, `--lr-menubar-radius`, `--lr-menubar-shadow`.
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
 
 A horizontal application menubar following the APG menubar pattern. Import
 `@aceshooting/lyra-ui/components/lr-menubar.js`; it registers the item and menu dependencies.
@@ -71,6 +75,10 @@ The menu width hooks `--lr-menu-min-inline-size` and `--lr-menu-max-inline-size`
 menubar or an ancestor and apply to every slotted menu.
 
 ### `lr-menubar-item`
+
+The `lr-menubar-item` styling hooks include `--lr-menubar-item-hover-color`, `--lr-menubar-item-active-color`.
+
+The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `menuOpen` for the current state.
 
 **Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
 and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not

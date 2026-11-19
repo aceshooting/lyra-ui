@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-mcp-app`
+
+The loading message overlays the frame. Set `--lr-mcp-app-frame-height` to override the negotiated frame height.
 
 Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
 with a trusted CSP meta placed before every caller-controlled HTML token; comment and script-text

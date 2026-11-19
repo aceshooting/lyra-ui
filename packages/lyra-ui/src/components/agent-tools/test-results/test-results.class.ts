@@ -222,8 +222,6 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsCollapseTest: LYRA_DEFAULT_testResultsCollapseTest,
     testResultsCompleteAnnounce: LYRA_DEFAULT_testResultsCompleteAnnounce,
     testResultsExpandTest: LYRA_DEFAULT_testResultsExpandTest,
-    testResultsShownAnnounce: LYRA_DEFAULT_testResultsShownAnnounce,
-    testResultsUnnamedTest: LYRA_DEFAULT_testResultsUnnamedTest,
     testResultsFailed: LYRA_DEFAULT_testResultsFailed,
     testResultsFilterLabel: LYRA_DEFAULT_testResultsFilterLabel,
     testResultsInputTooLarge: LYRA_DEFAULT_testResultsInputTooLarge,
@@ -231,7 +229,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsLimit: LYRA_DEFAULT_testResultsLimit,
     testResultsPassed: LYRA_DEFAULT_testResultsPassed,
     testResultsRunning: LYRA_DEFAULT_testResultsRunning,
+    testResultsShownAnnounce: LYRA_DEFAULT_testResultsShownAnnounce,
     testResultsSkipped: LYRA_DEFAULT_testResultsSkipped,
+    testResultsUnnamedTest: LYRA_DEFAULT_testResultsUnnamedTest,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

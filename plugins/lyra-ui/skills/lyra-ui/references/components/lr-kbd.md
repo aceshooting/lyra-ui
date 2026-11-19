@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-kbd`
+
+Shortcut chords keep their left-to-right order in RTL. Localize `kbdShortcutSeparator` to change the spoken separator. Style the caps with `--lr-kbd-key-bg`, `--lr-kbd-key-color`, and `--lr-kbd-key-border-color`.
 
 A small chip representing a keyboard shortcut, rendering the platform-appropriate glyph for
 cross-platform modifier keys (⌘ on macOS, "Ctrl" elsewhere) from a single platform-neutral `keys`

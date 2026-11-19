@@ -283,7 +283,7 @@ export class LyraGraphSample extends LyraElement {
 // (`this.localize(expanded ? 'a' : 'b')`) and a direct resolveLyraString(...) call must still be
 // detected.
 const falsePositiveCatalog = `
-type Key = 'copy' | 'loading' | 'open' | 'search' | 'remove' | 'date' | 'jsonCollapseLabel' | 'jsonExpandLabel' | 'directResolve';
+type Key = 'copy' | 'loading' | 'open' | 'search' | 'remove' | 'date' | 'jsonCollapseLabel' | 'jsonExpandLabel' | 'directResolve' | 'nestedLabel';
 const DEFAULT_STRINGS: Record<Key, string> = {
   copy: 'Copy',
   loading: 'Loading',
@@ -294,6 +294,7 @@ const DEFAULT_STRINGS: Record<Key, string> = {
   jsonCollapseLabel: 'Collapse',
   jsonExpandLabel: 'Expand',
   directResolve: 'Direct resolve',
+  nestedLabel: 'Nested',
 };
 `;
 const falsePositiveFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-false-positive-'));
@@ -339,7 +340,8 @@ export class LyraFalsePositiveSample extends LyraElement {
   render() {
     const expanded = true;
     const direct = resolveLyraString(this, 'directResolve', this.strings, undefined, undefined, undefined);
-    return direct + this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: 'x' });
+    return direct + this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: 'x' }) +
+      this.localize(direct ? (expanded ? 'nestedLabel' : 'jsonExpandLabel') : 'jsonCollapseLabel');
   }
 }
 `,
@@ -359,7 +361,8 @@ export class LyraFalsePositiveSample extends LyraElement {
   assert.match(generated, /LYRA_DEFAULT_directResolve/, 'a real resolveLyraString(...) call must still be detected');
   assert.match(generated, /LYRA_DEFAULT_jsonCollapseLabel/, 'a ternary operand of this.localize(...) must still be detected');
   assert.match(generated, /LYRA_DEFAULT_jsonExpandLabel/, 'a ternary operand of this.localize(...) must still be detected');
-  assert.equal(result.usedKeyCount, 3, 'only the 3 real localize()/resolveLyraString() keys must be reachable');
+  assert.match(generated, /LYRA_DEFAULT_nestedLabel/, 'a parenthesised nested ternary operand of this.localize(...) must be detected');
+  assert.equal(result.usedKeyCount, 4, 'only the 4 real localize()/resolveLyraString() keys must be reachable');
 } finally {
   await rm(falsePositiveFixture, { recursive: true, force: true });
 }

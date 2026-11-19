@@ -44,10 +44,10 @@ semantics.
   never shrinks below 24px (WCAG 2.5.8)
 - `disabled: boolean = false` (reflected)
 - `startLabel?: string` (attribute `start-label`) — caller-owned `aria-label` override for the start
-  handle; absence resolves localized `rangeStart` (`"Range start"` in English), while every
-  supplied string — including `"Range start"` and `""` — remains literal
-- `endLabel?: string` (attribute `end-label`) — equivalent override for the end handle; absence
-  resolves localized `rangeEnd` (`"Range end"` in English)
+  handle. Omitted or whitespace-only labels use localized `rangeStart` (`"Range start"` in English).
+  An explicit `""` remains an opt-out.
+- `endLabel?: string` (attribute `end-label`) — equivalent override for the end handle, with
+  localized `rangeEnd` (`"Range end"` in English) as its fallback.
 - `valueFormatter?: TimeRangeValueFormatter` (attribute: false) — maps each finite, clamped
   `aria-valuenow` to optional human-readable `aria-valuetext`; called as
   `(value, handle: TimeRangeHandle)`, where `TimeRangeHandle = 'start' | 'end'`. The formatter may

@@ -59,7 +59,9 @@ after the write fulfills.
   padding/background box, for an action row that must sit visually outside the bubble's chrome.
   `ChatMessageActionsPosition` remains exported as the same union.
 - `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
-  included in `lr-message-retry` detail when the built-in retry control is activated
+  included in `lr-message-retry` detail and in the accessible name of the built-in retry control.
+  Override the `conversationActionWithTitle` string to localize how the retry label and message ID
+  are combined
 - `avatarPlacement: ChatMessageAvatarPlacement = 'top'` (`'top' | 'start' | 'end'`, attribute
   `avatar-placement`, reflected) — `'top'` keeps `[part="avatar"]` in the header row above the body;
   `'start'`/`'end'` move it into its own column of `[part="bubble"]` beside the body at the inline

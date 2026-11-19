@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-export-button`
+
+The `exportFailed` message names a failed download in the live region. Theme a format option with
+`--lr-export-button-menu-item-hover-bg`, `--lr-export-button-menu-item-hover-color`,
+`--lr-export-button-menu-item-active-bg` and `--lr-export-button-menu-item-active-color`. The trigger and options use `--lr-transition-interactive`.
 
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
 immediately) or multi-format (click opens a small menu).

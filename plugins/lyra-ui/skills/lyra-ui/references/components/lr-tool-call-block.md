@@ -16,6 +16,8 @@
 
 ## `lr-tool-call-block`
 
+Event details include `invocationId` alongside `callId` for correlation.
+
 One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware
 verb (`Used web_search`, `Failed to use web_search`, …) beside a status glyph and an optional
 duration; activating it expands the block in place to show the call's arguments, then its error,

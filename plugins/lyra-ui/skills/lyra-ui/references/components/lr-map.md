@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 92 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 92 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-map`
+
+The map's popups and overlay panels size against the available viewport space through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`, set by the shared positioner.
 
 A MapLibre-compatible wrapper using the optional `@aceshooting/lyra-map` modular engine by default,
 with a declarative legend, a single choropleth GeoJSON fill layer, markers,
@@ -22,6 +24,26 @@ and additive `dataLayers` — plain GeoJSON, natively clustered points, or a hea
 plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
+
+The base reports the engine's loading state through `aria-busy`. An application can set
+`aria-busy` on the host independently. Removing that attribute resumes the loading-state mirror.
+The cancel button emits cancelable `lr-map-pick-cancel-request` and, after turning off pick mode,
+`lr-map-pick-cancel`. Both carry frozen `{ source: 'control' }`. Assigning `pickMode` stays silent.
+Globe and terrain controls emit cancelable `lr-map-projection-change-request` and
+`lr-map-terrain-change-request` with the same details as their respective change events.
+Vetoing or assigning the corresponding property during a request suppresses the default change.
+Read the settled `center` and `zoom` after an initial URL restoration or a limit clamp. Those
+initialization and constraint writes are silent.
+
+The slot anchor emits cancelable `lr-map-anchor-close-request` with frozen `{ reason }` for its close
+button, Escape, or `closeAnchor()`. A veto preserves placement and focus. The existing
+`lr-map-anchor-close` reports an accepted dismissal.
+
+Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (default 0.2),
+`--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
+`--lr-map-drawing-preview-dash` (two positive lengths, default `2 2`).
+`--lr-map-drawing-vertex-hover-bg` and `--lr-map-drawing-vertex-active-bg` theme edit handles.
+Scene, pick and drawing buttons accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`.
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -334,7 +356,8 @@ images within an aggregate budget of 16,777,216 backing pixels and 8 MiB of enco
 sprite catalog fits. `sdf: true` registers a signed-distance-field image that `icon-color` and
 `icon-halo-color` recolor. Reassigning `images` adds, replaces and removes images in place, without
 removing or re-adding the layers that use them. These resources are restored after style
-replacement; keep IDs distinct from basemap and generated resources.
+replacement; keep IDs distinct from basemap and generated resources. A remote URL source that
+does not deliver its headers and body within the image decode timeout fails with `fetch`.
 
 `imageProvider?: LyraMapImageProvider` (attribute: false) supplies images on demand:
 `(id) => LyraMapImage | null | undefined` (or a promise of one), called through the engine's
@@ -425,7 +448,8 @@ and `render`. Image descriptors use `url` and canvas descriptors retain an `HTML
 both require four `coordinates` ordered top-left, top-right, bottom-right, bottom-left. External
 layers accept `before`, `minZoom`, `maxZoom`, `opacity`, and `category`. GeoJSON and vector labels
 use `label: LyraMapLabelOptions` with exactly one `field` or `expression`; text needs a style with
-a glyph provider. Image/canvas interaction tests the full four-corner footprint, including
+a glyph provider. A `haloWidth` above 0 without a `haloColor` draws the halo in
+`--lr-color-surface`. Image/canvas interaction tests the full four-corner footprint, including
 transparent pixels, and reports `sourceId` without inventing feature identity or `sourceLayer`.
 
 For a retained canvas, change `redrawRevision` (default `0`, a nonnegative safe integer) in a
@@ -486,7 +510,8 @@ at most once per animation frame whatever lies under it, for tooltips and coordi
 `lr-map-feature-leave`, `lr-map-contextmenu` and `lr-map-pick` add `feature`, the hit as a detached,
 deeply frozen GeoJSON `Feature` (`LyraMapFeature`) with its `[longitude, latitude]` geometry. That
 geometry is the rendered one, so a large feature may be clipped to the tiles around the pointer, and
-`geometry` is `null` above 100,000 coordinate values.
+`geometry` is `null` above 100,000 coordinate values. Disconnecting the map clears its hover state without emitting
+`lr-map-feature-leave` or `lr-map-pointer-leave`. Clear any tooltip or highlight when removing the map.
 
 **Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. The
 controls render as soon as a mode is armed; the session starts once the drawing runtime has loaded
@@ -565,7 +590,9 @@ when sharing an export. DOM markers, popups and slotted overlays are excluded. E
 current-frame readiness; handle rejection as `LyraMapImageExportError` with a sanitized `code`.
 `lr-map-export-error` carries `LyraMapImageExportErrorDetail`, never raw renderer errors. The first
 call loads the export runtime; options are still admitted when the call is made, and a runtime that
-cannot load rejects with `capture-failed`.
+cannot load rejects with `capture-failed`. The credit strip is sized in CSS pixels of the map, so it
+stays the same size on a high-density display, wraps at spaces (a single word wider than the strip is
+split), and is drawn right-to-left, aligned to the right edge, inside an RTL map.
 
 **Properties:**
 
@@ -1105,7 +1132,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   starts only on user activation. Attribution is enabled by default; set `attribution: false` to
   disable it. Attribution options accept `position`, `compact`, `initialExpanded`, and `customAttribution` as a string,
   `LyraMapAttributionLink { readonly label: string; readonly url: string }`, or a readonly array of
-  either. Labels are escaped text; links open in a new tab with `rel="noopener noreferrer"`.
+  either. Labels are escaped text (a blank label shows the link's host); links open in a new tab with `rel="noopener noreferrer"`.
   Link URLs must be absolute HTTP(S), no longer than 2,048 characters, with no credentials or
   control characters. At most 32 credits and 16 KiB of label/URL text are accepted, with each label
   limited to 4,096 characters. Admission snapshots own data properties without invoking accessors.
@@ -1315,7 +1342,8 @@ calling the same methods through `map`, which the element neither knows about no
 - Every option is optional and an unusable one is ignored: `center` must be a finite
   `[longitude, latitude]` (clamped into range), `zoom` is clamped into the zoom limits
   (`minZoom`/`maxZoom`, `[0, 22]` by default), `pitch` into
-  `[0, 85]`, and a negative or non-finite `duration` means the engine's default. With nothing
+  `[0, 85]`, and a negative or non-finite `duration` means the engine's default (a longer one is
+  capped at 60000 ms). With nothing
   usable the call returns `false` (and warns in development) without moving anything.
 - Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
   applied without animation right after construction, unless `center` or `zoom` has been given a
@@ -1404,7 +1432,9 @@ disclosure, not a *category's* visibility, so it deliberately does not reuse
 `lr-map-legend-toggle-request`. `preventDefault()` is the same genuine veto: `legendOpen` is not
 written, the rendered rows and the disclosure's `aria-expanded` do not change, so a host can own the
 open state and assign its own value from `event.detail.open`. A programmatic `legendOpen` assignment
-reconciles without emitting it, so a controlled host cannot loop.
+reconciles without emitting it, so a controlled host cannot loop. For either legend request, assigning
+the controlled property in a listener takes precedence, even if the value stays the same. Removing
+and reinserting the map during the request also cancels the pending change.
 Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
@@ -1468,8 +1498,7 @@ Failures: `lr-map-geolocate-error` (frozen `LyraMapGeolocateErrorDetail { code }
 expose no coordinates or native messages; `lr-map-export-error` (frozen
 `LyraMapImageExportErrorDetail { code }`) reports a sanitized `exportImage()` failure.
 Attribution: `lr-map-attribution-toggle` (`LyraMapAttributionToggleDetail { expanded }`) after the owned
-attribution control's credits are shown or hidden. None of these events is cancelable; all bubble and
-are composed.
+attribution control's credits are shown or hidden. These notifications bubble and are composed.
 Scene: `lr-map-projection-change` (frozen `LyraMapProjectionChangeDetail { projection, source:
 'control' }`) and `lr-map-terrain-change` (frozen `LyraMapTerrainChangeDetail { terrain, source:
 'control' }`) follow a component-owned globe or terrain control after the property is assigned;
@@ -1552,6 +1581,11 @@ Hiding that label retains the button's localized accessible name. Pick mode rend
 `drawing-summary` with `drawingMeasurements`), vertex editing renders `drawing-handles` containing
 one `drawing-vertex` per editable vertex, and `drawingMeasurements` renders `drawing-measurements`
 holding the `drawing-measurement` labels.
+Configuration problems (hash, control, export, data-layer, feature-state and drawing messages) render as stacked
+`configuration-error` banners above the map. Pick and drawing action bars reserve space for the legend,
+scene panel and native corner controls. When a focused action disappears, focus moves to a surviving
+action, the map canvas or the initialization button. Disabling the map also disables marker activation
+and legend toggles.
 The compact attribution summary has a decorative, current-color information glyph and retains
 MapLibre's accessible name, keyboard/touch disclosure behavior and attribution links. To make
 only this control compact, scope the shared target-size token to its public wrapper:
@@ -1855,7 +1889,9 @@ occurs in the browser.
 `<lr-map>` styles the generated canvas, marker, popup, and control DOM inside its shadow root;
 a page-level map stylesheet is neither required nor able to reach those nodes. The explicit
 `engine="maplibre"` choice uses the separate optional `maplibre-gl` `>=5 <7` peer. Canonical v6 needs
-its own bundler-specific module-worker URL; v5's standard build includes its worker.
+its own bundler-specific module-worker URL; v5's standard build includes its worker. A rejected engine
+import (a network or chunk failure) is retried by the next map that connects; an installed engine
+missing a capability the map needs is not.
 
 With the default companion configured:
 

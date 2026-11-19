@@ -16,6 +16,10 @@
 
 ## `lr-stepper`
 
+Read `omittedSteps` after assigning `steps` for the number of input positions beyond the 256-position limit.
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
+
 Ordered multi-step wizard/form navigation: an index/label per step, independent
 `pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fully
@@ -39,7 +43,11 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   returned array/records never alias caller-owned objects. Duplicate step IDs are supported as
   ordered occurrences because selection detail always includes `index`; keyed rendering and focus
   restoration correlate `{ stepId, index }` so a refresh retains the focused duplicate occurrence.
-  Empty (the default) renders nothing.
+  Empty (the default) renders nothing. Each step also carries a visually hidden, localized state
+  text (`Completed`, `Error`, `Not started`, plus `Locked` for an interactive `disabled` step), so
+  progress is never conveyed by colour or an `aria-hidden` glyph alone; the current step stays
+  announced through `aria-current="step"`. The keys are `stepperStateCompleted`, `stepperStateError`,
+  `stepperStatePending` and `stepperStateLocked`. A held Enter/Space activates once.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,

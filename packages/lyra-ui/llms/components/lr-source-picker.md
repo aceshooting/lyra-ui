@@ -71,8 +71,8 @@ set), `select-all` (omitted while `without-select-all` is set), `select-all-cont
 owner), `summary` ("{selected} of {total} selected"), `tree`
 (`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
-`aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
-surrounding treeitem owns keyboard expansion),
+`aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse chevron, rotated when expanded and
+mirrored under RTL; the surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state box: a check when selected, a dash when mixed), `icon` (the `lr-file-icon` type
 badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMatches` when a filter
 empties the tree), `error` (a nonempty raw

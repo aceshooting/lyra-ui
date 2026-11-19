@@ -125,6 +125,10 @@ dropdown owns those root-level behaviors.
 
 ### `lr-menu-item`
 
+Assigned `details` and `suffix` elements describe the item. The default slot supplies its name.
+
+The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `submenuOpen` for the current state.
+
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
 `menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
@@ -183,15 +187,15 @@ browser falls back to the row's own content; an `aria-label` or `aria-labelledby
 including an explicitly empty value, still wins.
 
 A checkbox activation first emits cancelable `lr-menu-item-change-request` with the proposed
-`detail: { value, checked }`. Preventing that event retains the current checked state; the owning
-menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
-activation opens its submenu and emits neither checkbox-change nor selection.
+`detail: { value, checked }`. A listener can prevent the event or assign `checked` during dispatch,
+including assigning its current value. The owning menu's `lr-select` still follows. Activating a
+submenu parent opens its submenu and emits neither checkbox-change nor selection.
 
 A `type="radio"` item works the same way, with exclusive-choice semantics layered on top:
 activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change-request`, no
 state change, matching native `<input type="radio">` — but still falls through to the owning menu's
 usual selection. Activating an unchecked radio fires `lr-menu-item-change-request` with
-`checked: true`; once not prevented, this item becomes `checked` and every other `type="radio"`
+`checked: true`. When the proposal commits, this item becomes `checked` and every other `type="radio"`
 item the same owning `<lr-menu>` owns directly whose `group` matches is unchecked directly
 (without an `lr-menu-item-change-request` of its own).
 

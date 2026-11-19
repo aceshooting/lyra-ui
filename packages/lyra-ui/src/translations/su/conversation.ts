@@ -38,8 +38,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Gagal ngirim',
   chatFailedAnnounce: 'Talatah gagal dikirim.',
   chatCompleteAnnounce: 'Talatah réngsé.',
-  expandCode: 'Kembangkeun kode',
-  collapseCode: 'Ciutkeun kode',
   copyCode: 'Salin kode',
   copiedToClipboard: 'Disalin kana clipboard',
   codeRegion: 'Kode',

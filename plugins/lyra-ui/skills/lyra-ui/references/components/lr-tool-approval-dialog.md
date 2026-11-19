@@ -9,12 +9,20 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 24 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-tool-approval-dialog`
+
+Escape and backdrop dismissal emit cancelable `lr-request-close` with `{ source }`. Prevent it to keep the current proposal open.
+
+The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to control its place in the outline.
+
+`disabled` blocks both decision buttons and argument editing.
+
+The panel accepts `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius`, and `--lr-overlay-shadow-modal`.
 
 Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
 pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
@@ -209,3 +217,7 @@ shared composed-tree focus traversal used by the other modal families.
   itself.
 
 ---
+
+**Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
+
+**Shared tokens:** the panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.

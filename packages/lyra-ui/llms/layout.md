@@ -1,4 +1,3 @@
-
 ## `lr-multi-split`
 
 The floating drawer enters the browser top layer within the split's allocation. An intrinsically
@@ -1080,8 +1079,6 @@ including `lr-table`, `lr-virtual-list`, `lr-code-block`, and `lr-code-editor`.
 
 Screen-reader users can activate the named close button for each closable tab after the tablist, including for an inactive tab. Keyboard users can press Delete on the focused tab.
 
-The `lr-tab` styling hooks include `--lr-tab-close-hover-bg`, `--lr-tab-close-active-bg`.
-
 A descriptor’s `aria-labelledby` or `aria-label` names its rendered tab. The default slot supplies the fallback name.
 
 The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
@@ -1547,6 +1544,8 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 ## `lr-tab`
 
 One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
+
+The close button of a closable tab is themed with `--lr-tab-close-hover-bg` and `--lr-tab-close-active-bg`.
 
 A **declarative descriptor, not the interactive control**: the group renders the real `role="tab"`
 button and projects this element's content into it, so the whole ARIA and roving-tabindex contract
@@ -3064,6 +3063,8 @@ acts only on desktop; it cannot open the page drawer. Give the rail a distinct `
 page and rail navigation landmarks nest. This recipe uses the page's default start-side placement.
 
 ### `lr-app-rail-item`
+
+The flyout panel paints from the shared overlay-surface family: `--lr-overlay-surface` (fill), `--lr-overlay-border` (edge) and `--lr-overlay-radius` (corner radius).
 
 For localized rail controls, use `navigation` for the main and collapse toggles, `appRailPin` for the pin,
 `appRailItemToggle` for an item, and `appRailGroupToggle` for a group without a heading. Each name

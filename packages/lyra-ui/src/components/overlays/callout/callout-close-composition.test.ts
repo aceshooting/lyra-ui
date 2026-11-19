@@ -115,7 +115,7 @@ describe('lr-callout: composed close lr-icon-button', () => {
 });
 
 it('keeps a danger callout close hover independent of the brand fill', async () => {
-  const el = await fixture<LyraCallout>(html`<lr-callout closable variant="danger" appearance="accent"
+  const el = await fixture<LyraCallout>(html`<lr-callout data-lr-theme-scope closable variant="danger" appearance="accent"
     style="--lr-color-brand-quiet:rgb(1, 222, 3);--lr-transition-fast:0ms">Message</lr-callout>`);
   const control = nativeControl(el);
   try {

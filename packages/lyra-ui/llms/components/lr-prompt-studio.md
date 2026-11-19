@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -76,7 +76,12 @@ studio emits a `blur` and then a `focus`.
 
 **Headings and malformed rows:** `heading-level` defaults to `none`; `heading` is used verbatim including `''` (omission localizes “Prompt studio”), and the Variables and Preview titles sit one level below `heading-level` (no heading semantics under `none`). A `null` variable row, or one without a string `name`/`value`, is skipped instead of blanking the studio.
 
-**CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
+Workspace inputs follow the shared collection ceiling of 10,000 entries per array and 50,000
+values per assignment. When messages, variables and versions total more than 500 admitted rows,
+`size-notice` shows a localized performance advisory. Every admitted row remains available, and
+save and run events still carry the workspace in full.
+
+**CSS parts:** `base`, `toolbar`, `editor`, `size-notice`, `messages`, `message`, `message-role`,
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
 `add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
 

@@ -78,7 +78,8 @@ function isLocalizeIdentifierCallee(callee) {
  * non-literal shape this repo uses for that position: a ternary of literals, e.g.
  * `this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel')` (json-viewer.class.ts).
  */
-function collectKeyLiterals(node, sink) {
+function collectKeyLiterals(expression, sink) {
+  const node = unwrapExpression(expression);
   const value = literalString(node);
   if (value !== undefined) {
     sink.add(value);

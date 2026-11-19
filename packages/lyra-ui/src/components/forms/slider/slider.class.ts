@@ -206,9 +206,8 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @method setCustomValidity - Sets or clears a caller-supplied validation message.
  * @cssprop [--lr-slider-gap=var(--lr-space-s)] - Gap between the track row, value, label,
  * references, and hint as they wrap.
- * @cssprop [--lr-slider-track-length=var(--lr-size-10rem)] - Length of the track in
- *   `orientation="vertical"`; the horizontal track fills its container instead. Declared as an
- *   inline `var()` fallback (never on `:host`), so a consumer override at any ancestor wins.
+ * @cssprop [--lr-slider-track-length=var(--lr-size-10rem)] - Block size of the vertical track
+ *   row including its endpoint space. A horizontal track row fills its inline allocation.
  * @cssprop [--lr-slider-row-size=calc(var(--lr-form-control-height) * 0.6)] - Cross-axis extent of
  * the control's interactive row: its block size when horizontal, its inline size when vertical.
  * Scales off the shared form-control ladder, so a size tier moves it without a per-tier rule.
@@ -1618,23 +1617,25 @@ export class LyraSlider extends LyraSliderBase {
         aria-labelledby=${this.range && labelledBy ? labelledBy : nothing}
         @pointerdown=${this.onBasePointerDown}
       >
-        <div part="track"></div>
-        <div part="indicator" style=${indicatorStyle}></div>
-        ${markers.length > 0
-          ? html`<div part="markers" aria-hidden="true">
-              ${markers.map(
-                (percent) => html`<span part="marker" style=${this.offsetStyle(percent)}></span>`,
-              )}
-            </div>`
-          : nothing}
-        ${this.range
-          ? html`${this.renderHandle('min', describedBy, undefined, invalid)}${this.renderHandle(
-              'max',
-              describedBy,
-              undefined,
-              invalid,
-            )}`
-          : this.renderHandle('value', describedBy, labelledBy, invalid)}
+        <div class="track-axis">
+          <div part="track"></div>
+          <div part="indicator" style=${indicatorStyle}></div>
+          ${markers.length > 0
+            ? html`<div part="markers" aria-hidden="true">
+                ${markers.map(
+                  (percent) => html`<span part="marker" style=${this.offsetStyle(percent)}></span>`,
+                )}
+              </div>`
+            : nothing}
+          ${this.range
+            ? html`${this.renderHandle('min', describedBy, undefined, invalid)}${this.renderHandle(
+                'max',
+                describedBy,
+                undefined,
+                invalid,
+              )}`
+            : this.renderHandle('value', describedBy, labelledBy, invalid)}
+        </div>
       </div>
       ${labelValue ? nothing : value}
       ${renderFormControlHintError({

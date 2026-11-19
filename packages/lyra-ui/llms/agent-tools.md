@@ -1,4 +1,3 @@
-
 ## Breaking changes, fixes, and renames in 9.0.0
 
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
@@ -507,6 +506,8 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 
 ---
 
+**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+
 ## `lr-tool-select-dialog`
 
 The polite announcement after search reports the total number of matches, including matches outside the rendered page.
@@ -700,6 +701,10 @@ checkboxes for editing.
   toggle never removes a shown row.
 
 ---
+
+**Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
+
+**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 ## `lr-thinking-panel`
 
@@ -1184,6 +1189,10 @@ shared composed-tree focus traversal used by the other modal families.
   itself.
 
 ---
+
+**Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
+
+**Shared tokens:** the panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 ## `lr-tool-param-form`
 
@@ -2044,7 +2053,7 @@ of its own. The announcement itself goes to the library's shared **light-DOM** p
 appended to the consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live
 region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright).
 Inspect the shared region, not `::part(announcer)`, when reading an announcement; the part remains
-the right hook for styling and for reading back what the terminal last announced.
+the right hook for styling and for reading back what the terminal last announced. Also `limit` (the localized notice shown once input or a line exceeded the size limits and output was omitted).
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
@@ -2911,7 +2920,7 @@ carries `data-kind`).
 
 After mount, each `phase` transition is appended to the shared polite light-DOM announcement sink.
 The phase already shown on initial mount or reconnect establishes a silent baseline, including a
-phase write queued while detached.
+phase write queued while detached. Also `limit` (the localized notice shown once the action-marker window omits older entries).
 
 **Themeable custom properties:** `--lr-browser-frame-aspect-ratio` (default `16 / 9`) — the
 viewport's aspect ratio.
@@ -3605,7 +3614,7 @@ failure is announced, and expanding an example again retries. The render-limit n
 `example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
 `live-region`, `empty`, `limit` (localized notice shown when `examples` exceeds the 500-row render
-ceiling).
+ceiling). Also `load-error` (the localized notice in an expanded example whose detail views failed to load).
 
 ## `lr-policy-summary`
 
@@ -3766,7 +3775,7 @@ group status.
 and rendered-window notices), `group` (the grouped disclosure), and `group-summary` (its glyph and
 summary content, with the aggregate status in `data-status`).
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
-repeated bare "Details" label.
+repeated bare "Details" label. Also `load-error` (the localized fallback shown when a review or result view fails to load).
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the
@@ -3879,6 +3888,8 @@ state), so the selection is announced, not merely painted. Other request rows ex
 **Additional API surface:**
 
 - `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
+
+**Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
 ## `lr-mcp-app`
 
@@ -4549,6 +4560,7 @@ These named interfaces and helper signatures are available to typed integrations
   `EvalToolApprovalDetail extends ToolTimelineApprovalDetail {
     exampleId: string;
     // Inherited from ToolTimelineApprovalDetail.
+    waitUntil?: ApprovalWaitUntil;
     args?: unknown;
     sourceKey?: string;
     invocationId: string;
@@ -4774,11 +4786,13 @@ These named interfaces and helper signatures are available to typed integrations
     toolName: string;
     error: unknown;
     callId: string;
+    invocationId: string;
   }`
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
   `ToolCallBlockToggleDetail {
     expanded: boolean;
     callId: string;
+    invocationId: string;
   }`
 
 - **`components-agent-tools-tool-call-chip-tool-call-chip-contracts`** — Supporting data types and helpers for this component family.
@@ -4786,6 +4800,7 @@ These named interfaces and helper signatures are available to typed integrations
   `ToolChipSelectDetail {
     name: string;
     callId: string;
+    invocationId: string;
   }`
 
 - **`components-agent-tools-tool-result-view-registry-contracts`** — Supporting data types and helpers for this component family.
@@ -4843,6 +4858,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js`.
   `ToolTimelineApprovalDetail extends ToolApprovalEventDetail {
+    waitUntil?: ApprovalWaitUntil;
     args?: unknown;
     sourceKey?: string;
     // Inherited from ToolApprovalEventDetail.

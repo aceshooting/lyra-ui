@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 3 custom properties — see `lr-breadcrumb.md`
+- **Themeable via** 7 parts, 6 custom properties — see `lr-breadcrumb.md`
 - **Documented with** `lr-breadcrumb`: see [lr-breadcrumb.md](./lr-breadcrumb.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

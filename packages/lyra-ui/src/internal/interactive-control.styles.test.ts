@@ -21,7 +21,7 @@ describe('disclosureChevron', () => {
       expanded: '[aria-expanded="true"] > .g',
       collapsedRtl: '[dir="rtl"] [aria-expanded="false"] > .g',
     }).cssText;
-    const root = await fixture<HTMLDivElement>(html`<div style="--lr-transition-fast: 0s">
+    const root = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-transition-fast: 0s">
       <style>${css}</style>
       <button aria-expanded="true"><span class="g" id="open"></span></button>
       <button aria-expanded="false"><span class="g" id="closed"></span></button>

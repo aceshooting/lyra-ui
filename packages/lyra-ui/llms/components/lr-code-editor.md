@@ -35,17 +35,21 @@ adoption keep that relationship current.
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
 optional line-number gutter. No syntax highlighting: `language` is metadata only.
 
+Code and its caret measurements use left-to-right base direction. The surrounding frame and
+gutter placement follow the application direction.
+
 **Properties:**
 
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
   `gutter` part, which otherwise renders one row per `\n`-separated line.
-- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press (a selection spanning several lines indents each of its lines and stays selected; an insertion never exceeds `maxlength`) and the tab width
+- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
   shared by the native textarea and text measurement. Explicit property/attribute assignment wins
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
   on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
   empty the insert nor throw out of `String.repeat()`.
+  Tab indents the selected lines and preserves the selection within `maxlength`.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation

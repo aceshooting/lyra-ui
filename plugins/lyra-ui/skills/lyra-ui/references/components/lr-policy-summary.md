@@ -16,6 +16,8 @@
 
 ## `lr-policy-summary`
 
+A nonblank host `aria-label` names the decision list. Omit it to use the localized `policySummaryLabel`.
+
 Read-only list of guardrail, permission, privacy, and tool-policy decisions with accessible
 allow, deny, or needs-review explanations.
 

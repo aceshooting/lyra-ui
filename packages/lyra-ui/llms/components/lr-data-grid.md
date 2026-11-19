@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 60 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 62 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -100,6 +100,8 @@ changing borrowed row content or callback-dependent external state in place.
   when a positive limit is reached.
 - `page: number = 0` (`page`, reflected) — zero-based.
 - `pageCount: number` (read-only, JS-only).
+- `paginationFormat: 'standard' | 'compact' = 'standard'` (`pagination-format`) selects the numbered pager or page field. Set `paginationWithSummary` (`pagination-with-summary`) to show the item range in `page-summary`. Grouped client pages count top-level groups.
+- `unknownTotal: boolean = false` (`unknown-total`) enables an open-ended server pager. Set `hasNext` (`has-next`, defaults to true) to false at the final page.
 - `pageSize: number = 20` (`page-size`).
 - `pageSizeOptions: readonly number[] = [10, 20, 50, 100]` (JS-only). A finite current `pageSize`
   absent from this list is still inserted into the selector, keeping visible and IDL state aligned.
@@ -238,11 +240,13 @@ writes); `lr-row-collapse`, `lr-row-expand`, `lr-group-collapse`, and `lr-group-
 row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelable
 `lr-sort-request` (readonly `{ sort }`) precedes `lr-sort-change`; veto leaves sort unchanged
 and suppresses `lr-sort-change`.
-Grid detail is `{ sort }`; `<lr-table>` emits `lr-sort` with `{ phase, sortKey, sortDir }`.
+Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
+`lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
+`lr-before-page-change` proposes zero-based `{ page, pageSize }` for page navigation and page-size changes. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.
-All library events bubble and are composed. Cancelable events: `lr-cell-contextmenu`,
+All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-selection-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
 `lr-column-resize-request`, `lr-sort-request`, and `lr-retry-request`. Details and owned collections
 are frozen. Toolbar-search and column-filter inputs re-emit `focus`/`blur` once from the host as
 bubbling, composed native `FocusEvent`s, preserving `relatedTarget`.
@@ -260,6 +264,9 @@ when the menu is already open (rows changed while open are repaired by the menu)
 
 **Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
 including its retry button, while `error` is set).
+
+Grid search and column-filter inputs forward `spellcheck`, `autocapitalize`, and `autocorrect`. The default text search matches without case or accents and announces the filtered count. Selection and expansion inputs inspect at most 100,000 key entries per assignment.
+The composed pager inherits the `--lr-pagination-*` tokens, including `--lr-pagination-current-bg`, `--lr-pagination-hover-bg` and `--lr-pagination-active-bg`. The grid exports its page field as `page-input`.
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
 `drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
@@ -305,7 +312,7 @@ for styling and inspection. Check delivery on the shared light-DOM region in `<b
 
 Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
 localized loading text to that shared polite sink, including repeated loading cycles. The visible
-`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`.
+`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`. Also `page-summary` (the localized range for the current page) and `page-input` (the compact pager's page-jump input).
 
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
@@ -333,13 +340,12 @@ anchors, and `--lr-data-grid-cell-link-hover-color` (default
 focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
 default. Six independent interaction-background hooks preserve those state boundaries:
 `--lr-data-grid-control-hover-bg` and `--lr-data-grid-control-active-bg` theme
-search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-bg` themes
+search, toolbar and resize controls; `--lr-data-grid-page-size-active-bg` themes
 the page-size selector when pressed; `--lr-data-grid-row-active-bg` themes pressed data
 rows; and `--lr-data-grid-sortable-header-hover-bg` and
 `--lr-data-grid-sortable-header-active-bg` theme sortable header states. They default to
 live `color-mix()` values of the effective grid accent and transparent, using the corresponding
-`--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
-uses the hover mix), so an accent override remains coherent while each surface can still be
+`--lr-color-mix-hover` or `--lr-color-mix-active` token, so an accent override remains coherent while each surface can still be
 overridden independently.
 
 ```html
@@ -367,3 +373,5 @@ string; templates and Nodes fall back to the raw value. Server export/copy inclu
 rows because the browser does not possess unloaded pages.
 
 ---
+
+**Additional members:** `autoCorrect` (attribute `autocorrect`, default empty) forwards the native `autocorrect` attribute to the toolbar search and column-filter inputs (Safari/WebKit).

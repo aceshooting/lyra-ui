@@ -32,7 +32,8 @@ allocating every preceding part for each citation in a citation-heavy or growing
 
 Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code reads
 left-to-right inside a right-to-left document. `lr-message-parts` forwards no Markdown part, so that
-nested code direction cannot be overridden from outside with `::part()`.
+nested code direction cannot be overridden from outside with `::part()`. In plain mode each text
+and reasoning part uses its own first-strong text direction.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `withoutReasoning: boolean = false` (attribute

@@ -16,6 +16,8 @@
 
 ## `lr-known-date`
 
+Each field references the visible error before its hint. Slotted messages replace the corresponding attribute text.
+
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
 

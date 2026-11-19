@@ -30,7 +30,6 @@ import {
 } from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -228,17 +227,10 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     documentCompareLabel: LYRA_DEFAULT_documentCompareLabel,
     documentCompareNewVersion: LYRA_DEFAULT_documentCompareNewVersion,
     documentCompareNoVersion: LYRA_DEFAULT_documentCompareNoVersion,
     documentCompareOldVersion: LYRA_DEFAULT_documentCompareOldVersion,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -510,8 +502,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     this.diffEl?.clearSearch();
   }
 
-  private versionLabel(version: DocumentCompareVersion | undefined, fallbackKey: 'documentCompareOldVersion' | 'documentCompareNewVersion'): string {
-    return normalizeLabel(version?.name) ?? normalizeLabel(version?.version) ?? this.localize(fallbackKey);
+  private versionLabel(version: DocumentCompareVersion | undefined, isOld: boolean): string {
+    return normalizeLabel(version?.name) ?? normalizeLabel(version?.version) ?? this.localize(isOld ? 'documentCompareOldVersion' : 'documentCompareNewVersion');
   }
 
   private renderDiff(): TemplateResult {
@@ -548,8 +540,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   }
 
   private renderSideBySide(): TemplateResult {
-    const oldLabel = this.versionLabel(this.oldVersion, 'documentCompareOldVersion');
-    const newLabel = this.versionLabel(this.newVersion, 'documentCompareNewVersion');
+    const oldLabel = this.versionLabel(this.oldVersion, true);
+    const newLabel = this.versionLabel(this.newVersion, false);
     // Two regions with one name are indistinguishable, so identical version names fall back to
     // the localized old/new names.
     const distinct = oldLabel !== newLabel;

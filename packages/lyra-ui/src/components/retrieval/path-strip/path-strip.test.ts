@@ -694,7 +694,7 @@ describe('nested scroller keys and non-colour direction cue', () => {
 });
 
 it('paints the configured hover fill on its node', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-path-strip']>(html`<lr-path-strip .path=${path} style="--lr-path-strip-action-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-path-strip>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-path-strip']>(html`<lr-path-strip data-lr-theme-scope .path=${path} style="--lr-path-strip-action-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-path-strip>`);
   const button = el.shadowRoot!.querySelector('[part="node"]')!;
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');

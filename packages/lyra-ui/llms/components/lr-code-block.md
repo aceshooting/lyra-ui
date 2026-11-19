@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -111,6 +111,10 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
+The collapse control uses the stable `codeBlockToggle` string and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
+
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -164,6 +168,9 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
+style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
+`--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default

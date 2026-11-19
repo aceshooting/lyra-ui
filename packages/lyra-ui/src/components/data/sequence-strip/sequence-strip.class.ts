@@ -22,7 +22,7 @@ import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -219,9 +219,9 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     loading: LYRA_DEFAULT_loading,
     retry: LYRA_DEFAULT_retry,
     sequenceStripBucketLabel: LYRA_DEFAULT_sequenceStripBucketLabel,
-    sequenceStripCellKeyboardHelp: LYRA_DEFAULT_sequenceStripCellKeyboardHelp,
     sequenceStripBucketSummary: LYRA_DEFAULT_sequenceStripBucketSummary,
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
+    sequenceStripCellKeyboardHelp: LYRA_DEFAULT_sequenceStripCellKeyboardHelp,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
     sequenceStripSourceError: LYRA_DEFAULT_sequenceStripSourceError,
     sequenceStripSourceItemLabel: LYRA_DEFAULT_sequenceStripSourceItemLabel,

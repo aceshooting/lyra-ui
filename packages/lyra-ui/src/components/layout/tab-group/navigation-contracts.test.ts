@@ -334,7 +334,7 @@ for (const [name, markup, owner, selector, property] of [
   ['tab close', '<lr-tab closable>Files</lr-tab>', 'lr-tab', '[part~="close-button"]', 'background-color'],
 ] as const) {
   it(`paints the ${name} with its hover and press tokens`, async () => {
-    const root = await fixture<HTMLElement>(`<div style="--lr-transition-interactive:none; --lr-transition-fast:0ms;
+    const root = await fixture<HTMLElement>(`<div data-lr-theme-scope style="--lr-transition-interactive:none; --lr-transition-fast:0ms;
       --lr-menubar-item-hover-color:rgb(1, 2, 3); --lr-menubar-item-active-color:rgb(4, 5, 6);
       --lr-navigation-menu-toggle-hover-bg:rgb(1, 2, 3); --lr-navigation-menu-toggle-active-bg:rgb(4, 5, 6);
       --lr-tab-close-hover-bg:rgb(1, 2, 3); --lr-tab-close-active-bg:rgb(4, 5, 6)">${markup}</div>`);

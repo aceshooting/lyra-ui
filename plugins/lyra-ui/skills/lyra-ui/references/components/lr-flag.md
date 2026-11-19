@@ -181,9 +181,13 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   `<span part="error">` text (the `flagLoadError` message key, `"Flag unavailable"` by default).
   Each fresh failure appends that same localized message to the document's pre-mounted
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
-  retries remain separate additions. The failure also produces a one-time `console.warn`
-  once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances). A **separate** one-time `console.warn` covers the
+  retries remain separate additions. Importing a peer entry (`flag-peer.js` and its bulk variants)
+  asks the library to load `@aceshooting/lyra-flags`, so its outcome is reported once per entry in
+  every build with a cause-specific `console.warn`: a package that cannot be resolved is told to
+  install it; a package that loads without the needed `flagUrl`/`createFlagUrlResolver` is a version
+  mismatch to upgrade (both are cached for the page); an import that rejects for another reason (a
+  network or chunk failure) is reported as a load failure and retried by the next flag resolution,
+  with flags failing closed until a retry succeeds. A **separate** one-time, development-only `console.warn` covers the
   commonest setup mistake — `country`/`language` set while no resolver was ever registered, i.e.
   `flag-peer.js` was not imported. It names the offending code and that import path, because the
   visible `[part="error"]` state alone is indistinguishable from missing flag data. It is armed

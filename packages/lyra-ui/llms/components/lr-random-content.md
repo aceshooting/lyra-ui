@@ -9,12 +9,18 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-random-content`
+
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
+Both built-in actions read `--lr-random-content-action-hover-bg`, `--lr-random-content-action-hover-color`,
+`--lr-random-content-action-active-bg` and `--lr-random-content-action-active-color`.
+Set `autoplay-interval` to control the time between selections.
 
 Shows a chosen subset of its slotted children and hides the rest — A/B copy testing, testimonial
 rotation, varying marketing copy per render or interval — with no custom JS beyond slotting the

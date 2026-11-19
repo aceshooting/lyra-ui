@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -101,3 +101,5 @@ tiers still paint an exactly avatar-sized disc instead of an oversized circle.
   visual.
 - avatars are non-interactive, so there is no roving tabindex / arrow-key handling; the badge is the
   only tab stop.
+
+`--lr-avatar-group-badge-hover-ring-color` sets the overflow badge ring color on hover and press.

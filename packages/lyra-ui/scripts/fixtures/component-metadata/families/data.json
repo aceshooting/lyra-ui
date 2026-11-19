@@ -39,5 +39,19 @@
       "lr-tree-item"
     ]
   },
-  "deprecations": []
+  "deprecations": [
+    {
+      "tag": "lr-calendar",
+      "kind": "event",
+      "name": "lr-view-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-month-change",
+        "usage": "@lr-month-change"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration."
+    }
+  ]
 }

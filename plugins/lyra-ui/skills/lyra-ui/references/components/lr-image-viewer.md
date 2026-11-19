@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
-- **Themeable via** 24 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -59,9 +59,9 @@ box always wins over another region's enlarged area, and where only enlarged are
 later highlight in document order wins. Keyboard navigation between highlights is unaffected.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
-`--lr-icon-button-bg`, and `--lr-icon-button-color`, plus the hover and pressed variants
-`--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-bg-hover`,
-`--lr-icon-button-bg-active`, `--lr-icon-button-color-hover`, and `--lr-icon-button-color-active`.
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
+`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
@@ -172,3 +172,5 @@ on any ancestor_:
 `::part()` — which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
 element that read them. Unset, each falls back to the token its rule used before.
+
+`--lr-image-viewer-control-hover-bg` sets the toolbar hover fill and supplies the base for its pressed fill.

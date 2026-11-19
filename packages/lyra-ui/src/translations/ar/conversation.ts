@@ -43,8 +43,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'فشل الإرسال',
   chatFailedAnnounce: 'تعذّر إرسال الرسالة.',
   chatCompleteAnnounce: 'اكتملت الرسالة.',
-  expandCode: 'توسيع الشيفرة',
-  collapseCode: 'طي الشيفرة',
   copyCode: 'نسخ الشيفرة',
   copiedToClipboard: 'تم النسخ إلى الحافظة',
   codeRegion: 'شيفرة برمجية',

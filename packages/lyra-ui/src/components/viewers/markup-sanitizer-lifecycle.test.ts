@@ -14,6 +14,16 @@ function source(kind: MarkupKind, label: string): string {
     : `<svg xmlns="http://www.w3.org/2000/svg"><text onclick="return false">${label}</text></svg>`;
 }
 
+/** Counts reads apart from cancellation; `bodyUsed` is also true for a released, unread body. */
+function trackedResponse(text: string): { response: Response; state: { pulls: number; cancelled: boolean } } {
+  const state = { pulls: 0, cancelled: false };
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) { state.pulls++; controller.enqueue(new TextEncoder().encode(text)); controller.close(); },
+    cancel() { state.cancelled = true; },
+  }, { highWaterMark: 0 });
+  return { response: new Response(body), state };
+}
+
 for (const kind of ['html', 'svg'] as const) {
   const template = kind === 'html' ? html`<lr-html-viewer></lr-html-viewer>` : html`<lr-svg-viewer></lr-svg-viewer>`;
   const contentSelector = `[part="${kind}"]`;
@@ -24,7 +34,7 @@ for (const kind of ['html', 'svg'] as const) {
       const fetch = window.fetch;
       const failedUrl = `https://example.test/unsafe.${kind}`;
       const currentUrl = `https://example.test/current.${kind}`;
-      const blocked = new Response(source(kind, 'Must stay hidden'));
+      const blocked = trackedResponse(source(kind, 'Must stay hidden'));
       const message = 'Document sanitization is unavailable.';
       const errors: unknown[] = [];
       viewer.addEventListener('lr-render-error', event => errors.push(event));
@@ -33,7 +43,7 @@ for (const kind of ['html', 'svg'] as const) {
       __setDompurifyImporterForTesting(() => failure === 'rejection'
         ? Promise.reject(new Error('Private sanitizer import diagnostic')) : Promise.resolve({}));
       window.fetch = async (input, init) => {
-        if (String(input) === failedUrl) return blocked;
+        if (String(input) === failedUrl) return blocked.response;
         if (String(input) === currentUrl) return new Response(source(kind, 'Current document'));
         return fetch.call(window, input, init);
       };
@@ -47,7 +57,8 @@ for (const kind of ['html', 'svg'] as const) {
         expect(viewer.shadowRoot!.querySelectorAll(contentSelector).length).to.equal(0);
         expect(viewer.shadowRoot!.textContent).not.to.include('Must stay hidden');
         expect(viewer.shadowRoot!.textContent).not.to.include('Private sanitizer import diagnostic');
-        expect(blocked.bodyUsed).to.equal(false);
+        expect(blocked.state.pulls).to.equal(0);
+        await waitUntil(() => blocked.state.cancelled, 'the unread response body was not released');
 
         __setDompurifyImporterForTesting(undefined);
         viewer.src = currentUrl;
@@ -55,7 +66,7 @@ for (const kind of ['html', 'svg'] as const) {
         expect(viewer.shadowRoot!.querySelectorAll('[onclick]').length).to.equal(0);
         expect(viewer.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
         expect(errors.length).to.equal(1);
-        expect(blocked.bodyUsed).to.equal(false);
+        expect(blocked.state.pulls).to.equal(0);
       } finally {
         viewer.remove();
         window.fetch = fetch;
@@ -71,14 +82,14 @@ for (const kind of ['html', 'svg'] as const) {
       const fetch = window.fetch;
       const oldUrl = `https://example.test/obsolete.${kind}`;
       const currentUrl = `https://example.test/recovered.${kind}`;
-      const obsolete = new Response(source(kind, 'Obsolete document'));
+      const obsolete = trackedResponse(source(kind, 'Obsolete document'));
       let rejectImport: ((error: Error) => void) | undefined;
       let errors = 0;
       viewer.addEventListener('lr-render-error', () => { errors++; });
       expectDevWarning('lyra-dompurify-unavailable');
       __setDompurifyImporterForTesting(() => new Promise((_resolve, reject) => { rejectImport = reject; }));
       window.fetch = async (input, init) => {
-        if (String(input) === oldUrl) return obsolete;
+        if (String(input) === oldUrl) return obsolete.response;
         if (String(input) === currentUrl) return new Response(source(kind, 'Current document'));
         return fetch.call(window, input, init);
       };
@@ -86,7 +97,7 @@ for (const kind of ['html', 'svg'] as const) {
       try {
         viewer.src = oldUrl;
         await waitUntil(() => rejectImport !== undefined);
-        expect(obsolete.bodyUsed).to.equal(false);
+        expect(obsolete.state).to.deep.equal({ pulls: 0, cancelled: false });
         __setDompurifyImporterForTesting(undefined);
         if (retirement === 'disconnect') viewer.remove();
         else {
@@ -97,7 +108,8 @@ for (const kind of ['html', 'svg'] as const) {
         await twoFrames();
         await viewer.updateComplete;
         expect(errors).to.equal(0);
-        expect(obsolete.bodyUsed).to.equal(false);
+        expect(obsolete.state.pulls).to.equal(0);
+        await waitUntil(() => obsolete.state.cancelled, 'the retired response body was not released');
         expect(viewer.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
         expect(content()).not.to.include('Obsolete document');
         if (retirement === 'disconnect') {

@@ -23,6 +23,9 @@ several steps may be `running` at once. By default it is a status report; with `
 `reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
 Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
 
+In a reorderable array, one row is in the tab sequence. Up, Down, Home and End move focus
+through visible tasks and subtasks. Ctrl/Cmd with Up or Down requests a sibling reorder.
+
 **Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
 falling back to the array. Only `undefined` restores current legacy items.

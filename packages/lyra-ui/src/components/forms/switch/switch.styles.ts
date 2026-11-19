@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import {
   formControlSupportingText,
 } from '../../../internal/form-control.styles.js';
@@ -98,7 +98,7 @@ export const styles = css`
        undeclared border already computes to style 'none'/width '0px', so this fallback is
        byte-identical when unset. */
     border: var(--lr-switch-track-border, none);
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part~="track"][part~="checked"] {
     --_lr-switch-track-fill: var(

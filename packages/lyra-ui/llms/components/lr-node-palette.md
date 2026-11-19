@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-node-palette`
+
+The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-fill` to customize the hovered control background.
 
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
@@ -42,16 +44,15 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
   the raw property readback
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
-  reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
-  behaving exactly like a plain Arrow press
+  reordering of the catalog. With reordering off, plain arrows move focus and Ctrl/Cmd+Arrow stays available to the browser
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the listbox name. Authored host `aria-label` instead
   names the component as a whole (including explicit-empty/dynamic values) and is not cloned onto
   the listbox, which retains the distinct `label`/localized name
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
-click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item), `lr-reorder`
+click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, carrying the original item
+after placement when the palette is still connected and its `items` collection is still current), `lr-reorder`
 (`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur`
 (realm-correct native `FocusEvent`s relayed exactly once from the internal search field, preserving
 `relatedTarget` while bubbling and crossing the shadow boundary).

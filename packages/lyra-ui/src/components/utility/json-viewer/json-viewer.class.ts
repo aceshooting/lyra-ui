@@ -421,6 +421,10 @@ export interface LyraJsonViewerEventMap {
  * @cssprop [--lr-json-viewer-boolean-color=var(--lr-color-warning)] - Boolean value color.
  * @cssprop [--lr-json-viewer-null-color=var(--lr-color-text-quiet)] - Null, undefined, and
  *   circular-reference marker color.
+ * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
  * @status stable
  * @since 4.0.0
  */
@@ -766,7 +770,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Keeps the capped-height tree body keyboard-scrollable while it overflows. */
   private syncScrollRegion(): void {
     const body = this.renderRoot.querySelector<HTMLElement>('[part="base"]') ?? undefined;
-    if (!body) {
+    if (!body || !this.isConnected) {
       this.releaseScrollRegion();
       return;
     }

@@ -83,6 +83,12 @@ type MapAnchorDetachment = 'map' | 'slot' | 'nested';
  * @csspart close-button - The localized icon close button of a `closable` anchor.
  * @csspart close-icon - The wrapper of the close glyph.
  * @cssstate placed - Matches while the panel is placed and shown.
+ * @cssprop --lr-map-popup-close-button-active-bg - Pressed background of `close-button`; defaults to a press-mixed `--lr-color-brand-quiet`.
+ * @cssprop --lr-map-popup-close-button-active-color - Pressed foreground of `close-button`; defaults to `--lr-color-brand`.
+ * @cssprop --lr-map-popup-close-button-hover-bg - Hover background of `close-button`; defaults to `--lr-color-brand-quiet`.
+ * @cssprop --lr-map-popup-close-button-hover-color - Hover foreground of `close-button`; defaults to `--lr-color-brand`.
+ * @cssprop --lr-positioner-available-block-size - Available block size the positioner publishes on the floating popup; caps the popup height.
+ * @cssprop --lr-positioner-available-inline-size - Available inline size the positioner publishes on the floating popup; caps the popup width.
  * @status experimental
  * @since 30.1.0
  */

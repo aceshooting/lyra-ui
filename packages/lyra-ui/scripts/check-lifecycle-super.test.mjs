@@ -234,9 +234,14 @@ test('covers every ReactiveElement lifecycle hook with a callable superclass imp
 
 
 test('allows direct Lit Directive update replacements without invoking their render fallback', () => {
-  for (const [specifier, binding] of [['lit/directive.js', 'Directive'], ['lit-html/directive.js', 'BaseDirective']]) {
+  for (const [specifier, imported, binding] of [
+    ['lit/directive.js', 'Directive', 'Directive'],
+    ['lit-html/directive.js', 'Directive', 'BaseDirective'],
+    ['lit/async-directive.js', 'AsyncDirective', 'AsyncDirective'],
+    ['lit-html/async-directive.js', 'AsyncDirective', 'BaseAsyncDirective'],
+  ]) {
     const source = `
-      import { Directive as ${binding} } from '${specifier}';
+      import { ${imported} as ${binding} } from '${specifier}';
       class Blocks extends ${binding} {
         render(blocks) { return blocks.map(renderBlock); }
         override update(part, [blocks, revision, start]) {
@@ -253,6 +258,7 @@ test('allows direct Lit Directive update replacements without invoking their ren
 
 test('keeps update policy for unproven, type-only, shadowed, and intermediate directive bases', () => {
   const sources = [
+    `import { Directive } from 'lit/async-directive.js'; class Example extends Directive { override update() {} }`,
     `class Directive {} class Example extends Directive { override update() {} }`,
     `import { Directive } from './directive.js'; class Example extends Directive { override update() {} }`,
     `import type { Directive } from 'lit/directive.js'; class Example extends Directive { override update() {} }`,

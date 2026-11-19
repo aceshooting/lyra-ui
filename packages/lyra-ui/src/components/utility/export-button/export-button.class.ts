@@ -211,8 +211,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     exportButtonLabel: LYRA_DEFAULT_exportButtonLabel,
-    exportFormatMenuLabel: LYRA_DEFAULT_exportFormatMenuLabel,
     exportFailed: LYRA_DEFAULT_exportFailed,
+    exportFormatMenuLabel: LYRA_DEFAULT_exportFormatMenuLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

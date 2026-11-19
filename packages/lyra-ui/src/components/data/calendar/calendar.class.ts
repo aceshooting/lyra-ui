@@ -188,7 +188,7 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @customElement lr-calendar
  * @event lr-date-select - A calendar date was selected.
  * @event lr-event-select - An event was selected.
- * @event lr-view-change - The visible month changed. Use lr-month-change for calendar-specific notifications.
+ * @event lr-view-change - Deprecated alias for lr-month-change. The visible month changed; same `{ viewDate }` detail.
  * @event lr-month-change - The visible month changed. Detail: `{ viewDate: string }`.
  * @csspart limit - Input admission limit notice.
  * @csspart header - Calendar header.

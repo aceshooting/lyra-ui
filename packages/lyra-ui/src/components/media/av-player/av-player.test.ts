@@ -3054,7 +3054,7 @@ describe('active-state cssprop escape hatches', () => {
 
   it('--lr-av-player-rate-select-hover-bg paints the hovered rate select', async () => {
     const el = (await fixture(html`
-      <lr-av-player src=${MP4_SRC} style="--lr-transition-fast: 0ms linear; --lr-av-player-rate-select-hover-bg: rgb(4, 5, 6)"></lr-av-player>
+      <lr-av-player data-lr-theme-scope src=${MP4_SRC} style="--lr-transition-fast: 0ms linear; --lr-av-player-rate-select-hover-bg: rgb(4, 5, 6)"></lr-av-player>
     `)) as LyraAvPlayer;
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;

@@ -454,6 +454,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private syncScrollRegions(): void {
+    if (!this.isConnected) return;
     const live = new Set<Element>(this.renderRoot.querySelectorAll('[part="body"], pre.text'));
     const name = this.filename || this.localize('documentPreviewGenericFile');
     for (const el of live) {

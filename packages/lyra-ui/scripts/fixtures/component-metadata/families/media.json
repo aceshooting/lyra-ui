@@ -36,5 +36,32 @@
       "lr-sequence-playback"
     ]
   },
-  "deprecations": []
+  "deprecations": [
+    {
+      "tag": "lr-map-anchor",
+      "kind": "event",
+      "name": "lr-close",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-map-anchor-dismiss",
+        "usage": "@lr-map-anchor-dismiss"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The component-prefixed dismiss event carries the same frozen reason detail; the older name remains emitted during migration."
+    },
+    {
+      "tag": "lr-map-anchor",
+      "kind": "event",
+      "name": "lr-close-request",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-map-anchor-dismiss-request",
+        "usage": "@lr-map-anchor-dismiss-request"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration."
+    }
+  ]
 }

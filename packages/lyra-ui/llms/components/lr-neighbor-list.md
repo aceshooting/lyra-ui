@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-neighbor-list`
+
+Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-fill` to customize the hovered control background.
 
 One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
@@ -140,8 +142,7 @@ Source-mode parts: `source-status` (loading, failure, empty or missing-center fe
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
   element is the internal virtual-list's own row wrapper (the component renders only the row's
   content into it), so a `::part(row)` rule applies once, not twice.
-- Rows with blank neighbor ids and later rows repeating the same node id are omitted first-wins
-  before grouping, virtualization, rendering, or events.
+- Rows are identified by node id, relation and direction. Each distinct relationship appears once. Blank node ids are omitted.
 - A missing, blank, or nonstring `node.type` is omitted from that row's secondary metadata instead
   of being passed to locale formatting; the neighbor label and any valid degree remain visible.
 

@@ -104,7 +104,7 @@ one `::after` rule described under "The required-field marker" above, not a copy
 `--lr-form-control-required-content`, `--lr-form-control-required-color` and
 `--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`. It
 marks the **group**, not the individual checkboxes: an owned `<lr-checkbox>` has no label box of
-its own and paints nothing. With no group label text the legend is hidden and no glyph is painted.
+its own and paints nothing. With no group label text the legend is hidden and no glyph is painted. Also `form-control-help-text` (an alias for the `hint` container).
 
 **Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options

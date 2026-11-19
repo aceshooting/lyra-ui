@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,6 +27,9 @@ the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that
 left alone — appending a live entry never steals focus from an unrelated, still-present control.
 Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
+
+`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-pressed-bg`
+set the header's pointer feedback.
 
 `entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries
 through `activityFeedInputLimit`, with `count` and `total` placeholders. The existing follow and

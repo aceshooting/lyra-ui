@@ -364,8 +364,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
-    documentLibraryOmitted: LYRA_DEFAULT_documentLibraryOmitted,
     documentLibraryClearSelection: LYRA_DEFAULT_documentLibraryClearSelection,
     documentLibraryCursorEmptyBatch: LYRA_DEFAULT_documentLibraryCursorEmptyBatch,
     documentLibraryCursorEnd: LYRA_DEFAULT_documentLibraryCursorEnd,
@@ -382,6 +380,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     documentLibraryLabel: LYRA_DEFAULT_documentLibraryLabel,
     documentLibraryNameColumn: LYRA_DEFAULT_documentLibraryNameColumn,
     documentLibraryNoMatchesHeading: LYRA_DEFAULT_documentLibraryNoMatchesHeading,
+    documentLibraryOmitted: LYRA_DEFAULT_documentLibraryOmitted,
     documentLibraryOwnerColumn: LYRA_DEFAULT_documentLibraryOwnerColumn,
     documentLibrarySearchPlaceholder: LYRA_DEFAULT_documentLibrarySearchPlaceholder,
     documentLibrarySelectAll: LYRA_DEFAULT_documentLibrarySelectAll,
@@ -399,6 +398,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     sourceSelectionFailed: LYRA_DEFAULT_sourceSelectionFailed,
     sourceSelectionLoading: LYRA_DEFAULT_sourceSelectionLoading,
     tagFacetLimit: LYRA_DEFAULT_tagFacetLimit,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,3 +69,5 @@ consumer record replacing a built-in MIME also owns that type's verbatim label, 
   bytes="245000"
 ></lr-file-icon>
 ```
+
+`--lr-file-icon-border-color` sets the badge border color and `--lr-file-icon-radius` sets its corner radius.

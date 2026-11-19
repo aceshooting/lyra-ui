@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Yuborib boʻlmadi',
   chatFailedAnnounce: 'Xabarni yuborib boʻlmadi.',
   chatCompleteAnnounce: 'Xabar tayyor.',
-  expandCode: 'Kodni yoyish',
-  collapseCode: 'Kodni yigʻish',
   copyCode: 'Kodni nusxalash',
   copiedToClipboard: 'Clipboardʼga nusxalandi',
   codeRegion: 'Kod',

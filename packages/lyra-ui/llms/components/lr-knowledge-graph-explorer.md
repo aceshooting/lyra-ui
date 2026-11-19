@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-knowledge-graph-explorer`
+
+The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-fill` to customize the hovered control background.
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
@@ -222,6 +224,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
+- `lr-hidden-types-change-request` carries the proposed `{ hiddenTypes }`. Call `preventDefault()` to veto the legend change.
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.

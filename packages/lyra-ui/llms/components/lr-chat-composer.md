@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-chat-composer`
+
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+Plain Enter submits once per keypress. Browser shortcuts, Shift+Enter and IME composition keep their native behavior. The selection accessors return `null` before the textarea is available.
 
 The message input for a chat/agent conversation surface: an auto-resizing `<textarea>` plus a
 built-in send/stop button. Deliberately no label/hint/error chrome — a composite chat-input
@@ -145,9 +149,8 @@ composer docked into a themed panel can match it, with no `::part(base)` overrid
 the chrome hooks above, `frame="plain"` still zeroes the padding. `--lr-chat-composer-focus-shadow`
 (default `inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)`) is the
 `frame="plain"` focus underline painted on `[part="base"]:focus-within` — override it to reshape the
-underline, or set it to `none` to cede focus chrome entirely to a wrapper you draw yourself. The
-`:focus-within` border keeps its `--lr-color-brand` shift — that is state paint, not card chrome —
-and `frame="plain"` still removes the border, radius and fill outright. Plus shared tokens
+underline, or set it to `none` to cede focus chrome entirely to a wrapper you draw yourself. The focused card uses `--lr-chat-composer-focus-border-color`, which defaults to `var(--lr-color-brand)`.
+`frame="plain"` removes the border, radius and fill outright. Plus shared tokens
 `--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
 `--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,

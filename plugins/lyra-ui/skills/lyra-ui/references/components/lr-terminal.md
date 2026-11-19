@@ -83,7 +83,7 @@ server-side or other handling),
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
-text, anchor, rects }`). The terminal reports a selection inside its viewport once for unchanged endpoints.
+text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, once for unchanged endpoints.
 User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
 release following silently. Copy outcomes are announced. When an input or line exceeds the character
 limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
@@ -103,7 +103,7 @@ of its own. The announcement itself goes to the library's shared **light-DOM** p
 appended to the consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live
 region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright).
 Inspect the shared region, not `::part(announcer)`, when reading an announcement; the part remains
-the right hook for styling and for reading back what the terminal last announced.
+the right hook for styling and for reading back what the terminal last announced. Also `limit` (the localized notice shown once input or a line exceeded the size limits and output was omitted).
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
@@ -120,7 +120,7 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control the copy and d
 `--lr-terminal-line-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-terminal-line-active-bg` (default `color-mix(in oklab, var(--lr-terminal-line-hover-bg,
 var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control
-ordinary rendered lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+activatable highlighted lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-terminal-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
 `--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
@@ -174,8 +174,10 @@ than token-driven, and carry no contrast guarantee.
 
 **Additional API surface:**
 
-- `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
-- `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.
+- `--lr-terminal-search-outline-color` — Inset ring color for a line containing a non-active search match; the outline stays reserved for focus. Default: `var(--lr-color-warning)`.
+- `--lr-terminal-search-active-outline-color` — Inset ring color for the active search match's line. Default: `var(--lr-color-brand)`.
+
+Only a highlight-owning (`line-interactive`) line previews hover and press tints.
 
 While a search query is active, writes, scrollback trimming, `content` replacement, and `clear()`
 recompute the exact match count and emit `lr-search-change` only when that public search snapshot

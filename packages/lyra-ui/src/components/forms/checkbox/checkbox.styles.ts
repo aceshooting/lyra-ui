@@ -75,8 +75,7 @@ export const styles = css`
     );
     background: var(--lr-color-surface);
     color: var(--lr-color-on-brand);
-    transition: background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive), box-shadow var(--lr-transition-fast);
   }
   :host(:not(:disabled)) .checkbox-layout:hover [part~="box"] {
     border-color: var(--lr-checkbox-hover-border, var(--lr-color-brand));

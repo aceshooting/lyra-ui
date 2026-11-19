@@ -9,13 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 42 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-app-rail`
+
+The `lr-app-rail` styling hooks include `--lr-app-rail-toggle-color`, `--lr-app-rail-toggle-bg`, `--lr-app-rail-toggle-border`, `--lr-app-rail-pin-color`, `--lr-app-rail-pin-pressed-bg`.
 
 The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
@@ -265,13 +267,15 @@ not fired for a redundant reassignment to the mode already in effect, nor when n
 was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean }`;
 cancelable proposal before a user-triggered overlay change), and non-cancelable `lr-toggle` with
 the same detail after the accepted state change. Forced responsive closes emit only `lr-toggle`;
-direct property writes remain silent.
+direct property writes remain silent. Nested `lr-app-rail-group` and rail-item disclosures bubble
+their own `lr-toggle`/`lr-toggle-request` through the rail under the same names; a rail-level
+listener checks `event.target === rail` to tell the overlay's own pair from a nested disclosure's.
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
 that disables resizing, leaves full mode, or disconnects the rail also cancels the proposal,
-preserving any width the listener assigned and publishing no accepted resize. Assigning only
-`railWidth` does not veto the proposal. It is not fired when a consumer sets `railWidth` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
+preserving any width the listener assigned and publishing no accepted resize. Assigning
+`railWidth` inside the request listener resolves the proposal, including a write of its current value. It is not fired when a consumer sets `railWidth` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).
@@ -301,9 +305,9 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the decorative glyph wrapper),
+`navigation` key) and `collapse-icon` (the decorative glyph wrapper),
 `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
-while pinned and `"false"` otherwise, the name comes from the `appRailPin`/`appRailUnpin` keys, and it
+while pinned and `"false"` otherwise, the name comes from the `appRailPin` key, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
@@ -322,7 +326,7 @@ panel; no value can paint elevation while closed. Prefer that token over an unqu
 `--lr-app-rail-peek-shadow` (default `var(--lr-shadow-l)`) and `--lr-app-rail-peek-bg` (default
 `var(--lr-color-surface-overlay)`) restyle the `auto-hide` rail while it overlays the content; the
 overlay sits on the `--lr-layer-dropdown` layer token, below modals and popovers.
-`--lr-app-rail-pin-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-app-rail-pin-pressed-color` (defaults to the glass-qualified brand text colour when available, then `--lr-color-brand`), `--lr-app-rail-pin-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-app-rail-pin-hover-color` (default `var(--lr-color-brand)`) tint the pin control on hover.
 Motion uses the shared transition tokens and stops under `prefers-reduced-motion`.
 
@@ -582,6 +586,14 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 ### `lr-app-rail-item`
 
+The flyout panel paints from the shared overlay-surface family: `--lr-overlay-surface` (fill), `--lr-overlay-border` (edge) and `--lr-overlay-radius` (corner radius).
+
+For localized rail controls, use `navigation` for the main and collapse toggles, `appRailPin` for the pin,
+`appRailItemToggle` for an item, and `appRailGroupToggle` for a group without a heading. Each name
+stays the same as its expanded or pressed state changes.
+
+Icon-only tooltips use the shared overlay surface, border, radius, anchored shadow, and viewport clamp.
+
 An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
 set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
 removing the label from the accessibility tree.
@@ -668,7 +680,7 @@ names the native control, which remains the sole action).
   authored without any `children` content renders byte-identically to one authored before this
   slot existed. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
   at `[part="children"]`'s id, and a localized accessible name interpolating this item's own label
-  (`Expand {label}`/`Collapse {label}` in the default locale — no literal fallback, so a
+  (`Toggle {label}` in the default locale — no literal fallback, so a
   `registerLyraLocale()` translation or a `.strings` override always reaches it). `<lr-app-rail-group>`
   cannot express this pattern: its collapsible heading *is* the toggle, so a navigable link cannot
   live inside it without nesting an interactive element inside a button.
@@ -730,7 +742,7 @@ while current: unset, icon-only gets an inset ring automatically — the non-col
 current state through the indicator bar and `--lr-app-rail-item-current-font-weight`. Setting this
 token explicitly applies the same value in both presentations.
 Ordinary interaction states are independently inheritable through
-`--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
+`--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-current-hover-bg` (the current row's hover fill; unset, one mix tier past the current fill), `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
 brand/active-mix values as fallbacks.
 `--lr-app-rail-item-color` (default `var(--lr-color-text)`) sets the resting text and icon color.
@@ -772,6 +784,8 @@ Logical, so it mirrors under `dir="rtl"` with no separate rule.
 ---
 
 ### `lr-app-rail-group`
+
+A group with no heading uses the localized `appRailGroupToggle` name in both disclosure states.
 
 Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
 the group holds whatever it is given; there is no items array and no renderer callback, so it can

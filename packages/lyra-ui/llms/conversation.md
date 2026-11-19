@@ -1,4 +1,3 @@
-
 ## Migrating removed conversation aliases
 
 The aliases removed in 23.0.0 no longer control rendering. Use the documented `without-*` controls
@@ -443,6 +442,8 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 
 ---
 
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius` for their background, border, foreground and corner radius in the resting, hover and pressed states.
+
 ## `lr-markdown-core`
 
 Assign a new `languages` map to update available grammars.
@@ -590,6 +591,8 @@ The shared `--lr-markdown-task-checkbox-size` hook defaults to `var(--lr-size-0-
 keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-header-bg`
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
+
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds.
 
 ## `lr-chat-message`
 
@@ -2616,6 +2619,8 @@ const view = html`<lr-code-block-core
   optimization: callers must not depend on distinct frozen map objects producing distinct cores.
 
 ---
+
+**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons.
 
 ## `lr-model-settings-panel`
 

@@ -671,9 +671,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   };
 
   private statusLabel(status: CopyStatus): string {
-    const [label, key] = status === 'success' ? [this.successLabel, 'copied'] as const
-      : status === 'error' ? [this.errorLabel, 'copyFailed'] as const : [this.copyLabel, 'copy'] as const;
-    return label === '' ? '' : normalizeLabel(label) ?? this.localize(key);
+    const label = status === 'success' ? this.successLabel : status === 'error' ? this.errorLabel : this.copyLabel;
+    return label === ''
+      ? ''
+      : normalizeLabel(label) ?? this.localize(status === 'success' ? 'copied' : status === 'error' ? 'copyFailed' : 'copy');
   }
 
   private renderIcon(): TemplateResult {

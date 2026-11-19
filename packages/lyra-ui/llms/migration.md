@@ -1738,7 +1738,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-drawer>` | `<lr-drawer>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
 | `<wa-dropdown>` | `<lr-dropdown>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-select → lr-select; events: wa-show → lr-show. |
 | `<wa-dropdown-item>` | `<lr-dropdown-item>` | `rewritten` | Automatic: tag/import plus attributes: submenuOpen → submenu-open. |
-| `<wa-file-input>` | `<lr-file-input>` | `warning-required` | Manual: Lyra exposes dragging and fileCount as getter-only derived state. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract. |
+| `<wa-file-input>` | `<lr-file-input>` | `warning-required` | Manual: Lyra derives dragging and fileCount and ignores assignments to either. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract. |
 | `<wa-format-bytes>` | `<lr-format-bytes>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-format-date>` | `<lr-format-date>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-format-number>` | `<lr-format-number>` | `exact` | Automatic: tag and supported side-effect registration import. |

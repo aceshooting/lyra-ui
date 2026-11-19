@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,9 +22,9 @@ existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
-`--lr-icon-button-bg`, and `--lr-icon-button-color`, plus the hover and pressed variants
-`--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-bg-hover`,
-`--lr-icon-button-bg-active`, `--lr-icon-button-color-hover`, and `--lr-icon-button-color-active`.
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
+`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
 
 **Properties:**
 
@@ -45,7 +45,7 @@ Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 A failed image renders a localized message in the `error` part, announces the failure, and emits
 `lr-render-error` with `{ error: Error }`.
 
-**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
+**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
 the nearest `zoomStep`. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from
@@ -61,8 +61,8 @@ component's own keyboard target — a bare host `.focus()` would otherwise be a 
 relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
 `relatedTarget`).
 
-**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and
-`error` (the localized message shown in place of an image that failed to load). The
+**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and `error` (the localized message shown in place of an image that
+failed to load). The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
 `zoom` on every render (not a fixed "100%"). Its accessible name includes both the localized reset
 action and that visible percentage, so the visible label is contained in the computed name.
@@ -83,5 +83,7 @@ import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
   aria-label="Map preview"
 ></lr-pan-zoom>
 ```
+
+`--lr-pan-zoom-control-hover-bg` sets the zoom and reset button hover fill and supplies the base for their pressed fill.
 
 ---

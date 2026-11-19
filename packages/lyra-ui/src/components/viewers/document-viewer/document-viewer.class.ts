@@ -301,7 +301,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   private syncScrollRegion(): void {
     const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
-    if (!el) return;
+    if (!el || !this.isConnected) return;
     const name = this.currentFile().name || this.localize('documentViewerLabel');
     const child = el.firstElementChild;
     const current = this.scrollRegion;

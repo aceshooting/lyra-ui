@@ -16,6 +16,8 @@
 
 ## `lr-tool-call-chip`
 
+Event details include `invocationId` alongside `callId` for correlation. Activation also emits `lr-tool-activate` with `{ invocationId }`.
+
 A compact inline pill representing one tool/function call an agent made mid-conversation, e.g.
 `web_search: Searching web…` with a `running` spinner. First-party invention (no Web Awesome
 equivalent). It owns no detail surface of its own — activating it (click or Enter/Space while

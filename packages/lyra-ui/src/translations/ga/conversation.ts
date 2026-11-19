@@ -42,8 +42,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Theip ar an seoladh',
   chatFailedAnnounce: 'Theip ar sheoladh na teachtaireachta.',
   chatCompleteAnnounce: 'Teachtaireacht críochnaithe.',
-  expandCode: 'Leathnaigh an cód',
-  collapseCode: 'Laghdaigh an cód',
   copyCode: 'Cóipeáil an cód',
   copiedToClipboard: 'Cóipeáilte chuig an ngearrthaisce',
   codeRegion: 'Cód',

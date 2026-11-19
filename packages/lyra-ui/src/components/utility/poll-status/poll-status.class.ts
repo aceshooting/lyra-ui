@@ -62,6 +62,10 @@ export interface LyraPollStatusEventMap {
  *   the brand-quiet active mix.
  * @cssprop [--lr-poll-status-refresh-active-color=var(--lr-color-brand)] - `refresh-button` pressed
  *   foreground.
+ * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
  * @status stable
  * @since 4.0.0
  */

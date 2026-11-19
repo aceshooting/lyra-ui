@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,7 +36,9 @@ string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating
 Unknown values normalize and reflect as `'agent'`.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering.
+letterboxing-aware). After dropping blank ids and later duplicates, only the last 500 markers in
+the admitted snapshot render, in input order. `part="limit"` shows the localized overflow notice. Entering overflow after
+mount also announces the notice politely.
 `withoutControls: boolean = false` (attribute `without-controls`, reflected) — hides the built-in
 take-over/stop buttons, for a read-only viewer; the `actions` slot still renders.
 
@@ -55,7 +57,7 @@ carries `data-kind`).
 
 After mount, each `phase` transition is appended to the shared polite light-DOM announcement sink.
 The phase already shown on initial mount or reconnect establishes a silent baseline, including a
-phase write queued while detached.
+phase write queued while detached. Also `limit` (the localized notice shown once the action-marker window omits older entries).
 
 **Themeable custom properties:** `--lr-browser-frame-aspect-ratio` (default `16 / 9`) — the
 viewport's aspect ratio.

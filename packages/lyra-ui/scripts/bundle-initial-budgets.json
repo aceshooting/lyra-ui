@@ -14,25 +14,25 @@
     "dist/utilities/scoped-registry-loader.js": 11.25
   },
   "$marginalGzipKb": {
-    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 8.0625,
+    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 8.25,
     "dist/components/conversation/model-select/model-select.js": 28.75,
-    "dist/components/conversation/usage-badge/usage-badge.js": 4.8125,
+    "dist/components/conversation/usage-badge/usage-badge.js": 4.9375,
     "dist/components/conversation/voice-picker/voice-picker.js": 30.25,
-    "dist/components/forms/color-picker/color-picker.js": 28.4462890625,
+    "dist/components/forms/color-picker/color-picker.js": 28.8125,
     "dist/components/forms/combobox/combobox.js": 42.75,
     "dist/components/forms/date-picker/date-input.js": 42.1875,
-    "dist/components/forms/input/time-input.js": 27.125,
+    "dist/components/forms/input/time-input.js": 27.6875,
     "dist/components/forms/locale-picker/locale-picker.js": 29.4375,
     "dist/components/forms/select/select.js": 36.8125,
-    "dist/components/layout/app-rail/app-rail-item.js": 8.25,
+    "dist/components/layout/app-rail/app-rail-item.js": 8.625,
     "dist/components/layout/menu/menu.js": 18.25,
-    "dist/components/overlays/overlay/popover.js": 18.1875,
-    "dist/components/overlays/overlay/tooltip.js": 16.1875,
-    "dist/components/overlays/popup/popup.js": 4.75,
-    "dist/components/retrieval/citation-badge/citation-badge.js": 7.125,
-    "dist/components/retrieval/entity-chip/entity-chip.js": 6.5625,
-    "dist/components/utility/export-button/export-button.js": 14.6875,
-    "dist/components/utility/mention-popover/mention-popover.js": 9.8125,
-    "dist/components/utility/tour/tour.js": 19.625
+    "dist/components/overlays/overlay/popover.js": 18.625,
+    "dist/components/overlays/overlay/tooltip.js": 16.375,
+    "dist/components/overlays/popup/popup.js": 4.8125,
+    "dist/components/retrieval/citation-badge/citation-badge.js": 7.25,
+    "dist/components/retrieval/entity-chip/entity-chip.js": 6.6875,
+    "dist/components/utility/export-button/export-button.js": 15.375,
+    "dist/components/utility/mention-popover/mention-popover.js": 10.125,
+    "dist/components/utility/tour/tour.js": 19.75
   }
 }

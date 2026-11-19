@@ -167,7 +167,7 @@ export async function runFileActions(page, check, { createEditor }) {
       await page.keyboard.press('ControlOrMeta+K');
       const palette = editor.locator('[part="command-palette"]');
       await palette.getByRole('dialog').waitFor({ state: 'visible' });
-      await palette.getByRole('searchbox').fill('Open');
+      await palette.getByRole('combobox', { name: 'Search commands', exact: true }).fill('Open');
       await page.keyboard.press('Enter');
       await page.waitForFunction(id => Boolean(document.getElementById(id).dataset.requestSource), id);
       assert.equal(await editor.getAttribute('data-request-source'), 'command-palette');
@@ -194,7 +194,7 @@ export async function runFileActions(page, check, { createEditor }) {
       await page.keyboard.press('ControlOrMeta+K');
       const palette = editor.locator('[part="command-palette"]');
       await palette.getByRole('dialog').waitFor({ state: 'visible' });
-      await palette.getByRole('searchbox').fill('Open');
+      await palette.getByRole('combobox').fill('Open');
       const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'), () => page.keyboard.press('Enter'));
       await chooser.setFiles({ name: 'Palette.docx',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
@@ -232,7 +232,7 @@ export async function runFileActions(page, check, { createEditor }) {
       const confirm = editor.locator('[part="discard-button"]');
       await page.keyboard.press('ControlOrMeta+K');
       await palette.getByRole('dialog').waitFor({ state: 'visible' });
-      await palette.getByRole('searchbox').fill('Open');
+      await palette.getByRole('combobox').fill('Open');
       let prematurePicker = false;
       const onPicker = () => { prematurePicker = true; };
       page.on('filechooser', onPicker);

@@ -16,6 +16,8 @@
 
 ## `lr-segmented`
 
+Read `omittedItems` after assigning `items` for the number of input positions beyond the 256-position limit.
+
 Caption typography accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
 

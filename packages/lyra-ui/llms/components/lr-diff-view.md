@@ -9,12 +9,24 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 7 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-diff-view`
+
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
+The `copyable` property reflects to the host attribute and defaults to false. Listen for `lr-copy-error` for
+a clipboard failure or check `event.composedPath()[0]` to identify the origin of a bubbling `lr-error`.
+Apply `max-height`, `context-lines`, `layout` and `copyable` directly to a standalone diff viewer.
+An overflowing diff becomes a keyboard tab stop named by the host’s `aria-label` or the localized `diffViewLabel`.
+The sides of a split diff retain their old and new content labels.
+The `--lr-diff-view-copy-hover-bg`, `--lr-diff-view-copy-hover-color`, `--lr-diff-view-copy-active-bg`,
+`--lr-diff-view-copy-active-color`, `--lr-diff-view-highlight-action-hover-bg`,
+`--lr-diff-view-highlight-action-hover-color`, `--lr-diff-view-highlight-action-active-bg` and
+`--lr-diff-view-highlight-action-active-color` tokens style its two actions.
 
 A real two-string line diff (a classic longest-common-subsequence dynamic program, not a Myers
 implementation), rendered as interleaved unified-diff output — not diff-flavored syntax highlighting

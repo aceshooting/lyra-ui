@@ -75,7 +75,8 @@ plus bubbling/composed `blur` and `focus` with `null` detail relayed from the re
 - `start` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
   selectable region before the label/excerpt content.
 - `content` — replaces the built-in label + excerpt + meta content area with host-supplied
-  non-interactive row content.
+  non-interactive row content. Provide visible text to name the selectable row, or supply a host
+  `aria-label` for content with no accessible text.
 - `excerpt` — full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`);
   wins over the `excerpt` property whenever it has assigned content.
 - `meta` — small, non-focusable structured fields below the label/excerpt (a day label, cost, request

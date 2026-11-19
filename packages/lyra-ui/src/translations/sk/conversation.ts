@@ -41,8 +41,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Odoslanie zlyhalo',
   chatFailedAnnounce: 'Správu sa nepodarilo odoslať.',
   chatCompleteAnnounce: 'Správa je dokončená.',
-  expandCode: 'Rozbaliť kód',
-  collapseCode: 'Zbaliť kód',
   copyCode: 'Kopírovať kód',
   copiedToClipboard: 'Skopírované do schránky',
   codeRegion: 'Kód',

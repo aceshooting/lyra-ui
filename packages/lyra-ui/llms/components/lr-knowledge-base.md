@@ -182,7 +182,8 @@ In source mode, `lr-sort-request` is the original cancelable table proposal with
 `TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
 `lr-sort` is the accepted, noncancelable table commit with frozen
 `TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
-the commit and leaves the current source sort unchanged.
+the commit and leaves the current source sort unchanged. With no source provider, the table's
+page and sort events stay inside `lr-knowledge-base`.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while the host error or a current provider failure is shown.

@@ -22,6 +22,10 @@ refreshes the rendered projection. Item objects keep their identity, but assigni
 again, even after mutating an item or the array itself, is ignored: create a new array to publish
 a change. Unrelated property updates reuse the current projection where possible.
 
+Use `maxNodes` (attribute `max-nodes`) to set the array projection limit from 1 to 5000.
+It defaults to 500. The default `frame="plain"` has no outer border. Use `frame="card"`
+for a bordered timeline. Small sizes reduce row height from the default `size="m"`.
+
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
@@ -100,13 +104,13 @@ explicitly unrecognized `status` values render the localized neutral `'unknown'`
 absent status renders `'pending'`. Raw provider status text is never shown. Assignment retains the
 first 10,000 source entries in a bounded readonly outer snapshot; admitted row identities feed a
 descriptor-safe copy of the closed span display schema, so opaque provider fields do not consume
-the shared deep-copy budget. Reassign the collection after record changes. At most 500 unique valid
+the shared deep-copy budget. Reassign the collection after record changes. By default, at most 500 unique valid
 spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
 controlled active state remains visible. A localized `[part="limit"]` note reports the actual
 number shown and the assigned source count when either ceiling omits entries. Counts use the
 effective locale; initial truncation stays silent and a later transition into truncation is
-announced politely. The time axis scales to the full admitted trace, measured before the 500-span
+announced politely. The time axis scales to the full admitted trace, measured before the row
 cap is applied, so spans omitted only by that render cap cannot shrink the axis and stretch the
 surviving bars across the track. Active changes within the ordinary window reuse the existing
 projection and sort; reserving an outside active path can change the projection.

@@ -7,14 +7,17 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `30.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecations** none
+- **Deprecated event** `lr-close` since `unreleased`; use event `@lr-map-anchor-dismiss`; removal not before `33.0.0` — The component-prefixed dismiss event carries the same frozen reason detail; the older name remains emitted during migration.
+- **Deprecated event** `lr-close-request` since `unreleased`; use event `@lr-map-anchor-dismiss-request`; removal not before `33.0.0` — The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration.
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-map-anchor`
+
+The popup is sized by the shared positioner through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`. Its built-in close button is themed with `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`, `--lr-map-popup-close-button-active-bg` and `--lr-map-popup-close-button-active-color`.
 
 Experimental. An independent panel of rich, interactive content anchored to a coordinate of its
 `lr-map`. Whoever owns it opens, moves and closes it without touching the map's other anchors or
@@ -64,18 +67,14 @@ with a development warning while it is open, and `focusContent()` returns `false
   close button. Returns `false` while the panel is hidden or not yet placed, when it is inert, or when
   nothing in it can take focus. It never queues focus.
 
-**Events:** `lr-close-request` and `lr-close` both bubble, are composed and carry a frozen
-`detail: { reason }` (`LyraMapAnchorCloseDetail`, with `reason` `'api'`, `'close-button'` or `'escape'`).
+Child anchor events bubble across shadow boundaries with a frozen `LyraMapAnchorCloseDetail`.
+Its `reason` is `api`, `close-button` or `escape`.
 
-- `lr-close-request` — cancelable, before a requested close; `preventDefault()` keeps the anchor
-  open.
-- `lr-close` — after an accepted close has set `open = false`. Not fired when the panel merely
-  hides, for an `open = false` assignment, or for removal or disconnect. A listener may reopen the
-  anchor (focus then stays where it is) or remove it.
+- `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
+- `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
 
-The names are the library's shared dismissal pair, so they also bubble through a surrounding dialog
-or drawer: an ancestor that handles only its own dismissal checks `event.target`. The map's
-`lr-map-anchor-close` never fires for these anchors.
+The deprecated aliases `lr-close-request` and `lr-close` remain available. A veto through either request
+preserves the anchor. The map's slot anchor emits `lr-map-anchor-close`.
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.

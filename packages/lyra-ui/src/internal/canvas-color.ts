@@ -129,6 +129,8 @@ export function readCanvasRgba(
     for (let i = 0; i < 4; i++) if ((first[i] ?? 0) !== (second[i] ?? 0)) return undefined;
     return [first[0] ?? 0, first[1] ?? 0, first[2] ?? 0, (first[3] ?? 0) / 255];
   } catch {
+    // A canvas keeps returning the same context, even when its pixels can no longer be read.
+    if (!context) readbackCanvases.delete(doc);
     return undefined;
   } finally {
     ctx?.restore();

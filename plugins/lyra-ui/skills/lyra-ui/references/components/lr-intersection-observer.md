@@ -16,6 +16,8 @@
 
 ## `lr-intersection-observer`
 
+With a named root, observation begins when the matching ID is present in the host tree or document.
+
 Lifecycle-managed wrapper around the native `IntersectionObserver`. It observes all element children
 in the default slot and emits a composed event, while adding no layout of its own.
 

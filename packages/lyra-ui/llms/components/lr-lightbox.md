@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,8 +83,7 @@ a stable global `key`, canonical nonnegative safe-integer `order`, and image `va
 stable within a revision; publish a new revision and refresh when its contents change. Navigation,
 clamping, looping and the localized counter use the full logical count, so first, middle and final
 images remain reachable in a million-image host collection without copying it into `images`.
-Current navigation emits `lr-index-change` for the logical destination before its image finishes
-loading; direct consumer `index` writes stay event-silent. Source mode adds no new event.
+Navigation emits `lr-index-change` after the final logical destination renders, including a loading state for a pending image; direct consumer `index` writes stay event-silent. Source mode adds no new event.
 
 Only the current image loads, after resolving its descriptor. The component retains at most three
 descriptors in one-record pages, with one range read physically pending and no neighbour prefetch.
@@ -162,3 +161,5 @@ photo content.
 - scope for v1: no per-image slotted content (data-driven via `images` or `imageSource`), no dot indicators, no
   visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
   still observable through the before/after events and methods above.
+
+Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.

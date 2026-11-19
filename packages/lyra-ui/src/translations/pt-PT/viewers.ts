@@ -17,7 +17,7 @@ const strings: LyraLocaleStrings = {
   ebookViewerRegionLabel: 'Conteúdo do ebook',
   ebookViewerPreviousChapter: 'Capítulo anterior',
   ebookViewerNextChapter: 'Capítulo seguinte',
-  ebookViewerShowingChapter: 'A mostrar {chapter}',
+  ebookViewerShowingChapter: 'Exibindo {chapter}',
   pptxViewerLabel: 'Visualizador de apresentações',
   pptxViewerFidelityNotice: 'Parte do conteúdo dos slides pode não ser apresentada.',
   pptxViewerRenderError: 'Não foi possível renderizar esta apresentação.',

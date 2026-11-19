@@ -229,6 +229,10 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  *   `neutral`-tone `highlights` line.
  * @cssprop [--lr-diff-view-highlight-active-outline=var(--lr-color-brand)] - Outline of the line
  *   whose covering highlight is `activeHighlightId`.
+ * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
  * @status stable
  * @since 4.0.0
  */
@@ -249,8 +253,8 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     details: LYRA_DEFAULT_details,
     diffViewHiddenLines: LYRA_DEFAULT_diffViewHiddenLines,
     diffViewHighlightLimit: LYRA_DEFAULT_diffViewHighlightLimit,
-    diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
     diffViewLabel: LYRA_DEFAULT_diffViewLabel,
+    diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
     diffViewOldLabel: LYRA_DEFAULT_diffViewOldLabel,
     diffViewTooLarge: LYRA_DEFAULT_diffViewTooLarge,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
@@ -516,6 +520,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   /** Keeps every capped-height scroll body keyboard-scrollable while it overflows. */
   private syncScrollRegions(): void {
+    if (!this.isConnected) return;
     const name = hostAriaLabel(this) ?? this.localize('diffViewLabel');
     if (name !== this.scrollRegionName) {
       this.releaseScrollRegions();

@@ -303,6 +303,19 @@ interface ToolProjection {
  * @cssprop [--lr-tool-select-dialog-body-hover-outline-offset=calc(-1 * var(--lr-border-width-thin))] -
  *   Inward offset of the mouse-hover preview on `[part="body"]`, keeping the outline inside its
  *   own scrollport so it is not clipped at the edge.
+ * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
+ * @cssprop --lr-overlay-border - Shared floating-surface edge colour of the panel.
+ * @cssprop --lr-overlay-radius - Shared floating-surface corner radius of the panel.
+ * @cssprop --lr-overlay-surface - Shared floating-surface fill of the panel.
  * @status stable
  * @since 4.0.0
  */
@@ -312,7 +325,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
-    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loadMore: LYRA_DEFAULT_loadMore,
     noMatchesQuery: LYRA_DEFAULT_noMatchesQuery,
@@ -325,6 +337,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     toolSelectNoneAvailable: LYRA_DEFAULT_toolSelectNoneAvailable,
     toolSelectSummary: LYRA_DEFAULT_toolSelectSummary,
     useDefaultTools: LYRA_DEFAULT_useDefaultTools,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

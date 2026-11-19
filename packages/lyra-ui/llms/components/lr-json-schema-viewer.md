@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,6 +73,7 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
 - `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-selected-bg` — Selected trigger fill and base color for its hover and press states. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
 - `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.

@@ -35,6 +35,9 @@ When `multiple` becomes false, the public value, live option flags, popup `aria-
 retained multiple-selection history returns if multiple is enabled again without another selection
 write. A populated `multiple` combobox describes its input by every committed label (visually
 hidden), so the tags collapsed behind "+N" are announced too.
+Equal-valued suggestions can be selected independently in multiple mode. Each activation toggles
+one occurrence, and each selected row supplies its own label and data. Use `FormData#getAll()` to
+read repeated submitted values.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.

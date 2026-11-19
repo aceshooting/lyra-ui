@@ -18,7 +18,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { CustomElementUpgradeObserver } from './custom-element-upgrade-observer.js';
 
 /** Collects announcement text and follows definitions that can introduce new shadow roots. */
-export class AnnouncementUpgradeObserver extends CustomElementUpgradeObserver {
+class AnnouncementUpgradeObserver extends CustomElementUpgradeObserver {
   collect(
     node: Node,
     roots: Set<ShadowRoot>,

@@ -217,6 +217,9 @@ export interface LyraToolApprovalDialogEventMap {
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  * @cssprop [--lr-tool-approval-dialog-invalid-border-color=var(--lr-color-danger)] - Border color of an invalid raw-JSON editor.
  * @cssprop [--lr-tool-approval-dialog-hover-border-color=var(--lr-color-brand)] - Border color of a valid, editable raw-JSON args editor on hover. Invalid and pending states retain their semantic chrome.
+ * @cssprop --lr-overlay-border - Shared floating-surface edge colour of the panel.
+ * @cssprop --lr-overlay-radius - Shared floating-surface corner radius of the panel.
+ * @cssprop --lr-overlay-surface - Shared floating-surface fill of the panel.
  * @status stable
  * @since 4.0.0
  */

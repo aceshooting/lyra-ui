@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -90,7 +90,8 @@ allocations and is not a live region, avoiding unsolicited announcements on ever
 `--lr-sequence-playback-play-button-active-bg` (default
 `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) —
 the pressed play/pause background; and `--lr-sequence-playback-play-button-active-border-color` (default
-`var(--lr-color-brand)`) — its pressed border. Both are inline `var()` fallbacks, so a value set on
+`var(--lr-color-brand)`) — its pressed border; `--lr-sequence-playback-play-button-hover-border-color`
+(default `var(--lr-color-brand)`) — its hovered border. All are inline `var()` fallbacks, so a value set on
 the element or an ancestor inherits without being shadowed by a host default. Plus shared tokens `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`,
 `--lr-icon-button-size` (the play button's box), `--lr-opacity-disabled` (play button/slider

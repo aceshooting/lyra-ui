@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,7 +65,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
   tooltip on that row's `[part="row-value"]` and gives it `tabindex="0"`, independently per row —
-  unset rows are unaffected.
+  unset rows are unaffected. If the input exceeds the admission limit, `[part="limit"]` displays
+  the retained and supplied counts using the `statRowsInputLimit` message. Later limit changes are
+  announced politely.
 - `emphasis: boolean = false` (reflected) — visual emphasis (e.g. for a "headline" stat in a group):
   a brand-colored accent edge, orthogonal to the status `variant`; status semantics still win over
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
@@ -73,7 +75,7 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
   `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`); also gives
   `[part="value"]` `tabindex="0"` (only when set) so the tooltip is reachable by keyboard focus, not
-  just hover
+  just hover. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -117,7 +119,7 @@ not just the bare value); each
 Present metric and row labels expose the `term` role; their named values expose `definition`,
 which supports these accessible names. A unit-only headline value also exposes `definition`
 and includes the unit in its name. Values without a label or unit remain plain text; setting
-`exactValue` still adds the existing focus stop and exact-value tooltip in an unlinked stat.
+`exactValue` still adds the existing focus stop and exact-value tooltip in an unlinked stat. Also `limit` (the notice showing how many rows were admitted when input exceeded the limit).
 
 **Themeable custom properties:** `--lr-stat-bg` (default `var(--lr-color-surface)`) is
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to

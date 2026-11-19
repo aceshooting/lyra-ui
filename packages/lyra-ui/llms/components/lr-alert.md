@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-alert`
+
+The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
+
+The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 
 A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
 plus one additive Lyra property (`size`) that is inert until you set it.

@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Imeshindwa kutuma',
   chatFailedAnnounce: 'Ujumbe umeshindwa kutumwa.',
   chatCompleteAnnounce: 'Ujumbe umekamilika.',
-  expandCode: 'Panua msimbo',
-  collapseCode: 'Kunja msimbo',
   copyCode: 'Nakili msimbo',
   copiedToClipboard: 'Imenakiliwa kwenye ubao wa kunakili',
   codeRegion: 'Msimbo',

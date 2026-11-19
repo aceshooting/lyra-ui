@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 19 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -90,8 +90,8 @@ focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCusto
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`; both aliases carry `detail: { value, previousValue }`. `lr-load-error` (no detail,
+**Events:** selecting a different emoji emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows any value events. `lr-load-error` (no detail,
 non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
@@ -103,8 +103,8 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox: the arrow keys and Enter also work while focus stays in
-the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. ArrowUp and ArrowDown navigate results, Enter picks, and
+ArrowLeft and ArrowRight move the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
@@ -159,6 +159,8 @@ frame. `--lr-emoji-picker-search-min-height` (default `auto`),
 field. `size` does NOT drive them — on this component `size` scales the emoji glyph and item box,
 never the form-control ladder — so point the height at `--lr-form-control-height-s` (or any tier of
 that ladder) when the filter field has to match a themed search field beside it.
+`--lr-emoji-picker-grid-max-height` (default `var(--lr-size-16rem)`) caps the scrolling grid's
+block size.
 
 Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-bg`, `--lr-emoji-picker-selected-bg`/
@@ -166,7 +168,9 @@ Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-outline-color`,
 `--lr-emoji-picker-selected-outline-color`, and
 `--lr-emoji-picker-pressed-outline-color` hooks for active, selected, and pressed. The legacy
-`--lr-emoji-picker-active-bg` remains the fallback for hover and keyboard-active. These are inline
+`--lr-emoji-picker-active-bg` remains the fallback for hover and keyboard-active. Hovering or
+pressing a selected or keyboard-active cell mixes from that cell's own fill unless the hover or
+pressed hook is set. These are inline
 `var()` fallbacks rather than host declarations, so values set on any ancestor remain effective.
 The committed form `value` alone drives `aria-selected`; roving focus and pointer navigation use
 `data-active`, so moving through the grid never falsely changes selection. Forced-colors mode also

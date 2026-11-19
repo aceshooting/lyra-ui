@@ -54,7 +54,6 @@ import {
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
-import type { LyraMessageKey } from '../../../internal/localization-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
@@ -440,8 +439,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     archiveConversation: LYRA_DEFAULT_archiveConversation,
-    conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
     clear: LYRA_DEFAULT_clear,
+    conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
     deleteConversation: LYRA_DEFAULT_deleteConversation,
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
@@ -1576,9 +1575,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
   };
 
-  private rowActionLabel(thread: LyraChatThread, key: LyraMessageKey): string {
+  private rowActionLabel(thread: LyraChatThread, action: string): string {
     return this.localize('conversationActionWithTitle', undefined, {
-      action: this.localize(key),
+      action,
       title: normalizeLabel(thread.title) ?? thread.id,
     });
   }
@@ -1591,7 +1590,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.rowActionLabel(thread, thread.pinned ? 'unpinConversation' : 'pinConversation')}
+              aria-label=${this.rowActionLabel(thread, this.localize(thread.pinned ? 'unpinConversation' : 'pinConversation'))}
               @click=${() =>
                 this.canUseThread(thread) && this.emit('lr-thread-pin', {
                   conversationId: thread.id,
@@ -1605,7 +1604,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.rowActionLabel(thread, thread.archived ? 'unarchiveConversation' : 'archiveConversation')}
+              aria-label=${this.rowActionLabel(thread, this.localize(thread.archived ? 'unarchiveConversation' : 'archiveConversation'))}
               @click=${() =>
                 this.canUseThread(thread) && this.emit('lr-thread-archive', {
                   conversationId: thread.id,
@@ -1619,7 +1618,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.rowActionLabel(thread, 'deleteConversation')}
+              aria-label=${this.rowActionLabel(thread, this.localize('deleteConversation'))}
               @click=${() =>
                 this.canUseThread(thread) && this.emit('lr-thread-delete', { conversationId: thread.id })}
             >

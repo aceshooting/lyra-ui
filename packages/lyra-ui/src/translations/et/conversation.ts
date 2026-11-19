@@ -39,8 +39,6 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Saatmine ebaõnnestus',
   chatFailedAnnounce: 'Sõnumi saatmine ebaõnnestus.',
   chatCompleteAnnounce: 'Sõnum valmis.',
-  expandCode: 'Laienda koodi',
-  collapseCode: 'Ahenda koodi',
   copyCode: 'Kopeeri kood',
   copiedToClipboard: 'Kopeeritud lõikelauale',
   codeRegion: 'Kood',

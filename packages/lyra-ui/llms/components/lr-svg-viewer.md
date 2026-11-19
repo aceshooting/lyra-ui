@@ -88,8 +88,9 @@ localized loading text alongside its decorative ring, and the ring stops under r
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 `--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
-border color of the `[part='region-highlight']` matching `activeHighlightId`, distinct from the
-resting highlight border so the active region can be recolored without touching the rest. It is an
+border and outer-ring color of the `[part='region-highlight']` matching `activeHighlightId`; the
+ring keeps the active region distinct from a warning-tone highlight, and the token recolors the
+active region without touching the rest. It is an
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
 the element _or on any ancestor_: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,

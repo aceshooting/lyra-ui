@@ -16,8 +16,13 @@
 
 ## `lr-approval-queue`
 
+The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to control its place in the outline.
+
+`disabled` prevents review actions. `lr-approval-open` and `lr-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
+
 Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
-It never executes tools or persists decisions.
+The host executes tools and persists decisions. The queue reports the outcome through
+`lr-approval-close` and contains the nested dialog’s `lr-decision-settled` event.
 
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
 `{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
@@ -57,3 +62,5 @@ state), so the selection is announced, not merely painted. Other request rows ex
 **Additional API surface:**
 
 - `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
+
+**Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.

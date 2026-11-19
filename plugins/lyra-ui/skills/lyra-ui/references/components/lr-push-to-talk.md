@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-push-to-talk`
+
+`--lr-push-to-talk-trigger-hover-bg` and `--lr-push-to-talk-trigger-active-bg` set the trigger background on hover and press.
+
+In hold mode, a primary pointer press starts capture and releasing that pointer ends it, including outside the trigger. A click-only activation from assistive technology starts capture with one activation and stops it with the next. Modified keyboard shortcuts leave capture unchanged.
 
 A mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle: permission request,
 recording, optional chunked streaming, teardown. The one place in this library that touches the
@@ -32,7 +36,9 @@ grouping, and pads its seconds field to two locale-aware digits.
 **Properties:** `mode: PushToTalkMode = 'hold'` (`'hold' | 'toggle'`, reflected; invalid writes
 normalize to `hold`), `timesliceMs: number = 0` (attribute
 `timeslice-ms`) — `> 0` passes a timeslice to `MediaRecorder.start()` and emits `lr-record-chunk` per
-slice, `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
+slice. Set `stream-only` (`streamOnly`, default `false`) to deliver chunks without retaining a
+recording. In this mode the default interval is one second and the stop event carries an empty Blob.
+The recorder snapshots both options at the start of a take. Other properties include `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
 string = ''` (attribute `device-id`) — a specific input device, `audioConstraints?:
 PushToTalkAudioConstraints` (attribute: false) — merged into the `getUserMedia` audio constraints;
 it deliberately excludes `deviceId`, whose single authority is the dedicated property,
@@ -68,7 +74,7 @@ decorative inside the named trigger: their flattened content is inert and hidden
 APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
-Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
+Blob }`, with `stream-only` or `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
 }`), `lr-record-cancel` (`detail: null`), `lr-record-error`
 (`detail: { error: DOMException | Error }`, covering permission, recorder construction/start, and
 recorder runtime failures), `lr-level`

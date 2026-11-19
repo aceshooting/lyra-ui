@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-tool-result-dialog`
+
+User dismissal emits cancelable `lr-request-close` with `{ source }` before closing. The maximize button emits `lr-after-maximize-change` with `{ maximized }` after an accepted toggle.
+
+The panel accepts `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius`, and `--lr-overlay-shadow-modal`.
 
 Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
 pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
@@ -156,3 +160,5 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 - `--lr-tool-result-dialog-incomplete-bg` — Incomplete status background (21.1.0). Default: `transparent`.
 
 ---
+
+**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.

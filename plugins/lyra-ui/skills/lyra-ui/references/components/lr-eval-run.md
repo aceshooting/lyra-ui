@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 25 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,7 +62,8 @@ localized name or its `label`; `idle` is silent.
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
-with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide-request`
+with the example it came from, so a host needn't walk the DOM), `lr-example-citation-open` (same
+detail, for a citation's full-preview request), `lr-example-tool-approval-decide-request`
 (`detail: EvalToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
 `{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
 }`). The approval
@@ -79,7 +80,10 @@ example's nested timeline after the host persisted it, and `revertPendingApprova
 void` releases it for a retry; both are no-ops while the example is collapsed or gone.
 
 **Registration:** the Markdown, code, grounding and tool-timeline children register when the first
-example expands, so a collapsed batch loads none of them; they upgrade in place.
+example expands, so a collapsed batch loads none of them; they upgrade in place. If that download
+fails, each expanded example shows `part="load-error"` (`evaluationRunDetailsLoadError`), the
+failure is announced, and expanding an example again retries. The render-limit notice is a
+`role="note"` and is announced when it first appears.
 
 
 **CSS parts:** `base`, `header`,
@@ -87,4 +91,4 @@ example expands, so a collapsed batch loads none of them; they upgrade in place.
 `example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
 `live-region`, `empty`, `limit` (localized notice shown when `examples` exceeds the 500-row render
-ceiling).
+ceiling). Also `load-error` (the localized notice in an expanded example whose detail views failed to load).

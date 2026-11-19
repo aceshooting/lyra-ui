@@ -263,7 +263,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @property({ reflect: true }) type: MenuItemType = 'normal';
 
   /** Whether a `type="checkbox"`/`type="radio"` item is checked. Meaningless (ignored) for
-   *  `type="normal"`. */
+   *  `type="normal"`.
+   * @default false */
   @property({ type: Boolean, reflect: true })
   get checked(): boolean { return this._checked; }
   set checked(value: boolean) {

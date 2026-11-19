@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -95,7 +95,8 @@ extension-mode rectangle. `status` is the visible invalid-prepared-input message
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
 default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back to
 `--lr-border-width-medium`. Declare `--line-width` on the sparkline itself because this unprefixed name can also reach other elements that read it.
-No canvas bridge or manual refresh is needed.
+The scoped aliases `--lr-sparkline-line-color`, `--lr-sparkline-fill-color` and
+`--lr-sparkline-line-width` take precedence over the mirrored tokens.
 
 **Optional peer deps:** none.
 

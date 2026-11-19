@@ -24,7 +24,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetLimit, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_tagFacetLimit } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_tagFacetLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -185,7 +185,6 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetRemoveExample: LYRA_DEFAULT_evalDatasetRemoveExample,
     evalDatasetSearchLabel: LYRA_DEFAULT_evalDatasetSearchLabel,
     evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     tagFacetLimit: LYRA_DEFAULT_tagFacetLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END

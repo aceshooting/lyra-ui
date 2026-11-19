@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-mind-map`
+
+The `disclosure` part shows a plus on collapsed parents and a minus on expanded parents.
 
 A radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of a topic hierarchy where
 activating a topic drills in or hands the topic to the chat. Hierarchy, not network — no cross-links,
@@ -124,7 +126,7 @@ keyboard descent).
 
 **Slots:** none.
 
-**CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
+**CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `disclosure` (the plus or minus on a topic with children), `link`
 (parent-child connector), `focus-ring` (keyboard focus ring), `limit` (the "showing N of M"
 render-cap notice, present above 500 legacy visible nodes and always in source mode),
 `input-limit` (legacy input-admission notice), `live-region` (visually hidden
@@ -138,6 +140,8 @@ virtualized navigator), `source-row` (a hierarchy row with global position metad
 ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
+`--lr-mind-map-label-halo` (default `var(--lr-color-surface)`) — halo stroke behind topic labels.
+`--lr-mind-map-source-block-size` (default `20rem`) — block size of the source-mode diagram box; the diagram scales to fit it and scrolls when it still overflows.
 
 **Optional peer deps:** none.
 

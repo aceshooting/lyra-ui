@@ -23,6 +23,10 @@ request cancellation. The component does not poll, schedule timers, start runs, 
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
 
+Tab enters the current row's actions. Up, Down, Home and End move between rows and keep the
+same action when available. A narrow layout stacks status and actions below the run label.
+A polite announcement accompanies the first transition past the 100-row display limit.
+
 **Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
 `completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and

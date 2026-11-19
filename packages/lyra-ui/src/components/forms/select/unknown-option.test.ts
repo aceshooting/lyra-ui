@@ -143,8 +143,9 @@ describe('lr-select out-of-list value', () => {
   });
 
   it('passes an accessibility audit with the synthetic row showing', async () => {
-    const el = await buildSelect('label="Pick" value="ghost" open with-unknown-option');
-    await el.updateComplete;
+    const el = await buildSelect('label="Pick" value="ghost" with-unknown-option');
+    await el.show();
+    expect(unknownRows(el).length).to.equal(1);
     await expect(el).to.be.accessible();
   });
 });

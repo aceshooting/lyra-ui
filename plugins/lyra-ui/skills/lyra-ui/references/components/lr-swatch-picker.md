@@ -84,7 +84,7 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-change` (`detail: { value }`) — fired only when the selected value actually
+**Events:** `lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
 `lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
 Arrow/Home/End key that lands on one), whether or not the selection actually moved. Bubbling,
@@ -108,6 +108,7 @@ follows `size` —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
 place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
 glyph fills the wrapper; the wrapper is inert and aria-hidden across the flattened subtree).
+A selected custom icon keeps an outline in the selected color, including when its glow is zero.
 Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the

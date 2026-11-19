@@ -230,7 +230,7 @@ it('treats unset held totals and non-finite retained sizes as zero', () => {
 });
 
 it('paints the pressed dropzone from its public tokens', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input style="--lr-transition-interactive: none; --lr-transition-fast: 0s; --lr-file-input-dropzone-active-border-color: rgb(1, 2, 3); --lr-file-input-dropzone-active-bg: rgb(4, 5, 6)"></lr-file-input>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input data-lr-theme-scope style="--lr-transition-interactive: none; --lr-transition-fast: 0s; --lr-file-input-dropzone-active-border-color: rgb(1, 2, 3); --lr-file-input-dropzone-active-bg: rgb(4, 5, 6)"></lr-file-input>`);
   const zone = el.shadowRoot!.querySelector<HTMLElement>('[part~="file-input"]')!;
   await resetMouse();
   try {

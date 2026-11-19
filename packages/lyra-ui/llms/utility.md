@@ -1,8 +1,8 @@
-
 ## `lr-export-button`
 
 The `exportFailed` message names a failed download in the live region. Theme a format option with
-`--lr-export-button-menu-item-{hover,active}-{bg,color}`. The trigger and options use `--lr-transition-interactive`.
+`--lr-export-button-menu-item-hover-bg`, `--lr-export-button-menu-item-hover-color`,
+`--lr-export-button-menu-item-active-bg` and `--lr-export-button-menu-item-active-color`. The trigger and options use `--lr-transition-interactive`.
 
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
 immediately) or multi-format (click opens a small menu).
@@ -501,10 +501,14 @@ observer.
 
 ## `lr-json-viewer`
 
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
 Local searches ignore case and accents in keys and values. Navigating a match scrolls the viewer within
 its own bounds. An overflowing tree becomes a keyboard tab stop named by the host’s `aria-label` or the
-localized `jsonViewerLabel`. `--lr-json-viewer-toggle-{hover,active}-{bg,color}` and
-`--lr-json-viewer-copy-{hover,active}-{bg,color}` set the action colors independently of the row.
+localized `jsonViewerLabel`. `--lr-json-viewer-toggle-hover-bg`, `--lr-json-viewer-toggle-hover-color`,
+`--lr-json-viewer-toggle-active-bg`, `--lr-json-viewer-toggle-active-color`,
+`--lr-json-viewer-copy-hover-bg`, `--lr-json-viewer-copy-hover-color`,
+`--lr-json-viewer-copy-active-bg` and `--lr-json-viewer-copy-active-color` set the action colors independently of the row.
 
 A collapsible, copyable tree view for an arbitrary JSON-serializable value (object, array, string,
 number, boolean, null, or `undefined`). Serves as a fallback renderer wherever a raw payload needs
@@ -949,6 +953,8 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 ## `lr-poll-status`
 
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
 A "next scheduled refresh" countdown with built-in pause and optional manual refresh controls: a ticking
 `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at zero, and a
 pause/resume toggle.
@@ -1004,7 +1010,8 @@ repainting every other component that reuses the same shared success token. `--l
 `--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
 brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
 hover/pressed paint independently of those same shared brand tokens; the matching
-`--lr-poll-status-refresh-hover-bg`/`-hover-color`/`-active-bg`/`-active-color` tokens do the same
+`--lr-poll-status-refresh-hover-bg`, `--lr-poll-status-refresh-hover-color`,
+`--lr-poll-status-refresh-active-bg` and `--lr-poll-status-refresh-active-color` tokens do the same
 for the `refresh-button`. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
@@ -1308,13 +1315,17 @@ fresh `query` is the proxy for "the caret may have moved").
 
 ## `lr-diff-view`
 
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
 The `copyable` property reflects to the host attribute and defaults to false. Listen for `lr-copy-error` for
 a clipboard failure or check `event.composedPath()[0]` to identify the origin of a bubbling `lr-error`.
 Apply `max-height`, `context-lines`, `layout` and `copyable` directly to a standalone diff viewer.
 An overflowing diff becomes a keyboard tab stop named by the host’s `aria-label` or the localized `diffViewLabel`.
 The sides of a split diff retain their old and new content labels.
-The `--lr-diff-view-copy-{hover,active}-{bg,color}` and
-`--lr-diff-view-highlight-action-{hover,active}-{bg,color}` tokens style its two actions.
+The `--lr-diff-view-copy-hover-bg`, `--lr-diff-view-copy-hover-color`, `--lr-diff-view-copy-active-bg`,
+`--lr-diff-view-copy-active-color`, `--lr-diff-view-highlight-action-hover-bg`,
+`--lr-diff-view-highlight-action-hover-color`, `--lr-diff-view-highlight-action-active-bg` and
+`--lr-diff-view-highlight-action-active-color` tokens style its two actions.
 
 A real two-string line diff (a classic longest-common-subsequence dynamic program, not a Myers
 implementation), rendered as interleaved unified-diff output — not diff-flavored syntax highlighting
@@ -2058,7 +2069,10 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 
 ## `lr-random-content`
 
-Both built-in actions read `--lr-random-content-action-{hover,active}-{bg,color}`.
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
+
+Both built-in actions read `--lr-random-content-action-hover-bg`, `--lr-random-content-action-hover-color`,
+`--lr-random-content-action-active-bg` and `--lr-random-content-action-active-color`.
 Set `autoplay-interval` to control the time between selections.
 
 Shows a chosen subset of its slotted children and hides the rest — A/B copy testing, testimonial
