@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Option ಕೀ',
   kbdAltWord: 'Alt ಕೀ',
   kbdShiftWord: 'Shift ಕೀ',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('kn', strings);

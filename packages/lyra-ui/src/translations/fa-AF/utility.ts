@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} کلید',
   },
   jsonViewerLimit: 'تنها نخستین {count} گرهٔ JSON و سطح‌های تودرتوی {depth} نمایش داده و جست‌وجو می‌شوند.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'مکث',
   pollResume: 'ازسرگیری',
   pollRefresh: 'همین حالا تازه‌سازی کنید',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'ماه',
   knownDateYear: 'سال',
   exportFormatMenuLabel: 'قالب {label}',
+  exportFailed: 'برون‌بری انجام نشد',
   mentionSuggestions: 'پیشنهادها',
   mentionResultCount: {
     one: '{count} پیشنهاد',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'تنها ۱۰٬۰۰۰ پیشنهاد نخست برای اشاره در دسترس هستند.',
   diffViewHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نشان داده می‌شود.',
+  diffViewLabel: 'تفاوت',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

@@ -1,6 +1,6 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { chartDataTableStyles, chartLegendPositionStyles } from './chart-surface.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 export const styles = css`
@@ -99,17 +99,33 @@ export const styles = css`
      --lr-color-mix-partner (which follows the text colour) always moves, and always away from the
      plot background. The base is currentColor because each mark carries its series colour in an
      inline 'color' beside its fill attribute -- CSS cannot read a fill presentation attribute. */
-  :where([part='bar']):hover,
-  :where([part='point']):hover,
-  :where(.mark-hit-group):hover [part='bar'],
-  :where(.mark-hit-group):hover [part='point'] {
+  :where(svg:not([data-forced-colors])) :where([part='bar']):hover,
+  :where(svg:not([data-forced-colors])) :where([part='point']):hover,
+  :where(svg:not([data-forced-colors])) :where(.mark-hit-group):hover [part='bar'],
+  :where(svg:not([data-forced-colors])) :where(.mark-hit-group):hover [part='point'] {
     fill: color-mix(in oklab, currentColor, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  :where([part='bar']):active,
-  :where([part='point']):active,
-  :where(.mark-hit-group):active [part='bar'],
-  :where(.mark-hit-group):active [part='point'] {
+  :where(svg:not([data-forced-colors])) :where([part='bar']):active,
+  :where(svg:not([data-forced-colors])) :where([part='point']):active,
+  :where(svg:not([data-forced-colors])) :where(.mark-hit-group):active [part='bar'],
+  :where(svg:not([data-forced-colors])) :where(.mark-hit-group):active [part='point'] {
     fill: color-mix(in oklab, currentColor, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  /* Forced colors keep the series texture as the fill (a flat hover fill would erase it), so hover
+     and press are an edge in a system colour instead. */
+  :where(svg[data-forced-colors]) :where([part='bar']):hover,
+  :where(svg[data-forced-colors]) :where([part='point']):hover,
+  :where(svg[data-forced-colors]) :where(.mark-hit-group):hover [part='bar'],
+  :where(svg[data-forced-colors]) :where(.mark-hit-group):hover [part='point'] {
+    stroke: Highlight;
+    stroke-width: var(--lr-border-width-medium);
+  }
+  :where(svg[data-forced-colors]) :where([part='bar']):active,
+  :where(svg[data-forced-colors]) :where([part='point']):active,
+  :where(svg[data-forced-colors]) :where(.mark-hit-group):active [part='bar'],
+  :where(svg[data-forced-colors]) :where(.mark-hit-group):active [part='point'] {
+    stroke: ButtonText;
+    stroke-width: var(--lr-border-width-thick, var(--lr-border-width-medium));
   }
   [part='bar'][data-selected],
   [part='point'][data-selected] {
@@ -174,21 +190,7 @@ export const styles = css`
     margin-inline-start: var(--lr-space-2xs);
     color: var(--lr-chart-tick-color, var(--_lr-chart-tick-color));
   }
-  [part='data-table'][data-visually-hidden] {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    overflow: clip;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  [part='data-table'] {
-    grid-area: table;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
+  ${chartDataTableStyles}
   .notices { grid-area: notice; }
   [part='limit'],
   [part='data-truncation'] {
@@ -198,45 +200,6 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
-  [part='base']:where([data-legend-position='top']) {
-    grid-template-areas:
-      'legend'
-      'plot'
-      'notice'
-      'table';
-  }
-  [part='base']:where([data-legend-position='inline-start']) {
-    grid-template-areas:
-      'legend plot'
-      'notice notice'
-      'table table';
-    grid-template-columns:
-      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
-      minmax(0, 1fr);
-  }
-  [part='base']:where([data-legend-position='inline-end']) {
-    grid-template-areas:
-      'plot legend'
-      'notice notice'
-      'table table';
-    grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
-  }
-  @container ${mediumContainerQuery} {
-    [part='base']:where([data-legend-position='inline-start']),
-    [part='base']:where([data-legend-position='inline-end']) {
-      grid-template-areas:
-        'plot'
-        'notice'
-        'legend'
-        'table';
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  /* The disclosure button gets its own row just above the table only when it exists: an empty
-     row would add one more gap to every chart. Each variant follows the rule it extends. */
   [part='base']:where([data-table-toggle]) {
     grid-template-areas:
       'plot'
@@ -245,55 +208,8 @@ export const styles = css`
       'table-toggle'
       'table';
   }
-  [part='base']:where([data-table-toggle][data-legend-position='top']) {
-    grid-template-areas:
-      'legend'
-      'plot'
-      'notice'
-      'table-toggle'
-      'table';
-  }
-  [part='base']:where([data-table-toggle][data-legend-position='inline-start']) {
-    grid-template-areas:
-      'legend plot'
-      'notice notice'
-      'table-toggle table-toggle'
-      'table table';
-  }
-  [part='base']:where([data-table-toggle][data-legend-position='inline-end']) {
-    grid-template-areas:
-      'plot legend'
-      'notice notice'
-      'table-toggle table-toggle'
-      'table table';
-  }
-  @container ${mediumContainerQuery} {
-    [part='base']:where([data-table-toggle][data-legend-position='inline-start']),
-    [part='base']:where([data-table-toggle][data-legend-position='inline-end']) {
-      grid-template-areas:
-        'plot'
-        'notice'
-        'legend'
-        'table-toggle'
-        'table';
-    }
-  }
-  [part='data-table-toggle'] {
-    grid-area: table-toggle;
-    align-self: flex-start;
-    font: inherit;
-    font-size: var(--lr-font-size-xs);
-    ${iconHitTarget}
-    padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    max-inline-size: 100%;
-    white-space: normal;
-    overflow-wrap: break-word;
-    cursor: pointer;
-  }
+  ${chartLegendPositionStyles('notice', false)}
+  ${chartLegendPositionStyles('notice', true)}
   [part='data-table-toggle']:hover {
     background: var(
       --lr-lite-chart-data-table-toggle-hover-bg,

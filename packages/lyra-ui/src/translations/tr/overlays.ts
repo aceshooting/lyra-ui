@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Seçenek',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('tr', strings);

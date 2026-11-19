@@ -5,9 +5,7 @@ import {
   loadChartAndRegisterZoom,
   loadChartAndDataLabels,
   loadChartJsWithZoomResult,
-  loadChartJsWithZoom,
   loadChartJsWithDataLabelsResult,
-  loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
   loadAnnotationPlugin,
   loadChartAndAnnotation,
@@ -153,7 +151,7 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
   });
 
   it('still resolves chart.js when the zoom plugin fails to load — a partial install (chart.js only, no zoom) must not break every chart', async () => {
-    const zoomError = new Error('zoom boom');
+    const zoomError = new Error('Failed to resolve module specifier "chartjs-plugin-zoom"');
     const originalWarn = console.warn;
     const warnings: unknown[][] = [];
     console.warn = (...args: unknown[]) => warnings.push(args);
@@ -175,7 +173,7 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
   });
 
   it('resolves null when chart.js itself fails to load, even though the zoom plugin would have loaded fine', async () => {
-    const chartError = new Error('chart.js boom');
+    const chartError = new Error('Failed to resolve module specifier "chart.js"');
     const originalWarn = console.warn;
     const warnings: unknown[][] = [];
     console.warn = (...args: unknown[]) => warnings.push(args);
@@ -368,8 +366,8 @@ describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () =
     // closes: two callers (e.g. two `<lr-chart zoomable>` elements connecting
     // close together) both hitting `loadChartJsWithZoom()` before either has
     // had a chance to observe a completed load.
-    const p1 = loadChartJsWithZoom();
-    const p2 = loadChartJsWithZoom();
+    const p1 = loadChartJsWithZoomResult();
+    const p2 = loadChartJsWithZoomResult();
 
     // A memoized single load means both callers share the exact same
     // promise — a boolean check-then-act guard could never guarantee this,
@@ -386,7 +384,7 @@ describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () =
     if (result.kind !== 'available') {
       throw new Error('Expected zoom to be available.');
     }
-    expect(mod).to.equal(result.mod);
+    expect(mod).to.equal(result);
   });
 });
 
@@ -395,8 +393,8 @@ describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin
     // No `await` between the two calls — the same check-then-act race the zoom
     // loader closes: two `<lr-chart data-labels>` elements connecting close
     // together must share one in-flight load, not each register the plugin.
-    const p1 = loadChartJsWithDataLabels();
-    const p2 = loadChartJsWithDataLabels();
+    const p1 = loadChartJsWithDataLabelsResult();
+    const p2 = loadChartJsWithDataLabelsResult();
     expect(p1).to.equal(p2);
 
     const [combined] = await Promise.all([p1, p2]);
@@ -408,8 +406,8 @@ describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin
     if (result.kind !== 'available') {
       throw new Error('Expected data labels to be available.');
     }
-    expect(combined?.mod).to.equal(result.mod);
-    expect(combined?.plugin).to.equal(result.plugin);
+    expect(combined).to.equal(result);
+    expect(result.plugin.id).to.equal('datalabels');
   });
 
   it('resolves undefined and warns (naming the component + package) when the data-labels plugin fails to load — a partial install must not break charts', async () => {

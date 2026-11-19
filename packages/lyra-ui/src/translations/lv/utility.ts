@@ -34,6 +34,7 @@ const strings: LyraLocaleStrings = {
     zero: '{count} atslēgas',
   },
   jsonViewerLimit: 'Tiek rādīti un pārmeklēti tikai pirmie {count} JSON mezgli un {depth} ligzdošanas līmeņi.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pauzēt',
   pollResume: 'Atsākt',
   pollRefresh: 'Atsvaidzināt tagad',
@@ -51,6 +52,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Mēnesis',
   knownDateYear: 'Gads',
   exportFormatMenuLabel: '{label} formāts',
+  exportFailed: 'Eksportēšana neizdevās',
   mentionSuggestions: 'Ieteikumi',
   mentionResultCount: {
     one: '{count} ieteikums',
@@ -71,6 +73,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Pieejami tikai pirmie 10 000 pieminēšanas kandidāti.',
   diffViewHighlightLimit: 'Garš kods tiek rādīts bez sintakses izcelšanas.',
+  diffViewLabel: 'Atšķirības',
 };
 
 registerLyraLocale('lv', strings);

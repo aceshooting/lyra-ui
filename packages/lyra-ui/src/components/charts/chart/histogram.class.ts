@@ -21,7 +21,7 @@ import type { LyraHistogramDistribution, LyraPreparedCategoryData } from '../../
 export type { LyraHistogramDistribution } from '../../../utilities/data-preparation.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraChartPreparedData } from './chart-prepared-data.js';
-import { binnedBuckets, distributionBuckets, invalidateHistogramBuckets, snapshotHistogramDistribution } from './histogram-buckets.js';
+import { binnedBuckets, distributionBuckets, extendHistogramBuckets, invalidateHistogramBuckets, snapshotHistogramDistribution } from './histogram-buckets.js';
 export { binnedBuckets } from './histogram-buckets.js';
 import { bidiStyles } from './chart-bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -33,6 +33,8 @@ import { LYRA_DEFAULT_chartSummarySeparator } from '../../../internal/default-st
 
 /** The `values` snapshot keeps at most this many samples. */
 const MAX_HISTOGRAM_SAMPLES = 10_000;
+const histogramDistributionKeys = new Set<PropertyKey>(['distribution', 'seriesLabel', 'locale', 'strings']);
+const histogramContentKeys = ['values', 'bins', 'seriesLabel', 'distribution'] as const;
 const incompatibleDistribution = Object.freeze({}) as LyraChartPreparedData;
 
 interface HistogramAppendBatch {
@@ -201,7 +203,7 @@ export class LyraHistogram extends LyraChart {
   override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: Parameters<LyraElement['requestUpdate']>[2]): void {
     if ((name === 'values' && !this.committingSamples) || name === 'distribution' ||
       (name === undefined && this._distribution != null)) this.cancelSampleBatches();
-    if (name === undefined || ['distribution', 'seriesLabel', 'locale', 'strings'].includes(String(name))) {
+    if (name === undefined || histogramDistributionKeys.has(name)) {
       this.distributionDirty = true;
       invalidateHistogramBuckets(this);
       if (name !== undefined && this._distribution != null) super.requestUpdate('preparedData', undefined);
@@ -231,12 +233,18 @@ export class LyraHistogram extends LyraChart {
       if (typeof value === 'number' && Number.isFinite(value)) batch.newest.push(value);
     }
     if (batch.cursor < 0 || batch.newest.length === batch.limit) {
-      for (let index = this.values.length - 1; index >= 0 && batch.newest.length < batch.limit; index--)
-        batch.newest.push(this.values[index]!);
-      batch.newest.reverse();
+      const previous = this.values;
+      const retained = Math.min(previous.length, batch.limit - batch.newest.length);
+      const values = new Array<number>(retained + batch.newest.length);
+      const start = previous.length - retained;
+      for (let i = 0; i < retained; i++) values[i] = previous[start + i]!;
+      for (let i = 0; i < batch.newest.length; i++) values[values.length - 1 - i] = batch.newest[i]!;
       this.sampleBatches.shift();
       this.committingSamples = true;
-      try { this.withStreamedTableUpdate(() => { this.values = batch.newest; }); }
+      try {
+        this.withStreamedTableUpdate(() => { this.values = values; });
+        extendHistogramBuckets(this, previous, start, batch.newest);
+      }
       finally { this.committingSamples = false; }
     }
     if (this.sampleBatches.length) {
@@ -285,7 +293,7 @@ export class LyraHistogram extends LyraChart {
   protected override chartContentChanged(changed: PropertyValues): boolean {
     return (
       super.chartContentChanged(changed) ||
-      ['values', 'bins', 'seriesLabel', 'distribution'].some((name) => changed.has(name))
+      histogramContentKeys.some((name) => changed.has(name))
     );
   }
 }

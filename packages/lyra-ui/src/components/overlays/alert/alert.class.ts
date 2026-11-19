@@ -18,8 +18,9 @@ import {
   optionalLiteralSetConverter,
 } from '../../../internal/converters.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
+  type LyraAppearance,
   type LyraSize,
 } from '../../../internal/variants.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
@@ -32,6 +33,7 @@ import {
   TOAST_REGION_REJECT,
   TOAST_REGION_SET_ACTIVE,
   toastRegionControllerFor,
+  type NotificationDismissReason,
   type ToastRegionController,
 } from '../toast/toast-region-protocol.js';
 import { styles } from './alert.styles.js';
@@ -58,6 +60,8 @@ export interface LyraAlertEventMap {
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;
+  'lr-close-request': CustomEvent<{ reason: NotificationDismissReason }>;
+  'lr-close': CustomEvent<{ reason: NotificationDismissReason }>;
   'lr-after-hide': CustomEvent<null>;
 }
 
@@ -97,6 +101,8 @@ interface AlertAutoHideTimer {
  * @event lr-after-show - Emitted after the alert's show motion completes. Noncancelable.
  * @event lr-hide - The alert is about to close, including an auto-hide expiry. Cancelable on
  *   the same terms as `lr-show`.
+ * @event lr-close-request - Cancelable dismissal request after lr-hide. Detail contains the dismissal reason.
+ * @event lr-close - Dismissal committed. Detail contains the same reason.
  * @event lr-after-hide - Emitted after the alert's hide motion completes. Noncancelable.
  * @csspart base - The component's base wrapper.
  * @csspart close-button - The close button.
@@ -110,6 +116,11 @@ interface AlertAutoHideTimer {
  *   other interactive surface in the library also reads.
  * @cssprop [--lr-alert-close-active-bg=color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   The close button's pressed background, independently scoped from `--lr-alert-close-hover-bg`.
+ * @cssprop --lr-alert-bg - Panel background.
+ * @cssprop --lr-alert-border - Panel border color.
+ * @cssprop --lr-alert-color - Panel text color.
+ * @cssprop --lr-alert-radius - Panel corner radius.
+ * @cssprop --lr-alert-shadow - Panel shadow.
  * @status stable
  * @since 8.0.0
  */
@@ -142,7 +153,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     this.requestOpenState(Boolean(next));
   }
 
-  private requestOpenState(normalized: boolean): boolean {
+  private requestOpenState(normalized: boolean, reason: NotificationDismissReason = 'programmatic'): boolean {
     if (normalized === this._open) return true;
     if (this.openRequest) return this.openRequest.target === normalized;
     const repair = normalized
@@ -165,7 +176,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
       // observes and awaits this exact request instead of starting a second veto point.
       this.openRequest = request;
       this.transitionPromise = completion;
-      if (this.emit(normalized ? 'lr-show' : 'lr-hide', null, { cancelable: true }).defaultPrevented) {
+      if (this.emit(normalized ? 'lr-show' : 'lr-hide', null, { cancelable: true }).defaultPrevented ||
+          (!normalized && this.emit('lr-close-request', { reason }, { cancelable: true }).defaultPrevented)) {
         // A veto that arrived through the reflected attribute would otherwise leave the attribute
         // disagreeing with the property.
         this.toggleAttribute('open', this._open);
@@ -183,12 +195,16 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
       if (this.openRequest === request) this.openRequest = undefined;
       this.transitionRequest = request;
       void this.runTransition(request);
+      if (!normalized) this.emit('lr-close', { reason });
     }
     return true;
   }
 
   /** Enables the localized close action. */
   @property({ type: Boolean, reflect: true }) closable = false;
+
+  /** Panel fill treatment. The untiered panel uses its variant's quiet fill and border. */
+  @property({ reflect: true, useDefault: true }) appearance: LyraAppearance = 'filled-outlined';
 
   private _size?: LyraSize;
 
@@ -209,11 +225,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, value => { this._size = value; });
   }
 
   /** Physical direction in which the optional visual countdown empties. Unsupported values
@@ -722,7 +734,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
       }
       this.autoHideTimer = undefined;
       this.autoHideRemaining = undefined;
-      void this.hide();
+      this.requestOpenState(false, 'timeout');
     };
     if (duration === 0) {
       owner.queueMicrotask(finish);
@@ -815,7 +827,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   };
 
   private close = (): void => {
-    void this.hide();
+    this.requestOpenState(false, 'close-button');
   };
 
   override render(): TemplateResult {

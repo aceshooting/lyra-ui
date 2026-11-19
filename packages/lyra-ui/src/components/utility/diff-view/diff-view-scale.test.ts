@@ -20,11 +20,27 @@ it('caps rendered operations when max-lines is unbounded', async () => {
   } finally { el.remove(); }
 });
 it('loads a requested lazy diff grammar without the full highlighter module', async () => {
-  const el = document.createElement('lr-diff-view'); let calls = 0; let unused = 0;
-  el.languageLoaders = { json: async () => { calls++; return { default: jsonGrammar }; }, unused: async () => { unused++; return { default: jsonGrammar }; } };
-  el.language = 'json'; el.oldText = '{"x":1}'; el.newText = '{"x":2}'; document.body.append(el);
-  try { await el.updateComplete; await waitUntil(() => calls === 1, 'lazy grammar did not resolve', { timeout: 2500 }); expect(unused).equal(0); }
-  finally { el.remove(); }
+  const el = document.createElement('lr-diff-view');
+  let calls = 0;
+  let unused = 0;
+  let grammarRequested!: () => void;
+  const requested = new Promise<void>(resolve => { grammarRequested = resolve; });
+  el.languageLoaders = {
+    json: async () => { calls++; grammarRequested(); return { default: jsonGrammar }; },
+    unused: async () => { unused++; return { default: jsonGrammar }; },
+  };
+  el.language = 'json';
+  el.oldText = '{"x":1}';
+  el.newText = '{"x":2}';
+  document.body.append(el);
+  try {
+    await requested;
+    await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part="line"] [style]')), 'loaded grammar colors the rendered diff');
+    expect(calls).to.equal(1);
+    expect(unused).to.equal(0);
+  } finally {
+    el.remove();
+  }
 });
 
 it('keeps both oversized diff inputs readable with a localized highlighting notice', async () => {
@@ -54,12 +70,13 @@ it('retires a disconnected lazy grammar result and highlights again after reconn
   const el = document.createElement('lr-diff-view');
   let resolveGrammar!: (value: typeof jsonGrammar) => void;
   const pending = new Promise<typeof jsonGrammar>((resolve) => { resolveGrammar = resolve; });
-  let called = false;
-  el.languageLoaders = { json: () => { called = true; return pending; } };
+  let grammarRequested!: () => void;
+  const requested = new Promise<void>(resolve => { grammarRequested = resolve; });
+  el.languageLoaders = { json: () => { grammarRequested(); return pending; } };
   el.language = 'json'; el.oldText = '{"x":1}'; el.newText = '{"x":2}'; document.body.append(el);
   const seam = el as unknown as { highlightedOldLines: string[] | null };
   try {
-    await waitUntil(() => called, 'lazy grammar was not requested');
+    await requested;
     el.remove(); resolveGrammar(jsonGrammar);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(seam.highlightedOldLines === null).equal(true);

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} nøklar',
   },
   jsonViewerLimit: 'Berre dei første {count} JSON-nodane og {depth} nivå med nesting blir viste og gjennomsøkte.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Set på pause',
   pollResume: 'Hald fram',
   pollRefresh: 'Oppdater no',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Månad',
   knownDateYear: 'År',
   exportFormatMenuLabel: 'Format for {label}',
+  exportFailed: 'Eksporten mislukkast',
   mentionSuggestions: 'Forslag',
   mentionResultCount: {
     one: '{count} forslag',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Berre dei første 10 000 kandidatane til omtale er tilgjengelege.',
   diffViewHighlightLimit: 'Lang kode blir vist utan syntaksutheving.',
+  diffViewLabel: 'Diff',
 };
 
 registerLyraLocale('nn', strings);

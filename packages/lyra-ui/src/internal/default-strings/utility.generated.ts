@@ -9,10 +9,12 @@ export const LYRA_DEFAULT_diffViewHiddenLines: LyraMessage = {
     other: '{count} unchanged lines',
   };
 export const LYRA_DEFAULT_diffViewHighlightLimit: LyraMessage = 'Long code is shown without syntax highlighting.';
+export const LYRA_DEFAULT_diffViewLabel: LyraMessage = 'Diff';
 export const LYRA_DEFAULT_diffViewNewLabel: LyraMessage = 'Modified';
 export const LYRA_DEFAULT_diffViewOldLabel: LyraMessage = 'Original';
 export const LYRA_DEFAULT_diffViewTooLarge: LyraMessage = 'Diff is too large to display.';
 export const LYRA_DEFAULT_exportButtonLabel: LyraMessage = 'Export';
+export const LYRA_DEFAULT_exportFailed: LyraMessage = 'Export failed';
 export const LYRA_DEFAULT_exportFormatMenuLabel: LyraMessage = '{label} format';
 export const LYRA_DEFAULT_iconLoadError: LyraMessage = 'The icon failed to load.';
 export const LYRA_DEFAULT_iconSanitizerMissing: LyraMessage = 'This icon needs the optional "dompurify" package installed to render safely.';
@@ -25,6 +27,7 @@ export const LYRA_DEFAULT_jsonItemCount: LyraMessage = { one: '{count} item', ot
 export const LYRA_DEFAULT_jsonKeyCount: LyraMessage = { one: '{count} key', other: '{count} keys' };
 export const LYRA_DEFAULT_jsonObject: LyraMessage = 'object';
 export const LYRA_DEFAULT_jsonValue: LyraMessage = 'value';
+export const LYRA_DEFAULT_jsonViewerLabel: LyraMessage = 'JSON';
 export const LYRA_DEFAULT_jsonViewerLimit: LyraMessage = 'Only the first {count} JSON nodes and {depth} nesting levels are shown and searched.';
 export const LYRA_DEFAULT_knownDateDay: LyraMessage = 'Day';
 export const LYRA_DEFAULT_knownDateMonth: LyraMessage = 'Month';

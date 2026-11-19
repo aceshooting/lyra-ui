@@ -3,34 +3,25 @@ import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-targe
 import type { LyraDiffView } from './diff-view.js';
 import './diff-view.js';
 
-interface ScrollRecord {
-  text: string;
-  index: string | null;
-  connected: boolean;
+function trackScrollWrites(body: HTMLElement): () => number {
+  const offset = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop')!;
+  let writes = 0;
+  Object.defineProperty(body, 'scrollTop', {
+    configurable: true,
+    get: () => offset.get!.call(body) as number,
+    set: (value: number) => { writes++; offset.set!.call(body, value); },
+  });
+  return () => writes;
 }
 
-function trackLineScrolling(viewer: LyraDiffView): { calls: ScrollRecord[]; restore(): void } {
-  const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
-  const original = Element.prototype.scrollIntoView;
-  const calls: ScrollRecord[] = [];
-  Object.defineProperty(Element.prototype, 'scrollIntoView', {
-    configurable: true,
-    writable: true,
-    value(this: Element, options?: boolean | ScrollIntoViewOptions): void {
-      if (viewer.shadowRoot!.contains(this) && this.hasAttribute('data-op-index')) {
-        calls.push({ text: this.textContent?.trim() ?? '', index: this.getAttribute('data-op-index'), connected: this.isConnected });
-        return;
-      }
-      original.call(this, options);
-    },
-  });
-  return {
-    calls,
-    restore() {
-      if (descriptor) Object.defineProperty(Element.prototype, 'scrollIntoView', descriptor);
-      else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
-    },
-  };
+function assertVisibleMatch(viewer: LyraDiffView, body: HTMLElement, query: string): void {
+  const active = viewer.shadowRoot!.querySelector<HTMLElement>('[data-active-match]')!;
+  const bounds = active.getBoundingClientRect();
+  const port = body.getBoundingClientRect();
+  expect(active.isConnected).to.equal(true);
+  expect(active.textContent).to.include(query);
+  expect(bounds.top).to.be.at.least(port.top - 1);
+  expect(bounds.bottom).to.be.at.most(port.bottom + 1);
 }
 
 async function expectRetiredNavigation(pending: Promise<boolean>): Promise<void> {
@@ -46,7 +37,7 @@ for (const direction of ['next', 'previous'] as const) {
   for (const retirement of ['clear', 'replace'] as const) {
     it(`keeps ${direction} navigation retired when a search-change listener ${retirement === 'clear' ? 'clears the results' : 'replaces the compared source'}`, async () => {
       const text = 'needle first\nplain middle\nneedle last';
-      const viewer = await fixture<LyraDiffView>(html`<lr-diff-view .oldText=${text} .newText=${text}></lr-diff-view>`);
+      const viewer = await fixture<LyraDiffView>(html`<lr-diff-view max-height="32px" .oldText=${text} .newText=${text}></lr-diff-view>`);
       expect(await viewer.search('needle')).to.equal(2);
       expect(viewer.shadowRoot!.querySelector('[data-active-match]')?.textContent?.trim()).to.equal('needle first');
       const changes: LyraSearchChangeDetail[] = [];
@@ -58,25 +49,24 @@ for (const direction of ['next', 'previous'] as const) {
           viewer.newText = viewer.oldText;
         }
       }, { once: true });
-      const scrolling = trackLineScrolling(viewer);
-      try {
-        await expectRetiredNavigation(direction === 'next' ? viewer.searchNext() : viewer.searchPrevious());
-        await viewer.updateComplete;
-        expect(scrolling.calls.length, 'the superseded event cannot cause a line scroll').to.equal(0);
-        expect(changes.at(-1)).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
-        expect(viewer.shadowRoot!.querySelectorAll('[data-match], [data-active-match]').length).to.equal(0);
-        expect(await viewer.searchNext()).to.equal(false);
-        expect(await viewer.searchPrevious()).to.equal(false);
+      const body = viewer.shadowRoot!.querySelector<HTMLElement>('[part=base]')!;
+      const scrollWrites = trackScrollWrites(body);
+      await expectRetiredNavigation(direction === 'next' ? viewer.searchNext() : viewer.searchPrevious());
+      await viewer.updateComplete;
+      expect(scrollWrites(), 'retired navigation does not scroll the viewer').to.equal(0);
+      expect(changes.at(-1)).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+      expect(viewer.shadowRoot!.querySelectorAll('[data-match], [data-active-match]').length).to.equal(0);
+      expect(await viewer.searchNext()).to.equal(false);
+      expect(await viewer.searchPrevious()).to.equal(false);
 
-        const query = retirement === 'clear' ? 'needle' : 'replacement';
-        expect(await viewer.search(query)).to.equal(retirement === 'clear' ? 2 : 3);
-        expect(scrolling.calls.length, 'a new search still scrolls its own accepted target').to.equal(1);
-        expect(scrolling.calls[0]!.connected).to.equal(true);
-        expect(scrolling.calls[0]!.text).to.include(query);
-        expect(viewer.shadowRoot!.querySelector('[data-active-match]')?.textContent).to.include(query);
-      } finally {
-        scrolling.restore();
-      }
+      body.scrollTop = body.scrollHeight;
+      const before = body.scrollTop;
+      expect(before).to.be.greaterThan(0);
+      const query = retirement === 'clear' ? 'needle' : 'replacement';
+      expect(await viewer.search(query)).to.equal(retirement === 'clear' ? 2 : 3);
+      expect(body.scrollTop).to.be.lessThan(before);
+      expect(scrollWrites()).to.equal(2);
+      assertVisibleMatch(viewer, body, query);
     });
   }
 }
@@ -87,7 +77,7 @@ const sharedLines = Array.from({ length: 40 }, (_, index) => index === 20 ? 'nee
 for (const operation of ['search navigation', 'anchor jump'] as const) {
   for (const retirement of ['source replacement', 'disconnect'] as const) {
     it(`retires a folded ${operation} across ${retirement} and accepts a fresh search`, async () => {
-      const container = await fixture<HTMLDivElement>(html`<div><lr-diff-view
+      const container = await fixture<HTMLDivElement>(html`<div><lr-diff-view max-height="32px"
         .oldText=${['old start', ...sharedLines, 'old end'].join('\n')}
         .newText=${['needle start', ...sharedLines, 'new end'].join('\n')}
         .contextLines=${1}
@@ -99,7 +89,8 @@ for (const operation of ['search navigation', 'anchor jump'] as const) {
       expect(viewer.shadowRoot!.querySelector(`[data-op-index="${hiddenIndex}"]`) === null).to.equal(true);
       const anchorResults: boolean[] = [];
       viewer.addEventListener('lr-anchor-result', event => anchorResults.push(event.detail.found));
-      const scrolling = trackLineScrolling(viewer);
+      const body = viewer.shadowRoot!.querySelector<HTMLElement>('[part=base]')!;
+      const scrollWrites = trackScrollWrites(body);
       try {
         const pending = operation === 'search navigation'
           ? viewer.searchNext()
@@ -114,7 +105,7 @@ for (const operation of ['search navigation', 'anchor jump'] as const) {
         }
         const found = await pending;
         await viewer.updateComplete;
-        expect(scrolling.calls.length, 'retired reveal cannot scroll a detached or replacement line').to.equal(0);
+        expect(scrollWrites(), 'retired navigation does not scroll the viewer').to.equal(0);
         expect(found, 'the superseded operation reports no current target').to.equal(false);
         expect(anchorResults.some(result => result), 'no retired anchor success is published').to.equal(false);
         if (retirement === 'source replacement') {
@@ -127,12 +118,10 @@ for (const operation of ['search navigation', 'anchor jump'] as const) {
 
         const query = retirement === 'disconnect' ? 'needle hidden' : `replacement-${hiddenIndex}`;
         expect(await viewer.search(query)).to.equal(1);
-        expect(scrolling.calls.length, 'the fresh current search reaches a real rendered line').to.equal(1);
-        expect(scrolling.calls[0]!.connected).to.equal(true);
-        expect(scrolling.calls[0]!.text).to.include(query);
-        expect(viewer.shadowRoot!.querySelector('[data-active-match]')?.textContent).to.include(query);
+        expect(body.scrollTop).to.be.greaterThan(0);
+        expect(scrollWrites()).to.equal(1);
+        assertVisibleMatch(viewer, body, query);
       } finally {
-        scrolling.restore();
         viewer.remove();
       }
     });

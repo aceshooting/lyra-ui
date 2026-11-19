@@ -7,6 +7,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('fr', [
+  'chartLegend',
   'chart',
   'chartCategory',
   'chartData',

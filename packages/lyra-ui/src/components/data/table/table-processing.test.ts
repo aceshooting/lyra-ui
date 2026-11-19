@@ -5,7 +5,6 @@ import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
-import { styles } from './table.styles.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
@@ -523,10 +522,21 @@ it("renders the filter placeholder color and undoes Firefox's reduced default op
   expect(placeholder.opacity).to.equal('1');
 });
 
-it("resets the native search-cancel glyph on the filter field (matches lr-input's own unconditional reset)", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='filter'\]\[type='search'\]::-webkit-search-cancel-button/);
-  expect(css).to.match(/\[part='filter'\]\[type='search'\]::-webkit-search-decoration/);
+it('keeps the query when the native cancel area is clicked and clears it through the named button', async () => {
+  const el = await fixture<LyraTable<Row>>(html`<lr-table filterable filter-text="Ada" .rows=${rows} .columns=${columns}></lr-table>`);
+  const field = el.shadowRoot!.querySelector<HTMLInputElement>('[part="filter"]')!;
+  await focusByKeyboard(field);
+  const rect = field.getBoundingClientRect();
+  try {
+    for (let inset = 4; inset <= 32; inset += 4) {
+      await sendMouse({ type: 'click', position: [Math.round(rect.right - inset), Math.round(rect.top + rect.height / 2)] });
+    }
+    expect(field.value).to.equal('Ada');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-clear"]')!.click();
+    expect(el.filterText).to.equal('');
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('lr-table sorted-header theming and specificity', () => {
@@ -559,7 +569,7 @@ describe('lr-table sorted-header theming and specificity', () => {
 
     el.style.setProperty('--lr-table-header-sorted-bg', 'rgb(1, 2, 3)');
     await el.updateComplete;
-    expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgb(1, 2, 3)');
+    await waitUntil(() => getComputedStyle(scoreHeader).backgroundColor === 'rgb(1, 2, 3)', 'sorted header tint');
   });
 
   it("gives a sorted, sticky header cell the sorted-header background instead of the sticky column's flat surface color (regression)", async () => {

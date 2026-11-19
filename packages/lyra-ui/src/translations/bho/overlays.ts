@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'ऑप्शन',
   kbdAltWord: 'ऑल्ट',
   kbdShiftWord: 'शिफ्ट',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('bho', strings);

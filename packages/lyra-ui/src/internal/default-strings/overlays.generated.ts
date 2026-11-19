@@ -28,6 +28,7 @@ export const LYRA_DEFAULT_kbdPageUpVisual: LyraMessage = 'PgUp';
 export const LYRA_DEFAULT_kbdPageUpWord: LyraMessage = 'Page Up';
 export const LYRA_DEFAULT_kbdPlusWord: LyraMessage = 'Plus';
 export const LYRA_DEFAULT_kbdShiftWord: LyraMessage = 'Shift';
+export const LYRA_DEFAULT_kbdShortcutSeparator: LyraMessage = '+';
 export const LYRA_DEFAULT_kbdSpaceWord: LyraMessage = 'Space';
 export const LYRA_DEFAULT_kbdTabWord: LyraMessage = 'Tab';
 export const LYRA_DEFAULT_rating: LyraMessage = 'Rating';

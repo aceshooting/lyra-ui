@@ -525,7 +525,10 @@ it("toggles a row selection via its checkbox and emits lr-selection-change", asy
   const listener = oneEvent(el, "lr-selection-change");
   findCheckbox(table, 0).click(); // sorted order: row 0 is Alpha (d1)
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ documentIds: ["d1"] });
+  const { documentIds, selectedRowKeys } = (event as CustomEvent<{ documentIds: readonly string[]; selectedRowKeys: readonly string[] }>).detail;
+  expect(selectedRowKeys).to.equal(documentIds);
+  expect(Object.isFrozen(selectedRowKeys)).to.equal(true);
+  expect((event as CustomEvent).detail).to.deep.equal({ documentIds: ["d1"], selectedRowKeys: ["d1"] });
   expect(el.selectedDocumentIds).to.deep.equal(["d1"]);
 });
 
@@ -575,7 +578,7 @@ it('"Clear selection" empties selectedDocumentIds and emits lr-selection-change 
   const listener = oneEvent(el, "lr-selection-change");
   clearButton.click();
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ documentIds: [] });
+  expect((event as CustomEvent).detail).to.deep.equal({ documentIds: [], selectedRowKeys: [] });
   expect(el.selectedDocumentIds).to.deep.equal([]);
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="selection-bar"]')) == null).to.be.true;
@@ -1420,4 +1423,86 @@ describe('document-library retry reentry', () => {
     expect(el.error).to.equal(false);
     expect(table.error).to.equal(false);
   });
+});
+
+it('reports omitted documents, respects the configured input limit and clears the notice on replacement', async () => {
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library max-documents="2" .documents=${docs}></lr-document-library>`);
+  expect(library.documents.map(doc => doc.id)).to.deep.equal(['d2', 'd1']);
+  expect(library.documentsTruncated).to.equal(1);
+  expect(library.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.contain('1');
+  library.maxDocuments = 3;
+  await library.updateComplete;
+  expect(library.documentsTruncated).to.equal(0);
+  expect(library.documents.length).to.equal(3);
+  expect(library.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  library.documents = [docs[0]!, docs[0]!];
+  expect(library.documentsTruncated).to.equal(1);
+});
+
+it('matches unaccented search, announces the result and preserves a localized blank-name fallback', async () => {
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library label="   "
+    .documents=${[{ id: '1', name: 'Café' }, { id: '2', name: 'Water' }]}
+    .strings=${{ documentLibraryLabel: 'Inventory', viewerSearchMatchCount: { one: 'One matching document', other: '{count} matches' } }}>
+    </lr-document-library>`);
+  expect(library.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Inventory');
+  library.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'cafe' } }));
+  await library.updateComplete;
+  expect(library.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('[data-row-key]').length).to.equal(1);
+  await waitUntil(() => sinkTexts().includes('One matching document'), 'filtered document count');
+});
+
+it('selects the plural category from the numeric selection count and sizes its clear button', async () => {
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${docs}
+    .selectedDocumentIds=${['d1']} .strings=${{ documentLibrarySelectedCount: { one: 'Single selection', other: 'Many selections' } }}></lr-document-library>`);
+  expect(library.shadowRoot!.querySelector('[part="selection-count"]')!.textContent!.trim()).to.equal('Single selection');
+  const rect = library.shadowRoot!.querySelector('[part="clear-selection"]')!.getBoundingClientRect();
+  expect(Math.min(rect.width, rect.height)).to.be.at.least(24);
+});
+
+it('keeps documents with a missing sort value after known values in both directions', async () => {
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library sort-key="owner"
+    .documents=${[{ id: 'a', name: 'Missing' }, { id: 'b', name: 'Known', owner: 'Z' }]}></lr-document-library>`);
+  for (const direction of ['asc', 'desc'] as const) {
+    library.sortDir = direction;
+    await library.updateComplete;
+    const names = [...library.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('[part="document-name"]')];
+    expect(names.map(name => name.textContent!.trim())).to.deep.equal(['Known', 'Missing']);
+  }
+});
+
+it('lets a newer document assignment win during descriptor inspection', async () => {
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library></lr-document-library>`);
+  const replacement = [{ id: 'new', name: 'Replacement' }];
+  const original = new Proxy([{ id: 'old', name: 'Old' }], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === '0') library.documents = replacement;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  library.documents = original;
+  expect(library.documents.map(item => item.id)).to.deep.equal(['new']);
+  library.maxDocuments = 0;
+  expect(library.documentsTruncated).to.equal(1);
+  library.maxDocuments = Number.MAX_SAFE_INTEGER;
+  expect(library.maxDocuments).to.equal(100_000);
+  expect(library.documents[0]!.id).to.equal('new');
+});
+
+it('reports malformed tag arrays and tolerates an unreadable inventory length', async () => {
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library></lr-document-library>`);
+  function unreadable<T>(list: T[]): T[] {
+    return new Proxy(list, {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('Unavailable length');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+  }
+  library.maxDocuments = library.maxDocuments;
+  library.documents = [{ id: 'bad', name: 'Invalid tags', tags: unreadable(['tag']) }];
+  expect(library.documentsTruncated).to.equal(1);
+  expect(library.documents.length).to.equal(0);
+  library.documents = unreadable([{ id: 'bad', name: 'Unknown inventory' }]);
+  expect(library.documents.length).to.equal(0);
+  expect(library.documentsTruncated).to.equal(0);
 });

@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Àṣàyàn',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Yípadà',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('yo', strings);

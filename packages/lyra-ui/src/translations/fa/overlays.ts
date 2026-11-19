@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'گزینه',
   kbdAltWord: 'دگرساز',
   kbdShiftWord: 'شیفت',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

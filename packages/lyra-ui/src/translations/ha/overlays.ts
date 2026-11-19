@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Zaɓi',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Sauya',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ha', strings);

@@ -371,7 +371,10 @@ it('keeps live-content tracking silent without animation frames in an ownerless 
   await el.updateComplete;
   await Promise.resolve();
   await Promise.resolve();
-  expect((el as unknown as { liveActive: boolean }).liveActive).to.equal(false);
+  el.heading = 'Detached document';
+  await el.updateComplete;
+  const sink = ownerless.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+  expect(sink?.textContent ?? '').to.equal('');
   el.remove();
 });
 
@@ -1482,3 +1485,22 @@ describe('lazy custom-element announcement content', () => {
     }
   });
 });
+
+for (const update of ['open', 'closable', 'remove'] as const) {
+  it(`discards the close commit when the listener changes ${update}`, async () => {
+    const el = await fixture<LyraCallout>(html`<lr-callout closable>Notice</lr-callout>`);
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+    let requests = 0;
+    let commits = 0;
+    el.addEventListener('lr-close', () => { commits++; });
+    el.addEventListener('lr-close-request', () => {
+      requests++;
+      if (update === 'remove') el.remove();
+      else el[update] = false;
+    });
+    button.click();
+    button.click();
+    expect(requests).to.equal(1);
+    expect(commits).to.equal(0);
+  });
+}

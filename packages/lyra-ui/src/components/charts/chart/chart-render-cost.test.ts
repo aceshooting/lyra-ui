@@ -460,12 +460,12 @@ describe('chart synchronization idle cost', () => {
           chartSync: { enabled: boolean };
           lastObservedInlineSize?: number;
           samplingWidth: number;
-          resizeDrawFrame?: number;
+          resizeDraw: { readonly pending: boolean };
         };
         const width = allocation.lastObservedInlineSize;
         if (!allocation.chartSync.enabled || chart.isUpdatePending ||
           typeof width !== 'number' || !Number.isFinite(width) || width <= 0 ||
-          allocation.samplingWidth !== Math.floor(width) || allocation.resizeDrawFrame !== undefined) return false;
+          allocation.samplingWidth !== Math.floor(width) || allocation.resizeDraw.pending) return false;
         // Initial sampling updates can clear a published category; wait before the single move.
         const runtime = peer(chart) as (RuntimeProbe & {
           width: number;

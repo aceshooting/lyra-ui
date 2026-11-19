@@ -1,3 +1,4 @@
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
@@ -403,7 +404,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private headingObserverDocument?: Document;
   private headingObserverOpen?: boolean;
   private headingObserverGeneration = 0;
-  private bodyOverflowObserver?: ResizeObserver;
+  private readonly bodyOverflowObserver = new OwnedResizeObserver(this, () => this.syncBodyTabIndex());
   private bodyOverflowObservedBody?: HTMLElement;
   /** Invalidates any in-flight `lr-after-show`/`lr-after-hide` wait, so a lifecycle interrupted by
    *  the opposite transition (or by a disconnect) never announces a completion that never
@@ -682,27 +683,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const body = this.renderRoot?.querySelector<HTMLElement>('[part="body"]');
     if (!body || !this.isConnected || this.bodyOverflowObservedBody === body) return;
     this.resetBodyOverflowObserver();
-    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
-    if (!ResizeObserverCtor) return;
-    const observer = new ResizeObserverCtor(() => {
-      if (
-        this.bodyOverflowObserver !== observer ||
-        this.bodyOverflowObservedBody !== body ||
-        !this.isConnected
-      ) {
-        return;
-      }
-      this.syncBodyTabIndex();
-    });
-    this.bodyOverflowObserver = observer;
+    const observer = this.bodyOverflowObserver;
     this.bodyOverflowObservedBody = body;
     observer.observe(body);
     for (const element of this.defaultSlotElements()) observer.observe(element);
   }
 
   private resetBodyOverflowObserver(): void {
-    this.bodyOverflowObserver?.disconnect();
-    this.bodyOverflowObserver = undefined;
+    this.bodyOverflowObserver.clear();
     this.bodyOverflowObservedBody = undefined;
   }
 

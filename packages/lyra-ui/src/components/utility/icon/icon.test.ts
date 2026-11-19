@@ -646,6 +646,22 @@ describe('lr-icon icon libraries', () => {
     }
   });
 
+  it('keeps a local xlink:href use reference in a remote sprite', async () => {
+    const remote =
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+      '<defs><path id="local" d="M0 0h1v1z"/></defs><use id="legacy" xlink:href="#local"/></svg>';
+    const restore = stubFetch(() => Promise.resolve(svgResponse(remote)));
+    try {
+      const el = (await fixture(html`<lr-icon src="https://icons.test/legacy-sprite.svg"></lr-icon>`)) as LyraIcon;
+      await waitUntil(() => partCount(el, '[part="svg"]') === 1);
+      const legacy = el.shadowRoot!.querySelector('#legacy')!;
+      const reference = legacy.getAttribute('href') ?? legacy.getAttribute('xlink:href');
+      expect(reference).to.equal('#local');
+    } finally {
+      restore();
+    }
+  });
+
   it('never fetches a URL the fetch allowlist rejects, and fails closed instead', async () => {
     let calls = 0;
     const restore = stubFetch(() => {
@@ -668,7 +684,7 @@ describe('lr-icon icon libraries', () => {
   it('announces a localized failure through light DOM, not a shadow live region', async () => {
     const restore = stubFetch(() => Promise.resolve(svgResponse('', false)));
     try {
-      const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      const el = (await fixture(html`<lr-icon label="Status"></lr-icon>`)) as LyraIcon;
       const errored = oneEvent(el, 'lr-error');
       el.src = 'https://icons.test/missing.svg';
       await errored;
@@ -683,6 +699,20 @@ describe('lr-icon icon libraries', () => {
       expect(sink.childElementCount).to.equal(1);
       expect(sink.textContent).to.equal(alert.textContent);
       expect(partCount(el, 'svg')).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps a remote failure silent for a decorative icon but still emits lr-error', async () => {
+    const restore = stubFetch(() => Promise.resolve(svgResponse('', false)));
+    try {
+      const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      const errored = oneEvent(el, 'lr-error');
+      el.src = 'https://icons.test/decorative-missing.svg';
+      await errored;
+      const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+      expect(sink?.textContent ?? '').to.equal('');
     } finally {
       restore();
     }
@@ -935,7 +965,7 @@ describe('lr-icon icon libraries', () => {
     });
     let el: LyraIcon | undefined;
     try {
-      el = await fixture<LyraIcon>(html`<lr-icon .strings=${{ iconLoadError: message }}></lr-icon>`);
+      el = await fixture<LyraIcon>(html`<lr-icon label="Glyph" .strings=${{ iconLoadError: message }}></lr-icon>`);
       const loads: string[] = [];
       const errors: Array<{ src: string; error: unknown }> = [];
       el.addEventListener('lr-load', (event) => loads.push(event.detail.src));
@@ -1040,7 +1070,7 @@ describe('lr-icon icon libraries', () => {
           throw failure;
         },
       });
-      failed = await fixture<LyraIcon>(html`<lr-icon .strings=${{ iconLoadError: message }}></lr-icon>`);
+      failed = await fixture<LyraIcon>(html`<lr-icon label="Glyph" .strings=${{ iconLoadError: message }}></lr-icon>`);
       let loads = 0;
       const errors: Array<{ src: string; error: unknown }> = [];
       failed.addEventListener('lr-load', () => loads += 1);

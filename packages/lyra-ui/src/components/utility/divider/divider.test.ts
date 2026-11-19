@@ -94,3 +94,19 @@ it('forwards a host aria-label to the inner separator owner', async () => {
   const divider = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(divider.getAttribute('aria-label')).to.equal('Section break');
 });
+
+it('keeps a vertical divider visible in an auto-height flex row', async () => {
+  const row = (await fixture(html`<div style="display:flex"><lr-divider vertical></lr-divider></div>`)) as HTMLElement;
+  const divider = row.querySelector('lr-divider') as LyraDivider;
+  expect(divider.offsetHeight).to.be.greaterThan(0);
+});
+
+it('normalizes the reflected orientation while the vertical shorthand takes precedence', async () => {
+  const el = await fixture<LyraDivider>(html`<lr-divider orientation="diagonal" vertical></lr-divider>`);
+  expect(el.orientation).to.equal('horizontal');
+  expect(el.getAttribute('orientation')).to.equal('horizontal');
+  expect(el.shadowRoot!.querySelector('hr')!.getAttribute('aria-orientation')).to.equal('vertical');
+  el.vertical = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('hr')!.getAttribute('aria-orientation')).to.equal('horizontal');
+});

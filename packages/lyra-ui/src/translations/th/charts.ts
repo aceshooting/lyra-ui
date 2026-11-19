@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, รัศมี {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'คำอธิบายสัญลักษณ์แผนภูมิ',
   chartSeriesNoData: '{label}: ไม่มีข้อมูล',
   chartSummaryWithData: 'แผนภูมิ {type}: {summaries}',
   chartSummaryEmpty: 'แผนภูมิ {type} ไม่มีข้อมูล',

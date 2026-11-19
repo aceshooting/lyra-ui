@@ -776,7 +776,7 @@ it('localizes the overflow-toggle aria-label and collapsed text via this.localiz
     </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
-  expect(toggle.getAttribute('aria-label')).to.equal('2 de plus');
+  expect(toggle.getAttribute('aria-label')).to.equal('+2 2 de plus');
   toggle.click();
   await el.updateComplete;
   expect(toggle.getAttribute('aria-label')).to.equal('Voir moins');
@@ -816,7 +816,7 @@ it('defaults to English "Show N more"/"Show less" when no strings override is se
     </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
-  expect(toggle.getAttribute('aria-label')).to.equal('Show 2 more');
+  expect(toggle.getAttribute('aria-label')).to.equal('+2 Show 2 more');
 });
 
 it('is accessible with no overflow', async () => {

@@ -1,3 +1,4 @@
+import { labelWithVisibleText } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -74,6 +75,9 @@ interface TrackedChipFocus {
  * @cssprop [--lr-chip-group-overflow-expanded-border-style=solid] - Border style of
  *   `[part="overflow-indicator"]` while expanded. The resting indicator intentionally stays
  *   dashed, so this can retune the expanded state without losing that structural affordance.
+ * @cssprop --lr-chip-group-overflow-bg - Overflow indicator background.
+ * @cssprop --lr-chip-group-overflow-color - Overflow indicator text color.
+ * @cssprop --lr-chip-group-overflow-border-color - Overflow indicator border color.
  * @status stable
  * @since 4.0.0
  */
@@ -485,6 +489,8 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const hiddenCount = overflowing ? this.eligibleChildren().length - (this.maxVisible as number) : 0;
     const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
+    const visible = this.expanded ? this.localize('showLess') : this.localize('showMoreCollapsed', undefined, { count: formattedHiddenCount });
+
     return html`
       <div
         part="base"
@@ -500,12 +506,10 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
               part="overflow-indicator"
               type="button"
               aria-expanded=${this.expanded ? 'true' : 'false'}
-              aria-label=${this.expanded ? this.localize('showLess') : this.localize('showMoreCount', undefined, { count: formattedHiddenCount })}
+              aria-label=${this.expanded ? visible : labelWithVisibleText(visible, this.localize('showMoreCount', undefined, { count: formattedHiddenCount }))}
               @click=${this.onToggleOverflow}
             >
-              ${this.expanded
-                ? this.localize('showLess')
-                : this.localize('showMoreCollapsed', undefined, { count: formattedHiddenCount })}
+              ${visible}
             </button>`
           : nothing}
       </div>

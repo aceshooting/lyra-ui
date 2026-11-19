@@ -96,6 +96,7 @@ export const styles = css`
   }
   [part="progress"] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-s);
     color: var(--lr-color-text-quiet);
@@ -106,6 +107,8 @@ export const styles = css`
   }
   .dots {
     display: inline-flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
     align-items: center;
     gap: var(--lr-space-xs);
   }

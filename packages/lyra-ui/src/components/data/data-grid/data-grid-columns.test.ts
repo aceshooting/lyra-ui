@@ -840,7 +840,11 @@ it("ignores search and filter inputs, or a select-all checkbox, whose native pro
     configurable: true,
     get: () => 42 as unknown as string,
   });
-  search.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  try {
+    search.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  } finally {
+    Reflect.deleteProperty(search, 'value');
+  }
   await element.updateComplete;
   expect(
     element.searchTerm,
@@ -860,9 +864,11 @@ it("ignores search and filter inputs, or a select-all checkbox, whose native pro
     configurable: true,
     get: () => 7 as unknown as string,
   });
-  filterInput.dispatchEvent(
-    new Event("input", { bubbles: true, composed: true })
-  );
+  try {
+    filterInput.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  } finally {
+    Reflect.deleteProperty(filterInput, 'value');
+  }
   await element.updateComplete;
   expect(
     element.filters,
@@ -876,7 +882,11 @@ it("ignores search and filter inputs, or a select-all checkbox, whose native pro
     configurable: true,
     get: () => "yes" as unknown as boolean,
   });
-  selectAll.dispatchEvent(new Event("change", { bubbles: true }));
+  try {
+    selectAll.dispatchEvent(new Event("change", { bubbles: true }));
+  } finally {
+    Reflect.deleteProperty(selectAll, 'checked');
+  }
   await element.updateComplete;
   expect(
     element.selectedKeys,

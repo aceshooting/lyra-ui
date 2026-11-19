@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} key',
   },
   jsonViewerLimit: 'Ang unang {count} JSON node at {depth} antas ng pagkakakulong lang ang ipinapakita at hinahanap.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'I-pause',
   pollResume: 'Ipagpatuloy',
   pollRefresh: 'I-refresh ngayon',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Buwan',
   knownDateYear: 'Taon',
   exportFormatMenuLabel: 'Format na {label}',
+  exportFailed: 'Hindi na-export',
   mentionSuggestions: 'Mga mungkahi',
   mentionResultCount: {
     one: '{count} mungkahi',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Ang unang 10,000 kandidatong maaaring banggitin lang ang available.',
   diffViewHighlightLimit: 'Ipinapakita ang mahabang code nang walang pagha-highlight ng sintaks.',
+  diffViewLabel: 'Diff',
 };
 
 registerLyraLocale('tl', strings);

@@ -42,6 +42,8 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
   [part='clear-selection'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: 0;
     background: none;
     padding: 0;

@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Inketho',
   kbdAltWord: 'Enye indlela',
   kbdShiftWord: 'Shintsha',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('zu', strings);

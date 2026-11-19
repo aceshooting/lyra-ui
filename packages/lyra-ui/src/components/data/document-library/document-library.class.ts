@@ -1,3 +1,4 @@
+import { compareNullable } from '../../../internal/sort-compare.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraCursorSource, LyraCursorNavigationState } from '../../../data-sources.js';
 import { SourceCursorController } from '../../../internal/source-cursor-controller.js';
 import { setSourcePageScope, sourcePageScope, shareSourcePageQueries } from '../../../internal/source-page-scope.js';
@@ -16,14 +17,17 @@ import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { createRetryForwarder } from '../../../internal/retry-forwarder.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   getCollator,
+  getListFormat,
   getDateTimeFormat,
-  getNumberFormat,
 } from '../../../internal/intl-cache.js';
 import {
   getOwnDataDescriptor,
+  readOwnArrayLength,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -37,14 +41,14 @@ import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './document-library.styles.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibraryCursorEmptyBatch, LYRA_DEFAULT_documentLibraryCursorEnd, LYRA_DEFAULT_documentLibraryCursorFailed, LYRA_DEFAULT_documentLibraryCursorHistoryLimit, LYRA_DEFAULT_documentLibraryCursorNavigation, LYRA_DEFAULT_documentLibraryCursorRestart, LYRA_DEFAULT_documentLibraryEmptyHeading, LYRA_DEFAULT_documentLibraryFilterByTag, LYRA_DEFAULT_documentLibraryFreshnessAging, LYRA_DEFAULT_documentLibraryFreshnessColumn, LYRA_DEFAULT_documentLibraryFreshnessFresh, LYRA_DEFAULT_documentLibraryFreshnessStale, LYRA_DEFAULT_documentLibraryLabel, LYRA_DEFAULT_documentLibraryNameColumn, LYRA_DEFAULT_documentLibraryNoMatchesHeading, LYRA_DEFAULT_documentLibraryOwnerColumn, LYRA_DEFAULT_documentLibrarySearchPlaceholder, LYRA_DEFAULT_documentLibrarySelectAll, LYRA_DEFAULT_documentLibrarySelectColumn, LYRA_DEFAULT_documentLibrarySelectDocument, LYRA_DEFAULT_documentLibrarySelectPage, LYRA_DEFAULT_documentLibrarySelectedCount, LYRA_DEFAULT_documentLibraryTagsColumn, LYRA_DEFAULT_documentLibraryTypeColumn, LYRA_DEFAULT_documentLibraryUpdatedColumn, LYRA_DEFAULT_documentLibraryVersionColumn } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSelectionFailed, LYRA_DEFAULT_sourceSelectionLoading, LYRA_DEFAULT_tagFacetLimit } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibraryCursorEmptyBatch, LYRA_DEFAULT_documentLibraryCursorEnd, LYRA_DEFAULT_documentLibraryCursorFailed, LYRA_DEFAULT_documentLibraryCursorHistoryLimit, LYRA_DEFAULT_documentLibraryCursorNavigation, LYRA_DEFAULT_documentLibraryCursorRestart, LYRA_DEFAULT_documentLibraryEmptyHeading, LYRA_DEFAULT_documentLibraryFilterByTag, LYRA_DEFAULT_documentLibraryFreshnessAging, LYRA_DEFAULT_documentLibraryFreshnessColumn, LYRA_DEFAULT_documentLibraryFreshnessFresh, LYRA_DEFAULT_documentLibraryFreshnessStale, LYRA_DEFAULT_documentLibraryLabel, LYRA_DEFAULT_documentLibraryNameColumn, LYRA_DEFAULT_documentLibraryNoMatchesHeading, LYRA_DEFAULT_documentLibraryOmitted, LYRA_DEFAULT_documentLibraryOwnerColumn, LYRA_DEFAULT_documentLibrarySearchPlaceholder, LYRA_DEFAULT_documentLibrarySelectAll, LYRA_DEFAULT_documentLibrarySelectColumn, LYRA_DEFAULT_documentLibrarySelectDocument, LYRA_DEFAULT_documentLibrarySelectPage, LYRA_DEFAULT_documentLibrarySelectedCount, LYRA_DEFAULT_documentLibraryTagsColumn, LYRA_DEFAULT_documentLibraryTypeColumn, LYRA_DEFAULT_documentLibraryUpdatedColumn, LYRA_DEFAULT_documentLibraryVersionColumn } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSelectionFailed, LYRA_DEFAULT_sourceSelectionLoading, LYRA_DEFAULT_tagFacetLimit, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Full-source document query; tags use AND semantics and filter receives folded search text. */
@@ -83,6 +87,7 @@ export type DocumentLibrarySortDetail =
   | DocumentLibrarySortRequestDetail
   | DocumentLibrarySortCommitDetail;
 export interface DocumentLibrarySelectionChangeDetail {
+  readonly selectedRowKeys: readonly string[];
   readonly documentIds: readonly string[];
 }
 export interface DocumentLibraryOpenDetail {
@@ -128,17 +133,10 @@ const FRESHNESS_TONE: Record<
 function projectLibraryStringArray(value: unknown): readonly string[] | undefined {
   try {
     if (!Array.isArray(value)) return undefined;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return undefined;
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return undefined;
     const tags: string[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_LIBRARY_COLLECTION_ENTRIES); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_LIBRARY_COLLECTION_ENTRIES); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
       if (
         entry === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -323,7 +321,7 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  *   `detail: { phase: 'commit', sortKey, sortDir }`.
  * @event lr-selection-change - The bulk selection changed (a row checkbox, the header
  *   select-all checkbox, or "Clear selection"). Frozen readonly
- *   `detail: { documentIds: readonly string[] }`. Translated checkbox
+ *   `detail: { documentIds: readonly string[], selectedRowKeys: readonly string[] }`. Translated checkbox
  *   `lr-change` events do not escape the library.
  * @event lr-open - A document was activated (its name, or Enter/Space/click elsewhere on its
  *   row). Frozen readonly `detail: { documentId }`.
@@ -366,6 +364,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    documentLibraryOmitted: LYRA_DEFAULT_documentLibraryOmitted,
     documentLibraryClearSelection: LYRA_DEFAULT_documentLibraryClearSelection,
     documentLibraryCursorEmptyBatch: LYRA_DEFAULT_documentLibraryCursorEmptyBatch,
     documentLibraryCursorEnd: LYRA_DEFAULT_documentLibraryCursorEnd,
@@ -757,7 +757,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       if (this.sourceSelectionEvent === ids) {
         this.sourceSelectionEvent = undefined;
         this.announcements.announcePolite(this.selectionCountText());
-        this.emit('lr-selection-change', Object.freeze({ documentIds: Object.freeze([...this._selectedDocumentIds]) }));
+        const documentIds = Object.freeze([...this._selectedDocumentIds]);
+        this.emit('lr-selection-change', Object.freeze({ documentIds, selectedRowKeys: documentIds }));
       }
       this.sourceStateVersion++;
     });
@@ -778,6 +779,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     }
     if (this.sourceFilterEvent) {
       this.sourceFilterEvent = false;
+      this.announcements.announcePolite(this.localize('viewerSearchMatchCount', undefined, { count: result.total }));
       this.emit('lr-filter-change', Object.freeze({ searchTerm: this.searchTerm, tags: Object.freeze([...this.tagFilter]), matchCount: result.total }));
     }
   }
@@ -787,8 +789,25 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     if (this.isCurrentTableEvent(event) && this.sourceMode) this.sourcePage = event.detail.page - 1;
   };
 
+  private documentLimit = MAX_LIBRARY_COLLECTION_ENTRIES;
+  private omittedDocuments = 0;
+  /** Maximum source positions inspected per assignment. Raising the limit re-admits the source. */
+  @property({ type: Number, attribute: 'max-documents' })
+  get maxDocuments(): number { return this.documentLimit; }
+  set maxDocuments(value: number) {
+    const limit = finiteInteger(value, MAX_LIBRARY_COLLECTION_ENTRIES, 0, 100_000);
+    const previous = this.documentLimit;
+    if (previous === limit) return;
+    this.documentLimit = limit;
+    if (this.documentsSource) this.admitDocuments(this.documentsSource);
+    this.requestUpdate('maxDocuments', previous);
+  }
+
+  /** Source positions omitted by the limit, invalid records and duplicate document IDs. */
+  get documentsTruncated(): number { return this.omittedDocuments; }
+
   private _documents: readonly LibraryDocument[] = Object.freeze([]);
-  /** Clone-owned readonly inventory, bounded to the first 10,000 source documents and 10,000 tags
+  /** Clone-owned readonly inventory, bounded to the first maxDocuments source positions and 10,000 tags
    * per document. Document records, nested tag arrays, and dates are snapshotted at assignment
    * time; records without a string name or with non-string tag entries, blank ids, and later
    * duplicate ids are omitted first-wins before filters, counts, selection, rows, and events. Reads
@@ -796,13 +815,21 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    * retained state. Reassign a new collection to update. */
   @property({ attribute: false })
   get documents(): readonly LibraryDocument[] {
-    return (this.documentsView ??= this.snapshotDocuments(this._documents));
+    return (this.documentsView ??= this.snapshotDocuments(this._documents).rows);
   }
   set documents(value: readonly LibraryDocument[]) {
     if (value === this.documentsSource || value === this.documentsView) return;
     this.documentsSource = value;
+    this.admitDocuments(value);
+  }
+  private documentAssignment = 0;
+  private admitDocuments(value: unknown): void {
+    const assignment = ++this.documentAssignment;
     const previous = this._documents;
-    this._documents = this.snapshotDocuments(value);
+    const { rows, omitted } = this.snapshotDocuments(value);
+    if (assignment !== this.documentAssignment) return;
+    this.omittedDocuments = omitted;
+    this._documents = rows;
     this.documentsView = undefined;
     this.requestUpdate('documents', previous);
   }
@@ -817,6 +844,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  own `expanded` state). Assignment snapshots at most 10,000 unique ids; reassign to update. */
   private _selectedDocumentIds: readonly string[] = Object.freeze([]);
   private selectionSource?: unknown;
+  /** Selected document IDs, including selections outside the current page. */
   @property({ attribute: false })
   get selectedDocumentIds(): readonly string[] {
     return this._selectedDocumentIds;
@@ -853,6 +881,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  most 10,000 unique tags; reassign to update. */
   private _tagFilter: readonly string[] = Object.freeze([]);
   private tagFilterSource?: unknown;
+  /** Tags that constrain the document query. */
   @property({ attribute: false })
   get tagFilter(): readonly string[] {
     return this._tagFilter;
@@ -894,6 +923,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    * attribute clears filtering while retaining the native null property readback. */
   @property({ attribute: 'search-term' }) searchTerm = '';
 
+  /** Shows the library's loading state. */
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** Reports a failed document-list load. Forwarded to the nested `<lr-table>`, whose own
@@ -956,11 +986,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, size => { this._size = size; });
   }
 
   /** Accessible name for the region and the inner grid. Defaults to the localized
@@ -1006,6 +1032,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private sourceAnnouncementInitialized = false;
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.sourceAnnouncementInitialized && !this.providerMode && this.documentsTruncated > 0 &&
+      (changed.has('documents') || changed.has('maxDocuments'))) {
+      this.announcements.announcePolite(this.localize('documentLibraryOmitted', undefined, { count: this.documentsTruncated }));
+    }
     if (this.cursorMode) {
       const state = this.cursorPages.state;
       if (this.cursorAnnounceTransition &&
@@ -1021,32 +1051,25 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     this.sourceAnnouncementInitialized = true; this.sourceSelectionAnnouncement = status;
   }
 
-  private snapshotDocuments(documents: unknown): readonly LibraryDocument[] {
-    const snapshot: LibraryDocument[] = [];
+  private snapshotDocuments(documents: unknown): { rows: readonly LibraryDocument[]; omitted: number } {
+    const rows: LibraryDocument[] = [];
     const seen = new Set<string>();
+    let length = 0;
     try {
-      if (!Array.isArray(documents)) return Object.freeze(snapshot);
-      const length = getOwnDataDescriptor(documents, 'length');
-      if (
-        length === MISSING_OWN_DATA_DESCRIPTOR ||
-        length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        typeof length.value !== 'number' ||
-        !Number.isSafeInteger(length.value) ||
-        length.value < 0
-      )
-        return Object.freeze(snapshot);
-      for (let index = 0; index < Math.min(length.value, MAX_LIBRARY_COLLECTION_ENTRIES); index += 1) {
-        const entry = getOwnDataDescriptor(documents, String(index));
+      if (Array.isArray(documents)) length = readOwnArrayLength(documents) ?? 0;
+      const limit = Math.min(length, this.documentLimit);
+      for (let index = 0; index < limit; index++) {
+        const entry = getOwnDataDescriptor(documents as object, String(index));
         if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
         const document = projectLibraryDocument(entry.value);
         if (!document || seen.has(document.id)) continue;
         seen.add(document.id);
-        snapshot.push(document);
+        rows.push(document);
       }
     } catch {
-      // A malformed record cannot reserve its id or suppress a later valid occurrence.
+      // Revoked arrays cannot supply a length.
     }
-    return Object.freeze(snapshot);
+    return { rows: Object.freeze(rows), omitted: length - rows.length };
   }
 
   private snapshotIds(ids: Iterable<string>): readonly string[] {
@@ -1111,9 +1134,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private selectionCountText(): string {
     return this.localize('documentLibrarySelectedCount', undefined, {
-      count: getNumberFormat(this.effectiveLocale).format(
-        this.selectedDocumentIds.length
-      ),
+      count: this.formatLocaleNumber(this.selectedDocumentIds.length), pluralCount: this.selectedDocumentIds.length,
     });
   }
 
@@ -1129,7 +1150,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     if (this.corpusMemo?.documents !== this._documents || this.corpusMemo.locale !== locale) {
       const fields = new Map<LibraryDocument, readonly string[]>();
       for (const row of this._documents) fields.set(row,
-        [row.name, row.owner ?? '', ...(row.tags ?? [])].map(value => value.toLocaleLowerCase(locale)));
+        [row.name, row.owner ?? '', ...(row.tags ?? [])].map(value => foldSearchText(value, locale)));
       this.corpusMemo = { documents: this._documents, locale, fields };
     }
     return this.corpusMemo.fields.get(document)!.some(value => value.includes(query));
@@ -1152,42 +1173,23 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     return this.documentDates.get(document);
   }
 
-  private sortCollator?: Intl.Collator;
-  private compareDocuments = (
-    a: LibraryDocument,
-    b: LibraryDocument
-  ): number => {
-    const collator = this.sortCollator!;
-    const dir = this.sortDir === 'asc' ? 1 : -1;
-    let result = 0;
+  private sortValue(document: LibraryDocument): string | number | undefined {
     switch (this.sortKey) {
-      case 'name':
-        result = collator.compare(a.name, b.name);
-        break;
-      case 'version':
-        result = collator.compare(a.version ?? '', b.version ?? '');
-        break;
-      case 'owner':
-        result = collator.compare(a.owner ?? '', b.owner ?? '');
-        break;
-      case 'freshness':
-        result =
-          (a.freshness ? FRESHNESS_RANK[a.freshness] : 3) -
-          (b.freshness ? FRESHNESS_RANK[b.freshness] : 3);
-        break;
-      case 'updatedAt':
-        result =
-          (this.documentDate(a)?.getTime() ?? 0) -
-          (this.documentDate(b)?.getTime() ?? 0);
-        break;
+      case 'freshness': return document.freshness && FRESHNESS_RANK[document.freshness];
+      case 'updatedAt': return this.documentDate(document)?.getTime();
+      default: return document[this.sortKey];
     }
-    return result * dir;
-  };
+  }
+
+  private sortLocale = this.effectiveLocale;
+  private compareDocuments = (a: LibraryDocument, b: LibraryDocument): number =>
+    compareNullable(this.sortValue(a), this.sortValue(b), this.sortDir === 'asc' ? 1 : -1, this.sortLocale);
 
   private matchingMemo?: { inputs: unknown[]; rows: LibraryDocument[] };
   /** The current search+tag-facet-filtered view, in input order. */
   private get matchingDocuments(): LibraryDocument[] {
-    const query = (this.searchTerm ?? '').trim().toLocaleLowerCase(this.effectiveLocale);
+    const term = this.searchTerm ?? '';
+    const query = this.filter ? term.trim().toLocaleLowerCase(this.effectiveLocale) : prepareNeedle(term, this.effectiveLocale);
     const inputs = [this._documents, query, this.tagFilter, this.filter, this.effectiveLocale,
       this.filter ? this.explicitRefresh : 0];
     if (!this.matchingMemo || inputs.some((input, index) => input !== this.matchingMemo!.inputs[index])) {
@@ -1205,7 +1207,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     const locale = this.effectiveLocale;
     const previous = this.sortedMemo;
     if (previous?.rows === rows && previous.key === this.sortKey && previous.dir === this.sortDir && previous.locale === locale) return previous.sorted;
-    this.sortCollator = getCollator(locale, { numeric: true });
+    this.sortLocale = locale;
     if (this.sortKey === 'updatedAt') for (const row of rows) this.documentDate(row);
     const sorted = [...rows].sort(this.compareDocuments);
     this.sortedMemo = { rows, key: this.sortKey, dir: this.sortDir, locale, sorted };
@@ -1248,6 +1250,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     }
     if (this.sourceMode) { this.sourceFilterEvent = true; return; }
     const tags = Object.freeze([...this.tagFilter]);
+    this.announcements.announcePolite(this.localize('viewerSearchMatchCount', undefined, { count: this.matchingDocuments.length }));
     this.emit(
       'lr-filter-change',
       Object.freeze({ searchTerm: this.searchTerm, tags, matchCount: this.matchingDocuments.length })
@@ -1368,7 +1371,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     if (this.sourceMode) { this.sourceSelectionEvent = this._selectedDocumentIds; return; }
     this.announcements.announcePolite(this.selectionCountText());
     const eventIds = Object.freeze([...this.selectedDocumentIds]);
-    this.emit('lr-selection-change', Object.freeze({ documentIds: eventIds }));
+    this.emit('lr-selection-change', Object.freeze({ documentIds: eventIds, selectedRowKeys: eventIds }));
   }
 
   private toggleSelection(document: LibraryDocument, checked: boolean): void {
@@ -1461,7 +1464,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   ): TemplateResult | typeof nothing {
     const tags = document.tags ?? [];
     if (tags.length === 0) return nothing;
-    if (this.providerMode) return html`<span>${tags.join(', ')}</span>`;
+    if (this.providerMode) return html`<span>${getListFormat(this.effectiveLocale, { type: 'unit' }).format(tags)}</span>`;
     return html`<lr-chip-group
       >${tags.map((tag) => html`<lr-chip>${tag}</lr-chip>`)}</lr-chip-group
     >`;
@@ -1568,9 +1571,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   override render(): TemplateResult {
-    const label =
-      hostAriaLabel(this)?.trim() ??
-      (this.label == null ? this.localize('documentLibraryLabel') : this.label);
+    const authoredLabel = hostAriaLabel(this) ?? this.label;
+    const label = authoredLabel === '' ? '' : normalizeLabel(authoredLabel) ?? this.localize('documentLibraryLabel');
     const visible = this.cursorMode ? this.cursorRows : this.sourceMode ? this.sourceRows : this.sortedDocuments;
     // A cursor batch owns its composed row DOM, including the table's delegated activation.
     // Legacy routes keep their existing stable table identity; paints retain the accepted batch.
@@ -1584,6 +1586,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
         ? this.localize('documentLibraryEmptyHeading')
         : this.localize('documentLibraryNoMatchesHeading');
 
+    const omittedTags = this.sourceMode ? facetTotal - tags.length : tags.length - MAX_TAG_FACETS;
     return html`
       <div part="base" role="region" aria-label=${label}>
         <div part="toolbar">
@@ -1624,9 +1627,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
               </lr-combobox>`
             : nothing}
         </div>
-        ${(this.sourceMode ? facetTotal > tags.length : tags.length > MAX_TAG_FACETS)
+        ${!this.providerMode && this.documentsTruncated > 0
+          ? html`<p part="limit" role="note">${this.localize('documentLibraryOmitted', undefined, { count: this.documentsTruncated })}</p>` : nothing}
+        ${omittedTags > 0
           ? html`<p part="limit" role="note">${this.localize('tagFacetLimit', undefined, {
-              count: getNumberFormat(this.effectiveLocale).format(this.sourceMode ? facetTotal - tags.length : tags.length - MAX_TAG_FACETS),
+              count: this.formatLocaleNumber(omittedTags), pluralCount: omittedTags,
             })}</p>` : nothing}
         ${this.selectedDocumentIds.length > 0
           ? html`<div part="selection-bar">

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} кілт',
   },
   jsonViewerLimit: 'Тек алғашқы {count} JSON түйіні және {depth} кірістіру деңгейі көрсетіледі және ізделеді.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Кідірту',
   pollResume: 'Жалғастыру',
   pollRefresh: 'Қазір жаңартыңыз',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Ай',
   knownDateYear: 'Жыл',
   exportFormatMenuLabel: 'Пішім: {label}',
+  exportFailed: 'Экспорттау сәтсіз аяқталды',
   mentionSuggestions: 'Ұсыныстар',
   mentionResultCount: {
     one: '{count} ұсыныс',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Атап өтуге арналған алғашқы 10 000 ұсыныс қана қолжетімді.',
   diffViewHighlightLimit: 'Ұзын код синтаксисті ерекшелеусіз көрсетіледі.',
+  diffViewLabel: 'Айырмашылық',
 };
 
 registerLyraLocale('kk', strings);

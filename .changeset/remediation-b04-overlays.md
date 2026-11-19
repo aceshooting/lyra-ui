@@ -1,0 +1,27 @@
+---
+'@aceshooting/lyra-ui': major
+---
+
+- The collapsed `lr-chip-group` overflow button starts its accessible name with the visible count. Update exact-name queries such as “Show 2 more” to “+2 Show 2 more”.
+- Tooltips honor inherited `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`. To retain the previous geometry in a themed container, set those properties on the tooltip to `var(--lr-radius-xs)` and `var(--lr-shadow-m)`.
+- Alerts and toast items emit a cancelable `lr-close-request` and a committed `lr-close` with the dismissal reason for button, timer and programmatic closes.
+- Alerts support the shared `appearance` values and scoped tokens for panel background, border, text, radius and shadow.
+- Spinners, keyboard caps and chip-group overflow controls expose component-specific paint tokens.
+- Alerts and callouts give the full message row to content when the icon and close control are absent.
+- Long dialog and drawer titles wrap within the panel.
+- Drawers respect the safe-area insets at the edges they occupy.
+- Progress indicators, filled rating symbols and selected chips remain distinguishable in forced colors.
+- Keyboard shortcuts keep their reading order in RTL.
+- Keyboard shortcut announcements use a localized separator.
+- Rating and dropdown controls preserve browser-modified keystrokes and input-method composition.
+- A callout discards a close request if its listener removes it, closes it or disables its close control.
+- Alert and toast close buttons follow the shared icon-action styling.
+- Callout close hover uses its variant surface. Set `--lr-callout-close-hover-bg` to `var(--lr-color-brand-quiet)` to retain the previous hover fill.
+- A confirmation stays open when nested content dismisses itself.
+- The rating, toast region and toast-item element getters return `null` before their first render.
+- Toast creation retries failed registration.
+- Toast overflow announcements format counts in the active locale.
+- An announcing skeleton speaks its current label once after reconnecting, including when labels change before paint.
+- Removing the popup's `arrow-padding` attribute restores its default.
+- Attribute-only tooltips update their descriptions while remaining concealed. Changes to fallback text reuse the current slotted description.
+- A popover dismisses an outside press even if the target stops propagation.

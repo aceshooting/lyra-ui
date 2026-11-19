@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} key dem',
   },
   jsonViewerLimit: 'Na only di first {count} JSON nodes and {depth} nesting levels dem show and search.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pause am',
   pollResume: 'Continue am',
   pollRefresh: 'Make am refresh now',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Month',
   knownDateYear: 'Year',
   exportFormatMenuLabel: 'Format for {label}',
+  exportFailed: 'We no fit export am',
   mentionSuggestions: 'Things e suggest',
   mentionResultCount: {
     one: '{count} suggestion',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Na only di first 10,000 candidates wey you fit mention dey available.',
   diffViewHighlightLimit: 'Long code dey show without syntax highlighting.',
+  diffViewLabel: 'Diff',
 };
 
 registerLyraLocale('pcm', strings);

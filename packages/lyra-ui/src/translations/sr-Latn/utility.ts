@@ -34,6 +34,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ključeva',
   },
   jsonViewerLimit: 'Prikazuje se i pretražuje samo prvih {count} JSON čvorova i {depth} nivoa ugnežđavanja.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pauziraj',
   pollResume: 'Nastavi',
   pollRefresh: 'Osveži odmah',
@@ -51,6 +52,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Mesec',
   knownDateYear: 'Godina',
   exportFormatMenuLabel: 'Format za {label}',
+  exportFailed: 'Izvoz nije uspeo',
   mentionSuggestions: 'Predlozi',
   mentionResultCount: {
     few: '{count} predloga',
@@ -71,6 +73,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Dostupno je samo prvih 10.000 kandidata za pominjanje.',
   diffViewHighlightLimit: 'Dugačak kod se prikazuje bez isticanja sintakse.',
+  diffViewLabel: 'Razlike',
 };
 
 registerLyraLocale('sr-Latn', strings);

@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, polmer {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'Legenda grafikona',
   chartSeriesNoData: '{label}: ni podatkov',
   chartSummaryWithData: 'Grafikon (vrsta: {type}). {summaries}.',
   chartSummaryEmpty: 'Grafikon (vrsta: {type}) brez podatkov.',

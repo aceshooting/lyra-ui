@@ -106,11 +106,11 @@ it('hides low- and medium-priority columns in a narrow container, and reveals th
   expect(getComputedStyle(lowCell).display).to.equal('none');
 
   const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
-  expect(revealButton.getAttribute('aria-pressed')).to.equal('false');
+  expect(revealButton.getAttribute('aria-expanded')).to.equal('false');
   revealButton.click();
   await el.updateComplete;
 
-  expect(revealButton.getAttribute('aria-pressed')).to.equal('true');
+  expect(revealButton.getAttribute('aria-expanded')).to.equal('true');
   expect(getComputedStyle(lowHeader).display).to.not.equal('none');
   expect(getComputedStyle(mediumHeader).display).to.not.equal('none');
   expect(getComputedStyle(lowCell).display).to.not.equal('none');
@@ -507,7 +507,7 @@ it('restores a priorityColumnsVisible preference from the initial property/attri
 
   await waitUntil(() => el.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null);
   const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
-  expect(revealButton.getAttribute('aria-pressed')).to.equal('true');
+  expect(revealButton.getAttribute('aria-expanded')).to.equal('true');
 });
 
 it('persists and restores priorityColumnsVisible via storage-key', async () => {

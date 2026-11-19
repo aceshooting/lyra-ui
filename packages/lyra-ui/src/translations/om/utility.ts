@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: 'furtuu {count}',
   },
   jsonViewerLimit: 'Qoodni JSON jalqabaa {count} fi sadarkaawwan wal keessa galuu {depth} qofa agarsiifamu, barbaadamus.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Dhaabi',
   pollResume: 'Itti fufi',
   pollRefresh: 'Amma haaromsi',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Ji\'a',
   knownDateYear: 'Waggaa',
   exportFormatMenuLabel: 'Bifa {label}',
+  exportFailed: 'Ala baasuun hin milkoofne',
   mentionSuggestions: 'Yaada dhiyaate',
   mentionResultCount: {
     one: 'yaada {count}',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Kaadhimamtoota maqaa eeruuf jalqabaa 10,000 qofa argamu.',
   diffViewHighlightLimit: 'Koodiin dheeraan sintaksii isaa halluudhaan adda baasuu malee agarsiifama.',
+  diffViewLabel: 'Garaagarummaa',
 };
 
 registerLyraLocale('om', strings);

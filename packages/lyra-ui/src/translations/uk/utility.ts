@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ключа',
   },
   jsonViewerLimit: 'Показуються та доступні для пошуку лише перші {count} вузлів JSON і {depth} рівнів вкладеності.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Призупинити',
   pollResume: 'Продовжити',
   pollRefresh: 'Оновити зараз',
@@ -54,6 +55,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Місяць',
   knownDateYear: 'Рік',
   exportFormatMenuLabel: 'Формат {label}',
+  exportFailed: 'Не вдалося експортувати',
   mentionSuggestions: 'Пропозиції',
   mentionResultCount: {
     one: '{count} пропозиція',
@@ -76,6 +78,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Доступні лише перші 10 000 кандидатів для згадування.',
   diffViewHighlightLimit: 'Довгий код показується без підсвічування синтаксису.',
+  diffViewLabel: 'Відмінності',
 };
 
 registerLyraLocale('uk', strings);

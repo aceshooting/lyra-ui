@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'ઑપ્શન',
   kbdAltWord: 'ઑલ્ટ',
   kbdShiftWord: 'શિફ્ટ',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('gu', strings);

@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Επιλογή',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('el', strings);

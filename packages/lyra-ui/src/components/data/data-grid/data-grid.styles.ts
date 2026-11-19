@@ -1,9 +1,14 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
+  :where([part="search"], [part~="header-cell"][data-sortable]:not([data-pin]), [part="resize-handle"], [part="page-size"]) { transition: var(--lr-transition-interactive); }
+  @media (prefers-reduced-motion: reduce) {
+    :where([part="search"], [part~="header-cell"][data-sortable]:not([data-pin]), [part="resize-handle"], [part="page-size"]) { transition: none; }
+  }
   :host {
     --_lr-data-grid-accent-color: var(--lr-color-brand);
     --_lr-data-grid-background-color: var(--lr-color-surface);
@@ -215,6 +220,12 @@ export const styles = css`
     outline: var(--focus-ring, var(--_lr-data-grid-focus-ring));
     outline-offset: var(--lr-focus-ring-offset);
   }
+  button:focus-visible,
+  [part="resize-handle"]:focus-visible,
+  [role="gridcell"]:focus-visible,
+  [role="columnheader"]:focus-visible {
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+  }
 
   button {
     box-sizing: border-box;
@@ -338,6 +349,32 @@ export const styles = css`
           transparent
         )
     );
+  }
+
+  /* A pinned header cell must stay opaque so scrolled columns do not show through: the hover and
+     press tints layer over the opaque header fill instead of replacing it. */
+  [part="header"] > [part~="header-cell"][data-sortable][data-pin]:hover {
+    background:
+      linear-gradient(var(
+          --lr-data-grid-sortable-header-hover-bg,
+          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-hover), transparent)
+        ), var(
+          --lr-data-grid-sortable-header-hover-bg,
+          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-hover), transparent)
+        )),
+      var(--header-background, var(--_lr-data-grid-header-background));
+  }
+
+  [part="header"] > [part~="header-cell"][data-sortable][data-pin]:active {
+    background:
+      linear-gradient(var(
+          --lr-data-grid-sortable-header-active-bg,
+          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-active), transparent)
+        ), var(
+          --lr-data-grid-sortable-header-active-bg,
+          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-active), transparent)
+        )),
+      var(--header-background, var(--_lr-data-grid-header-background));
   }
 
   [part="body"] {
@@ -480,6 +517,11 @@ export const styles = css`
     z-index: var(--lr-layer-content);
     background: inherit;
   }
+
+  /* A sticky cell is its own stacking context, so a row-level overlay inside one (a per-row actions
+     menu) would be covered by the next row's pinned cell; the cell holding an open overlay rises to
+     the popover layer, and one with focus inside rises a step. After the pin z-index on purpose. */
+  ${raiseWhileOverlayOpen('[data-pin]', 'var(--lr-layer-popover)', 'calc(var(--lr-layer-content) + 1)')}
 
   /* Body-row pins: the row's own fill over the opaque grid background (see the row-state rules). */
   [part~="row"] > [data-pin] {
@@ -692,7 +734,7 @@ export const styles = css`
       color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
+            var(--lr-color-mix-active),
           transparent
         )
     );
@@ -714,61 +756,6 @@ export const styles = css`
 
   .page-size-chevron svg {
     transform: rotate(90deg);
-  }
-
-  [part~="page-current"] {
-    background: var(--lr-color-brand);
-    border-color: transparent;
-    color: var(--lr-color-on-brand);
-    font-weight: var(--lr-font-weight-bold);
-  }
-
-  [part~="page-current"]:where(:hover) {
-    background: var(--lr-color-brand);
-  }
-
-  [part~="page-current"]:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-  }
-
-  [part="first-icon"],
-  [part="previous-icon"],
-  [part="next-icon"],
-  [part="last-icon"] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: var(--lr-line-height-none);
-  }
-
-  /* The two chevrons of an edge button overlap slightly so they read as one doubled glyph rather
-     than two separate arrows -- matches lr-pagination's identical first/last treatment. */
-  [part="first-icon"] svg + svg,
-  [part="last-icon"] svg + svg {
-    margin-inline-start: var(--lr-size-neg-4px);
-  }
-
-  /* chevronIcon() points right by default, so 'next'/'last' render unrotated and 'first'/'previous'
-     rotate to point left -- both pairs then flip under RTL, exactly like lr-pagination's
-     first/previous/next/last icons. */
-  [part="first-icon"],
-  [part="previous-icon"] {
-    transform: rotate(180deg);
-  }
-
-  [part="next-icon"],
-  [part="last-icon"] {
-    transform: rotate(0deg);
-  }
-
-  :host(:dir(rtl)) [part="first-icon"],
-  :host(:dir(rtl)) [part="previous-icon"] {
-    transform: rotate(0deg);
-  }
-
-  :host(:dir(rtl)) [part="next-icon"],
-  :host(:dir(rtl)) [part="last-icon"] {
-    transform: rotate(180deg);
   }
 
   [part="drag-ghost"] {
@@ -808,6 +795,13 @@ export const styles = css`
     [part="sort-indicator"],
     [part="expand-button"] > span {
       transition: none !important;
+    }
+  }
+  @media (forced-colors: active) {
+    [part="pin-indicator"] { border-inline-start: var(--lr-border-width-thin) solid ButtonText; }
+    [part~="row"][aria-selected="true"] {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
     }
   }
 `;

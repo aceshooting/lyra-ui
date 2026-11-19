@@ -1142,6 +1142,24 @@ describe('per-field labels', () => {
     expect(yearText).to.equal('Year'); // untouched built-in default
   });
 
+  it('falls back to the localized per-field label for a whitespace-only label', async () => {
+    const el = (await fixture(html`
+      <lr-known-date day-label="   " month-label=" " year-label="&#9;"></lr-known-date>
+    `)) as LyraKnownDate;
+    const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="field-label"]')) as HTMLLabelElement[];
+    expect(labels.map((l) => l.textContent?.trim()).sort()).to.deep.equal(['Day', 'Month', 'Year']);
+  });
+
+  it('does not rewrite or commit a field while an IME composition is pending', async () => {
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+    const day = fieldFor(el, 'day');
+    day.value = '1a';
+    day.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, isComposing: true }));
+    expect(day.value).to.equal('1a');
+    day.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, composed: true }));
+    expect(day.value).to.equal('1');
+  });
+
   it('renders the built-in English fallback with no locale registered', async () => {
     const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
@@ -1303,7 +1321,7 @@ describe('accessibility', () => {
     const el = (await fixture(html`<lr-known-date hint="DD MM YYYY" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     for (const input of fields(el)) {
-      expect(input.getAttribute('aria-describedby')).to.include('known-date-hint');
+      expect(input.getAttribute('aria-describedby')).to.equal(el.shadowRoot!.querySelector('[part=hint]')!.id);
       expect(input.getAttribute('aria-required')).to.equal('true');
       expect(input.getAttribute('aria-invalid')).to.equal('false');
     }
@@ -2150,4 +2168,25 @@ it('reuses the per-locale field order and digit map until the locale changes', a
   await el.updateComplete;
   expect(internals.fieldOrder === order).to.be.false;
   expect(internals.fieldOrder[0]).to.equal('year');
+});
+
+it('describes all three fields with the visible error before the hint', async () => {
+  const el = await fixture<LyraKnownDate>(html`<lr-known-date hint="Guidance" error-text="Invalid"></lr-known-date>`);
+  const parts = [...el.shadowRoot!.querySelectorAll('[part=error], [part=hint]')];
+  expect(parts.map(part => part.getAttribute('part'))).to.deep.equal(['error', 'hint']);
+  for (const input of fields(el)) {
+    expect(input.getAttribute('aria-describedby')).to.equal(parts.map(part => part.id).join(' '));
+  }
+});
+
+it('ignores a field input immediately after its host is disabled', async () => {
+  const el = await fixture<LyraKnownDate>(html`<lr-known-date></lr-known-date>`);
+  let emitted = 0;
+  el.addEventListener('lr-input', () => { emitted++; });
+  const input = fields(el)[0]!;
+  el.disabled = true;
+  input.value = '12';
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  expect(emitted).to.equal(0);
+  expect(el.value).to.equal('');
 });

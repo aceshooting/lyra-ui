@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { chartLegendPositionStyles } from './chart-surface.styles.js';
 
@@ -52,7 +52,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: transparent;
     padding: var(--lr-space-2xs);
+    ${iconHitTarget}
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='data-table'] button:hover {
     background: var(--lr-chart-data-table-button-hover-bg, var(--lr-color-brand-quiet));
@@ -83,10 +85,15 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+    ${iconHitTarget}
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     max-inline-size: calc(100% - var(--lr-space-xs) - var(--lr-space-xs));
     white-space: normal;
     overflow-wrap: anywhere;
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='reset-zoom-button']:hover {
     background: var(--lr-chart-reset-zoom-button-hover-bg, var(--lr-color-brand-quiet));

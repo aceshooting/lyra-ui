@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} കീകൾ',
   },
   jsonViewerLimit: 'ആദ്യത്തെ {count} JSON നോഡുകളും {depth} നെസ്റ്റിംഗ് നിലകളും മാത്രമാണ് കാണിക്കുകയും തിരയുകയും ചെയ്യുന്നത്.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'താൽക്കാലികമായി നിർത്തുക',
   pollResume: 'പുനരാരംഭിക്കുക',
   pollRefresh: 'ഇപ്പോൾ പുതുക്കുക',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'മാസം',
   knownDateYear: 'വർഷം',
   exportFormatMenuLabel: '{label} ഫോർമാറ്റ്',
+  exportFailed: 'എക്സ്പോർട്ട് ചെയ്യാനായില്ല',
   mentionSuggestions: 'നിർദ്ദേശങ്ങൾ',
   mentionResultCount: {
     one: '{count} നിർദ്ദേശം',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'പരാമർശത്തിനുള്ള ആദ്യത്തെ 10,000 നിർദ്ദേശങ്ങൾ മാത്രമേ ലഭ്യമാകൂ.',
   diffViewHighlightLimit: 'നീളമുള്ള കോഡ് സിന്റാക്സ് ഹൈലൈറ്റിംഗ് ഇല്ലാതെ കാണിക്കുന്നു.',
+  diffViewLabel: 'വ്യത്യാസം',
 };
 
 registerLyraLocale('ml', strings);

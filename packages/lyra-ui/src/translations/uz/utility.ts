@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ta kalit',
   },
   jsonViewerLimit: 'Faqat dastlabki {count} ta JSON tuguni va {depth} ta ichma-ichlik darajasi koʻrsatiladi va qidiriladi.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Toʻxtatib turish',
   pollResume: 'Davom ettirish',
   pollRefresh: 'Hozir yangilang',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Oy',
   knownDateYear: 'Yil',
   exportFormatMenuLabel: '{label} formati',
+  exportFailed: 'Eksport qilib boʻlmadi',
   mentionSuggestions: 'Takliflar',
   mentionResultCount: {
     one: '{count} ta taklif',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Faqat tilga olish uchun dastlabki 10 000 ta nomzod mavjud.',
   diffViewHighlightLimit: 'Uzun kod sintaksisni ajratib koʻrsatishsiz koʻrsatiladi.',
+  diffViewLabel: 'Farqlar',
 };
 
 registerLyraLocale('uz', strings);

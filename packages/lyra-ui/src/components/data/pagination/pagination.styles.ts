@@ -1,6 +1,7 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -311,7 +312,8 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: max(
       var(--lr-pagination-control-size, var(--_lr-pagination-control-size)),
-      var(--lr-icon-button-size)
+      var(--lr-icon-button-size),
+      calc(var(--_lr-pagination-page-digits, 2) * 1ch + var(--lr-space-l))
     );
     min-inline-size: var(--lr-icon-button-size);
     block-size: max(
@@ -396,4 +398,8 @@ export const styles = css`
       justify-content: space-between;
     }
   }
+  @media (forced-colors: active) {
+    [part~="page-current"] { forced-color-adjust: none; transition: none; }
+  }
+  ${forcedColorsPart('[part~="page-current"]')}
 `;

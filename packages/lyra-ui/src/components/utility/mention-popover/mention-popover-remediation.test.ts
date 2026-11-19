@@ -24,7 +24,9 @@ it('keeps the full match list readable while only fifty suggestions can render o
   expect(viewer.filteredItems.length).to.equal(52);
   expect(options.length).to.equal(50);
   expect(more.textContent?.trim()).to.equal('2 more suggestions');
-  expect(more.hasAttribute('role')).to.equal(false);
+  expect(more.getAttribute('role')).to.equal('option');
+  expect(more.getAttribute('aria-disabled')).to.equal('true');
+  expect(more.getAttribute('aria-selected')).to.equal('false');
   expect(listbox.getAttribute('aria-describedby')).to.equal(more.id);
   for (let index = 0; index < 60; index += 1) {
     viewer.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));

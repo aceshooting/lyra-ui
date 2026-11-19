@@ -1,3 +1,8 @@
+import { syncChartHeight } from './chart-surface-shared.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
+import { isSvgElement } from '../../../internal/dom-guards.js';
+import { niceStep } from '../../../internal/chart-ticks.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { SourceRequestController } from '../../../internal/source-request-controller.js';
 import { prepareChartModel, revealPreparedSourcePoint, type PreparedChartModel, type LyraChartPreparedData, type LyraChartSourcePointSelectDetail, type LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
 import type { LyraSeriesPointRef } from '../../../utilities/data-preparation.js';
@@ -27,7 +32,7 @@ import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { decimalPlaces, finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
-import { escapeCsvField } from '../../utility/export-button/csv.js';
+import { csvRow } from '../../../internal/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
@@ -44,7 +49,7 @@ import {
   type ForcedColorEncodingName,
 } from './chart-forced-colors.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
@@ -69,11 +74,23 @@ import type {
   LyraChartDatumActivateDetail,
   LyraChartFormatter,
 } from './chart.class.js';
+import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartPreparedSummary, LYRA_DEFAULT_chartPreparedUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const markKeys = ['type', 'labels', 'datasets', 'skipZero', 'maxRecords', 'plotWidth', 'layout'];
+const syncKeys = ['datasets', 'labels', 'type', 'skipZero', 'layout', 'maxRecords', 'maxSeries'];
+const nonGeometryKeys = new Set<PropertyKey>(['selectedIndices', 'dataTableExpandedOverride', 'dataTable', 'dataTableToggle', 'description', 'label']);
+const preparedDataKeys = new Set<PropertyKey>(['preparedData', 'type', 'maxRecords', 'stacked']);
+const liteTableKeys = new Set<PropertyKey>([
+      'preparedData', 'preparedView', 'labels', 'datasets', 'type', 'stacked', 'tableTotals', 'formatter', 'tableCellFormatter',
+      'pointText', 'skipZero', 'maxRecords', 'plotWidth', 'layout', 'locale', 'lang', 'dir', 'strings',
+      'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride',
+    ]);
+const liteActivationKeys = new Set<PropertyKey>(['datasets', 'labels', 'preparedData', 'preparedView', 'type', 'maxRecords', 'stacked']);
 
 export interface LyraLiteChartSeries {
   readonly label: string;
@@ -161,23 +178,8 @@ const DEFAULT_PALETTE = [
 const PAD_LEFT = 36;
 const PAD_RIGHT = 8;
 const PAD_TOP = 8;
-/** Reserves the category-label row below the plot, including room for the tallest engine's line box
- *  under `CATEGORY_LABEL_OFFSET`'s baseline. Raised with that offset so descenders never clip. */
-const PAD_BOTTOM = 30;
-/** Baseline offset of the category-label row below the plot floor.
- *
- *  This must clear the bottom y-axis tick, which is `dominant-baseline="middle"` on the plot floor
- *  and so hangs half its line box *below* that floor, into this row -- and the first category label
- *  of a line chart is centred on `plotX`, so it always reaches left into the tick column (measured
- *  overlap: 5.7px on both Chromium and Firefox). Horizontal overlap alone is therefore not
- *  separable here; the only thing keeping the two boxes apart is this vertical gap.
- *
- *  At the previous 18px the gap was 1.3px on Chromium and *-0.7px* on Firefox, whose line box for
- *  the same 10px `system-ui` font is 16px against Chromium's 14px -- so the labels genuinely
- *  collided there. 24px keeps ~5px clear on both, comfortably past that 2px cross-engine variation,
- *  at the cost of 6px of plot height. */
-const CATEGORY_LABEL_OFFSET = 24;
-const AXIS_TITLE_SPACE = 14;
+const DEFAULT_TICK_SIZE = 10;
+const DEFAULT_TITLE_SIZE = 12;
 const TICK_COUNT = 4;
 const BAR_GROUP_GAP = 0.2; // fraction of a category slot left as gap between categories
 const BAR_GAP = 0.08; // fraction of a category slot left as gap between grouped bars
@@ -199,21 +201,6 @@ const CATEGORY_LABEL_SELECTION_BOUNDS: CategoryLabelSelectionBounds = Object.fre
   maxContentWidth: MAX_SCROLL_CONTENT_WIDTH,
   maxRenderedRecords: MAX_RENDERED_CHART_RECORDS,
 });
-
-/**
- * Picks a "nice" (1/2/5 × 10^n) step size for an axis spanning `span` over
- * roughly `count` ticks — the standard Heckbert nice-numbers approach, so
- * axis labels read as 0/25/50/75/100 rather than 0/23.4/46.8/70.2/93.6.
- * Callers supply a positive span from validated bounds, widening equal linear-domain bounds
- * before selecting their step.
- */
-function niceStep(span: number, count: number): number {
-  const rough = span / Math.max(1, count);
-  const magnitude = 10 ** Math.floor(Math.log10(rough));
-  const residual = rough / magnitude;
-  const niceResidual = residual < 1.5 ? 1 : residual < 3 ? 2 : residual < 7 ? 5 : 10;
-  return niceResidual * magnitude;
-}
 
 /**
  * Position of `value` on a base-10 logarithmic value axis spanning `lo`..`hi`, as a `[0, 1]`
@@ -575,7 +562,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
-  private _preparedData: LyraChartPreparedData | null = null;
   /**
    * Property-only immutable whole-source summary. Takes precedence over labels and datasets.
    * Series require line/bar; categories require bar.
@@ -588,14 +574,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * row with source index and coordinates in its label; other series cells remain empty.
    * Reassign or explicitly requestUpdate after changing a host-authored descriptor/revision.
    */
-  @property({ attribute: false })
-  get preparedData(): LyraChartPreparedData | null { return this._preparedData; }
-  set preparedData(value: LyraChartPreparedData | null) {
-    const previous = this._preparedData;
-    this._preparedData = value;
-    this.requestUpdate('preparedData', previous);
-    if (value === previous) this.requestUpdate();
-  }
+  @property({ attribute: false, hasChanged: () => true })
+  preparedData: LyraChartPreparedData | null = null;
 
 
   private preparedDirty = true;
@@ -620,7 +600,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.preparedRequestFailed = false;
     this.preparedBaseModel = this.preparedModel = undefined;
     this.preparedEffective = undefined;
-    const input = this._preparedData;
+    const input = this.preparedData;
     this.preparedActive = input !== null;
     try {
       if (input !== null) {
@@ -950,6 +930,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  split its extent by raw positive shares; nonpositive segments have zero natural log height.
    *  With minBarHeight unset, the natural logarithmic stack remains within the plot. */
   @property() scale: LyraLiteChartScale = 'linear';
+
+  /** Alias of `scale` matching the value-axis setting on canvas charts. */
+  @property({ attribute: 'scale-type' })
+  get scaleType(): LyraLiteChartScale { return this.scale; }
+  set scaleType(value: LyraLiteChartScale) { this.scale = value; }
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
    *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
   @property({ type: Boolean, attribute: 'without-value-axis' }) withoutValueAxis = false;
@@ -1034,7 +1019,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * Inactive while preparedData is supplied.
    */
   appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
-    if (this._preparedData !== null) return;
+    if (this.preparedData !== null) return;
     this.deferStreamedTable();
     this.streamingTableUpdate = true;
     try {
@@ -1080,7 +1065,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       if (!this.svgEl || typeof XMLSerializerCtor !== 'function') return '';
       return new XMLSerializerCtor().serializeToString(this.svgEl);
     }
-    const header = ['label', ...this.displayDatasets.map((series) => series.label)].map(escapeCsvField).join(',');
+    const header = csvRow(['label', ...this.displayDatasets.map((series) => series.label)]);
     if (this.preparedModel?.kind === 'series') {
       const rows: string[] = [];
       this.preparedModel.series.forEach((entry, datasetIndex) => entry.samples.forEach((point, index) => {
@@ -1088,14 +1073,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const label = this.datumLabel(datasetIndex, index);
         const value = this.formatter?.({ value: point.y, surface: 'export', datasetIndex, index,
           label, seriesLabel: entry.label, axis: 'y' }) ?? point.y;
-        rows.push([label, ...this.displayDatasets.map((_series, position) => position === datasetIndex ? value : '')]
-          .map(escapeCsvField).join(','));
+        rows.push(csvRow([label, ...this.displayDatasets.map((_series, position) => position === datasetIndex ? value : '')]));
       }));
       return [header, ...rows].join('\r\n');
     }
     const rows = Array.from({ length: this.recordCount() }, (_, index) => {
       const label = this.displayLabels[index] ?? '';
-      return [
+      return csvRow([
         label,
         ...this.displayDatasets.map((series, datasetIndex) => {
           const value = series.data[index];
@@ -1111,7 +1095,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               }) ?? value
             : '';
         }),
-      ].map(escapeCsvField).join(',');
+      ]);
     });
     return [header, ...rows].join('\r\n');
   }
@@ -1275,7 +1259,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.seedFirstRenderState(() => {
       this.refreshFitMeasurementAvailability();
     });
-    const marksChanged = this.preparedChanged || ['type', 'labels', 'datasets', 'skipZero', 'maxRecords', 'plotWidth', 'layout'].some((name) => changed.has(name));
+    const marksChanged = this.preparedChanged || markKeys.some(name => changed.has(name));
     if (!marksChanged) return;
     const active = shadowFocusTarget(this) ?? null;
     const hadFocusedMark = active?.matches('[part="bar"], [part="point"]') ?? false;
@@ -1310,9 +1294,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.announcedPreparedInvalid = this.preparedInvalid;
     this.isMounting = false;
     if (changed.has('height')) {
-      const height = sanitizeCssLength(this.height, 'height');
-      if (height) this.style.setProperty('--_lr-chart-height', height);
-      else this.style.removeProperty('--_lr-chart-height');
+      syncChartHeight(this, this.height);
     }
     const inputLimit = this.inputLimitMessage();
     const sampling = this.dataTruncationMessage();
@@ -1335,13 +1317,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.svgEl?.focus();
     }
     // An arrow key changes only the active mark, so skip the per-tick text measurements.
-    if (changed.size === 0 || [...changed.keys()].some((name) => !['selectedIndices', 'dataTableExpandedOverride', 'dataTable', 'dataTableToggle', 'description', 'label'].includes(String(name)))) {
+    let fitLabels = changed.size === 0;
+    for (const name of changed.keys()) {
+      if (!nonGeometryKeys.has(name)) { fitLabels = true; break; }
+    }
+    if (fitLabels) {
       this.fitAxisTitles();
       this.fitCategoryLabels();
     }
     this.syncAxisTitleTargets();
-    const dataChanged = ['datasets', 'labels', 'type', 'skipZero', 'layout', 'maxRecords', 'maxSeries']
-      .some((name) => changed.has(name));
+    const dataChanged = syncKeys.some(name => changed.has(name));
     this.chartSync.update(this.syncGroup, this.preparedModel?.kind !== 'series', dataChanged);
   }
 
@@ -1924,23 +1909,22 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
   }
 
+  private activationGeneration = 0;
+
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
-    if (args[0] === undefined || ['preparedData', 'type', 'maxRecords', 'stacked'].includes(String(args[0]))) {
+    if (args[0] === undefined || preparedDataKeys.has(args[0])) {
       this.preparedDirty = true;
       this.preparedRequests?.refresh();
     }
     this.forcedColorsMemo = undefined;
     // Moving the active mark does not change table contents. Explicit refreshes still
     // rebuild rows when a formatter captures state outside its arguments.
-    if (args[0] === undefined || [
-      'preparedData', 'preparedView', 'labels', 'datasets', 'type', 'stacked', 'tableTotals', 'formatter', 'tableCellFormatter',
-      'pointText', 'skipZero', 'maxRecords', 'plotWidth', 'layout', 'locale', 'lang', 'dir', 'strings',
-      'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride',
-    ].includes(String(args[0]))) {
+    if (args[0] === undefined || liteTableKeys.has(args[0])) {
       this.dataTableRows = undefined;
       this.dataListMemo = undefined;
       if (!this.streamingTableUpdate || this.dataTableVisible) this.clearDeferredTable();
     }
+    if (args[0] === undefined || liteActivationKeys.has(args[0])) this.activationGeneration++;
     super.requestUpdate(...args);
   }
 
@@ -2198,6 +2182,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private emitPoint(datasetIndex: number, index: number): void {
     if (!this.isConnected) return;
     const model = this.preparedModel;
+    const generation = this.activationGeneration;
     if (model) {
       const series = model.series[datasetIndex];
       if (!series) return;
@@ -2211,6 +2196,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         this.emit('lr-source-category-select', { revision: model.revision, seriesId: series.id, categoryId, value, observationCount: model.categoryCounts[index]! });
       }
     }
+    // A source-select listener may replace the data or remove the chart; stop once the mark is stale.
+    if (!this.isConnected || generation !== this.activationGeneration) return;
     const label = this.datumLabel(datasetIndex, index);
     const value = this.displayDatasets[datasetIndex]?.data[index] ?? null;
     this.emit('lr-datum-activate', {
@@ -2220,6 +2207,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       label,
       value,
     });
+    if (!this.isConnected || generation !== this.activationGeneration) return;
     this.emit('lr-point-activate', { datasetIndex, index, label, value });
   }
 
@@ -2234,7 +2222,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     );
     const currentTarget = event.currentTarget;
     const svgElement =
-      currentTarget instanceof SVGElement ? currentTarget.ownerSVGElement : null;
+      isSvgElement(currentTarget) ? currentTarget.ownerSVGElement : null;
     const screenMatrix = svgElement?.getScreenCTM();
 
     // A physical pointer click carries screen coordinates and `detail > 0`; choose the closest
@@ -2313,6 +2301,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      if (isRepeatedActivationKey(e)) return;
       this.onMarkFocus(markIndex);
       this.emitPoint(datasetIndex, index);
       return;
@@ -2581,7 +2570,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const barText =
           custom ??
           this.localize('liteChartBarLabel', undefined, {
-            series: s.label,
+            series: normalizeLabel(s.label) ?? this.localize('chartSeriesLabel'),
             label,
             value: formatChartValue(v, this.effectiveLocale, numberFormat),
           });
@@ -2762,7 +2751,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const barText =
           custom ??
           this.localize('liteChartBarLabel', undefined, {
-            series: s.label,
+            series: normalizeLabel(s.label) ?? this.localize('chartSeriesLabel'),
             label,
             value: formatChartValue(v, this.effectiveLocale, numberFormat),
           });
@@ -2936,9 +2925,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // An explicit numeric value remains authoritative. Unset and non-finite numeric values retain
     // the established 36px fallback; the opt-in automatic branch is bounded separately.
     const padLeft = this.resolvedValueAxisGutter(formattedTicks, measuredWidth);
-    const axisGutter = padLeft + (this.yLabel ? AXIS_TITLE_SPACE : 0);
+    const computed = this.ownerDocument?.defaultView?.getComputedStyle(this);
+    const tickSize = resolveCssTokenLength(computed?.getPropertyValue('--lr-chart-tick-font-size').trim() ||
+      computed?.getPropertyValue('--_lr-chart-tick-font-size'), { host: this }) ?? DEFAULT_TICK_SIZE;
+    const titleSize = resolveCssTokenLength(computed?.getPropertyValue('--lr-font-size-xs'), { host: this }) ?? DEFAULT_TITLE_SIZE;
+    const tickOffset = Math.max(24, 2.4 * tickSize);
+    const titleSpace = Math.max(14, titleSize * 1.6);
+    const axisGutter = padLeft + (this.yLabel ? titleSpace : 0);
     const rtl = this.effectiveDirection === 'rtl';
-    const padBottom = PAD_BOTTOM + (this.xLabel ? AXIS_TITLE_SPACE : 0);
+    const padBottom = tickOffset + Math.max(6, tickSize * 0.6) + (this.xLabel ? titleSpace : 0);
     const plotX = rtl ? PAD_RIGHT : axisGutter;
     const plotY = PAD_TOP;
     const plotH = Math.max(0, h - plotY - padBottom);
@@ -3100,7 +3095,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       return svg`<text
         part="axis-label"
         x=${x}
-        y=${plotY + plotH + CATEGORY_LABEL_OFFSET}
+        y=${plotY + plotH + tickOffset}
         text-anchor=${textAnchor}
         data-label-extent=${labelExtent}
         data-full-label=${fullLabel}
@@ -3110,11 +3105,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
     // A blank series label never reaches the name (" and Sales"); all blank uses the fallback.
     const datasetLabels = recordSample.seriesIndexes
-      .map((datasetIndex) => this.displayDatasets[datasetIndex]!.label)
-      .filter(Boolean);
+      .map((datasetIndex) => normalizeLabel(this.displayDatasets[datasetIndex]!.label))
+      .filter((label): label is string => label !== undefined);
     const chartLabel =
-      this.hostAccessibleLabel ??
-      (this.label ||
+      this.hostAccessibleLabel === '' ? '' : normalizeLabel(this.hostAccessibleLabel) ??
+      (normalizeLabel(this.label) ||
         (datasetLabels.length
           ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)
           : '') ||
@@ -3134,6 +3129,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         ?data-table-toggle=${this.dataTableToggle}
       >
         <svg
+          ?data-forced-colors=${this.forcedColors()}
           viewBox="0 0 ${w} ${h}"
           style=${this.layout === 'scroll' ? `inline-size: ${w}px` : nothing}
           role="group"
@@ -3157,7 +3153,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               >${this.yLabel}</text>`
             : nothing}
           ${!awaitingFitMeasurement && this.xLabel
-            ? svg`<text part="axis-title" aria-label=${this.xLabel} data-title-extent=${plotW} x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`
+            ? svg`<text part="axis-title" aria-label=${this.xLabel} data-title-extent=${plotW} x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - Math.max(2, titleSize * 0.35)} text-anchor="middle">${this.xLabel}</text>`
             : nothing}
         </svg>
         <lr-live-region part="live-region"></lr-live-region>
@@ -3258,6 +3254,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 function formatTick(v: number, locale: string): string {
   // Avoid float noise (e.g. 0.30000000000000004) from the niceStep() math
   // above without hardcoding a fixed decimal count that'd butcher large ints.
+  if (Number.isFinite(v) && v !== 0 && Math.abs(v) < 5e-7) {
+    // A tiny nonzero tick would round to "0" at six fraction digits; keep its significant digits.
+    return formatChartValue(v, locale, undefined, 6);
+  }
   return getNumberFormat(locale, { maximumFractionDigits: 6 }).format(Number(v.toFixed(6)));
 }
 

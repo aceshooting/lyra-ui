@@ -1039,7 +1039,9 @@ it("resolves descendant selection state when a childRows callback returns a fres
     "the recomputed child key is resolved by value, not by reference"
   ).to.have.members([1, 2]);
 
-  const cascade = oneEvent(element, "lr-row-select");
+  // The whole page is already selected, so select-all is a no-op and stays silent.
+  let repeated = 0;
+  element.addEventListener("lr-row-select", () => { repeated += 1; });
   dataCells(element)[0]!.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "a",
@@ -1048,7 +1050,8 @@ it("resolves descendant selection state when a childRows callback returns a fres
       composed: true,
     })
   );
-  expect((await cascade).detail.selectedKeys).to.include(1);
+  expect(repeated).to.equal(0);
+  expect(element.selectedKeys).to.include(1);
   childName = 'Updated child';
   element.requestUpdate();
   await element.updateComplete;

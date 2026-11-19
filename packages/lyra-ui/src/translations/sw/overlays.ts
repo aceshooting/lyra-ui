@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Chaguo',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('sw', strings);

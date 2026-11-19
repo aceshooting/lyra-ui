@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
     two: '{count} ċwievet',
   },
   jsonViewerLimit: 'Jintwerew u jiġu mfittxija biss l-ewwel {count} nodi JSON u {depth} livelli ta’ inkapsulament.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Waqqaf temporanjament',
   pollResume: 'Kompli',
   pollRefresh: 'Aġġorna issa',
@@ -57,6 +58,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Xahar',
   knownDateYear: 'Sena',
   exportFormatMenuLabel: 'Format {label}',
+  exportFailed: 'L-esportazzjoni falliet',
   mentionSuggestions: 'Suġġerimenti',
   mentionResultCount: {
     few: '{count} suġġerimenti',
@@ -81,6 +83,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Huma disponibbli biss l-ewwel 10,000 kandidat għas-semmija.',
   diffViewHighlightLimit: 'Il-kodiċi twil jintwera mingħajr enfasi tas-sintassi.',
+  diffViewLabel: 'Differenzi',
 };
 
 registerLyraLocale('mt', strings);

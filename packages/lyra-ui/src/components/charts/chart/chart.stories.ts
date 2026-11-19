@@ -475,7 +475,11 @@ export const DataTableDisclosure: Story = {
     },
   },
   render: () => html`
+    <style>
+      .revenue-disclosure::part(data-table-button) { font-weight: var(--lr-font-weight-semibold); }
+    </style>
     <lr-chart
+      class="revenue-disclosure"
       data-table-toggle
       type="bar"
       .labels=${['Q1', 'Q2', 'Q3', 'Q4']}

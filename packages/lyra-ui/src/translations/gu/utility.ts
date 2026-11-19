@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} કીઓ',
   },
   jsonViewerLimit: 'ફક્ત પ્રથમ {count} JSON નોડ અને {depth} સુધીના નેસ્ટિંગ સ્તરો દેખાડવામાં અને શોધવામાં આવે છે.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'થોભો',
   pollResume: 'ચાલુ રાખો',
   pollRefresh: 'હમણાં રીફ્રેશ કરો',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'મહિનો',
   knownDateYear: 'વર્ષ',
   exportFormatMenuLabel: '{label} ફૉર્મેટ',
+  exportFailed: 'નિકાસ કરી શકાઈ નહીં',
   mentionSuggestions: 'સૂચનો',
   mentionResultCount: {
     one: '{count} સૂચન',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ઉલ્લેખ માટે ફક્ત પ્રથમ 10,000 સૂચનો ઉપલબ્ધ છે.',
   diffViewHighlightLimit: 'લાંબો કોડ સિન્ટેક્સ હાઇલાઇટિંગ વિના બતાવવામાં આવે છે.',
+  diffViewLabel: 'ફરક',
 };
 
 registerLyraLocale('gu', strings);

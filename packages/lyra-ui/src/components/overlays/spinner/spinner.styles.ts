@@ -7,8 +7,8 @@ export const styles = css`
     inline-size: var(--lr-spinner-size, var(--lr-size-1-25rem));
     block-size: var(--lr-spinner-size, var(--lr-size-1-25rem));
     border: var(--lr-spinner-track-width, var(--track-width, var(--lr-border-width-medium))) solid
-      var(--track-color, var(--lr-color-brand-quiet));
-    border-block-start-color: var(--indicator-color, var(--lr-color-brand));
+      var(--lr-spinner-track-color, var(--track-color, var(--lr-color-brand-quiet)));
+    border-block-start-color: var(--lr-spinner-indicator-color, var(--indicator-color, var(--lr-color-brand)));
     border-radius: var(--lr-radius-pill);
     animation: var(--_lr-motion-animation, lr-spin var(--lr-spinner-duration, var(--speed, var(--lr-transition-ambient))) infinite);
   }

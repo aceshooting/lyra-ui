@@ -71,3 +71,7 @@ it('loads an injected importer uncached and leaves the shared cache untouched', 
   expect(await loadIconSanitizer(() => Promise.resolve(fake))).to.equal(fake);
   expect(await loadIconSanitizer(() => Promise.resolve(other))).to.equal(other);
 });
+
+it('uses the shared cached sanitizer for both default entry points', async () => {
+  expect(await loadIconSanitizerDeps()).to.equal(await loadIconSanitizer());
+});

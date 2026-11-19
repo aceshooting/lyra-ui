@@ -8,7 +8,7 @@ import { styles } from './kbd.styles.js';
 import { parseShortcut } from './kbd-shortcut.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord } from '../../../internal/default-strings/overlays.generated.js';
+import { LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdShortcutSeparator, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord } from '../../../internal/default-strings/overlays.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { shortcutTokenLabel, parseShortcut } from './kbd-shortcut.js';
@@ -68,6 +68,9 @@ function isEffectivePlatform(value: string | null): value is EffectiveKbdPlatfor
  * `keys`-driven rendering. Leave empty to use `keys`.
  * @csspart base - The chip's root element.
  * @csspart key - Each rendered key cap (one per token in `keys`).
+ * @cssprop --lr-kbd-key-bg - Key background.
+ * @cssprop --lr-kbd-key-color - Key text color.
+ * @cssprop --lr-kbd-key-border-color - Key edge and inset shadow color.
  * @status stable
  * @since 4.0.0
  */
@@ -100,6 +103,7 @@ export class LyraKbd extends LyraElement {
     kbdPageUpWord: LYRA_DEFAULT_kbdPageUpWord,
     kbdPlusWord: LYRA_DEFAULT_kbdPlusWord,
     kbdShiftWord: LYRA_DEFAULT_kbdShiftWord,
+    kbdShortcutSeparator: LYRA_DEFAULT_kbdShortcutSeparator,
     kbdSpaceWord: LYRA_DEFAULT_kbdSpaceWord,
     kbdTabWord: LYRA_DEFAULT_kbdTabWord,
   };
@@ -175,7 +179,7 @@ export class LyraKbd extends LyraElement {
     // explicit empty string. Keep that presence signal alongside the string:
     // an absent label and no tokens also produce an empty string, but must
     // remain the hidden, non-image state.
-    const ariaLabel = explicitLabel ?? tokens.map((t) => t.word).join('+');
+    const ariaLabel = explicitLabel ?? tokens.map((t) => t.word).join(this.localize('kbdShortcutSeparator'));
     const hasAriaLabel = explicitLabel !== null || tokens.length > 0;
 
     // One outer template for both renderings, with the branch inside it. Slotted content is only
@@ -184,6 +188,7 @@ export class LyraKbd extends LyraElement {
     return html`
       <span
         part="base"
+        ?data-shortcut=${!this.hasCustomContent}
         data-effective-platform=${this.effectivePlatform}
         role=${hasAriaLabel ? 'img' : nothing}
         aria-hidden=${!this.hasCustomContent && !hasAriaLabel ? 'true' : nothing}

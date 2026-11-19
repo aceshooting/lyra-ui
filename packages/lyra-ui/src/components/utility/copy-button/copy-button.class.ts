@@ -1,19 +1,26 @@
+import { tag } from '../../../internal/prefix.js';
+import { copyOutcome, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { checkIcon, copyIcon } from '../../../internal/icons.js';
+import { acquireNativeControlDescription } from '../../../internal/native-control-description.js';
+import { acquireResolvedAriaRelationship } from '../../../internal/aria-controls.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
-  normalizeReflectedOptionalSize,
   optionalSizeConverter,
+  writeOptionalSize,
   type LyraSize,
 } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import {
   writeClipboardText,
+  type LyraClipboardWriteOutcome,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
@@ -31,43 +38,6 @@ const DEFAULT_FEEDBACK_DURATION = COPY_FEEDBACK_MS;
 
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
-
-/** A generic two-rectangle "copy" glyph. */
-function copyIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-  `;
-}
-
-/** Matches `<lr-checkbox>`'s own checkmark glyph exactly, for visual consistency across the
- *  library's "confirmation" affordances. */
-function checkIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="5 12.5 10 17.5 19 6.5"></polyline></svg>
-  `;
-}
 
 /** An exclamation mark in a circle: a shape nothing else in this component uses, so the failure
  *  state is legible without relying on its color. */
@@ -169,7 +139,7 @@ export interface LyraCopyButtonEventMap {
  * @slot error-icon - Failure icon for the built-in button.
  * @event lr-copy - Clipboard writing fulfilled. The frozen shared outcome detail is
  *   `{ ok: true, text }`. Failed writes emit `lr-copy-error` instead.
- * @event lr-error - The source could not be resolved or clipboard writing failed. A bubbling,
+ * @event lr-error - When handling a bubbling event, compare its origin with this button to distinguish a nested icon failure.  The source could not be resolved or clipboard writing failed. A bubbling,
  *   composed, non-cancelable `CustomEvent` with no detail, matching the mapped notification.
  * @event lr-copy-error - Source resolution or clipboard writing failed. The frozen detail is
  *   `{ ok: false, text, reason, error }`, where
@@ -266,11 +236,9 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (value) => {
+      this._size = value;
+    });
   }
 
   /** How long, in milliseconds, the copied confirmation or failure state remains visible. */
@@ -327,6 +295,35 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     if (changed.has('disabled') || changed.has('hasCustomTrigger')) {
       this.emit('lr-toolbar-actions-change');
     }
+    this.syncHostRelationships();
+  }
+
+  private hostRelationshipLeases: Array<{ update(target: HTMLElement | null): void; release(): void }> = [];
+
+  /** Projects the host's own `aria-describedby`/`aria-labelledby` onto the inner native button. */
+  private syncHostRelationships(): void {
+    const iconButton = this.renderRoot.querySelector<LyraIconButton>(tag('icon-button'));
+    if (!iconButton) {
+      this.releaseHostRelationships();
+      return;
+    }
+    void iconButton.updateComplete.then(() => {
+      if (!iconButton.isConnected || iconButton.getRootNode() !== this.renderRoot) return;
+      const target = iconButton.control;
+      if (this.hostRelationshipLeases.length === 0) {
+        this.hostRelationshipLeases = [
+          acquireNativeControlDescription(this, target, () => ''),
+          acquireResolvedAriaRelationship(this, target, 'aria-labelledby'),
+        ];
+      } else {
+        for (const lease of this.hostRelationshipLeases) lease.update(target);
+      }
+    });
+  }
+
+  private releaseHostRelationships(): void {
+    for (const lease of this.hostRelationshipLeases) lease.release();
+    this.hostRelationshipLeases = [];
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -371,6 +368,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   override disconnectedCallback(): void {
     this.toolbarAction.releaseTabIndex?.();
+    this.releaseHostRelationships();
     super.disconnectedCallback();
     this.resetFeedback();
     this.sink?.release();
@@ -546,11 +544,16 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     const attributeMatch = /^(.*?)\[([^\]]+)\]$/.exec(expression);
     const propertyMatch = attributeMatch ? null : /^(.*?)\.([^.]*)$/.exec(expression);
     const id = (attributeMatch?.[1] ?? propertyMatch?.[1] ?? expression).trim();
-    const source = id ? this.sourceById(id) : null;
+    const splitSource = id ? this.sourceById(id) : null;
+    const wholeIdSource =
+      !splitSource && (attributeMatch || propertyMatch) ? this.sourceById(expression) : null;
+    const source = splitSource ?? wholeIdSource;
     if (!source) throw new CopySourceError(`The copy source "${id}" was not found.`);
 
     let resolved: unknown;
-    if (attributeMatch) {
+    if (wholeIdSource) {
+      resolved = source.textContent;
+    } else if (attributeMatch) {
       const attribute = attributeMatch[2]!.trim();
       resolved = attribute ? source.getAttribute(attribute) : null;
     } else if (propertyMatch) {
@@ -596,10 +599,11 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.copyTimer = { owner, handle, generation };
   }
 
-  private reportFailure(outcome: LyraClipboardWriteFailure): void {
-    this.showStatus('error');
-    this.emit('lr-error');
-    this.emit('lr-copy-error', outcome);
+  private reportCopy(outcome: LyraClipboardWriteOutcome, generation: number, owner?: Window): void {
+    reportCopyOutcome({
+      announce: ok => this.showStatus(ok ? 'success' : 'error'),
+      emit: (name, detail) => this.emit(name, detail ?? null),
+    }, outcome, () => this.isCurrentCopy(generation, owner));
   }
 
   private async copy(): Promise<void> {
@@ -610,20 +614,12 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     try {
       text = this.resolveCopyText();
     } catch (error) {
-      if (this.isCurrentCopy(generation)) {
-        this.reportFailure(Object.freeze({ ok: false, text, reason: 'failed', error }));
-      }
+      this.reportCopy(copyOutcome('failure', { text, error }), generation);
       return;
     }
     if (!owner) return;
     const outcome = await writeClipboardText(owner, text);
-    if (!this.isCurrentCopy(generation, owner)) return;
-    if (!outcome.ok) {
-      this.reportFailure(outcome);
-      return;
-    }
-    this.showStatus('success');
-    this.emit('lr-copy', outcome);
+    this.reportCopy(outcome, generation, owner);
   }
 
   private isCurrentCopy(generation: number, owner?: Window): boolean {
@@ -675,9 +671,9 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   };
 
   private statusLabel(status: CopyStatus): string {
-    if (status === 'success') return this.successLabel == null ? this.localize('copied') : this.successLabel;
-    if (status === 'error') return this.errorLabel == null ? this.localize('copyFailed') : this.errorLabel;
-    return this.copyLabel == null ? this.localize('copy') : this.copyLabel;
+    const [label, key] = status === 'success' ? [this.successLabel, 'copied'] as const
+      : status === 'error' ? [this.errorLabel, 'copyFailed'] as const : [this.copyLabel, 'copy'] as const;
+    return label === '' ? '' : normalizeLabel(label) ?? this.localize(key);
   }
 
   private renderIcon(): TemplateResult {

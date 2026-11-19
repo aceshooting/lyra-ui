@@ -106,6 +106,12 @@ export const NumberedPages: Story = {
   `,
 };
 
+export const CompactPages: Story = {
+  render: () => html`<lr-data-grid label="Engineering roster" paginate pagination-format="compact" pagination-with-summary
+    page-size="1" with-search spellcheck="false" autocapitalize="none" autocorrect="off"
+    .columns=${columns} .data=${rows}></lr-data-grid>`,
+};
+
 export const FullClientFeatures: Story = {
   render: () => html`
     <lr-data-grid

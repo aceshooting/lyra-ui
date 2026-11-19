@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} కీలు',
   },
   jsonViewerLimit: 'మొదటి {count} JSON నోడ్‌లు, గరిష్ఠంగా {depth} అంచెల లోతు మాత్రమే చూపించి వెతుకుతారు.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'తాత్కాలికంగా ఆపండి',
   pollResume: 'మళ్లీ ప్రారంభించండి',
   pollRefresh: 'ఇప్పుడే రిఫ్రెష్ చేయండి',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'నెల',
   knownDateYear: 'సంవత్సరం',
   exportFormatMenuLabel: '{label} ఫార్మాట్',
+  exportFailed: 'ఎగుమతి చేయడం విఫలమైంది',
   mentionSuggestions: 'సూచనలు',
   mentionResultCount: {
     one: '{count} సూచన',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ప్రస్తావించడానికి మొదటి 10,000 అభ్యర్థులు మాత్రమే అందుబాటులో ఉన్నారు.',
   diffViewHighlightLimit: 'పొడవైన కోడ్ సింటాక్స్ హైలైటింగ్ లేకుండా చూపబడుతుంది.',
+  diffViewLabel: 'తేడాలు',
 };
 
 registerLyraLocale('te', strings);

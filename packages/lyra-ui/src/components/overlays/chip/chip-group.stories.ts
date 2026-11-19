@@ -26,7 +26,7 @@ export const NarrowRtlLongContent: StoryObj = {
       <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
         <lr-chip-group
           max-visible="2"
-          style="--lr-chip-group-overflow-expanded-border-style: dotted;"
+          style="--lr-chip-group-overflow-bg: var(--lr-color-surface); --lr-chip-group-overflow-expanded-border-style: dotted;"
         >
           <lr-chip removable>${longLabel}</lr-chip>
           <lr-chip removable>${longLabel}</lr-chip>

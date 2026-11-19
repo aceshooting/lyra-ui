@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './skeleton.js';
 import type { LyraSkeleton, LyraSkeletonEffect } from './skeleton.js';
@@ -280,4 +280,31 @@ it('paints the placeholder from the neutral normal fill role, not the border tok
   const el = (await fixture(html`<lr-skeleton data-lr-theme-scope style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"></lr-skeleton>`)) as LyraSkeleton;
   const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
   expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
+it('announces again after the skeleton is removed and re-attached', async () => {
+  const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
+  await waitUntil(() => sinkText() === 'Loading…');
+  const parent = el.parentNode!;
+  el.remove();
+  expect(sink() === null).to.equal(true);
+  parent.appendChild(el);
+  await waitUntil(() => sinkText() === 'Loading…');
+});
+
+it('announces only the current label after changes and a reconnect before paint', async () => {
+  const parent = await fixture<HTMLElement>(html`<div></div>`);
+  const el = document.createElement('lr-skeleton');
+  el.announce = true;
+  el.label = 'Loading image';
+  parent.append(el);
+  await el.updateComplete;
+  el.label = 'Loading results';
+  await el.updateComplete;
+  el.remove();
+  parent.append(el);
+  await waitUntil(() => sinkText().includes('Loading results'));
+  await nextFrame();
+  expect(sinkText()).to.equal('Loading results');
+  expect(sink()!.childElementCount).to.equal(1);
 });

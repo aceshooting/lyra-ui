@@ -1,17 +1,19 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
@@ -286,6 +288,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  `true` so an indeterminate pager stays navigable until told otherwise. */
   @property({ type: Boolean, attribute: 'has-next', reflect: true, converter: trueDefaultBooleanConverter })
   hasNext = true;
+  /** Disables all navigation controls. */
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Disables navigation and exposes `aria-busy="true"` while a page is loading. */
   @property({ type: Boolean, reflect: true }) loading = false;
@@ -347,9 +350,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Optional control-label overrides. Omission localizes the matching message key; supplied
    * strings, including the built-in English text or an empty string, render verbatim. */
   @property({ attribute: 'page-label' }) pageLabel?: string;
+  /** Accessible name for the previous-page control. */
   @property({ attribute: 'previous-label' }) previousLabel?: string;
+  /** Accessible name for the next-page control. */
   @property({ attribute: 'next-label' }) nextLabel?: string;
+  /** Accessible name for the first-page control. */
   @property({ attribute: 'first-label' }) firstLabel?: string;
+  /** Accessible name for the last-page control. */
   @property({ attribute: 'last-label' }) lastLabel?: string;
 
   @state() private draftPage = '';
@@ -510,25 +517,21 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return { href, renderAnchor: href !== null };
   }
 
-  private formatNumber(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
-  }
-
   private summaryText(): string {
     const total = this.normalizedTotalItems;
     const itemLabel = this.itemLabel || this.localize('items', undefined, { count: total });
     if (this.calculatedTotalPages === 0) {
       return this.localize('paginationEmptySummary', undefined, {
-        total: this.formatNumber(0),
+        total: this.formatLocaleNumber(0),
         itemLabel,
       });
     }
     const start = (this.currentPage - 1) * this.normalizedPageSize + 1;
     const end = Math.min(total, this.currentPage * this.normalizedPageSize);
     return this.localize('paginationSummary', undefined, {
-      start: this.formatNumber(start),
-      end: this.formatNumber(end),
-      total: this.formatNumber(total),
+      start: this.formatLocaleNumber(start),
+      end: this.formatLocaleNumber(end),
+      total: this.formatLocaleNumber(total),
       itemLabel,
     });
   }
@@ -542,7 +545,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     }
     if (this.initialized && changed.has('page') && this.indeterminate) {
       this.liveText = this.localize('paginationAppliedUnknownTotal', undefined, {
-        page: this.formatNumber(this.currentPage),
+        page: this.formatLocaleNumber(this.currentPage),
       });
       // Announced from the computation, not from a rendered text change: the shared region appends
       // each announcement as its own node, so returning to a page already announced is read again
@@ -550,8 +553,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       this.sink?.announce(this.liveText);
     } else if (this.initialized && changed.has('page') && this.calculatedTotalPages > 0) {
       this.liveText = this.localize('paginationApplied', undefined, {
-        page: this.formatNumber(this.currentPage),
-        totalPages: this.formatNumber(this.calculatedTotalPages),
+        page: this.formatLocaleNumber(this.currentPage),
+        totalPages: this.formatLocaleNumber(this.calculatedTotalPages),
       });
       this.sink?.announce(this.liveText);
     }
@@ -594,10 +597,15 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       return;
     }
     if (page !== this.currentPage) {
+      const previousPage = this.page;
       const focusOrigin = deepActiveElementIn(this.ownerDocument);
       const pageSize = this.normalizedPageSize;
       const detail = (): LyraPaginationChangeDetail => Object.freeze({ page, pageSize });
-      if (this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented) {
+      const vetoed = this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented;
+      // A listener may also have disabled or detached the control; the accepted request no longer
+      // applies. (A listener may still change `pageSize`: the request reports what was proposed.)
+      if (vetoed || !this.isConnected || this.controlsDisabled || this.page !== previousPage ||
+        page > this.maxRequestablePage || (this.indeterminate && page > this.currentPage && !this.hasNext)) {
         this.draftPage = this.hasPages ? String(this.currentPage) : '';
         this.invalidDraft = false;
         return;
@@ -611,7 +619,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     }
     // Every accepted request reports, including the re-request of the current page that
     // `lr-page-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
-    this.emit('lr-activate', { value: page });
+    this.emit('lr-activate', Object.freeze({ value: page }));
   }
 
   private onPageInput = (event: Event): void => {
@@ -631,7 +639,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   };
 
   private onPageKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Enter') return;
+    if (event.key !== 'Enter' || shouldIgnoreActivationKey(event)) return;
     event.preventDefault();
     this.commitPage(event);
   };
@@ -649,8 +657,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isPrevious = direction === 'previous';
     const current = this.currentPage;
     const label = isPrevious
-      ? this.previousLabel ?? this.localize('previous')
-      : this.nextLabel ?? this.localize('next');
+      ? (this.previousLabel === '' ? '' : normalizeLabel(this.previousLabel) ?? this.localize('previous'))
+      : (this.nextLabel === '' ? '' : normalizeLabel(this.nextLabel) ?? this.localize('next'));
     const spent = isPrevious
       ? current <= 1
       : this.indeterminate
@@ -668,6 +676,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       return html`<a
         part=${part}
         href=${href ?? nothing}
+        role=${href ? nothing : 'link'}
         aria-label=${label}
         aria-disabled=${inactive ? 'true' : 'false'}
         @focus=${this.onControlFocus}
@@ -695,8 +704,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isFirst = edge === 'first';
     const current = this.currentPage;
     const label = isFirst
-      ? this.firstLabel ?? this.localize('paginationFirstPage')
-      : this.lastLabel ?? this.localize('paginationLastPage');
+      ? (this.firstLabel === '' ? '' : normalizeLabel(this.firstLabel) ?? this.localize('paginationFirstPage'))
+      : (this.lastLabel === '' ? '' : normalizeLabel(this.lastLabel) ?? this.localize('paginationLastPage'));
     const spent = isFirst ? current <= 1 : current >= this.calculatedTotalPages;
     const target = isFirst ? 1 : this.calculatedTotalPages;
     const inactive = this.controlsDisabled || spent;
@@ -710,6 +719,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       return html`<a
         part=${part}
         href=${href ?? nothing}
+        role=${href ? nothing : 'link'}
         aria-label=${label}
         aria-disabled=${inactive ? 'true' : 'false'}
         @focus=${this.onControlFocus}
@@ -738,7 +748,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     // Both branches render the same part names, so the state lives in the part token rather than
     // in an attribute: `::part(page)[aria-current]` is invalid CSS and would silently never match.
     const part = isCurrent ? 'button page page-current' : 'button page';
-    const label = this.formatNumber(page);
+    const label = this.formatLocaleNumber(page);
     const inactive = isCurrent || this.controlsDisabled;
     const { href, renderAnchor } = this.pageLink(page, inactive);
 
@@ -746,6 +756,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       return html`<a
         part=${part}
         href=${href ?? nothing}
+        role=${href ? nothing : 'link'}
         tabindex=${isCurrent && !this.controlsDisabled ? '0' : nothing}
         aria-current=${isCurrent ? 'page' : 'false'}
         aria-disabled=${this.controlsDisabled ? 'true' : 'false'}
@@ -773,7 +784,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    * page button. */
   private renderEllipsis(target: number): TemplateResult {
     const label = this.localize('paginationJumpToPage', undefined, {
-      page: this.formatNumber(target),
+      page: this.formatLocaleNumber(target),
     });
     const inactive = this.controlsDisabled;
     const { href, renderAnchor } = this.pageLink(target, inactive);
@@ -781,6 +792,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       return html`<a
         part="button ellipsis"
         href=${href ?? nothing}
+        role=${href ? nothing : 'link'}
         aria-label=${label}
         aria-disabled=${this.controlsDisabled ? 'true' : 'false'}
         @focus=${this.onControlFocus}
@@ -819,11 +831,15 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private renderPageField(): TemplateResult {
-    const pageLabel = this.pageLabel ?? this.localize('paginationPage');
+    const pageLabel = (this.pageLabel === '' ? '' : normalizeLabel(this.pageLabel) ?? this.localize('paginationPage'));
+    // The field grows with the digits it must show (the last page or the typed draft), so a
+    // four-digit page is not clipped by the fixed control width.
+    const digits = Math.max(2, this.indeterminate ? 0 : String(this.calculatedTotalPages).length, this.draftPage.length);
 
     return html`<span part="page-field label">
       <input
         part="page-input"
+        style=${styleMap({ '--_lr-pagination-page-digits': String(digits) })}
         type="number"
         inputmode="numeric"
         min="1"
@@ -842,14 +858,14 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       />
       ${this.indeterminate
         ? nothing
-        : html`<span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.calculatedTotalPages)}</span>`}
+        : html`<span part="page-count" aria-hidden="true"> / ${this.formatLocaleNumber(this.calculatedTotalPages)}</span>`}
     </span>`;
   }
 
   override render(): TemplateResult | typeof nothing {
     if (this.hideSinglePage && !this.indeterminate && this.calculatedTotalPages <= 1) return nothing;
-    const navigationLabel =
-      this.accessibleLabel ?? this.label ?? this.localize('paginationLabel');
+    const authoredLabel = this.accessibleLabel ?? this.label;
+    const navigationLabel = authoredLabel === '' ? '' : normalizeLabel(authoredLabel) ?? this.localize('paginationLabel');
     // Indeterminate mode has no total to lay a numbered page list, an item-range summary, or a
     // "last page" edge button against, so it always renders the page-jump field regardless of
     // `format`, and ignores `withSummary`/`withEdges`.

@@ -37,14 +37,14 @@ async function ready(chart: SyncChart): Promise<void> {
     const allocation = core as unknown as {
       lastObservedInlineSize?: number;
       samplingWidth: number;
-      resizeDrawFrame?: number;
+      resizeDraw: { readonly pending: boolean };
     };
     // Initial allocation changes invalidate synchronization ownership, so settle them before interaction.
     await waitUntil(() => {
       const width = allocation.lastObservedInlineSize;
       const area = core.chartArea;
       return !!core.chart && width !== undefined && Number.isFinite(width) && width > 0 &&
-        allocation.samplingWidth === Math.floor(width) && allocation.resizeDrawFrame === undefined &&
+        allocation.samplingWidth === Math.floor(width) && !allocation.resizeDraw.pending &&
         !!area && area.width > 0 && area.height > 0;
     }, 'core chart allocation is ready for interaction');
   }

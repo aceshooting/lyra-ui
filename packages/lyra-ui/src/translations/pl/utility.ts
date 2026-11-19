@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} klucza',
   },
   jsonViewerLimit: 'Wyświetlane i przeszukiwane są tylko pierwsze {count} węzły JSON oraz poziomy zagnieżdżenia do {depth}.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Wstrzymaj',
   pollResume: 'Wznów',
   pollRefresh: 'Odśwież teraz',
@@ -54,6 +55,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Miesiąc',
   knownDateYear: 'Rok',
   exportFormatMenuLabel: 'Format {label}',
+  exportFailed: 'Nie udało się wyeksportować',
   mentionSuggestions: 'Sugestie',
   mentionResultCount: {
     one: '{count} sugestia',
@@ -76,6 +78,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Dostępnych jest tylko pierwszych 10 000 kandydatów do wzmianki.',
   diffViewHighlightLimit: 'Długi kod jest wyświetlany bez podświetlania składni.',
+  diffViewLabel: 'Różnice',
 };
 
 registerLyraLocale('pl', strings);

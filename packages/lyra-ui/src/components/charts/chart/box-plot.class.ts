@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { positionIndex } from '../../../internal/keyed-index.js';
 import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
 import { boundChartSeriesValues } from './chart-series-bounds.js';
@@ -7,9 +8,9 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { createReducedMotionWatch } from './chart-surface-shared.js';
+import { createCanvasChart, createReducedMotionWatch, disposeChart, guardCanvasRenderer, syncChartHeight } from './chart-surface-shared.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
-import { loadBoxPlotAndRegister, type BoxPlotModule } from './box-plot-loader.js';
+import { loadBoxPlotPlugin, type BoxPlotModule } from './box-plot-loader.js';
 export { loadBoxPlotAndRegister } from './box-plot-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 import { styles } from './box-plot.styles.js';
@@ -19,14 +20,8 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { showChartActiveDatum } from './chart-active-datum.js';
-import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
-  FALLBACK_GRID_COLOR,
-  FALLBACK_LEGEND_COLOR,
-  FALLBACK_TICK_COLOR,
-  FALLBACK_TICK_FONT_SIZE,
   FALLBACK_TOOLTIP_BG,
-  FALLBACK_TOOLTIP_TEXT,
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
 import { ChartTokenCache } from './chart-token-cache.js';
@@ -55,7 +50,7 @@ import {
   bidiStyles,
   isolateHtml,
 } from './chart-bidi.js';
-import { escapeCsvField } from '../../utility/export-button/csv.js';
+import { csvRow } from '../../../internal/csv.js';
 import type {
   LyraChartValueFormatter,
   LyraChartValueFormatterContext,
@@ -69,15 +64,20 @@ import {
   chartChromeLegendPlacement,
   normalizeChartChromeLegendPosition,
   type LyraChartChromeLegendPosition,
-} from './chart-chrome.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
+} from './chart-chrome.js';
+import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
 import { LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+const boxContentKeys = ['labels', 'datasets', 'hiddenDatasets', 'withLegend', 'legendPosition', 'height', 'xLabel', 'yLabel', 'withoutZeroBaseline', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'];
+const boxTableKeys = new Set<PropertyKey>(['datasets', 'labels', 'formatter', 'valueFormatter', 'locale', 'strings',
+      'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride']);
+const boxActivationKeys = new Set<PropertyKey>(['datasets', 'labels', 'hiddenDatasets']);
 
-const DIRECT_PIXEL_NUMBER = new RegExp(`^(${CSS_NUMBER_SOURCE})(?:px)?$`, 'i');
+
 
 export interface LyraBoxPlotSummary {
   readonly min: number;
@@ -107,9 +107,6 @@ function normalizeBoxPlotSeries(value: unknown): readonly LyraBoxPlotSeries[] {
 }
 
 // FALLBACK_GRID_COLOR/FALLBACK_TICK_COLOR/FALLBACK_LEGEND_COLOR/FALLBACK_TOOLTIP_BG/
-// FALLBACK_TOOLTIP_TEXT/ThemeColors (imported above as ChartThemeColors) now live in
-// chart-colors.ts, shared verbatim with chart.class.ts's identical fallback chain.
-
 type BrowserWindow = Window & typeof globalThis;
 
 interface BoxPlotChartConfiguration {
@@ -170,20 +167,6 @@ function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
     q3: point.q3,
     max: point.max,
   };
-}
-
-let boxPlotPlugin: Promise<BoxPlotModule | null> | undefined;
-
-/**
- * Lazily loads `@sgratzl/chartjs-chart-boxplot` and registers its controller
- * only when a `<lr-box-plot>` connects — kept separate from the base
- * `chart-core-loader.ts` so importing `lr-chart.js` alone never pulls this in.
- */
-function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
-  if (!boxPlotPlugin) {
-    boxPlotPlugin = loadBoxPlotAndRegister();
-  }
-  return boxPlotPlugin;
 }
 
 /**
@@ -301,6 +284,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     boxPlotSummaryEmpty: LYRA_DEFAULT_boxPlotSummaryEmpty,
     boxPlotSummaryWithData: LYRA_DEFAULT_boxPlotSummaryWithData,
     chartCategory: LYRA_DEFAULT_chartCategory,
+    chartLegend: LYRA_DEFAULT_chartLegend,
     chartDataSampled: LYRA_DEFAULT_chartDataSampled,
     chartPlotSampled: LYRA_DEFAULT_chartPlotSampled,
     chartPointLabel: LYRA_DEFAULT_chartPointLabel,
@@ -524,9 +508,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.loading = false;
     if (!boxMod) {
       this.loadFailed = true;
-      this.appliedLegendVisibility = undefined;
-      this.chart?.destroy();
-      this.chart = undefined;
+      this.discardChart();
       this.chartJsModule = undefined;
       return;
     }
@@ -544,9 +526,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.loadGeneration += 1;
-    this.appliedLegendVisibility = undefined;
-    this.chart?.destroy();
-    this.chart = undefined;
+    this.discardChart();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
     this.intersectionGeneration += 1;
@@ -635,14 +615,12 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
     // Keep the public CSS hook consumer-owned; the property is only a private fallback.
     if (changed.has('height')) {
-      const height = sanitizeCssLength(this.height, 'height');
-      if (height) this.style.setProperty('--_lr-chart-height', height);
-      else this.style.removeProperty('--_lr-chart-height');
+      syncChartHeight(this, this.height);
     }
     if (this.loading) return;
     const visibilityAlreadyApplied = appliedVisibility !== undefined &&
       appliedVisibility.chart === this.chart && appliedVisibility.hidden === this.hiddenDatasets;
-    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'withLegend', 'legendPosition', 'height', 'xLabel', 'yLabel', 'withoutZeroBaseline', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
+    const contentChanged = boxContentKeys.some((name) =>
       changed.has(name) && (name !== 'hiddenDatasets' || !visibilityAlreadyApplied),
     );
     const direction = this.effectiveDirection;
@@ -656,53 +634,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.drawIfVisible();
   }
 
-  /**
-   * Resolves the `--lr-chart-*` theme tokens (declared in
-   * `box-plot.styles.ts`, each layered over an existing semantic token) via
-   * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
-   * consume CSS `var()` directly — same constraint `chart.ts`'s
-   * `themeColors()` documents — so this is called fresh from `buildConfig()`
-   * on every draw rather than cached. Each computed value is also round-tripped
-   * through a CSS color probe; invalid expressions fail to a concrete semantic
-   * fallback instead of silently preserving an earlier canvas paint.
-   */
-  private themeColors(): ThemeColors {
-    const cs = this.canvasTokens.sync() ?? this.style;
-    return {
-      grid: this.canvasTokens.resolve(
-        cs.getPropertyValue('--lr-chart-grid-color').trim() ||
-          cs.getPropertyValue('--_lr-chart-grid-color').trim(),
-        FALLBACK_GRID_COLOR,
-      ),
-      tick: this.canvasTokens.resolve(
-        cs.getPropertyValue('--lr-chart-tick-color').trim() ||
-          cs.getPropertyValue('--_lr-chart-tick-color').trim(),
-        FALLBACK_TICK_COLOR,
-      ),
-      tickFontSize: this.styleNumber(
-        '--lr-chart-tick-font-size',
-        FALLBACK_TICK_FONT_SIZE,
-        '--_lr-chart-tick-font-size',
-      ),
-      legend: this.canvasTokens.resolve(
-        cs.getPropertyValue('--lr-chart-legend-color').trim() ||
-          cs.getPropertyValue('--_lr-chart-legend-color').trim(),
-        FALLBACK_LEGEND_COLOR,
-      ),
-      tooltipBg: this.canvasTokens.resolve(
-        cs.getPropertyValue('--lr-chart-tooltip-bg').trim() ||
-          cs.getPropertyValue('--_lr-chart-tooltip-bg').trim(),
-        FALLBACK_TOOLTIP_BG,
-      ),
-      tooltipText: this.canvasTokens.resolve(
-        cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
-          cs.getPropertyValue('--_lr-chart-tooltip-color').trim(),
-        FALLBACK_TOOLTIP_TEXT,
-      ),
-    };
-  }
+  private themeColors(): ThemeColors { return this.canvasTokens.themeColors(false); }
 
-  /** The series color for a box index, honoring an explicit per-series `color` override. */
   private seriesColor(index: number, palette: string[] = this.canvasTokens.palette()): string {
     const fallback = palette[index % palette.length] ?? 'transparent';
     const series = this.datasets[index];
@@ -752,44 +685,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private styleColor(name: string, fallback: string): string {
-    const view = this.ownerWindow;
-    const cs = view ? view.getComputedStyle(this) : this.style;
-    const value = cs.getPropertyValue(name).trim();
-    return value ? this.canvasTokens.resolve(value, fallback) : fallback;
+    return this.canvasTokens.styleColor(name, fallback);
   }
 
-  /**
-   * Resolves a themeable numeric geometry token the same way `themeColors()`/`styleColor()`
-   * resolve color tokens — via `getComputedStyle` on every draw, since the peer renders to canvas
-   * and can't consume a CSS `var()` directly. `fallbackToken`, when given, is tried before the
-   * hard-coded `fallback` so the token can itself default to a `--lr-*` design token (mirrors
-   * `LyraChart.styleNumber()`).
-   */
   private styleNumber(name: string, fallback: number, fallbackToken?: string): number {
-    const view = this.ownerWindow;
-    const cs = view ? view.getComputedStyle(this) : this.style;
-    const value =
-      cs.getPropertyValue(name).trim() ||
-      (fallbackToken ? cs.getPropertyValue(fallbackToken).trim() : '');
-    const direct = DIRECT_PIXEL_NUMBER.exec(value);
-    if (direct) {
-      const resolved = Number.parseFloat(direct[1]!);
-      if (Number.isFinite(resolved) && resolved >= 0) return resolved;
-    }
-    if (!value || !view) return fallback;
-    const resolved = this.canvasTokens.length(value, () => {
-      const probe = this.ownerDocument.createElement('span');
-      probe.hidden = true;
-      probe.setAttribute('aria-hidden', 'true');
-      probe.style.inlineSize = value;
-      (this.shadowRoot ?? this).append(probe);
-      try {
-        return Number.parseFloat(view.getComputedStyle(probe).inlineSize);
-      } finally {
-        probe.remove();
-      }
-    });
-    return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
+    return this.canvasTokens.styleNumber(name, fallbackToken, fallback);
   }
 
   /** Isolates each drawn tooltip line in its own first-strong direction (see chart-bidi.ts). */
@@ -930,15 +830,23 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     };
   }
 
-  // Mirrors `LyraChart.draw()`'s reuse-existing-instance-when-possible
-  // pattern: an update that doesn't need a new Chart.js instance (e.g. a
-  // bare `height` change, or new `datasets`/`labels` data) mutates the existing
-  // chart and does an incremental `.update('none')` instead of tearing down
-  // and rebuilding the whole canvas/instance on every reactive update. Unlike
-  // `LyraChart`, `LyraBoxPlot` has no raw `config` passthrough that could
-  // change the effective Chart.js type out from under `this.type`, so
-  // reusing whenever a chart already exists is always safe here.
+  private discardChart(): void {
+    this.appliedLegendVisibility = undefined;
+    const retiring = this.chart;
+    this.chart = undefined;
+    disposeChart(retiring);
+  }
+
+  private readonly withCanvasRenderer = guardCanvasRenderer(() => {
+    this.discardChart();
+    this.setCanvasUnavailable(true);
+  });
+
   private draw(): void {
+    this.withCanvasRenderer(() => this.drawCanvas());
+  }
+
+  private drawCanvas(): void {
     if (!this.chartJsModule || !this.canvasEl || !this.ownerWindow) return;
     if (!this.chart && !this.canvasEl.getContext('2d')) {
       this.setCanvasUnavailable(true);
@@ -954,8 +862,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       this.canvasTokens.rememberTheme();
       return;
     }
-    const candidate = new this.chartJsModule.Chart(
-      this.canvasEl,
+    const candidate = createCanvasChart(
+      this.chartJsModule.Chart, this.canvasEl,
       { ...config, plugins: [this.tooltipIsolationPlugin] } as never,
     ) as unknown as BoxPlotChartRuntime;
     const context = candidate as unknown as {
@@ -963,7 +871,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       ctx?: CanvasRenderingContext2D | null;
     };
     if (context.canvas === null || context.ctx === null) {
-      candidate.destroy();
+      disposeChart(candidate);
       this.setCanvasUnavailable(true);
       return;
     }
@@ -998,9 +906,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    */
   private rebuildAfterAnnotationRegistration(): void {
     if (!this.chart) return;
-    this.appliedLegendVisibility = undefined;
-    this.chart.destroy();
-    this.chart = undefined;
+    this.discardChart();
     this.drawIfVisible();
   }
 
@@ -1043,7 +949,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       return (this.chart as BoxPlotChartRuntime & { toBase64Image?(): string } | undefined)
         ?.toBase64Image?.() ?? '';
     }
-    const header = [
+    const header = csvRow([
       'category',
       'series',
       'min',
@@ -1051,7 +957,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       'median',
       'q3',
       'max',
-    ].map(escapeCsvField).join(',');
+    ]);
     const rows: string[] = [];
     this.datasets.forEach((series, datasetIndex) => {
       series.data.forEach((point, index) => {
@@ -1063,7 +969,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           seriesLabel: series.label,
           axis: 'y',
         };
-        rows.push([
+        rows.push(csvRow([
           this.labels[index] ?? '',
           this.seriesDisplayLabel(series),
           this.formatValue(point.min, 'export', { ...metadata, statistic: 'min' }),
@@ -1071,7 +977,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           this.formatValue(point.median, 'export', { ...metadata, statistic: 'median' }),
           this.formatValue(point.q3, 'export', { ...metadata, statistic: 'q3' }),
           this.formatValue(point.max, 'export', { ...metadata, statistic: 'max' }),
-        ].map(escapeCsvField).join(','));
+        ]));
       });
     });
     return [header, ...rows].join('\r\n');
@@ -1250,7 +1156,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       this.keyboardDatumIndex = position;
       this.keyboardDatumAnnouncement = this.boxAnnouncement(datum, position, datums.length);
     }
+    const generation = this.activationGeneration;
     this.emit('lr-datum-activate', { ...datum, kind: 'box' });
+    if (!this.isConnected || this.activationGeneration !== generation) return;
     this.emit('lr-point-activate', { ...datum });
   }
 
@@ -1318,11 +1226,13 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private onCanvasKeyDown(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
       event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key === 'Escape' && this.keyboardBoxShown) { this.showKeyboardBox(undefined); return; }
     const datums = this.boxDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      if (isRepeatedActivationKey(event)) return;
       this.activateBox(datums[this.keyboardDatumIndex]!);
       return;
     }
@@ -1352,7 +1262,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private accessibleName(fallback: string): string {
-    return this.getAttribute('aria-label') ?? this.label ?? fallback;
+    const host = this.getAttribute('aria-label');
+    return host === '' ? '' : normalizeLabel(host) ?? (this.label === '' ? '' : normalizeLabel(this.label) ?? fallback);
   }
 
   private sampleMemo?: {
@@ -1386,11 +1297,13 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   private dataTableRows?: Array<TemplateResult | typeof nothing>;
 
+  private activationGeneration = 0;
+
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
     const key = args[0];
     if (key === undefined) this.descriptionMemo = undefined;
-    if (key === undefined || ['datasets', 'labels', 'formatter', 'valueFormatter', 'locale', 'strings',
-      'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride'].includes(String(key))) this.dataTableRows = undefined;
+    if (key === undefined || boxTableKeys.has(key)) this.dataTableRows = undefined;
+    if (args[0] === undefined || boxActivationKeys.has(args[0])) this.activationGeneration++;
     super.requestUpdate(...args);
   }
 
@@ -1456,7 +1369,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private toggleDataset(index: number): void {
-    if (!this.chart) return;
+    const chart = this.chart;
+    const generation = this.activationGeneration;
+    if (!chart) return;
     if (index < 0 || index >= this.datasets.length) return;
     const hidden = this.effectiveHiddenDatasetIndexes();
     const wasHidden = hidden.includes(index);
@@ -1470,14 +1385,18 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       legendVisibilityDetail(index, visible, nextHidden),
       { cancelable: true },
     );
-    if (proposed.defaultPrevented) return;
+    // A request listener may remove the plot or replace its data; the indexes above are then stale.
+    if (proposed.defaultPrevented || !this.isConnected || this.chart !== chart || this.activationGeneration !== generation) return;
     this.hiddenDatasets = nextHidden;
-    const appliedVisibility = { chart: this.chart, hidden: this.hiddenDatasets };
-    this.applyDatasetVisibility();
-    this.chart.update('none');
-    this.appliedLegendVisibility = appliedVisibility;
-    this.requestUpdate('canvasPresentation', null);
-    this.emit('lr-legend-visibility-change', legendVisibilityDetail(index, visible, nextHidden));
+    const appliedVisibility = { chart, hidden: this.hiddenDatasets };
+    this.withCanvasRenderer(() => {
+      this.applyDatasetVisibility();
+      chart.update('none');
+    }, () => {
+      this.appliedLegendVisibility = appliedVisibility;
+      this.requestUpdate('canvasPresentation', null);
+      this.emit('lr-legend-visibility-change', legendVisibilityDetail(index, visible, nextHidden));
+    });
   }
 
   private renderLegend(): TemplateResult | typeof nothing {
@@ -1490,7 +1409,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       : new Set(controlledHidden);
     const sample = this.dataTableSample();
     return html`
-      <div part="legend" role="group" aria-label=${this.accessibleName(this.localize('boxPlot'))}>
+      <div part="legend" role="group" aria-label=${this.localize('chartLegend')}>
         ${sample.seriesIndexes.map((index) => {
           const series = this.datasets[index]!;
           const color = this.seriesFillColor(index, palette);
@@ -1537,8 +1456,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     }
     // A blank series label never reaches the name (" and Sales"); all blank uses the fallback.
     const boxLabels = this.dataTableSample().seriesIndexes
-      .map((index) => this.datasets[index]!.label)
-      .filter(Boolean);
+      .map((index) => normalizeLabel(this.datasets[index]!.label))
+      .filter((label): label is string => label !== undefined);
     const label = this.accessibleName(
       (boxLabels.length
         ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(boxLabels)

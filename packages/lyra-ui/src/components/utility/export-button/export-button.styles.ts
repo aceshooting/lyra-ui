@@ -1,9 +1,9 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
-import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { anchoredPopupOpen, anchoredPopupReveal, overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -67,6 +67,7 @@ export const styles = css`
     font: inherit;
     ${iconHitTarget}
     cursor: pointer;
+    ${interactiveTransition}
   }
   /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0). Unwrapped,
      [part='trigger']:hover:not(:disabled) is (0,3,0) and out-ranks the source-later :active rule
@@ -153,7 +154,7 @@ export const styles = css`
        visibility: hidden and silently fail. Untransitioned, it applies in the same synchronous
        style pass as the open attribute write. The settled-closed [hidden] rule above is orthogonal
        -- it only ever lands after the fade settles, never during it. */
-    visibility: hidden;
+    ${anchoredPopupReveal}
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
@@ -176,11 +177,7 @@ export const styles = css`
     ${overlaySurface}
     /* Anchored overlay: a positioner-placed menu floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
-    opacity: 0;
-    transform: translateY(var(--lr-size-neg-4px));
-    transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast);
+    transition-property: opacity, transform;
   }
   /* 'visibility' alone, unconditional on 'open' -- updated() focuses the first menu item
      synchronously right after 'open' flips, which needs 'visibility: visible' already true in
@@ -193,7 +190,7 @@ export const styles = css`
     visibility: visible;
   }
   :host([open]) [part='menu'][data-positioned] {
-    opacity: 1;
+    ${anchoredPopupOpen}
     transform: none;
   }
   @media (prefers-reduced-motion: reduce) {
@@ -217,15 +214,18 @@ export const styles = css`
     color: inherit;
     font: inherit;
     cursor: pointer;
+    ${interactiveTransition}
     border-radius: var(--lr-radius);
   }
   /* :where() zeroes the wrapped selectors' specificity contribution -- see the [part='trigger']
      hover rule above for the full rationale. */
   :where([part='menu-item']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-export-button-menu-item-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-export-button-menu-item-hover-color, inherit);
   }
   :where([part='menu-item']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-export-button-menu-item-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    color: var(--lr-export-button-menu-item-active-color, inherit);
   }
   [part='menu-item']:focus-visible {
     ${focusRing}

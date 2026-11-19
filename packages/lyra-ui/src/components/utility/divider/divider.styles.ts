@@ -9,7 +9,11 @@ export const styles = css`
     margin-block: var(--spacing, 0);
     margin-inline: 0;
   }
-  :host(:where([orientation='vertical'], [vertical])) { display: inline-block; block-size: 100%; }
+  :host(:where([orientation='vertical'], [vertical])) {
+    display: inline-block;
+    block-size: 100%;
+    min-block-size: var(--lr-size-1em);
+  }
   :host(:where([orientation='vertical'], [vertical])) [part='base'] {
     block-size: 100%;
     border-block-start: 0;

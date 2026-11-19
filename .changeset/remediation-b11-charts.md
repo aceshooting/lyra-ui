@@ -1,0 +1,22 @@
+---
+'@aceshooting/lyra-ui': patch
+---
+
+- Keep chart activation and legend changes current when an event listener replaces data or removes the chart.
+- Activate a chart mark once per keyboard press and dismiss the canvas keyboard tooltip with Escape.
+- Return keyboard focus to the chart after resetting zoom and enlarge the reset and table action targets.
+- Expose generated table action buttons through the `data-table-button` part.
+- Give chart legends a localized accessible name and use the chart or series name for whitespace-only labels.
+- Keep lite chart bar textures visible on hover and press in forced colors.
+- Keep lite chart axis titles and tick labels clear of each other as font sizes grow.
+- Reuse stable histogram ranges and update their counts when samples enter or leave a rolling window.
+- Distinguish tiny values on lite chart axes and histogram bucket boundaries.
+- Honor the `scale-type` attribute and `scaleType` property on lite charts.
+- Draw a keyboard focus indicator for spatial chart points and density bins.
+- Load the spatial renderer when a chart first receives a spatial source.
+- Retry transient chart and plugin imports while preserving charts whose optional feature is unavailable.
+- Show the accessible data table when a canvas renderer throws and restore the canvas on a successful redraw.
+- Honor motion preferences when chart controls change their hover and pressed colors.
+- Allow applications to veto 3D row selection with `lr-chart-row-select-request`.
+- Isolate 3D table numbers in right-to-left layouts and keep disabled pagination controls visually inactive.
+- Expose 3D selected-row, hover, and pressed-border colors and refresh the renderer when its effective theme changes.

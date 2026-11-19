@@ -8,7 +8,7 @@ import type { DataGridColumn } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid, measurementAccess, delay, header, dataCells, valueGrid } from '../../../../test/data-grid.js';
 
 
-expectLocaleFallback('fa', ['dataGridRowsPerPage', 'next', 'paginationFirstPage', 'paginationJumpToPage', 'paginationLabel', 'paginationLastPage', 'previous', 'tableFilterLabel']);
+expectLocaleFallback('fa', ['dataGridFilterColumn', 'dataGridRowsPerPage', 'next', 'paginationFirstPage', 'paginationJumpToPage', 'paginationLabel', 'paginationLastPage', 'previous', 'tableFilterLabel']);
 
 it('keeps each row-size baseline and measures the same minimum after inherited density and row-input changes', async () => {
   const densityResponse = await fetch(new URL('../../../density.css', import.meta.url));
@@ -408,7 +408,7 @@ it("uses host naming precedence, locale-aware labels/digits, and responsive rend
       .getAttribute("aria-label")
   ).to.equal("Host wins");
   const pageTexts = [
-    ...localized.shadowRoot!.querySelectorAll<HTMLElement>('[part~="page"]'),
+    ...localized.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelectorAll<HTMLElement>('[part~="page"]'),
   ].map((button) => button.textContent?.trim());
   const localizedOne = new Intl.NumberFormat("fa", {
     maximumFractionDigits: 0,
@@ -637,12 +637,12 @@ it("renders no page-number buttons and disables navigation when there are zero p
     ></lr-data-grid>`
   );
   expect(element.pageCount).to.equal(0);
-  expect(element.shadowRoot!.querySelectorAll('[part~="page"]')).to.have.length(
+  expect(element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelectorAll('[part~="page"]')).to.have.length(
     0
   );
   expect(
     (
-      element.shadowRoot!.querySelector(
+      element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
         '[part~="first-button"]'
       ) as HTMLButtonElement
     ).disabled

@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} kunci',
   },
   jsonViewerLimit: 'Hanya {count} simpul JSON pertama dan {depth} tingkat penyarangan yang ditampilkan dan dicari.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Jeda',
   pollResume: 'Lanjutkan',
   pollRefresh: 'Muat ulang sekarang',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Bulan',
   knownDateYear: 'Tahun',
   exportFormatMenuLabel: 'Format {label}',
+  exportFailed: 'Ekspor gagal',
   mentionSuggestions: 'Saran',
   mentionResultCount: {
     other: '{count} saran',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Hanya 10.000 saran penyebutan pertama yang tersedia.',
   diffViewHighlightLimit: 'Kode panjang ditampilkan tanpa penyorotan sintaks.',
+  diffViewLabel: 'Perbedaan',
 };
 
 registerLyraLocale('id', strings);

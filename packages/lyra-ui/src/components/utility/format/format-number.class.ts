@@ -1,3 +1,4 @@
+import { bdi } from '../../../internal/bidi.js';
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -136,7 +137,7 @@ export class LyraFormatNumber extends LyraElement {
         }
       }
     }
-    return html`${text || html`<slot></slot>`}`;
+    return text ? bdi(text) : html`<slot></slot>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-format-number': LyraFormatNumber; } }

@@ -137,9 +137,12 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       dialog.appendChild(desc);
     }
 
-    dialog.addEventListener('lr-close', (event) =>
-      resolve((event as CustomEvent<{ reason: DialogCloseReason }>).detail.reason === 'confirm'));
-    dialog.addEventListener('lr-after-hide', () => dialog.remove());
+    dialog.addEventListener('lr-close', (event) => {
+      if (event.target === dialog) resolve((event as CustomEvent<{ reason: DialogCloseReason }>).detail.reason === 'confirm');
+    });
+    dialog.addEventListener('lr-after-hide', (event) => {
+      if (event.target === dialog) dialog.remove();
+    });
 
     const cancelButton = createButton(
       resolveLyraString(dialog, 'cancel', undefined, cancelLabel, undefined, CONFIRM_DEFAULT_STRINGS),

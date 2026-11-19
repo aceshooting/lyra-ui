@@ -419,3 +419,16 @@ it('dismisses only the confirmation on native Escape and removes its transient h
     native.remove();
   }
 });
+
+it('waits for its own close and exit events when slotted content dismisses', async () => {
+  const result = confirm({ title: 'Continue?' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+  const child = dialog.querySelector('h2')!;
+  child.dispatchEvent(new CustomEvent('lr-close', { bubbles: true, detail: { reason: 'cancel' } }));
+  child.dispatchEvent(new CustomEvent('lr-after-hide', { bubbles: true }));
+  const connected = dialog.isConnected;
+  if (connected) await dialog.close('confirm');
+  expect(connected).to.equal(true);
+  expect(await result).to.equal(true);
+});

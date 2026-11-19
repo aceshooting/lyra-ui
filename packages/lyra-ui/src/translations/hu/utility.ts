@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} kulcs',
   },
   jsonViewerLimit: 'Csak az első {count} JSON-csomópont és {depth} beágyazási szint látható és kereshető.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Szüneteltetés',
   pollResume: 'Folytatás',
   pollRefresh: 'Frissíts most',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Hónap',
   knownDateYear: 'Év',
   exportFormatMenuLabel: 'Formátum: {label}',
+  exportFailed: 'Az exportálás sikertelen',
   mentionSuggestions: 'Javaslatok',
   mentionResultCount: {
     one: '{count} javaslat',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Csak az első 10 000 említési javaslat érhető el.',
   diffViewHighlightLimit: 'A hosszú kód szintaxiskiemelés nélkül jelenik meg.',
+  diffViewLabel: 'Eltérések',
 };
 
 registerLyraLocale('hu', strings);

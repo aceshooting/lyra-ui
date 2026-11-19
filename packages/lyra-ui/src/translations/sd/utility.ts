@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ڪنجيون',
   },
   jsonViewerLimit: 'صرف پهريان {count} JSON نوڊ ۽ {depth} اندروني سطحون ڏيکاري ۽ ڳولهي سگهجن ٿيون.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'روڪيو',
   pollResume: 'ٻيهر شروع ڪريو',
   pollRefresh: 'هاڻي تازو ڪريو',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'مهينو',
   knownDateYear: 'سال',
   exportFormatMenuLabel: '{label} فارميٽ',
+  exportFailed: 'برآمد ڪرڻ ۾ ناڪامي',
   mentionSuggestions: 'تجويزون',
   mentionResultCount: {
     one: '{count} تجويز',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ذڪر لاءِ صرف پهريان 10,000 اميدوار موجود آهن.',
   diffViewHighlightLimit: 'ڊگهو ڪوڊ سنٽيڪس هاءِ لائٽنگ کان سواءِ ڏيکاريو وڃي ٿو.',
+  diffViewLabel: 'فرق',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

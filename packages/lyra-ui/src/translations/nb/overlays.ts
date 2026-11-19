@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Tilvalg',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('nb', strings);

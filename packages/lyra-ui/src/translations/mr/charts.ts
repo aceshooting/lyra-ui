@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, त्रिज्या {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'आलेखाची संकेतसूची',
   chartSeriesNoData: '{label}: डेटा नाही',
   chartSummaryWithData: '{type} आलेख. {summaries}.',
   chartSummaryEmpty: 'डेटा नसलेला {type} आलेख.',

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: 'maɓallai {count}',
   },
   jsonViewerLimit: 'Ana nuna kuma nemo nodes {count} na farko na JSON da matakan zurfi {depth} kawai.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Dakata',
   pollResume: 'Ci gaba',
   pollRefresh: 'Sabunta yanzu',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Wata',
   knownDateYear: 'Shekara',
   exportFormatMenuLabel: 'Tsarin {label}',
+  exportFailed: 'An kasa fitarwa',
   mentionSuggestions: 'Shawarwari',
   mentionResultCount: {
     one: 'shawara {count}',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Shawarwarin ambaton suna 10,000 na farko kawai ake samu.',
   diffViewHighlightLimit: 'Ana nuna doguwar lambar tushe ba tare da bambanta sassan tsarinta da launi ba.',
+  diffViewLabel: 'Bambanci',
 };
 
 registerLyraLocale('ha', strings);

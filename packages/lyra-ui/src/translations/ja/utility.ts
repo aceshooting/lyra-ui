@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: 'キー {count} 個',
   },
   jsonViewerLimit: '表示と検索の対象は先頭 {count} 個の JSON ノードとネスト {depth} 段までです。',
+  jsonViewerLabel: 'JSON',
   pollPause: '一時停止',
   pollResume: '再開',
   pollRefresh: '今すぐ更新',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: '月',
   knownDateYear: '年',
   exportFormatMenuLabel: '{label} の形式',
+  exportFailed: 'エクスポートに失敗しました',
   mentionSuggestions: '候補',
   mentionResultCount: {
     other: '{count} 件の候補',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: '最初の10,000件のメンション候補のみが利用できます。',
   diffViewHighlightLimit: '長いコードはシンタックスハイライトなしで表示されます。',
+  diffViewLabel: '差分',
 };
 
 registerLyraLocale('ja', strings);

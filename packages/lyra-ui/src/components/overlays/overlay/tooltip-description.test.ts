@@ -350,3 +350,60 @@ it('moves the active default description when a wrapper replaces its native focu
   await el.hide();
   expect(replacement.hasAttribute('aria-describedby')).to.be.false;
 });
+
+it('keeps an attribute-only tooltip concealed while its closed description updates', async () => {
+  const el = await fixture<LyraTooltip>(html`<lr-tooltip content="First"><button>Help</button></lr-tooltip>`);
+  const popup = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  let changes = 0;
+  const observer = new MutationObserver(records => { changes += records.length; });
+  observer.observe(popup, { attributes: true, attributeFilter: ['hidden'], attributeOldValue: true });
+  try {
+    el.content = 'Second';
+    await el.updateComplete;
+    expect(el.querySelector('[data-lyra-tooltip-description]')!.textContent).to.equal('Second');
+    expect(changes + observer.takeRecords().length).to.equal(0);
+    expect(popup.hidden).to.equal(true);
+  } finally {
+    observer.disconnect();
+  }
+});
+
+it('uses the shared overlay radius and elevation for the tooltip bubble', async () => {
+  const el = await fixture<LyraTooltip>(html`<lr-tooltip content="Help"
+    style="--lr-overlay-radius:11px;--lr-overlay-shadow-anchored:rgb(1, 2, 3) 0px 0px 4px">
+    <button>Help</button></lr-tooltip>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector('[part~="popup"]')!);
+  expect(style.borderTopLeftRadius).to.equal('11px');
+  expect(style.boxShadow).to.equal('rgb(1, 2, 3) 0px 0px 4px 0px');
+});
+
+it('leaves a disabled tooltip closed for an imperative show request', async () => {
+  const el = await fixture<LyraTooltip>(html`<lr-tooltip disabled content="Help"><button slot="trigger">Help</button></lr-tooltip>`);
+  let requests = 0;
+  el.addEventListener('lr-show', () => requests++);
+  await el.show();
+  expect(el.open).to.equal(false);
+  expect(requests).to.equal(0);
+});
+
+it('updates the fallback without redisplaying closed slotted content', async () => {
+  const el = await fixture<LyraTooltip>(html`<lr-tooltip label-mode="label">
+    <button slot="trigger">Help</button><span>Slotted help</span>
+  </lr-tooltip>`);
+  const proxy = el.querySelector<HTMLElement>('[data-lyra-tooltip-description]')!;
+  await waitUntil(() => proxy.textContent === 'Slotted help');
+  const bubble = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  const changes: MutationRecord[] = [];
+  const observer = new MutationObserver(records => changes.push(...records));
+  observer.observe(bubble, { attributes: true, attributeFilter: ['hidden'] });
+  try {
+    el.content = 'New fallback';
+    await el.updateComplete;
+    expect(proxy.textContent).to.equal('Slotted help');
+    expect(changes.length + observer.takeRecords().length).to.equal(0);
+    el.querySelector('span:not([slot])')!.remove();
+    await waitUntil(() => proxy.textContent === 'New fallback');
+  } finally {
+    observer.disconnect();
+  }
+});

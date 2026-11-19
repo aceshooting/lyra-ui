@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../../../internal/motion.js';
+import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -9,7 +11,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { makeScrollRegionFocusable, revealWithinScrollParent } from '../../../internal/scroll-region.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
@@ -36,11 +38,11 @@ import {
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
+import { copyOutcome, KeyedCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit } from '../../../internal/default-strings/utility.generated.js';
+import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLabel, LYRA_DEFAULT_jsonViewerLimit } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type JsonPathSegment = string | number;
@@ -68,7 +70,6 @@ interface RenderBudget {
   truncated: boolean;
 }
 
-const COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 const MAX_JSON_NODES = 5000;
 const MAX_JSON_DEPTH = 100;
 // Reflection is independently bounded, but has headroom for opaque/non-enumerable own names so
@@ -381,6 +382,14 @@ export interface LyraJsonViewerEventMap {
  *   changes -- from `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct
  *   `query`/`data` property write. `detail: { query, matchCount, matchCountExact, activeIndex }`;
  *   `matchCountExact=false` means the bounded count is a known lower bound.
+ * @cssprop --lr-json-viewer-toggle-hover-bg - Hover fill of the toggle control.
+ * @cssprop --lr-json-viewer-toggle-hover-color - Hover text color of the toggle control.
+ * @cssprop --lr-json-viewer-toggle-active-bg - Active fill of the toggle control.
+ * @cssprop --lr-json-viewer-toggle-active-color - Active text color of the toggle control.
+ * @cssprop --lr-json-viewer-copy-hover-bg - Hover fill of the copy control.
+ * @cssprop --lr-json-viewer-copy-hover-color - Hover text color of the copy control.
+ * @cssprop --lr-json-viewer-copy-active-bg - Active fill of the copy control.
+ * @cssprop --lr-json-viewer-copy-active-color - Active text color of the copy control.
  * @csspart base - The root scroll container; respects `max-height`.
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.
@@ -435,6 +444,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     jsonKeyCount: LYRA_DEFAULT_jsonKeyCount,
     jsonObject: LYRA_DEFAULT_jsonObject,
     jsonValue: LYRA_DEFAULT_jsonValue,
+    jsonViewerLabel: LYRA_DEFAULT_jsonViewerLabel,
     jsonViewerLimit: LYRA_DEFAULT_jsonViewerLimit,
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
@@ -519,7 +529,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.sourceHits = undefined; this.sourceHitKeys?.clear();
     this.sourceSearchExact = true; this.sourceSearchUnavailable = false; this.sourceSearchDirty = true;
     if (this.activeSearchIndex !== undefined && (this._treeSource !== undefined || this.sourceMode)) this.activeSearchIndex = -1;
-    if (this.copyFeedback !== undefined) this.clearCopyFeedback();
+    this.copyFeedback?.clear();
   }
   private async searchSource(): Promise<number> {
     this.sourceSearchDirty = false;
@@ -573,12 +583,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const intent = ++this.copyIntent;
     const current = () => this.treeSource === source && this.hierarchy.epoch === epoch && this.ownerDocument === owner &&
       this.isConnected && intent === this.copyIntent;
-    this.clearCopyFeedback();
+    this.copyFeedback.clear();
     const result = await this.hierarchy.copy(key, scope, 25 * 1024 * 1024);
     if (!current() || result.status === 'stale') return;
     const feedback = key ?? 'toolbar';
     if (result.status !== 'ready') {
-      this.showCopyFeedback(feedback, false);
+      this.copyFeedback.show(feedback, false);
       const message = this.localize('copyFailed');
       if (current()) this.searchAnnouncementSink?.announce(message);
       return;
@@ -591,13 +601,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       const write = clipboard?.writeText;
       if (!accepted()) return;
       if (typeof write !== 'function') {
-        outcome = Object.freeze({ ok: false, text: result.value, reason: 'unsupported', error: new Error('Clipboard is unavailable') });
+        outcome = copyOutcome('failure', { text: result.value, reason: 'unsupported', error: new Error('Clipboard is unavailable') });
       } else {
         await write.call(clipboard, result.value);
-        outcome = Object.freeze({ ok: true, text: result.value });
+        outcome = copyOutcome('success', { text: result.value });
       }
     } catch (error) {
-      outcome = Object.freeze({ ok: false, text: result.value, reason: clipboardFailureReason(error), error });
+      outcome = copyOutcome('failure', { text: result.value, reason: clipboardFailureReason(error), error });
     }
     this.reportCopyOutcome(feedback, outcome, accepted);
   }
@@ -669,7 +679,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   @property({ converter: JSON_VIEWER_LAYOUT }) layout: LyraJsonViewerLayout = 'auto';
   /** Shows copy-to-clipboard affordances: one for the whole value, plus one per node. */
   @property({ type: Boolean, reflect: true }) copyable = false;
-  /** Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
+  /** Removing the attribute clears search without changing its null readback. Case- and accent-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
   @property() query = '';
   /**
    * Per-path (`JSON.stringify(path)`) explicit expand/collapse, overriding
@@ -695,7 +705,15 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private readonly matchElements = new Map<string, Element>();
   private activeMatchElement?: Element;
 
+  private previousFeedback: KeyedCopyFeedback['state'] = null;
+
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    // A feedback repaint must preserve the provider's active search and clipboard request.
+    if (!args.length && this.copyFeedback && this.copyFeedback.state !== this.previousFeedback) {
+      this.previousFeedback = this.copyFeedback.state;
+      super.requestUpdate();
+      return;
+    }
     if (args[0] === undefined) this.explicitRefresh = (this.explicitRefresh ?? 0) + 1;
     if (this._treeSource !== undefined && (args[0] === undefined || args[0] === 'query')) {
       this.invalidateSourceSearch();
@@ -719,8 +737,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private searchAnnouncementSink?: AnnouncementSink;
   private searchAnnouncementsArmed = false;
   private searchAnnouncementGeneration = 0;
-  @state() private copyFeedback: { key: string; ok: boolean } | null = null;
-  private copyFeedbackTimer?: { owner: Window; handle: number };
+  private readonly copyFeedback = new KeyedCopyFeedback(this);
+
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -741,10 +759,36 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     });
   }
 
+  private disposeScrollRegion?: () => void;
+  private scrollRegionBody?: HTMLElement;
+  private scrollRegionName?: string;
+
+  /** Keeps the capped-height tree body keyboard-scrollable while it overflows. */
+  private syncScrollRegion(): void {
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="base"]') ?? undefined;
+    if (!body) {
+      this.releaseScrollRegion();
+      return;
+    }
+    const name = hostAriaLabel(this) ?? this.localize('jsonViewerLabel');
+    if (body === this.scrollRegionBody && name === this.scrollRegionName) return;
+    this.releaseScrollRegion();
+    this.scrollRegionBody = body;
+    this.scrollRegionName = name;
+    this.disposeScrollRegion = makeScrollRegionFocusable(body, name);
+  }
+
+  private releaseScrollRegion(): void {
+    this.disposeScrollRegion?.();
+    this.disposeScrollRegion = undefined;
+    this.scrollRegionBody = undefined;
+  }
+
   override disconnectedCallback(): void {
+    this.releaseScrollRegion();
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
-    this.clearCopyFeedback();
+    this.copyFeedback.clear();
     this.searchAnnouncementGeneration += 1;
     this.searchAnnouncementSink?.release();
     this.searchAnnouncementSink = undefined;
@@ -808,52 +852,32 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   private reportCopyOutcome(key: string, outcome: LyraClipboardWriteOutcome, current: () => boolean): void {
     if (!current()) return;
-    this.showCopyFeedback(key, outcome.ok);
-    const message = outcome.ok ? this.localize('copied') : this.localize('copyFailed');
-    if (!current()) return;
-    this.searchAnnouncementSink?.announce(message);
-    if (!current()) return;
-    if (outcome.ok) this.emit('lr-copy', outcome);
-    else {
-      this.emit('lr-error');
-      if (current()) this.emit('lr-copy-error', outcome);
-    }
-  }
-
-  private clearCopyFeedback(): void {
-    const timer = this.copyFeedbackTimer;
-    if (timer) timer.owner.clearTimeout(timer.handle);
-    this.copyFeedbackTimer = undefined;
-    this.copyFeedback = null;
-  }
-
-  private showCopyFeedback(key: string, ok: boolean): void {
-    const owner = this.ownerDocument.defaultView;
-    if (!owner) return;
-    this.clearCopyFeedback();
-    const feedback = { key, ok };
-    this.copyFeedback = feedback;
-    this.copyFeedbackTimer = { owner, handle: owner.setTimeout(() => {
-      if (this.copyFeedback === feedback) this.clearCopyFeedback();
-    }, COPY_CONFIRM_MS) };
+    this.copyFeedback.show(key, outcome.ok);
+    reportCopyOutcome({
+      announce: ok => {
+        const message = this.localize(ok ? 'copied' : 'copyFailed');
+        if (current()) this.searchAnnouncementSink?.announce(message);
+      },
+      emit: (name, detail) => this.emit(name, detail ?? null),
+    }, outcome, current);
   }
 
   private copyLabel(key: string, rest: string): string {
-    const feedback = this.copyFeedback;
-    return feedback?.key === key ? this.localize(feedback.ok ? 'copied' : 'copyFailed') : rest;
+    const feedback = this.copyFeedback.for(key);
+    return feedback ? this.localize(feedback.ok ? 'copied' : 'copyFailed') : rest;
   }
 
   private async copy(value: JsonSnapshotValue, key: string): Promise<void> {
     if (this.treeSource !== undefined) return;
     const intent = ++this.copyIntent;
     const current = () => this.treeSource === undefined && intent === this.copyIntent;
-    this.clearCopyFeedback();
+    this.copyFeedback.clear();
     let text = '';
     try {
       text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
     } catch (error) {
       if (this.isConnected && current()) {
-        this.reportCopyOutcome(key, Object.freeze({ ok: false, text, reason: 'failed', error }), current);
+        this.reportCopyOutcome(key, copyOutcome('failure', { text, error }), current);
       }
       return;
     }
@@ -912,7 +936,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    */
   private computeSearch(): SearchState {
     const locale = this.effectiveLocale;
-    const query = (this.query ?? '').trim().toLocaleLowerCase(locale);
+    const query = prepareNeedle(this.query ?? '', locale);
     const keyMatches = new Set<string>();
     const valueMatches = new Set<string>();
     const forceExpand = new Set<string>();
@@ -953,7 +977,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       const type = valueType(value);
       if (query) {
         let hit = false;
-        if (keyLabel !== undefined && keyLabel.toLocaleLowerCase(locale).includes(query)) {
+        if (keyLabel !== undefined && foldSearchText(keyLabel, locale).includes(query)) {
           keyMatches.add(pathKey);
           orderedMatches.push({ pathKey, kind: 'key' });
           hit = true;
@@ -961,7 +985,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         if (
           type !== 'object' &&
           type !== 'array' &&
-          formatPrimitive(value, type).toLocaleLowerCase(locale).includes(query)
+          foldSearchText(formatPrimitive(value, type), locale).includes(query)
         ) {
           valueMatches.add(pathKey);
           orderedMatches.push({ pathKey, kind: 'value' });
@@ -1062,8 +1086,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const expanded = hasEntries && withinDepthBudget && this.isExpanded(pathKey, depth, search.forceExpand);
     const activeMatch = this.searchState.orderedMatches[this.activeSearchIndex];
     const indentStyle = `padding-inline-start:calc(${depth} * var(--lr-space-l))`;
+    // The full key path names a repeated key ("name" under every row) uniquely.
     const toggleLabel =
-      keyLabel ??
+      (keyLabel === undefined ? undefined : path.map(String).join('.')) ??
       (type === 'array'
         ? this.localize('jsonArray')
         : type === 'object'
@@ -1198,7 +1223,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     if (wasSource) { this.sourceAnnouncement = undefined; this.invalidateSourceSearch(); }
     if (wasSource || !this.hasUpdated || changed.has('data') || changed.has('maxNodes')) {
       this.copyIntent++;
-      this.clearCopyFeedback();
+      this.copyFeedback.clear();
       const snapshot = snapshotJsonData(this.data, this.effectiveMaxNodes);
       this.dataSnapshot = snapshot.value;
       this.dataSnapshotTruncated = snapshot.truncated;
@@ -1225,13 +1250,14 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       this.searchState = next;
       if (this.hasUpdated) {
         this.activeSearchIndex = -1;
-        this.emitSearchChange();
+        this.scheduleAfterUpdate(() => this.emitSearchChange(), 'lr-search-change');
       }
     }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     if (this.treeSource !== undefined) {
       const message = this.hierarchy.error || this.hierarchy.rowError ? this.localize('treeSourceError') :
         this.hierarchy.loading ? this.localize('loading') : this.sourceSummary();
@@ -1340,16 +1366,17 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private async scrollActiveMatchIntoView(): Promise<void> {
     await this.updateComplete;
     const el = this.renderRoot.querySelector('[data-active]');
-    el?.scrollIntoView({
-      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
-      block: 'nearest',
-    });
+    const body = this.scrollRegionBody;
+    if (body) body.style.scrollBehavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
+    if (el && body && (body.scrollHeight > body.clientHeight || body.scrollWidth > body.clientWidth)) {
+      revealWithinScrollParent(el);
+    }
   }
 
   override render(): TemplateResult {
     if (this.treeSource !== undefined) return this.renderSource();
     const deps = [this.dataSnapshot, this.searchState, this.expandedOverrides, this.expandDepth,
-      this.copyable, this.copyFeedback, this.strings, this.effectiveLocale,
+      this.copyable, this.copyFeedback.state, this.strings, this.effectiveLocale,
       lyraLocaleCatalogVersion(this.effectiveLocale), this.explicitRefresh, this.effectiveMaxNodes];
     let memo = this.treeMemo;
     if (!memo || deps.some((value, index) => value !== memo!.deps[index])) {

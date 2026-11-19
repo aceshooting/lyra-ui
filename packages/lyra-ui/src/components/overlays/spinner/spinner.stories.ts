@@ -13,3 +13,9 @@ export const UpstreamThemeHooks: StoryObj = {
     >Loading data</lr-spinner>
   `,
 };
+
+export const RingColors: StoryObj = {
+  render: () => html`<lr-spinner label-placement="after"
+    style="--lr-spinner-track-color:var(--lr-color-success-quiet);--lr-spinner-indicator-color:var(--lr-color-success)"
+  >Loading data</lr-spinner>`,
+};

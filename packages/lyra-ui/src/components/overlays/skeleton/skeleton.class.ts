@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import type { AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { styles } from './skeleton.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -62,8 +63,10 @@ export class LyraSkeleton extends LyraElement {
   @property() label?: string;
 
   private sink?: AnnouncementSink;
+  private readonly announcementFrame = new OwnedFrame(this);
 
   override disconnectedCallback(): void {
+    this.announcementFrame.cancel();
     this.sink?.release();
     this.sink = undefined;
     super.disconnectedCallback();
@@ -72,19 +75,29 @@ export class LyraSkeleton extends LyraElement {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.announce) {
+      this.announcementFrame.cancel();
       this.sink?.release();
       this.sink = undefined;
     } else if (changed.has('announce') || changed.has('label')) {
-      // Loaded on first use: only an opted-in skeleton ever announces.
-      void import('../../../internal/announcer.js').then(({ acquireAnnouncementSink }) => {
-        if (!this.announce || !this.isConnected) return;
-        this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-        // Text follows a frame after the sink mounts so assistive technology is already watching it.
-        this.ownerDocument.defaultView?.requestAnimationFrame(() => {
-          if (this.announce) this.sink?.announce(this.label ?? this.localize('loading'));
-        });
-      });
+      this.scheduleAnnouncement();
     }
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.announce) this.scheduleAnnouncement();
+  }
+
+  private scheduleAnnouncement(): void {
+    // Decorative skeletons do not load the announcer.
+    void import('../../../internal/announcer.js').then(({ acquireAnnouncementSink }) => {
+      if (!this.announce || !this.isConnected) return;
+      this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+      // Text follows a frame after the sink mounts so assistive technology is already watching it.
+      this.announcementFrame.schedule(() => {
+        this.sink?.announce(this.label ?? this.localize('loading'));
+      });
+    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {

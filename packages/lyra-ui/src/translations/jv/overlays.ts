@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Tombol Option',
   kbdAltWord: 'Tombol Alt',
   kbdShiftWord: 'Tombol Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('jv', strings);

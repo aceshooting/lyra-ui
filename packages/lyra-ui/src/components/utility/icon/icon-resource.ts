@@ -6,7 +6,8 @@ import {
 } from '../../../internal/resource-loader.js';
 import { BoundedResourceCache, type ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { isLocalSvgFragment, isUnsafeSvgPresentationValue } from '../../../internal/safe-svg.js';
-import { loadIconSanitizer } from './dompurify-loader.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
+import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 
 export type IconResourceErrorReason = 'load' | 'too-large' | 'sanitizer';
 
@@ -14,13 +15,7 @@ export type IconResourceErrorReason = 'load' | 'too-large' | 'sanitizer';
 const MAX_ICON_BYTES = 1024 * 1024;
 
 const ICON_CACHE_ENTRIES = 128;
-const SANITIZE_PROFILE = 'svg-filters-v1';
-const SANITIZE_CONFIG = {
-  USE_PROFILES: { svg: true, svgFilters: true },
-  ADD_TAGS: ['use'],
-  ADD_ATTR: ['href'],
-  RETURN_DOM_FRAGMENT: true,
-} as const;
+const SANITIZE_PROFILE = 'passive-svg-v1';
 const resources = new BoundedResourceCache<SVGSVGElement | null>(ICON_CACHE_ENTRIES);
 const ownerDocumentIds = new WeakMap<Document, number>();
 let nextOwnerId = 1;
@@ -94,9 +89,9 @@ export function acquireSanitizedIconResource(target: OwnerFetchTarget): Resource
     }
     if (raw.trim() === '') return null;
 
-    const sanitizer = await loadIconSanitizer();
+    const sanitizer = await loadDompurify();
     if (!sanitizer) throw new IconResourceError('sanitizer');
-    const fragment = sanitizer.sanitize(raw, SANITIZE_CONFIG) as DocumentFragment;
+    const fragment = sanitizePassiveMarkupFragment(sanitizer, raw, document, 'passive-svg');
     const node = fragment.firstElementChild;
     if (!(node instanceof SVGSVGElement)) {
       throw new IconResourceError('load', new Error('response is not an SVG document'));

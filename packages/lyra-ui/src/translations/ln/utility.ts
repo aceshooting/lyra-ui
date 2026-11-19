@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ba clé',
   },
   jsonViewerLimit: 'Ba nœud JSON {count} ya liboso mpe ba niveau {depth} ya nesting nde emonisami mpe elukami.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Telemisa',
   pollResume: 'Bandela lisusu',
   pollRefresh: 'Rafraîchir sikoyo',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Sanza',
   knownDateYear: 'Mobu',
   exportFormatMenuLabel: 'Format ya {label}',
+  exportFailed: 'Koexporter elongi te',
   mentionSuggestions: 'Ba suggestion',
   mentionResultCount: {
     one: '{count} proposition',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Kaka ba suggestion 10 000 ya liboso mpo na kotánga nkombo nde ezali.',
   diffViewHighlightLimit: 'Code ya molai emonisami kozanga kokesenisa syntaxe na balangi.',
+  diffViewLabel: 'Différence',
 };
 
 registerLyraLocale('ln', strings);

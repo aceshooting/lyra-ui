@@ -1,5 +1,8 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import type { ReactiveControllerHost } from 'lit';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
-import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+import { readCanvasRgba, resolveCanvasColor, toRgbaString } from '../../../internal/canvas-color.js';
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import {
   Engine3dSelection,
@@ -40,6 +43,9 @@ interface Chart3dEngineCallbacks {
   camera(camera: LyraChart3dCamera): void;
 }
 
+const paletteTokens = Array.from({ length: 8 }, (_, index) => `--lr-color-chart-${index + 1}`);
+const colorTokens = ['--lr-color-surface', '--lr-color-text', '--lr-color-text-quiet', '--lr-color-brand', '--lr-focus-ring-color', ...paletteTokens];
+
 /**
  * Owns the optional points renderer. Row identity, keyboard interaction and the accessible table
  * stay in the element. Every asynchronous step and every peer callback re-checks a generation
@@ -70,14 +76,16 @@ export class Chart3dEngineController {
   private eligibility?: MutationObserver;
   private intersecting = false;
   private resizeObserver?: ResizeObserver;
-  private styleObserver?: MutationObserver;
-  private cleanup: (() => void)[] = [];
-  private colorContext?: CanvasRenderingContext2D | null;
+  private themeWatcher?: ThemeWatcher;
+  private styleSignature = '';
+  private cachedStyle?: object;
+  private readonly refreshFrame: OwnedFrame;
+  private readonly colors = new Map<string, string>();
 
   constructor(
-    private readonly host: HTMLElement,
+    private readonly host: HTMLElement & ReactiveControllerHost,
     private readonly callbacks: Chart3dEngineCallbacks,
-  ) {}
+  ) { this.refreshFrame = new OwnedFrame(host); }
 
   /** Disposes a renderer exactly once; a throwing peer disposer still retires ownership. */
   private dispose(engine: Engine3dInstance | undefined): void {
@@ -104,13 +112,17 @@ export class Chart3dEngineController {
     this.intersecting = false;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
-    this.styleObserver?.disconnect();
-    this.styleObserver = undefined;
-    for (const cleanup of this.cleanup) cleanup();
-    this.cleanup = [];
+    if (this.themeWatcher) {
+      this.themeWatcher.hostDisconnected();
+      this.host.removeController(this.themeWatcher);
+      this.themeWatcher = undefined;
+    }
+    this.styleSignature = '';
+    this.cachedStyle = undefined;
     const engine = this.engine;
     this.engine = undefined;
-    this.colorContext = undefined;
+    this.colors.clear();
+    this.refreshFrame.cancel();
     this.loading = this.ready = this.configured = this.attempted = this.contextLost = this.software = false;
     this.hover = -1;
     this.notice = null;
@@ -365,9 +377,14 @@ export class Chart3dEngineController {
     const view = this.host.ownerDocument.defaultView;
     const engine = this.engine;
     const refresh = () => {
+      if (!this.refreshFrame.pending) this.refreshFrame.schedule(apply);
+    };
+    const apply = () => {
       if (!current() || !this.ready || !engine) return;
       try {
-        engine.setStyle(this.style());
+        const previous = this.cachedStyle;
+        const style = this.style();
+        if (style !== previous) engine.setStyle(style);
         if (current()) resize();
       } catch {
         if (current()) this.fail('error');
@@ -377,60 +394,51 @@ export class Chart3dEngineController {
       this.resizeObserver = new view.ResizeObserver(refresh);
       this.resizeObserver.observe(container);
     }
-    if (view?.MutationObserver) {
-      this.styleObserver = new view.MutationObserver(refresh);
-      let ancestor: Element | null = this.host;
-      while (ancestor) {
-        this.styleObserver.observe(ancestor, { attributes: true });
-        const root: Node = ancestor.getRootNode();
-        ancestor = ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
-      }
-    }
-    for (const query of ['(prefers-reduced-motion: reduce)', '(forced-colors: active)', '(prefers-color-scheme: dark)']) {
-      const media = view?.matchMedia(query);
-      media?.addEventListener('change', refresh);
-      if (media) this.cleanup.push(() => media.removeEventListener('change', refresh));
-    }
+    this.themeWatcher = new ThemeWatcher(this.host, refresh, [
+      '(prefers-reduced-motion: reduce)', '(forced-colors: active)', '(prefers-color-scheme: dark)',
+    ]);
   }
 
   /** Resolves tokens, fonts, point and line sizes and media preferences into plain values. */
-  private style(): unknown {
+  private style(): object {
     const view = this.host.ownerDocument.defaultView!;
     const computed = view.getComputedStyle(this.host);
     // The probe carries the point-size and line-width tokens, so their units resolve live.
     const probe = this.host.shadowRoot?.querySelector('[data-style-probe]');
     const measured = probe ? view.getComputedStyle(probe) : computed;
-    // One 1x1 canvas converts every CSS color to concrete rgba for the renderer; it lives as long
-    // as the renderer does, so a burst of resizes allocates nothing.
-    if (this.colorContext === undefined) {
-      const canvas = this.host.ownerDocument.createElement('canvas');
-      canvas.width = canvas.height = 1;
-      this.colorContext = canvas.getContext('2d', { willReadFrequently: true });
-    }
-    const context = this.colorContext;
+    const reducedMotion = view.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const forcedColors = view.matchMedia('(forced-colors: active)').matches;
+    const signature = JSON.stringify([computed.color, computed.colorScheme, computed.fontSize, computed.fontFamily,
+      measured.inlineSize, measured.borderBlockStartWidth, view.devicePixelRatio, reducedMotion, forcedColors,
+      view.matchMedia('(prefers-color-scheme: dark)').matches, ...colorTokens.map(name => computed.getPropertyValue(name))]);
+    if (this.cachedStyle && signature === this.styleSignature) return this.cachedStyle;
+    this.styleSignature = signature;
+    const previous = new Map(this.colors);
+    this.colors.clear();
     const color = (name: string): string => {
       const resolved = resolveCanvasColor(this.host, `var(${name})`, computed.color);
-      if (!context) return resolved;
-      context.clearRect(0, 0, 1, 1);
-      context.fillStyle = resolved;
-      context.fillRect(0, 0, 1, 1);
-      const rgba = context.getImageData(0, 0, 1, 1).data;
-      return `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]! / 255})`;
+      let value = this.colors.get(resolved) ?? previous.get(resolved);
+      if (value === undefined) {
+        const rgba = readCanvasRgba(this.host.ownerDocument, resolved);
+        value = rgba ? toRgbaString(rgba) : resolved;
+      }
+      this.colors.set(resolved, value);
+      return value;
     };
-    return {
+    return this.cachedStyle = {
       background: color('--lr-color-surface'),
       foreground: color('--lr-color-text'),
       muted: color('--lr-color-text-quiet'),
       accent: color('--lr-color-brand'),
       focus: color('--lr-focus-ring-color'),
-      palette: Array.from({ length: 8 }, (_, index) => color(`--lr-color-chart-${index + 1}`)),
+      palette: paletteTokens.map(color),
       fontFamily: computed.fontFamily,
       fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128),
       pointSize: finiteRange(Number.parseFloat(measured.inlineSize), 8, 1, 1024),
       lineWidth: finiteRange(Number.parseFloat(measured.borderBlockStartWidth), 1, 0, 64),
       devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4),
-      reducedMotion: view.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      forcedColors: view.matchMedia('(forced-colors: active)').matches,
+      reducedMotion,
+      forcedColors,
     };
   }
 }

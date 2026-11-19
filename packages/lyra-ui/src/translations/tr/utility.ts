@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} anahtar',
   },
   jsonViewerLimit: 'Yalnızca ilk {count} JSON düğümü ve {depth} iç içe geçme düzeyi gösterilir ve aranır.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Duraklat',
   pollResume: 'Sürdür',
   pollRefresh: 'Şimdi yenile',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Ay',
   knownDateYear: 'Yıl',
   exportFormatMenuLabel: '{label} biçimi',
+  exportFailed: 'Dışa aktarma başarısız oldu',
   mentionSuggestions: 'Öneriler',
   mentionResultCount: {
     one: '{count} öneri',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Yalnızca ilk 10.000 bahsetme adayı kullanılabilir.',
   diffViewHighlightLimit: 'Uzun kod, sözdizimi vurgulaması olmadan gösterilir.',
+  diffViewLabel: 'Fark',
 };
 
 registerLyraLocale('tr', strings);

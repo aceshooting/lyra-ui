@@ -3,7 +3,6 @@ import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
-import { styles } from './table.styles.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
@@ -427,11 +426,12 @@ it('forwards spellcheck/autocapitalize/autocorrect to a text cell editor but not
   expect(numberInput.hasAttribute('autocorrect')).to.be.false;
 });
 
-it("resets the native number-spinner chrome on the cell editor (editType: 'number')", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]\s*\{[^}]*appearance:\s*textfield/);
-  expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]::-webkit-inner-spin-button/);
-  expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]::-webkit-outer-spin-button/);
+it('uses a textfield appearance for the native number editor', async () => {
+  const el = await fixture<LyraTable<Row>>(html`<lr-table .rows=${rows}
+    .columns=${[{ ...columns[1], editTrigger: 'always', editType: 'number' }]}></lr-table>`);
+  const editor = el.shadowRoot!.querySelector<HTMLInputElement>('[part="cell-editor"]')!;
+  expect(editor.type).to.equal('number');
+  expect(getComputedStyle(editor).appearance).to.equal('textfield');
 });
 
 describe("editTrigger: 'always'", () => {

@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
@@ -432,7 +433,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     this.fetchState = { kind: 'error', reason };
     await this.updateComplete;
     if (!this.isConnected || generation !== this.generation) return;
-    if (isAccessibilityVisible(this)) {
+    if (isAccessibilityVisible(this) && normalizeLabel(this.accessibleLabel()) !== undefined) {
       this.errorAnnouncementSink?.announce(this.errorMessage(reason));
     }
     this.emit('lr-error', { src, error });

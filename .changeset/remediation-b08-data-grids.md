@@ -1,0 +1,22 @@
+---
+'@aceshooting/lyra-ui': major
+---
+
+- Use `aria-expanded` on the table’s additional-columns button. Set its stable visible name with `tableAdditionalColumns`. The existing show and hide labels supply action tooltips.
+- Sort missing document-library values last in either direction, retaining input order for ties.
+- Use the shared pagination controls in the data grid, with compact page jumps, range summaries, unknown server totals and zero-based page events.
+- Veto grid or table paging before it commits, including when a synchronous listener changes the destination.
+- Observe grid sort, selection and expansion through the collection events. Veto selection and expansion requests before keys change.
+- Report page resets caused by sorting, searching or filtering. Suppress repeated selection notifications when the keys stay the same.
+- Resume listener-driven grid data requests after the grid moves during a pending load.
+- Bound selection and expansion key ingestion, and expose omitted document counts and configurable local admission limits.
+- Find accented text with unaccented queries in default searches and announce result counts. Use locale-aware plural categories for count overrides and localized lists for provider tags.
+- Identify rows and columns in control names. Keep focus indicators visible inside scrollports and forced-color selection indicators distinct.
+- Preserve browser shortcuts and composing keystrokes. Move table focus by a page and skip unavailable targets.
+- Forward spellchecking, capitalization and correction to grid search and column-filter inputs.
+- Keep pinned grid headers opaque during pointer interaction and raise pinned cells containing open overlays.
+- Customize table row and sortable-header pointer colors and honor interactive motion preferences.
+- Preserve themed padding on resizable table headers and allow narrow flex layouts to shrink.
+- Keep longer page numbers visible in the compact pagination field and preserve link semantics for unavailable destinations.
+- Delay CSV download URL cleanup in the grid’s owner window. Recognize dates and set filters from other windows.
+- Load the grid’s optional column-menu controls when the menu is enabled.

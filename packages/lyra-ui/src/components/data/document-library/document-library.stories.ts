@@ -69,6 +69,10 @@ export const Default: Story = {
     html`<lr-document-library .documents=${documents}></lr-document-library>`,
 };
 
+export const LimitedInventory: Story = {
+  render: () => html`<lr-document-library max-documents="2" .documents=${documents}></lr-document-library>`,
+};
+
 export const WithSelection: Story = {
   render: () =>
     html`<lr-document-library

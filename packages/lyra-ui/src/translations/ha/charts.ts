@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, zangon da’ira {radius}',
   chartLabeledPoint: 'Alama {label}: {coordinates}',
+  chartLegend: 'Bayanin alamomin jadawali',
   chartSeriesNoData: '{label}: babu bayanai',
   chartSummaryWithData: 'Jadawalin {type}. {summaries}.',
   chartSummaryEmpty: 'Jadawalin {type} marar bayanai.',

@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'Ufafanuzi wa alama za chati',
   chartSeriesNoData: '{label}: hakuna data',
   chartSummaryWithData: 'Chati ya {type}. {summaries}.',
   chartSummaryEmpty: 'Chati ya {type} haina data.',

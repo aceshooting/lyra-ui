@@ -275,6 +275,35 @@ describe('lr-copy-button', () => {
     expect(writes).to.deep.equal(['source text', 'attribute text', 'property text']);
   });
 
+  it('copies the text of an element whose id contains a dot', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <span id="my.section">dotted source</span>
+        <lr-copy-button from="my.section"></lr-copy-button>
+      </div>
+    `);
+    const button = wrapper.querySelector('lr-copy-button') as LyraCopyButton;
+    baseButton(button).click();
+    await settle(button);
+    expect(writes).to.deep.equal(['dotted source']);
+  });
+
+  it('describes and names the inner button from the host aria-describedby and aria-labelledby', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <span id="copy-help">Copies the key</span>
+        <span id="copy-name">Key copier</span>
+        <lr-copy-button value="x" aria-describedby="copy-help" aria-labelledby="copy-name"></lr-copy-button>
+      </div>
+    `);
+    const button = wrapper.querySelector('lr-copy-button') as LyraCopyButton;
+    await settle(button);
+    await waitUntil(() => (paintedControl(button) as HTMLButtonElement).ariaDescribedByElements?.length);
+    const inner = paintedControl(button) as HTMLButtonElement;
+    expect(inner.ariaDescribedByElements!.map((node) => node.id)).to.include('copy-help');
+    expect(inner.ariaLabelledByElements!.map((node) => node.id)).to.deep.equal(['copy-name']);
+  });
+
   it('prefers a shadow-local source and otherwise falls back to the owner document', async () => {
     const documentSource = document.createElement('span');
     documentSource.id = 'copy-boundary-source';
@@ -1359,4 +1388,56 @@ it('releases a removed custom trigger before its slotchange and leases its repla
   expect(replacement.tabIndex).to.equal(0);
   action.releaseTabIndex?.();
   expect(replacement.getAttribute('tabindex')).to.equal('9');
+});
+
+it('uses localized copy feedback labels for whitespace-only overrides', async () => {
+  const el = await fixture<LyraCopyButton>(html`<lr-copy-button copy-label="  " success-label="  " error-label="  "
+    .strings=${{ copy: 'Copy text', copied: 'Done', copyFailed: 'Could not copy' }}></lr-copy-button>`);
+  expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy text');
+  el.click();
+  await waitUntil(() => baseButton(el).getAttribute('aria-label') === 'Could not copy');
+});
+
+it('stops the failed copy after an error listener disconnects the button', async () => {
+  const el = await fixture<LyraCopyButton>(html`<lr-copy-button></lr-copy-button>`);
+  const events: string[] = [];
+  el.addEventListener('lr-error', () => { events.push('error'); el.remove(); });
+  el.addEventListener('lr-copy-error', () => events.push('copy-error'));
+  el.click();
+  await el.updateComplete;
+  expect(events).to.deep.equal(['error']);
+});
+
+it('distinguishes an error bubbling from a slotted icon from a failed copy', async () => {
+  const el = await fixture<LyraCopyButton>(html`<lr-copy-button><span slot="copy-icon"></span></lr-copy-button>`);
+  const origins: boolean[] = [];
+  let failures = 0;
+  el.addEventListener('lr-error', event => origins.push(event.composedPath()[0] === el));
+  el.addEventListener('lr-copy-error', () => { failures++; });
+  el.firstElementChild!.dispatchEvent(new CustomEvent('lr-error', { bubbles: true, composed: true }));
+  el.click();
+  expect(origins).to.deep.equal([false, true]);
+  expect(failures).to.equal(1);
+});
+
+it('keeps descriptions on the current trigger when a retired icon button finishes updating', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><span id="current-help">Help</span>
+    <lr-copy-button aria-describedby="current-help"></lr-copy-button></div>`);
+  const host = wrapper.querySelector<LyraCopyButton>('lr-copy-button')!;
+  await settle(host);
+  const old = baseButton(host);
+  let finish!: (value: boolean) => void;
+  Object.defineProperty(old, 'updateComplete', { configurable: true, value: new Promise<boolean>(r => { finish = r; }) });
+  host.copyLabel = 'First';
+  await host.updateComplete;
+  const custom = document.createElement('button');
+  host.append(custom);
+  await waitUntil(() => !old.isConnected);
+  custom.remove();
+  await waitUntil(() => Boolean(host.shadowRoot!.querySelector('[part~="base"]')));
+  const current = paintedControl(host) as HTMLButtonElement;
+  await waitUntil(() => current.ariaDescribedByElements?.[0]?.id === 'current-help');
+  finish(true);
+  await Promise.resolve();
+  expect(current.ariaDescribedByElements?.map(node => node.id)).to.deep.equal(['current-help']);
 });

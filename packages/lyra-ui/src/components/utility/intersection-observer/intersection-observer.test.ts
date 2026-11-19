@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './intersection-observer.js';
 import type { LyraIntersectionObserver } from './intersection-observer.class.js';
 
@@ -79,7 +79,7 @@ describe('<lr-intersection-observer>', () => {
 
       const batchEvent = oneEvent(el, 'lr-intersection');
       const itemEvent = oneEvent(el, 'lr-intersect');
-      const entry = { target, isIntersecting: true } as IntersectionObserverEntry;
+      const entry = intersectionEntry(target, true);
       latest!.callback([entry], {} as IntersectionObserver);
       const [batch, item] = await Promise.all([batchEvent, itemEvent]);
       expect(batch.detail.entries).to.deep.equal([entry]);
@@ -90,6 +90,40 @@ describe('<lr-intersection-observer>', () => {
       expect(target.classList.contains('visible')).to.be.true;
       expect(latest?.unobserved.length).to.equal(1);
       expect(latest?.unobserved[0] === target).to.equal(true);
+    } finally {
+      window.IntersectionObserver = OriginalIntersectionObserver;
+    }
+  });
+
+  it('removes applied intersect-class tokens when the class changes or the observer is disabled', async () => {
+    const OriginalIntersectionObserver = window.IntersectionObserver;
+    let callback: IntersectionObserverCallback | undefined;
+    class FakeIntersectionObserver {
+      constructor(cb: IntersectionObserverCallback) { callback = cb; }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+    }
+    window.IntersectionObserver = FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+    try {
+      const el = await fixture<LyraIntersectionObserver>(html`
+        <lr-intersection-observer intersect-class="seen"><div>Observed</div></lr-intersection-observer>
+      `);
+      await aTimeout(0);
+      const target = el.querySelector('div')!;
+      callback!([intersectionEntry(target, true)], {} as IntersectionObserver);
+      expect(target.classList.contains('seen')).to.equal(true);
+      el.intersectClass = 'shown';
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(target.classList.contains('seen')).to.equal(false);
+      callback!([intersectionEntry(target, true)], {} as IntersectionObserver);
+      expect(target.classList.contains('shown')).to.equal(true);
+      el.disabled = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(target.classList.contains('shown')).to.equal(false);
     } finally {
       window.IntersectionObserver = OriginalIntersectionObserver;
     }
@@ -129,7 +163,7 @@ describe('<lr-intersection-observer>', () => {
       el.addEventListener('lr-intersect', () => { intersections += 1; });
 
       records.at(-1)!.callback(
-        [{ target, isIntersecting: true } as IntersectionObserverEntry],
+        [intersectionEntry(target, true)],
         {} as IntersectionObserver,
       );
       expect(intersections).to.equal(1);
@@ -568,5 +602,55 @@ it('contains a throwing disconnect hook across rebuild and reconnect', async () 
     el?.remove();
     if (originalCapability) Object.defineProperty(window, 'IntersectionObserver', originalCapability);
     else Reflect.deleteProperty(window, 'IntersectionObserver');
+  }
+});
+
+it('waits for the named root to arrive before observing its children', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><lr-intersection-observer root="late-viewport">
+    <span>Observed</span></lr-intersection-observer></div>`);
+  const el = wrapper.querySelector<LyraIntersectionObserver>('lr-intersection-observer')!;
+  const delivered: (Element | null)[] = [];
+  el.addEventListener('lr-intersect', ({ detail }) => delivered.push(detail.entry.rootBounds ? el.parentElement : null));
+  const viewport = document.createElement('div');
+  wrapper.append(viewport);
+  viewport.append(el);
+  await el.updateComplete;
+  await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  expect(delivered.length).to.equal(0);
+  const intersect = oneEvent(el, 'lr-intersect');
+  viewport.id = 'late-viewport';
+  await intersect;
+  expect(delivered.length).to.equal(1);
+});
+
+it('finds a late document root from a shadow tree and rejects an unreadable threshold length', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+  const tree = wrapper.attachShadow({ mode: 'open' });
+  const el = document.createElement('lr-intersection-observer');
+  el.root = 'late-document-root';
+  el.threshold = new Proxy([0.5], {
+    getOwnPropertyDescriptor() { throw new Error('Unavailable'); },
+  });
+  el.append(document.createElement('span'));
+  tree.append(el);
+  await el.updateComplete;
+  const intersect = oneEvent(el, 'lr-intersect');
+  wrapper.id = 'late-document-root';
+  expect((await intersect).detail.entry.target === el.firstElementChild).to.equal(true);
+});
+
+it('continues removing intersection classes when one target refuses cleanup', async () => {
+  const el = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer intersect-class="seen">
+    <div>A</div><div>B</div></lr-intersection-observer>`);
+  const [first, second] = Array.from(el.children);
+  await waitUntil(() => second!.classList.contains('seen'));
+  const list = first!.classList;
+  Object.defineProperty(list, 'remove', { configurable: true, value: () => { throw new Error('Unavailable'); } });
+  try {
+    el.disabled = true;
+    await waitUntil(() => !second!.classList.contains('seen'));
+    expect(first!.classList.contains('seen')).to.equal(true);
+  } finally {
+    Reflect.deleteProperty(list, 'remove');
   }
 });

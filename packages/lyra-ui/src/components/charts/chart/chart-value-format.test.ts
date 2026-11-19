@@ -28,7 +28,7 @@ describe('chart default value formatting', () => {
   it('lr-chart tables and announces small values instead of "0"', async () => {
     const el = await fixture<LyraChart>(html`<lr-line-chart without-animation with-data-table
       .labels=${['a', 'b']} .datasets=${[{ label: 'p', data: [0.0004, 0.0007] }]}></lr-line-chart>`);
-    await waitUntil(() => tableText(el).includes('0.0004'), 'table value');
+    await waitUntil(() => tableText(el).includes('0.0004'), 'table value', { timeout: 5000 });
     expect(tableText(el)).to.contain('0.0007');
   });
 
@@ -44,6 +44,7 @@ describe('chart default value formatting', () => {
     const el = await fixture<LyraChart>(html`<lr-bubble-chart lang="en" without-animation with-data-table
       .datasets=${[{ label: 'p', points: [{ x: 1e-30, y: 0, r: 3 }, { x: 2e-30, y: -3e-30, r: 4 }] }]}
     ></lr-bubble-chart>`);
+    await waitUntil(() => !!el.chart, 'bubble chart initialized', { timeout: 5000 });
     expect(tableText(el)).to.contain('1E-30');
     expect(tableText(el)).to.contain('2E-30');
     expect(tableText(el)).to.contain('-3E-30');

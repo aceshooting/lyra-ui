@@ -407,7 +407,7 @@ export const LogarithmicScaleCanary: Story = {
       <lr-lite-chart
         aria-label="Logarithmic end-to-end latency"
         type="bar"
-        scale="logarithmic"
+        scale-type="logarithmic"
         height="16rem"
         with-legend
         with-data-table

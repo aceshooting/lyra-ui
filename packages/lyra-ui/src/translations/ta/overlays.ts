@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Option விசை',
   kbdAltWord: 'Alt விசை',
   kbdShiftWord: 'Shift விசை',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ta', strings);

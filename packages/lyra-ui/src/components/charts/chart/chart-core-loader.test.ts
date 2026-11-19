@@ -83,13 +83,22 @@ describe('loadChartModule (independent Chart.js core loading)', () => {
   });
 
   it('fails closed and logs the real caught error when Chart.js cannot load', async () => {
-    const chartError = new Error('specific chart.js core failure reason');
+    const chartError = new Error('Failed to resolve module specifier "chart.js"');
     const { result, warnings } = await captureWarnings(() =>
       loadChartModule(() => Promise.reject(chartError)),
     );
     expect(result).to.equal(null);
     expect(warnings.flat()).to.contain(chartError);
     expect(warnings.flat().join(' ')).to.contain('pnpm add chart.js');
+  });
+
+  it('words a network failure as a load failure, not as a missing install', async () => {
+    const networkError = new TypeError('Failed to fetch dynamically imported module: https://cdn.example/chart.js');
+    const { result, warnings } = await captureWarnings(() => loadChartModule(() => Promise.reject(networkError)));
+    expect(result).to.equal(null);
+    expect(warnings.flat()).to.contain(networkError);
+    expect(warnings.flat().join(' ')).to.not.contain('pnpm add chart.js');
+    expect(warnings.flat().join(' ')).to.contain('try again');
   });
 
   it('fails closed when core registration throws instead of memoizing a rejected promise', async () => {

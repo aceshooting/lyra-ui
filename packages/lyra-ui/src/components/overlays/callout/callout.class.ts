@@ -1,13 +1,12 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
-import { AnnouncementUpgradeObserver } from '../../../internal/announcement-text.js';
+import { SlottedAnnouncementController } from '../../../internal/announcement-text.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -144,10 +143,8 @@ const calloutAppearanceConverter = {
  *   host surface's border color.
  * @cssprop [--lr-callout-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's text color.
- * @cssprop [--lr-callout-close-hover-bg=var(--lr-color-brand-quiet)] - The close button's hover
- *   background, decoupled from `--lr-callout-bg` so a consumer can retint one without
- *   affecting the other (e.g. keeping the hover fill visibly distinct from a `variant="brand"`
- *   panel, which shares the same default token).
+ * @cssprop [--lr-callout-close-hover-bg=color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Close-button hover fill. The default translucent fill lets the panel's variant show through.
  * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size,var(--lr-font-size-m))] - The callout's text size.
  *   Its private default follows the library's shared size ladder; an inherited or direct public
  *   value remains authoritative.
@@ -291,104 +288,33 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
    *  presence. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   private readonly slotPresence = new SlotPresenceController(this);
-  private liveActive = false;
   private initialContentAnnounced = false;
-  private connectionGeneration = 0;
-  private politeSink?: AnnouncementSink;
-  private assertiveSink?: AnnouncementSink;
-  private contentObserver?: MutationObserver;
-  private lastAnnouncementText = '';
-  private announcementShadowRoots = new Set<ShadowRoot>();
-  private readonly announcementUpgrades = new AnnouncementUpgradeObserver(() => {
-    this.announceCurrentContent();
-    this.observeAnnouncementContent();
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
+  private readonly contentAnnouncements = new SlottedAnnouncementController(this, {
+    feeds: node => this.isAnnouncementSlotNode(node),
+    isRelevantMutation: record => this.isAnnouncementMutation(record),
+    text: controller => this.announcementText(controller),
+    announce: text => this.announcements.announce(text, this.effectiveContextualVariant === 'danger' ? 'assertive' : 'polite'),
+    canAnnounce: () => this.open && this.ownerDocument.defaultView !== null,
+    waitForFrame: true,
+    armed: controller => {
+      if (this.announce && this.open && !this.initialContentAnnounced) {
+        this.initialContentAnnounced = true;
+        controller.announceCurrent(true);
+      }
+    },
   });
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.addEventListener('slotchange', this.onForwardedSlotChange);
-    this.politeSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    const MutationObserverCtor =
-      this.ownerDocument.defaultView?.MutationObserver;
-    if (MutationObserverCtor) {
-      this.contentObserver = new MutationObserverCtor((records) => {
-        if (
-          records.some(
-            (record) =>
-              !this.contains(record.target) ||
-              this.isAnnouncementMutation(record)
-          )
-        ) {
-          this.announceCurrentContent();
-          this.observeAnnouncementContent();
-        }
-      });
-      this.observeAnnouncementContent();
-    }
-    const generation = ++this.connectionGeneration;
-    // Wait through the first slot-distribution paint and any update it schedules before arming;
-    // otherwise initially slotted content could be mistaken for a later mutation.
-    void this.updateComplete
-      .then(() => {
-        const view = this.ownerDocument?.defaultView;
-        return typeof view?.requestAnimationFrame === 'function'
-          ? new Promise<void>((resolve) =>
-              view.requestAnimationFrame(() => resolve())
-            )
-          : Promise.resolve();
-      })
-      .then(() => this.updateComplete)
-      .then(() => {
-        if (this.isConnected && generation === this.connectionGeneration) {
-          this.lastAnnouncementText = this.announcementText();
-          // Seeding may have discovered shadow roots of late-rendering children; observe them.
-          this.observeAnnouncementContent();
-          this.liveActive = true;
-          // Opted-in initial content goes through the one existing announcement path, so it
-          // resolves urgency, accessibility visibility and localized context identically to a
-          // later update. `force` is required: the arming line above already recorded this exact
-          // text as the baseline, which the deduplicating path would otherwise treat as a repeat.
-          if (this.announce && !this.initialContentAnnounced) {
-            this.initialContentAnnounced = true;
-            this.announceCurrentContent(true);
-          }
-        }
-      });
-  }
-
-  override disconnectedCallback(): void {
-    this.connectionGeneration += 1;
-    this.liveActive = false;
-    this.lastAnnouncementText = '';
-    this.contentObserver?.disconnect();
-    this.contentObserver = undefined;
-    this.announcementShadowRoots.clear();
-    this.announcementUpgrades.disconnect();
-    this.removeEventListener('slotchange', this.onForwardedSlotChange);
-    this.politeSink?.release();
-    this.politeSink = undefined;
-    this.assertiveSink?.release();
-    this.assertiveSink = undefined;
-    super.disconnectedCallback();
-  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (!this.liveActive || !this.open) return;
+    if (!this.contentAnnouncements.armed || !this.open) return;
     if (
       changed.has('open') ||
       changed.has('heading') ||
       changed.has('hostAriaLabel')
     ) {
-      this.announceCurrentContent(changed.has('open'));
-      this.observeAnnouncementContent();
+      this.contentAnnouncements.announceCurrent(changed.has('open'));
+      this.contentAnnouncements.observe();
     }
   }
 
@@ -434,58 +360,6 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     return slotName === null || slotName === '' || slotName === 'heading';
   }
 
-  private announcementObservationOptions(): MutationObserverInit {
-    return {
-      attributes: true,
-      attributeFilter: [
-        'alt',
-        'aria-hidden',
-        'aria-label',
-        'class',
-        'hidden',
-        'inert',
-        'open',
-        'slot',
-        'style',
-      ],
-      characterData: true,
-      childList: true,
-      subtree: true,
-    };
-  }
-
-  private announcementForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter(
-      (slot) => {
-        let top: Node = slot;
-        while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-        return top.parentNode === this && this.isAnnouncementSlotNode(top);
-      }
-    );
-  }
-
-  private observeAnnouncementContent(): void {
-    const observer = this.contentObserver;
-    if (!observer) return;
-    observer.disconnect();
-    const options = this.announcementObservationOptions();
-    observer.observe(this, options);
-    for (const slot of this.announcementForwardingSlots()) {
-      if (slot.assignedNodes().length === 0) continue;
-      for (const assigned of slot.assignedNodes({ flatten: true })) {
-        observer.observe(assigned, options);
-      }
-    }
-    for (const root of this.announcementShadowRoots) observer.observe(root, options);
-  }
-
-  private onForwardedSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
-    if (!this.announcementForwardingSlots().includes(slot)) return;
-    this.announceCurrentContent();
-    this.observeAnnouncementContent();
-  };
-
   private normalizedText(value: string | null | undefined): string {
     return (value ?? '').replace(/\s+/g, ' ').trim();
   }
@@ -495,9 +369,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     return this.normalizedText(hostLabel);
   }
 
-  private announcementText(): string {
-    const roots = new Set<ShadowRoot>();
-    this.announcementShadowRoots = roots;
+  private announcementText(controller: SlottedAnnouncementController): string {
+    controller.resetRoots();
     if (!isAccessibilityVisible(this)) return '';
     const hostLabel = this.hostAriaLabel;
     const context = this.normalizedText(hostLabel);
@@ -509,7 +382,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
             node.nodeType === 1 &&
             (node as Element).getAttribute('slot') === 'heading'
         )
-        .map((node) => this.announcementUpgrades.collect(node, roots)),
+        .map((node) => controller.collect(node)),
     ];
     const message = Array.from(this.childNodes)
       .filter((node) => {
@@ -517,7 +390,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         const slotName = (node as Element).getAttribute('slot');
         return slotName === null || slotName === '';
       })
-      .map((node) => this.announcementUpgrades.collect(node, roots));
+      .map((node) => controller.collect(node));
     const content = this.normalizedText([...heading, ...message].join(' '));
     if (!context || context === content) return content;
     return content
@@ -526,17 +399,6 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
           content,
         })
       : context;
-  }
-
-  private announceCurrentContent(force = false): void {
-    if (!this.liveActive || !this.isConnected || !this.open) return;
-    const text = this.announcementText();
-    if (!force && text === this.lastAnnouncementText) return;
-    this.lastAnnouncementText = text;
-    (this.effectiveContextualVariant === 'danger'
-      ? this.assertiveSink
-      : this.politeSink
-    )?.announce(text);
   }
 
   /** Resolve the same contextual tone that the inherited CSS vocabulary paints. An explicit local
@@ -553,9 +415,10 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     return 'brand';
   }
   private close = (): void => {
+    if (!this.open || !this.closable || !this.isConnected) return;
     const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
     const event = this.emit('lr-close-request', { reason: 'close-button' }, { cancelable: true });
-    if (!event.defaultPrevented) {
+    if (!event.defaultPrevented && this.isConnected && this.open && this.closable) {
       if (repair) applyComposedFocusRepair(repair);
       this.open = false;
       this.emit('lr-close', { reason: 'close-button' });

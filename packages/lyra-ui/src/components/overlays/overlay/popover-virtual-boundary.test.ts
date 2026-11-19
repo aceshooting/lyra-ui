@@ -223,3 +223,14 @@ it('keeps a fresh boundary when an earlier hide transition is superseded', async
   await popover.updateComplete;
   expect(popover.open).to.equal(false);
 });
+
+it('dismisses an outside press even when its target stops propagation', async () => {
+  const { first, outside, popover } = await setup();
+  const shown = oneEvent(popover, 'lr-after-show');
+  popover.showAt({ x: 20, y: 20 }, { interactionBoundary: first });
+  await shown;
+  outside.addEventListener('pointerdown', event => event.stopPropagation(), { once: true });
+  press(outside);
+  await popover.updateComplete;
+  expect(popover.open).to.equal(false);
+});

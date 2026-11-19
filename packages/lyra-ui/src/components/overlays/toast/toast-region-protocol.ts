@@ -44,3 +44,6 @@ export function toastRegionControllerFor(value: Element): ToastRegionController 
     ? parent as ToastRegionController
     : undefined;
 }
+
+/** Origin of a notification dismissal. */
+export type NotificationDismissReason = 'programmatic' | 'close-button' | 'timeout';

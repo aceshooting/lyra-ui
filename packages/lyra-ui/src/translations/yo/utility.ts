@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: 'Àwọn kókó {count}',
   },
   jsonViewerLimit: 'A fi àwọn nóòdù JSON àkọ́kọ́ {count} àti ìpele ìtẹ̀síwájú {depth} hàn, a sì ń wá wọn nìkan.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Dúró díẹ̀',
   pollResume: 'Tẹ̀síwájú',
   pollRefresh: 'Tún sọ di tuntun nísinsìnyí',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Oṣù',
   knownDateYear: 'Ọdún',
   exportFormatMenuLabel: 'Ọ̀nà {label}',
+  exportFailed: 'Ìkójáde kò ṣàṣeyọrí',
   mentionSuggestions: 'Àwọn àbá',
   mentionResultCount: {
     other: 'Àwọn àbá {count}',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Àwọn àṣàyàn 10,000 àkọ́kọ́ tí a lè mẹ́nu kàn nìkan ló wà.',
   diffViewHighlightLimit: 'A ń ṣàfihàn kóòdù gígùn láì lo àwọ̀ láti fi ìlànà ìkọ̀wé kóòdù hàn.',
+  diffViewLabel: 'Ìyàtọ̀',
 };
 
 registerLyraLocale('yo', strings);

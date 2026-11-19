@@ -1,3 +1,8 @@
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { bdi, isolateText } from '../../../internal/bidi.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -55,6 +60,7 @@ export interface LyraChart3dSelectDetail {
 }
 
 export interface LyraChart3dEventMap {
+  'lr-chart-row-select-request': CustomEvent<LyraChart3dSelectDetail>;
   'lr-chart-row-select': CustomEvent<LyraChart3dSelectDetail>;
   'lr-camera-change': CustomEvent<{ readonly camera: LyraChart3dCamera }>;
   'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
@@ -95,6 +101,7 @@ const sameAxis = (left: LyraChart3dAxis, right: LyraChart3dAxis): boolean =>
  * `lr-chart-row-select`, and camera gestures or the Fit control emit `lr-camera-change`.
  *
  * @customElement lr-chart-3d
+ * @event lr-chart-row-select-request - Cancelable before selecting a row. Detail contains its id and source index.
  * @event lr-chart-row-select - A user activated a row; detail contains its id and its original zero-based index.
  * @event lr-camera-change - A user gesture or the Fit control moved the camera; detail contains the normalized camera.
  * @event lr-engine-fallback - The WebGL renderer descended to the table; detail contains from, to and reason.
@@ -113,6 +120,10 @@ const sameAxis = (left: LyraChart3dAxis, right: LyraChart3dAxis): boolean =>
  * @csspart page-button - A previous or next page action.
  * @csspart empty - The empty or fully filtered data state.
  * @csspart error - The invalid-data feedback.
+ * @cssprop [--lr-chart-3d-selected-bg=var(--lr-color-brand)] - Selected row button background.
+ * @cssprop [--lr-chart-3d-selected-color=var(--lr-color-on-brand)] - Selected row button text.
+ * @cssprop [--lr-chart-3d-control-active-border-color=var(--lr-color-brand)] - Pressed control border.
+ * @cssprop [--lr-chart-3d-control-hover-bg=var(--lr-color-surface-raised)] - Hovered control background.
  * @cssprop [--lr-chart-3d-height=24rem] - Block size of the graphical viewport.
  * @cssprop [--lr-chart-3d-point-size=0.5rem] - Diameter of uniform scatter and line points.
  * @cssprop [--lr-chart-3d-line-width=1px] - Width of graphical lines.
@@ -204,8 +215,16 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
   /** Accessible chart name. A host aria-label takes precedence; unset uses the localized default. */
   @property() label?: string;
 
+  private readonly selectionGuard = new VetoWriteGuard();
+  private _selectedId = '';
+
   /** ID of the selected source row, or empty for none. Programmatic writes do not emit events. */
-  @property({ attribute: 'selected-id' }) selectedId = '';
+  @property({ attribute: 'selected-id' })
+  get selectedId(): string { return this._selectedId; }
+  set selectedId(id: string) {
+    this._selectedId = id;
+    markVetoGuardWrite(this.selectionGuard);
+  }
 
   /**
    * Immutable typed columns, at most one million rows; `x`, `y` and `z` are required. Admission
@@ -370,7 +389,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
   private get chartName(): string {
     const host = this.getAttribute('aria-label')?.trim();
     if (host) return host;
-    return this.label == null ? this.localize('chart3dLabel') : this.label;
+    return this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('chart3dLabel');
   }
 
   private rebuildRows(): void {
@@ -505,9 +524,18 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     if (!this.isConnected || rows !== this.rows) return;
     const row = rows?.row(index);
     if (!row) return;
-    this.setCursor(index);
-    this.selectedId = row.id;
-    this.emit('lr-chart-row-select', Object.freeze({ id: row.id, index: row.index }));
+    const detail = Object.freeze({ id: row.id, index: row.index });
+    requestThenCommit({
+      guard: this.selectionGuard,
+      requestDetail: detail,
+      emitRequest: (value, init: { cancelable: true }) => this.emit('lr-chart-row-select-request', value, init),
+      commit: () => {
+        if (!this.isConnected || this.rows !== rows) return;
+        this.setCursor(index);
+        this.selectedId = row.id;
+        this.emit('lr-chart-row-select', detail);
+      },
+    });
   }
 
   private userFit(): void {
@@ -557,7 +585,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
         <thead>
           <tr>
             <th scope="col">${this.localize('chart3dName')}</th>
-            ${axes.map((axis) => html`<th scope="col">${chart3dAxisTitle(axis)}</th>`)}
+            ${axes.map((axis) => html`<th scope="col">${isolateText(chart3dAxisTitle(axis))}</th>`)}
             ${bubble ? html`<th scope="col">${this.localize('chart3dSize')}</th>` : nothing}
             <th scope="col">${this.localize('chart3dCategory')}</th>
           </tr>
@@ -567,12 +595,12 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
             const index = page.start + offset;
             const row = rows.row(index)!;
             return html`<tr part="row">
-              <th scope="row"><button part="row-button" type="button" data-id=${row.id} aria-pressed=${this.selectedId === row.id ? 'true' : 'false'} @click=${() => this.activate(index, rows)}>${row.label}</button></th>
-              <td>${this.format(row.x)}</td>
-              <td>${this.format(row.y)}</td>
-              <td>${this.format(row.z)}</td>
-              ${bubble ? html`<td>${row.size === undefined ? '—' : this.format(row.size)}</td>` : nothing}
-              <td>${row.category ?? '—'}</td>
+              <th scope="row"><button part="row-button" type="button" data-id=${row.id} aria-pressed=${this.selectedId === row.id ? 'true' : 'false'} @click=${() => this.activate(index, rows)}>${bdi(row.label)}</button></th>
+              <td>${isolateText(this.format(row.x), 'ltr')}</td>
+              <td>${isolateText(this.format(row.y), 'ltr')}</td>
+              <td>${isolateText(this.format(row.z), 'ltr')}</td>
+              ${bubble ? html`<td>${row.size === undefined ? '—' : isolateText(this.format(row.size), 'ltr')}</td>` : nothing}
+              <td>${row.category === undefined || row.category === null ? '—' : bdi(row.category)}</td>
             </tr>`;
           })}
         </tbody>
@@ -598,7 +626,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
         this.focusWithin = true;
       }}
       @focusout=${(event: FocusEvent) => {
-        if (!(event.relatedTarget instanceof Node) || !this.renderRoot.contains(event.relatedTarget)) this.focusWithin = false;
+        if (!isElementNode(event.relatedTarget) || !this.renderRoot.contains(event.relatedTarget)) this.focusWithin = false;
       }}
     >
       <span data-style-probe aria-hidden="true"></span>

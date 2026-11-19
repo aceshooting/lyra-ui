@@ -542,3 +542,19 @@ for (const mode of ['server', 'dataSource'] as const) {
     expect(ids()).to.deep.equal(['row:number:10', 'row:number:11', 'row:number:12', 'row:number:13']);
   });
 }
+
+it('re-emits lr-request when a listener-driven server grid is moved after its request was aborted', async () => {
+  const element = await dataGrid(html`<lr-data-grid label="Listener people" server .columns=${columns} .data=${rows}></lr-data-grid>`);
+  const signals: Array<AbortSignal | undefined> = [];
+  element.addEventListener('lr-request', (event) => signals.push(event.detail.signal));
+  element.page = 1;
+  element.searchTerm = 'x';
+  await waitUntil(() => signals.length > 0);
+  const before = signals.length;
+  const parent = element.parentElement!;
+  element.remove();
+  expect(signals[before - 1]?.aborted).to.equal(true);
+  parent.append(element);
+  await waitUntil(() => signals.length > before);
+  expect(signals[signals.length - 1]?.aborted).to.equal(false);
+});

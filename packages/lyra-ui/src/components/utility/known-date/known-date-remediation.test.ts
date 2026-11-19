@@ -56,7 +56,7 @@ it('resolves external guidance at the aggregate fieldset while retaining local d
   const viewer = root.querySelector<LyraKnownDate>('lr-known-date')!;
   const owner = viewer.shadowRoot!.querySelector<HTMLElement>('[part="fieldset"]')!;
   const inputs = [...viewer.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="field-input"]')];
-  const localIds = ['hint', 'error'].map((part) => viewer.shadowRoot!.querySelector(`[part="${part}"]`)!.id);
+  const localIds = ['error', 'hint'].map((part) => viewer.shadowRoot!.querySelector(`[part="${part}"]`)!.id);
   await waitUntil(() => descriptionIds(owner).join(' ') === 'date-guide');
   for (const input of inputs) expect(descriptionIds(input)).to.deep.equal(localIds);
   const replacement = document.createElement('p');

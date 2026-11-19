@@ -14,7 +14,6 @@ import {
 import {
   loadChartAndZoom,
   loadChartJsWithDataLabelsResult,
-  loadChartJsWithZoom,
   loadChartJsWithZoomResult,
 } from './chart-feature-loader.js';
 import { loadChartJs } from './chart-core-loader.js';
@@ -41,6 +40,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
+  'chartLegend',
   'chart',
   'chartCategory',
   'chartData',
@@ -54,6 +54,7 @@ expectLocaleFallback('de-DE', [
   'loading',
 ]);
 expectLocaleFallback('ar', [
+  'chartLegend',
   'chart',
   'chartCategory',
   'chartData',
@@ -67,6 +68,7 @@ expectLocaleFallback('ar', [
   'loading',
 ]);
 expectLocaleFallback('ar-EG', [
+  'chartLegend',
   'chart',
   'chartCategory',
   'chartData',
@@ -1982,7 +1984,7 @@ it('renders independent hover and pressed theme hooks for each chart control sur
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
-      await aTimeout(0);
+      await waitUntil(() => getComputedStyle(control.element).backgroundColor === control.hover, 'hover color did not settle');
       expect(getComputedStyle(control.element).backgroundColor).to.equal(control.hover);
       expect(
         controls
@@ -3253,7 +3255,7 @@ it('does not leak a Chart instance bound to a detached canvas when zoom turns on
   // test above.
   el.zoomable = true;
   el.remove();
-  await Promise.all([loadChartJsWithZoom(), loadChartJsWithZoomResult()]);
+  await loadChartJsWithZoomResult();
   await aTimeout(0);
 
   // The chart that existed before disconnect must have been torn down by
@@ -3533,7 +3535,7 @@ it('skips drawing when the element disconnects after zoom starts loading but bef
   // synchronous tick and never reaches that `.then()` registration at all.
   await el.updateComplete;
   el.remove();
-  await Promise.all([loadChartJsWithZoom(), loadChartJsWithZoomResult()]);
+  await loadChartJsWithZoomResult();
   await aTimeout(0);
 
   // Boolean projection, not `.to.be.undefined` on the live instance -- see the
@@ -5611,7 +5613,7 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     el.zoomable = true;
     await el.updateComplete; // updated() observes changed.has('zoomable') and starts the on-demand load
     el.remove(); // disconnect before loadChartJsWithZoom() resolves
-    await Promise.all([loadChartJsWithZoom(), loadChartJsWithZoomResult()]);
+    await loadChartJsWithZoomResult();
     await aTimeout(0);
 
     // Boolean projection, not `.to.be.undefined` on the live instance -- see the

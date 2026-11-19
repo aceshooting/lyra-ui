@@ -27,7 +27,10 @@ function registerToastElements(): Promise<void> {
       defineElement('toast-item', LyraToastItem);
       defineElement('toast', LyraToast);
     },
-  );
+  ).catch((error: unknown) => {
+    elementsRegistered = undefined;
+    throw error;
+  });
   return elementsRegistered;
 }
 

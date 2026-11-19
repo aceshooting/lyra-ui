@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import type { CSSResult, CSSResultOrNative } from 'lit';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './histogram.js';
@@ -8,6 +9,8 @@ import './histogram.js';
 import '../../../translations/de/shared.js';
 import '../../../translations/de/charts.js';
 import { binnedBuckets, type LyraHistogram } from './histogram.js';
+
+expectLocaleFallback('de-DE', ['chartLegend']);
 
 it('bins its values and renders a bar-chart Chart.js instance', async () => {
   const el = (await fixture(html`<lr-histogram bins="5"></lr-histogram>`)) as LyraHistogram;

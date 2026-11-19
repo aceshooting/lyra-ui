@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} võtit',
   },
   jsonViewerLimit: 'Kuvatakse ja otsitakse ainult esimestest {count} JSON-sõlmest ja {depth} pesastustasemest.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Peata',
   pollResume: 'Jätka',
   pollRefresh: 'Värskenda kohe',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Kuu',
   knownDateYear: 'Aasta',
   exportFormatMenuLabel: '{label} vorming',
+  exportFailed: 'Eksportimine ebaõnnestus',
   mentionSuggestions: 'Soovitused',
   mentionResultCount: {
     one: '{count} soovitus',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Saadaval on ainult esimesed 10 000 mainimiskandidaati.',
   diffViewHighlightLimit: 'Pikk kood kuvatakse ilma süntaksi esiletõstuta.',
+  diffViewLabel: 'Erinevused',
 };
 
 registerLyraLocale('et', strings);

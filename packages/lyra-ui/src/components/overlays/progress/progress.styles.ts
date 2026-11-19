@@ -125,6 +125,15 @@ export const styles = css`
       animation: none !important;
     }
   }
+  @media (forced-colors: active) {
+    [part="track"] {
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part="indicator"] {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+  }
 `;
 
 export const ringStyles = css`
@@ -267,6 +276,16 @@ export const ringStyles = css`
     [part="indicator"] {
       transition: none;
       animation: none !important;
+    }
+  }
+  @media (forced-colors: active) {
+    [part="track"] {
+      forced-color-adjust: none;
+      stroke: GrayText;
+    }
+    [part="indicator"] {
+      forced-color-adjust: none;
+      stroke: Highlight;
     }
   }
 `;

@@ -13,6 +13,8 @@ import './box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
+import { binnedBuckets } from './histogram-buckets.js';
+import { binValues } from './histogram-bin.js';
 import { preloadCharts } from './chart-preload.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
@@ -158,6 +160,43 @@ it('builds the histogram append window once without a second full-window slice',
     expect(copies).to.equal(0);
     recordScaleMeasurement('lr-histogram', 'append@10000', { windowSlices: copies });
   } finally { spy.restore(); }
+});
+
+it('updates counts without rebuilding range labels when the rolling domain is stable', () => {
+  const el = document.createElement('lr-histogram') as LyraHistogram;
+  el.bins = 3;
+  el.locale = 'en';
+  el.values = [2, 0, 6, 3];
+  const original = binnedBuckets(el);
+  el.appendSamples([4], 4);
+  const updated = binnedBuckets(el);
+  expect(updated.map(bucket => bucket.count)).to.deep.equal([1, 1, 2]);
+  expect(original.map(bucket => bucket.count)).to.deep.equal([1, 2, 1]);
+  expect(updated[0] === original[0]).to.equal(true);
+  for (const append of [[4], [10], [-3], [1, 2, 3, 4]]) {
+    el.appendSamples(append, 4);
+    expect(binnedBuckets(el)).to.deep.equal(binValues(el.values, 3, 'en'));
+  }
+  for (const outside of [7, -1]) {
+    el.values = [0, 6, 2];
+    expect(binnedBuckets(el).length).to.equal(3);
+    el.appendSamples([outside], 10);
+    expect(binnedBuckets(el)).to.deep.equal(binValues(el.values, 3, 'en'));
+  }
+  el.values = [3, 3];
+  expect(binnedBuckets(el)[0]!.count).to.equal(2);
+  el.appendSamples([3], 4);
+  expect(binnedBuckets(el)[0]!.count).to.equal(3);
+  el.bins = 0;
+  expect(binnedBuckets(el).length).to.equal(0);
+  el.appendSamples([1]);
+  expect(binnedBuckets(el).length).to.equal(0);
+  el.bins = 3;
+  el.values = [NaN, 0, 6, 1];
+  const valid = binnedBuckets(el);
+  el.appendSamples([1], 4);
+  expect(binnedBuckets(el).map(bucket => bucket.count)).to.deep.equal([3, 0, 1]);
+  expect(valid[2] === binnedBuckets(el)[2]).to.equal(true);
 });
 
 for (const tag of ['lr-bar-chart', 'lr-line-chart', 'lr-pie-chart', 'lr-doughnut-chart', 'lr-radar-chart', 'lr-polar-area-chart', 'lr-scatter-chart', 'lr-bubble-chart'] as const) {

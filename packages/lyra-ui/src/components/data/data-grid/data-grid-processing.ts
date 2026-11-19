@@ -1,5 +1,9 @@
+import { compareNullable } from '../../../internal/sort-compare.js';
+import { foldSearchText } from '../../../internal/search-haystack.js';
+import { parseIsoDate, localDate } from '../../../internal/calendar-date.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import { getCollator, resolveIntlLocale } from '../../../internal/intl-cache.js';
-import { UNSAFE_LEADING } from '../../utility/export-button/csv.js';
+import { escapeCsvField, UNSAFE_LEADING } from '../../../internal/csv.js';
 import type {
   DataGridAggregation,
   DataGridColumn,
@@ -32,7 +36,7 @@ export function columnValue<Row>(column: DataGridColumn<Row>, row: Row): unknown
 
 function comparableText(value: unknown): string {
   if (value === null || value === undefined) return '';
-  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : '';
+  if (isDateObject(value)) return Number.isFinite(value.getTime()) ? value.toISOString() : '';
   if (Array.isArray(value)) return value.map(comparableText).join(' ');
   if (typeof value === 'object') {
     try {
@@ -47,7 +51,7 @@ function comparableText(value: unknown): string {
 }
 
 function numericDate(value: unknown): number | undefined {
-  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.getTime() : undefined;
+  if (isDateObject(value)) return Number.isFinite(value.getTime()) ? value.getTime() : undefined;
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
   if (typeof value === 'string') {
     const parsed = Date.parse(value);
@@ -62,16 +66,22 @@ function finiteValue(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
-function valuesFromFilter(value: unknown): unknown[] {
+export function filterList(value: unknown): readonly unknown[] | undefined {
   if (Array.isArray(value)) return value;
-  if (value instanceof Set) return [...value];
-  return value === null || value === undefined || value === '' ? [] : [value];
+  if (value === null || typeof value !== 'object') return undefined;
+  try {
+    return Array.from(Set.prototype.values.call(value) as IterableIterator<unknown>);
+  } catch {
+    return undefined;
+  }
 }
 
-function valuesFromCell(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value;
-  if (value instanceof Set) return [...value];
-  return [value];
+function valuesFromFilter(value: unknown): readonly unknown[] {
+  return filterList(value) ?? (value == null || value === '' ? [] : [value]);
+}
+
+function valuesFromCell(value: unknown): readonly unknown[] {
+  return filterList(value) ?? [value];
 }
 
 function sameValue(left: unknown, right: unknown, collator: () => Intl.Collator): boolean {
@@ -82,24 +92,9 @@ function sameValue(left: unknown, right: unknown, collator: () => Intl.Collator)
   ) === 0;
 }
 
-const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/** Local midnight of a `YYYY-MM-DD` calendar day. `Date.parse()` reads that form as UTC
- *  midnight, which shifts the day for everyone outside UTC; a date-only value names the user's own
- *  day. Anything else (timestamps, full ISO date-times, invalid days) is left to `numericDate()`. */
 function localCalendarDay(value: unknown): number | undefined {
-  if (typeof value !== 'string') return undefined;
-  const match = DATE_ONLY.exec(value.trim());
-  if (!match) return undefined;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const date = new Date(0);
-  date.setFullYear(year, month, day);
-  date.setHours(0, 0, 0, 0);
-  return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
-    ? date.getTime()
-    : undefined;
+  const parts = typeof value === 'string' ? parseIsoDate(value.trim()) : undefined;
+  return parts ? localDate(parts.y, parts.m - 1, parts.d).getTime() : undefined;
 }
 
 function matchesRange(value: unknown, filter: unknown, date: boolean): boolean {
@@ -150,8 +145,8 @@ export function matchesFilter<Row>(
     return needles.every((needle) => values.some((candidate) => sameValue(candidate, needle, comparison)));
   }
 
-  return comparableText(value).toLocaleLowerCase(intlLocale).includes(
-    comparableText(filter).toLocaleLowerCase(intlLocale),
+  return foldSearchText(comparableText(value), intlLocale).includes(
+    foldSearchText(comparableText(filter), intlLocale),
   );
 }
 
@@ -164,7 +159,7 @@ export function textFilterCorpus<Row>(locale: string): (column: DataGridColumn<R
     if (!cells) { cells = new Map(); columns.set(column, cells); }
     let text = cells.get(row);
     if (text === undefined) {
-      text = comparableText(columnValue(column, row)).toLocaleLowerCase(intlLocale);
+      text = foldSearchText(comparableText(columnValue(column, row)), intlLocale);
       cells.set(row, text);
     }
     return text;
@@ -186,8 +181,8 @@ export function filterRows<Row>(
     if (!column.filterFn && (column.filterType === undefined || column.filterType === 'text')) {
       if (valuesFromFilter(filter.value).length === 0) return [(_row: Row) => true];
       const intlLocale = resolveIntlLocale(locale);
-      const needle = comparableText(filter.value).toLocaleLowerCase(intlLocale);
-      return [(row: Row) => (textFor ? textFor(column, row) : comparableText(columnValue(column, row)).toLocaleLowerCase(intlLocale)).includes(needle)];
+      const needle = foldSearchText(comparableText(filter.value), intlLocale);
+      return [(row: Row) => (textFor ? textFor(column, row) : foldSearchText(comparableText(columnValue(column, row)), intlLocale)).includes(needle)];
     }
     if (!column.filterFn && (column.filterType === 'number-range' || column.filterType === 'date-range') && Array.isArray(filter.value)) {
       const date = column.filterType === 'date-range';
@@ -211,7 +206,7 @@ export function filterRows<Row>(
 export function searchHaystacks<Row>(rows: readonly Row[], columns: readonly DataGridColumn<Row>[], locale: string): ReadonlyMap<Row, readonly string[]> {
   const intlLocale = resolveIntlLocale(locale);
   const searchable = columns.filter(column => (column.field || column.value) && column.searchable !== false);
-  return new Map(rows.map(row => [row, searchable.map(column => comparableText(columnValue(column, row)).toLocaleLowerCase(intlLocale))]));
+  return new Map(rows.map(row => [row, searchable.map(column => foldSearchText(comparableText(columnValue(column, row)), intlLocale))]));
 }
 
 export function searchRows<Row>(
@@ -226,15 +221,14 @@ export function searchRows<Row>(
   const needle = term.trim();
   if (!needle) return [...rows];
   const searchable = columns.filter((column) => (column.field || column.value) && column.searchable !== false);
-  const normalizedNeedle = searchFn ? '' : needle.toLocaleLowerCase(intlLocale);
+  const normalizedNeedle = searchFn ? '' : foldSearchText(needle, intlLocale);
   if (!searchFn && haystacks) return rows.filter(row => haystacks.get(row)?.some(value => value.includes(normalizedNeedle)));
   return rows.filter((row) =>
     searchable.some((column) => {
       const value = columnValue(column, row);
       return searchFn
         ? Boolean(searchFn(value, needle, row))
-        : comparableText(value)
-            .toLocaleLowerCase(intlLocale)
+        : foldSearchText(comparableText(value), intlLocale)
             .includes(normalizedNeedle);
     }),
   );
@@ -289,10 +283,10 @@ function cellComparator<Row>(column: DataGridColumn<Row>, locale: string): CellC
     if (algorithm === 'datetime') {
       const leftTime = cellTime(left);
       const rightTime = cellTime(right);
-      if (leftTime !== undefined && rightTime !== undefined) return leftTime - rightTime;
+      if (leftTime !== undefined && rightTime !== undefined) return compareNullable(leftTime, rightTime, 1, locale);
     }
     if (algorithm === 'basic' && typeof left.value === 'number' && typeof right.value === 'number') {
-      return left.value - right.value;
+      return compareNullable(left.value, right.value, 1, locale);
     }
     collator ??= getCollator(locale, {
       sensitivity: caseSensitive ? 'variant' : 'base',
@@ -393,12 +387,8 @@ export function aggregateValues<Row>(
 }
 
 function csvCell(value: unknown, delimiter: string, escapeFormulas: boolean): string {
+  if (delimiter === ',' && escapeFormulas) return escapeCsvField(typeof value === 'number' ? value : comparableText(value));
   let text = comparableText(value);
-  // Shares `UNSAFE_LEADING` with `escapeCsvField()` so both writers guard the same set: the bare
-  // ASCII sigils plus the fullwidth twins an import normalizes back to them and the leading
-  // whitespace a spreadsheet strips before parsing the cell. A real numeric cell is exempt --
-  // its text can only ever be a number literal, and text-prefixing it would break every
-  // downstream sum.
   if (escapeFormulas && typeof value !== 'number' && UNSAFE_LEADING.test(text)) text = `'${text}`;
   if (text.includes(delimiter) || /[\x22\r\n]/u.test(text)) text = `\x22${text.replaceAll('\x22', '\x22\x22')}\x22`;
   return text;

@@ -1,9 +1,11 @@
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
-import { seriesPalette, translucentAreaColor } from './chart-colors.js';
+import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
+import { FALLBACK_GRID_COLOR, FALLBACK_TICK_COLOR, FALLBACK_LEGEND_COLOR, FALLBACK_TOOLTIP_BG, FALLBACK_TOOLTIP_TEXT, FALLBACK_TICK_FONT_SIZE, type ChartThemeColors, seriesPalette, translucentAreaColor } from './chart-colors.js';
 import { forcedColorsActive } from './chart-forced-colors.js';
 
 /** Color text whose canvas value depends on the live scope rather than on the text alone. */
 const SCOPE_DEPENDENT_COLOR = /var\(|currentcolor|inherit|unset/i;
+const DIRECT_PIXEL_NUMBER = new RegExp(`^(${CSS_NUMBER_SOURCE})(?:px)?$`, 'i');
 const PALETTE_SIZE = seriesPalette(null).length;
 const THEME_TOKENS = [
   '--grid-color', '--lr-chart-grid-color', '--_lr-chart-grid-color',
@@ -34,7 +36,67 @@ export class ChartTokenCache {
   private readonly drawColorVariables = new Set<string>();
   private readonly drawCacheKeys = new Set<string>();
 
-  constructor(private readonly scope: Element) {}
+  constructor(private readonly scope: HTMLElement) {}
+
+  themeColors(legacyGrid: boolean): ChartThemeColors {
+    const cs = this.sync() ?? this.scope.style;
+    const grid =
+      (legacyGrid && cs.getPropertyValue('--grid-color').trim()) ||
+      cs.getPropertyValue('--lr-chart-grid-color').trim() ||
+      cs.getPropertyValue('--_lr-chart-grid-color').trim();
+    const tick =
+      cs.getPropertyValue('--lr-chart-tick-color').trim() ||
+      cs.getPropertyValue('--_lr-chart-tick-color').trim();
+    const legend =
+      cs.getPropertyValue('--lr-chart-legend-color').trim() ||
+      cs.getPropertyValue('--_lr-chart-legend-color').trim();
+    const tooltipBg =
+      cs.getPropertyValue('--lr-chart-tooltip-bg').trim() ||
+      cs.getPropertyValue('--_lr-chart-tooltip-bg').trim();
+    const tooltipText =
+      cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
+      cs.getPropertyValue('--_lr-chart-tooltip-color').trim();
+    return {
+      grid: this.resolve(grid, FALLBACK_GRID_COLOR),
+      tick: this.resolve(tick, FALLBACK_TICK_COLOR),
+      tickFontSize: this.styleNumber('--lr-chart-tick-font-size', '--_lr-chart-tick-font-size', FALLBACK_TICK_FONT_SIZE),
+      legend: this.resolve(legend, FALLBACK_LEGEND_COLOR),
+      tooltipBg: this.resolve(tooltipBg, FALLBACK_TOOLTIP_BG),
+      tooltipText: this.resolve(tooltipText, FALLBACK_TOOLTIP_TEXT),
+    };
+  }
+
+  styleColor(name: string, fallback: string): string {
+    const value = (this.scope.ownerDocument?.defaultView?.getComputedStyle(this.scope) ?? this.scope.style).getPropertyValue(name).trim();
+    return value ? this.resolve(value, fallback) : fallback;
+  }
+
+  styleNumber(name: string, fallbackToken: string | undefined, fallback: number): number {
+    const computed = (this.scope.ownerDocument?.defaultView?.getComputedStyle(this.scope) ?? this.scope.style);
+    const value =
+      computed.getPropertyValue(name).trim() || (fallbackToken ? computed.getPropertyValue(fallbackToken).trim() : '');
+    const direct = DIRECT_PIXEL_NUMBER.exec(value);
+    if (direct) {
+      const resolved = Number.parseFloat(direct[1]!);
+      if (Number.isFinite(resolved) && resolved >= 0) return resolved;
+    }
+    if (!value || !this.scope.ownerDocument?.defaultView) return fallback;
+
+    const resolved = this.length(value, () => {
+      const probe = this.scope.ownerDocument.createElement('span');
+      probe.hidden = true;
+      probe.setAttribute('aria-hidden', 'true');
+      probe.style.inlineSize = value;
+      (this.scope.shadowRoot ?? this.scope).append(probe);
+      try {
+        return Number.parseFloat(this.scope.ownerDocument.defaultView!.getComputedStyle(probe).inlineSize);
+      } finally {
+        probe.remove();
+      }
+    });
+    return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
+  }
+
 
   clear(): void {
     this.values.clear();

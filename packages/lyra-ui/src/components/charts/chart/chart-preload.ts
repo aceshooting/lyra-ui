@@ -20,11 +20,9 @@ export interface LyraChartPreloadResult {
   readonly boxPlot?: boolean;
 }
 
-let boxPlotPreload: Promise<boolean> | undefined;
-
 async function preloadBoxPlot(): Promise<boolean> {
-  const { loadBoxPlotAndRegister } = await import('./box-plot.class.js');
-  return (await loadBoxPlotAndRegister()) !== null;
+  const { loadBoxPlotPlugin } = await import('./box-plot-loader.js');
+  return (await loadBoxPlotPlugin()) !== null;
 }
 
 /**
@@ -41,7 +39,7 @@ export async function preloadCharts(
     options.dataLabels ? loadChartJsWithDataLabelsResult() : undefined,
     options.annotations ? loadChartJsWithAnnotationResult() : undefined,
     options.boxPlot
-      ? (boxPlotPreload ??= preloadBoxPlot())
+      ? preloadBoxPlot()
       : undefined,
   ]);
   return {

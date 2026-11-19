@@ -1,3 +1,7 @@
+import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
+import { compareNullable } from '../../../internal/sort-compare.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -11,7 +15,7 @@ import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
-import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import {
@@ -39,11 +43,12 @@ import {
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth, columnResizeWidth } from '../../../internal/column-resize.js';
+import { isRepeatedActivationKey, isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -599,6 +604,7 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-retry-request': CustomEvent<null>;
   'lr-selection-change': CustomEvent<Readonly<{ selectedRowKeys: readonly K[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ filterText: string }>>;
+  'lr-page-request': CustomEvent<Readonly<{ page: number }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
   'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
   'lr-column-resize-request': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
@@ -652,6 +658,7 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   unparameterized table, the default `K`. Not cancelable in either case: it announces a
  *   selection that has already changed rather than proposing one.
  * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { filterText }`.
+ * @event lr-page-request - Cancelable one-based page proposal with readonly `{ page }`.
  * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
  * @event lr-column-resize-request - Cancelable proposal before accepting a keyboard resize or
@@ -765,6 +772,10 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @slot error - Replaces the built-in failed-load state, including its retry button, while `error`
  *   is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as this slot's
  *   fallback content.
+ * @cssprop --lr-table-row-hover-bg - Hover background of the row.
+ * @cssprop --lr-table-row-active-bg - Active background of the row.
+ * @cssprop --lr-table-sortable-header-hover-bg - Hover background of the sortable header.
+ * @cssprop --lr-table-sortable-header-active-bg - Active background of the sortable header.
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
  *   resizable column without an explicit pixel `minWidth`. Inherits from theme ancestors.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
@@ -842,9 +853,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    dataGridCollapseRow: LYRA_DEFAULT_dataGridCollapseRow,
+    dataGridExpandRow: LYRA_DEFAULT_dataGridExpandRow,
     expand: LYRA_DEFAULT_expand,
     loadMore: LYRA_DEFAULT_loadMore,
     loading: LYRA_DEFAULT_loading,
@@ -859,6 +873,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
+    tableAdditionalColumns: LYRA_DEFAULT_tableAdditionalColumns,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,
     tableEditCell: LYRA_DEFAULT_tableEditCell,
@@ -901,15 +916,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     let length = 0;
     try {
       if (Array.isArray(value)) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-        const sourceLength = descriptor && 'value' in descriptor ? descriptor.value : 0;
-        if (
-          typeof sourceLength === 'number' &&
-          Number.isSafeInteger(sourceLength) &&
-          sourceLength >= 0
-        ) {
-          length = Math.min(sourceLength, MAX_TABLE_COLLECTION_ENTRIES);
-        }
+        length = Math.min(readOwnArrayLength(value) ?? 0, MAX_TABLE_COLLECTION_ENTRIES);
       }
     } catch {
       length = 0;
@@ -992,6 +999,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   get rowsTruncated(): boolean {
     return this._rowsTruncated;
   }
+  private _layout: 'auto' | 'fixed' = 'auto';
+
   /** Floor for the `<table>`'s `table-layout`. `'fixed'` forces the fixed algorithm even when no
    *  column declares a `width`, so every column shares the available width evenly and long cell
    *  content is clipped/wrapped instead of stretching its column. The default `'auto'` is only a
@@ -1004,8 +1013,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `priority`-hidden column via `[part='reveal-columns-button']` re-measures and changes all of
    *  them; and `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`
    *  (declare `width` instead when you need a specific column sized). */
-  private _layout: 'auto' | 'fixed' = 'auto';
-
   @property({ reflect: true, converter: TABLE_LAYOUT })
   get layout(): 'auto' | 'fixed' {
     return this._layout;
@@ -1017,7 +1024,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this._layout = normalized;
     this.requestUpdate('layout', old);
   }
+  /** Column key identifying the active sort. */
   @property({ attribute: 'sort-key' }) sortKey = '';
+  /** Direction of the active sort. */
   @property({ attribute: 'sort-dir' }) sortDir: TableSortDirection = 'asc';
   /** `'active'` preserves the active-column chevron alone. `'all'` also reserves the same icon
    *  space with a muted bidirectional indicator in inactive sortable headers, including on touch
@@ -1061,6 +1070,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  are omitted before every rendered/count/focus/action/event path; the first valid occurrence
    *  wins. */
   @property({ attribute: false }) rowKey?: (row: T) => K;
+  /** Allows no selection, one selected row or multiple selected rows. */
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
   /** Who owns `expandedRowKeys`, mirroring `selectionMode`'s three members. `'none'` (the default,
    *  and the behaviour this component shipped with) leaves the set entirely consumer-controlled:
@@ -1098,12 +1108,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this._selectedKeys = keySet(value ?? [], this.maxRows);
     this.requestUpdate('selectedRowKeys', previous);
   }
+  /** Shows the row filter field. */
   @property({ type: Boolean, reflect: true }) filterable = false;
+  /** Current row filter query. */
   @property({ attribute: 'filter-text' }) filterText = '';
+  /** A custom predicate for matching a row against the active query. */
   @property({ attribute: false }) filter?: (row: T, text: string) => boolean;
   /** Optional filter-copy overrides. Omission localizes the matching message key; supplied
    * strings, including the built-in English text or an empty string, render verbatim. */
   @property({ attribute: 'filter-label' }) filterLabel?: string;
+  /** Placeholder in the row filter field. */
   @property({ attribute: 'filter-placeholder' }) filterPlaceholder?: string;
   /** Forwarded to the filter input's, and (when the active column's `editType` is `'text'`, the
    *  default) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching
@@ -1117,6 +1131,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  omits the attribute (browser default). Named `autoCorrect` (capital `C`), not `autocorrect`,
    *  to dodge a TS `lib.dom.d.ts` collision -- same fix as `<lr-textarea>`/`<lr-model-select>`. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  /** Indicates that the table is waiting for rows. */
   @property({ type: Boolean, reflect: true }) loading = false;
   /** Optional loading-copy override. Omission localizes `tableLoading`; a supplied string renders verbatim. */
   @property({ attribute: 'loading-label' }) loadingLabel?: string;
@@ -1150,6 +1165,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  — reorders the *groups* by that value instead, since there is nothing to reorder within
    *  them. */
   @property({ attribute: false }) groupBy?: (row: T) => string | number;
+  /** Renders the label for a group of rows. */
   @property({ attribute: false }) groupLabel?: (key: string | number, rows: readonly T[]) => unknown;
   /** Maximum rows mounted per page. Defaults to 100 and normalizes into 1..500 so a bare table
    * never creates an unbounded row-by-column DOM projection. */
@@ -1159,6 +1175,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   @property({ type: Number, reflect: true }) page = 1;
   /** Total item count for server pagination; `-1` derives it from filtered rows. */
   @property({ type: Number, attribute: 'total-items' }) totalItems = -1;
+  /** Client mode slices rows locally. Server mode expects one supplied page. */
   @property({ reflect: true, attribute: 'pagination-mode' }) paginationMode: 'client' | 'server' = 'client';
   /** Marks server pagination as indeterminate -- the caller has no total item count, only whether
    *  one more page exists (`hasNext`). Forwarded to the nested `<lr-pagination>` as its own
@@ -1211,12 +1228,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  exactly like a column's `editLabel`/`cellTitle`. Consumer-owned text: it is used verbatim and
    *  never passed through the localization runtime.
    *
-   *  Omit it and every chevron in the table shares the same localized `expand`/`collapse` name,
-   *  which carries no row context. That is fine for a handful of rows, but each chevron is its own
-   *  Tab stop, so a long table otherwise announces the same two names over and over with no way to
-   *  tell the rows apart. There is no default row context to add here: this component has no
-   *  row-header notion to derive one from (`rowKey` is an opaque identity, not a label). */
+   *  The default localized name includes the row key. */
   @property({ attribute: false }) rowExpandLabel?: (row: T, expanded: boolean) => string;
+  private _expandedKeys = new Set<string | number>();
+
   /** Open/closed state, bounded to 10,000 keys and keyed the same way as `rowKey`/
    *  `selectedRowKeys`. Under the default `expansionMode: 'none'` the table never mutates this
    *  itself — it only reads it to decide which rows currently render `expandedContent`, and the
@@ -1227,7 +1242,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  facades; malformed and whitespace-only string keys are omitted and valid off-page keys remain
    *  controlled in every mode — filtering, sorting and pagination never clear them. Reassign a new
    *  set to update. */
-  private _expandedKeys = new Set<string | number>();
   @property({ attribute: false })
   get expandedRowKeys(): ReadonlySet<K> {
     // Re-typed at the public boundary for the same reason as `selectedRowKeys` above.
@@ -1268,6 +1282,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `rowTotal` is set **and** at least one column defines `footer` — otherwise there is no footer
    *  row for it to occupy, and this renders nothing. */
   @property({ attribute: false }) grandTotal?: (rows: readonly T[]) => unknown;
+  /** Shows the control for requesting more rows. */
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
   /** Controlled incremental-load state for the built-in continuation action. Keeps existing rows
    *  and the same focusable button mounted, marks the action busy with `aria-busy` and unavailable
@@ -1314,6 +1329,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** Empty-state heading override. Omitted, it localizes `noData` for a table with no rows and
    *  `noMatches` when rows exist but the filter excludes them all. */
   @property({ attribute: 'empty-heading' }) emptyHeading?: string;
+  /** Supporting text shown when the table has no rows. */
   @property({ attribute: 'empty-description' }) emptyDescription = '';
   private _emptySize?: LyraSize;
   /** Size of the built-in `[part='empty']` state on the shared size ladder: `s` and the steps
@@ -1338,8 +1354,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   @property({ attribute: 'empty-columns-heading' }) emptyColumnsHeading?: string;
   /** Description of the built-in no-columns state, rendered verbatim. */
   @property({ attribute: 'empty-columns-description' }) emptyColumnsDescription = '';
+  /** Tooltip for revealing lower-priority columns. */
   @property({ attribute: 'reveal-columns-label' }) revealColumnsLabel?: string;
-  /** Label of `[part='reveal-columns-button']` while priority columns are revealed. Omission
+  /** Tooltip for hiding lower-priority columns after they are revealed. Omission
    *  localizes `showFewerColumns`. */
   @property({ attribute: 'columns-hide-label' }) columnsHideLabel?: string;
 
@@ -1428,7 +1445,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   }
 
   private patchRovingTabStop(selector: string, attribute: string, value: string | null): void {
-    const next = value === null ? null : this.renderRoot?.querySelector<HTMLElement>(`${selector}[${attribute}="${CSS.escape(value)}"]`);
+    const next = value === null ? null : this.elementWithAttribute(selector, attribute, value);
     if (!next) return;
     const previous = this.renderRoot.querySelector<HTMLElement>(`${selector}[tabindex="0"]`);
     if (previous && previous !== next) previous.tabIndex = -1;
@@ -1572,17 +1589,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return Number.isFinite(parsed) ? parsed : undefined;
   }
 
-  /** The themed floor a column may be dragged/keyed down to, in used pixels. `rem`/`em` resolve
-   *  against the live root/own font size through the shared `resolveCssTokenLength()` -- a hardcoded
-   *  `* 16` would pick the wrong floor on a page whose root font-size isn't the browser default.
-   *  CSS math resolves in the host's theme scope. A token with no used pixel length here (a bare `%` with no
-   *  base) falls back to DEFAULT_RESIZE_MIN_WIDTH_PX rather than being read as raw pixels. */
   /** The themed resize minimum, resolved at most once per update and owner document instead of
    *  one `getComputedStyle()` per resizable column per render; cleared in `willUpdate()`. A `rem`
    *  token resolves against the owner document's root, so adoption into another document also
    *  re-resolves it. */
   private themedResizeMinWidth?: { readonly document: Document; readonly width: number };
 
+  /** The themed floor a column may be dragged/keyed down to, in used pixels. `rem`/`em` resolve
+   *  against the live root/own font size through the shared `resolveCssTokenLength()` -- a hardcoded
+   *  `* 16` would pick the wrong floor on a page whose root font-size isn't the browser default.
+   *  CSS math resolves in the host's theme scope. A token with no used pixel length here (a bare `%` with no
+   *  base) falls back to DEFAULT_RESIZE_MIN_WIDTH_PX rather than being read as raw pixels. */
   private minimumResizeWidth(column: TableColumn<T>): number {
     const explicit = this.parsePixelLength(column.minWidth);
     if (explicit !== undefined) return Math.max(0, explicit);
@@ -1683,7 +1700,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (this.resizedColumnWidths.get(state.key) === width) return;
     this._resizedColumnWidths = new Map(this.resizedColumnWidths).set(state.key, width);
     markVetoGuardWrite(this.resizeWriteGuard);
-    const column = this.renderRoot.querySelector<HTMLElement>(`col[data-col-key="${CSS.escape(state.key)}"]`);
+    const column = this.elementWithAttribute('col[data-col-key]', 'data-col-key', state.key);
     column?.style.setProperty('inline-size', `${width}px`);
     const table = this.renderRoot.querySelector('table');
     table?.setAttribute('data-layout', 'fixed');
@@ -1695,6 +1712,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   };
 
   private onResizeKeyDown = (event: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(event)) return;
     const handle = event.currentTarget as HTMLElement;
     const key = handle.dataset['colKey'];
     const column = key ? this.columnsByKey.get(key) : undefined;
@@ -1723,7 +1741,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       role="separator"
       tabindex="0"
       aria-orientation="vertical"
-      aria-label=${this.localize('resizeColumn', undefined, { label: column.label })}
+      aria-label=${this.localize('resizeColumn', undefined, { label: this.columnName(column) })}
       aria-valuemin=${aria.min}
       aria-valuenow=${aria.now}
       aria-valuetext=${this.resizeValueText(width)}
@@ -1792,7 +1810,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     else reverted.set(state.key, state.previousWidth);
     this.resizedColumnWidths = reverted;
     const column = this.columnsByKey.get(state.key);
-    const col = this.renderRoot.querySelector<HTMLElement>(`col[data-col-key="${CSS.escape(state.key)}"]`);
+    const col = this.elementWithAttribute('col[data-col-key]', 'data-col-key', state.key);
     const width = column ? this.renderedColumnWidth(column) : undefined;
     if (width) col?.style.setProperty('inline-size', width);
     else col?.style.removeProperty('inline-size');
@@ -2241,12 +2259,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     } else {
       const stringify = createFilterStringifier();
       const intlLocale = this.effectiveLocale;
-      const normalized = text.toLocaleLowerCase(intlLocale);
+      const normalized = prepareNeedle(text, intlLocale);
       entries = canonicalEntries.filter((entry) => {
         if (this.filter) return this.filter(entry.row, text);
         let haystack = entry.search?.locale === intlLocale ? entry.search.text : undefined;
         if (haystack === undefined) {
-          haystack = stringify(entry.row).toLocaleLowerCase(intlLocale);
+          haystack = foldSearchText(stringify(entry.row), intlLocale);
           if (isImmutableSearchRow(entry.row)) entry.search = { locale: intlLocale, text: haystack };
         }
         return haystack.includes(normalized);
@@ -2361,7 +2379,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     ) {
       return this.cachedSortedEntries;
     }
-    const collator = getCollator(locale, { numeric: true });
     const dir = this.sortDir === 'desc' ? -1 : 1;
     // Decorate/sort/undecorate: `sortValue()`/`cell()` runs once per row rather than once per
     // comparison, so a costly consumer accessor stays O(n) instead of O(n log n). A non-finite
@@ -2382,15 +2399,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       a: { value: string | number | null | undefined },
       b: { value: string | number | null | undefined }
     ): number => {
-      const av = a.value;
-      const bv = b.value;
-      // Missing values sort last in BOTH directions -- multiplying by `dir` here would float a
-      // block of blanks to the top the moment the user flipped to descending.
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
-      return collator.compare(String(av), String(bv)) * dir;
+      return compareNullable(a.value, b.value, dir, locale);
     };
     let sorted: TableRowEntry<T>[];
     const groupBy = this.groupBy;
@@ -2522,6 +2531,15 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private onNativeBlur = (event: FocusEvent): void => {
     event.stopPropagation();
     relayNativeEvent(this, event);
+  };
+
+  private onPaginationRequest = (event: CustomEvent<{ page: number }>): void => {
+    event.stopPropagation();
+    const { page, pageSize, rows, totalItems, paginationMode, filterText, unknownTotal, hasNext } = this;
+    if (this.emit('lr-page-request', Object.freeze({ page: event.detail.page }), { cancelable: true }).defaultPrevented ||
+      !this.isConnected || this.page !== page || this.pageSize !== pageSize || this.rows !== rows ||
+      this.totalItems !== totalItems || this.paginationMode !== paginationMode || this.filterText !== filterText ||
+      this.unknownTotal !== unknownTotal || this.hasNext !== hasNext) event.preventDefault();
   };
 
   private onPaginationChange = (event: Event): void => {
@@ -2855,10 +2873,13 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  reflects the rendered columns. */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.firstUpdateAnnouncementsReady && changed.has('filterText') && this.filterable) {
+      this.announcements.announcePolite(this.localize('viewerSearchMatchCount', undefined, { count: this.matchingEntries().length }));
+    }
     if (this.firstUpdateAnnouncementsReady && this.rowsTruncated &&
       (changed.has('rows') || changed.has('maxRows'))) {
       this.announcements.announcePolite(this.localize('tableRowLimit', undefined, {
-        count: getNumberFormat(this.effectiveLocale).format(this.rows.length),
+        count: this.formatLocaleNumber(this.rows.length), pluralCount: this.rows.length,
       }));
     }
     if (this.firstUpdateAnnouncementsReady && changed.has('loading') && this.loading) {
@@ -3041,6 +3062,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (!this.isConnected || this.rows !== rows || this.rowKey !== rowKey ||
       this.selectionMode !== selectionMode || this._selectedKeys !== _selectedKeys) return;
     if (selectionMode === 'single') {
+      if (_selectedKeys.size === 1 && _selectedKeys.has(selectedKey)) return;
       this.commitSelectedKeys(new Set([selectedKey]));
       const rowKeys = this.asKeyList(Object.freeze([selectedKey]));
       this.emit('lr-selection-change', Object.freeze({ selectedRowKeys: rowKeys }));
@@ -3315,7 +3337,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  measurement pass) but must never be treated as header cells here. */
   private visibleHeaders(): HTMLElement[] {
     return [...(this.renderRoot?.querySelectorAll<HTMLElement>('th[data-col-key]') ?? [])].filter(
-      (el) => el.offsetParent !== null
+      (el) => el.offsetParent !== null && isRovingTargetAvailable(el)
     );
   }
 
@@ -3370,8 +3392,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // preventDefault(), so a focused nested control keeps its native/own
     // Enter or Space activation instead of having it swallowed.
     if (eventInteractiveTarget(e, table)) return;
-    // Alt+Arrow (Cmd+Arrow on macOS) is browser history navigation; leave it to the platform.
-    if ((e.altKey || e.metaKey) && e.key.startsWith('Arrow')) return;
+    // Composition and Alt/Ctrl/Cmd shortcuts (history, zoom, copy) belong to the platform.
+    if (shouldIgnoreNavigationKey(e)) return;
+    if (isRepeatedActivationKey(e)) return;
     // Same th-scoping rationale as onTableClick above.
     const th = target.closest('th[data-col-key]') as HTMLElement | null;
     if (th) return this.onHeaderKeyDown(e, th);
@@ -3411,9 +3434,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         e.preventDefault();
         this.focusHeader(headers[headers.length - 1] ?? null);
         return;
+      case 'PageUp':
+      case 'PageDown': {
+        const rows = this.availableRows();
+        e.preventDefault();
+        this.focusRow(rows[e.key === 'PageUp' ? 0 : Math.min(rows.length - 1, this.normalizedPageSize - 1)] ?? null);
+        return;
+      }
       case 'ArrowDown': {
         e.preventDefault();
-        const rows = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')];
+        const rows = this.availableRows();
         const key = this.focusedRowKey();
         this.focusRow(rows.find((r) => r.dataset['rowKey'] === key) ?? rows[0] ?? null);
         return;
@@ -3421,6 +3451,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       default:
         return;
     }
+  }
+
+  private elementWithAttribute(selector: string, attribute: string, value: string): HTMLElement | undefined {
+    const root = this.renderRoot;
+    const css = this.ownerDocument.defaultView?.CSS;
+    if (css?.escape) return root.querySelector<HTMLElement>(`${selector}[${attribute}="${css.escape(value)}"]`) ?? undefined;
+    return [...root.querySelectorAll<HTMLElement>(selector)].find(element => element.getAttribute(attribute) === value);
+  }
+
+  private availableRows(): HTMLElement[] {
+    return [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')].filter((element) => isRovingTargetAvailable(element));
   }
 
   /** The editable (`editTrigger: 'double-click'`) `<td>` that owns `target`, if any -- i.e. `target`
@@ -3442,7 +3483,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  below can never strand the cell-level focus stop on a target that cannot actually take it. */
   private editableCellsInRow(tr: HTMLElement): HTMLElement[] {
     return [...tr.querySelectorAll<HTMLElement>('td[data-editable]')].filter(
-      (td) => td.offsetParent !== null && !td.inert && !td.closest('[inert]')
+      (td) => td.offsetParent !== null && isRovingTargetAvailable(td)
     );
   }
 
@@ -3469,10 +3510,18 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       this.onRowLateralKeyDown(e, tr, cell);
       return;
     }
-    const bodyRows = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')];
+    const bodyRows = this.availableRows();
     const index = bodyRows.indexOf(tr);
     if (index < 0) return;
     switch (e.key) {
+      case 'PageUp':
+      case 'PageDown': {
+        e.preventDefault();
+        const step = this.normalizedPageSize;
+        const next = finiteInteger(index + (e.key === 'PageDown' ? step : -step), index, 0, bodyRows.length - 1);
+        this.focusRow(bodyRows[next]!);
+        return;
+      }
       case 'ArrowDown':
         e.preventDefault();
         this.focusRow(bodyRows[Math.min(bodyRows.length - 1, index + 1)] ?? null);
@@ -3591,10 +3640,15 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return nothing;
   }
 
+  /** The column's label, or its key when the label is blank, so a control never reads unnamed. */
+  private columnName(col: TableColumn<T>): string {
+    return normalizeLabel(col.ariaLabel) ?? normalizeLabel(col.label) ?? col.key;
+  }
+
   private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
     const type = col.editType ?? 'text';
     const value = this.editorValue(row, col);
-    const label = col.editLabel?.(row) ?? this.localize('tableEditCell', undefined, { column: col.label });
+    const label = col.editLabel?.(row) ?? this.localize('tableEditCell', undefined, { column: this.columnName(col) });
     const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
     const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
     if (type === 'select') {
@@ -3777,8 +3831,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // Skeleton mode deliberately falls through to the full grid render below instead of returning
     // its own shell here: its whole point is that the <colgroup>/<thead>/filter/pagination chrome
     // stays put, which is only achievable by rendering the real table.
-    const hasHostAriaLabel = this.hasAttribute('aria-label');
-    const gridAriaLabel = this.hostAccessibleLabel ?? nothing;
+    const gridAriaLabel = this.hostAccessibleLabel === '' ? '' : normalizeLabel(this.hostAccessibleLabel) ?? nothing;
 
     // A cold load is exactly the case where `rows` is still empty, so skeleton mode must not take
     // either empty-state branch -- "no data" is a *result*, and the load has not produced one yet.
@@ -3851,7 +3904,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
             part="table"
             role="grid"
             aria-label=${gridAriaLabel}
-            aria-labelledby=${!hasHostAriaLabel && this.caption
+            aria-labelledby=${gridAriaLabel === nothing && this.caption
               ? this.captionId
               : nothing}
             aria-multiselectable=${String(this.selectionMode === 'multiple')}
@@ -3887,12 +3940,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                 ${this.columns.map((col) => {
                   const active = Boolean(col.sortable) && this.sortKey === col.key;
                   const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
-                  // An explicit `ariaLabel` always wins; otherwise a blank/whitespace-only `label`
-                  // (the only case with no accessible name from rendered content) falls back to
-                  // the raw column `key` for the accessible name alone -- the visible header stays
-                  // blank, exactly as a deliberate icon-only column intends.
-                  const headerAriaLabel =
-                    col.ariaLabel ?? (typeof col.label === 'string' && col.label.trim().length === 0 ? col.key : undefined);
+                  const headerAriaLabel = normalizeLabel(col.ariaLabel) ?? (normalizeLabel(col.label) ? undefined : col.key);
                   return html`<th
                     part="header-cell"
                     role="columnheader"
@@ -3960,7 +4008,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                                       part="row-expand-toggle"
                                       aria-expanded=${String(rowExpanded)}
                                       aria-label=${this.rowExpandLabel?.(row, rowExpanded) ??
-                                      this.localize(rowExpanded ? 'collapse' : 'expand')}
+                                      this.localize(rowExpanded ? 'dataGridCollapseRow' : 'dataGridExpandRow', undefined, { row: String(key) })}
                                       @click=${this.onExpandToggleClick}
                                     >
                                       <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
@@ -4084,20 +4132,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         ${tableContent}
         ${this.rowsTruncated
           ? html`<div part="row-limit">${this.localize('tableRowLimit', undefined, {
-              count: getNumberFormat(this.effectiveLocale).format(this.rows.length),
+              count: this.formatLocaleNumber(this.rows.length), pluralCount: this.rows.length,
             })}</div>`
           : nothing}
         ${this.priorityToggleAvailable
           ? html`<button
               part="reveal-columns-button"
               type="button"
-              aria-pressed=${this.priorityColumnsVisible ? 'true' : 'false'}
-              @click=${this.toggleColumns}
-            >
-              ${this.priorityColumnsVisible
+              aria-expanded=${this.priorityColumnsVisible ? 'true' : 'false'}
+              title=${this.priorityColumnsVisible
                 ? this.localizedOverride('showFewerColumns', this.columnsHideLabel)
                 : this.localizedOverride('showAllColumns', this.revealColumnsLabel)}
-            </button>`
+              @click=${this.toggleColumns}
+            >${this.localize('tableAdditionalColumns')}</button>`
           : nothing}
         ${this.hasMore
           ? html`<button part="more-button" type="button"
@@ -4117,7 +4164,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               .total=${this.serverUnknownTotal ? -1 : this.matchingTotalItems}
               .hasNext=${this.hasNext}
               .strings=${this.strings}
-              @lr-before-page-change=${this.stopOwnedEvent}
+              @lr-before-page-change=${this.onPaginationRequest}
               @lr-activate=${this.stopOwnedEvent}
               @lr-page-change=${this.onPaginationChange}
             ></lr-pagination>`

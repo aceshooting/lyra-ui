@@ -8,6 +8,7 @@ import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
+  readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
 
 const MAX_OBSERVER_ATTRIBUTE_FILTERS = 10_000;
@@ -15,17 +16,10 @@ const MAX_OBSERVER_ATTRIBUTE_FILTERS = 10_000;
 function normalizedAttributeFilter(value: unknown): readonly string[] {
   try {
     if (!Array.isArray(value)) return Object.freeze([]);
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return Object.freeze([]);
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return Object.freeze([]);
     const values: string[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_OBSERVER_ATTRIBUTE_FILTERS); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_OBSERVER_ATTRIBUTE_FILTERS); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
       if (
         entry === MISSING_OWN_DATA_DESCRIPTOR ||

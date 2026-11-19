@@ -1036,3 +1036,26 @@ describe('numeric formatter engine rejection fallbacks', () => {
     expect(rejectedOptions).to.have.length(1);
   });
 });
+
+it('isolates formatted number and byte text from the surrounding direction', async () => {
+  const root = (await fixture(html`
+    <div dir="rtl">
+      <lr-format-number value="-1.5"></lr-format-number>
+      <lr-format-bytes value="1536"></lr-format-bytes>
+    </div>
+  `)) as HTMLElement;
+  for (const tag of ['lr-format-number', 'lr-format-bytes']) {
+    const host = root.querySelector(tag) as LyraFormatNumber | LyraFormatBytes;
+    await host.updateComplete;
+    const isolate = host.shadowRoot!.querySelector('bdi')!;
+    expect(isolate).to.exist;
+    expect(getComputedStyle(isolate).unicodeBidi).to.match(/isolate/);
+  }
+});
+
+it('projects the number fallback slot instead of a bidi isolate for a non-finite value', async () => {
+  const el = await fixture<LyraFormatNumber>(html`<lr-format-number .value=${NaN}>Unknown</lr-format-number>`);
+  const slot = el.shadowRoot!.querySelector('slot')!;
+  expect(slot.assignedNodes().map(node => node.textContent).join('')).to.equal('Unknown');
+  expect(el.shadowRoot!.querySelector('bdi') === null).to.equal(true);
+});

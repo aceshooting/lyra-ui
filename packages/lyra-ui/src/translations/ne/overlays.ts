@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'अप्सन',
   kbdAltWord: 'अल्ट',
   kbdShiftWord: 'सिफ्ट',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ne', strings);

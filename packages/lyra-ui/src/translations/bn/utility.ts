@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count}টি কী',
   },
   jsonViewerLimit: 'শুধু প্রথম {count}টি JSON নোড ও {depth}টি নেস্টিং স্তর দেখানো ও খোঁজা হচ্ছে।',
+  jsonViewerLabel: 'JSON',
   pollPause: 'বিরতি দিন',
   pollResume: 'আবার শুরু করুন',
   pollRefresh: 'এখন রিফ্রেশ করুন',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'মাস',
   knownDateYear: 'বছর',
   exportFormatMenuLabel: '{label} ফরম্যাট',
+  exportFailed: 'এক্সপোর্ট করা যায়নি',
   mentionSuggestions: 'প্রস্তাবনা',
   mentionResultCount: {
     one: '{count}টি প্রস্তাবনা',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'মেনশনের জন্য শুধু প্রথম 10,000টি প্রস্তাবনা পাওয়া যায়।',
   diffViewHighlightLimit: 'দীর্ঘ কোড সিনট্যাক্স হাইলাইটিং ছাড়াই দেখানো হয়।',
+  diffViewLabel: 'পার্থক্য',
 };
 
 registerLyraLocale('bn', strings);

@@ -23,25 +23,33 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
+  [part='base'][data-shortcut] {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
   [part='key'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+    /* Key names are LTR notation: isolate so Latin glyphs and punctuation keep their order under dir=rtl. */
+    direction: ltr;
+    unicode-bidi: isolate;
     min-inline-size: var(--lr-size-1-5em);
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     padding: var(--lr-size-0-0625rem) var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-border-width-thin) solid var(--lr-kbd-key-border-color, var(--lr-color-border-subtle));
     border-radius: calc(var(--lr-radius) * 0.6);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    background: var(--lr-kbd-key-bg, var(--lr-color-surface));
+    color: var(--lr-kbd-key-color, var(--lr-color-text));
     font-weight: var(--lr-font-weight-medium);
     /* A bottom-weighted inset shadow reads as a slightly-raised physical key cap rather than a
        flat label chip, echoing lr-chip/lr-checkbox's own bordered-box treatment. Its offset tracks
        the real border's own width (the border-width ladder, not a generic size token) so the two
        lines retheme together and keep reading as one continuous raised edge. */
-    box-shadow: inset 0 calc(-1 * var(--lr-border-width-thin)) 0 var(--lr-color-border-subtle);
+    box-shadow: inset 0 calc(-1 * var(--lr-border-width-thin)) 0 var(--lr-kbd-key-border-color, var(--lr-color-border-subtle));
   }
 
   .sep {

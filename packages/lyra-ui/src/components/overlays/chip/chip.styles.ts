@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -299,6 +300,12 @@ export const styles = css`
     [part='toggle-button'],
     :host([toggleable]:not([removable])) [part='base'] {
       transition: none !important;
+    }
+  }
+  ${forcedColorsPart(":host([toggleable][selected]:not([removable])) [part='base']")}
+  @media (forced-colors: active) {
+    :host([toggleable][selected]:not([removable])) [part='toggle-button'] {
+      color: inherit;
     }
   }
 `;

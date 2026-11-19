@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ga {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'Eochair na cairte',
   chartSeriesNoData: '{label}: gan sonraí',
   chartSummaryWithData: 'Cairt de chineál {type}. {summaries}.',
   chartSummaryEmpty: 'Cairt de chineál {type} gan sonraí.',

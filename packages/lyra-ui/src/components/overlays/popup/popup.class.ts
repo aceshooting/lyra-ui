@@ -18,7 +18,7 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from '../overlay/overlay-arrow.js';
-import { observeOverlayAnchorRoots } from '../overlay/overlay-shared.js';
+import { observeOverlayAnchorRoots } from '../../../internal/overlay-shared.js';
 import { styles } from './popup.styles.js';
 
 export type {
@@ -223,7 +223,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
 
   /** Keeps the arrow this far from the popup's corners, in pixels. */
-  @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 10;
+  @property({ attribute: 'arrow-padding', converter: declaredDefaultConverter(10) }) arrowPadding = 10;
 
   /**
    * Anchor against an arbitrary rectangle rather than an element — a canvas hit, a chart datum, a

@@ -14,6 +14,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
+  'chartLegend',
   'boxPlot',
   'boxPlotData',
   'boxPlotMax',
@@ -33,6 +34,7 @@ expectLocaleFallback('de-DE', [
   'loading',
 ]);
 expectLocaleFallback('ar-EG', [
+  'chartLegend',
   'boxPlot',
   'boxPlotData',
   'boxPlotMax',
@@ -1192,7 +1194,7 @@ it('honors independent --lr-box-plot-border-color-N/--lr-box-plot-fill-color-N o
   expect(dataset.borderColor).to.equal('rgb(9, 9, 9)');
   expect(dataset.backgroundColor).to.equal('rgb(8, 8, 8)');
 
-  // The legend swatch tracks the fill override, matching what the canvas paints.
+  await waitUntil(() => !!el.shadowRoot!.querySelector('[part~="legend-swatch"]'), 'legend swatch did not render');
   const swatch = el.shadowRoot!.querySelector('[part~="legend-swatch"]') as HTMLElement;
   expect(swatch.style.backgroundColor).to.equal('rgb(8, 8, 8)');
 });

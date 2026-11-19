@@ -2009,3 +2009,14 @@ it('leaves navigation keys to the page while the read-only rating is focused', a
   expect(handled).to.deep.equal([]);
   expect(el.value).to.equal(3);
 });
+
+it('leaves browser shortcuts and composing navigation keys uncanceled', async () => {
+  const el = await fixture<LyraRating>(html`<lr-rating value="2"></lr-rating>`);
+  await focusByKeyboard(el);
+  for (const modifier of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }, { keyCode: 229 }]) {
+    const event = new KeyboardEvent('keydown', { key: 'End', cancelable: true, ...modifier });
+    el.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+    expect(el.value).to.equal(2);
+  }
+});

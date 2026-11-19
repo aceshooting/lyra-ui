@@ -1,8 +1,7 @@
 import type { LyraHistogramDistribution } from '../../../utilities/data-preparation.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../../../internal/localization-runtime.js';
-import { binValues, normalizeHistogramBinCount, type HistogramBucket } from './histogram-bin.js';
+import { histogramBucketIndex, histogramBucketsInDomain, histogramDomain, histogramNumberFormat, normalizeHistogramBinCount, type HistogramBucket } from './histogram-bin.js';
 
 interface HistogramBucketSource {
   readonly distribution?: LyraHistogramDistribution | null;
@@ -77,9 +76,7 @@ export function distributionBuckets(distribution: LyraHistogramDistribution, loc
   return Object.freeze(distribution.binCounts.map((count, index) => {
     const lo = distribution.edges[index]!, hi = distribution.edges[index + 1]!;
     const width = hi - lo;
-    const formatter = getNumberFormat(resolveActiveOrExplicitLocale(locale), {
-      maximumFractionDigits: Math.min(20, Math.max(0, 1 - Math.floor(Math.log10(width)))) || 0,
-    });
+    const formatter = histogramNumberFormat(resolveActiveOrExplicitLocale(locale), width);
     const range = (formatter as Intl.NumberFormat & { formatRange?: (start: number, end: number) => string }).formatRange;
     const label = range ? range.call(formatter, lo, hi) : `${formatter.format(lo)}–${formatter.format(hi)}`;
     return Object.freeze({ label: `\u2066${label}\u2069`, count });
@@ -94,16 +91,36 @@ export function invalidateHistogramBuckets(el: HistogramBucketSource): void {
   distributionCache.delete(el);
 }
 
-// Both the `labels` and `datasets` accessors below derive from the same
-// `binValues(values, bins)` pass, and `LyraChart` reads `datasets` more than
-// once per `draw()`/`render()` — memoize the last bucketing result per
-// instance (keyed by reference equality on `values`/`bins`, matching Lit's
-// own change detection for the `values` array) so an unrelated property
-// change doesn't re-run the O(n) bucketing loop from scratch on every access.
-const bucketCache = new WeakMap<
-  HistogramBucketSource,
-  { values: readonly number[]; bins: number; locale: string; buckets: HistogramBucket[] }
->();
+interface RawHistogramCache {
+  values: readonly number[];
+  bins: number;
+  locale: string;
+  domain: readonly [number, number];
+  buckets: HistogramBucket[];
+}
+const bucketCache = new WeakMap<HistogramBucketSource, RawHistogramCache>();
+
+/** Keep range labels and count only the changed samples while both domain endpoints survive. */
+export function extendHistogramBuckets(
+  el: HistogramBucketSource, previous: readonly number[], removed: number, added: readonly number[],
+): void {
+  const cache = bucketCache.get(el);
+  if (!cache || cache.values !== previous || !cache.buckets.length) return;
+  const [lo, hi] = cache.domain;
+  for (let index = 0; index < removed; index++) {
+    const value = previous[index];
+    if (value === lo || value === hi) return;
+  }
+  if (added.some(value => value < lo || value > hi)) return;
+  const deltas = new Int32Array(cache.buckets.length);
+  for (let index = 0; index < removed; index++) {
+    const value = previous[index]!;
+    if (Number.isFinite(value)) deltas[histogramBucketIndex(value, lo, hi, cache.bins)]!--;
+  }
+  for (const value of added) deltas[histogramBucketIndex(value, lo, hi, cache.bins)]!++;
+  const buckets = cache.buckets.map((bucket, i) => deltas[i] ? { label: bucket.label, count: bucket.count + deltas[i]! } : bucket);
+  bucketCache.set(el, { ...cache, values: el.values, buckets });
+}
 
 export function binnedBuckets(el: HistogramBucketSource): HistogramBucket[] {
   const locale = (el as unknown as { effectiveLocale: string }).effectiveLocale;
@@ -131,7 +148,9 @@ export function binnedBuckets(el: HistogramBucketSource): HistogramBucket[] {
   ) {
     return cached.buckets;
   }
-  const buckets = binValues(el.values, bins, locale);
-  bucketCache.set(el, { values: el.values, bins, locale, buckets });
+  const finite = el.values.filter(Number.isFinite);
+  const domain = histogramDomain(finite);
+  const buckets = histogramBucketsInDomain(finite, bins, domain, locale);
+  bucketCache.set(el, { values: el.values, bins, locale, domain, buckets });
   return buckets;
 }

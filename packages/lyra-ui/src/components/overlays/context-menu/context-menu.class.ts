@@ -1,3 +1,4 @@
+import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -477,17 +478,11 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
       if (end.pointerId === press.pointerId) this.endPress(press);
     };
     const onScroll = (): void => this.endPress(press);
-    const listen = { capture: true, passive: true } as const;
-    ownerDocument.addEventListener('pointermove', onMove, listen);
-    ownerDocument.addEventListener('pointerup', onEnd, listen);
-    ownerDocument.addEventListener('pointercancel', onEnd, listen);
-    ownerDocument.addEventListener('scroll', onScroll, listen);
-    press.release = () => {
-      ownerDocument.removeEventListener('pointermove', onMove, listen);
-      ownerDocument.removeEventListener('pointerup', onEnd, listen);
-      ownerDocument.removeEventListener('pointercancel', onEnd, listen);
-      ownerDocument.removeEventListener('scroll', onScroll, listen);
-    };
+    press.release = listenUntilPointerEnd(ownerDocument, onEnd, {
+      capture: true,
+      passive: true,
+      extra: { pointermove: event => onMove(event as PointerEvent), scroll: onScroll },
+    });
     press.timer = view.setTimeout(() => this.onPressTimer(press), LyraContextMenu.longPressDelayMs);
     this.press = press;
   };

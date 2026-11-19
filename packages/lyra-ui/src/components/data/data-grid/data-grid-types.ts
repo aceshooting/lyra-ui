@@ -288,6 +288,13 @@ export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   'lr-search-change': CustomEvent<Readonly<{ searchTerm: string }>>;
   'lr-group-collapse': CustomEvent<Readonly<DataGridGroupDetail<Row>>>;
   'lr-group-expand': CustomEvent<Readonly<DataGridGroupDetail<Row>>>;
+  'lr-activate': CustomEvent<Readonly<{ value: number }>>;
+  'lr-before-page-change': CustomEvent<DataGridPageDetail>;
+  'lr-selection-request': CustomEvent<Readonly<{ selectedRowKeys: readonly DataGridKey[] }>>;
+  'lr-selection-change': CustomEvent<Readonly<DataGridSelectionDetail<Row>>>;
+  'lr-row-expand-request': CustomEvent<Readonly<DataGridRowDetail<Row> & { expanded: boolean }>>;
+  'lr-row-expand-toggle': CustomEvent<Readonly<DataGridRowDetail<Row> & { expanded: boolean }>>;
+  'lr-sort': CustomEvent<Readonly<{ phase: 'commit'; sortKey: string; sortDir: 'asc' | 'desc' | null; sort: DataGridSortingState }>>;
   'lr-page-change': CustomEvent<DataGridPageDetail>;
   'lr-row-collapse': CustomEvent<DataGridRowDetail<Row>>;
   'lr-row-expand': CustomEvent<DataGridRowDetail<Row>>;

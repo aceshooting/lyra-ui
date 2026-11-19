@@ -129,6 +129,7 @@ it('refreshes mutable distribution counts, labels and locale strings on coalesce
   source.binCounts = [4,1]; element.distribution = source; await element.updateComplete;
   expect(element.chart!.data.datasets[0]!.data).to.deep.equal([4,1]);
   expectLocaleFallback('de', [
+  'chartLegend',
     'histogramDistributionSummary', 'histogramDistributionRange', 'chartSummarySeparator',
     'chart', 'chartData', 'chartCategory',
   ]);

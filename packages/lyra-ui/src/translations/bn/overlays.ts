@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'অপশন',
   kbdAltWord: 'অল্ট',
   kbdShiftWord: 'শিফট',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('bn', strings);

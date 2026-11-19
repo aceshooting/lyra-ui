@@ -1,3 +1,4 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -6,8 +7,7 @@ import { composedParentElement } from '../../../internal/a11y.js';
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -39,6 +39,7 @@ import {
   TOAST_REGION_REJECT,
   TOAST_REGION_SET_ACTIVE,
   toastRegionControllerFor,
+  type NotificationDismissReason,
   type ToastRegionController,
 } from './toast-region-protocol.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -87,6 +88,8 @@ export interface LyraToastItemEventMap {
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;
+  'lr-close-request': CustomEvent<{ reason: NotificationDismissReason }>;
+  'lr-close': CustomEvent<{ reason: NotificationDismissReason }>;
   'lr-after-hide': CustomEvent<null>;
 }
 /**
@@ -113,6 +116,8 @@ export interface LyraToastItemEventMap {
  * @event lr-hide - The item is about to hide, including an auto-dismiss expiry. Cancelable —
  *   `preventDefault()` leaves it visible. A vetoed auto-dismiss restarts the full current
  *   normalized duration; a vetoed manual `hide()` leaves any active countdown untouched.
+ * @event lr-close-request - Cancelable dismissal request after lr-hide. Detail contains the dismissal reason.
+ * @event lr-close - Dismissal committed. Detail contains the same reason.
  * @event lr-after-hide - Fired after the hide animation completes (item then removes itself).
  * @csspart toast-item - The outer container.
  * @csspart accent - The colored accent bar.
@@ -181,7 +186,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   /** Live visible toast surface, or `null` before the render root is populated. */
   get toastItemElement(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part="toast-item"]');
+    return this.renderRoot?.querySelector<HTMLElement>('[part="toast-item"]') ?? null;
   }
 
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
@@ -212,8 +217,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private elapsedMs = 0;
   private startedAt = 0;
   private timerStarted = false;
-  private showRafId?: number;
-  private showRafOwner?: Window;
+  private readonly showFrame = new OwnedFrame(this);
   private showGeneration = 0;
   private showCompletionGeneration = 0;
   private showCompletionRunning = false;
@@ -234,8 +238,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.bindMessageObserverTargets();
     this.recomputeMessageText();
   });
-  private politeSink?: AnnouncementSink;
-  private assertiveSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   private lastAnnouncedMessage = '';
   private readonly onMessageSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
@@ -334,14 +337,6 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.politeSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
     const MutationObserverCtor =
       this.ownerDocument.defaultView?.MutationObserver;
     this.messageObserver = MutationObserverCtor
@@ -497,29 +492,15 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.showGeneration += 1;
     if (this.showAccepted && !this.afterShowEmitted)
       this.showCompletionGeneration += 1;
-    if (this.showRafId !== undefined) {
-      this.showRafOwner?.cancelAnimationFrame(this.showRafId);
-      this.showRafId = undefined;
-      this.showRafOwner = undefined;
-    }
+    this.showFrame.cancel();
     this.cancelShowAnimation?.();
     this.cancelShowAnimation = undefined;
   }
 
   private scheduleShow(): void {
-    if (this.showRafId !== undefined || this.hiding || !this.admitted) return;
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
+    if (this.showFrame.pending || this.hiding || !this.admitted) return;
     const generation = ++this.showGeneration;
-    this.showRafOwner = view;
-    this.showRafId = view.requestAnimationFrame(() => {
-      this.showRafId = undefined;
-      this.showRafOwner = undefined;
-      // hide() may have already run synchronously before this frame fired
-      // (e.g. a caller creates the toast and immediately dismisses it) --
-      // don't resurrect the show sequence on top of an already-hiding item.
-      if (this.hiding || !this.admitted || generation !== this.showGeneration)
-        return;
+    this.showFrame.schedule(() => {
       void this.prepareShow(generation);
     });
   }
@@ -624,10 +605,6 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.messageObserver?.disconnect();
     this.messageObserver = undefined;
     this.messageUpgrades.disconnect();
-    this.politeSink?.release();
-    this.politeSink = undefined;
-    this.assertiveSink?.release();
-    this.assertiveSink = undefined;
     if (this.hiding && !this.afterHideEmitted) this.hideGeneration++;
     this.cancelPendingShow();
     this.cancelHideAnimation?.();
@@ -677,7 +654,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // not silently never schedule anything. It is still a countdown-driven
     // request, so a veto restarts a full duration just like a timeout expiry.
     if (remaining <= 0) {
-      void this.requestHide('timer');
+      void this.requestHide('timeout');
       return;
     }
     const view = this.ownerDocument.defaultView;
@@ -690,7 +667,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       if (this.timer !== timer || this.timerOwner !== view) return;
       this.timer = undefined;
       this.timerOwner = undefined;
-      void this.requestHide('timer');
+      void this.requestHide('timeout');
     }, remaining);
     this.timer = timer;
   };
@@ -913,10 +890,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       : message;
     if (!force && announcement === this.lastAnnouncedMessage) return;
     this.lastAnnouncedMessage = announcement;
-    (isAssertiveVariant(this.variant)
-      ? this.assertiveSink
-      : this.politeSink
-    )?.announce(announcement);
+    this.announcements.announce(announcement, isAssertiveVariant(this.variant) ? 'assertive' : 'polite');
   }
 
   private get closeLabel(): string {
@@ -941,10 +915,10 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   /** Hide with animation, then remove from the DOM. A vetoed manual request leaves the current
    * countdown untouched; a vetoed auto-dismiss request restarts the full normalized duration. */
   async hide(): Promise<void> {
-    await this.requestHide('manual');
+    await this.requestHide('programmatic');
   }
 
-  private requestHide(source: 'manual' | 'timer'): Promise<void> {
+  private requestHide(reason: NotificationDismissReason): Promise<void> {
     if (this.hideRequest) return this.hideRequest;
     if (this.hiding) return Promise.resolve();
     let resolve!: () => void;
@@ -960,8 +934,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // instead of half-dismissed. A timeout has no remaining countdown once its callback runs, so
     // restart it from the full current duration after a veto; repeated vetoes therefore retry at
     // deterministic intervals instead of making the toast immortal.
-    if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
-      if (source === 'timer') {
+    if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented ||
+        this.emit('lr-close-request', { reason }, { cancelable: true }).defaultPrevented) {
+      if (reason === 'timeout') {
         this.elapsedMs = 0;
         this.startedAt = 0;
         // Recreate the SVG animation in the same transaction as the timer reset. Merely changing
@@ -991,6 +966,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.removeAttribute('data-visible');
     this.bindMessageObserverTargets();
     this.setAttribute('data-hiding', '');
+    this.emit('lr-close', { reason });
     void this.completeHide().then(
       () => {
         if (this.hideRequest === completion) this.hideRequest = undefined;
@@ -1139,7 +1115,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
           type="button"
           aria-label=${this.closeLabel}
           aria-disabled=${this.hiding ? 'true' : 'false'}
-          @click=${() => void this.hide()}
+          @click=${() => void this.requestHide('close-button')}
         >
           ${this.renderCloseControl()}
         </button>

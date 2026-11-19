@@ -386,3 +386,17 @@ describe('provider copy clipboard failures', () => {
     });
   }
 });
+
+it('retires a pending legacy scroll when its search listener installs a provider', async () => {
+  const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer max-height="40px"
+    .data=${Array.from({ length: 40 }, (_, i) => `value-${i}`)}></lr-json-viewer>`);
+  const previousBody = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  await el.runSearch('value-39');
+  const { provider } = source(3);
+  el.addEventListener('lr-search-change', () => { el.treeSource = provider; }, { once: true });
+  await el.searchNext();
+  await ready(el);
+  expect(previousBody.isConnected).to.equal(false);
+  expect(previousBody.style.scrollBehavior).to.equal('');
+  expect(previousBody.scrollTop).to.equal(0);
+});

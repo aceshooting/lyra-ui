@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: '{count}個鍵',
   },
   jsonViewerLimit: '僅顯示和搜尋前{count}個 JSON 節點及{depth}層巢狀。',
+  jsonViewerLabel: 'JSON',
   pollPause: '暫停',
   pollResume: '繼續',
   pollRefresh: '立即重新整理',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: '月',
   knownDateYear: '年',
   exportFormatMenuLabel: '{label}格式',
+  exportFailed: '匯出失敗',
   mentionSuggestions: '建議',
   mentionResultCount: {
     other: '{count}項建議',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: '僅提供前 10,000 個提及候選項目。',
   diffViewHighlightLimit: '較長的程式碼會以不含語法醒目提示的方式顯示。',
+  diffViewLabel: '差異',
 };
 
 registerLyraLocale('zh-TW', strings);

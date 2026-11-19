@@ -248,6 +248,56 @@ it('resets the active row to the top match whenever query changes', async () => 
   expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
 });
 
+it('leaves modified and composing keys to the browser', async () => {
+  const el = await openWithItems();
+  for (const init of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }, { isComposing: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true, ...init });
+    expect(el.handleKeyDown(event)).to.equal(false);
+    expect(event.defaultPrevented).to.equal(false);
+  }
+  expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
+});
+
+it('treats a throwing filter as no match instead of breaking the render', async () => {
+  const el = await openWithItems();
+  el.filter = (item) => {
+    if (item.suggestionId === 'bob') throw new Error('filter failed');
+    return true;
+  };
+  el.query = 'x';
+  await el.updateComplete;
+  expect(el.filteredItems.map((i) => i.suggestionId)).to.not.include('bob');
+  expect(el.filteredItems.length).to.be.greaterThan(0);
+});
+
+it('falls back to the localized listbox name for a whitespace-only label', async () => {
+  const el = await openWithItems();
+  el.label = '   ';
+  await el.updateComplete;
+  expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions');
+});
+
+it('keeps only option children inside the listbox when results overflow the limit', async () => {
+  const many = Array.from({ length: 80 }, (_, i) => ({ suggestionId: `s${i}`, label: `Person ${i}` }));
+  const el = await openWithItems(many);
+  const more = el.shadowRoot!.querySelector('[part="more-results"]') as HTMLElement;
+  expect(more).to.exist;
+  expect(more.getAttribute('role')).to.equal('option');
+  expect(more.getAttribute('aria-disabled')).to.equal('true');
+});
+
+it('does not close when a select listener already closed it', async () => {
+  const el = await openWithItems();
+  el.addEventListener('lr-mention-select', () => {
+    el.open = false;
+  });
+  el.handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+});
+
 it('returns false from handleKeyDown while closed', async () => {
   const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   const consumed = el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));

@@ -425,7 +425,7 @@ it('renders lr-empty when columns is empty, even with non-empty rows', async () 
   expect(el.shadowRoot!.querySelector('table') == null).to.equal(true);
 });
 
-it('swaps the reveal-columns-button label between revealColumnsLabel and columnsHideLabel on toggle', async () => {
+it('swaps the reveal-columns-button tooltip between revealColumnsLabel and columnsHideLabel on toggle', async () => {
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
@@ -433,15 +433,15 @@ it('swaps the reveal-columns-button label between revealColumnsLabel and columns
   await waitUntil(() => el.hasHiddenPriorityColumns === true);
 
   const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
-  expect(revealButton.textContent!.trim()).to.equal('Show all columns');
+  expect(revealButton.title).to.equal('Show all columns');
 
   revealButton.click();
   await el.updateComplete;
-  expect(revealButton.textContent!.trim()).to.equal('Show fewer columns');
+  expect(revealButton.title).to.equal('Show fewer columns');
 
   revealButton.click();
   await el.updateComplete;
-  expect(revealButton.textContent!.trim()).to.equal('Show all columns');
+  expect(revealButton.title).to.equal('Show all columns');
 });
 
 it('honors custom revealColumnsLabel and columnsHideLabel property values', async () => {
@@ -454,11 +454,11 @@ it('honors custom revealColumnsLabel and columnsHideLabel property values', asyn
   await waitUntil(() => el.hasHiddenPriorityColumns === true);
 
   const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
-  expect(revealButton.textContent!.trim()).to.equal('More columns');
+  expect(revealButton.title).to.equal('More columns');
 
   revealButton.click();
   await el.updateComplete;
-  expect(revealButton.textContent!.trim()).to.equal('Fewer columns');
+  expect(revealButton.title).to.equal('Fewer columns');
 });
 
 it('keeps the visibility toggle available while hasHiddenPriorityColumns reports the actual revealed state', async () => {

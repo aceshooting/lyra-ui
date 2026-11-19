@@ -88,7 +88,9 @@ for (const revealed of [false, true]) {
     table.columns = priorityColumns;
     await table.updateComplete;
     await waitUntil(() => toggle() !== null && table.hasHiddenPriorityColumns === !revealed);
-    expect(toggle()!.textContent!.trim()).to.equal(revealed ? 'Show fewer columns' : 'Show all columns');
+    expect(toggle()!.textContent!.trim()).to.equal('Additional columns');
+    expect(toggle()!.getAttribute('aria-expanded')).to.equal(String(revealed));
+    expect(toggle()!.getAttribute('title')).to.equal(revealed ? 'Show fewer columns' : 'Show all columns');
     const low = table.shadowRoot!.querySelector<HTMLElement>('th[data-col-key="id"]')!;
     expect(getComputedStyle(low).display === 'none').to.equal(!revealed);
     expect(table.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal('name');

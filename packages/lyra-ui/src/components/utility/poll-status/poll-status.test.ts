@@ -17,9 +17,11 @@ expectLocaleFallback('ar-EG', ['pollPause', 'pollRefresh']);
 
 describe('lr-poll-status', () => {
   it('ticks down the countdown display and reaches the due phase, firing lr-poll-due', async () => {
+    const el = await fixture<LyraPollStatus>(html`<lr-poll-status></lr-poll-status>`);
+    const due = oneEvent(el, 'lr-poll-due');
     const started = performance.now();
-    const el = (await fixture(html`<lr-poll-status next-in-ms="40"></lr-poll-status>`)) as LyraPollStatus;
-    await oneEvent(el, 'lr-poll-due');
+    el.nextInMs = 40;
+    await due;
     expect(performance.now() - started).to.be.lessThan(300);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
@@ -277,17 +279,18 @@ describe('lr-poll-status', () => {
   });
 
   it('freezes remaining time across repeated programmatic pause/resume transitions', async () => {
-    const el = (await fixture(html`<lr-poll-status next-in-ms="120"></lr-poll-status>`)) as LyraPollStatus;
+    const el = (await fixture(html`<lr-poll-status next-in-ms="200"></lr-poll-status>`)) as LyraPollStatus;
     let dueCount = 0;
     el.addEventListener('lr-poll-due', () => {
       dueCount += 1;
     });
-    // wait-reason: real timer semantics, elapsed time before pausing must be frozen out of the remaining 120ms
+    el.restart();
+    // wait-reason: real timer semantics, elapsed time before pausing must be frozen out of the remaining 200ms
     await aTimeout(30);
     el.paused = true;
     await el.updateComplete;
-    // wait-reason: negative assertion, a paused poll must not fire past the 120ms deadline
-    await aTimeout(160);
+    // wait-reason: negative assertion, a paused poll must not fire past the 200ms deadline
+    await aTimeout(240);
     expect(dueCount).to.equal(0);
 
     el.paused = false;
@@ -297,7 +300,7 @@ describe('lr-poll-status', () => {
     el.paused = true;
     await el.updateComplete;
     // wait-reason: negative assertion, a re-paused poll must not fire past the remaining delay
-    await aTimeout(120);
+    await aTimeout(220);
     expect(dueCount).to.equal(0);
 
     const due = oneEvent(el, 'lr-poll-due');
@@ -468,6 +471,24 @@ describe('lr-poll-status', () => {
 
     await oneEvent(el, 'lr-poll-due');
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+  });
+
+  it('does not count down while inactive, so reactivation resumes the remaining time', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="400"></lr-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    let dueCount = 0;
+    el.addEventListener('lr-poll-due', () => dueCount++);
+    el.active = false;
+    await el.updateComplete;
+    // wait-reason: the full original window elapses while inactive
+    await aTimeout(500);
+    el.active = true;
+    await el.updateComplete;
+    // wait-reason: negative assertion, the frozen remainder (about 400ms) has not elapsed yet
+    await aTimeout(150);
+    expect(dueCount).to.equal(0);
+    await oneEvent(el, 'lr-poll-due');
+    expect(dueCount).to.equal(1);
   });
 
   it('clears the running deadline timer on disconnect, so a removed element never fires a late lr-poll-due', async () => {
@@ -801,4 +822,28 @@ describe('poll-status timer and adoption hardening', () => {
       expect(getComputedStyle(button).fontSize).to.equal(getComputedStyle(countdown).fontSize);
     }
   });
+});
+
+it('applies the action hover and pressed colors to the rendered buttons', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-poll-status with-refresh></lr-poll-status>`);
+  el.style.setProperty('--lr-transition-interactive', 'none');
+  try {
+    for (const [part, token] of [['refresh-button', 'refresh']] as const) {
+      const prefix = `--lr-poll-status-${token}`;
+      el.style.setProperty(`${prefix}-hover-bg`, 'rgb(11, 22, 33)');
+      el.style.setProperty(`${prefix}-active-bg`, 'rgb(44, 55, 66)');
+      el.style.setProperty(`${prefix}-hover-color`, 'rgb(77, 88, 99)');
+      el.style.setProperty(`${prefix}-active-color`, 'rgb(99, 88, 77)');
+      const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await hoverUntilMatched(button, part);
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(11, 22, 33)' &&
+        getComputedStyle(button).color === 'rgb(77, 88, 99)', part);
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(44, 55, 66)' &&
+        getComputedStyle(button).color === 'rgb(99, 88, 77)', part);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
+  }
 });

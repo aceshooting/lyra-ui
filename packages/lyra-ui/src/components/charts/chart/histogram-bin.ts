@@ -19,6 +19,17 @@ export function normalizeHistogramBinCount(binCount: unknown): number {
   return Math.min(MAX_HISTOGRAM_BINS, Math.max(0, Math.floor(numeric)));
 }
 
+/** Formats bin boundaries with enough precision to distinguish adjacent values. */
+export function histogramNumberFormat(locale: string | undefined, width: number, constant?: number): Intl.NumberFormat {
+  const magnitude = Math.abs(constant ?? width);
+  if (magnitude > 0 && magnitude < 1e-18) {
+    return getNumberFormat(locale, { notation: 'scientific', maximumSignificantDigits: 17 });
+  }
+  return getNumberFormat(locale, { maximumFractionDigits: constant === undefined
+    ? Math.min(20, Math.max(0, 1 - Math.floor(Math.log10(width)))) || 0
+    : chartValueFractionDigits(constant) });
+}
+
 /** Splits `values` into `binCount` equal-width buckets and counts membership.
  *  Non-finite `binCount` (or <= 0) yields no buckets; a fractional `binCount`
  *  is floored and an excessive count is capped; non-finite samples in
@@ -34,17 +45,28 @@ export function binValues(
   binCount: number,
   locale?: string,
 ): HistogramBucket[] {
-  const finite = values.filter((v) => Number.isFinite(v));
-  if (finite.length === 0) return [];
-  const bins = normalizeHistogramBinCount(binCount);
-  if (bins <= 0) return [];
+  const finite = values.filter(Number.isFinite);
+  return histogramBucketsInDomain(finite, normalizeHistogramBinCount(binCount), histogramDomain(finite), locale);
+}
 
-  let lo = finite[0]!; // safe: finite.length === 0 returned above
-  let hi = finite[0]!; // safe: finite.length === 0 returned above
-  for (const v of finite) {
-    if (v < lo) lo = v;
-    if (v > hi) hi = v;
+export function histogramDomain(finite: readonly number[]): readonly [number, number] {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const value of finite) {
+    if (value < lo) lo = value;
+    if (value > hi) hi = value;
   }
+  return [lo, hi];
+}
+
+export function histogramBucketIndex(value: number, lo: number, hi: number, bins: number): number {
+  return lo === hi ? 0 : Math.min(bins - 1, Math.max(0, Math.floor(finiteRatio(value, lo, hi) * bins)));
+}
+
+export function histogramBucketsInDomain(
+  finite: readonly number[], bins: number, [lo, hi]: readonly [number, number], locale?: string,
+): HistogramBucket[] {
+  if (!finite.length || bins <= 0) return [];
   // Constant data (lo === hi) previously fell into the `v === hi` branch
   // below, which places every value in the *last* bucket alone — misleading,
   // since every other bucket reads 0 and the label implies a spread that
@@ -56,11 +78,7 @@ export function binValues(
   // Two significant digits of the bin width tell adjacent edges apart (none for widths of 10 and
   // above); a constant domain keeps three significant digits of its value. No forced trailing zero.
   const width = hi / bins - lo / bins;
-  const numberFormat = getNumberFormat(resolvedLocale, {
-    maximumFractionDigits: constant
-      ? chartValueFractionDigits(lo)
-      : Math.min(20, Math.max(0, 1 - Math.floor(Math.log10(width)))) || 0,
-  });
+  const numberFormat = histogramNumberFormat(resolvedLocale, width, constant ? lo : undefined);
   if (constant) {
     // A constant domain contains one truthful bucket. In particular, `MAX_VALUE + 1` is still
     // `MAX_VALUE`, so fabricating `binCount` ranges from that synthetic upper edge produces
@@ -92,8 +110,7 @@ export function binValues(
   });
 
   for (const v of finite) {
-    const index = Math.floor(finiteRatio(v, lo, hi) * bins);
-    buckets[Math.min(bins - 1, Math.max(0, index))]!.count++; // safe: index clamped to [0, bins-1], buckets has length bins
+    buckets[histogramBucketIndex(v, lo, hi, bins)]!.count++;
   }
   return buckets;
 }

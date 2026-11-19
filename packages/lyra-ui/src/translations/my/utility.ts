@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: 'ကီး {count} ခု',
   },
   jsonViewerLimit: 'ပထမဆုံး JSON နိုဒ် {count} ခုနှင့် အဆင့်ဆင့်အတွင်းဝင်မှု {depth} အဆင့်အထိကိုသာ ပြသပြီး ရှာဖွေသည်။',
+  jsonViewerLabel: 'JSON',
   pollPause: 'ခေတ္တရပ်ရန်',
   pollResume: 'ပြန်စရန်',
   pollRefresh: 'ယခု ပြန်လည်ဆန်းသစ်ပါ',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'လ',
   knownDateYear: 'နှစ်',
   exportFormatMenuLabel: '{label} ပုံစံ',
+  exportFailed: 'ထုတ်ယူ၍ မရပါ',
   mentionSuggestions: 'အကြံပြုချက်များ',
   mentionResultCount: {
     other: 'အကြံပြုချက် {count} ခု',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ရည်ညွှန်းဖော်ပြရန် ပထမဆုံး အကြံပြုချက် 10,000 ကိုသာ ရနိုင်သည်။',
   diffViewHighlightLimit: 'ရှည်လျားသော ကုဒ်ကို ကုဒ်ဖွဲ့စည်းပုံအလိုက် အရောင်ခွဲခြားဖော်ပြခြင်းမရှိဘဲ ပြထားသည်။',
+  diffViewLabel: 'ကွာခြားချက်',
 };
 
 registerLyraLocale('my', strings);

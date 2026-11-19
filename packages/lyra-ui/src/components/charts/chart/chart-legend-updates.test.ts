@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart, CartesianScaleOptions, Plugin } from 'chart.js';
 import './chart.js';
@@ -31,6 +32,8 @@ async function chart(): Promise<LyraChart> {
   await settled(el);
   return el;
 }
+
+expectLocaleFallback('de-DE', ['chartLegend']);
 
 describe('dataset legend update reconciliation', () => {
   it('applies two accepted toggles before one flush without repeating either update', async () => {

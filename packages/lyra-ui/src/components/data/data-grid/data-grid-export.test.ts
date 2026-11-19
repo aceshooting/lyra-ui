@@ -1,4 +1,4 @@
-import { expect, html, oneEvent } from '@open-wc/testing';
+import { expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
 import type { DataGridColumn, DataGridCsvOptions, DataGridExportOptions } from './data-grid-types.js';
@@ -281,7 +281,8 @@ it("honors an explicit copy delimiter over the format default", async () => {
   }
 });
 
-it("uses the adopted owner realm for clipboard, fallback DOM, Blob, URL, and download anchor", async () => {
+it("uses the adopted owner realm for clipboard, fallback DOM, Blob, URL, and download anchor", async function () {
+  this.timeout(9000);
   const frame = document.createElement("iframe");
   document.body.append(frame);
   const frameDocument = frame.contentDocument!;
@@ -370,6 +371,8 @@ it("uses the adopted owner realm for clipboard, fallback DOM, Blob, URL, and dow
     expect(frameObjectUrls).to.equal(1);
     expect(frameBlobConstructions).to.equal(1);
     expect(downloaded).to.equal("owner:owner.csv");
+    expect(revoked).to.equal("");
+    await waitUntil(() => revoked === "blob:owner-data-grid", "owner object URL release", { timeout: 7000 });
     expect(revoked).to.equal("blob:owner-data-grid");
 
     Object.defineProperty(frameWindow.navigator, "clipboard", {

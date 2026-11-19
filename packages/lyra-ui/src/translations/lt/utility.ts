@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} raktų',
   },
   jsonViewerLimit: 'Rodomi ir ieškomi tik pirmieji JSON mazgai ({count}) ir įdėjimo lygiai ({depth}).',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pristabdyti',
   pollResume: 'Tęsti',
   pollRefresh: 'Atnaujinti dabar',
@@ -54,6 +55,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Mėnuo',
   knownDateYear: 'Metai',
   exportFormatMenuLabel: '{label} formatas',
+  exportFailed: 'Nepavyko eksportuoti',
   mentionSuggestions: 'Pasiūlymai',
   mentionResultCount: {
     few: '{count} pasiūlymai',
@@ -76,6 +78,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Pasiekiama tik pirmųjų 10 000 paminėjimo kandidatų.',
   diffViewHighlightLimit: 'Ilgas kodas rodomas be sintaksės paryškinimo.',
+  diffViewLabel: 'Skirtumai',
 };
 
 registerLyraLocale('lt', strings);

@@ -1,7 +1,45 @@
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS, type CSSResult } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
+
+export const chartDataTableStyles = css`
+  [part='data-table'] {
+    grid-area: table;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  [part='data-table'][data-visually-hidden] {
+    ${visuallyHidden}
+  }
+  [part='data-table'] table {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  [part='data-table-toggle'] {
+    grid-area: table-toggle;
+    align-self: flex-start;
+    font: inherit;
+    font-size: var(--lr-font-size-xs);
+    ${iconHitTarget}
+    padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  [part='data-table-toggle']:focus-visible {
+    ${focusRing}
+  }
+`;
 
 export const chartSurfaceStyles = css`
   [part='legend'] {
@@ -33,6 +71,7 @@ export const chartSurfaceStyles = css`
     text-align: start;
     overflow-wrap: anywhere;
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part~='legend-item']:where(:hover) {
     background: var(--lr-chart-legend-item-hover-bg, var(--lr-color-brand-quiet));
@@ -85,25 +124,7 @@ export const chartSurfaceStyles = css`
     block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     min-inline-size: 0;
   }
-  [part='data-table'] {
-    grid-area: table;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  [part='data-table'][data-visually-hidden] {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    overflow: clip;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  [part='data-table'] table {
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
-  }
+  ${chartDataTableStyles}
   lr-skeleton {
     --lr-skeleton-w: 100%;
     --lr-skeleton-h: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
@@ -114,9 +135,9 @@ export const chartSurfaceStyles = css`
   }
   [part='canvas'] {
     ${iconHitTarget}
+    transition: outline-color var(--lr-transition-fast);
   }
   [part='canvas']:hover {
-
     outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid
       var(
         --lr-chart-canvas-hover-outline-color,
@@ -143,71 +164,55 @@ export const chartSurfaceStyles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='data-table-toggle'] {
-    grid-area: table-toggle;
-    align-self: flex-start;
-    font: inherit;
-    font-size: var(--lr-font-size-xs);
-    ${iconHitTarget}
-    padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    max-inline-size: 100%;
-    white-space: normal;
-    overflow-wrap: break-word;
-    cursor: pointer;
-  }
-  [part='data-table-toggle']:focus-visible {
-    ${focusRing}
-  }
 `;
 
 /** Legend-position grid areas shared by the grid-based chart surfaces; `noticeArea` names the notice row. */
-export function chartLegendPositionStyles(noticeArea: 'notice' | 'warning'): CSSResult {
+export function chartLegendPositionStyles(noticeArea: 'notice' | 'warning', compactToggle?: boolean): CSSResult {
   const area = unsafeCSS(noticeArea);
+  const toggle = unsafeCSS(compactToggle === undefined ? '' : compactToggle ? '[data-table-toggle]' : ':not([data-table-toggle])');
+  const row = unsafeCSS(compactToggle === false ? '' : "'table-toggle'");
+  const doubleRow = unsafeCSS(compactToggle === false ? '' : "'table-toggle table-toggle'");
+  const compactRows = unsafeCSS(compactToggle === undefined ? `'legend' '${noticeArea}'` : `'${noticeArea}' 'legend'`);
   return css`
-  [part='base']:where([data-legend-position='top']) {
+  [part='base']:where(${toggle}[data-legend-position='top']) {
     grid-template-areas:
       'legend'
       'plot'
       '${area}'
-      'table-toggle'
+      ${row}
       'table';
   }
   /* Column 1 vs column 2, not physical left vs right: a grid numbers columns along the inline axis,
      so this pair mirrors itself under dir=rtl. The host resolves every legend-position value
      (logical alias, physical edge, or auto) into the column that lands on the intended physical
      edge after that mirror -- see legendGridPlacement(). */
-  [part='base']:where([data-legend-position='inline-start']) {
+  [part='base']:where(${toggle}[data-legend-position='inline-start']) {
     grid-template-areas:
       'legend plot'
       '${area} ${area}'
-      'table-toggle table-toggle'
+      ${doubleRow}
       'table table';
     grid-template-columns:
       minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
       minmax(0, 1fr);
   }
-  [part='base']:where([data-legend-position='inline-end']) {
+  [part='base']:where(${toggle}[data-legend-position='inline-end']) {
     grid-template-areas:
       'plot legend'
       '${area} ${area}'
-      'table-toggle table-toggle'
+      ${doubleRow}
       'table table';
     grid-template-columns:
       minmax(0, 1fr)
       minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
   }
   @container ${mediumContainerQuery} {
-    [part='base']:where([data-legend-position='inline-start']),
-    [part='base']:where([data-legend-position='inline-end']) {
+    [part='base']:where(${toggle}[data-legend-position='inline-start']),
+    [part='base']:where(${toggle}[data-legend-position='inline-end']) {
       grid-template-areas:
         'plot'
-        'legend'
-        '${area}'
-        'table-toggle'
+        ${compactRows}
+        ${row}
         'table';
       grid-template-columns: minmax(0, 1fr);
     }

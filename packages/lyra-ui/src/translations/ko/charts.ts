@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x: {x}, y: {y}',
   chartBubblePointCoordinates: 'x: {x}, y: {y}, 반경: {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: '차트 범례',
   chartSeriesNoData: '{label}: 데이터 없음',
   chartSummaryWithData: '{type} 차트. {summaries}.',
   chartSummaryEmpty: '데이터가 없는 {type} 차트입니다.',

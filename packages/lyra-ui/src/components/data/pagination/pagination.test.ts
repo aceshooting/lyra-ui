@@ -2297,7 +2297,7 @@ describe("Web Awesome navigation surface", () => {
 
   it("emits fresh frozen detail snapshots for the before and accepted page requests", async () => {
     const el = await pagination(
-      html`<lr-pagination total="95"></lr-pagination>`
+      html`<lr-pagination total="950"></lr-pagination>`
     );
     const details: Array<{ page: number; pageSize: number }> = [];
     el.addEventListener("lr-before-page-change", (event) => {

@@ -223,12 +223,12 @@ describe('spatial chart density activation by pointer', () => {
       const allocation = el as unknown as {
         lastObservedInlineSize?: number;
         samplingWidth: number;
-        resizeDrawFrame?: number;
+        resizeDraw: { readonly pending: boolean };
       };
       const width = allocation.lastObservedInlineSize;
       const chart = peer(el), box = canvas.getBoundingClientRect(), area = chart?.chartArea;
       return typeof width === 'number' && Number.isFinite(width) && width > 0 &&
-        allocation.samplingWidth === Math.floor(width) && allocation.resizeDrawFrame === undefined &&
+        allocation.samplingWidth === Math.floor(width) && !allocation.resizeDraw.pending &&
         !el.isUpdatePending && el.getAttribute('aria-busy') === 'false' && !!area &&
         [box.width, box.height, chart.width, chart.height, area.width, area.height]
           .every(value => Number.isFinite(value) && value > 0) &&

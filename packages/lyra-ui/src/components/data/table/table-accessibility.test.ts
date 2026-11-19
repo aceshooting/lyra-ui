@@ -719,7 +719,7 @@ describe('localization', () => {
       { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
     ];
     const el = (await fixture(
-      html`<lr-table .strings=${{ expand: 'Développer', collapse: 'Réduire' }}></lr-table>`
+      html`<lr-table .strings=${{ dataGridExpandRow: 'Développer {row}', dataGridCollapseRow: 'Réduire {row}' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
@@ -728,14 +728,14 @@ describe('localization', () => {
     await el.updateComplete;
 
     const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
-    expect(toggle.getAttribute('aria-label')).to.equal('Développer');
+    expect(toggle.getAttribute('aria-label')).to.equal('Développer a');
 
     // `expandedRowKeys` is a controlled prop -- the toggle button only emits
     // lr-row-expand-toggle, it doesn't mutate state itself (see the
     // `emits lr-row-expand-toggle` test above).
     el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
-    expect(toggle.getAttribute('aria-label')).to.equal('Réduire');
+    expect(toggle.getAttribute('aria-label')).to.equal('Réduire a');
   });
 
   it('localizes the inline cell editor aria-label, interpolating the column label', async () => {
@@ -792,6 +792,7 @@ describe('localization', () => {
       html`<lr-table
         style="display: block; width: 300px;"
         .strings=${{
+          tableAdditionalColumns: 'Colonnes supplémentaires',
           showAllColumns: 'Tout afficher',
           showFewerColumns: 'Afficher moins',
         }}
@@ -803,10 +804,12 @@ describe('localization', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null);
 
     const button = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement;
-    expect(button.textContent).to.contain('Tout afficher');
+    expect(button.textContent!.trim()).to.equal('Colonnes supplémentaires');
+    expect(button.title).to.equal('Tout afficher');
     button.click();
     await el.updateComplete;
-    expect(button.textContent).to.contain('Afficher moins');
+    expect(button.textContent!.trim()).to.equal('Colonnes supplémentaires');
+    expect(button.title).to.equal('Afficher moins');
   });
 
   it('localizes the load-more button label', async () => {
@@ -852,10 +855,10 @@ describe('localization', () => {
     await main.updateComplete;
     await waitUntil(() => main.hasHiddenPriorityColumns === true);
     const reveal = main.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement;
-    const revealText = reveal.textContent!.trim();
+    const revealText = reveal.title;
     reveal.click();
     await main.updateComplete;
-    const hideText = reveal.textContent!.trim();
+    const hideText = reveal.title;
 
     const loading = (await fixture(
       html`<lr-table loading .strings=${strings}></lr-table>`
@@ -1184,8 +1187,8 @@ describe('grid keyboard navigation edges', () => {
 
   it('ignores an unhandled key on both a header and a row', async () => {
     const el = await grid();
-    const onHeader = await key(el, headers(el)[0]!, 'PageDown');
-    const onRow = await key(el, bodyRows(el)[0]!, 'PageDown');
+    const onHeader = await key(el, headers(el)[0]!, 'F8');
+    const onRow = await key(el, bodyRows(el)[0]!, 'F8');
     expect(onHeader.defaultPrevented).to.be.false;
     expect(onRow.defaultPrevented).to.be.false;
   });
@@ -1331,4 +1334,11 @@ it('uses the host aria-label, including an empty one, before falling back to the
   await el.updateComplete;
   expect(owner().hasAttribute('aria-label')).to.equal(false);
   expect(owner().getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('caption')!.id);
+});
+
+it('uses the visible caption when the host name contains only whitespace', async () => {
+  const table = await fixture<LyraTable<Row>>(html`<lr-table aria-label="  " caption="Scores" .columns=${columns} .rows=${rows}></lr-table>`);
+  const grid = table.shadowRoot!.querySelector('[role="grid"]')!;
+  expect(grid.hasAttribute('aria-label')).to.equal(false);
+  expect(grid.getAttribute('aria-labelledby')).to.equal(table.shadowRoot!.querySelector('caption')!.id);
 });

@@ -1,3 +1,4 @@
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -8,6 +9,7 @@ import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
+  readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
 
 const MAX_OBSERVER_OPTION_VALUES = 10_000;
@@ -45,17 +47,10 @@ function normalizedThreshold(value: unknown): number | number[] {
   }
   try {
     if (!Array.isArray(value)) return 0;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return 0;
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return 0;
     const values: number[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_OBSERVER_OPTION_VALUES); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_OBSERVER_OPTION_VALUES); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
       if (
         entry === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -136,10 +131,38 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
    * and reconnects; setting `once` to false resets them. */
   @property({ type: Boolean, reflect: true }) once = false;
 
+  private readonly pendingRoot = new OwnedMutationObserver(this, () => {
+    if (this.resolveRoot()) this.observeTargets();
+  });
+
+  private resolveRoot(): Element | null {
+    const value = this.root;
+    if (typeof value !== 'string') return isElementNode(value) ? value : null;
+    const id = value.trim().replace(/^#/, '');
+    return (this.getRootNode() as Document | ShadowRoot).getElementById?.(id) ?? this.ownerDocument.getElementById(id);
+  }
+
   private observer?: IntersectionObserver;
   private observerDocument?: Document;
   private observerGeneration = 0;
   private onceIntersectedTargets = new WeakSet<Element>();
+  private appliedClasses = new Map<Element, Set<string>>();
+
+  /** Removes intersect-class tokens this element applied that the current options no longer ask for. */
+  private pruneAppliedClasses(keep: readonly string[]): void {
+    for (const [target, tokens] of this.appliedClasses) {
+      for (const token of tokens) {
+        if (keep.includes(token)) continue;
+        try {
+          target.classList.remove(token);
+        } catch {
+          // A custom element's class-list boundary cannot block the remaining cleanup.
+        }
+        tokens.delete(token);
+      }
+      if (tokens.size === 0) this.appliedClasses.delete(target);
+    }
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -192,6 +215,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   private onSlotChange = (): void => this.observeTargets();
 
   private disconnect(): void {
+    this.pendingRoot.clear();
     this.observerGeneration += 1;
     const observer = this.observer;
     // Clear the ownership fields before crossing a consumer-controlled observer boundary. A
@@ -225,14 +249,16 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     const classes = typeof classValue === 'string'
       ? Object.freeze(classValue.trim().split(/\s+/).filter(Boolean))
       : Object.freeze([]);
-    const rootValue = this.root;
-    const rootId = typeof rootValue === 'string' ? rootValue.trim().replace(/^#/, '') : '';
-    const root = typeof rootValue === 'string'
-      ? (this.getRootNode() as Document | ShadowRoot).getElementById?.(rootId) ?? ownerDocument.getElementById(rootId)
-      : isElementNode(rootValue)
-        ? rootValue
-        : null;
+    this.pruneAppliedClasses(disabled ? [] : classes);
     if (disabled || !this.isConnected || !IntersectionObserverCtor) return;
+    const root = this.resolveRoot();
+    if (!root && typeof this.root === 'string' && this.root.trim()) {
+      const options = { subtree: true, childList: true, attributes: true, attributeFilter: ['id'] };
+      const tree = this.getRootNode();
+      this.pendingRoot.observe(tree, options);
+      if (tree !== ownerDocument) this.pendingRoot.observe(ownerDocument, options);
+      return;
+    }
     let targets: Element[];
     try {
       targets = slottedElementTargets(this.renderRoot).filter(
@@ -261,6 +287,11 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
         for (const token of classes) {
           try {
             target.classList.toggle(token, isIntersecting);
+            const applied = this.appliedClasses.get(target) ?? new Set<string>();
+            if (isIntersecting) applied.add(token);
+            else applied.delete(token);
+            if (applied.size > 0) this.appliedClasses.set(target, applied);
+            else this.appliedClasses.delete(target);
           } catch {
             // A custom element's class-list boundary cannot prevent later entries from emitting.
           }

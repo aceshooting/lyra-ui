@@ -374,6 +374,8 @@ changing borrowed row content or callback-dependent external state in place.
   when a positive limit is reached.
 - `page: number = 0` (`page`, reflected) — zero-based.
 - `pageCount: number` (read-only, JS-only).
+- `paginationFormat: 'standard' | 'compact' = 'standard'` (`pagination-format`) selects the numbered pager or page field. Set `paginationWithSummary` (`pagination-with-summary`) to show the item range in `page-summary`. Grouped client pages count top-level groups.
+- `unknownTotal: boolean = false` (`unknown-total`) enables an open-ended server pager. Set `hasNext` (`has-next`, defaults to true) to false at the final page.
 - `pageSize: number = 20` (`page-size`).
 - `pageSizeOptions: readonly number[] = [10, 20, 50, 100]` (JS-only). A finite current `pageSize`
   absent from this list is still inserted into the selector, keeping visible and IDL state aligned.
@@ -512,11 +514,13 @@ writes); `lr-row-collapse`, `lr-row-expand`, `lr-group-collapse`, and `lr-group-
 row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelable
 `lr-sort-request` (readonly `{ sort }`) precedes `lr-sort-change`; veto leaves sort unchanged
 and suppresses `lr-sort-change`.
-Grid detail is `{ sort }`; `<lr-table>` emits `lr-sort` with `{ phase, sortKey, sortDir }`.
+Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
+`lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
+`lr-before-page-change` proposes zero-based `{ page, pageSize }` for page navigation and page-size changes. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.
-All library events bubble and are composed. Cancelable events: `lr-cell-contextmenu`,
+All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-selection-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
 `lr-column-resize-request`, `lr-sort-request`, and `lr-retry-request`. Details and owned collections
 are frozen. Toolbar-search and column-filter inputs re-emit `focus`/`blur` once from the host as
 bubbling, composed native `FocusEvent`s, preserving `relatedTarget`.
@@ -534,6 +538,9 @@ when the menu is already open (rows changed while open are repaired by the menu)
 
 **Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
 including its retry button, while `error` is set).
+
+Grid search and column-filter inputs forward `spellcheck`, `autocapitalize`, and `autocorrect`. The default text search matches without case or accents and announces the filtered count. Selection and expansion inputs inspect at most 100,000 key entries per assignment.
+The composed pager inherits the `--lr-pagination-*` tokens, including `--lr-pagination-current-bg`, `--lr-pagination-hover-bg` and `--lr-pagination-active-bg`. The grid exports its page field as `page-input`.
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
 `drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
@@ -607,13 +614,12 @@ anchors, and `--lr-data-grid-cell-link-hover-color` (default
 focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
 default. Six independent interaction-background hooks preserve those state boundaries:
 `--lr-data-grid-control-hover-bg` and `--lr-data-grid-control-active-bg` theme
-search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-bg` themes
+search, toolbar and resize controls; `--lr-data-grid-page-size-active-bg` themes
 the page-size selector when pressed; `--lr-data-grid-row-active-bg` themes pressed data
 rows; and `--lr-data-grid-sortable-header-hover-bg` and
 `--lr-data-grid-sortable-header-active-bg` theme sortable header states. They default to
 live `color-mix()` values of the effective grid accent and transparent, using the corresponding
-`--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
-uses the hover mix), so an accent override remains coherent while each surface can still be
+`--lr-color-mix-hover` or `--lr-color-mix-active` token, so an accent override remains coherent while each surface can still be
 overridden independently.
 
 ```html
@@ -953,14 +959,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
   `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (attribute: false) —
-  accessible name for one row's expand/collapse chevron, read once per render for that row,
-  exactly like a column's `editLabel`/`cellTitle`; consumer-owned text used verbatim, never
-  passed through localization. Omit it and every chevron shares the same localized
-  `expand`/`collapse` name, which carries no row context — fine for a handful of rows, but each
-  chevron is its own Tab stop, so a long table otherwise announces the same two names over and
-  over with no way to tell the rows apart. There is no default row context to derive one from
-  here: this component has no row-header notion (`rowKey` is an opaque identity, not a label)
+- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (property only) supplies the name for a row's disclosure. The default includes the row key through `dataGridExpandRow` or `dataGridCollapseRow`. Supply a callback for a more descriptive row name.
 - `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
   mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
   `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
@@ -1029,11 +1028,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
   unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
-- `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
-  while `priority`-hidden columns are hidden; omission renders localized
-  `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
-- `columnsHideLabel?: string` (attribute `columns-hide-label`) — the same button's label once
-  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim.
+- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) set the action tooltip for showing or hiding additional columns. An explicit empty string omits that tooltip. The visible name stays constant in both states and uses `tableAdditionalColumns`. Read `aria-expanded` for its state.
 
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
@@ -1068,6 +1063,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
+Page Up and Page Down move focus by a page through available rows. The default text filter ignores case and accents and announces the filtered count. `--lr-table-row-hover-bg`, `--lr-table-row-active-bg`, `--lr-table-sortable-header-hover-bg` and `--lr-table-sortable-header-active-bg` control their respective pointer states.
+
 **Methods:**
 
 - `rowElement(rowKey)` — the rendered `<tr>` for one row key, or `null` when that row is not in the
@@ -1098,6 +1095,8 @@ row) and `data-expanded-row-key` (on the panel row) are a type-tagged encoding o
 same way. The panel deliberately does **not** repeat `data-row-key`, so a `[data-row-key]` query
 still resolves exactly one element per row. Prefer these three methods over building a selector from
 any of the attributes — a consumer-supplied key is not safe to interpolate into CSS unescaped.
+
+The table emits a cancelable `lr-page-request` with a one-based `{ page }` before applying a pager change. Preventing it preserves the current page and suppresses `lr-page-change`.
 
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
@@ -1295,13 +1294,12 @@ declaration to retheme every internal scroll container in the library, including
   neither renders nor re-sorts; assign a new `columns` array.
 - Single/multiple selection both use `selectedRowKeys`. No checkbox column is synthesized;
   implement bulk selection through `headerCell()`/`cell()`.
-- Host `aria-label` (or native `ariaLabel`) names the internal `<table role="grid">` verbatim,
-  bypassing localization; its presence wins even when empty. `caption: string = ''` supplies an
+- Host `aria-label` (or native `ariaLabel`) names the internal `<table role="grid">`. An explicitly empty string suppresses the name. Whitespace-only values fall back to the caption. `caption: string = ''` supplies an
   optional visible `<caption>` (`caption` part); without a host label it also names the grid through
   `aria-labelledby`.
   Without either name, first render issues one development-only `console.warn`; production and
   unknown/unbundled runtimes stay silent.
-- `revealColumnsLabel`/`columnsHideLabel` only label `[part='reveal-columns-button']`, which
+- `revealColumnsLabel`/`columnsHideLabel` only set the tooltip on `[part='reveal-columns-button']`, which
   requires a `priority` column. Setting either without one is inert and issues the same one-time,
   development-only warning; production and unknown/unbundled runtimes stay silent.
 - Headers and body rows each have one roving `tabindex="0"`. Left/Right/Home/End navigate headers;
@@ -1372,6 +1370,8 @@ independent concepts.
 - `lr-page-change.detail` now includes `pageSize` as well as `page`, and the new cancelable
   `lr-before-page-change` fires first. Existing readers of `detail.page` keep working; code that
   asserted the exact one-key detail object must accept `{ page, pageSize }`.
+
+The pager revalidates the requested page after `lr-before-page-change` returns. A synchronous disable, disconnect, or total change that makes the destination unavailable cancels the commit. The compact field grows for longer page numbers, and unavailable link-mode controls keep their link role.
 
 **Properties and getters:**
 
@@ -5036,7 +5036,7 @@ explicitly empty query also clears filtering and a later query applies normally.
 by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary as `lr-table`.
 
 **Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (at most the first
-10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
+10,000 source positions by default and 10,000 tags per document are retained; document records, nested tags,
 and dates are snapshotted on assignment; malformed records (including missing/non-string names or
 non-string tag entries), blank ids, and later duplicate ids are omitted first-wins before filters,
 counts, selection, rows, and events; reads return one stable detached snapshot per assignment, so
@@ -5066,6 +5066,9 @@ The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: st
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
 readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
 The component's `filter` property uses this same callback contract.
+
+Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.
+The default local filter ignores case and accents. Local sorts place missing values last in either direction and preserve the order of ties. Provider row tags use the active locale's list formatting.
 
 **Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
 (default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
@@ -5196,7 +5199,7 @@ newer requests wait instead of overlapping it. The host owns callback cost and b
   result/total notification; programmatic assignments are silent and no `matchCount` is fabricated.
 - `lr-sort-request` — cancelable; proposes frozen readonly `{ phase: 'request', sortKey, sortDir }`.
 - `lr-sort` — non-cancelable; an accepted sort commits the same fields with `phase: 'commit'`.
-- `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
+- `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds, selectedRowKeys }`, with both keys referencing the same array.
 - `lr-open` — non-cancelable; frozen readonly `{ documentId }`.
 - `lr-retry-request` — cancelable, `detail: null`; the nested table's built-in retry button was
   activated while a host or provider load error is shown. The library contains the child's request, then

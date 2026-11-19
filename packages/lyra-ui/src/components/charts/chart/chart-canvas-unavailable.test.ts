@@ -76,7 +76,7 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
       chartJsModule: { Chart: new (...args: unknown[]) => object };
       lastObservedInlineSize?: number;
       samplingWidth?: number;
-      resizeDrawFrame?: number;
+      resizeDraw: { readonly pending: boolean };
       draw(): void;
     };
     let destroyed = 0;
@@ -89,7 +89,7 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
         // Initial allocation can schedule a redraw after the peer first becomes available.
         const width = runtime.lastObservedInlineSize;
         return typeof width === 'number' && Number.isFinite(width) && width > 0 &&
-          runtime.samplingWidth === Math.floor(width) && runtime.resizeDrawFrame === undefined;
+          runtime.samplingWidth === Math.floor(width) && !runtime.resizeDraw.pending;
       }, 'Initial chart allocation should settle', { timeout: 5000 });
       runtime.chart!.destroy();
       runtime.chart = undefined;
@@ -109,5 +109,69 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
     } finally {
       el.remove();
     }
+  });
+}
+
+for (const tag of ['lr-chart', 'lr-box-plot']) {
+  it(`${tag} retires a throwing renderer and recovers on the next redraw`, async () => {
+    const el = document.createElement(tag) as LyraChart | LyraBoxPlot;
+    document.body.append(el);
+    const runtime = el as unknown as {
+      chart?: { update(): void; destroy(): void };
+      chartJsModule: { Chart: new (...args: never[]) => object };
+      draw(): void;
+    };
+    try {
+      await waitUntil(() => !!runtime.chart);
+      const working = runtime.chartJsModule;
+      const previous = runtime.chart!;
+      const dispose = previous.destroy.bind(previous);
+      previous.update = () => { throw new Error('update failed'); };
+      previous.destroy = () => { dispose(); throw new Error('dispose failed'); };
+      runtime.draw();
+      expect(runtime.chart === undefined).to.equal(true);
+      let claimed = false;
+      let releases = 0;
+      const claim = { destroy() { claimed = false; releases++; } };
+      runtime.chartJsModule = { Chart: class {
+        static getChart() { return claimed ? claim : undefined; }
+        constructor() { claimed = true; throw new Error('construct failed'); }
+      } };
+      runtime.draw();
+      expect(releases).to.equal(1);
+      await el.updateComplete;
+      await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+      expect(el.shadowRoot!.querySelector('[part="data-table"]')!.hasAttribute('data-visually-hidden')).to.equal(false);
+      runtime.chartJsModule = working;
+      runtime.draw();
+      await waitUntil(() => !!runtime.chart && !el.shadowRoot!.querySelector('[part="error"]'));
+    } finally { el.remove(); }
+  });
+}
+
+for (const mode of ['dataset', 'datum', 'box'] as const) {
+  it(`retires a throwing ${mode} legend renderer without emitting a completed change`, async () => {
+    const el = document.createElement(mode === 'box' ? 'lr-box-plot' : 'lr-chart') as LyraChart | LyraBoxPlot;
+    el.labels = ['East'];
+    if (mode === 'box') {
+      const box = el as LyraBoxPlot;
+      box.withLegend = true;
+      box.datasets = [{ label: 'Orders', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+    } else {
+      const chart = el as LyraChart;
+      chart.type = mode === 'datum' ? 'pie' : 'bar';
+      chart.datasets = [{ label: 'Orders', data: [3] }];
+    }
+    document.body.append(el);
+    try {
+      const runtime = el as unknown as { chart?: { update(): void } };
+      await waitUntil(() => !!runtime.chart && !!el.shadowRoot!.querySelector('[part~="legend-item"]'));
+      let commits = 0;
+      el.addEventListener(mode === 'datum' ? 'lr-datum-visibility-change' : 'lr-legend-visibility-change', () => { commits++; });
+      runtime.chart!.update = () => { throw new Error('Invalid renderer'); };
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="legend-item"]')!.click();
+      expect(runtime.chart === undefined).to.equal(true);
+      expect(commits).to.equal(0);
+    } finally { el.remove(); }
   });
 }

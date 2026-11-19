@@ -1,3 +1,4 @@
+import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -22,24 +23,37 @@ export const styles = css`
     position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: var(--lr-space-s);
+    align-items: flex-start;
+    row-gap: var(--lr-space-s);
     inline-size: 100%;
     max-inline-size: 100%;
     min-inline-size: 0;
     box-sizing: border-box;
     overflow: hidden;
     padding: var(--_lr-alert-padding);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-normal);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-fill-quiet);
-    color: var(--lr-color-on-quiet);
-    box-shadow: var(--lr-shadow-s);
+    border: var(--lr-border-width-thin) solid var(--lr-alert-border, var(--_lr-alert-border, var(--lr-color-border-normal)));
+    border-radius: var(--lr-alert-radius, var(--lr-radius));
+    background: var(--lr-alert-bg, var(--_lr-alert-fill, var(--lr-color-fill-quiet)));
+    color: var(--lr-alert-color, var(--_lr-alert-text, var(--lr-color-on-quiet)));
+    box-shadow: var(--lr-alert-shadow, var(--lr-shadow-s));
     opacity: 1;
     transform: none;
     transition:
       opacity var(--lr-duration-fast) var(--lr-easing-standard),
       transform var(--lr-duration-fast) var(--lr-easing-standard);
+  }
+
+  :host([appearance='accent']) {
+    --_lr-alert-fill: var(--lr-color-fill-loud);
+    --_lr-alert-text: var(--lr-color-on-loud);
+    --_lr-alert-border: var(--lr-color-fill-loud);
+  }
+  :host(:is([appearance='filled'], [appearance='plain'])) {
+    --_lr-alert-border: transparent;
+  }
+  :host(:is([appearance='outlined'], [appearance='plain'])) {
+    --_lr-alert-fill: transparent;
+    --_lr-alert-text: var(--lr-color-fill-loud);
   }
 
   /* A queued alert renders its base with both hidden and inert. inert is platform-enforced, but
@@ -90,6 +104,7 @@ export const styles = css`
   [part='icon'] {
     display: inline-flex;
     grid-column: 1;
+    margin-inline-end: var(--lr-space-s);
     color: var(--lr-color-fill-loud);
     font-size: var(--lr-font-size-lg);
     line-height: var(--lr-line-height-none);
@@ -114,8 +129,9 @@ export const styles = css`
   }
 
   [part~='close-button'] {
-    display: inline-flex;
+    ${iconAction}
     grid-column: 3;
+    margin-inline-start: var(--lr-space-s);
     align-items: center;
     justify-content: center;
     ${iconHitTarget}
@@ -132,35 +148,20 @@ export const styles = css`
     margin-block: calc(-1 * var(--_lr-alert-close-pull));
     margin-inline-end: calc(-1 * var(--_lr-alert-close-pull));
     padding: var(--lr-space-xs);
-    border: 0;
-    border-radius: var(--lr-radius-pill);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
     transition: background-color var(--lr-transition-fast);
+    --_lr-icon-button-radius-default: var(--lr-radius-pill);
+    --_lr-icon-button-background-hover-default: var(--lr-alert-close-hover-bg,
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    --_lr-icon-button-background-active-default: var(--lr-alert-close-active-bg,
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
 
   [part~='close-button']:where(:hover) {
-    background: var(
-      --lr-alert-close-hover-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
-    );
+    ${iconActionHover}
   }
 
   [part~='close-button']:where(:active) {
-    background: var(
-      --lr-alert-close-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
+    ${iconActionActive}
   }
 
   [part~='close-button']:where(:focus-visible) {

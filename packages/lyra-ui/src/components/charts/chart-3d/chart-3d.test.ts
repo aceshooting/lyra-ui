@@ -4,6 +4,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { nextFrame } from '../../../../test/frames.js';
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { setColorScheme, setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraChart3d, LyraChart3dColumns, LyraChart3dSelectDetail } from './chart-3d.class.js';
 import './chart-3d.js';
@@ -655,4 +656,85 @@ it('retains accessible rows and selection across real document adoption', async 
     parts(el, 'row-button')[2]!.click(); await el.updateComplete;
     expect(selections).to.deep.equal([{ id: 'row-1', index: 1 }, { id: 'row-2', index: 2 }]);
   } finally { parent.appendChild(el); frame.remove(); }
+});
+
+describe('lr-chart-3d table bidi isolation', () => {
+  it('isolates numeric cells so a negative value keeps its sign inside an RTL page', async () => {
+    const host = await fixture<HTMLElement>(html`<div dir="rtl"><lr-chart-3d .data=${columns(3)}></lr-chart-3d></div>`);
+    const el = host.querySelector<LyraChart3d>('lr-chart-3d')!;
+    await el.updateComplete;
+    const numericCells = Array.from(parts(el, 'row')[2]!.querySelectorAll('td')).slice(0, 3);
+    expect(numericCells.length).to.equal(3);
+    for (const cell of numericCells) {
+      const isolated = cell.querySelector('bdi');
+      expect(isolated !== null).to.equal(true);
+      expect(getComputedStyle(isolated!).unicodeBidi).to.equal('isolate');
+      expect(getComputedStyle(isolated!).direction).to.equal('ltr');
+    }
+    expect(cells(el, 2)[2]).to.equal('-2');
+  });
+
+  it('does not paint hover on a disabled page button', async () => {
+    const el = await mount(columns(3));
+    const previous = parts(el, 'page-button')[0]! as HTMLButtonElement;
+    expect(previous.disabled).to.equal(true);
+    const resting = getComputedStyle(previous).backgroundColor;
+    try {
+      await hoverUntilMatched(previous, 'disabled button did not receive :hover');
+      await settlePointer();
+      expect(getComputedStyle(previous).backgroundColor).to.equal(resting);
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+it('honors selection vetoes and listener changes to the selection or rows', async () => {
+  const el = await mount();
+  const selections = record(el, 'lr-chart-row-select');
+  const select = () => parts(el, 'row-button')[1]!.click();
+  el.addEventListener('lr-chart-row-select-request', event => event.preventDefault(), { once: true });
+  select();
+  expect(pressed(el)).to.deep.equal(['false', 'false', 'false']);
+  el.addEventListener('lr-chart-row-select-request', () => { el.selectedId = ''; }, { once: true });
+  select();
+  expect(el.selectedId).to.equal('');
+  el.addEventListener('lr-chart-row-select-request', () => { el.selectedId = 'row-2'; }, { once: true });
+  select();
+  expect(el.selectedId).to.equal('row-2');
+  el.addEventListener('lr-chart-row-select-request', () => { el.data = columns(1); }, { once: true });
+  select();
+  expect(selections).to.deep.equal([]);
+});
+
+it('uses a localized name for whitespace chart labels', async () => {
+  const el = await mount();
+  el.label = '  ';
+  el.strings = { chart3dLabel: 'Measurements' };
+  await el.updateComplete;
+  expect(part(el, 'base')!.getAttribute('aria-label')).to.equal('Measurements');
+  el.label = '';
+  await el.updateComplete;
+  expect(part(el, 'base')!.getAttribute('aria-label')).to.equal('');
+});
+
+it('themes the selected row and the hover surface independently', async () => {
+  const el = await mount();
+  el.style.setProperty('--lr-chart-3d-selected-bg', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-chart-3d-selected-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lr-chart-3d-control-hover-bg', 'rgb(7, 8, 9)');
+  el.style.setProperty('--lr-chart-3d-control-active-border-color', 'rgb(10, 11, 12)');
+  el.selectedId = 'row-0';
+  await el.updateComplete;
+  const [selected, other] = parts(el, 'row-button');
+  await waitUntil(() => getComputedStyle(selected!).backgroundColor === 'rgb(1, 2, 3)');
+  expect(getComputedStyle(selected!).color).to.equal('rgb(4, 5, 6)');
+  try {
+    await hoverUntilMatched(other!, 'row receives hover');
+    await waitUntil(() => getComputedStyle(other!).backgroundColor === 'rgb(7, 8, 9)');
+    await sendMouse({ type: 'down', button: 'left' });
+    try {
+      await waitUntil(() => getComputedStyle(other!).borderTopColor === 'rgb(10, 11, 12)');
+    } finally { await sendMouse({ type: 'up', button: 'left' }); }
+  } finally { await resetMouse(); }
 });

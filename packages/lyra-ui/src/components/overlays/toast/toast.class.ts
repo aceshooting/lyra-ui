@@ -137,7 +137,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
 
   /** Live stack element, or `null` before the render root is populated. */
   get stack(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part="stack"]');
+    return this.renderRoot?.querySelector<HTMLElement>('[part="stack"]') ?? null;
   }
 
   private syncVisibleState = (): void => {
@@ -336,7 +336,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
       this.emit('lr-toast-overflow', { count });
       if (this.isConnected) {
         this.overflowSink?.announce(
-          this.localize('toastOverflow', undefined, { count })
+          this.localize('toastOverflow', undefined, { count: this.formatLocaleNumber(count) })
         );
       }
     };

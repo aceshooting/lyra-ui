@@ -121,3 +121,13 @@ export const SizeTiers: StoryObj = {
     </div>
   `,
 };
+
+export const Appearances: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-s)">
+      ${(['accent', 'filled', 'outlined', 'filled-outlined', 'plain'] as const).map(appearance => html`
+        <lr-alert open closable variant="success" appearance=${appearance}>Saved changes (${appearance})</lr-alert>
+      `)}
+    </div>
+  `,
+};

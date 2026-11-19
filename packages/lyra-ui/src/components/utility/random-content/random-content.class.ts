@@ -7,6 +7,7 @@ import { property, query } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { composedAccessibilityTextResult } from '../../../internal/announcement-text.js';
 import { pauseIcon, playIcon, refreshIcon } from '../../../internal/icons.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -90,6 +91,10 @@ export interface LyraRandomContentEventMap {
  * host mirroring or persisting that state stays in sync. Never fired for a host's own `paused`
  * write. `detail: { paused: boolean }` (the new `paused` value). Same name and shape as
  * `<lr-poll-status>`'s identical affordance.
+ * @cssprop --lr-random-content-action-hover-bg - Hover fill of the action control.
+ * @cssprop --lr-random-content-action-hover-color - Hover text color of the action control.
+ * @cssprop --lr-random-content-action-active-bg - Active fill of the action control.
+ * @cssprop --lr-random-content-action-active-color - Active text color of the action control.
  * @csspart base - The wrapping element around the default slot.
  * @csspart pause-button - The autoplay pause/resume action.
  * @csspart next-button - The opt-in action that selects another item and re-arms autoplay.
@@ -626,6 +631,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
         this.stopAutoplay();
         return;
       }
+      if (this.ownerDocument.hidden) return;
       this.reselect({ announce: false });
     }, interval);
   }
@@ -665,7 +671,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   };
 
   override render(): TemplateResult {
-    const hostLabel = this.getAttribute('aria-label');
+    const hostLabel = normalizeLabel(this.getAttribute('aria-label')) ?? null;
     const multiple = finiteInteger(this.items, 1, 1, Number.MAX_SAFE_INTEGER) > 1;
     return html`
       <div

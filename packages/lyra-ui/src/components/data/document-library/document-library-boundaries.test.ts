@@ -21,7 +21,7 @@ function names(element: LyraDocumentLibrary): string[] {
 it('sorts missing owners and freshness after changing sort keys and directions', async () => {
   const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${documents} sort-key="owner"></lr-document-library>`);
   await waitUntil(() => names(element).length === 4);
-  expect(names(element)).to.deep.equal(['Unknown', 'Aging', 'Fresh', 'Stale']);
+  expect(names(element)).to.deep.equal(['Aging', 'Fresh', 'Stale', 'Unknown']);
   element.sortDir = 'desc';
   await element.updateComplete;
   await table(element).updateComplete;
@@ -128,7 +128,7 @@ for (const sortKey of ['version', 'updatedAt'] as const) {
     ];
     const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${records} .sortKey=${sortKey}></lr-document-library>`);
     await waitUntil(() => names(element).length === 4);
-    expect(names(element)).to.deep.equal(['Missing first', 'Missing last', 'Older', 'Newer']);
+    expect(names(element)).to.deep.equal(['Older', 'Newer', 'Missing first', 'Missing last']);
     element.sortDir = 'desc';
     await element.updateComplete; await table(element).updateComplete;
     expect(names(element)).to.deep.equal(['Newer', 'Older', 'Missing first', 'Missing last']);

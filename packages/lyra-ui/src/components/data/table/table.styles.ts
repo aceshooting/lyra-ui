@@ -1,10 +1,15 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
+  :where([part='row']:not(:has([data-sticky])), [part='header-cell'][data-sortable], [part='row-expand-toggle'], [part='filter'], [part='cell-editor'], [part='more-button'], [part='reveal-columns-button']) { transition: var(--lr-transition-interactive); }
+  @media (prefers-reduced-motion: reduce), (forced-colors: active) {
+    :where([part='row']:not(:has([data-sticky])), [part='header-cell'][data-sortable], [part='row-expand-toggle'], [part='filter'], [part='cell-editor'], [part='more-button'], [part='reveal-columns-button']) { transition: none; }
+  }
   :host {
+    min-inline-size: 0;
     display: block;
     inline-size: 100%;
     /* Public hooks stay undeclared on the host so a theme wrapper's values inherit through. The
@@ -90,6 +95,7 @@ export const styles = css`
      their raw gray cancel-x once the field has text, inconsistent with this fully themed field. */
   [part='filter'][type='search']::-webkit-search-cancel-button,
   [part='filter'][type='search']::-webkit-search-decoration {
+    display: none;
     appearance: none;
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same "opt-out chrome
@@ -194,8 +200,10 @@ export const styles = css`
     cursor: default;
     white-space: nowrap;
   }
-  [part='header-cell'][data-resizable] {
-    padding-inline-end: calc(var(--lr-space-s) + var(--lr-size-0-5rem));
+  [part='header-cell'][data-resizable]::after {
+    content: '';
+    display: inline-block;
+    inline-size: var(--lr-size-0-5rem);
   }
   [part='resize-handle'] {
     position: absolute;
@@ -267,22 +275,22 @@ export const styles = css`
      background. columns[].sticky and columns[].sortable compose, and while these arms were
      :where()-zeroed to (0,1,0) a column using both had no hover and no press. */
   [part='header-cell'][data-sortable]:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-table-sortable-header-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Re-sorting a large table is the slowest thing this component does, so the press must read
      before the rows move. Same specificity as the :hover arm above and written after it, one step
      further toward --lr-color-mix-partner. */
   [part='header-cell'][data-sortable]:active {
-    background: color-mix(
+    background: var(--lr-table-sortable-header-active-bg, color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
   }
   /* Not scoped to [data-sortable]: the roving-tabindex header stop (table.ts's focusedColKey()) can
      land on any column, so every header cell needs its own focus indicator. */
   [part='header-cell']:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part='header-cell'][data-align='end'] {
     text-align: end;
@@ -345,17 +353,17 @@ export const styles = css`
      plain brand-quiet fallback used elsewhere, because the selected row's resting fill already
      resolves to that token. */
   [part='row']:hover {
-    --_lr-table-row-bg: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --_lr-table-row-bg: var(--lr-table-row-hover-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
     background: var(--_lr-table-row-bg);
   }
   /* MUST stay after the selected-row rule above -- both are (0,2,0), so source order alone decides,
      and the selected row is the one a user presses to DEselect. */
   [part='row']:active {
-    --_lr-table-row-bg: color-mix(
+    --_lr-table-row-bg: var(--lr-table-row-active-bg, color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
     background: var(--_lr-table-row-bg);
   }
   @media (forced-colors: active) {
@@ -380,7 +388,7 @@ export const styles = css`
     text-align: start;
   }
   [part='row']:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part='cell'] {
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
@@ -413,7 +421,7 @@ export const styles = css`
     );
   }
   [part='cell'][data-editable]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   /* A column's cell(row) may return any TemplateResult, rendered in this shadow root -- unreachable
      from the page's stylesheet, and ::part() cannot select past its first compound selector, so a

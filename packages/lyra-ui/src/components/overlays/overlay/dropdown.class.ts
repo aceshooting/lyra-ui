@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -179,16 +180,6 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     return 'absolute';
   }
 
-  /** Keeps the `hoist` half of the alias reflecting: Lit only writes an attribute for a property
-   *  it saw change, and a `positioningStrategy` write changes `hoist`'s value without going
-   *  through its own setter. */
-  protected override onPositioningStrategyChanged(
-    previous: PlaceStrategy,
-    next: PlaceStrategy,
-  ): void {
-    const wasHoisted = previous === 'fixed';
-    if (wasHoisted !== (next === 'fixed')) this.requestUpdate('hoist', wasHoisted);
-  }
 
   protected override get positioningSync(): PlaceSync | undefined {
     return this.sync;
@@ -317,8 +308,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   }
 
   protected override onTriggerKeyDown(event: KeyboardEvent): void {
-    if (this.disabled || this.open || event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
-      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (this.disabled || this.open || event.defaultPrevented || shouldIgnoreNavigationKey(event) || event.shiftKey) return;
     let focus: MenuFocusTarget | undefined;
     if (event.key === 'ArrowDown') focus = 'first';
     else if (event.key === 'ArrowUp') focus = 'last';

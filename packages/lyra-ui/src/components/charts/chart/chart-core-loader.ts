@@ -1,4 +1,7 @@
+import { isObjectLike } from '../../../internal/object-guards.js';
+import { isConstructor, warnChartPeerImport } from './chart-peer.js';
 import {
+  createOptionalPeerLoader,
   resolveOptionalPeerCapability,
   unwrapOptionalPeerDefault,
 } from '../../../internal/optional-peer-capabilities.js';
@@ -68,29 +71,16 @@ const CHART_REGISTERABLE_KEYS = [
   'Legend',
 ] as const satisfies readonly (keyof ChartJsModule)[];
 
-function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
-  return (typeof value === 'object' || typeof value === 'function') && value !== null;
-}
-
-function isConstructor(value: unknown): value is new (...args: never[]) => object {
-  if (typeof value !== 'function') return false;
-  try {
-    Reflect.construct(Object, [], value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function missingChartCapability(candidate: unknown): string | undefined {
   if (!isObjectLike(candidate)) return 'module namespace';
-  if (!isConstructor(candidate['Chart'])) return 'Chart';
-  if (typeof (candidate['Chart'] as unknown as { register?: unknown }).register !== 'function') {
+  const entries = candidate as Record<string, unknown>;
+  if (!isConstructor(entries['Chart'])) return 'Chart';
+  if (typeof (entries['Chart'] as unknown as { register?: unknown }).register !== 'function') {
     return 'Chart.register';
   }
-  if (!isObjectLike(candidate['defaults'])) return 'defaults';
+  if (!isObjectLike(entries['defaults'])) return 'defaults';
   for (const key of CHART_REGISTERABLE_KEYS) {
-    if (!isObjectLike(candidate[key])) return key;
+    if (!isObjectLike(entries[key])) return key;
   }
   return undefined;
 }
@@ -110,20 +100,32 @@ function resolveChartJsModule(value: unknown): ChartJsModule {
   );
 }
 
-let chartJs: Promise<ChartJsModule | null> | undefined;
+const corePeer = createOptionalPeerLoader({
+  load: () => import('chart.js'),
+  isCapability: isChartJsModule,
+  cache: 'generation',
+  warningKey: 'lr-chart-core-peer',
+  warning: '<lr-chart> requires a compatible chart.js installation.',
+});
 let registered = false;
-
 /**
  * Independently loads and validates Chart.js core for both core-only and feature-enabled charts.
  */
 export async function loadChartModule(
   importChart: () => Promise<unknown> = () => import('chart.js'),
 ): Promise<ChartJsModule | null> {
+  let imported: unknown;
   try {
-    return resolveChartJsModule(await importChart());
+    imported = await importChart();
+  } catch (err) {
+    warnChartPeerImport('chart.js', err);
+    return null;
+  }
+  try {
+    return resolveChartJsModule(imported);
   } catch (err) {
     console.warn(
-      '<lr-chart> needs the optional peer dependency `chart.js` — install it with `pnpm add chart.js`:',
+      '<lr-chart> incompatible chart.js module:',
       err,
     );
     return null;
@@ -164,6 +166,10 @@ export async function loadAndRegisterChartModule(
   register: (mod: ChartJsModule) => void = registerCore,
 ): Promise<ChartJsModule | null> {
   const mod = await loadChartModule(importChart);
+  return registerChart(mod, register);
+}
+
+function registerChart(mod: ChartJsModule | null, register: (mod: ChartJsModule) => void): ChartJsModule | null {
   if (!mod) return null;
   try {
     register(mod);
@@ -178,9 +184,6 @@ export async function loadAndRegisterChartModule(
 }
 
 /** Lazily loads the optional `chart.js` peer once per page and registers Lyra's core subset. */
-export function loadChartJs(): Promise<ChartJsModule | null> {
-  if (!chartJs) {
-    chartJs = loadAndRegisterChartModule();
-  }
-  return chartJs;
+export async function loadChartJs(): Promise<ChartJsModule | null> {
+  return registerChart(await corePeer.get(), registerCore);
 }

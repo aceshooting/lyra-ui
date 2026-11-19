@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x：{x}，y：{y}',
   chartBubblePointCoordinates: 'x：{x}，y：{y}，半径：{radius}',
   chartLabeledPoint: '{label}：{coordinates}',
+  chartLegend: '图表图例',
   chartSeriesNoData: '{label}：无数据',
   chartSummaryWithData: '{type}图。{summaries}。',
   chartSummaryEmpty: '{type}图，无数据。',

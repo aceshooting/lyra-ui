@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconAction } from '../../../internal/icon-action.styles.js';
+import { interactiveTransition, iconHitTarget, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -117,6 +118,8 @@ export const styles = css`
     opacity: 1;
   }
   [part="toggle"] {
+    ${iconAction}
+    ${interactiveTransition}
     /* Compact glyph, but the interactive box keeps the shared minimum target size even in deeply
        nested rows. */
     inline-size: var(--lr-size-1-25rem);
@@ -124,20 +127,12 @@ export const styles = css`
     ${iconHitTarget}
     margin-block-start: var(--lr-size-0-1875rem);
     flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     padding: 0;
     border: none;
     background: none;
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
-    /* The chevron renders at 1em (internal/icons.ts), so this native <button>'s own font-size IS
-       the glyph's rendered size -- anchor it to the host's own --lr-font-size-sm cascade rather
-       than the UA control font, mirroring [part="copy-button"]'s identical font-inherit rule. */
-    font: inherit;
+
   }
   /* An author declaration beats the UA '[hidden] { display: none }' regardless of specificity,
      !important aside, so this only needs to add visibility, not re-declare display. Keeping the box
@@ -160,16 +155,16 @@ export const styles = css`
   /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0) -- the same
      weight as the :active rule below, which therefore wins on source order while held. */
   :where([part="toggle"]):hover:where(:not([hidden])) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-json-viewer-toggle-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)')});
+    color: var(--lr-json-viewer-toggle-hover-color, var(--lr-color-brand));
   }
   :where([part="toggle"]):active:where(:not([hidden])) {
-    background: color-mix(
+    background: var(--lr-json-viewer-toggle-active-bg, color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-    color: var(--lr-color-brand);
+    ));
+    color: var(--lr-json-viewer-toggle-active-color, var(--lr-color-brand));
   }
   [part="toggle"]:focus-visible,
   [part="copy-button"]:focus-visible {
@@ -269,19 +264,19 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part="copy-button"]:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-json-viewer-copy-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)')});
+    color: var(--lr-json-viewer-copy-hover-color, var(--lr-color-brand));
   }
   /* Also the pressed state for the row-hover reveal rule further up: that rule only fades the
      button in when its row is hovered rather than styling the button's own hover, so the button's
      held state belongs here beside its hover. */
   [part="copy-button"]:active {
-    background: color-mix(
+    background: var(--lr-json-viewer-copy-active-bg, color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-    color: var(--lr-color-brand);
+    ));
+    color: var(--lr-json-viewer-copy-active-color, var(--lr-color-brand));
   }
   /* Per-node copy buttons stay out of the way until the row is interacted with; the toolbar's own
      top-level copy button has no ancestor .row, so this rule never matches it. */

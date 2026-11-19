@@ -1829,6 +1829,41 @@ describe('lr-tour', () => {
     }
   });
 
+  it('ignores key auto-repeat so a held ArrowRight advances once and cannot complete the tour', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    for (const repeat of [false, true, true, true]) {
+      popover.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'ArrowRight', bubbles: true, composed: true, cancelable: true, repeat,
+      }));
+      await tour.updateComplete;
+    }
+    expect(tour.activeIndex).to.equal(1);
+    expect(tour.open).to.equal(true);
+  });
+
+  it('wraps the progress dots instead of overflowing a narrow popover with many steps', async () => {
+    const el = (await fixture(
+      html`<div style="inline-size:320px">
+        <lr-tour .steps=${makeSteps(40)} open></lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    const dots = tour.shadowRoot!.querySelector('.dots') as HTMLElement;
+    expect(getComputedStyle(dots).flexWrap).to.equal('wrap');
+    expect(popover.scrollWidth).to.be.at.most(popover.clientWidth);
+  });
+
   it('LTR: ArrowRight calls next(), ArrowLeft calls back()', async () => {
     const el = (await fixture(
       html`<div>
@@ -2630,4 +2665,42 @@ it('runs the start/end lifecycle for post-mount open writes, including the end v
   expect((await ended).detail.reason).to.equal('api');
   await tour.updateComplete;
   expect(tour.hasAttribute('open')).to.equal(false);
+});
+
+it('reports the rendered step after navigation and direct index writes', async () => {
+  const el = await fixture<LyraTour>(html`<lr-tour .steps=${makeSteps(3)} open></lr-tour>`);
+  const events: unknown[] = [];
+  el.addEventListener('lr-tour-step-activate', event => {
+    const detail = (event as CustomEvent).detail;
+    events.push([detail.previousIndex, detail.index, detail.step === el.steps[detail.index], detail.via,
+      el.getAttribute('active-index'), event.cancelable]);
+  });
+  el.next();
+  await el.updateComplete;
+  el.activeIndex = 2;
+  await el.updateComplete;
+  el.addEventListener('lr-tour-step-change-request', event => event.preventDefault(), { once: true });
+  el.back();
+  await el.updateComplete;
+  expect(events).to.deep.equal([[0, 1, true, 'next', '1', false], [1, 2, true, 'api', '2', false]]);
+});
+
+it('resolves the active target again when steps are reassigned after mounting it', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><lr-tour open .steps=${makeSteps(1)}></lr-tour></div>`);
+  const el = wrapper.querySelector<LyraTour>('lr-tour')!;
+  expect(Boolean(el.shadowRoot!.querySelector('[data-unanchored]'))).to.equal(true);
+  const target = document.createElement('button');
+  target.id = 'tour-target-0';
+  wrapper.append(target);
+  el.steps = [...el.steps];
+  await el.updateComplete;
+  expect(Boolean(el.shadowRoot!.querySelector('[data-unanchored]'))).to.equal(false);
+});
+
+it('keeps the step chosen by a synchronous request listener', async () => {
+  const el = await fixture<LyraTour>(html`<lr-tour open .steps=${makeSteps(3)}></lr-tour>`);
+  el.addEventListener('lr-tour-step-change-request', () => { el.activeIndex = 2; }, { once: true });
+  el.next();
+  await el.updateComplete;
+  expect(el.activeIndex).to.equal(2);
 });

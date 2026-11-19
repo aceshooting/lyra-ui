@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} klíčů',
   },
   jsonViewerLimit: 'Zobrazuje se a prohledává pouze prvních {count} uzlů JSON a {depth} úrovní vnoření.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pozastavit',
   pollResume: 'Pokračovat',
   pollRefresh: 'Obnovit nyní',
@@ -54,6 +55,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Měsíc',
   knownDateYear: 'Rok',
   exportFormatMenuLabel: 'Formát {label}',
+  exportFailed: 'Export se nezdařil',
   mentionSuggestions: 'Návrhy',
   mentionResultCount: {
     few: '{count} návrhy',
@@ -76,6 +78,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Dostupných je pouze prvních 10 000 návrhů pro zmínky.',
   diffViewHighlightLimit: 'Dlouhý kód se zobrazuje bez zvýraznění syntaxe.',
+  diffViewLabel: 'Rozdíly',
 };
 
 registerLyraLocale('cs', strings);

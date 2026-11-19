@@ -314,7 +314,7 @@ describe('lr-chart-3d optional renderer', () => {
       expect((style['palette'] as string[]).length).to.equal(8);
       expect(new Set(style['palette'] as string[]).size).to.be.above(1);
       expect([style['reducedMotion'], style['forcedColors']]).to.deep.equal([false, false]);
-      expect(style['background']).to.match(/^rgba\(/);
+      expect(style['background']).to.equal(getComputedStyle(el.shadowRoot!.querySelector('[part="engine"]')!).backgroundColor);
       await expect(el).to.be.accessible();
     });
 
@@ -380,8 +380,8 @@ describe('lr-chart-3d optional renderer', () => {
       await ready(el);
       const style = peer.styles[0]!;
       expect([style['pointSize'], style['lineWidth']]).to.deep.equal([20, 3]);
-      expect((style['palette'] as string[]).slice(0, 2)).to.deep.equal(['rgba(1, 2, 3, 1)', 'rgba(4, 5, 6, 1)']);
-      expect(style['accent']).to.equal('rgba(255, 0, 0, 1)');
+      expect((style['palette'] as string[]).slice(0, 2)).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+      expect(style['accent']).to.equal('rgb(255, 0, 0)');
     });
 
     it('re-resolves its style when an ancestor changes a token, the theme or a media preference', async () => {
@@ -394,7 +394,7 @@ describe('lr-chart-3d optional renderer', () => {
       const latest = () => peer.styles.at(-1)!;
       const before = peer.styles.length;
       wrapper.style.setProperty('--lr-color-brand', 'rgb(9,8,7)');
-      await waitUntil(() => latest()['accent'] === 'rgba(9, 8, 7, 1)');
+      await waitUntil(() => latest()['accent'] === 'rgb(9, 8, 7)');
       expect(peer.styles.length).to.be.above(before);
       await setForcedColors('active');
       if (matchMedia('(forced-colors: active)').matches) await waitUntil(() => latest()['forcedColors'] === true);

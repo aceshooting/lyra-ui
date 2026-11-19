@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconAction } from '../../../internal/icon-action.styles.js';
+import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -54,29 +55,28 @@ export const styles = css`
   }
   [part='pause-button'],
   [part='refresh-button'] {
+    ${iconAction}
+    ${interactiveTransition}
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     ${iconHitTarget}
     border: none;
     background: transparent;
     color: inherit;
-    font: inherit;
-    cursor: pointer;
     padding: var(--lr-size-0-125rem);
     border-radius: var(--lr-radius);
-    transition: var(--lr-transition-interactive);
   }
   [part='refresh-button'] {
-    --_lr-poll-status-refresh-hover-bg: var(--lr-color-brand-quiet);
-    --_lr-poll-status-refresh-hover-color: var(--lr-color-brand);
-    --_lr-poll-status-refresh-active-bg: color-mix(
-      in oklab,
-      var(--_lr-poll-status-refresh-hover-bg),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    --_lr-poll-status-refresh-hover-bg: var(--lr-poll-status-refresh-hover-bg, var(--lr-color-brand-quiet));
+    --_lr-poll-status-refresh-hover-color: var(--lr-poll-status-refresh-hover-color, var(--lr-color-brand));
+    --_lr-poll-status-refresh-active-bg: var(
+      --lr-poll-status-refresh-active-bg,
+      color-mix(
+        in oklab,
+        var(--_lr-poll-status-refresh-hover-bg),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    --_lr-poll-status-refresh-active-color: var(--lr-color-brand);
+    --_lr-poll-status-refresh-active-color: var(--lr-poll-status-refresh-active-color, var(--lr-color-brand));
   }
   [part='pause-button']:hover:not(:disabled) {
     background: var(--lr-poll-status-pause-hover-bg, var(--lr-color-brand-quiet));

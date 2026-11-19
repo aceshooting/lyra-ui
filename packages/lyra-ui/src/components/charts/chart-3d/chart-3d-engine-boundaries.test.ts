@@ -1,7 +1,12 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { LitElement } from 'lit';
+import { defineCE, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import type { Chart3dEngineData, LyraChart3dCamera } from './chart-3d-data.js';
 import { Chart3dEngineController, chart3dEngineEnvironment, chart3dPointsLoader } from './chart-3d-engine.js';
+
+const hostTag = defineCE(class extends LitElement {
+  protected override render() { return html`<slot></slot>`; }
+});
 
 interface Renderer {
   callbacks?: Engine3dHost;
@@ -29,7 +34,7 @@ describe('3D renderer capability and ownership boundaries', () => {
     chart3dEngineEnvironment.available = () => true;
     chart3dEngineEnvironment.visible = () => true;
     renderers = []; notices = [];
-    const host = await fixture<HTMLElement>(html`<div style="color: rgb(12, 34, 56); inline-size: 360px; block-size: 180px;"></div>`);
+    const host = await fixture<LitElement>(`<${hostTag} style="display:block;color:rgb(12,34,56);inline-size:360px;block-size:180px"></${hostTag}>`);
     container = document.createElement('div'); host.append(container);
     controller = new Chart3dEngineController(host, { changed() {}, fallback(detail) { notices.push(detail.reason); }, pick() {}, camera() {} });
     chart3dPointsLoader.override(async () => ({ createEngine(): Engine3dInstance {
@@ -167,9 +172,23 @@ describe('3D renderer capability and ownership boundaries', () => {
       expect(renderers.length).to.equal(1);
       const peer = renderers[0]!;
       ancestor.style.setProperty('--lr-color-text', 'rgb(93, 47, 11)');
-      await waitUntil(() => (peer.styles.at(-1) as { foreground: string }).foreground === 'rgba(93, 47, 11, 1)');
+      await waitUntil(() => (peer.styles.at(-1) as { foreground: string }).foreground === 'rgb(93, 47, 11)');
       expect(controller.ready).to.equal(true); expect(notices).to.deep.equal([]);
       expect(peer.disposed).to.equal(0);
     } finally { controller.disconnect(); ancestor.remove(); host.remove(); }
   });
+  it('ignores unrelated ancestor attributes and coalesces theme changes', async () => {
+    const peer = await start();
+    await new Promise(resolve => setTimeout(resolve, 70));
+    const count = peer.styles.length;
+    const ancestor = container.parentElement!;
+    ancestor.setAttribute('data-unrelated', '1');
+    await new Promise(resolve => setTimeout(resolve, 70));
+    expect(peer.styles.length).to.equal(count);
+    ancestor.style.setProperty('--lr-color-text', 'rgb(3, 9, 5)');
+    ancestor.style.setProperty('--lr-color-brand', 'rgb(7, 11, 13)');
+    await waitUntil(() => peer.styles.length > count);
+    expect(peer.styles.length).to.equal(count + 1);
+  });
+
 });

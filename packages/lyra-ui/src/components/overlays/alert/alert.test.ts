@@ -1,4 +1,4 @@
-import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraAlert } from './alert.js';
 import './alert.js';
@@ -7,9 +7,6 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { TOAST_REGION_ENQUEUE } from '../toast/toast-region-protocol.js';
 
 const motionless = '--lr-duration-fast: 0ms;';
-
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => window.setTimeout(resolve, ms));
 
 afterEach(() => {
   document.querySelectorAll('lr-alert').forEach((alert) => alert.remove());
@@ -305,7 +302,7 @@ it('runs the same lifecycle for direct open assignments without announcing initi
   initial.addEventListener('lr-show', () => initialEvents++);
   await initial.updateComplete;
   // wait-reason: asserting that no lr-show fires for initial open markup
-  await delay(20);
+  await aTimeout(20);
   expect(initialEvents).to.equal(0);
 
   const el = (await fixture(html`<lr-alert style=${motionless}>Message</lr-alert>`)) as LyraAlert;
@@ -443,15 +440,15 @@ it('auto-hides after duration and restarts the full timer after interaction', as
   `)) as LyraAlert;
   await el.show();
   // wait-reason: real auto-hide duration semantics
-  await delay(250);
+  await aTimeout(250);
   el.dispatchEvent(new Event('pointerenter'));
   // wait-reason: real auto-hide duration semantics (pause window)
-  await delay(300);
+  await aTimeout(300);
   expect(el.open, 'interaction pauses the timer').to.be.true;
 
   el.dispatchEvent(new Event('pointerleave'));
   // wait-reason: real auto-hide duration semantics (restart window)
-  await delay(250);
+  await aTimeout(250);
   expect(el.open, 'leaving restarts the entire duration rather than only the remainder').to.be.true;
   await waitUntil(() => !el.open, 'duration should eventually hide the alert', { timeout: 1000 });
 });
@@ -466,7 +463,7 @@ it('restores persistent duration when the attribute is removed from an open aler
   await el.updateComplete;
   expect(el.duration).to.equal(Infinity);
   // wait-reason: verify the original timeout was canceled as well as the immediate dismissal
-  await delay(300);
+  await aTimeout(300);
   expect(el.open).to.equal(true);
   expect(hides).to.equal(0);
   expect(el.shadowRoot!.querySelector('.countdown')!.getAnimations().length).to.equal(0);
@@ -484,7 +481,7 @@ it('normalizes hostile duration values before timer math', async () => {
   `)) as LyraAlert;
   await el.show();
   // wait-reason: asserting an infinite duration never hides
-  await delay(30);
+  await aTimeout(30);
   expect(el.open).to.be.true;
 
   el.duration = Number.NaN;
@@ -650,7 +647,8 @@ it('fails closed and settles a burst when the adopted owner document has no toas
     const completions = alerts.map((alert) => alert.toast());
     const settled = await Promise.race([
       Promise.all(completions).then(() => true),
-      delay(120).then(() => false),
+      // wait-reason: deadline for the pending lifecycle completion
+      aTimeout(120).then(() => false),
     ]);
     expect(settled, 'an unavailable owner-realm controller cannot strand toast() promises').to.equal(true);
     expect(alerts.every((alert) => !alert.isConnected), 'failed work is removed instead of growing unchecked').to
@@ -739,7 +737,8 @@ it('settles a toast lifecycle when the alert is moved to a different parent inst
   document.body.append(el);
   const settled = await Promise.race([
     completion.then(() => true),
-    delay(120).then(() => false),
+    // wait-reason: deadline for the pending lifecycle completion
+    aTimeout(120).then(() => false),
   ]);
   expect(settled, 'moving the alert directly to a different parent must still settle toast()').to.be
     .true;
@@ -757,7 +756,8 @@ it('settles an externally removed toast and lets the same alert be toasted again
   el.remove();
   const firstSettled = await Promise.race([
     first.then(() => true),
-    delay(120).then(() => false),
+    // wait-reason: deadline for the pending lifecycle completion
+    aTimeout(120).then(() => false),
   ]);
   expect(firstSettled, 'a lasting external disconnect must settle toast()').to.be.true;
 
@@ -781,7 +781,8 @@ it('settles and releases a toast whose initial show is vetoed, so a later toast(
   const first = el.toast();
   const firstSettled = await Promise.race([
     first.then(() => true),
-    delay(120).then(() => false),
+    // wait-reason: deadline for the pending lifecycle completion
+    aTimeout(120).then(() => false),
   ]);
   expect(firstSettled, 'a rejected initial show must settle its toast lifecycle').to.be.true;
   expect(el.isConnected, 'a rejected toast must release the singleton region').to.be.false;
@@ -835,7 +836,8 @@ it('settles every permanently vetoed toast attempt without retaining stale lifec
     const completion = el.toast();
     const settled = await Promise.race([
       completion.then(() => true),
-      delay(120).then(() => false),
+      // wait-reason: deadline for the pending lifecycle completion
+      aTimeout(120).then(() => false),
     ]);
     expect(settled, `vetoed attempt ${attempt} must settle`).to.be.true;
     expect(el.isConnected).to.be.false;
@@ -979,7 +981,8 @@ it('discards stale managed alerts before a toast region is reconnected after a l
   const region = alert.parentElement!;
 
   region.remove();
-  const settled = await Promise.race([completion.then(() => true), delay(120).then(() => false)]);
+  // wait-reason: deadline for the pending lifecycle completion
+  const settled = await Promise.race([completion.then(() => true), aTimeout(120).then(() => false)]);
   expect(settled).to.equal(true);
   document.body.append(region);
   await nextFrame();
@@ -1005,7 +1008,8 @@ it('resumes same-task show and hide transitions after reconnect with exactly one
   parent.append(el);
   const showCompleted = await Promise.race([
     waitUntil(() => afterShowCount === 1).then(() => true),
-    delay(250).then(() => false),
+    // wait-reason: deadline for the pending lifecycle completion
+    aTimeout(250).then(() => false),
   ]);
   expect(showCompleted, 'the accepted show must reach its terminal event after reconnect').to.equal(true);
   await shown;
@@ -1018,7 +1022,8 @@ it('resumes same-task show and hide transitions after reconnect with exactly one
   parent.append(el);
   const hideCompleted = await Promise.race([
     waitUntil(() => afterHideCount === 1).then(() => true),
-    delay(250).then(() => false),
+    // wait-reason: deadline for the pending lifecycle completion
+    aTimeout(250).then(() => false),
   ]);
   expect(hideCompleted, 'the accepted hide must reach its terminal event after reconnect').to.equal(true);
   await hidden;
@@ -1100,7 +1105,8 @@ it('settles an alert evicted from the bounded queue without disturbing active al
 
   const oldestQueuedSettled = await Promise.race([
     completions[3]!.then(() => true),
-    delay(120).then(() => false),
+    // wait-reason: deadline for the pending lifecycle completion
+    aTimeout(120).then(() => false),
   ]);
   expect(oldestQueuedSettled, 'overflow eviction must settle alert.toast()').to.be.true;
   expect(alerts[3]!.isConnected).to.be.false;
@@ -1118,7 +1124,7 @@ it('disconnecting an open timed alert clears stale work and reconnect restarts i
   await el.show();
   el.remove();
   // wait-reason: real timer semantics: disconnected alert must not hide
-  await delay(100);
+  await aTimeout(100);
   expect(el.open).to.be.true;
 
   document.body.append(el);
@@ -1170,12 +1176,12 @@ it('pauses the auto-hide timer while focus is inside and resumes when it leaves'
 
   await focusByKeyboard(el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement);
   // wait-reason: real timer semantics: pause while focused
-  await delay(300);
+  await aTimeout(300);
   expect(el.open, 'focus inside pauses the timer').to.be.true;
 
   await focusByKeyboard(wrapper.querySelector('#inside') as HTMLElement);
   // wait-reason: real timer semantics: pause while focus moves within
-  await delay(300);
+  await aTimeout(300);
   expect(el.open, 'focus moving within the alert keeps the timer paused').to.be.true;
 
   await focusByKeyboard(wrapper.querySelector('#outside') as HTMLElement);
@@ -1436,10 +1442,10 @@ for (const mountedAsToast of [false, true]) {
       const completion = mountedAsToast ? el.toast() : el.show();
       await shown;
       // wait-reason: let a meaningful part of the countdown elapse before hiding the document
-      await delay(250);
+      await aTimeout(250);
       setHidden(true);
       // wait-reason: exceed the entire duration while hidden
-      await delay(700);
+      await aTimeout(700);
       expect(el.open, 'the alert stays open in a hidden document').to.equal(true);
       expect(el.shadowRoot!.querySelector('.countdown')!.getAnimations()[0]?.playState).to.equal('paused');
       setHidden(false);
@@ -1470,18 +1476,18 @@ it('keeps a hidden-start alert paused until hover and focus both leave', async (
   try {
     await el.show();
     // wait-reason: an alert first shown in a hidden document receives its full duration on return
-    await delay(250);
+    await aTimeout(250);
     expect(el.open).to.equal(true);
     el.dispatchEvent(new PointerEvent('pointerenter'));
     await focusByKeyboard(wrapper.querySelector<HTMLElement>('#inside')!);
     hidden = false;
     document.dispatchEvent(new Event('visibilitychange'));
     // wait-reason: becoming visible does not dismiss the alert during interaction
-    await delay(250);
+    await aTimeout(250);
     expect(el.open).to.equal(true);
     el.dispatchEvent(new PointerEvent('pointerleave'));
     // wait-reason: leaving hover retains the separate focus pause
-    await delay(250);
+    await aTimeout(250);
     expect(el.open).to.equal(true);
     await focusByKeyboard(wrapper.querySelector<HTMLElement>('#outside')!);
     await waitUntil(() => !el.open, 'the timer starts after focus leaves', { timeout: 750 });

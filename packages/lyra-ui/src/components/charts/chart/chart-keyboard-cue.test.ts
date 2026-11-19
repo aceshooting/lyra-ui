@@ -49,4 +49,32 @@ describe('keyboard-current datum cue', () => {
     await sendKeys({ press: 'ArrowRight' });
     await waitUntil(() => active(el) === '[[0,1]]', 'ArrowRight highlights the second box');
   });
+
+  it('dismisses the lr-chart keyboard tooltip with Escape while focus stays on the canvas', async () => {
+    const el = await fixture<LyraChart>(html`<lr-bar-chart without-animation .labels=${['a', 'b']}
+      .datasets=${[{ label: 'S', data: [3, 5] }]}></lr-bar-chart>`);
+    await waitUntil(() => runtime(el) !== undefined, 'chart did not initialize', { timeout: 5000 });
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    await focusByKeyboard(canvas);
+    await waitUntil(() => tooltipCount(el) === 1, 'focus shows the tooltip');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => tooltipCount(el) === 0, 'Escape hides the tooltip');
+    expect(el.shadowRoot!.activeElement === canvas).to.equal(true);
+  });
+
+  it('dismisses the lr-box-plot keyboard tooltip with Escape while focus stays on the canvas', async () => {
+    const box = { min: 0, q1: 1, median: 2, q3: 3, max: 4 };
+    const el = await fixture<LyraBoxPlot>(html`<lr-box-plot .labels=${['a', 'b']}
+      .datasets=${[{ label: 'A', data: [box, box] }]}></lr-box-plot>`);
+    await waitUntil(() => runtime(el) !== undefined, 'box plot did not initialize', { timeout: 5000 });
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    await focusByKeyboard(canvas);
+    await sendKeys({ press: 'ArrowRight' });
+    await waitUntil(() => tooltipCount(el) === 1, 'ArrowRight shows the tooltip');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => tooltipCount(el) === 0, 'Escape hides the tooltip');
+    expect(el.shadowRoot!.activeElement === canvas).to.equal(true);
+  });
 });

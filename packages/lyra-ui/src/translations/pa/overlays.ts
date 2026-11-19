@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Option ਕੁੰਜੀ',
   kbdAltWord: 'Alt ਕੁੰਜੀ',
   kbdShiftWord: 'Shift ਕੁੰਜੀ',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('pa', strings);

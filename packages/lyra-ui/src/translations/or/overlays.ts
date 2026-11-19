@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'ଅପ୍ସନ୍',
   kbdAltWord: 'ଆଲ୍ଟ୍',
   kbdShiftWord: 'ସିଫ୍ଟ୍',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('or', strings);

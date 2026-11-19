@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import {
+  anchoredPopupSettle,
   overlaySurface,
   overlaySurfaceFill,
 } from '../../../internal/overlay-surface.styles.js';
@@ -57,15 +58,8 @@ export const styles = css`
       var(--lr-positioner-hover-bridge-bottom-left-x, 0) var(--lr-positioner-hover-bridge-bottom-left-y, 0)
     );
   }
-  /* Settled closed (no exit transition playing, gated by JS clearing 'hidden' only once
-     'lr-after-hide' fires): out of layout entirely, so a stale placed box can no longer inflate
-     whatever ancestor establishes this popup's CSS containing block. */
-  [part~='popup'][hidden] { display: none; }
-  [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
-  /* none, not an identity translate: an identity transform is still a containing block, and
-     would trap every fixed surface nested in the open popup (hoisted selects, submenus). */
-  [part~='popup'] { opacity: 1; transform: none; }
-  :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
+  [part~='popup'] { --_lr-popup-exit-transform: translateY(var(--lr-size-neg-0-25rem)); }
+  ${anchoredPopupSettle}
   [part~='content'] { padding: var(--lr-space-m); }
   /* An arrow protrudes past the popup's edge, so the scroll container moves inwards for it -- an
      overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so an
@@ -98,13 +92,9 @@ export const tooltipStyles = css`
   /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */
   /* Intrinsic sizing must not depend on the placed inset: shrink-to-fit can rewrap on every
      shift when an absolute popup's containing block is narrower than its clipping boundary. */
-  [part~='popup'] { position: absolute; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; inline-size: max-content; max-inline-size: min(var(--max-width, var(--lr-tooltip-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-bg, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
-  /* Settled closed (gated by JS clearing 'hidden' only once 'lr-after-hide' fires): out of layout
-     entirely, so a stale placed box can no longer inflate this popup's CSS containing block. */
-  [part~='popup'][hidden] { display: none; }
-  [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
-  [part~='popup'] { opacity: 1; }
-  :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
+  [part~='popup'] { position: absolute; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; inline-size: max-content; max-inline-size: min(var(--max-width, var(--lr-tooltip-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-overlay-radius, var(--lr-radius-xs)); background: var(--lr-tooltip-bg, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m)); }
+  [part~='popup'] { --_lr-popup-exit-transform: none; }
+  ${anchoredPopupSettle}
   /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching to
      visible trades internal scrolling for a visible arrow. Use <lr-popover> when both are
      needed. */

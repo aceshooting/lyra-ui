@@ -106,3 +106,8 @@ export const EmptyState: Story = {
   name: 'No keys set (renders nothing, aria-hidden)',
   render: () => html`<lr-kbd></lr-kbd>`,
 };
+
+export const RightToLeftShortcut: StoryObj = {
+  render: () => html`<div dir="rtl"><lr-kbd keys="mod+shift+k"
+    style="--lr-kbd-key-bg:var(--lr-color-brand-fill-quiet)"></lr-kbd></div>`,
+};

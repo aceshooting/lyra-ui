@@ -6,7 +6,7 @@ export const styles = css`
     box-sizing: border-box;
     max-inline-size: 100%;
     /* The close hover is independently themeable so retinting it never changes the host surface. */
-    --_lr-callout-close-hover-bg: var(--lr-color-brand-quiet);
+    --_lr-callout-close-hover-bg: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
     /* This callout's own default paint for the close control, set on the HOST for organization
        only -- nothing here reads an --lr-icon-button-* token to compute it. The close-button rule
        below writes these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never
@@ -56,10 +56,11 @@ export const styles = css`
   [part='base'] {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
+    align-items: flex-start;
     max-inline-size: 100%;
     box-sizing: border-box;
-    gap: var(--lr-callout-gap, var(--_lr-callout-gap));
+    --_lr-callout-item-gap: var(--lr-callout-gap, var(--_lr-callout-gap));
+    row-gap: var(--_lr-callout-item-gap);
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -67,6 +68,7 @@ export const styles = css`
     color: inherit;
     font-size: inherit;
   }
+
   :host([appearance='filled-outlined']) {
     --_lr-callout-background: var(--lr-color-fill-quiet, var(--lr-color-brand-fill-quiet));
     --_lr-callout-border: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
@@ -92,7 +94,7 @@ export const styles = css`
     --_lr-callout-border: transparent;
     --_lr-callout-color: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
   }
-  [part='icon'] { display: inline-flex; grid-column: 1; min-inline-size: 0; max-inline-size: var(--lr-icon-button-size); overflow: hidden; font-size: var(--lr-font-size-lg); line-height: var(--lr-line-height-none); }
+  [part='icon'] { display: inline-flex; grid-column: 1; margin-inline-end: var(--_lr-callout-item-gap); min-inline-size: 0; max-inline-size: var(--lr-icon-button-size); overflow: hidden; font-size: var(--lr-font-size-lg); line-height: var(--lr-line-height-none); }
   [part='icon'] ::slotted(*) { max-inline-size: 100%; }
   [part='icon'][hidden], [part='close-button'][hidden] { display: none; }
   [part='heading'] { margin-block-end: var(--lr-space-xs); font-weight: var(--lr-font-weight-semibold); }
@@ -109,14 +111,14 @@ export const styles = css`
      --_lr-icon-button-<token>-default tier rather than the public token itself, so an ancestor
      theme wrapper's own --lr-icon-button-* still wins instead of being shadowed by these
      defaults. */
-  [part='close-button'] { grid-column: 3; --_lr-icon-button-background-default: var(--_lr-callout-close-background); --_lr-icon-button-background-hover-default: var(--_lr-callout-close-background-hover); --_lr-icon-button-background-active-default: var(--_lr-callout-close-background-active); --_lr-icon-button-radius-default: var(--_lr-callout-close-radius); }
+  [part='close-button'] { grid-column: 3; margin-inline-start: var(--_lr-callout-item-gap); --_lr-icon-button-background-default: var(--_lr-callout-close-background); --_lr-icon-button-background-hover-default: var(--_lr-callout-close-background-hover); --_lr-icon-button-background-active-default: var(--_lr-callout-close-background-active); --_lr-icon-button-radius-default: var(--_lr-callout-close-radius); }
   :host(:where([inline])) {
     padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
   }
-  :host(:where([inline])) [part='base'] { gap: var(--lr-space-xs); }
+  :host(:where([inline])) [part='base'] { --_lr-callout-item-gap: var(--lr-space-xs); }
   :host(:where([inline])) [part='icon'] { font-size: var(--lr-font-size-m); }
   :host(:where([inline])) [part='heading'] { margin-block-end: 0; }
   [part='close-icon'] { display: inline-flex; align-items: center; justify-content: center; }

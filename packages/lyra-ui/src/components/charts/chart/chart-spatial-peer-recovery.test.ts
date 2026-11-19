@@ -1,3 +1,5 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraChart, LyraChartInstance } from './chart.class.js';
 import type { LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
@@ -15,7 +17,7 @@ async function mounted(): Promise<LyraChart> {
   const element = await fixture<LyraChart>(html`<lr-chart type="scatter" without-animation with-data-table
     style="inline-size:500px;block-size:280px" .preparedData=${source()}></lr-chart>`);
   await waitUntil(() => !!element.chart && element.getAttribute('aria-busy') === 'false' &&
-    element.shadowRoot!.querySelector('[data-spatial-id="initial"]') !== null);
+    element.shadowRoot!.querySelector('[data-spatial-id="initial"]') !== null, 'initial spatial frame settled', { timeout: 5000 });
   return element;
 }
 
@@ -149,3 +151,18 @@ for (const retirement of ['replacement', 'clear', 'disconnect', 'reconnect']) {
     } finally { current.getElementsAtEventForMode = query; }
   });
 }
+
+it('shows the spatial keyboard point and density bin on the canvas without changing selection', async () => {
+  const element = await mounted();
+  const canvas = element.shadowRoot!.querySelector('canvas')!;
+  const pixels = () => canvas.toDataURL();
+  const resting = pixels();
+  await focusByKeyboard(canvas);
+  await waitUntil(() => pixels() !== resting, 'keyboard focus highlights the spatial point');
+  const focused = pixels();
+  await sendKeys({ press: 'End' });
+  await waitUntil(() => pixels() !== focused && pixels() !== resting, 'End highlights the density bin');
+  expect(element.selectedPointId).to.equal('');
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(() => pixels() === resting, 'blur clears the spatial keyboard cue');
+});

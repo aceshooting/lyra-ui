@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Opció',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Majúscules',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ca', strings);

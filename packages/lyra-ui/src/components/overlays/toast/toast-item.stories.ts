@@ -87,3 +87,13 @@ export const ScopedGeometryAndCloseStates: StoryObj = {
     </div>
   `,
 };
+
+export const DismissalReason: StoryObj = {
+  render: () => html`<div>
+    <lr-toast-item duration="8000" @lr-close=${(event: CustomEvent<{ reason: string }>) => {
+      const output = (event.currentTarget as HTMLElement).nextElementSibling;
+      if (output) output.textContent = event.detail.reason;
+    }}>Changes saved</lr-toast-item>
+    <output aria-label="Dismissal reason"></output>
+  </div>`,
+};

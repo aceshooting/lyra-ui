@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Rogha',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Iomlaoid',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ga', strings);

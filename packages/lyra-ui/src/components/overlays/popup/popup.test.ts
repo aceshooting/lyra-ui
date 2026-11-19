@@ -40,12 +40,16 @@ it('renders nothing visible until activated', async () => {
 });
 
 it('exposes the positioned popup and consumes the mapped transition aliases', async () => {
+  let onPlaced!: () => void;
+  const placed = new Promise<void>(resolve => { onPlaced = resolve; });
   const el = await fixture<LyraPopup>(html`
-    <lr-popup active style="--show-duration: 123ms; --hide-duration: 234ms">
+    <lr-popup active @lr-reposition=${onPlaced} style="--show-duration: 123ms; --hide-duration: 234ms">
       <button slot="anchor">Anchor</button><div>Content</div>
     </lr-popup>
   `);
-  await waitUntil(() => el.popup.hasAttribute('data-active'));
+  await placed;
+  await el.updateComplete;
+  expect(el.popup.hasAttribute('data-active')).to.equal(true);
   expect(el.popup.localName).to.equal('div');
   expect(partsOf(el.popup)).to.include('popup');
   // Opacity fades over the alias; visibility flips instantly on show and after the fade on hide.

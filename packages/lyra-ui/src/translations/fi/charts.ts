@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, säde {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'Kaavion selite',
   chartSeriesNoData: '{label}: ei tietoja',
   chartSummaryWithData: 'Kaavio ({type}). {summaries}.',
   chartSummaryEmpty: 'Kaavio ({type}) ilman tietoja.',

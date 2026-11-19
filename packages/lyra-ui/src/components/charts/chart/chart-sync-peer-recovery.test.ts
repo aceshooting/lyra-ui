@@ -8,7 +8,7 @@ type SyncAccess = {
   chartSync: { enabled: boolean; publish(label: string, index: number): void };
   lastObservedInlineSize?: number;
   samplingWidth: number;
-  resizeDrawFrame?: number;
+  resizeDraw: { readonly pending: boolean };
   onSyncPointerMove(event: PointerEvent): void;
 };
 
@@ -25,7 +25,7 @@ async function synchronizedCharts() {
   await waitUntil(() => {
     const width = access.lastObservedInlineSize;
     return Boolean(chart.chart && width !== undefined && width > 0 && access.samplingWidth === Math.floor(width) &&
-      access.resizeDrawFrame === undefined && chart.chartArea && chart.chartArea.width > 0 && access.chartSync.enabled &&
+      !access.resizeDraw.pending && chart.chartArea && chart.chartArea.width > 0 && access.chartSync.enabled &&
       (peer as unknown as SyncAccess).chartSync.enabled);
   }, 'group is ready', { timeout: 5000 });
   const native = chart.chart!;

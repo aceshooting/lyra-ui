@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Option',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('pt-PT', strings);

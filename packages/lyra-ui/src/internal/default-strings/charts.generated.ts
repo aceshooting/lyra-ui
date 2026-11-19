@@ -32,6 +32,7 @@ export const LYRA_DEFAULT_chartDataLabelsUnavailable: LyraMessage = 'Data labels
 export const LYRA_DEFAULT_chartDataSampled: LyraMessage = 'The chart and its generated data table show a sample of up to 1,000 records. Provide a custom data table to access all chart data.';
 export const LYRA_DEFAULT_chartInputLimit: LyraMessage = 'Some chart data was omitted because an input limit was reached. Provide a smaller or pre-aggregated dataset to represent the omitted values.';
 export const LYRA_DEFAULT_chartLabeledPoint: LyraMessage = '{label}: {coordinates}';
+export const LYRA_DEFAULT_chartLegend: LyraMessage = 'Chart legend';
 export const LYRA_DEFAULT_chartMissingLibrary: LyraMessage = 'This component needs the optional "chart.js" package installed to render charts.';
 export const LYRA_DEFAULT_chartPlotSampled: LyraMessage = 'The chart shows a sample of up to 1,000 records; the data table lists all data.';
 export const LYRA_DEFAULT_chartPointCoordinates: LyraMessage = 'x {x}, y {y}';

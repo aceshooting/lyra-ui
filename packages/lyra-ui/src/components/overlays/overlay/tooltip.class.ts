@@ -1,3 +1,4 @@
+import { AnchoredDisclosureController } from '../../../internal/anchored-disclosure-controller.js';
 import {
   html,
   nothing,
@@ -40,10 +41,9 @@ import {
   declaredDefaultConverter,
   literalSetConverter,
   omittedEmptyStringConverter,
-  optionalLiteralSetConverter,
 } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
-import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { PositioningStrategyState, positioningStrategyConverter, resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -63,13 +63,11 @@ import {
   normalizeVirtualRect,
   OverlayAnchorIdentity,
   OverlayDelayTimer,
-  OverlayTransitionGate,
   resolveOverlayAnchor,
   resolveOverlayAccessibleTrigger,
   resolveOverlayInteractionTrigger,
-  settleOverlayTransition,
   type OverlayVirtualRect,
-} from './overlay-shared.js';
+} from '../../../internal/overlay-shared.js';
 import { tooltipStyles } from './overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -117,12 +115,8 @@ export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
 
 /** Unsupported values resolve to *absent* so this component's own mirrored default stays the
  *  fallback, rather than a member baked into the converter. */
-const TOOLTIP_POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
-  'absolute',
-  'fixed',
-]);
 
-/** The `showAt()` rectangle, shared verbatim with `<lr-popover>` (see `./overlay-shared.ts`). */
+/** The `showAt()` rectangle, shared verbatim with `<lr-popover>` (see `src/internal/overlay-shared.ts`). */
 
 const BLANK_TEXT = /^[ \t\n\f\r]*$/;
 
@@ -252,8 +246,8 @@ export interface LyraTooltipEventMap {
  *   deliberately outside the overlay-surface family.
  * @cssprop --lr-overlay-border - Shared floating-surface edge colour. Same deliberate exclusion as
  *   `--lr-overlay-surface` above: the bubble draws no border.
- * @cssprop --lr-overlay-radius - Shared floating-surface corner radius. Same deliberate exclusion:
- *   the bubble keeps the tighter `--lr-radius-xs` a label-sized box reads best with.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-xs)] - Tooltip corner radius.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Tooltip shadow.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
  *   {@link positioningStrategy}/`hoist`, read from computed style when the bubble is
  *   (re)positioned. Set it once on `:root`, a theme, or one clipping ancestor to change every
@@ -349,7 +343,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({ attribute: false }) anchor: Element | null = null;
   /** Prevents interaction/programmatic opening and closes an open tooltip. */
   @property({ type: Boolean, reflect: true }) disabled = false;
-  private _positioningStrategy?: PlaceStrategy;
+  private readonly strategy = new PositioningStrategyState(this);
   /**
    * CSS positioning scheme the popup is laid out with -- the same property, spelled the same way,
    * as on `<lr-popover>`, `<lr-dropdown>` and `<lr-select>`. `absolute` (this component's mirrored
@@ -367,26 +361,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({
     attribute: 'positioning-strategy',
     reflect: true,
-    converter: TOOLTIP_POSITIONING_STRATEGY,
+    converter: positioningStrategyConverter,
   })
   get positioningStrategy(): PlaceStrategy {
-    return this._positioningStrategy ?? 'absolute';
+    return this.strategy.value;
   }
   set positioningStrategy(next: PlaceStrategy) {
-    const normalized = TOOLTIP_POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
-    const old = this.positioningStrategy;
-    // Recorded even when it matches the already-resolved value: an author who explicitly writes
-    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
-    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
-    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
-    this._positioningStrategy = normalized;
-    if (normalized === old) return;
-    this.requestUpdate('positioningStrategy', old);
-    // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
-    // value without going through its own setter.
-    if ((old === 'fixed') !== (normalized === 'fixed')) {
-      this.requestUpdate('hoist', old === 'fixed');
-    }
+    this.strategy.set(next);
   }
   /**
    * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
@@ -398,10 +379,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    */
   @property({ type: Boolean, reflect: true })
   get hoist(): boolean {
-    return this.positioningStrategy === 'fixed';
+    return this.strategy.hoist;
   }
   set hoist(next: boolean) {
-    this.positioningStrategy = next ? 'fixed' : 'absolute';
+    this.strategy.setHoist(next);
   }
   /**
    * Shows the open bubble in the browser top layer wherever the native Popover API exists, so it
@@ -495,9 +476,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private shadowContentScanView?: Window;
   private shadowContentScanAttempts = 0;
   /** Invalidates an in-flight `lr-after-*` wait when the opposite transition interrupts it. */
-  private transitionToken = 0;
-  private transitionAnimation?: Animation;
-  private readonly transitionGate = new OverlayTransitionGate();
+
 
   private get rendersArrow(): boolean {
     return !this.withoutArrow;
@@ -717,9 +696,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.clearContentSlotListeners();
     this.cancelShadowContentScan();
     // A pending after-event must not announce a transition the detached element left behind.
-    this.transitionToken++;
-    this.cancelTransitionAnimation();
-    this.removeAttribute('data-closing');
+    this.disclosure.reset();
     this.popupHidden = true;
     super.disconnectedCallback();
   }
@@ -853,17 +830,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    *  first — vetoing it leaves the tooltip closed — then `lr-after-show`. */
   show(): Promise<void> {
     this.cancelPendingTransition();
-    if (this.disabled || this._open) return Promise.resolve();
-    return this.transitionGate.request(true, () => {
-      if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
-        this.syncOpenAttribute();
-        return;
-      }
-      this.cancelTransitionAnimation();
-      this.removeAttribute('data-closing');
-      this.applyOpenState(true);
-      return this.settleTransition('lr-after-show');
-    });
+    return this.disabled ? Promise.resolve() : this.disclosure.show();
   }
 
   /** Close immediately, bypassing `hide-delay`. Emits `lr-hide` first — vetoing it leaves the
@@ -871,17 +838,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    *  put focus back on the trigger it took it from. */
   hide(options?: { restoreFocus?: boolean }): Promise<void> {
     this.cancelPendingTransition();
-    if (!this._open) return Promise.resolve();
-    return this.transitionGate.request(false, () => {
-      if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
-        this.syncOpenAttribute();
-        return;
-      }
+    return this.disclosure.hide(() => {
       if (options?.restoreFocus) this.restoreFocusOnClose = true;
-      this.cancelTransitionAnimation();
-      if (this.isConnected) this.setAttribute('data-closing', '');
-      this.applyOpenState(false);
-      return this.settleTransition('lr-after-hide');
     });
   }
 
@@ -889,11 +847,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    * positioning anchor disappears. */
   private forceClose(): Promise<void> {
     this.cancelPendingTransition();
-    if (!this._open) return Promise.resolve();
-    this.cancelTransitionAnimation();
-    if (this.isConnected) this.setAttribute('data-closing', '');
-    this.applyOpenState(false);
-    return this.settleTransition('lr-after-hide');
+    return this.disclosure.forceClose();
   }
 
   private applyOpenState(next: boolean): void {
@@ -910,62 +864,25 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.requestUpdate('open', old);
   }
 
-  /** A vetoed transition must leave the reflected attribute agreeing with the property; Lit only
-   *  reflects properties it saw change. */
-  private syncOpenAttribute(): void {
-    this.toggleAttribute('open', this._open);
-  }
-
-  private cancelTransitionAnimation(): void {
-    this.transitionAnimation?.cancel();
-    this.transitionAnimation = undefined;
-  }
-
-  /** Resolves once the registry-backed popup animation has finished, then emits the matching
-   * `lr-after-*` event. A disabled registration retains the lifecycle without native motion. */
-  private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
-    const token = ++this.transitionToken;
-    const showing = event === 'lr-after-show';
-    return settleOverlayTransition({
-      showing,
-      updateComplete: () => this.updateComplete,
-      isCurrent: () => this.transitionToken === token,
-      readyToShow: async () => {
-        const positioned = await waitForDeferredPlacement(() => this.cleanup);
-        if (this.transitionToken !== token || !this.open) return false;
-        if (!positioned) {
-          await this.forceClose();
-          return false;
-        }
-        return this.anchorPositioned && !this.placementPending;
-      },
-      animate: async () => {
-        if (!this.isConnected) return;
-        const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
-        const animation = popup
-          ? animateRegistered(
-              this,
-              popup,
-              `tooltip.${showing ? 'show' : 'hide'}`,
-              this.effectiveDirection,
-              {
-                keyframes: showing ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }],
-                durationProperties: ['--lr-transition-fast', '--lr-duration-fast'],
-                easingProperties: ['--lr-easing-standard'],
-              },
-            )
-          : undefined;
-        this.transitionAnimation = animation;
-        await animation?.finished.catch(() => undefined);
-        if (this.transitionToken === token) this.cancelTransitionAnimation();
-      },
-      afterHide: () => {
-        this.removeAttribute('data-closing');
-        this.popupHidden = true;
-      },
-      settled: () => { this.emit(event); },
-    });
-  }
+  private readonly disclosure = new AnchoredDisclosureController({
+    host: this,
+    isOpen: () => this._open,
+    setOpen: value => this.applyOpenState(value),
+    emit: name => name === 'lr-show' || name === 'lr-hide'
+      ? this.emit(name, null, { cancelable: true }).defaultPrevented
+      : this.emit(name).defaultPrevented,
+    popup: () => this.renderRoot.querySelector<HTMLElement>('[part~="popup"]'),
+    readyToShow: async isCurrent => {
+      const positioned = await waitForDeferredPlacement(() => this.cleanup);
+      return isCurrent() && positioned && this.anchorPositioned && !this.placementPending;
+    },
+    animate: (showing, popup) => animateRegistered(this, popup, `tooltip.${showing ? 'show' : 'hide'}`, this.effectiveDirection, {
+      keyframes: showing ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }],
+      durationProperties: ['--lr-transition-fast', '--lr-duration-fast'],
+      easingProperties: ['--lr-easing-standard'],
+    }),
+    afterHide: () => { this.popupHidden = true; },
+  });
 
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
    *  direct `anchor`, then the `for` idref, then the slotted trigger. Shared with `<lr-popover>`,
@@ -1001,7 +918,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         placement: rtlAwarePlacement(this.placement, this),
         ...topLayerPlacement(
           this.topLayer,
-          resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+          resolveEffectivePositioningStrategy(this, this.strategy.authored, 'absolute'),
         ),
         offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
         skidding: finiteNumber(this.skidding, 0),
@@ -1311,7 +1228,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
 
   private inspectContent(): TooltipContentSnapshot {
-
     const snapshot: TooltipContentSnapshot = {
       actionable: false,
       assigned: false,
@@ -1332,6 +1248,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const assignedNodes = activeSlot.assignedNodes();
     snapshot.assigned = assignedNodes.some((node) => !isBlankText(node));
     snapshot.blank = assignedNodes.length > 0 && !snapshot.assigned;
+    if (!snapshot.assigned) return snapshot;
 
     // The popup hides itself with `visibility: hidden` while closed. Visibility inherits through
     // slots, so reading consumer content in that state would otherwise classify every closed
@@ -1492,6 +1409,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const pendingRecords = this.contentObserver.takeRecords();
     const pendingMatter = pendingRecords.length > 0 && accessibleTextRecordsMatter(this.contentObserver, pendingRecords);
     const observer = this.contentObserver;
+    if (!snapshot.assigned && !snapshot.blank) {
+      observer.disconnect();
+      observer.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'], subtree: true });
+      return;
+    }
     bindAccessibleTextObserver(observer, this);
     if (pendingMatter) queueMicrotask(() => {
       if (this.isConnected && this.contentObserver === observer) this.updateInteractiveContent();
@@ -1510,7 +1432,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.syncContentSlotListeners(snapshot.forwardingSlots);
     this.bindContentObservation(snapshot);
     this.scheduleShadowContentScan(snapshot.awaitingShadowRoot);
-    this.updateDescriptionProxy(snapshot.text, snapshot.assigned);
+    this.updateDescriptionProxy();
   }
   private scheduleShadowContentScan(awaitingShadowRoot: boolean): void {
     this.cancelShadowContentScan(false);
@@ -1548,13 +1470,12 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
     this.updateDescriptionProxy();
   }
-  private updateDescriptionProxy(contentText?: string, assigned?: boolean): void {
+  private updateDescriptionProxy(): void {
     if (!this.descriptionProxy) return;
     if (this.descriptionProxy.parentNode !== this) this.append(this.descriptionProxy);
     const hostLabel = this.getAttribute('aria-label');
-    const snapshot = contentText === undefined || assigned === undefined ? this.inspectContent() : undefined;
-    const visibleContent = contentText ?? snapshot?.text ?? '';
-    const hasAssignment = assigned ?? snapshot?.assigned ?? false;
+    const visibleContent = this.contentSnapshot?.text ?? '';
+    const hasAssignment = this.contentSnapshot?.assigned ?? false;
     const description = hostLabel !== null
       ? hostLabel.trim()
       : (this.accessibleLabel || visibleContent || (hasAssignment ? '' : this.content ?? '')).trim();

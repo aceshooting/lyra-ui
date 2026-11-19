@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} κλειδιά',
   },
   jsonViewerLimit: 'Εμφανίζονται και αναζητούνται μόνο οι πρώτοι {count} κόμβοι JSON και τα {depth} επίπεδα ένθεσης.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Παύση',
   pollResume: 'Συνέχιση',
   pollRefresh: 'Ανανέωσε τώρα',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Μήνας',
   knownDateYear: 'Έτος',
   exportFormatMenuLabel: 'Μορφή {label}',
+  exportFailed: 'Η εξαγωγή απέτυχε',
   mentionSuggestions: 'Προτάσεις',
   mentionResultCount: {
     one: '{count} πρόταση',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Είναι διαθέσιμες μόνο οι πρώτες 10.000 προτάσεις για αναφορά.',
   diffViewHighlightLimit: 'Ο μεγάλος κώδικας εμφανίζεται χωρίς επισήμανση σύνταξης.',
+  diffViewLabel: 'Διαφορές',
 };
 
 registerLyraLocale('el', strings);

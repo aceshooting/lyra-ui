@@ -28,6 +28,8 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
+import { readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { hasTopLayerAncestor, needsTopLayerEscape, promoteToTopLayer, releaseTopLayer } from '../../../internal/top-layer-escape.js';
 import { styles } from './tour.styles.js';
@@ -144,6 +146,8 @@ export type LyraTourEndReason =
   | 'unavailable'
   | (string & Record<never, never>);
 
+type StepNavigation = 'next' | 'back' | 'goto';
+
 export interface LyraTourEventMap {
   'lr-tour-start': CustomEvent<{ readonly index: number }>;
   /** Cancelable proposal to move to another step, fired before `activeIndex` changes. */
@@ -151,7 +155,13 @@ export interface LyraTourEventMap {
     readonly index: number;
     readonly previousIndex: number;
     readonly step: Readonly<LyraTourStep>;
-    readonly via: 'next' | 'back' | 'goto';
+    readonly via: StepNavigation;
+  }>;
+  'lr-tour-step-activate': CustomEvent<{
+    readonly via: StepNavigation | 'api';
+    readonly previousIndex: number;
+    readonly index: number;
+    readonly step: Readonly<LyraTourStep>;
   }>;
   'lr-tour-end-request': CustomEvent<{ reason: LyraTourEndReason }>;
   'lr-tour-end': CustomEvent<{ reason: LyraTourEndReason }>;
@@ -178,38 +188,6 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
   );
 }
 
-function ownDataValue(record: Record<string, unknown>, key: string): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function safeArrayLength(value: unknown): number {
-  try {
-    if (!Array.isArray(value)) return 0;
-    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
-    return typeof length === 'number' && Number.isFinite(length)
-      ? Math.min(MAX_TOUR_STEPS, Math.max(0, Math.floor(length)))
-      : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function arrayItem(value: unknown, index: number): unknown {
-  try {
-    if (!Array.isArray(value)) return undefined;
-    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function boundedString(value: unknown, maxLength: number): string | undefined {
   return typeof value === 'string' ? value.slice(0, maxLength) : undefined;
 }
@@ -232,28 +210,34 @@ function normalizeTourTarget(value: unknown): LyraTourTarget | undefined {
 /** Owns a bounded, realm-neutral snapshot without invoking provider accessors or iterators. */
 function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
   const normalized: Readonly<LyraTourStep>[] = [];
-  const length = safeArrayLength(value);
+  let length: number;
+  try {
+    if (!Array.isArray(value)) return Object.freeze(normalized);
+    length = Math.min(MAX_TOUR_STEPS, readOwnArrayLength(value) ?? 0);
+  } catch {
+    return Object.freeze(normalized);
+  }
   for (let index = 0; index < length; index += 1) {
-    const candidate = arrayItem(value, index);
+    const candidate = readOwnDataValue(value, String(index));
     if (!isCrossRealmPlainRecord(candidate)) continue;
-    const stepId = boundedString(ownDataValue(candidate, 'stepId'), MAX_STEP_ID_LENGTH);
-    const target = normalizeTourTarget(ownDataValue(candidate, 'target'));
-    const heading = boundedString(ownDataValue(candidate, 'heading'), MAX_HEADING_LENGTH);
+    const stepId = boundedString(readOwnDataValue(candidate, 'stepId'), MAX_STEP_ID_LENGTH);
+    const target = normalizeTourTarget(readOwnDataValue(candidate, 'target'));
+    const heading = boundedString(readOwnDataValue(candidate, 'heading'), MAX_HEADING_LENGTH);
     if (!stepId || stepId !== stepId.trim() || !target || heading === undefined) continue;
 
-    const content = boundedString(ownDataValue(candidate, 'content'), MAX_CONTENT_LENGTH);
-    const rawPlacement = ownDataValue(candidate, 'placement');
+    const content = boundedString(readOwnDataValue(candidate, 'content'), MAX_CONTENT_LENGTH);
+    const rawPlacement = readOwnDataValue(candidate, 'placement');
     const placement = TOUR_PLACEMENTS.has(rawPlacement as Placement)
       ? (rawPlacement as Placement)
       : undefined;
-    const rawPadding = ownDataValue(candidate, 'spotlightPadding');
+    const rawPadding = readOwnDataValue(candidate, 'spotlightPadding');
     const spotlightPadding =
       typeof rawPadding === 'number' && Number.isFinite(rawPadding)
         ? finiteRange(rawPadding, DEFAULT_SPOTLIGHT_PADDING, 0, MAX_STEP_SPOTLIGHT_PADDING)
         : undefined;
-    const rawInteractive = ownDataValue(candidate, 'interactiveTarget');
+    const rawInteractive = readOwnDataValue(candidate, 'interactiveTarget');
     const interactiveTarget = typeof rawInteractive === 'boolean' ? rawInteractive : undefined;
-    const rawHidePrevious = ownDataValue(candidate, 'hidePrevious');
+    const rawHidePrevious = readOwnDataValue(candidate, 'hidePrevious');
     const hidePrevious = typeof rawHidePrevious === 'boolean' ? rawHidePrevious : undefined;
 
     normalized.push(
@@ -332,6 +316,7 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  *   for `lr-tour-step-change-request` and re-renders them) itself, the same "consumer owns slotted
  *   content" pattern `lr-dialog`'s default slot already uses.
  * @event lr-tour-start - Fired by `start()`. `detail: { index }`. Not cancelable.
+ * @event lr-tour-step-activate - After rendering a changed index, emits `{ previousIndex, index, step, via }`; direct writes use `via: "api"`.
  * @event lr-tour-step-change-request - Fired by `next()`/`back()`/`goToStep()` before
  *   `activeIndex` changes. `detail: { index, previousIndex, step, via }`. Cancelable -- a listener
  *   calling `preventDefault()` leaves `activeIndex` unchanged, letting a tour gate advancement on a
@@ -443,12 +428,21 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.requestUpdate('steps', previous);
   }
 
+  private _activeIndex = 0;
+  private stepVia: StepNavigation | 'api' = 'api';
+
   /** Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()` --
    *  and, for a direct property/attribute assignment that bypasses that method (e.g. two-way
    *  binding an external store, or a bad `active-index` attribute), normalized the same way in
    *  `willUpdate()` below. */
   @property({ type: Number, reflect: true, attribute: 'active-index' })
-  activeIndex = 0;
+  get activeIndex(): number { return this._activeIndex; }
+  set activeIndex(value: number) {
+    const previous = this._activeIndex;
+    this._activeIndex = value;
+    this.stepVia = 'api';
+    this.requestUpdate('activeIndex', previous);
+  }
 
   /** Tour-level default Floating UI placement, overridable per step via `LyraTourStep.placement`. */
   @property({ reflect: true, converter: declaredDefaultConverter('bottom') })
@@ -593,6 +587,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       });
       if (shouldFocus) this.focusAfterPlacement(placement);
     }
+    const previousIndex: unknown = changed.get('activeIndex');
+    const step = this.steps[this.activeIndex];
+    if (typeof previousIndex === 'number' && previousIndex !== this.activeIndex && step) {
+      this.emit('lr-tour-step-activate', Object.freeze({ previousIndex, index: this.activeIndex, step, via: this.stepVia }));
+    }
   }
 
   override connectedCallback(): void {
@@ -700,8 +699,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     return finiteInteger(index, 0, 0, total - 1);
   }
 
-  private transitionTo(index: number, via: 'next' | 'back' | 'goto'): void {
+  private transitionTo(index: number, via: StepNavigation): void {
     const previousIndex = this.activeIndex;
+    const open = this.open;
     const step = this.steps[index];
     if (!step) return;
     const request = this.emit(
@@ -709,8 +709,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       Object.freeze({ index, previousIndex, step, via }),
       { cancelable: true },
     );
-    if (request.defaultPrevented) return;
+    if (request.defaultPrevented || this.open !== open || this.activeIndex !== previousIndex || this.steps[index] !== step) return;
     this.activeIndex = index;
+    this.stepVia = via;
   }
 
   private resolveTarget(step: LyraTourStep): HTMLElement | null {
@@ -1042,7 +1043,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   };
 
   private onPopoverKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.defaultPrevented || event.shiftKey || shouldIgnoreActivationKey(event)) return;
     if (this.ownsDirectionalKeys(event)) return;
 
     const rtl = this.effectiveDirection === 'rtl';

@@ -58,6 +58,14 @@ export const Bubble: Story = {
   render: () => html`<lr-chart-3d label="Sample measurements" type="bubble" selected-id="east" .data=${samples}></lr-chart-3d>`,
 };
 
+/** Only control samples can be selected. */
+export const SelectionRequest: Story = {
+  render: () => html`<lr-chart-3d label="Select a control sample" style="--lr-chart-3d-selected-bg: var(--lr-color-brand-quiet)" .data=${samples}
+    @lr-chart-row-select-request=${(event: CustomEvent<{ index: number }>) => {
+      if (samples.category?.[event.detail.index] !== 0) event.preventDefault();
+    }}></lr-chart-3d>`,
+};
+
 /** Hidden categories leave the view without changing the identity or source index of the remaining rows. */
 export const HiddenCategories: Story = {
   render: () => html`<lr-chart-3d label="Treatment only" .data=${samples} .hiddenCategories=${new Set([0])}></lr-chart-3d>`,

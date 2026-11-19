@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'ഓപ്ഷൻ',
   kbdAltWord: 'ആൾട്ട്',
   kbdShiftWord: 'ഷിഫ്റ്റ്',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ml', strings);

@@ -7,7 +7,7 @@ import type { DataGridColumn } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid, measurementAccess, header, dataCells } from '../../../../test/data-grid.js';
 
 
-expectLocaleFallback('de-DE', ['select']);
+expectLocaleFallback('de-DE', ['dataGridSelectPage', 'select']);
 
 /** Two animation frames: scroll handling and virtual-window rendering land on the next frame. */
 const settleFrames = async (): Promise<void> => {
@@ -1899,3 +1899,26 @@ for (const decoration of ['transform', 'zoom'] as const) {
     }
   });
 }
+
+it('applies a synchronous body scroll from a cell renderer after the current layout commits', async () => {
+  const data = Array.from({ length: 200 }, (_, id) => ({ ...rows[0]!, id }));
+  let scrollDuringRender: (() => void) | undefined;
+  const column: DataGridColumn<Person> = {
+    field: 'name',
+    formatter: value => { scrollDuringRender?.(); return String(value); },
+  };
+  const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" style="--row-height: 30px; --max-height: 180px"
+    .columns=${[column]} .data=${data}></lr-data-grid>`);
+  const body = grid.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  await waitUntil(() => body.scrollHeight > 3_000, 'a scrollable virtual body');
+  scrollDuringRender = () => {
+    scrollDuringRender = undefined;
+    body.scrollTop = 3_000;
+    body.dispatchEvent(new Event('scroll'));
+  };
+  grid.label = 'Updated people';
+  await grid.updateComplete;
+  await waitUntil(() => Number(grid.shadowRoot!.querySelector('[data-visible-index]')?.getAttribute('data-visible-index')) > 0,
+    'the visible row window should track the scroll');
+  expect(body.scrollTop).to.be.greaterThan(0);
+});

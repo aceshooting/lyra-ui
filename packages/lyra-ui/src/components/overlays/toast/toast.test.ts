@@ -1,4 +1,3 @@
-import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { toast } from './toaster.js';
@@ -26,12 +25,6 @@ function announcementTexts(politeness: 'polite' | 'assertive'): string[] {
   const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
-
-const isWebKit =
-  /Safari\//.test(navigator.userAgent) &&
-  !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
-
-expectLocaleFallback('ar', ['closeWithContext']);
 
 it('announces only the normalized message when toast() supplies icon and action controls', async () => {
   const assertiveBefore = announcementTexts('assertive');
@@ -688,24 +681,9 @@ it('bounds a synchronous burst, settles every create() promise, and evicts only 
 });
 
 it('coalesces overflow loss into one typed event and one localized polite announcement', async function () {
-  // Skipped on WebKit only, after real investigation, not a reflexive workaround: this exact
-  // assertion has failed on GitHub's real WebKit CI runner across two independent recordOverflow()
-  // scheduling fixes (queueMicrotask -> single requestAnimationFrame -> nested double
-  // requestAnimationFrame, the spec-accurate "wait for a real paint" idiom) plus a from-scratch
-  // instrumented investigation of announce()/isAccessibilityVisible() -- 24+ runs of the real
-  // CI-shard file list under WTR_BROWSER=webkit, CPU-constrained to both 4 and 2 cores, never
-  // reproduced the failure locally: isAccessibilityVisible() was always true and notify() always
-  // fired within ~300ms, nowhere near the 15000ms budget below. Whatever differs on the real
-  // runner has not been identified. Diagnosing it for real needs instrumentation running on an
-  // actual failing CI job, not another local repro attempt -- if you're picking this back up,
-  // start there rather than re-guessing the scheduling mechanism a third time.
-  if (isWebKit) this.skip();
-  // Two sequential waitUntil()s below each now carry a real 15000ms CI-timing budget (see their
-  // own doc comments); a plain arrow function can't call this.timeout(), and the suite's 6000ms
-  // mocha default (web-test-runner.config.js) would otherwise cut this test off first.
   this.timeout(35000);
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
-  region.locale = 'ar';
+  region.locale = 'en-u-nu-arab';
   region.strings = {
     toastOverflow: 'Skipped {count} notifications.',
   };
@@ -732,7 +710,7 @@ it('coalesces overflow loss into one typed event and one localized polite announ
   expect(events[0]!.cancelable).to.equal(false);
   expect(events[0]!.bubbles).to.equal(true);
   expect(events[0]!.composed).to.equal(true);
-  const localizedCount = new Intl.NumberFormat('ar').format(3);
+  const localizedCount = new Intl.NumberFormat('en-u-nu-arab').format(3);
   // The announce() call this fires through drops the message if the region isn't accessibility-
   // visible (isAccessibilityVisible) at that exact rAF -- correct by construction (every create()
   // synchronously re-syncs visibility before this notify callback can run), and toast.class.ts's
@@ -1028,9 +1006,9 @@ it('is accessible as a bare region with no toasts open', async () => {
 it('is accessible once a toast item is showing inside it', async () => {
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
   const item = await region.create('Accessible toast', { duration: 0 });
-  // `data-visible` starts the transition; wait for its completion so axe measures the final
-  // foreground colour instead of WebKit's partially transparent animation frame.
   await oneEvent(item, 'lr-after-show');
+  expect(getComputedStyle(item.toastItemElement!).opacity).to.equal('1');
+  await nextFrame();
   await expect(region).to.be.accessible();
 });
 

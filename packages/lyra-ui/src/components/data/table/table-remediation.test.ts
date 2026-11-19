@@ -16,7 +16,7 @@ expectLocaleFallback('sv', ['next', 'paginationLabel', 'paginationPage', 'previo
 
 describe('table live derived rows and responsive bands', () => {
   it('treats removed filter-text as absence and recovers without changing null readback', async () => {
-    const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Names" filter-text="ä" .rows=${rows} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
+    const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Names" filter-text="z" .rows=${rows} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
     expect(element.shadowRoot!.querySelectorAll('tbody tr[data-row-key]').length).to.equal(1);
     element.removeAttribute('filter-text');
     await element.updateComplete;

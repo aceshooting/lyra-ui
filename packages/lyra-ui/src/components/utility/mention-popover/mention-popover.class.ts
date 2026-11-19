@@ -16,6 +16,8 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -329,7 +331,7 @@ export interface LyraMentionPopoverEventMap {
  * @cssprop [--lr-mention-popover-option-active-color=var(--lr-color-brand)] - Text color of the
  *   `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
  *   `--lr-mention-popover-option-active-bg`.
- * @cssprop [--lr-mention-popover-option-disabled-opacity=0.5] - Opacity of a row whose `items` entry sets `disabled`.
+ * @cssprop [--lr-mention-popover-option-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a row whose `items` entry sets `disabled`.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the listbox.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
@@ -954,7 +956,13 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const rows = items.filter((item, index) => {
       if (typeof item.label !== 'string' || item.label.trim().length === 0) return false;
       if (!q) return true;
-      if (this.filter) return this.filter(item, q);
+      if (this.filter) {
+        try {
+          return Boolean(this.filter(item, q));
+        } catch {
+          return false;
+        }
+      }
       return labels![index]!.includes(q) || descriptions![index]!.includes(q);
     });
     this.filteredMemo = [items, query, filter, locale, rows];
@@ -1124,22 +1132,22 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    * normally rather than having the keystroke silently eaten.
    */
   handleKeyDown(e: KeyboardEvent): boolean {
-    if (!this.open || e.isComposing || e.keyCode === 229) return false;
+    if (!this.open || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return false;
     const rows = this.visibleItems;
     switch (e.key) {
+      case 'Home':
+      case 'End':
       case 'ArrowDown':
-        // Nothing to navigate -- let the key fall through to the host's own
-        // control (e.g. move the caret to the next line), matching Enter/Tab's
-        // identical "no active row" fallthrough right below.
-        if (!rows.length) return false;
+      case 'ArrowUp': {
+        if (!rows.length || (!this._ownsFocus && (e.key === 'Home' || e.key === 'End'))) return false;
         e.preventDefault();
-        this.activeIndex = this.stepEnabledIndex(rows, this.clampedIndex(rows), 1);
+        const next = resolveListMove(e, {
+          count: rows.length, current: this.clampedIndex(rows), orientation: 'vertical', wrap: false, clamp: true,
+          isAvailable: index => !rows[index]!.disabled,
+        });
+        if (next !== null) this.activeIndex = next;
         return true;
-      case 'ArrowUp':
-        if (!rows.length) return false;
-        e.preventDefault();
-        this.activeIndex = this.stepEnabledIndex(rows, this.clampedIndex(rows), -1);
-        return true;
+      }
       case 'Enter':
       case 'Tab': {
         const idx = this.clampedIndex(rows);
@@ -1150,13 +1158,6 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         this.commit(rows[idx]!); // safe: idx >= 0 here is clampedIndex()'s in-range result
         return true;
       }
-      case 'Home':
-      case 'End':
-        // The anchor's own caret keeps Home/End until the listbox owns focus.
-        if (!this._ownsFocus || !rows.length) return false;
-        e.preventDefault();
-        this.activeIndex = e.key === 'Home' ? this.stepEnabledIndex(rows, -1, 1) : this.stepEnabledIndex(rows, rows.length, -1);
-        return true;
       case 'Escape':
         e.preventDefault();
         this.open = false;
@@ -1186,22 +1187,6 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return -1;
   }
 
-  /** Steps `from` by one row in `direction`, skipping past a disabled row without wrapping -- the
-   *  same roving step contract `stepEnabledIndex()` in `internal/catalog-picker.ts` implements for
-   *  an active-descendant listbox. Unset regression: with no disabled row, this is the same
-   *  `clamp(from + direction, 0, rows.length - 1)` the arrow-key handler always computed. */
-  private stepEnabledIndex(rows: readonly Readonly<LyraMentionItem>[], from: number, direction: 1 | -1): number {
-    const count = rows.length;
-    if (!count) return 0;
-    let index = Math.min(Math.max(from + direction, 0), count - 1);
-    for (let steps = 0; steps < count; steps += 1) {
-      if (!rows[index]?.disabled) return index;
-      index += direction;
-      if (index < 0 || index >= count) break;
-    }
-    return from >= 0 && from < count && !rows[from]?.disabled ? from : this.activeIndex;
-  }
-
   private rowId(index: number): string {
     return `${this._listId}-opt-${index}`;
   }
@@ -1224,6 +1209,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       'lr-mention-select',
       Object.freeze({ suggestionId: item.suggestionId, index, label: item.label }),
     );
+    if (!this.isConnected || !this.open) return;
     this._silentClose = true;
     this.open = false;
   }
@@ -1332,7 +1318,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  `label` itself to be set. */
   private get effectiveLabel(): string {
     return (
-      hostAriaLabel(this) ?? (this.label == null ? this.localize('mentionSuggestions') : this.label)
+      hostAriaLabel(this) ??
+      (this.label == null || (this.label !== '' && normalizeLabel(this.label) === undefined)
+        ? this.localize('mentionSuggestions')
+        : this.label)
     );
   }
 
@@ -1385,7 +1374,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         ${this.listboxHidden ? nothing : rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.effectiveEmptyText}</div>`
           : rows.map((item, i) => this.renderRow(item, i, activeId))}
-        ${!this.listboxHidden && remaining > 0 ? html`<div part="more-results" id=${`${this._listId}-more`}>
+        ${!this.listboxHidden && remaining > 0 ? html`<div part="more-results" id=${`${this._listId}-more`} role="option" aria-selected="false" aria-disabled="true">
           ${this.localize('mentionMoreResults', undefined, {
             count: getNumberFormat(this.effectiveLocale).format(remaining),
             pluralCount: remaining,

@@ -1,4 +1,8 @@
+
 ## `lr-export-button`
+
+The `exportFailed` message names a failed download in the live region. Theme a format option with
+`--lr-export-button-menu-item-{hover,active}-{bg,color}`. The trigger and options use `--lr-transition-interactive`.
 
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
 immediately) or multi-format (click opens a small menu).
@@ -213,6 +217,9 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
 
 ## `lr-copy-button`
 
+For delegated copy failures, listen for `lr-copy-error`. A slotted icon can also emit `lr-error`.
+Compare `event.composedPath()[0]` with the copy button to identify its own detail-less notification.
+
 A standalone copy-to-clipboard affordance for a plain text `value` or a source element selected by
 `from`. Its built-in icon button swaps to a confirmation or failure glyph once the Clipboard API
 settles; a consumer-provided default-slot trigger can replace that button. The component takes no
@@ -424,6 +431,8 @@ own resize event from an observed child's event with `event.target === event.cur
 
 ## `lr-intersection-observer`
 
+With a named root, observation begins when the matching ID is present in the host tree or document.
+
 Lifecycle-managed wrapper around the native `IntersectionObserver`. It observes all element children
 in the default slot and emits a composed event, while adding no layout of its own.
 
@@ -491,6 +500,11 @@ observer.
 ---
 
 ## `lr-json-viewer`
+
+Local searches ignore case and accents in keys and values. Navigating a match scrolls the viewer within
+its own bounds. An overflowing tree becomes a keyboard tab stop named by the host’s `aria-label` or the
+localized `jsonViewerLabel`. `--lr-json-viewer-toggle-{hover,active}-{bg,color}` and
+`--lr-json-viewer-copy-{hover,active}-{bg,color}` set the action colors independently of the row.
 
 A collapsible, copyable tree view for an arbitrary JSON-serializable value (object, array, string,
 number, boolean, null, or `undefined`). Serves as a fallback renderer wherever a raw payload needs
@@ -645,7 +659,7 @@ also apply. The flat source rows own logical treeitem semantics.
   ```
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
-- `query: string = ''` — with `treeSource` unset, case-insensitive substring match against
+- `query: string = ''` — with `treeSource` unset, case- and accent-insensitive substring match against
   keys/values; matches are highlighted and their ancestors auto-expanded. Source matching is
   provider-owned as described above
 
@@ -989,8 +1003,9 @@ repainting every other component that reuses the same shared success token. `--l
 `var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
 `--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
 brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
-hover/pressed paint independently of those same shared brand tokens; these pause-specific
-overrides do not affect the refresh button, which uses shared brand tokens. Plus shared tokens —
+hover/pressed paint independently of those same shared brand tokens; the matching
+`--lr-poll-status-refresh-hover-bg`/`-hover-color`/`-active-bg`/`-active-color` tokens do the same
+for the `refresh-button`. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
@@ -1037,6 +1052,9 @@ called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announc
 ---
 
 ## `lr-mention-popover`
+
+The composing text control owns the insertion range. Recheck the live caret and query before applying a selected
+suggestion if the user can move the caret while the list stays open.
 
 The `more-results` CSS part exposes the additional-results message.
 
@@ -1149,7 +1167,7 @@ source admission omits candidates).
 (keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
 repainting every other component that reuses the same shared token.
-`--lr-mention-popover-option-disabled-opacity` (default `0.5`) — opacity of a row whose `items`
+`--lr-mention-popover-option-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a row whose `items`
 entry sets `disabled`. `--lr-mention-popover-option-active-color` (default `var(--lr-color-brand)`)
 — text color of the `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
 `--lr-mention-popover-option-active-bg`: the same component-scoped indirection over
@@ -1289,6 +1307,14 @@ fresh `query` is the proxy for "the caret may have moved").
 ---
 
 ## `lr-diff-view`
+
+The `copyable` property reflects to the host attribute and defaults to false. Listen for `lr-copy-error` for
+a clipboard failure or check `event.composedPath()[0]` to identify the origin of a bubbling `lr-error`.
+Apply `max-height`, `context-lines`, `layout` and `copyable` directly to a standalone diff viewer.
+An overflowing diff becomes a keyboard tab stop named by the host’s `aria-label` or the localized `diffViewLabel`.
+The sides of a split diff retain their old and new content labels.
+The `--lr-diff-view-copy-{hover,active}-{bg,color}` and
+`--lr-diff-view-highlight-action-{hover,active}-{bg,color}` tokens style its two actions.
 
 A real two-string line diff (a classic longest-common-subsequence dynamic program, not a Myers
 implementation), rendered as interleaved unified-diff output — not diff-flavored syntax highlighting
@@ -1686,6 +1712,8 @@ expose the text. Use the `:focus-within` escape hatch rather than overriding the
 
 ## `lr-divider`
 
+Unsupported orientation values normalize to `horizontal`. The boolean `vertical` shorthand wins while present.
+
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 
@@ -1830,6 +1858,8 @@ Date input accepts primitive strings/numbers or a genuine `Date`; arbitrary obje
 without calling their conversion hooks.
 
 ## `lr-known-date`
+
+Each field references the visible error before its hint. Slotted messages replace the corresponding attribute text.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -2028,6 +2058,9 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 
 ## `lr-random-content`
 
+Both built-in actions read `--lr-random-content-action-{hover,active}-{bg,color}`.
+Set `autoplay-interval` to control the time between selections.
+
 Shows a chosen subset of its slotted children and hides the rest — A/B copy testing, testimonial
 rotation, varying marketing copy per render or interval — with no custom JS beyond slotting the
 candidates. Selection is applied by setting `hidden` + `aria-hidden` directly on the light-DOM
@@ -2136,6 +2169,10 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
   the pre-hydration one. With `items > 1` the pre-hydration paint is still a single candidate.
 
 ## `lr-tour`
+
+`lr-tour-step-activate` fires after a changed step index renders. Its detail contains `previousIndex`, `index`,
+`step` and `via` (`next`, `back`, `goto` or `api` for a direct write). A vetoed move emits no activation.
+If a target mounts while its step is already open, assign `tour.steps = [...tour.steps]` to resolve it again.
 
 A spotlight-and-step guided walkthrough for first-run onboarding: each step anchors a popover to a
 target element elsewhere in the page via the shared Floating UI positioner, over a dimmed

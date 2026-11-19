@@ -142,4 +142,14 @@ export const styles = css`
   :host([readonly]) [part~="base"] {
     cursor: default;
   }
+  @media (forced-colors: active) {
+    [part="star"] {
+      forced-color-adjust: none;
+      color: GrayText;
+    }
+    [part="star-fill"] {
+      forced-color-adjust: none;
+      color: Highlight;
+    }
+  }
 `;

@@ -1,4 +1,5 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './random-content.js';
 import type { LyraRandomContent } from './random-content.js';
@@ -590,6 +591,41 @@ it('pauses autoplay while focus is inside and never hides the focused subtree', 
   await new Promise((resolve) => setTimeout(resolve, 0));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   expect((el as any).timer, 'autoplay resumes after focus leaves').to.not.be.undefined;
+});
+
+it('renders no group for a blank host aria-label', async () => {
+  const el = (await fixture(html`
+    <lr-random-content aria-label="   ">
+      <div>1</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.hasAttribute('role')).to.be.false;
+  expect(base.hasAttribute('aria-label')).to.be.false;
+});
+
+it('does not advance the selection from a timer tick while the document is hidden', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay autoplay-interval="1000" mode="sequence">
+      <div id="hidden-a">A</div>
+      <div id="hidden-b">B</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const visibleIds = (): string[] =>
+    Array.from(el.children).filter((child) => !(child as HTMLElement).hidden).map((child) => child.id);
+  const before = visibleIds();
+  const original = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden')!;
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+  try {
+    // wait-reason: negative assertion, outlives one 1000ms autoplay tick
+    await new Promise((resolve) => setTimeout(resolve, 1250));
+    expect(visibleIds()).to.deep.equal(before);
+  } finally {
+    Reflect.deleteProperty(document, 'hidden');
+    expect(Object.getOwnPropertyDescriptor(Document.prototype, 'hidden')).to.deep.equal(original);
+  }
 });
 
 it('exposes a localized pause/resume action whenever autoplay is enabled', async () => {
@@ -1727,5 +1763,29 @@ it('sizes its icon buttons from the host font, not the UA control font', async (
   for (const part of ['pause-button', 'next-button']) {
     const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
     expect(getComputedStyle(button).fontSize).to.equal(getComputedStyle(el).fontSize);
+  }
+});
+
+it('applies the action hover and pressed colors to the rendered buttons', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-random-content autoplay with-next><span>A</span><span>B</span></lr-random-content>`);
+  el.style.setProperty('--lr-transition-interactive', 'none');
+  try {
+    for (const [part, token] of [['pause-button', 'action'], ['next-button', 'action']] as const) {
+      const prefix = `--lr-random-content-${token}`;
+      el.style.setProperty(`${prefix}-hover-bg`, 'rgb(11, 22, 33)');
+      el.style.setProperty(`${prefix}-active-bg`, 'rgb(44, 55, 66)');
+      el.style.setProperty(`${prefix}-hover-color`, 'rgb(77, 88, 99)');
+      el.style.setProperty(`${prefix}-active-color`, 'rgb(99, 88, 77)');
+      const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await hoverUntilMatched(button, part);
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(11, 22, 33)' &&
+        getComputedStyle(button).color === 'rgb(77, 88, 99)', part);
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(44, 55, 66)' &&
+        getComputedStyle(button).color === 'rgb(99, 88, 77)', part);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
   }
 });

@@ -1,17 +1,21 @@
+import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
+import { KeyedCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { guard } from 'lit/directives/guard.js';
 import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { splitLines as splitTextLines } from '../../../internal/text-lines.js';
+import { makeScrollRegionFocusable, revealWithinScrollParent } from '../../../internal/scroll-region.js';
 import { acquireAnnouncementSink, Announcer, type AnnouncementSink } from '../../../internal/announcer.js';
 import { advanceViewerSearchIndex, announceSearchResult, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -46,14 +50,12 @@ import {
   ensureShikiLanguageLoaded,
 } from '../../conversation/code-block/shiki-types.js';
 import { styles } from './diff-view.styles.js';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewHighlightLimit, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings/utility.generated.js';
+import { LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewHighlightLimit, LYRA_DEFAULT_diffViewLabel, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-const COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 
 type CopyStatus = 'rest' | 'success' | 'error';
 
@@ -63,8 +65,7 @@ type CopyStatus = 'rest' | 'success' | 'error';
  *  payload, and (with `white-space: pre-wrap`) renders a spurious blank line after each row -- and
  *  collapses a lone-CR (classic-Mac) document into a single giant line. Used at BOTH the diff and
  *  the shiki-tokenize call sites so their line counts stay in lockstep. */
-const splitLines = (text: string): string[] =>
-  text === '' ? [] : text.split(/\r\n|\r|\n/);
+const splitLines = (text: string): string[] => (text === '' ? [] : splitTextLines(text));
 
 // Line count alone does not bound Hirschberg's O(k*l) work over the lines between the common head
 // and tail, or the strings handed to the highlighter. These ceilings apply even when maxLines is
@@ -169,7 +170,7 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  * @customElement lr-diff-view
  * @event lr-copy - Fired after clipboard writing fulfills. The frozen shared outcome detail is
  *   `{ ok: true, text }`, where `text` is the full unified diff.
- * @event lr-error - The clipboard write failed. A bubbling, composed, non-cancelable event with
+ * @event lr-error - A delegated listener can identify this viewer through the event origin.  The clipboard write failed. A bubbling, composed, non-cancelable event with
  *   no detail.
  * @event lr-copy-error - The clipboard write failed. The frozen shared outcome detail is
  *   `{ ok: false, text, reason, error }`, where
@@ -182,6 +183,14 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  *   was clicked or activated via Enter/Space. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
+ * @cssprop --lr-diff-view-copy-hover-bg - Hover fill of the copy control.
+ * @cssprop --lr-diff-view-copy-hover-color - Hover text color of the copy control.
+ * @cssprop --lr-diff-view-copy-active-bg - Active fill of the copy control.
+ * @cssprop --lr-diff-view-copy-active-color - Active text color of the copy control.
+ * @cssprop --lr-diff-view-highlight-action-hover-bg - Hover fill of the highlight-action control.
+ * @cssprop --lr-diff-view-highlight-action-hover-color - Hover text color of the highlight-action control.
+ * @cssprop --lr-diff-view-highlight-action-active-bg - Active fill of the highlight-action control.
+ * @cssprop --lr-diff-view-highlight-action-active-color - Active text color of the highlight-action control.
  * @csspart base - The root wrapper.
  * @csspart line - A single line. Carries `data-type="equal"|"add"|"remove"|"empty"|"fold"`
  *   (`"empty"` is an unbalanced-replace placeholder cell in `layout="split"` and never carries a
@@ -241,6 +250,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     diffViewHiddenLines: LYRA_DEFAULT_diffViewHiddenLines,
     diffViewHighlightLimit: LYRA_DEFAULT_diffViewHighlightLimit,
     diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
+    diffViewLabel: LYRA_DEFAULT_diffViewLabel,
     diffViewOldLabel: LYRA_DEFAULT_diffViewOldLabel,
     diffViewTooLarge: LYRA_DEFAULT_diffViewTooLarge,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
@@ -268,7 +278,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   /** Shows a copy-to-clipboard button for the full unified-diff text. `false` (the default)
    *  renders no button. */
-  @property({ type: Boolean }) copyable = false;
+  @property({ type: Boolean, reflect: true }) copyable = false;
 
   /** A CSS length (e.g. `"20rem"`); once set, the view scrolls internally past this height
    *  instead of growing the page. Invalid values are ignored. */
@@ -332,7 +342,11 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  field. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['line-range'];
 
-  @state() private copyStatus: CopyStatus = 'rest';
+  private readonly copyFeedback = new KeyedCopyFeedback(this);
+  private get copyStatus(): CopyStatus {
+    const feedback = this.copyFeedback.state;
+    return feedback === null ? 'rest' : feedback.ok ? 'success' : 'error';
+  }
   @state() private diffTooLarge = false;
 
   /** Copy outcomes announce through a light-DOM sink because live regions inside shadow roots are
@@ -360,7 +374,6 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   private loadHighlighterCore: (languages: Record<string, ShikiLanguageInput>) => Promise<ShikiHighlighterCore | null> =
     loadShikiHighlighterCore;
 
-  private copyTimer?: { owner: Window; handle: number; generation: number };
   /** Invalidates clipboard outcomes when another activation, source change, disconnect, or
    * adoption makes the pending write obsolete. */
   private copyGeneration = 0;
@@ -458,6 +471,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // reaches DocumentAnchorTarget's own live-region wiring
+    this.syncScrollRegions();
     if (this.pendingSearchResetEvent) {
       this.pendingSearchResetEvent = false;
       this.emitSearchChange();
@@ -484,7 +498,10 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.syncHighlight();
+    if (this.hasUpdated) {
+      this.syncHighlight();
+      this.syncScrollRegions();
+    }
     this.copyAnnouncementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
@@ -494,7 +511,35 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     if (ownerWindow) this.searchAnnouncer.setTimerHost(ownerWindow);
   }
 
+  private readonly scrollRegions = new Map<Element, () => void>();
+  private scrollRegionName?: string;
+
+  /** Keeps every capped-height scroll body keyboard-scrollable while it overflows. */
+  private syncScrollRegions(): void {
+    const name = hostAriaLabel(this) ?? this.localize('diffViewLabel');
+    if (name !== this.scrollRegionName) {
+      this.releaseScrollRegions();
+      this.scrollRegionName = name;
+    }
+    const bodies = new Set(this.renderRoot.querySelectorAll<HTMLElement>('[part="base"], [part="side"]'));
+    for (const [body, dispose] of this.scrollRegions) {
+      if (bodies.has(body as HTMLElement)) continue;
+      dispose();
+      this.scrollRegions.delete(body);
+    }
+    for (const body of bodies) {
+      if (this.scrollRegions.has(body)) continue;
+      this.scrollRegions.set(body, makeScrollRegionFocusable(body, body.matches('[part="base"]') ? name : undefined));
+    }
+  }
+
+  private releaseScrollRegions(): void {
+    for (const dispose of this.scrollRegions.values()) dispose();
+    this.scrollRegions.clear();
+  }
+
   override disconnectedCallback(): void {
+    this.releaseScrollRegions();
     this.highlightToken++;
     this.scrollGeneration++;
     this.searchGeneration++;
@@ -520,16 +565,9 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     if (ownerWindow) this.searchAnnouncer.setTimerHost(ownerWindow);
   }
 
-  private cancelCopyTimer(): void {
-    const timer = this.copyTimer;
-    this.copyTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
-  }
-
   private resetCopyFeedback(): void {
     this.copyGeneration += 1;
-    this.cancelCopyTimer();
-    this.copyStatus = 'rest';
+    this.copyFeedback.clear();
   }
 
   private get highlightLimited(): boolean {
@@ -732,10 +770,12 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     if (!isCurrent()) return false;
     const target = this.lineElementForOpIndex(index);
     if (!target) return false;
-    target.scrollIntoView({
-      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
-      block: 'nearest',
-    });
+    for (const body of this.scrollRegions.keys()) {
+      if (body.contains(target) && (body.scrollHeight > body.clientHeight || body.scrollWidth > body.clientWidth)) {
+        revealWithinScrollParent(target);
+        break;
+      }
+    }
     return true;
   }
 
@@ -918,46 +958,21 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     );
   }
 
-  private showCopyStatus(status: Exclude<CopyStatus, 'rest'>, generation: number): void {
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || !this.isCurrentCopy(generation, owner)) return;
-    this.copyStatus = status;
-    this.copyAnnouncementSink?.announce(status === 'success' ? this.localize('copied') : this.localize('copyFailed'));
-    this.cancelCopyTimer();
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      const timer = this.copyTimer;
-      if (
-        timer?.owner !== owner ||
-        timer.handle !== handle ||
-        timer.generation !== generation ||
-        !this.isCurrentCopy(generation, owner)
-      )
-        return;
-      this.copyTimer = undefined;
-      this.copyStatus = 'rest';
-    }, COPY_CONFIRM_MS);
-    this.copyTimer = { owner, handle, generation };
-  }
-
   private async copy(): Promise<void> {
     if (!this.copyable || this.diffTooLarge) return;
     const generation = ++this.copyGeneration;
-    this.cancelCopyTimer();
-    this.copyStatus = 'rest';
+    this.copyFeedback.clear();
     const text = this.unifiedText;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     if (!owner) return;
     const outcome = await writeClipboardText(owner, text);
-    if (!this.isCurrentCopy(generation, owner)) return;
-    if (!outcome.ok) {
-      this.showCopyStatus('error', generation);
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-      return;
-    }
-    this.showCopyStatus('success', generation);
-    this.emit('lr-copy', outcome);
+    reportCopyOutcome({
+      announce: ok => {
+        this.copyFeedback.show('diff', ok);
+        this.copyAnnouncementSink?.announce(this.localize(ok ? 'copied' : 'copyFailed'));
+      },
+      emit: (name, detail) => this.emit(name, detail ?? null),
+    }, outcome, () => this.isCurrentCopy(generation, owner));
   }
 
   private onCopyClick = (): void => {
@@ -1141,7 +1156,9 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
             </button>`
           : nothing}
         ${this.highlightLimited && this.languageSnapshot ? html`<div part="limit" role="note">${this.localize('diffViewHighlightLimit')}</div>` : nothing}
-        ${this.layout === 'split' ? this.renderSplit() : this.renderUnified()}
+        ${guard([this.layout, this.diffOps, this.contextLines, this.forcedVisibleOps, this.searchMatches,
+          this.searchActiveIndex, this.highlights, this.activeHighlightId, this.highlightedOldLines, this.highlightedNewLines,
+          this.effectiveLocale, lyraLocaleCatalogVersion(this.effectiveMessageLocale), this.strings], () => this.layout === 'split' ? this.renderSplit() : this.renderUnified())}
       </div>
       ${this.renderAnchorLiveRegion()}
     `;

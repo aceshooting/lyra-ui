@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} sleutels',
   },
   jsonViewerLimit: 'Alleen de eerste {count} JSON-knooppunten en {depth} nestingniveaus worden weergegeven en doorzocht.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pauzeren',
   pollResume: 'Hervatten',
   pollRefresh: 'Nu vernieuwen',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Maand',
   knownDateYear: 'Jaar',
   exportFormatMenuLabel: '{label}-formaat',
+  exportFailed: 'Exporteren mislukt',
   mentionSuggestions: 'Suggesties',
   mentionResultCount: {
     one: '{count} suggestie',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Alleen de eerste 10.000 kandidaten voor een vermelding zijn beschikbaar.',
   diffViewHighlightLimit: 'Lange code wordt zonder syntaxiskleuring getoond.',
+  diffViewLabel: 'Verschil',
 };
 
 registerLyraLocale('nl', strings);

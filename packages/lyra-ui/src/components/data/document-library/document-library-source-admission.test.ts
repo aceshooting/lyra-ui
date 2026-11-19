@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraDocumentLibrary, DocumentLibrarySource, LibraryDocument } from './document-library.class.js';
 import type { LyraTable } from '../table/table.class.js';
 import './document-library.js';
+import '../../../translations/ja.js';
 
 const documentRecord = (): LibraryDocument => ({ id: 'd0', name: 'Document', tags: ['topic'] });
 const facets = { total: 1, values: [{ key: 'topic', label: 'Topic' }], unavailableSelected: [] };
@@ -111,4 +112,18 @@ it('shows omitted source tag counts and provider labels without refetching for l
   expect(summary()).to.equal('Additional categories: 1,200');
   expect(requests).to.equal(1);
   expect(viewer.documents.length).to.equal(0);
+});
+
+it('formats provider row tags with the active locale’s unit-list separator', async () => {
+  const tags = ['Alpha', 'Beta', 'Gamma'];
+  const provider: DocumentLibrarySource = { revision: 1,
+    query: async () => ({ total: 1, rows: [{ key: 'd0', order: 0, value: { ...documentRecord(), tags } }], tags: facets }),
+    lookup: async () => [], locate: async () => null };
+  const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library lang="ja" .dataSource=${provider}></lr-document-library>`);
+  await waitUntil(() => library.sourceTotal === 1);
+  const table = library.shadowRoot!.querySelector<LyraTable>('lr-table')!;
+  await table.updateComplete;
+  const expected = new Intl.ListFormat('ja', { type: 'unit' }).format(tags);
+  expect(expected).not.to.equal(tags.join(', '));
+  expect(table.shadowRoot!.querySelector('td[data-col-key="tags"]')!.textContent!.trim()).to.equal(expected);
 });

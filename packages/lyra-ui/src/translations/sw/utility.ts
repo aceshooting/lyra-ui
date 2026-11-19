@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: 'funguo {count}',
   },
   jsonViewerLimit: 'Ni nodi {count} za kwanza za JSON na viwango {depth} vya ndani pekee vinavyoonyeshwa na kutafutwa.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Sitisha',
   pollResume: 'Endelea',
   pollRefresh: 'Sasisha sasa',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Mwezi',
   knownDateYear: 'Mwaka',
   exportFormatMenuLabel: 'Muundo wa {label}',
+  exportFailed: 'Uhamishaji umeshindwa',
   mentionSuggestions: 'Mapendekezo',
   mentionResultCount: {
     one: 'pendekezo {count}',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Ni mapendekezo 10,000 ya kwanza ya majina ya kutaja pekee yanayopatikana.',
   diffViewHighlightLimit: 'Msimbo mrefu unaonyeshwa bila uangaziaji wa sintaksia.',
+  diffViewLabel: 'Tofauti',
 };
 
 registerLyraLocale('sw', strings);

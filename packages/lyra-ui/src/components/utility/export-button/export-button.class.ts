@@ -6,7 +6,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraAppearance,
   type LyraSize,
@@ -20,7 +20,7 @@ import { downloadIcon } from '../../../internal/icons.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
+import { buildCsv, downloadBlob, type LyraCsvColumn } from '../../../internal/csv.js';
 import { styles } from './export-button.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
@@ -31,13 +31,14 @@ import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
+  readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
+import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { PopupController } from '../../../internal/popup-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_statusError } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel } from '../../../internal/default-strings/utility.generated.js';
+import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFailed, LYRA_DEFAULT_exportFormatMenuLabel } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraExportFormat = 'csv' | 'json';
@@ -77,17 +78,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
 
 function formatArrayLength(value: unknown): { source: object; length: number } | undefined {
   try {
-    if (!Array.isArray(value)) return undefined;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return undefined;
-    return { source: value, length: Math.min(length.value, MAX_EXPORT_FORMATS) };
+    const length = Array.isArray(value) ? readOwnArrayLength(value) : undefined;
+    return length === undefined ? undefined : { source: value as object, length: Math.min(length, MAX_EXPORT_FORMATS) };
   } catch {
     return undefined;
   }
@@ -167,6 +159,10 @@ export interface LyraExportButtonEventMap {
  *   A close this component imposes on itself (disablement, `loading`, or a format list collapsing
  *   to one entry) emits no lifecycle event and therefore offers no veto point.
  * @slot icon - Decorative trigger glyph. An icon-only trigger uses a download glyph by default.
+ * @cssprop --lr-export-button-menu-item-hover-bg - Hover fill of the menu-item control.
+ * @cssprop --lr-export-button-menu-item-hover-color - Hover text color of the menu-item control.
+ * @cssprop --lr-export-button-menu-item-active-bg - Active fill of the menu-item control.
+ * @cssprop --lr-export-button-menu-item-active-color - Active text color of the menu-item control.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart trigger-error - Present alongside `trigger` after a built-in CSV/JSON export fails,
  *   until the next export attempt. Style with `::part(trigger-error)`.
@@ -216,7 +212,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     ...super.defaultStrings,
     exportButtonLabel: LYRA_DEFAULT_exportButtonLabel,
     exportFormatMenuLabel: LYRA_DEFAULT_exportFormatMenuLabel,
-    statusError: LYRA_DEFAULT_statusError,
+    exportFailed: LYRA_DEFAULT_exportFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -343,11 +339,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (value) => {
+      this._size = value;
+    });
   }
 
   /** Optional compact trigger treatment. Omission preserves the original trigger chrome. */
@@ -458,6 +452,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const disconnectDocument = connectedDocument ?? this.ownerDocument;
     this.pendingDisconnectDocument = disconnectDocument;
     super.disconnectedCallback();
+    this.descriptionLease?.release();
+    this.descriptionLease = undefined;
     this.cleanup?.();
     this.cleanup = undefined;
     this.menuPositioned = false;
@@ -736,8 +732,19 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.open = !this.open;
   }
 
+  private descriptionLease?: NativeControlDescriptionLease;
+
+  /** Projects the host's `aria-describedby` onto the native trigger; IDREFs cannot cross the shadow root. */
+  private syncHostDescription(): void {
+    const target = this.isConnected ? this.triggerEl : undefined;
+    if (!target) return;
+    if (this.descriptionLease) this.descriptionLease.update(target);
+    else this.descriptionLease = acquireNativeControlDescription(this, target, () => '');
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncHostDescription();
     if (
       (changed.has('disabled') || changed.has('loading')) &&
       !this.disabled &&
@@ -811,7 +818,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const keys = this.effectiveColumns(rows).map((c) => c.key);
     return rows.map((row) => {
       const picked = Object.create(null) as Record<string, unknown>;
-      for (const key of keys) picked[key] = row[key];
+      for (const key of keys) picked[key] = Object.hasOwn(row, key) ? row[key] : undefined;
       return picked;
     });
   }
@@ -850,7 +857,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       if (generation !== this.connectionGeneration) return;
       const csv = format === 'csv';
       const contents = csv
-        ? buildCsv(rows, this.effectiveColumns(rows), { bom: this.bom })
+        ? buildCsv(this.rowsForExport(rows), this.effectiveColumns(rows), { bom: this.bom })
         : JSON.stringify(this.rowsForExport(rows), null, 2);
       if (generation !== this.connectionGeneration) return;
       downloadBlob(
@@ -863,7 +870,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     } catch (error) {
       if (generation !== this.connectionGeneration) return;
       this.exportFailed = true;
-      this.sink?.announce(this.localize('statusError'));
+      this.sink?.announce(this.localize('exportFailed'));
       this.emit('lr-export-error', Object.freeze({ format, error }));
     }
   }

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ቁልፎች',
   },
   jsonViewerLimit: 'የመጀመሪያዎቹ {count} JSON ኖዶች እና {depth} የመደራረብ ደረጃዎች ብቻ ይታያሉ እና ይፈለጋሉ።',
+  jsonViewerLabel: 'JSON',
   pollPause: 'አቁም',
   pollResume: 'ቀጥል',
   pollRefresh: 'አሁን አድስ',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'ወር',
   knownDateYear: 'ዓመት',
   exportFormatMenuLabel: 'የ{label} ቅርጸት',
+  exportFailed: 'መላክ አልተሳካም',
   mentionSuggestions: 'ጥቆማዎች',
   mentionResultCount: {
     one: '{count} ጥቆማ',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ለመጥቀስ የመጀመሪያዎቹ 10,000 ጥቆማዎች ብቻ ይገኛሉ።',
   diffViewHighlightLimit: 'ረጅም ኮድ የአገባብ ማድመቂያ ሳይኖረው ይታያል።',
+  diffViewLabel: 'ልዩነት',
 };
 
 registerLyraLocale('am', strings);

@@ -1,4 +1,6 @@
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   fixture,
@@ -8,7 +10,7 @@ import {
   waitUntil,
   aTimeout,
 } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
@@ -21,6 +23,9 @@ import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
 // incidentally touch (jsonObject, jsonExpandLabel, jsonKeyCount, jsonCollapseLabel) instead of
 // tripping the partial-catalog fallback warning. 'ar-EG' chains down to the registered base 'ar'.
 import "../../../translations/ar.js";
+
+expectLocaleFallback('ar', ['jsonViewerLabel']);
+expectLocaleFallback('ar-EG', ['jsonViewerLabel']);
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-json-viewer', 'collapsed-depth');
@@ -47,35 +52,76 @@ it("renders only own enumerable object data, never inherited prototype fields", 
   expect(el.shadowRoot!.textContent).to.not.contain("must stay hidden");
 });
 
-it("uses instant search scrolling when the owner prefers reduced motion", async () => {
-  const originalMatchMedia = window.matchMedia;
-  const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
-  let behavior: ScrollBehavior | undefined;
-  window.matchMedia = ((query: string) => ({
-    matches: query === "(prefers-reduced-motion: reduce)",
-    media: query,
-    onchange: null,
-    addListener() {},
-    removeListener() {},
-    addEventListener() {},
-    removeEventListener() {},
-    dispatchEvent: () => true,
-  })) as typeof window.matchMedia;
-  HTMLElement.prototype.scrollIntoView = function (options?: boolean | ScrollIntoViewOptions) {
-    if (typeof options === "object") behavior = options.behavior;
-  };
+for (const preference of ['reduce', 'no-preference'] as const) {
+  it(`reveals search matches within the viewer using the owner motion preference ${preference}`, async () => {
+    await setReducedMotion(preference);
+    try {
+      const data = Array.from({ length: 45 }, (_, i) => `value-${i}`);
+      const outer = await fixture<HTMLDivElement>(html`<div style="height:100px;overflow:auto">
+        <div style="height:200px"></div>
+        <lr-json-viewer max-height="80px" .data=${data}></lr-json-viewer>
+      </div>`);
+      const el = outer.querySelector<LyraJsonViewer>('lr-json-viewer')!;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part=base]')!;
+      await el.runSearch('value-44');
+      expect(await el.searchNext()).to.equal(true);
+      const active = el.shadowRoot!.querySelector<HTMLElement>('[data-active]')!;
+      await waitUntil(() => base.scrollTop > 0 && active.getBoundingClientRect().bottom <= base.getBoundingClientRect().bottom + 1);
+      expect(outer.scrollTop).to.equal(0);
+      expect(getComputedStyle(base).scrollBehavior).to.equal(preference === 'reduce' ? 'auto' : 'smooth');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+  });
+}
 
-  try {
-    const el = (await fixture(
-      html`<lr-json-viewer .data=${{ name: "Ada" }}></lr-json-viewer>`
-    )) as LyraJsonViewer;
-    await el.runSearch("Ada");
-    expect(await el.searchNext()).to.equal(true);
-    expect(behavior).to.equal("auto");
-  } finally {
-    window.matchMedia = originalMatchMedia;
-    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
-  }
+it("names repeated keys by their full path so per-row controls are distinguishable", async () => {
+  const el = (await fixture(
+    html`<lr-json-viewer
+      copyable
+      expand-depth="3"
+      .data=${{ a: { name: { x: 1 } }, b: { name: { x: 2 } } }}
+    ></lr-json-viewer>`
+  )) as LyraJsonViewer;
+  await el.updateComplete;
+  const names = Array.from(el.shadowRoot!.querySelectorAll('[part="toggle"]:not([hidden])')).map(
+    (toggle) => toggle.getAttribute('aria-label') ?? ''
+  );
+  expect(new Set(names).size).to.equal(names.length);
+  expect(names.some((name) => name.includes('a.name'))).to.equal(true);
+});
+
+it("makes a capped, overflowing tree a named keyboard tab stop", async () => {
+  const el = (await fixture(
+    html`<lr-json-viewer
+      max-height="40px"
+      expand-depth="3"
+      .data=${{ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6 }}
+    ></lr-json-viewer>`
+  )) as LyraJsonViewer;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  await waitUntil(() => base.getAttribute('tabindex') === '0', 'overflowing base is focusable');
+  expect(base.getAttribute('role')).to.equal('region');
+  expect(base.getAttribute('aria-label')).to.equal('JSON');
+  el.strings = { jsonViewerLabel: 'Inspection' };
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Inspection');
+  el.setAttribute('aria-label', 'Details');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Details');
+});
+
+it("paints the toggle hover fill differently from the row hover fill", async () => {
+  const el = (await fixture(
+    html`<lr-json-viewer expand-depth="2" .data=${{ a: { b: 1 } }}></lr-json-viewer>`
+  )) as LyraJsonViewer;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]:not([hidden])') as HTMLElement;
+  const row = toggle.closest('.row') as HTMLElement;
+  const { x, y, width, height } = toggle.getBoundingClientRect();
+  await sendMouse({ type: 'move', position: [Math.round(x + width / 2), Math.round(y + height / 2)] });
+  await waitUntil(() => toggle.matches(':hover'), 'toggle hovered');
+  expect(getComputedStyle(toggle).backgroundColor).to.not.equal(getComputedStyle(row).backgroundColor);
+  await resetMouse();
 });
 
 let originalClipboard: PropertyDescriptor | undefined;
@@ -1156,65 +1202,58 @@ describe("imperative search API", () => {
   });
 
   it("reveals, marks, announces, and scrolls to a selected match hidden by a collapsed ancestor", async () => {
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
-    let scrolledPart: string | null = null;
-    HTMLElement.prototype.scrollIntoView = function () {
-      scrolledPart = this.getAttribute("part");
-    };
-    try {
-      const el = (await fixture(
-        html`<lr-json-viewer
-          .data=${SAMPLE}
-          expand-depth=${99}
-        ></lr-json-viewer>`
-      )) as LyraJsonViewer;
-      const sinkSelector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
-      const sink = document.querySelector<HTMLElement>(sinkSelector)!;
-      expect(Boolean(sink), "the sink exists before search navigation").to.be
-        .true;
-      expect(sink.childElementCount).to.equal(0);
-      await el.runSearch("name");
-      const teamRow = [
-        ...el.shadowRoot!.querySelectorAll<HTMLElement>(".row"),
-      ].find(
-        (row) => row.querySelector('[part="key"]')?.textContent === "team"
-      )!;
-      const teamToggle = teamRow.querySelector(
-        '[part="toggle"]'
-      ) as HTMLButtonElement;
-      teamToggle.click();
-      await el.updateComplete;
-      expect(teamToggle.getAttribute("aria-expanded")).to.equal("false");
+    const el = (await fixture(
+      html`<lr-json-viewer
+        .data=${SAMPLE}
+        expand-depth=${99}
+      ></lr-json-viewer>`
+    )) as LyraJsonViewer;
+    const sinkSelector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+    const sink = document.querySelector<HTMLElement>(sinkSelector)!;
+    expect(Boolean(sink), "the sink exists before search navigation").to.be
+      .true;
+    expect(sink.childElementCount).to.equal(0);
+    await el.runSearch("name");
+    const teamRow = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>(".row"),
+    ].find(
+      (row) => row.querySelector('[part="key"]')?.textContent === "team"
+    )!;
+    const teamToggle = teamRow.querySelector(
+      '[part="toggle"]'
+    ) as HTMLButtonElement;
+    teamToggle.click();
+    await el.updateComplete;
+    expect(teamToggle.getAttribute("aria-expanded")).to.equal("false");
 
-      expect(await el.searchNext()).to.be.true;
-      expect(await el.searchNext()).to.be.true;
+    expect(await el.searchNext()).to.be.true;
+    expect(await el.searchNext()).to.be.true;
 
-      const active = el.shadowRoot!.querySelector<HTMLElement>("[data-active]");
-      expect(active?.getAttribute("aria-current")).to.equal("true");
-      expect(teamToggle.getAttribute("aria-expanded")).to.equal("true");
-      expect(
-        el.shadowRoot!.querySelectorAll('[part="key"][data-match]').length
-      ).to.equal(2);
-      const mirror = el.shadowRoot!.querySelector<HTMLElement>("span.sr-only")!;
-      expect(mirror.textContent).to.equal("Match 2 of 2");
-      expect(mirror.getAttribute("aria-hidden")).to.equal("true");
-      expect(mirror.hasAttribute("role")).to.be.false;
-      expect(mirror.hasAttribute("aria-live")).to.be.false;
-      expect(
-        Array.from(sink.children, (child) => child.textContent)
-      ).to.deep.equal(["Match 1 of 2", "Match 2 of 2"]);
-      expect(scrolledPart).to.equal("key");
+    const active = el.shadowRoot!.querySelector<HTMLElement>("[data-active]");
+    expect(active?.getAttribute("aria-current")).to.equal("true");
+    expect(teamToggle.getAttribute("aria-expanded")).to.equal("true");
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="key"][data-match]').length
+    ).to.equal(2);
+    const mirror = el.shadowRoot!.querySelector<HTMLElement>("span.sr-only")!;
+    expect(mirror.textContent).to.equal("Match 2 of 2");
+    expect(mirror.getAttribute("aria-hidden")).to.equal("true");
+    expect(mirror.hasAttribute("role")).to.be.false;
+    expect(mirror.hasAttribute("aria-live")).to.be.false;
+    expect(
+      Array.from(sink.children, (child) => child.textContent)
+    ).to.deep.equal(["Match 1 of 2", "Match 2 of 2"]);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part=base]')!;
+    expect(active!.getBoundingClientRect().bottom).to.be.at.most(base.getBoundingClientRect().bottom + 1);
 
-      el.remove();
-      expect(document.querySelector(sinkSelector) === null).to.be.true;
-      document.body.append(el);
-      expect(
-        document.querySelector<HTMLElement>(sinkSelector)?.childElementCount
-      ).to.equal(0);
-      el.remove();
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
-    }
+
+    el.remove();
+    expect(document.querySelector(sinkSelector) === null).to.be.true;
+    document.body.append(el);
+    expect(
+      document.querySelector<HTMLElement>(sinkSelector)?.childElementCount
+    ).to.equal(0);
+    el.remove();
   });
 
   it("keeps public search navigation silent while the viewer host is hidden", async () => {
@@ -1372,14 +1411,17 @@ describe("imperative search API", () => {
     await el.searchNext();
     let callCount = 0;
     let lastDetail: { activeIndex: number } | undefined;
+    let renderedMatches = -1;
     el.addEventListener("lr-search-change", (e) => {
       callCount++;
       lastDetail = (e as CustomEvent).detail;
+      renderedMatches = el.shadowRoot!.querySelectorAll('[data-match]').length;
     });
     el.data = { other: "value" };
     await el.updateComplete;
     expect(callCount).to.equal(1);
     expect(lastDetail!.activeIndex).to.equal(-1);
+    expect(renderedMatches).to.equal(0);
   });
 
   it("clearSearch() resets query/matchCount/activeIndex", async () => {
@@ -2073,4 +2115,43 @@ it('keeps feedback on the latest in-memory copy when the previous write rejects'
     if (original) Object.defineProperty(navigator, 'clipboard', original);
     else Reflect.deleteProperty(navigator, 'clipboard');
   }
+});
+
+it('matches keys and values across accent and case differences', async () => {
+  const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer .data=${{ Café: 'CAFÉ' }}></lr-json-viewer>`);
+  expect(await el.runSearch('cafe')).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(2);
+});
+
+it('applies the action hover and pressed colors to the rendered buttons', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-json-viewer copyable .data=${{status: 1}}></lr-json-viewer>`);
+  el.style.setProperty('--lr-transition-interactive', 'none');
+  try {
+    for (const [part, token] of [['toggle', 'toggle'], ['copy-button', 'copy']] as const) {
+      const prefix = `--lr-json-viewer-${token}`;
+      el.style.setProperty(`${prefix}-hover-bg`, 'rgb(11, 22, 33)');
+      el.style.setProperty(`${prefix}-active-bg`, 'rgb(44, 55, 66)');
+      el.style.setProperty(`${prefix}-hover-color`, 'rgb(77, 88, 99)');
+      el.style.setProperty(`${prefix}-active-color`, 'rgb(99, 88, 77)');
+      const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await hoverUntilMatched(button, part);
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(11, 22, 33)' &&
+        getComputedStyle(button).color === 'rgb(77, 88, 99)', part);
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(44, 55, 66)' &&
+        getComputedStyle(button).color === 'rgb(99, 88, 77)', part);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('leaves a scrolling ancestor in place when all JSON fits the viewer', async () => {
+  const outer = await fixture<HTMLDivElement>(html`<div style="height:50px;overflow:auto">
+    <div style="height:200px"></div><lr-json-viewer .data=${'needle'}></lr-json-viewer></div>`);
+  const viewer = outer.querySelector<LyraJsonViewer>('lr-json-viewer')!;
+  expect(await viewer.runSearch('needle')).to.equal(1);
+  expect(await viewer.searchNext()).to.equal(true);
+  expect(outer.scrollTop).to.equal(0);
 });

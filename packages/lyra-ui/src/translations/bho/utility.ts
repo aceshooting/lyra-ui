@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} कुंजी',
   },
   jsonViewerLimit: 'सिर्फ पहिला {count} JSON नोड आ {depth} तह तक नेस्टिंग देखावल आ खोजल जाई।',
+  jsonViewerLabel: 'JSON',
   pollPause: 'रोकीं',
   pollResume: 'फेर शुरू करीं',
   pollRefresh: 'अबहीं ताजा करीं',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'महीना',
   knownDateYear: 'साल',
   exportFormatMenuLabel: '{label} के फॉर्मेट',
+  exportFailed: 'निर्यात ना हो सकल',
   mentionSuggestions: 'सुझाव',
   mentionResultCount: {
     one: '{count} सुझाव',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'खाली पहिलका 10,000 गो मेंशन सुझाव उपलब्ध बा।',
   diffViewHighlightLimit: 'लमहर कोड बिना सिंटैक्स हाइलाइटिंग के देखावल जात बा।',
+  diffViewLabel: 'फरक',
 };
 
 registerLyraLocale('bho', strings);

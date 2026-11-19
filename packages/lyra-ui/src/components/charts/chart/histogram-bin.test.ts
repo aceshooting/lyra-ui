@@ -1,3 +1,4 @@
+import { distributionBuckets } from './histogram-buckets.js';
 import { expect } from '@open-wc/testing';
 import { binValues } from './histogram-bin.js';
 import { getLyraLocale, setLyraLocale } from '../../../internal/localization.js';
@@ -176,4 +177,14 @@ it('joins the range endpoints itself when the engine has no range formatter', ()
   } finally {
     if (original) Object.defineProperty(prototype, 'formatRange', original);
   }
+});
+
+it('distinguishes tiny ranges in raw values and prepared distributions', () => {
+  const edges = [1e-30, 2e-30, 3e-30];
+  const distribution = { revision: 'r', counts: { sourceCount: 2, validCount: 2, invalidCount: 0 },
+    domain: { min: 1e-30, max: 3e-30 }, edges, binCounts: [1, 1], belowCount: 0, aboveCount: 0 };
+  for (const buckets of [binValues(edges, 2, 'en'), distributionBuckets(distribution, 'en')]) {
+    expect(new Set(buckets.map(bucket => bucket.label)).size).to.equal(2);
+  }
+  expect(binValues([1e-30], 1, 'en')[0]!.label).to.contain('1');
 });

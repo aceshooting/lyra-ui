@@ -54,6 +54,14 @@ export interface LyraPollStatusEventMap {
  *   former brand-quiet active mix.
  * @cssprop [--lr-poll-status-pause-active-color=var(--lr-color-brand)] - `pause-button` pressed
  *   foreground.
+ * @cssprop [--lr-poll-status-refresh-hover-bg=var(--lr-color-brand-quiet)] - `refresh-button` hover
+ *   background.
+ * @cssprop [--lr-poll-status-refresh-hover-color=var(--lr-color-brand)] - `refresh-button` hover
+ *   foreground.
+ * @cssprop --lr-poll-status-refresh-active-bg - `refresh-button` pressed background; defaults to
+ *   the brand-quiet active mix.
+ * @cssprop [--lr-poll-status-refresh-active-color=var(--lr-color-brand)] - `refresh-button` pressed
+ *   foreground.
  * @status stable
  * @since 4.0.0
  */
@@ -173,11 +181,23 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.pausedRemainingMs = undefined;
       }
     }
-    if (changed.has('active') && !this.active) {
-      this.due = false;
-      this.remainingMs = 0;
+    if (changed.has('active')) {
+      if (!this.active) {
+        // The countdown does not run while inactive; reactivation resumes what was left.
+        if (this.nextInMs != null && !this.deadlineConsumed && !this.paused && !changed.has('nextInMs')) {
+          this.inactiveRemainingMs ??= Math.max(0, this.targetAt - Date.now());
+        }
+        this.due = false;
+        this.remainingMs = 0;
+      } else if (changed.get('active') === false && this.inactiveRemainingMs !== undefined && !changed.has('nextInMs')) {
+        this.targetAt = Date.now() + this.inactiveRemainingMs;
+        this.remainingMs = this.inactiveRemainingMs;
+      }
     }
+    if (this.active || changed.has('nextInMs')) this.inactiveRemainingMs = undefined;
   }
+
+  private inactiveRemainingMs?: number;
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);

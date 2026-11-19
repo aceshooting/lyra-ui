@@ -1,3 +1,4 @@
+import { readOwnDataValue, getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import {
   validateGraphColumns,
   POINT_COLUMN_LIMIT,
@@ -73,11 +74,8 @@ const MAX_CATEGORY_NAMES = 65536;
 const MAX_SIZE = 1024;
 
 /** Reads one own data property, never invoking an accessor or inherited member. */
-const own = (value: unknown, key: string): unknown => {
-  if (!value || typeof value !== 'object') return undefined;
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-};
+const own = (value: unknown, key: string): unknown =>
+  value && typeof value === 'object' ? readOwnDataValue(value, key) : undefined;
 
 const typedPrototype = Object.getPrototypeOf(Uint8Array.prototype) as object;
 const typedGetter = (key: string | symbol) => Object.getOwnPropertyDescriptor(typedPrototype, key)!.get!;
@@ -162,16 +160,13 @@ export function admitChart3dData(value: unknown): TypedColumnResult<LyraChart3dC
 
 /** Copies an axis from untrusted input: own string data only, bounded in length. */
 export function normalizeChart3dAxis(value: unknown): LyraChart3dAxis {
-  try {
-    const label = own(value, 'label');
-    const unit = own(value, 'unit');
-    return Object.freeze({
-      label: typeof label === 'string' ? label.slice(0, 128) : '',
-      unit: typeof unit === 'string' ? unit.slice(0, 64) : '',
-    });
-  } catch {
-    return Object.freeze({});
-  }
+  const axis = value && typeof value === 'object' ? value : {};
+  const label = getOwnDataDescriptor(axis, 'label');
+  const unit = getOwnDataDescriptor(axis, 'unit');
+  if (label === UNSAFE_OWN_DATA_DESCRIPTOR && unit === UNSAFE_OWN_DATA_DESCRIPTOR) return Object.freeze({});
+  const text = (field: typeof label, limit: number) => field !== MISSING_OWN_DATA_DESCRIPTOR &&
+    field !== UNSAFE_OWN_DATA_DESCRIPTOR && typeof field.value === 'string' ? field.value.slice(0, limit) : '';
+  return Object.freeze({ label: text(label, 128), unit: text(unit, 64) });
 }
 
 /** The visible and spoken axis title, with its unit when there is one. */

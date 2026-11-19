@@ -1,3 +1,4 @@
+import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -163,19 +164,22 @@ export const styles = css`
     display: none;
   }
   [part="close-button"] {
+    ${iconAction}
+    --_lr-icon-button-color-default: var(--lr-color-text-quiet);
+    --_lr-icon-button-color-hover-default: var(--lr-toast-close-button-hover-color, var(--lr-color-text));
+    --_lr-icon-button-color-active-default: var(--lr-toast-close-button-active-color, var(--lr-color-text));
+    --_lr-icon-button-background-hover-default: var(--lr-toast-close-button-hover-bg, transparent);
+    --_lr-icon-button-background-active-default: var(--lr-toast-close-button-active-bg,
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     position: relative;
     display: inline-grid;
     place-items: center;
     flex: 0 0 auto;
     margin-inline-start: auto;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--lr-color-text-quiet);
+
     font-size: var(--lr-size-1em);
     line-height: var(--lr-line-height-none);
     padding: var(--lr-space-xs);
-    border-radius: var(--lr-radius);
     ${iconHitTarget}
   }
   [part="progress-ring"] {
@@ -229,27 +233,11 @@ export const styles = css`
   [part="close-icon__svg"] {
     display: block;
   }
-  /* Keep each pointer-state value as an inline fallback: inherited hooks then retheme only the
-     close control without changing the toast surface or the region's stack spacing. */
   [part="close-button"]:where(:hover):where(:not([aria-disabled="true"])) {
-    background: var(--lr-toast-close-button-hover-bg, transparent);
-    color: var(--lr-toast-close-button-hover-color, var(--lr-color-text));
+    ${iconActionHover}
   }
-  /* Pressed adds the fill hover withholds: the resting button is background:none, so mixing that
-     transparent base toward --lr-color-mix-partner lands the partner colour at the active share
-     -- a scrim following the text colour, darker on a light toast, lighter on a dark one. The ink
-     change is restated because keyboard activation raises :active with no :hover; the disabled
-     guard keeps a dismiss-blocked toast visibly inert. */
   [part="close-button"]:where(:active):where(:not([aria-disabled="true"])) {
-    color: var(--lr-toast-close-button-active-color, var(--lr-color-text));
-    background: var(
-      --lr-toast-close-button-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
+    ${iconActionActive}
   }
   [part="close-button"][aria-disabled="true"] {
     opacity: var(--lr-opacity-disabled);

@@ -34,6 +34,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} de chei',
   },
   jsonViewerLimit: 'Sunt afișate și căutate doar primele {count} noduri JSON și {depth} niveluri de imbricare.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Pune pe pauză',
   pollResume: 'Reia',
   pollRefresh: 'Actualizează acum',
@@ -51,6 +52,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Lună',
   knownDateYear: 'An',
   exportFormatMenuLabel: 'Format {label}',
+  exportFailed: 'Exportul a eșuat',
   mentionSuggestions: 'Sugestii',
   mentionResultCount: {
     one: '{count} sugestie',
@@ -71,6 +73,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Sunt disponibili doar primii 10.000 de candidați pentru menționare.',
   diffViewHighlightLimit: 'Codul lung este afișat fără evidențierea sintaxei.',
+  diffViewLabel: 'Diferențe',
 };
 
 registerLyraLocale('ro', strings);

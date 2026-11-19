@@ -101,7 +101,7 @@ export const styles = css`
      matches an aria-disabled row exactly like it would a natively disabled button. */
   [part='option'][aria-disabled='true'] {
     cursor: default;
-    opacity: var(--lr-mention-popover-option-disabled-opacity, 0.5);
+    opacity: var(--lr-mention-popover-option-disabled-opacity, var(--lr-opacity-disabled));
   }
 
   [part='option-icon'] {

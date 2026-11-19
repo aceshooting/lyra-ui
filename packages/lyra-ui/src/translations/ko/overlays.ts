@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: '옵션',
   kbdAltWord: '알트',
   kbdShiftWord: 'Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ko', strings);

@@ -36,6 +36,8 @@ export type LyraSpinnerLabelPlacement = 'none' | 'after';
  * @cssprop [--track-color=var(--lr-color-brand-quiet)] - Upstream-compatible track color.
  * @cssprop [--indicator-color=var(--lr-color-brand)] - Upstream-compatible indicator color.
  * @cssprop [--speed=var(--lr-spinner-duration)] - Upstream-compatible rotation duration.
+ * @cssprop --lr-spinner-track-color - Track color; the upstream track-color alias supplies the fallback.
+ * @cssprop --lr-spinner-indicator-color - Indicator color; the upstream indicator-color alias supplies the fallback.
  * @status stable
  * @since 4.0.0
  */

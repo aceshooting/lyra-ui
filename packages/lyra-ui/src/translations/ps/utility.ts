@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} کیلي',
   },
   jsonViewerLimit: 'یوازې لومړي {count} JSON غوټې او د ځالې {depth} کچې ښودل کېږي او لټول کېږي.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'ځنډول',
   pollResume: 'بیا پیلول',
   pollRefresh: 'اوس تازه کړئ',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'میاشت',
   knownDateYear: 'کال',
   exportFormatMenuLabel: 'د {label} بڼه',
+  exportFailed: 'د صادرولو هڅه ناکامه شوه',
   mentionSuggestions: 'وړاندیزونه',
   mentionResultCount: {
     one: '{count} وړاندیز',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'د یادونې لپاره یوازې لومړي 10,000 نوماندان شته.',
   diffViewHighlightLimit: 'اوږد کوډ د نحوي جوړښت له رنګین ښودلو پرته ښودل کېږي.',
+  diffViewLabel: 'توپیر',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

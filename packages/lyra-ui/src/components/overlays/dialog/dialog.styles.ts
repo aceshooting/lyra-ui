@@ -1,3 +1,5 @@
+import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
+import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -42,34 +44,10 @@ export const styles = css`
     --_lr-dialog-close-color-hover: var(--lr-color-brand);
     --_lr-dialog-close-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
     --_lr-dialog-close-radius: var(--lr-overlay-radius, var(--lr-radius));
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
-    /* The popover API promotes the open host into the browser top layer, so no consumer stacking
-       context can trap it; the z-index above is only the no-popover fallback. These six
-       declarations neutralize the popover attribute's user-agent styles (fit-content, auto margins,
-       solid border, padding, opaque Canvas background), restoring the host's full-viewport
-       transparent frame. */
-    margin: 0;
-    border: none;
-    background: transparent;
-    overflow: visible;
-    inline-size: auto;
-    block-size: auto;
-    align-items: center;
-    justify-content: center;
-    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(
-      var(--lr-space-l),
-      var(--lr-safe-area-inline-start)
-    );
-    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+    ${modalHostStyles}
+    ${dialogChrome}
   }
-  :host([open]) {
-    display: flex;
-  }
+  ${dialogOpenHost}
   /* Keeps the panel rendered after open flips to false, through the exit animation: the component
      writes this attribute for exactly that long and removes it before lr-after-hide. Pointer input
      is dead meanwhile, so a dismissing dialog cannot swallow a click meant for the page below. */
@@ -179,8 +157,8 @@ export const styles = css`
     margin: 0;
     font-weight: var(--lr-font-weight-semibold);
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: break-word;
+    white-space: normal;
   }
   [part="header-actions"] {
     flex: 1 1 auto;

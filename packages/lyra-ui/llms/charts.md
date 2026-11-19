@@ -1,3 +1,4 @@
+
 ## Synchronized categorical charts
 
 `lr-chart` and `lr-lite-chart` accept `syncGroup: string = ''` (attribute `sync-group`). Give
@@ -278,7 +279,8 @@ canvas capability becomes available.
 - `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
   zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
   A data update while zoomed keeps the zoomed range. `resetZoom()` and changes that rebuild the
-  chart instance, such as a chart-type or plugin change, reset it.
+  chart instance, such as a chart-type or plugin change, reset it. If the reset button has keyboard
+  focus when it disappears, focus returns to the canvas.
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.
@@ -720,7 +722,7 @@ undefined, value: unknown }`). For scatter/bubble points, `label` prefers the pe
 `value` is the complete `LyraChartPoint`, including optional `r`, `id`, and `label`. A primitive
 `id` survives the same pointer, data-table, and keyboard activation paths; invalid ids are omitted.
 `lr-datum-activate` emits the same activation with `kind: 'bar'|'point'|'segment'|'slice'` for
-family-wide handling. For scatter/bubble, both events carry the same `LyraChartPoint` value,
+family-wide handling. A canvas line chart reports `segment`, while an SVG lite line chart activates a point mark and reports `point`. For scatter/bubble, both events carry the same `LyraChartPoint` value,
 including a string or finite-number `id` when supplied; invalid ids are omitted. The public
 `LyraChartPoint.id` type is `string | number`, while the activation event's heterogeneous `value`
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
@@ -793,7 +795,8 @@ canvas tooltip has no CSS part), `legend` (the
 wrapping DOM legend), `legend-item` (a dataset/category visibility button), `legend-item-hidden`
 (added while the dataset/category is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
-bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
+bounded-alternative truncation notices), `data-table`, `data-table-button` (activates a value in the generated table),
+`data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
 notice), `limit` (input-admission notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
@@ -1161,6 +1164,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   grouped-bar gaps are bounded within the remaining category width so supported multi-series groups
   retain positive, nonoverlapping bars for ratios below 1. A ratio of 1 reserves the whole slot as
   gap and leaves zero-width bars.
+- `scaleType` (attribute `scale-type`) is an alias for `scale`.
 - `scale: 'linear' | 'sqrt' | 'logarithmic' = 'linear'` — `'sqrt'` (**bar type only**) maps a bar's
   value to height via `Math.sqrt(value / domainMax)` instead of the standard linear `niceDomain`
   fraction (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars
@@ -1468,7 +1472,7 @@ Radial category legends additionally emit `lr-datum-visibility-change-request` (
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line, rendered only for an admitted synchronized
 configuration; the native canvas tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-button`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
@@ -1554,7 +1558,10 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 maxSamples?)` appends finite raw samples and keeps a rolling window of the newest `maxSamples`
 (at most 10,000, also the default; an assigned `values` array longer than that keeps its newest
 10,000 samples, with a localized `limit` notice). The bounded immutable window reuses existing
-canonical samples without re-admission. Use `distribution` below to represent a larger whole-source distribution.
+canonical samples without re-admission. Each completed batch copies each retained sample once into the
+new window. When the evicted samples contain neither endpoint and new samples fall inside the existing range,
+the histogram reuses its range labels and adjusts counts for just the added and removed samples.
+Use `distribution` below to represent a larger whole-source distribution.
 Appends inspect newest positions first and stop once the retained window is full. Invalid-heavy
 batches yield after 10,000 inspected positions and may finish asynchronously. Concurrent appends
 apply in call order; assigning `values` or disconnecting cancels unfinished batches. Pending input
@@ -1615,7 +1622,7 @@ and `distribution` supplies bin categories rather than a spatial route.
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line during synchronization; the native canvas
 tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-button`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
@@ -1957,7 +1964,7 @@ When a point label is absent or contains only whitespace, the point ID names its
   when an ancestor's attributes, the box size or a color-scheme, forced-colors or reduced-motion
   preference changes. Categories use `--lr-color-chart-1` to `--lr-color-chart-8` and wrap after eight.
 
-**Events:** `lr-chart-row-select` (`detail: { id, index }`, frozen — the activated row's ID and its
+**Events:** Cancel `lr-chart-row-select-request` to keep the current selection. An accepted request emits `lr-chart-row-select` (`detail: { id, index }`, frozen — the activated row's ID and its
 original zero-based index in the source columns; user activation only), `lr-camera-change`
 (`detail: { camera: LyraChart3dCamera }`, frozen — user gestures and the Fit control; programmatic
 `camera`, `fit()` and `focusRow()` are silent) and `lr-engine-fallback`
@@ -1972,6 +1979,8 @@ table page to a visible row and aims the camera at it, returning `false` for an 
 `engine-notice` (loading, fallback or software-rendering feedback), `toolbar`, `cursor`, `fit-button`
 (only while the renderer is ready), `instructions`, `table-container`, `table`, `row`, `row-button`,
 `pagination`, `page-button`, `empty` and `error`.
+
+The row selection uses `--lr-chart-3d-selected-bg` and `--lr-chart-3d-selected-color`. Use `--lr-chart-3d-control-hover-bg` for hovered controls and `--lr-chart-3d-control-active-border-color` for the pressed border.
 
 **Themeable custom properties:** `--lr-chart-3d-height` (default `var(--lr-size-24rem)`, the
 viewport's block size), `--lr-chart-3d-point-size` (default `var(--lr-space-s)`) and

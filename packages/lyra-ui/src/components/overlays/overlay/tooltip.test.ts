@@ -1003,11 +1003,23 @@ it('resolves show-delay from the --show-delay custom property when no attribute 
   expect(el.showDelay).to.equal(150);
 
   const trigger = el.querySelector('button')!;
-  await focusByKeyboard(trigger);
-  await waitUntil(() => el.open, 'should open well before the 150ms default show-delay', {
-    interval: 5,
-    timeout: 120,
-  });
+  const view: Window = el.ownerDocument.defaultView!;
+  const original = view.setTimeout;
+  const delays: Array<number | undefined> = [];
+  view.setTimeout = (handler, delay, ...args) => {
+    delays.push(delay);
+    return original.call(view, handler, delay, ...args);
+  };
+  try {
+    const shown = oneEvent(el, 'lr-show');
+    await focusByKeyboard(trigger);
+    expect(delays).to.include(30);
+    expect(delays).not.to.include(150);
+    await shown;
+    expect(el.open).to.equal(true);
+  } finally {
+    view.setTimeout = original;
+  }
 });
 
 it('uses a nested element aria-label instead of its own text when computing the tooltip description', async () => {

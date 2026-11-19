@@ -75,15 +75,15 @@ export const styles = css`
   [part='cursor']:hover,
   [part='fit-button']:hover,
   [part='row-button']:hover,
-  [part='page-button']:hover {
-    background: var(--lr-color-surface-raised);
+  [part='page-button']:hover:not(:disabled) {
+    background: var(--lr-chart-3d-control-hover-bg, var(--lr-color-surface-raised));
   }
 
   [part='cursor']:active,
   [part='fit-button']:active,
   [part='row-button']:active,
-  [part='page-button']:active {
-    border-color: var(--lr-color-brand);
+  [part='page-button']:active:not(:disabled) {
+    border-color: var(--lr-chart-3d-control-active-border-color, var(--lr-color-brand));
   }
 
   [part='cursor']:focus-visible,
@@ -100,12 +100,12 @@ export const styles = css`
   }
 
   [part='row-button']:where([aria-pressed='true']) {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--lr-chart-3d-selected-bg, var(--lr-color-brand));
+    color: var(--lr-chart-3d-selected-color, var(--lr-color-on-brand));
   }
 
   [part='row-button']:where([aria-pressed='true']):hover {
-    background: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) 12%);
+    background: color-mix(in oklab, var(--lr-chart-3d-selected-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
 
   [part='cursor'] {

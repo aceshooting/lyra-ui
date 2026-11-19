@@ -1,5 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
 
@@ -108,10 +109,8 @@ describe('lite-chart forced-colors encodings', () => {
     }
   });
 
-  it('keeps the marks intrinsic while axes, gridlines, and legend text stay system-controlled', async function () {
-    // The property is a Windows Forced Colors Mode integration point some engines omit entirely;
-    // skip rather than fail there, matching src/forced-colors-intrinsic.test.ts.
-    if (!CSS.supports('forced-color-adjust', 'none')) this.skip();
+  it('keeps the marks intrinsic while axes, gridlines, and legend text stay system-controlled', async () => {
+    const supported = CSS.supports('forced-color-adjust', 'none');
     const el = await mount(
       html`<lr-lite-chart type="bar" with-legend y-label="Value" style="inline-size: 640px"></lr-lite-chart>`,
     );
@@ -120,16 +119,16 @@ describe('lite-chart forced-colors encodings', () => {
     await el.updateComplete;
 
     const computed = (selector: string): string =>
-      getComputedStyle(el.shadowRoot!.querySelector(selector)!).forcedColorAdjust;
-    expect(computed('[part="bar"]')).to.equal('none');
-    expect(computed('[part="grid-line"]')).to.equal('auto');
-    expect(computed('[part="axis-label"]')).to.equal('auto');
-    expect(computed('[part="legend-item"]')).to.equal('auto');
+      getComputedStyle(el.shadowRoot!.querySelector(selector)!).getPropertyValue('forced-color-adjust');
+    expect(computed('[part="bar"]')).to.equal(supported ? 'none' : '');
+    expect(computed('[part="grid-line"]')).to.equal(supported ? 'auto' : '');
+    expect(computed('[part="axis-label"]')).to.equal(supported ? 'auto' : '');
+    expect(computed('[part="legend-item"]')).to.equal(supported ? 'auto' : '');
 
     el.type = 'line';
     await el.updateComplete;
-    expect(computed('[part="line"]')).to.equal('none');
-    expect(computed('[part="point"]')).to.equal('none');
+    expect(computed('[part="line"]')).to.equal(supported ? 'none' : '');
+    expect(computed('[part="point"]')).to.equal(supported ? 'none' : '');
   });
 
   it('leaves solid fills, no patterns, and no legend encoding when forced colors are inactive', async () => {
@@ -181,3 +180,23 @@ it('reads forced-colors media once for a chart render', async () => {
   finally { window.matchMedia = original; }
   expect(reads).to.be.at.most(1);
 });
+
+it('keeps the series texture on a hovered bar and marks the hover with a system-colour edge', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = forcedColorsMatchMedia(original);
+    try {
+      const el = await mount(html`<lr-lite-chart type="bar" style="inline-size:400px;block-size:200px"
+        .labels=${['A', 'B']} .datasets=${[{ label: 'S', data: [3, 5] }]}></lr-lite-chart>`);
+      const bar = el.shadowRoot!.querySelector<SVGElement>('[part="bar"]')!;
+      expect(getComputedStyle(bar).stroke).to.equal('none');
+      try {
+        await hoverUntilMatched(bar, 'bar did not receive :hover');
+        await waitUntil(() => getComputedStyle(bar).stroke !== 'none', 'hover edge never painted');
+        expect(getComputedStyle(bar).fill).to.contain('url(');
+      } finally {
+        await resetMouse();
+      }
+    } finally {
+      window.matchMedia = original;
+    }
+  });

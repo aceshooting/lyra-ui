@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} khóa',
   },
   jsonViewerLimit: 'Chỉ hiển thị và tìm kiếm {count} nút JSON đầu tiên, tối đa {depth} cấp lồng nhau.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Tạm dừng',
   pollResume: 'Tiếp tục',
   pollRefresh: 'Làm mới ngay',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Tháng',
   knownDateYear: 'Năm',
   exportFormatMenuLabel: 'Định dạng {label}',
+  exportFailed: 'Không thể xuất dữ liệu',
   mentionSuggestions: 'Đề xuất',
   mentionResultCount: {
     other: '{count} đề xuất',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Chỉ có 10.000 đối tượng đầu tiên trong danh sách gợi ý nhắc đến.',
   diffViewHighlightLimit: 'Mã dài được hiển thị mà không tô màu cú pháp.',
+  diffViewLabel: 'Khác biệt',
 };
 
 registerLyraLocale('vi', strings);

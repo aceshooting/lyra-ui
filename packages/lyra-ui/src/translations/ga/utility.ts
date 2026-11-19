@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
     two: '{count} eochair',
   },
   jsonViewerLimit: 'Ní thaispeántar agus ní chuardaítear ach an chéad {count} nód JSON agus {depth} leibhéal neadaithe.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Cuir ar sos',
   pollResume: 'Atosaigh',
   pollRefresh: 'Athnuaigh anois',
@@ -57,6 +58,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Mí',
   knownDateYear: 'Bliain',
   exportFormatMenuLabel: 'Formáid {label}',
+  exportFailed: 'Theip ar an easpórtáil',
   mentionSuggestions: 'Moltaí',
   mentionResultCount: {
     few: '{count} mholadh',
@@ -81,6 +83,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Níl ar fáil ach an chéad 10,000 iarrthóir lua.',
   diffViewHighlightLimit: 'Taispeántar cód fada gan aibhsiú comhréire.',
+  diffViewLabel: 'Difríocht',
 };
 
 registerLyraLocale('ga', strings);

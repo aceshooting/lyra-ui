@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ключа',
   },
   jsonViewerLimit: 'Показаны и доступны для поиска только первые {count} узлов JSON и {depth} уровней вложенности.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Приостановить',
   pollResume: 'Возобновить',
   pollRefresh: 'Обновить сейчас',
@@ -54,6 +55,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Месяц',
   knownDateYear: 'Год',
   exportFormatMenuLabel: 'Формат: {label}',
+  exportFailed: 'Не удалось выполнить экспорт',
   mentionSuggestions: 'Подсказки',
   mentionResultCount: {
     one: '{count} подсказка',
@@ -76,6 +78,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Доступны только первые 10 000 кандидатов для упоминания.',
   diffViewHighlightLimit: 'Длинный код отображается без подсветки синтаксиса.',
+  diffViewLabel: 'Различия',
 };
 
 registerLyraLocale('ru', strings);

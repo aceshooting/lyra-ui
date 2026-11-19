@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Touche Option',
   kbdAltWord: 'Touche Alt',
   kbdShiftWord: 'Touche Shift',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ln', strings);

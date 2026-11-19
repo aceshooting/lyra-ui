@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconAction } from '../../../internal/icon-action.styles.js';
+import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -32,9 +33,8 @@ export const styles = css`
   }
   [part='pause-button'],
   [part='next-button'] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    ${iconAction}
+    ${interactiveTransition}
     ${iconHitTarget}
     margin-block-start: var(--lr-space-xs);
     padding: var(--lr-space-xs);
@@ -42,23 +42,18 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
-    /* Hover/active below repaint border-color and color, and active also fills a background, so
-       all three channels need to ease; without this this button's paint snaps while
-       lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='pause-button']:hover,
   [part='next-button']:hover {
     border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
+    color: var(--lr-random-content-action-hover-color, var(--lr-color-brand));
+    background: var(--lr-random-content-action-hover-bg, var(--lr-color-surface));
   }
   [part='pause-button']:active,
   [part='next-button']:active {
     border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-random-content-action-active-color, var(--lr-color-brand));
+    background: var(--lr-random-content-action-active-bg, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='pause-button']:focus-visible,
   [part='next-button']:focus-visible {

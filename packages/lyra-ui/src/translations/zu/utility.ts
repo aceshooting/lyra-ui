@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: 'Okhiye abangu-{count}',
   },
   jsonViewerLimit: 'Kuboniswa futhi kuseshwa amafindo e-JSON okuqala angu-{count} namazinga okushutheka angu-{depth} kuphela.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Misa isikhashana',
   pollResume: 'Qhubeka',
   pollRefresh: 'Vuselela manje',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Inyanga',
   knownDateYear: 'Unyaka',
   exportFormatMenuLabel: 'Ifomethi ye-{label}',
+  exportFailed: 'Ukukhipha kuhlulekile',
   mentionSuggestions: 'Iziphakamiso',
   mentionResultCount: {
     one: 'Isiphakamiso esisodwa ({count})',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Kutholakala iziphakamiso zokuqala ezingu-10,000 zokubalula kuphela.',
   diffViewHighlightLimit: 'Ikhodi ende iboniswa ngaphandle kokugqamisa i-syntax.',
+  diffViewLabel: 'Umehluko',
 };
 
 registerLyraLocale('zu', strings);

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} کنجیاں',
   },
   jsonViewerLimit: 'صرف پہلے {count} JSON نوڈ تے {depth} درجہ بندی دیاں سطحاں وکھائیاں تے لبھیاں گئیاں۔',
+  jsonViewerLabel: 'JSON',
   pollPause: 'روکو',
   pollResume: 'مڑ شروع کرو',
   pollRefresh: 'ہن تازہ کرو',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'مہینہ',
   knownDateYear: 'سال',
   exportFormatMenuLabel: '{label} فارمیٹ',
+  exportFailed: 'برآمد کرن وچ ناکامی',
   mentionSuggestions: 'تجاویز',
   mentionResultCount: {
     one: '{count} تجویز',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ذکر کرن لئی صرف پہلے 10,000 امیدوار دستیاب نیں۔',
   diffViewHighlightLimit: 'لمبا کوڈ سنٹیکس ہائی لائٹنگ توں بغیر وکھایا جاندا اے۔',
+  diffViewLabel: 'فرق',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

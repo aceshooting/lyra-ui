@@ -1032,12 +1032,11 @@ describe('row expand toggle accessible name', () => {
       (button) => button.getAttribute('aria-label') ?? '',
     );
 
-  it('shares one localized name across rows when rowExpandLabel is unset', async () => {
+  it('includes the row identity in the default localized name when rowExpandLabel is unset', async () => {
     const el = await expandableTable();
     const names = toggleNames(el);
     expect(names.length).to.equal(rows.length);
-    expect(new Set(names).size, 'the default name carries no row context').to.equal(1);
-    expect(names[0]).to.not.equal('');
+    expect(names).to.deep.equal(rows.map(row => `Expand ${row.id}`));
   });
 
   it('names each row its own way when rowExpandLabel is set', async () => {

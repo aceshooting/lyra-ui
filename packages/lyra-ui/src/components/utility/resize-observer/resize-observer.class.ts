@@ -104,23 +104,38 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   private observeTargets = (): void => {
     this.disconnect();
     const ownerDocument = this.ownerDocument;
-    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    let ResizeObserverCtor: typeof ResizeObserver | undefined;
+    try {
+      ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    } catch {
+      return;
+    }
     if (this.disabled || !this.isConnected || !ResizeObserverCtor) return;
-    const targets = slottedElementTargets(this.renderRoot);
+    let targets: Element[];
+    try {
+      targets = slottedElementTargets(this.renderRoot);
+    } catch {
+      return;
+    }
     if (targets.length === 0) return;
     const generation = this.observerGeneration;
-    const observer = new ResizeObserverCtor((entries) => {
-      if (
-        this.observer !== observer ||
-        this.observerDocument !== ownerDocument ||
-        this.observerGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.emit('lr-resize', { entries: [...entries] });
-    });
+    let observer: ResizeObserver;
+    try {
+      observer = new ResizeObserverCtor((entries) => {
+        if (
+          this.observer !== observer ||
+          this.observerDocument !== ownerDocument ||
+          this.observerGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        this.emit('lr-resize', { entries: [...entries] });
+      });
+    } catch {
+      return;
+    }
     this.observer = observer;
     this.observerDocument = ownerDocument;
     let observed = false;

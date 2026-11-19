@@ -64,6 +64,26 @@ export const styles = css`
     max-inline-size: 100%;
     max-block-size: 100%;
   }
+  /* Edge-mounted panels carry their own safe-area padding. */
+  :host(:not([contained])) [part~="panel"] {
+    box-sizing: border-box;
+    padding-block: var(--lr-safe-area-top) var(--lr-safe-area-bottom);
+  }
+  :host(:not([contained]):is([placement="end"], :not([placement]))) [part~="panel"] {
+    padding-inline-end: var(--lr-safe-area-inline-end);
+  }
+  :host(:not([contained])[placement="start"]) [part~="panel"] {
+    padding-inline-start: var(--lr-safe-area-inline-start);
+  }
+  :host(:not([contained]):is([placement="top"], [placement="bottom"])) [part~="panel"] {
+    padding-inline: var(--lr-safe-area-inline-start) var(--lr-safe-area-inline-end);
+  }
+  :host(:not([contained])[placement="top"]) [part~="panel"] {
+    padding-block-end: 0;
+  }
+  :host(:not([contained])[placement="bottom"]) [part~="panel"] {
+    padding-block-start: 0;
+  }
   :host(:is([placement="end"], :not([placement]))) [part~="panel"] {
     --_lr-drawer-enter-x: var(--lr-size-1rem);
   }

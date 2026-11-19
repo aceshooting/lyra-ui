@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './resize-observer.js';
 import type { LyraResizeObserver } from './resize-observer.class.js';
 
@@ -290,4 +290,42 @@ it('isolates a target rejected both with and without the resize box option', asy
   } finally {
     window.ResizeObserver = originalObserver;
   }
+});
+
+it('contains a throwing constructor and capability getter, then resumes', async () => {
+  const original = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+  const el = await fixture<LyraResizeObserver>(html`<lr-resize-observer><div>Observed</div></lr-resize-observer>`);
+  await aTimeout(0);
+  const rebuild = (): void => (el as unknown as { observeTargets(): void }).observeTargets();
+  try {
+    class ThrowingResizeObserver {
+      constructor() {
+        throw new Error('constructor must stay contained');
+      }
+    }
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, writable: true, value: ThrowingResizeObserver });
+    expect(rebuild).to.not.throw();
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      get() {
+        throw new Error('capability lookup must stay contained');
+      },
+    });
+    expect(rebuild).to.not.throw();
+    expect((el as unknown as { observer?: ResizeObserver }).observer).to.equal(undefined);
+  } finally {
+    if (original) Object.defineProperty(window, 'ResizeObserver', original);
+    el.remove();
+  }
+});
+
+it('recovers when a slot temporarily cannot provide its assigned elements', async () => {
+  const el = await fixture<LyraResizeObserver>(html`<lr-resize-observer><div>Observed</div></lr-resize-observer>`);
+  const slot = el.shadowRoot!.querySelector('slot')!;
+  Object.defineProperty(slot, 'assignedElements', { configurable: true, value: () => { throw new Error('Unavailable'); } });
+  slot.dispatchEvent(new Event('slotchange'));
+  Reflect.deleteProperty(slot, 'assignedElements');
+  const resumed = oneEvent(el, 'lr-resize');
+  slot.dispatchEvent(new Event('slotchange'));
+  expect((await resumed).detail.entries[0].target === el.firstElementChild).to.equal(true);
 });

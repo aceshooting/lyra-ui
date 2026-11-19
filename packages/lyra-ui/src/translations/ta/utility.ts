@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} விசைகள்',
   },
   jsonViewerLimit: 'முதல் {count} JSON முனைகள் மற்றும் {depth} அடுக்குகள் மட்டுமே காட்டப்பட்டு தேடப்படும்.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'இடைநிறுத்து',
   pollResume: 'தொடர்',
   pollRefresh: 'இப்போது புதுப்பிக்கவும்',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'மாதம்',
   knownDateYear: 'ஆண்டு',
   exportFormatMenuLabel: '{label} வடிவம்',
+  exportFailed: 'ஏற்றுமதி செய்ய முடியவில்லை',
   mentionSuggestions: 'பரிந்துரைகள்',
   mentionResultCount: {
     one: '{count} பரிந்துரை',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'குறிப்பிடுவதற்கான முதல் 10,000 பரிந்துரைகள் மட்டுமே கிடைக்கின்றன.',
   diffViewHighlightLimit: 'நீளமான குறியீடு தொடரியல் சிறப்பித்தல் இல்லாமல் காட்டப்படுகிறது.',
+  diffViewLabel: 'வேறுபாடு',
 };
 
 registerLyraLocale('ta', strings);

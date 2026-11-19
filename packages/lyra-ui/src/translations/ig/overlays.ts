@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Nhọrọ',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Mgbanwe',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('ig', strings);

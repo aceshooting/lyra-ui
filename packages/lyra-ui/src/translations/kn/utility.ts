@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ಕೀಗಳು',
   },
   jsonViewerLimit: 'ಮೊದಲ {count} JSON ನೋಡ್‌ಗಳು ಮತ್ತು {depth} ನೆಸ್ಟಿಂಗ್ ಹಂತಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಹುಡುಕಲಾಗುತ್ತದೆ.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'ವಿರಾಮಗೊಳಿಸಿ',
   pollResume: 'ಮತ್ತೆ ಆರಂಭಿಸಿ',
   pollRefresh: 'ಈಗ ರಿಫ್ರೆಶ್ ಮಾಡಿ',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'ತಿಂಗಳು',
   knownDateYear: 'ವರ್ಷ',
   exportFormatMenuLabel: '{label} ಸ್ವರೂಪ',
+  exportFailed: 'ರಫ್ತು ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ',
   mentionSuggestions: 'ಸಲಹೆಗಳು',
   mentionResultCount: {
     one: '{count} ಸಲಹೆ',
@@ -66,6 +68,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'ಉಲ್ಲೇಖಕ್ಕಾಗಿ ಮೊದಲ 10,000 ಸಲಹೆಗಳು ಮಾತ್ರ ಲಭ್ಯವಿವೆ.',
   diffViewHighlightLimit: 'ಉದ್ದವಾದ ಕೋಡ್ ಅನ್ನು ಸಿಂಟ್ಯಾಕ್ಸ್ ಹೈಲೈಟಿಂಗ್ ಇಲ್ಲದೆ ತೋರಿಸಲಾಗುತ್ತದೆ.',
+  diffViewLabel: 'ವ್ಯತ್ಯಾಸ',
 };
 
 registerLyraLocale('kn', strings);

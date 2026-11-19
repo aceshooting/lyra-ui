@@ -25,3 +25,18 @@ for (const token of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) 
     expect(shortcutTokenLabel(token, false)).to.deep.equal({ visual: token, word: token });
   });
 }
+
+it('keeps the shortcut sequence left to right while custom content inherits its direction', async () => {
+  const el = await fixture<LyraKbd>(html`<lr-kbd dir="rtl" keys="ctrl+k"></lr-kbd>`);
+  const keys = el.shadowRoot!.querySelectorAll('[part="key"]');
+  expect(keys[0]!.getBoundingClientRect().left).to.be.lessThan(keys[1]!.getBoundingClientRect().left);
+  el.textContent = 'مفتاح';
+  await el.updateComplete;
+  expect(getComputedStyle(el).direction).to.equal('rtl');
+});
+
+it('localizes the spoken shortcut separator independently of the printed chord', async () => {
+  const el = await fixture<LyraKbd>(html`<lr-kbd keys="ctrl+k" .strings=${{ kbdShortcutSeparator: ' plus ' }}></lr-kbd>`);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Control plus K');
+  expect(el.shadowRoot!.querySelector('.sep')!.textContent).to.equal('+');
+});

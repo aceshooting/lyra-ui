@@ -12,7 +12,7 @@ import { render } from "lit";
 import "./diff-view.js";
 import type { LyraDiffView } from "./diff-view.js";
 import type { LyraDiffOp } from "./diff-line-diff.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
 
 function stubClipboard(target: Navigator, value: unknown): () => void {
@@ -24,7 +24,7 @@ function stubClipboard(target: Navigator, value: unknown): () => void {
   };
 }
 
-expectLocaleFallback('ar', ['diffViewHiddenLines']);
+expectLocaleFallback('ar', ['diffViewHiddenLines', 'diffViewLabel']);
 
 describe("lr-diff-view", () => {
   it("normalizes unsupported layout attributes and untyped property writes", async () => {
@@ -1948,20 +1948,41 @@ describe('search and scrollToAnchor', () => {
     expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
   });
 
-  it('scrolls to a line-range anchor addressing the 0-based rendered op index', async () => {
+  it('scrolls to a line-range anchor inside its own scroller without moving page ancestors', async () => {
     const el = (await fixture(
-      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText} max-height="40px"></lr-diff-view>`,
     )) as LyraDiffView;
     const target = el.shadowRoot!.querySelector('[data-op-index="4"]') as HTMLElement;
-    let scrolled = false;
+    let plainScroll = false;
     target.scrollIntoView = (() => {
-      scrolled = true;
+      plainScroll = true;
     }) as HTMLElement['scrollIntoView'];
     const listener = oneEvent(el, 'lr-anchor-result');
     const found = await el.scrollToAnchor({ kind: 'line-range', start: 4 });
     expect(found).to.equal(true);
-    expect(scrolled).to.equal(true);
+    expect(plainScroll).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.scrollTop).to.be.greaterThan(0);
     expect((await listener).detail).to.deep.equal({ found: true });
+  });
+
+  it('makes a capped, overflowing body a named keyboard tab stop', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText} max-height="40px"></lr-diff-view>`,
+    )) as LyraDiffView;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await waitUntil(() => base.getAttribute('tabindex') === '0', 'overflowing base is focusable');
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Diff');
+    el.strings = { diffViewLabel: 'Inspection' };
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Inspection');
+    el.setAttribute('aria-label', 'Details');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Details');
+    const roomy = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(roomy.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('tabindex')).to.equal(false);
   });
 
   it('does not jump again when a parent template re-commits the same anchor object', async () => {
@@ -2159,7 +2180,7 @@ describe('-bg custom properties and their deprecated -background aliases', () =>
 });
 
 it('recomputes an active search when its inherited locale changes', async () => {
-  const wrapper = await fixture<HTMLElement>(html`<div lang="en"><lr-diff-view .strings=${{ viewerSearchNoMatches: 'No matching lines' }} .newText=${'I'}></lr-diff-view></div>`);
+  const wrapper = await fixture<HTMLElement>(html`<div lang="en"><lr-diff-view .strings=${{ viewerSearchNoMatches: 'No matching lines', diffViewLabel: 'Changes' }} .newText=${'I'}></lr-diff-view></div>`);
   const el = wrapper.querySelector('lr-diff-view') as LyraDiffView;
   await el.updateComplete;
   expect(await el.search('i')).to.equal(1);
@@ -2282,4 +2303,77 @@ it('reports an inexact search when admitted Unicode text exceeds the folding wor
   expect(await el.search('i')).to.equal(1);
   expect(detail?.matchCount).to.equal(1);
   expect(detail?.matchCountExact).to.equal(true);
+});
+
+it('reflects both property transitions for the opt-in copy action', async () => {
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view></lr-diff-view>`);
+  for (const enabled of [false, true, false]) {
+    el.copyable = enabled;
+    await el.updateComplete;
+    expect(el.hasAttribute('copyable')).to.equal(enabled);
+    expect(Boolean(el.shadowRoot!.querySelector('[part="copy-button"]'))).to.equal(enabled);
+  }
+});
+
+it('applies the action hover and pressed colors to the rendered buttons', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-diff-view copyable .newText=${'new'} .highlights=${[{ id: 'item', anchor: { kind: 'line-range', start: 0 } }]}></lr-diff-view>`);
+  el.style.setProperty('--lr-transition-interactive', 'none');
+  try {
+    for (const [part, token] of [['copy-button', 'copy'], ['line-highlight-action', 'highlight-action']] as const) {
+      const prefix = `--lr-diff-view-${token}`;
+      el.style.setProperty(`${prefix}-hover-bg`, 'rgb(11, 22, 33)');
+      el.style.setProperty(`${prefix}-active-bg`, 'rgb(44, 55, 66)');
+      el.style.setProperty(`${prefix}-hover-color`, 'rgb(77, 88, 99)');
+      el.style.setProperty(`${prefix}-active-color`, 'rgb(99, 88, 77)');
+      const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await hoverUntilMatched(button, part);
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(11, 22, 33)' &&
+        getComputedStyle(button).color === 'rgb(77, 88, 99)', part);
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(44, 55, 66)' &&
+        getComputedStyle(button).color === 'rgb(99, 88, 77)', part);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('reuses the rendered diff rows when only copy chrome changes', async () => {
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view .oldText=${'a'} .newText=${'b'} layout="split"></lr-diff-view>`);
+  const seam = el as unknown as { computeFolds(): unknown };
+  const folds = seam.computeFolds.bind(el);
+  let calls = 0;
+  seam.computeFolds = () => { calls++; return folds(); };
+  el.copyable = true;
+  await el.updateComplete;
+  expect(calls).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part=line]').length).to.equal(2);
+  el.oldText = 'changed';
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.include('changed');
+});
+
+it('stops reporting an obsolete clipboard failure after its error listener removes the viewer', async () => {
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view copyable .newText=${'new'}></lr-diff-view>`);
+  const restore = stubClipboard(navigator, undefined);
+  try {
+    const events: string[] = [];
+    el.addEventListener('lr-error', () => { events.push('error'); el.remove(); });
+    el.addEventListener('lr-copy-error', () => events.push('copy-error'));
+    const failed = oneEvent(el, 'lr-error');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part=copy-button]')!.click();
+    await failed;
+    expect(events).to.deep.equal(['error']);
+  } finally {
+    restore();
+  }
+});
+
+it('leaves the surrounding scroll position intact when the whole diff is visible in its own body', async () => {
+  const outer = await fixture<HTMLDivElement>(html`<div style="height:50px;overflow:auto">
+    <div style="height:220px"></div><lr-diff-view .newText=${'needle'}></lr-diff-view></div>`);
+  const viewer = outer.querySelector<LyraDiffView>('lr-diff-view')!;
+  expect(await viewer.scrollToAnchor({ kind: 'line-range', start: 0 })).to.equal(true);
+  expect(outer.scrollTop).to.equal(0);
 });

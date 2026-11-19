@@ -2138,7 +2138,7 @@ for (const failure of ['import', 'setup'] as const) {
 
 it('paints a plain trigger without an edge at rest, on hover, and while pressed', async () => {
   const el = await fixture<LyraExportButton>(html`
-    <lr-export-button appearance="plain" .formats=${['csv', 'json']}></lr-export-button>
+    <lr-export-button appearance="plain" style="--lr-transition-interactive:none" .formats=${['csv', 'json']}></lr-export-button>
   `);
   const trigger = el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;
   const style = getComputedStyle(trigger);
@@ -2220,3 +2220,89 @@ for (const [format, reconnect] of [['csv', false], ['json', false], ['csv', true
     }
   });
 }
+
+it('does not export inherited prototype properties as column values', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = [{ id: 'a' }];
+  el.columns = [
+    { key: 'id', label: 'id' },
+    { key: 'constructor', label: 'constructor' },
+    { key: 'toString', label: 'toString' },
+  ];
+  el.formats = ['csv'];
+  await el.updateComplete;
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lr-export-complete');
+  try {
+    (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+  expect(await capturedBlob!.text()).to.equal('id,constructor,toString\r\na,,');
+});
+
+it('describes the native trigger from the host aria-describedby', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <span id="export-help">Exports the visible rows</span>
+      <lr-export-button aria-describedby="export-help"></lr-export-button>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-export-button') as LyraExportButton;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part~="trigger"]') as HTMLButtonElement;
+  await waitUntil(() => (trigger.ariaDescribedByElements?.length ?? 0) > 0, 'host description projected');
+  expect(trigger.ariaDescribedByElements!.map((node) => node.id)).to.include('export-help');
+});
+
+it('announces each repeated export failure', async () => {
+  const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${['json']}
+    .getRows=${() => { throw new Error('Rows unavailable'); }}
+    .strings=${{ exportFailed: 'Export failed to save' }}></lr-export-button>`);
+  el.click();
+  el.click();
+  expect(sinkTexts('polite').filter(text => text === 'Export failed to save')).to.have.length(2);
+});
+
+it('applies the action hover and pressed colors to the rendered buttons', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-export-button .formats=${['csv', 'json']}></lr-export-button>`);
+  el.click();
+  await waitUntil(() => el.shadowRoot!.querySelector('[part=menu][data-positioned]') !== null);
+  el.style.setProperty('--lr-transition-interactive', 'none');
+  try {
+    for (const [part, token] of [['menu-item', 'menu-item']] as const) {
+      const prefix = `--lr-export-button-${token}`;
+      el.style.setProperty(`${prefix}-hover-bg`, 'rgb(11, 22, 33)');
+      el.style.setProperty(`${prefix}-active-bg`, 'rgb(44, 55, 66)');
+      el.style.setProperty(`${prefix}-hover-color`, 'rgb(77, 88, 99)');
+      el.style.setProperty(`${prefix}-active-color`, 'rgb(99, 88, 77)');
+      const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await hoverUntilMatched(button, part);
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(11, 22, 33)' &&
+        getComputedStyle(button).color === 'rgb(77, 88, 99)', part);
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(44, 55, 66)' &&
+        getComputedStyle(button).color === 'rgb(99, 88, 77)', part);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('uses the configured interaction transition on the trigger and menu options', async () => {
+  const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${['csv', 'json']}
+    style="--lr-transition-interactive: background-color 123ms"></lr-export-button>`);
+  el.click();
+  await el.updateComplete;
+  for (const part of ['trigger', 'menu-item']) {
+    const button = el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
+    expect(getComputedStyle(button).transitionDuration).to.equal('0.123s');
+  }
+});

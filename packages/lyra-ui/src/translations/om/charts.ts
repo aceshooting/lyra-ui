@@ -17,6 +17,7 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, raadiyaasii {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
+  chartLegend: 'Ibsa mallattoolee chaartii',
   chartSeriesNoData: '{label}: odeeffannoon hin jiru',
   chartSummaryWithData: 'Chaartii {type}. {summaries}.',
   chartSummaryEmpty: 'Chaartii {type} odeeffannoo hin qabne.',

@@ -424,7 +424,7 @@ it("paginates client rows, clamps navigation, and reports page-size changes", as
 
   const previousEvent = oneEvent(element, "lr-page-change");
   (
-    element.shadowRoot!.querySelector(
+    element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
       '[part~="previous-button"]'
     ) as HTMLButtonElement
   ).click();
@@ -1014,16 +1014,16 @@ it("mirrors the pager first/previous/next/last icons under dir=\"rtl\" via chevr
       .data=${rows}
     ></lr-data-grid>
   `);
-  const firstIcon = element.shadowRoot!.querySelector(
+  const firstIcon = element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
     '[part="first-icon"]'
   ) as HTMLElement;
-  const previousIcon = element.shadowRoot!.querySelector(
+  const previousIcon = element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
     '[part="previous-icon"]'
   ) as HTMLElement;
-  const nextIcon = element.shadowRoot!.querySelector(
+  const nextIcon = element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
     '[part="next-icon"]'
   ) as HTMLElement;
-  const lastIcon = element.shadowRoot!.querySelector(
+  const lastIcon = element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
     '[part="last-icon"]'
   ) as HTMLElement;
 
@@ -1055,10 +1055,10 @@ it("mirrors the pager first/previous/next/last icons under dir=\"rtl\" via chevr
       .data=${rows}
     ></lr-data-grid>
   `);
-  const rtlFirstIcon = rtl.shadowRoot!.querySelector(
+  const rtlFirstIcon = rtl.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
     '[part="first-icon"]'
   ) as HTMLElement;
-  const rtlNextIcon = rtl.shadowRoot!.querySelector(
+  const rtlNextIcon = rtl.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
     '[part="next-icon"]'
   ) as HTMLElement;
 
@@ -1273,7 +1273,7 @@ it("uses one effective page across synchronous rows, state, and pager rendering"
   expect(element.getState().page).to.equal(2);
   await element.updateComplete;
   expect(
-    element.shadowRoot!.querySelector('[part~="page-current"]')?.textContent?.trim()
+    element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector('[part~="page-current"]')?.textContent?.trim()
   ).to.equal("3");
 });
 
@@ -1289,7 +1289,7 @@ it('ignores all retired -background interaction tokens', async () => {
   );
 });
 
-it('retains the hover-strength fallback for a pressed page-size selector', async () => {
+it('uses the active mix for a pressed page-size selector', async () => {
   const element = await dataGrid(html`
     <lr-data-grid
       label="Page-size active fallback"
@@ -1304,7 +1304,7 @@ it('retains the hover-strength fallback for a pressed page-size selector', async
   )!;
   const expected = document.createElement('div');
   expected.style.background =
-    'color-mix(in srgb, var(--accent-color) var(--lr-color-mix-hover), transparent)';
+    'color-mix(in srgb, var(--accent-color) var(--lr-color-mix-active), transparent)';
   element.shadowRoot!.append(expected);
 
   try {
@@ -1314,7 +1314,7 @@ it('retains the hover-strength fallback for a pressed page-size selector', async
       () =>
         getComputedStyle(pageSize).backgroundColor ===
         getComputedStyle(expected).backgroundColor,
-      'the page-size control never retained its hover-strength fallback color'
+      'the page-size control never reached its active color'
     );
   } finally {
     await sendMouse({ type: 'up' });
@@ -1382,14 +1382,14 @@ it('keeps the applied numbered page visibly distinct when focus and pointer are 
       .columns=${columns} .data=${rows}
     ></lr-data-grid>
   `);
-  const root = element.shadowRoot!;
+  const root = element.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!;
   const initial = root.querySelector<HTMLButtonElement>('[part~="page-current"]')!;
-  const next = root.querySelector<HTMLButtonElement>('[part~="page"]:not([aria-current])')!;
+  const next = root.querySelector<HTMLButtonElement>('[part~="page"][aria-current="false"]')!;
   expect(getComputedStyle(initial).backgroundColor).not.to.equal(getComputedStyle(next).backgroundColor);
   next.click();
   await element.updateComplete;
   const current = root.querySelector<HTMLButtonElement>('[part~="page-current"]')!;
-  const inactive = root.querySelector<HTMLButtonElement>('[part~="page"]:not([aria-current])')!;
+  const inactive = root.querySelector<HTMLButtonElement>('[part~="page"][aria-current="false"]')!;
   expect(current.getAttribute('aria-current')).to.equal('page');
   expect(current.textContent?.trim()).to.equal('2');
   expect(getComputedStyle(current).backgroundColor).not.to.equal(getComputedStyle(inactive).backgroundColor);
@@ -1400,18 +1400,18 @@ it('keeps keyboard focus on an enabled pager control at endpoints and on a chose
   const grid = await dataGrid(html`
     <lr-data-grid label="People" paginate page-size="1" .columns=${columns} .data=${rows}></lr-data-grid>
   `);
-  const root = grid.shadowRoot!;
+  const root = grid.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!;
   const button = (part: string) => root.querySelector<HTMLButtonElement>(`[part~="${part}"]`)!;
   await focusByKeyboard(button('last-button'));
   await sendKeys({ press: 'Enter' });
   await grid.updateComplete;
   expect(button('last-button').disabled).to.equal(true);
-  expect(root.activeElement === button('previous-button')).to.equal(true);
+  expect(root.activeElement === button('page-current')).to.equal(true);
   await focusByKeyboard(button('first-button'));
   await sendKeys({ press: 'Enter' });
   await grid.updateComplete;
   expect(button('first-button').disabled).to.equal(true);
-  expect(root.activeElement === button('next-button')).to.equal(true);
+  expect(root.activeElement === button('page-current')).to.equal(true);
   const second = root.querySelectorAll<HTMLButtonElement>('[part~="page"]')[1]!;
   await focusByKeyboard(second);
   await sendKeys({ press: 'Enter' });
@@ -1430,7 +1430,7 @@ it('preserves focus moved outside the pager by an lr-page-change listener', asyn
   const grid = wrapper.querySelector<LyraDataGrid<Person>>('lr-data-grid')!;
   await grid.updateComplete;
   const outside = wrapper.querySelector('button')!;
-  await focusByKeyboard(grid.shadowRoot!.querySelector<HTMLButtonElement>('[part~="last-button"]')!);
+  await focusByKeyboard(grid.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector<HTMLButtonElement>('[part~="last-button"]')!);
   // The consumer deliberately assigns focus synchronously during the page change event.
   grid.addEventListener('lr-page-change', () => outside.focus(), { once: true });
   await sendKeys({ press: 'Enter' });

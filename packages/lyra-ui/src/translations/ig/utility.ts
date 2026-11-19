@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
     other: 'Igodo {count}',
   },
   jsonViewerLimit: 'A na-egosi ma na-achọ naanị ọnụ JSON {count} mbụ na ọkwa omimi {depth}.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'Kwụsịtụ',
   pollResume: 'Gaa n’ihu',
   pollRefresh: 'Melite ugbu a',
@@ -48,6 +49,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'Ọnwa',
   knownDateYear: 'Afọ',
   exportFormatMenuLabel: 'Ụdị {label}',
+  exportFailed: 'Enweghị ike ibupụ',
   mentionSuggestions: 'Ndụmọdụ',
   mentionResultCount: {
     one: 'Ndụmọdụ {count}',
@@ -65,6 +67,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'Naanị ntụnye 10,000 mbụ maka ịkpọ aha dị.',
   diffViewHighlightLimit: 'A na-egosi koodu dị ogologo na-enweghị iji agba mee ka sintaksị ya pụta ìhè.',
+  diffViewLabel: 'Ọdịiche',
 };
 
 registerLyraLocale('ig', strings);

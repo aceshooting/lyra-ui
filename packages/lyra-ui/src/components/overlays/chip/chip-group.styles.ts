@@ -35,10 +35,10 @@ export const styles = css`
     ${iconHitTarget}
     justify-content: center;
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
-    border: var(--lr-border-width-thin) dashed var(--lr-color-border);
+    border: var(--lr-border-width-thin) dashed var(--lr-chip-group-overflow-border-color, var(--lr-color-border));
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text-quiet);
+    background: var(--lr-chip-group-overflow-bg, var(--lr-color-surface));
+    color: var(--lr-chip-group-overflow-color, var(--lr-color-text-quiet));
     font: inherit;
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-semibold);
@@ -64,7 +64,7 @@ export const styles = css`
   [part='overflow-indicator']:active {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-text);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-chip-group-overflow-bg, var(--lr-color-surface)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='overflow-indicator']:focus-visible {
     ${focusRing}

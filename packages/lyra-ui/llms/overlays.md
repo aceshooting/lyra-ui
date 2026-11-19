@@ -1,3 +1,4 @@
+
 ## Breaking changes in 10.0.0
 
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
@@ -240,6 +241,8 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 **Optional peer deps:** none.
 
 ### `lr-toast-item`
+
+A dismissal emits cancelable `lr-hide`, then cancelable `lr-close-request`. The committed `lr-close` and the request carry `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 
 A single notification.
 
@@ -1224,6 +1227,8 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
+The collapsed overflow button includes its visible count in its accessible name. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
 no `.items` array prop).
@@ -1322,6 +1327,8 @@ write from `firstUpdated()`.
 ---
 
 ## `lr-kbd`
+
+Shortcut chords keep their left-to-right order in RTL. Localize `kbdShortcutSeparator` to change the spoken separator. Style the caps with `--lr-kbd-key-bg`, `--lr-kbd-key-color`, and `--lr-kbd-key-border-color`.
 
 A small chip representing a keyboard shortcut, rendering the platform-appropriate glyph for
 cross-platform modifier keys (⌘ on macOS, "Ctrl" elsewhere) from a single platform-neutral `keys`
@@ -1967,13 +1974,11 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
 
-`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
-because its rules live in the stylesheet module `lr-popover` also composes, but a tooltip bubble is
-a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
-panel, so it keeps painting from `--lr-tooltip-bg`/`--lr-tooltip-color`, draws no border,
-and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
+The bubble paints its high-contrast label with `--lr-tooltip-bg` and `--lr-tooltip-color`.
+Its corner radius follows `--lr-overlay-radius` (default `--lr-radius-xs`) and its shadow follows
+`--lr-overlay-shadow-anchored` (default `--lr-shadow-m`).
 
-`--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
+With `--lr-positioning-strategy`, the tooltip honors the same cascading
 `absolute`/`fixed` override `<lr-popover>` documents (`llms/components/lr-popover.md`), ahead of
 its own mirrored `absolute`
 default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
@@ -2505,6 +2510,8 @@ tag name, but a veto only claims the gesture within one copy.
 
 ## `lr-spinner`
 
+Set `--lr-spinner-track-color` and `--lr-spinner-indicator-color` to style the ring. The corresponding upstream aliases supply their defaults.
+
 An indeterminate busy indicator with a localized, deliberately non-live `role="progressbar"`
 name. Mounting ordinary loading UI therefore does not create a false status announcement.
 
@@ -2825,6 +2832,8 @@ the remove button's `:hover` fill).
 
 ## `lr-alert`
 
+The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
+
 A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
 plus one additive Lyra property (`size`) that is inert until you set it.
 Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
@@ -3021,12 +3030,10 @@ as their standalone fallback. An explicit `variant` maps all generic slots local
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
 sites through private defaults, so a value inherited from a theme ancestor has the same authority
-as one set directly on the callout. `--lr-callout-close-hover-bg`
-(default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
-decoupled from `--lr-callout-bg` (which every explicit `variant`, including `neutral`,
-retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
-`variant="brand"` panel, which shares the same default token — without a collateral effect on the
-panel background, and vice versa.
+as one set directly on the callout. The close button paints a translucent hover fill over the
+panel using `--lr-color-mix-partner` and `--lr-color-mix-hover`. Set `--lr-callout-close-hover-bg`
+to override the hover fill independently of the panel. To retain the previous brand-colored hover,
+set it to `var(--lr-color-brand-quiet)`.
 
 Three more: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit

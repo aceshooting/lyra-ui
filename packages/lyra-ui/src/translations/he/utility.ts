@@ -34,6 +34,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} מפתחות',
   },
   jsonViewerLimit: 'מוצגים ונכללים בחיפוש רק {count} צומתי ה-JSON הראשונים ו-{depth} רמות הקינון הראשונות.',
+  jsonViewerLabel: 'JSON',
   pollPause: 'השהה',
   pollResume: 'המשך',
   pollRefresh: 'רענן עכשיו',
@@ -51,6 +52,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: 'חודש',
   knownDateYear: 'שנה',
   exportFormatMenuLabel: 'פורמט {label}',
+  exportFailed: 'הייצוא נכשל',
   mentionSuggestions: 'הצעות',
   mentionResultCount: {
     one: '{count} הצעה',
@@ -71,6 +73,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: 'רק 10,000 ההצעות הראשונות לאזכור זמינות.',
   diffViewHighlightLimit: 'קוד ארוך מוצג ללא הדגשת תחביר.',
+  diffViewLabel: 'הבדלים',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

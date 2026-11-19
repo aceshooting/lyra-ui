@@ -101,7 +101,7 @@ describe('chart source boundary interactions', () => {
         const allocation = element as unknown as {
           lastObservedInlineSize?: number;
           samplingWidth: number;
-          resizeDrawFrame?: number;
+          resizeDraw: { readonly pending: boolean };
         };
         const width = allocation.lastObservedInlineSize;
         const peer = element.chart as unknown as Chart | undefined;
@@ -109,7 +109,7 @@ describe('chart source boundary interactions', () => {
         const point = peer?.getDatasetMeta(0).data[0] as PointElement | undefined;
         const center = point?.getCenterPoint(true);
         return typeof width === 'number' && Number.isFinite(width) && width > 0 &&
-          allocation.samplingWidth === Math.floor(width) && allocation.resizeDrawFrame === undefined &&
+          allocation.samplingWidth === Math.floor(width) && !allocation.resizeDraw.pending &&
           !element.isUpdatePending && element.getAttribute('aria-busy') === 'false' &&
           !!peer && peer.canvas === surface && !!area && !!center &&
           [box.width, box.height, peer.width, peer.height, area.width, area.height]
@@ -181,6 +181,9 @@ describe('chart source boundary interactions', () => {
       queries++;
       return { matchedCount: 0, points: [], bins: [] };
     } }));
+    const bitmap = canvas(element).toDataURL();
+    await focusByKeyboard(canvas(element));
+    expect(canvas(element).toDataURL()).to.equal(bitmap);
     const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
     canvas(element).dispatchEvent(enter);
     expect(enter.defaultPrevented).to.equal(false);
@@ -189,6 +192,25 @@ describe('chart source boundary interactions', () => {
     expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
     expect(element.exportData('csv').split('\r\n').length).to.equal(1);
     expect(await element.revealSourcePoint('unknown')).to.equal(false);
+  });
+
+  it('exports an empty spatial CSV for a rejected source and restores point focus after document adoption', async () => {
+    const element = await mountSpatial();
+    element.preparedData = spatial({ series: [] });
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);
+    expect(element.exportData('csv').split('\r\n').length).to.equal(1);
+    expect(await element.revealSourcePoint(first.id)).to.equal(false);
+    element.preparedData = spatial();
+    await ready(element);
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      frame.contentDocument!.body.append(element);
+      await ready(element);
+      expect(await element.revealSourcePoint(first.id)).to.equal(true);
+      expect(element.shadowRoot!.activeElement === canvas(element)).to.equal(true);
+    } finally { element.remove(); frame.remove(); }
   });
 
   it('refuses an exact reveal whose viewport span cannot be preserved as finite coordinates', async () => {

@@ -1,3 +1,4 @@
+import { literalSetConverter } from '../../../internal/converters.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -5,6 +6,7 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './divider.styles.js';
 
 export type LyraDividerOrientation = LyraOrientation;
+const orientationValues = literalSetConverter(['horizontal', 'vertical'], 'horizontal');
 
 /**
  * `<lr-divider>` — a themeable semantic separator.
@@ -19,7 +21,15 @@ export type LyraDividerOrientation = LyraOrientation;
  */
 export class LyraDivider extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property({ reflect: true }) orientation: LyraDividerOrientation = 'horizontal';
+  private _orientation: LyraDividerOrientation = 'horizontal';
+  /** Base orientation. The vertical shorthand takes precedence when present. */
+  @property({ reflect: true, converter: orientationValues })
+  get orientation(): LyraDividerOrientation { return this._orientation; }
+  set orientation(value: LyraDividerOrientation) {
+    const previous = this._orientation;
+    this._orientation = orientationValues.normalizeReflected(this, 'orientation', value);
+    this.requestUpdate('orientation', previous);
+  }
   /** Shoelace-compatible vertical-orientation shorthand. */
   @property({ type: Boolean, reflect: true }) vertical = false;
   override render(): TemplateResult {

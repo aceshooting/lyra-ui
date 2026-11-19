@@ -28,6 +28,7 @@ const strings: LyraLocaleStrings = {
     other: '키 {count}개',
   },
   jsonViewerLimit: '처음 {count}개의 JSON 노드와 {depth}단계까지의 중첩만 표시하고 검색합니다.',
+  jsonViewerLabel: 'JSON',
   pollPause: '일시 중지',
   pollResume: '돌아가기',
   pollRefresh: '지금 새로고침',
@@ -45,6 +46,7 @@ const strings: LyraLocaleStrings = {
   knownDateMonth: '월',
   knownDateYear: '연도',
   exportFormatMenuLabel: '{label} 형식',
+  exportFailed: '내보내기 실패',
   mentionSuggestions: '제안',
   mentionResultCount: {
     other: '제안 {count}개',
@@ -61,6 +63,7 @@ const strings: LyraLocaleStrings = {
   },
   mentionInputLimit: '처음 10,000개의 멘션 후보만 사용할 수 있습니다.',
   diffViewHighlightLimit: '긴 코드는 구문 강조 없이 표시됩니다.',
+  diffViewLabel: '차이',
 };
 
 registerLyraLocale('ko', strings);

@@ -34,6 +34,7 @@ import {
 } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import {
   installFormControlLabelSupport,
   EXTERNAL_LABEL_HOST_SEMANTICS,
@@ -326,7 +327,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
 
   /** Live presentational symbol row, or `null` before the render root is populated. */
   get rating(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part~="rating"]');
+    return this.renderRoot?.querySelector<HTMLElement>('[part~="rating"]') ?? null;
   }
 
   constructor() {
@@ -527,14 +528,10 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   }
 
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    this.updateValidity();
-    // Reporting is what a submit attempt does, and a failed submit is precisely when native
-    // `:user-invalid` starts matching — so it counts as interaction here too. (A submission
-    // attempt itself never calls this method -- it drives `ElementInternals` directly -- which is
-    // what `installInteractionOnInvalid()` above covers.)
-    this.markInteracted();
-    return this.internals.reportValidity();
+    return this.validityController.reportValidity(() => {
+      this.updateValidity();
+      this.markInteracted();
+    });
   }
 
   /**
@@ -796,7 +793,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || !this.interactive) return;
+    if (event.defaultPrevented || !this.interactive || shouldIgnoreNavigationKey(event)) return;
     const forwardKey =
       this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey =

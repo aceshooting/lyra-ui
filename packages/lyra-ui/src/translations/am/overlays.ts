@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   kbdOptionWord: 'Option ቁልፍ',
   kbdAltWord: 'Alt ቁልፍ',
   kbdShiftWord: 'Shift ቁልፍ',
+  kbdShortcutSeparator: '+',
 };
 
 registerLyraLocale('am', strings);
