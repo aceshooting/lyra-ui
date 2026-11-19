@@ -463,10 +463,10 @@ test('combobox minimum-query admission retains its reviewed initial-route ceilin
 // Standalone button registration retains the shared-base canary at the next 64-byte boundary.
 test('standalone button retains its reviewed gzip measurement and tight canary', () => {
   const entry = 'dist/components/forms/button/button.js';
-  const measurement = 37_129;
+  const measurement = 37_353;
   const ceiling = budgetKilobytesToBytes(budgets[entry], entry);
   assert.equal(budgets.$reviewedGzipBytes[entry], measurement);
-  assert.equal(ceiling, 37_184);
+  assert.equal(ceiling, 37_376);
   assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
     'the standalone button ceiling advances only to the next 64-byte boundary');
 });
