@@ -9,7 +9,8 @@ import {
   type LyraSearchChangeDetail,
   type LyraTextViewerTargetEventMap,
 } from '../../../internal/text-viewer-target.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isAbortError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   adaptPptxViewer,
@@ -246,7 +247,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   @state() private phase: PptxPhase = 'idle';
-  @state() private errorMessage = '';
+  private readonly renderErrorMessage = () => this.localize('pptxViewerRenderError');
+  @state() private errorMessage = this.renderErrorMessage;
   @state() private slideCount = 0;
   @state() private currentSlideIndex = 0;
   @query('[part="container"]') private containerEl?: HTMLElement;
@@ -373,7 +375,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.announcements.transition(
       'load',
       this.phase,
-      this.phase === 'error' ? this.errorMessage : this.localize('loading'),
+      this.phase === 'error' ? this.errorMessage() : this.localize('loading'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
     if (changed.has('src') && this.pendingSearchResetEvent) {
@@ -473,7 +475,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.slideCount = 0;
       this.currentSlideIndex = 0;
       this.page = 1;
-      this.errorMessage = this.localize('pptxViewerRenderError');
+      this.errorMessage = this.renderErrorMessage;
       this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
@@ -559,11 +561,13 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private teardown(): void {
     const shouldEmitSearchReset = this.hasPptxSearchState();
     this.generation++;
-    this.viewerUnsubscribe?.();
+    const unsubscribe = this.viewerUnsubscribe;
+    const viewer = this.viewer;
     this.viewerUnsubscribe = undefined;
-    this.viewer?.destroy();
     this.viewer = undefined;
     this.resetPptxSearchState();
+    try { unsubscribe?.(); } catch { /* Continue releasing the retired renderer. */ }
+    try { viewer?.destroy(); } catch { /* Replacement and disconnect must finish. */ }
     if (shouldEmitSearchReset) this.emitPptxSearchChange();
   }
 
@@ -577,7 +581,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private resetPptxSearchState(): void {
     this.pptxSearchGeneration++;
     this.disposeSearchHighlight();
-    this.viewer?.clearSearchHighlights();
+    try { this.viewer?.clearSearchHighlights(); } catch { /* Source replacement retires this viewer. */ }
     this.pptxSearchQuery = '';
     this.pptxSearchMatches = [];
     this.pptxSearchMatchCountExact = true;
@@ -629,6 +633,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     generation: number,
     viewer: PptxViewerAdapter,
   ): Promise<void> {
+    if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) return;
     const match = this.pptxSearchMatches[index];
     if (!match) return;
     this.disposeSearchHighlight();
@@ -650,8 +655,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   private disposeSearchHighlight(): void {
-    this.searchHighlight?.dispose();
+    const highlight = this.searchHighlight;
     this.searchHighlight = undefined;
+    try { highlight?.dispose(); } catch { /* A retired highlight cannot block its replacement. */ }
   }
 
   private emitPptxSearchChange(): void {
@@ -685,35 +691,38 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.slideCount = 0;
     this.currentSlideIndex = 0;
     this.page = 1;
-    this.errorMessage = this.localize('pptxViewerRenderError');
+    this.errorMessage = this.renderErrorMessage;
     this.publishPageViewerSnapshot('error', 0);
     this.emit('lr-render-error', { error: cause });
   }
 
   private async mount(): Promise<void> {
+    const src = this.src;
     this.teardown();
     this.pageViewerState.advance();
     const signal = this.beginAbortableLoad();
     const generation = this.generation;
+    const current = () => this.isConnected && generation === this.generation && src === this.src;
     this.slideCount = 0;
     this.currentSlideIndex = 0;
     this.page = 1;
-    if (!this.src) {
+    if (!src) {
       this.phase = 'idle';
       this.publishPageViewerSnapshot('idle', 0);
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    const fetchTarget = resolveOwnerFetchTarget(this, src);
     if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.errorMessage = () => this.localize('documentPreviewUrlNotAllowed');
+      const error = new LyraUserFacingError(this.errorMessage());
       this.phase = 'error';
-      this.errorMessage = error.message;
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
       return;
     }
     this.phase = 'loading';
     this.publishPageViewerSnapshot('loading', 0);
+    if (!current()) return;
     let module: PptxRendererModule | null;
     let response: Response;
     try {
@@ -722,49 +731,49 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined),
       ]);
     } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !current()) return;
       this.phase = 'error';
-      this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
+      this.errorMessage = viewerFailureMessage(error, this.localize.bind(this));
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
       return;
     }
-    if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+    if (signal?.aborted || !current()) return;
     if (!module || !response.ok) {
       void response.body?.cancel().catch(() => undefined);
-      const error = new LyraUserFacingError(
-        this.localize(module ? 'documentPreviewFailedToLoad' : 'pptxViewerMissingLibrary'),
-      );
+      this.errorMessage = module
+        ? () => this.localize('documentPreviewFailedToLoad')
+        : () => this.localize('pptxViewerMissingLibrary');
+      const error = new LyraUserFacingError(this.errorMessage());
       this.phase = 'error';
-      this.errorMessage = error.message;
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
       return;
     }
     let buffer: ArrayBuffer;
     try {
       buffer = await readResponseArrayBuffer(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !current()) return;
       await assertPptxArchiveWithinLimits(buffer, { signal });
     } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !current()) return;
       this.phase = 'error';
-      this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
+      this.errorMessage = viewerFailureMessage(error, this.localize.bind(this));
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
       return;
     }
-    if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+    if (signal?.aborted || !current()) return;
     this.phase = 'mounted';
     await this.updateComplete;
-    if (!this.isConnected || generation !== this.generation || !this.containerEl) return;
+    if (!current() || !this.containerEl) return;
     try {
       const openedViewer = await module.PptxViewer.open(buffer, this.containerEl, {
         externalMedia: 'block',
         zipLimits: module.RECOMMENDED_ZIP_LIMITS,
         listOptions: { windowed: true },
       });
-      if (!this.isConnected || generation !== this.generation) { openedViewer.destroy(); return; }
+      if (!current()) { openedViewer.destroy(); return; }
       const viewer = adaptPptxViewer(openedViewer);
       if (!viewer) {
         openedViewer.destroy();
@@ -778,19 +787,19 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         this.page = viewer.currentSlideIndex + 1;
       }
       this.publishPageViewerSnapshot('ready', viewer.slideCount);
-      this.emit('lr-load', { slideCount: viewer.slideCount });
+      if (current()) this.emit('lr-load', { slideCount: viewer.slideCount });
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (isAbortError(error) || !current()) return;
       this.phase = 'error';
-      this.errorMessage = this.localize('pptxViewerRenderError');
+      this.errorMessage = this.renderErrorMessage;
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
     }
   }
 
   private renderBody(): TemplateResult | typeof nothing {
     if (this.phase === 'loading') return renderViewerLoading(this.localize('loading'));
-    if (this.phase === 'error') return html`<div part="error">${this.errorMessage}</div>`;
+    if (this.phase === 'error') return html`<div part="error">${this.errorMessage()}</div>`;
     if (this.phase !== 'mounted') return nothing;
     return html`
       <div part="nav" ?hidden=${this.slideCount <= 1}>

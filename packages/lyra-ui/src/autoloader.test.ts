@@ -1,7 +1,20 @@
+import { LyraButton } from './components/forms/button/button.class.js';
 import { resetNativeGetterCache } from './internal/rendered-tree-traversal.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { AUTOLOADER_PENDING_ATTRIBUTE, discover, start, stop, type AutoloadableTagName } from './autoloader.js';
 import { setAutoloaderLoaderForTesting } from './internal/autoloader-loaders.js';
+
+class ObservedButton extends LyraButton {
+  onRemoveMarker?: () => void;
+  static override get observedAttributes(): string[] {
+    return [...super.observedAttributes, AUTOLOADER_PENDING_ATTRIBUTE];
+  }
+  override attributeChangedCallback(name: string, previous: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, previous, value);
+    if (name === AUTOLOADER_PENDING_ATTRIBUTE && value === null) this.onRemoveMarker?.();
+  }
+}
+customElements.define('lr-button', ObservedButton);
 
 const overriddenTags = new Set<AutoloadableTagName>();
 
@@ -331,6 +344,45 @@ describe('autoloader', () => {
     expect(await discover(detachedDocument)).to.deep.equal([]);
     expect(loads).to.equal(0);
     expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+  });
+
+  it('releases markers owned by a replacement started during marker removal', async () => {
+    const root = await fixture<HTMLElement>(html`<section></section>`);
+    const button = new ObservedButton();
+    root.append(button);
+    const first = start(root);
+    let replacement: ReturnType<typeof start> | undefined;
+    button.onRemoveMarker = () => {
+      button.onRemoveMarker = undefined;
+      replacement = start(root);
+    };
+    stop();
+    expect(button.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+    await Promise.all([first, replacement, button.updateComplete]);
+    expect(button.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    stop();
+    expect(button.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+  });
+
+  it('keeps a watcher installed from marker removal while another start is stopping its predecessor', async () => {
+    const root = await fixture<HTMLElement>(html`<section></section>`);
+    const other = await fixture<HTMLElement>(html`<section></section>`);
+    const original = new ObservedButton();
+    const replacementButton = new ObservedButton();
+    root.append(original);
+    other.append(replacementButton);
+    const first = start(root);
+    let replacement: ReturnType<typeof start> | undefined;
+    original.onRemoveMarker = () => {
+      original.onRemoveMarker = undefined;
+      replacement = start(other);
+    };
+    const superseded = start(root);
+    expect(original.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    expect(replacementButton.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+    stop();
+    expect(replacementButton.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    await Promise.all([first, superseded, replacement]);
   });
 
   it('clears a predefined element marker when stopped before its first update settles', async () => {

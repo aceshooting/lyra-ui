@@ -56,5 +56,6 @@ e.g. a malformed attribute) or the formatted string is empty.
 
 All digit properties are finite-integer guarded before `Intl` construction: integer/significant
 digits clamp to `[1, 21]`, fractions to `[0, 100]`, and crossed minimum/maximum pairs are ordered.
-Leaving one `undefined` preserves `Intl`'s own defaults. Closed-set values assigned through untyped
-JavaScript fall back to their documented defaults.
+Leaving a digit property `undefined` preserves `Intl`'s defaults. Removing its attribute restores
+that `undefined` value. Closed-set values assigned through untyped JavaScript fall back to their
+documented defaults.

@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -753,4 +754,21 @@ describe('disabled', () => {
     el.click();
     expect(fired).to.equal(1);
   });
+});
+
+it('repairs focus when disabling the focused remove button', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-tag with-remove>Filter</lr-tag>
+      <button type="button">Next filter</button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-tag')!;
+  const button = removeButton(el)!;
+  await focusByKeyboard(button);
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(button.disabled).to.equal(true);
+  expect(el.ownerDocument.activeElement === wrapper.querySelector('button')).to.equal(true);
 });

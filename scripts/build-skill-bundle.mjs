@@ -49,7 +49,7 @@ function bundleEntries(pluginDir) {
 }
 
 /** Pure text transform from plugin-relative wording to package-relative wording. */
-export function bundleText(text, kind) {
+export function bundleText(text, kind, version) {
   let out = text
     .replace(PLUGIN_ONLY_BLOCK, '')
     .replace(PLUGIN_ONLY_INLINE, '')
@@ -63,7 +63,9 @@ export function bundleText(text, kind) {
       .replaceAll('${CLAUDE_PLUGIN_ROOT}/commands/', `${SKILL_PREFIX}commands/`)
       .replace(/(?<![\w./-])references\//gu, LLMS_PREFIX);
   }
-  return out;
+  // Markdown readers resolve links from the skill file. A copied skill and a symlink can have
+  // different physical and lexical parents; the release tag identifies the same guide for both.
+  return out.replaceAll(`](${LLMS_PREFIX}`, `](https://github.com/aceshooting/lyra-ui/blob/lyra-ui@${version}/packages/lyra-ui/llms/`);
 }
 
 export function parseFrontmatter(text) {
@@ -95,11 +97,12 @@ export function parseFrontmatter(text) {
 export function renderSkillBundle(root = repoRoot) {
   const pluginDir = path.join(root, 'plugins/lyra-ui');
   const packageDir = path.join(root, 'packages/lyra-ui');
+  const { version } = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
   const files = new Map();
   const problems = [];
 
   for (const [source, target, kind] of bundleEntries(pluginDir)) {
-    const text = bundleText(readFileSync(path.join(pluginDir, source), 'utf8'), kind);
+    const text = bundleText(readFileSync(path.join(pluginDir, source), 'utf8'), kind, version);
     files.set(target, text);
 
     if (text.includes('${CLAUDE_PLUGIN_ROOT}') || text.includes('plugin-only')) {

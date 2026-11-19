@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import "./knowledge-base-admin.js";
 import type { LyraKnowledgeBaseAdmin } from "./knowledge-base-admin.class.js";
@@ -140,6 +141,22 @@ describe("lr-knowledge-base-admin", () => {
     });
     onlyTab.dispatchEvent(unrelated);
     expect(unrelated.defaultPrevented).to.equal(false);
+  });
+
+  it('preserves external focus moved by a synchronous tab-change listener', async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div><button type="button">Outside</button><lr-knowledge-base-admin></lr-knowledge-base-admin></div>
+    `);
+    const el = host.querySelector<LyraKnowledgeBaseAdmin>('lr-knowledge-base-admin')!;
+    const outside = host.querySelector('button')!;
+    await el.updateComplete;
+    const sources = el.shadowRoot!.querySelector<HTMLButtonElement>('[role="tab"]')!;
+    await focusByKeyboard(sources);
+    el.addEventListener('lr-tab-change', () => outside.focus(), { once: true });
+    sources.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.activeTab).to.equal('ingestion');
+    expect(document.activeElement === outside).to.equal(true);
   });
 
   it("suppresses lr-tab-change when the already-selected tab is activated again", async () => {

@@ -322,3 +322,23 @@ describe('<lr-navigation-menu-item>', () => {
     expect(rect.width).to.be.at.least(floor - 0.5);
   });
 });
+
+it('reports only the latest rendered toggle and drops pending toggles on detach', async () => {
+  const el = await fixture<LyraNavigationMenuItem>(html`
+    <lr-navigation-menu-item>Products<div slot="panel"><a href="/a">A</a></div></lr-navigation-menu-item>
+  `);
+  await settle(el);
+  const events = recordToggles(el);
+  el.open = true;
+  el.open = false;
+  await settle(el);
+  expect(panel(el).hidden).to.equal(true);
+  expect(events).to.deep.equal([{ expanded: false, source: 'programmatic' }]);
+
+  const parent = el.parentNode!;
+  el.open = true;
+  el.remove();
+  parent.appendChild(el);
+  await settle(el);
+  expect(events).to.have.length(1);
+});

@@ -614,11 +614,13 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @customElement lr-table
  * @event lr-sort-request - Cancelable sort proposal. Frozen readonly
  *   `detail: { phase: 'request', sortKey, sortDir }`. Vetoing it leaves sort state and rows
- *   unchanged and suppresses `lr-sort`.
+ *   unchanged and suppresses `lr-sort`. A listener that replaces the columns or sets a different
+ *   sort also retires the proposal.
  * @event lr-sort - Accepted sort transaction. Frozen readonly
  *   `detail: { phase: 'commit', sortKey, sortDir }`. Client mode also updates `sortKey`/`sortDir`;
  *   server mode leaves them controlled while reporting the accepted proposal.
  * @event lr-row-activate - A row was activated by pointer or Enter/Space. `detail: { row }`.
+ *   If a listener replaces the row model or selection, the activation leaves that selection in place.
  * @event lr-load-more - The "load more" control was activated while `loadingMore` is false.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
  *   The built-in `[part='retry-button']` was activated, only rendered while
@@ -3007,11 +3009,14 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this.activeColKey = key;
     const col = this.columnsByKey.get(key);
     if (!col?.sortable) return;
+    const { columns, sortKey, sortDir: previousDir, sortMode } = this;
     const sortDir =
-      this.sortKey === key ? (this.sortDir === 'asc' ? 'desc' : 'asc') : (col.defaultSortDir ?? this.defaultSortDir);
+      sortKey === key ? (previousDir === 'asc' ? 'desc' : 'asc') : (col.defaultSortDir ?? this.defaultSortDir);
     const request = Object.freeze({ phase: 'request', sortKey: col.key, sortDir } as const);
-    if (this.emit('lr-sort-request', request, { cancelable: true }).defaultPrevented) return;
-    if (this.sortMode === 'client') {
+    if (this.emit('lr-sort-request', request, { cancelable: true }).defaultPrevented ||
+      !this.isConnected || this.columns !== columns || this.sortKey !== sortKey ||
+      this.sortDir !== previousDir || this.sortMode !== sortMode) return;
+    if (sortMode === 'client') {
       this.sortKey = col.key;
       this.sortDir = sortDir;
     }
@@ -3031,12 +3036,15 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const entry = this.rowsByKey.get(key);
     if (entry === undefined) return;
     const { row, key: selectedKey } = entry;
+    const { rows, rowKey, selectionMode, _selectedKeys } = this;
     this.emit('lr-row-activate', Object.freeze({ row }));
-    if (this.selectionMode === 'single') {
+    if (!this.isConnected || this.rows !== rows || this.rowKey !== rowKey ||
+      this.selectionMode !== selectionMode || this._selectedKeys !== _selectedKeys) return;
+    if (selectionMode === 'single') {
       this.commitSelectedKeys(new Set([selectedKey]));
       const rowKeys = this.asKeyList(Object.freeze([selectedKey]));
       this.emit('lr-selection-change', Object.freeze({ selectedRowKeys: rowKeys }));
-    } else if (this.selectionMode === 'multiple') {
+    } else if (selectionMode === 'multiple') {
       const rawKey = selectedKey;
       const next = new Set(this._selectedKeys);
       if (next.has(rawKey)) next.delete(rawKey);

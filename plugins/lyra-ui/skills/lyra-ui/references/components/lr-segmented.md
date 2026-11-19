@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,7 +19,8 @@
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
-non-disabled items (ArrowDown/ArrowUp step like ArrowRight/ArrowLeft). First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
+non-disabled items (ArrowDown/ArrowUp step like ArrowRight/ArrowLeft). Left and Right follow the
+track's rendered direction, including CSS direction overrides. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
 Re-picking the selected value never clears it; for an optional choice the user may clear, or for
 zero-or-more pressed buttons, use `lr-toggle-group`.
@@ -112,9 +113,9 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
-The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `xs`), but every
-`2xs`/`xs` _segment_ separately carries a 24×24px minimum box, so the tappable target holds even
-when a label is a single character and the track ends up taller than its nominal floor.
+The track floor at the two smallest tiers is 20px at `2xs` and 24px at `xs`. Each segment has a
+24×24 CSS pixel minimum box at every size, including with compact padding and a single-character
+label. The track can grow beyond its nominal floor to fit these targets.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-text)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-surface)`), `--lr-segmented-selected-font-weight` (default

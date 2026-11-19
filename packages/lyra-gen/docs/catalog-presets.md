@@ -83,7 +83,7 @@ node packages/lyra-gen/scripts/report-catalog-presets.mjs --check
 node packages/lyra-gen/scripts/report-catalog-presets.mjs --write
 ```
 
-Build the package first. The [checked report](../scripts/fixtures/catalog-preset-prompts.json) includes prompt UTF-16/code-point counts, UTF-8 bytes and SHA-256; compact serialized-schema bytes and SHA-256; and their combined content bytes. Trailing newlines, provider wrappers and request metadata are excluded. Provider tokens and model error rates remain unmeasured; smaller content does not establish token, quality, latency, caching or cost improvements.
+Build the package first. The [checked report](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/scripts/fixtures/catalog-preset-prompts.json) includes prompt UTF-16/code-point counts, UTF-8 bytes and SHA-256; compact serialized-schema bytes and SHA-256; and their combined content bytes. Trailing newlines, provider wrappers and request metadata are excluded. Provider tokens and model error rates remain unmeasured; smaller content does not establish token, quality, latency, caching or cost improvements.
 
 ## Composite answer blocks (opt-in overlay)
 

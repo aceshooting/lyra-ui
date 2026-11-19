@@ -50,7 +50,7 @@ export const styles = css`
     pointer-events: none;
   }
 
-  :host([placement^="top"]) [part="stack"] {
+  :host(:is([placement^="top"], :not([placement]))) [part="stack"] {
     align-self: start;
   }
   :host([placement^="bottom"]) [part="stack"] {
@@ -63,7 +63,7 @@ export const styles = css`
   :host([placement$="center"]) [part="stack"] {
     justify-self: center;
   }
-  :host([placement$="end"]) [part="stack"] {
+  :host(:is([placement$="end"], :not([placement]))) [part="stack"] {
     justify-self: end;
   }
 `;

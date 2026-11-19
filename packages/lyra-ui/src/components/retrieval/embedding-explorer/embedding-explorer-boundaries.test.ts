@@ -54,3 +54,14 @@ describe('lr-embedding-explorer boundaries', () => {
     expect(el.points.some((point) => point === null)).to.equal(false);
   });
 });
+
+it('positions both extrema and the midpoint of a finite domain whose span overflows', async () => {
+  const el = await fixture<LyraEmbeddingExplorer>(html`
+    <lr-embedding-explorer .points=${[-Number.MAX_VALUE, 0, Number.MAX_VALUE].map((coordinate, index) => ({
+      id: String(index), x: coordinate, y: coordinate,
+    }))}></lr-embedding-explorer>
+  `);
+  expect(renderedPoints(el).map((point) => point.getAttribute('transform'))).to.deep.equal([
+    'translate(24 336)', 'translate(320 180)', 'translate(616 24)',
+  ]);
+});

@@ -2300,9 +2300,10 @@ describe("Web Awesome navigation surface", () => {
       html`<lr-pagination total="95"></lr-pagination>`
     );
     const details: Array<{ page: number; pageSize: number }> = [];
-    el.addEventListener("lr-before-page-change", (event) =>
-      details.push(event.detail)
-    );
+    el.addEventListener("lr-before-page-change", (event) => {
+      details.push(event.detail);
+      el.pageSize = 100;
+    });
     el.addEventListener("lr-page-change", (event) =>
       details.push(event.detail)
     );

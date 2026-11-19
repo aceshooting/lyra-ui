@@ -3,7 +3,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { sizes } from '../../../internal/sizes.styles.js';
+import { groupOptionSize, sizes } from '../../../internal/sizes.styles.js';
 import { variants } from '../../../internal/variants.styles.js';
 import {
   LYRA_SIZE_VALUES,
@@ -176,7 +176,7 @@ const STANDALONE: LyraToggleGroupProjection = Object.freeze({
  * @since 21.0.0
  */
 export class LyraToggle extends LyraElement<LyraToggleEventMap> {
-  static override styles = [LyraElement.styles, sizes, variants, styles];
+  static override styles = [LyraElement.styles, sizes, groupOptionSize, variants, styles];
   static override properties = {
     pressed: { type: Boolean, reflect: true, noAccessor: true },
   };
@@ -409,6 +409,7 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
         this.emit('lr-toggle-toggle-request', detail, init),
       guard: this.pressGuard,
       commit: () => {
+        if (this.effectiveDisabled) return;
         this.pressed = next;
         this.emit('lr-change', { pressed: this.pressed, value: this.value });
       },

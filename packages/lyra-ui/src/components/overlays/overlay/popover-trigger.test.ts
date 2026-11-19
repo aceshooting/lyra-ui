@@ -937,3 +937,46 @@ it('closes a hover-opened popover when a re-render replaces its for trigger away
     await resetMouse();
   }
 });
+
+for (const name of ['lr-popover', 'lr-dropdown'] as const) {
+  it(`retires a delayed hover open when ${name} receives a replacement trigger`, async () => {
+    const el = await fixture<LyraPopover>(`<${name} trigger="hover" show-delay="60"><button slot="trigger">Old</button></${name}>`);
+    const old = triggerOf(el);
+    const replacement = document.createElement('button');
+    replacement.slot = 'trigger';
+    replacement.textContent = 'New';
+    replacement.style.cssText = 'position:fixed;inset:50% auto auto 50%';
+    enter(old);
+    old.replaceWith(replacement);
+    // wait-reason: the retired trigger's original show deadline must pass without opening the replacement.
+    await aTimeout(140);
+    expect(el.open).to.be.false;
+    const shown = oneEvent(el, 'lr-after-show');
+    enter(replacement);
+    await shown;
+    await el.hide();
+  });
+
+  it(`activates ${name} once per click as the same trigger moves between its slot and for bindings`, async () => {
+    const wrapper = await fixture<HTMLElement>(`<div><${name} for="moved-trigger">
+      <button id="moved-trigger" slot="trigger">Actions</button>
+    </${name}></div>`);
+    const el = wrapper.querySelector(name)!;
+    const button = wrapper.querySelector('button')!;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="trigger"]')!;
+    let shows = 0;
+    let hides = 0;
+    el.addEventListener('lr-show', () => shows++);
+    el.addEventListener('lr-hide', () => hides++);
+    for (const [index, owner] of [wrapper, el].entries()) {
+      const changed = oneEvent(slot, 'slotchange');
+      owner.append(button);
+      await changed;
+      button.click();
+      await el.updateComplete;
+      expect(el.open).to.be.true;
+      expect([shows, hides]).to.deep.equal([index + 1, index]);
+      await el.hide();
+    }
+  });
+}

@@ -1249,7 +1249,8 @@ children changing on their own)
 
 When collapse, `max-visible`, or controlled child removal hides the focused chip action, focus moves
 to the nearest enabled visible chip control, then the overflow disclosure, then the stable group
-base. Focus already moved outside the group is preserved.
+base. When the focused overflow disclosure disappears, focus moves to the nearest enabled
+visible chip control or the group base. Focus already moved outside the group is preserved.
 
 **Slots:** default (`<lr-chip>` elements, or any content, though the chip pairing is the intended
 usage)
@@ -1856,8 +1857,8 @@ later text renders normally.
 - `trigger: string = 'hover focus'` — A _space-separated_ list of `hover`,
   `focus`, `click` and `manual`. `focus` means keyboard focus: the focused element must match
   `:focus-visible` and the last input must not have been a pointer press. Pointer, touch and
-  scripted focus that follows them do not open it, but any focus inside the trigger still wires its
-  description; use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
+  scripted focus that follows them do not open it. In description mode, any focus inside the
+  trigger still wires its description. Use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
   activation deliberately, following the WAI-ARIA tooltip pattern, and the check reads the control
   that actually holds focus, including one inside a shadow-root trigger. Migrating from
   `wa-tooltip`/`sl-tooltip`: focus activation is narrowed to keyboard focus. If you removed `focus`
@@ -1879,7 +1880,7 @@ later text renders normally.
 - `skidding: number = 0` — offset along the anchor's edge, in px.
 - `for: string = ''` (reflected) — id of an element in this tooltip's own root. It positions behind
   a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, it also owns
-  the configured interaction listeners and `aria-describedby`. A slotted trigger wins interaction
+  the configured interaction listeners and the ARIA relationship selected by `labelMode`. A slotted trigger wins interaction
   and ARIA ownership. Assigning `null` clears the attribute to the canonical `''` read value; the
   getter itself remains non-nullable
 - `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
@@ -1906,7 +1907,14 @@ later text renders normally.
   documents (`llms/components/lr-popover.md`).
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted. Whitespace-only
   text in the content slot (template indentation around a `slot="trigger"` element) counts as
-  nothing, so `content` still paints and describes the trigger.
+  nothing, so `content` still supplies the tooltip text.
+- `labelMode: LyraTooltipLabelMode = 'description'` (attribute `label-mode`) —
+  `'description' | 'label' | 'none'`. Description mode associates the tooltip text with
+  `aria-describedby` while the tooltip is open or the trigger contains focus and `focus` is an
+  active trigger. Use `label` to name an icon-only trigger through `aria-labelledby` even while
+  the bubble is closed. Use `none` for a visual tooltip on a trigger that already has its own
+  accessible name or description. Both linked modes preserve authored relationships on the trigger
+  and its first focusable descendant.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
   actionable popup with no property label uses the localized `popover` string.
@@ -2705,8 +2713,8 @@ tag remains connected even if a listener calls `preventDefault()` (the event is 
 and the consumer removes it by updating the collection that rendered it.
 
 If that controlled listener synchronously removes the focused tag, or a direct property write
-removes its action, focus moves to the nearest available composed action. Focus explicitly moved by
-the listener is preserved.
+removes or disables the focused remove button, focus moves to the nearest available composed
+action. Focus explicitly moved by the listener is preserved.
 
 For a removable tag, `focus(options?)`, `blur()`, and `click()` delegate to its native remove
 button. A plain tag's `click()` retains native `HTMLElement.click()` behavior and dispatches one
@@ -2850,8 +2858,11 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 - `variant: 'primary' | 'brand' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` and `brand` resolve through Lyra's shared brand semantic tokens. Unsupported attributes and
   untyped property writes normalize to reflected `primary`.
-- `duration: number = Infinity` — milliseconds before automatic dismissal. `Infinity` stays open;
-  hover or focus pauses the timer, and leaving interaction restarts the full duration.
+- `duration: number = Infinity` — milliseconds before automatic dismissal. Removing the attribute
+  restores `Infinity` and keeps the alert open. An explicit `0` dismisses immediately when eligible.
+  Hover or focus pauses the timer, and leaving interaction restarts the full duration. A hidden
+  document pauses the timer and countdown bar for inline alerts and toasts. The remaining time
+  resumes when the document becomes visible and the alert is neither hovered nor focused.
 - `countdown: 'rtl' | 'ltr' | undefined` (reflected, unset by default) — adds a decorative visual
   bar that empties in the requested physical direction. Its motion is removed under
   `prefers-reduced-motion: reduce`. Unsupported attributes and untyped property writes normalize
@@ -3128,7 +3139,8 @@ The host is the one focusable `role="slider"` owner and carries `tabindex`, its 
 `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
 readonly, required and invalid states (`aria-invalid` turns `"true"` once the user has interacted
 while the rating fails its constraints). The shadow star row is `aria-hidden` presentation only, so custom
-host ARIA never creates a competing second slider.
+host ARIA never creates a competing second slider. A read-only rating remains focusable and leaves
+arrow keys, Page Up/Down, Home and End available for normal page navigation.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.

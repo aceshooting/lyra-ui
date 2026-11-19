@@ -1351,3 +1351,33 @@ describe('lr-tree-item activation before its first render', () => {
     await tree.updateComplete;
   });
 });
+
+it('keeps hovered unselected rows independent of the selected fill and supports separate hover colors', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div data-lr-theme-scope role="tree" style="--lr-transition-fast: 0s">
+      <lr-tree-item .item=${{ id: 'u', label: 'Unselected' }}></lr-tree-item>
+      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }}></lr-tree-item>
+    </div>
+  `);
+  const [unselected, selected] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  await Promise.all([unselected!.updateComplete, selected!.updateComplete]);
+  const unselectedRow = unselected!.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+  const selectedRow = selected!.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+  try {
+    await hoverUntilMatched(unselectedRow, 'unselected row never entered :hover');
+    const originalHover = getComputedStyle(unselectedRow).backgroundColor;
+    expect(originalHover).to.not.equal('rgba(0, 0, 0, 0)');
+
+    wrapper.style.setProperty('--lr-tree-selected-bg', 'rgb(100, 110, 120)');
+    expect(getComputedStyle(selectedRow).backgroundColor).to.equal('rgb(100, 110, 120)');
+    expect(getComputedStyle(unselectedRow).backgroundColor).to.equal(originalHover);
+
+    wrapper.style.setProperty('--lr-tree-hover-bg', 'rgb(10, 20, 30)');
+    wrapper.style.setProperty('--lr-tree-selected-hover-bg', 'rgb(40, 50, 60)');
+    expect(getComputedStyle(unselectedRow).backgroundColor).to.equal('rgb(10, 20, 30)');
+    await hoverUntilMatched(selectedRow, 'selected row never entered :hover');
+    expect(getComputedStyle(selectedRow).backgroundColor).to.equal('rgb(40, 50, 60)');
+  } finally {
+    await resetMouse();
+  }
+});

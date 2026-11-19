@@ -5,6 +5,7 @@ import type { LyraMenu } from './menu.js';
 import type { LyraMenuItem } from './menu-item.js';
 import './menu.js';
 import './menu-item.js';
+import './dropdown-item.js';
 
 function press(target: Element, key: string): KeyboardEvent {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });
@@ -208,4 +209,61 @@ describe('lr-menu submenu pointer intent timers', () => {
     await aTimeout(400);
     expect(share.submenuOpen).to.equal(false);
   });
+});
+
+for (const [tag, row] of [
+  ['lr-menu-item', html`<lr-menu-item id="proposed" type="radio" value="b">B</lr-menu-item>`],
+  ['lr-dropdown-item', html`<lr-dropdown-item id="proposed" type="radio" value="b">B</lr-dropdown-item>`],
+] as const) {
+  it(`retires radio activation when the change proposal replaces its ${tag}`, async () => {
+    const menu = await fixture<LyraMenu>(html`
+      <lr-menu label="Choice">
+        <lr-menu-item id="checked" type="radio" checked value="a">A</lr-menu-item>
+        ${row}
+      </lr-menu>
+    `);
+    const checked = menu.querySelector<LyraMenuItem>('#checked')!;
+    const proposed = menu.querySelector<LyraMenuItem>('#proposed')!;
+    const replacement = proposed.cloneNode(true) as LyraMenuItem;
+    let selected = 0;
+    menu.addEventListener('lr-select', () => { selected += 1; });
+    proposed.addEventListener('lr-menu-item-change-request', () => proposed.replaceWith(replacement));
+
+    proposed.select();
+
+    expect(checked.checked).to.equal(true);
+    expect(proposed.checked).to.equal(false);
+    expect(replacement.checked).to.equal(false);
+    expect(selected).to.equal(0);
+  });
+}
+
+it('restores a single tab stop when a menu row becomes available without moving focus', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <input aria-label="Before menu" />
+      <lr-menu label="Actions">
+        <lr-menu-item disabled>Alpha</lr-menu-item>
+        <lr-dropdown-item loading>Beta</lr-dropdown-item>
+      </lr-menu>
+      <input aria-label="After menu" />
+    </div>
+  `);
+  const [before, after] = wrapper.querySelectorAll('input');
+  const alpha = wrapper.querySelector('lr-menu-item')!;
+  const beta = wrapper.querySelector('lr-dropdown-item')!;
+  await focusByKeyboard(before!);
+  expect([alpha.tabIndex, beta.tabIndex]).to.deep.equal([-1, -1]);
+
+  beta.loading = false;
+  await waitUntil(() => beta.tabIndex === 0);
+  alpha.disabled = false;
+  await alpha.updateComplete;
+  expect([alpha.tabIndex, beta.tabIndex]).to.deep.equal([-1, 0]);
+  expect(document.activeElement === before).to.equal(true);
+
+  await sendKeys({ press: 'Tab' });
+  expect(document.activeElement === beta).to.equal(true);
+  await sendKeys({ press: 'Tab' });
+  expect(document.activeElement === after).to.equal(true);
 });

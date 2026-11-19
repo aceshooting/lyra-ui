@@ -17,7 +17,7 @@ export const styles = css`
     position: relative;
   }
   :host([placement="start"]),
-  :host([placement="end"]) {
+  :host(:is([placement="end"], :not([placement]))) {
     block-size: 100%;
   }
   :host([placement="top"]),
@@ -30,7 +30,7 @@ export const styles = css`
      the rail token's width: a CSS min-inline-size/min-block-size always beats an inline size
      style, whatever applySize() computed and announced via aria-valuenow. */
   :host([placement="start"][collapsed]),
-  :host([placement="end"][collapsed]) {
+  :host(:is([placement="end"], :not([placement]))[collapsed]) {
     min-inline-size: var(
       --lr-dock-panel-collapsed-size,
       var(--_lr-dock-panel-collapsed-size)
@@ -143,7 +143,7 @@ export const styles = css`
     inline-size: var(--lr-size-3px);
     cursor: col-resize;
   }
-  :host([placement="end"]) [part="handle"] {
+  :host(:is([placement="end"], :not([placement]))) [part="handle"] {
     inset-block: 0;
     inset-inline-start: 0;
     inline-size: var(--lr-size-3px);
@@ -218,7 +218,7 @@ export const styles = css`
     inset-block-start: 50%;
     transform: translateY(-50%);
   }
-  :host([placement="end"]) [part="collapse-toggle"] {
+  :host(:is([placement="end"], :not([placement]))) [part="collapse-toggle"] {
     inset-inline-start: var(--lr-space-xs);
     inset-block-start: 50%;
     transform: translateY(-50%);
@@ -255,10 +255,10 @@ export const styles = css`
   :host([placement="start"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
-  :host([placement="end"]) [part="collapse-toggle"] span {
+  :host(:is([placement="end"], :not([placement]))) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
-  :host([placement="end"][collapsed]) [part="collapse-toggle"] span {
+  :host(:is([placement="end"], :not([placement]))[collapsed]) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
   :host(:dir(rtl)[placement="start"]) [part="collapse-toggle"] span {
@@ -267,10 +267,10 @@ export const styles = css`
   :host(:dir(rtl)[placement="start"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
-  :host(:dir(rtl)[placement="end"]) [part="collapse-toggle"] span {
+  :host(:dir(rtl):is([placement="end"], :not([placement]))) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
-  :host(:dir(rtl)[placement="end"][collapsed]) [part="collapse-toggle"] span {
+  :host(:dir(rtl):is([placement="end"], :not([placement]))[collapsed]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
   /* Slotted toggle glyphs replace the chevron and are never rotated. */

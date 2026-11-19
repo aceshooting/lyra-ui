@@ -1,3 +1,4 @@
+import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -368,6 +369,29 @@ describe("lr-segmented", () => {
     await el.updateComplete;
     expect(el.value).to.equal("week");
     expect(event.defaultPrevented).to.equal(false);
+  });
+
+  it('moves to the visually right segment when CSS overrides the authored direction', async () => {
+    const el = await fixture<LyraSegmented>(html`
+      <lr-segmented dir="rtl" style="direction: ltr" .items=${items()} value="week"></lr-segmented>
+    `);
+    const [first, middle, last] = segmentButtons(el);
+    expect(last!.getBoundingClientRect().left).to.be.greaterThan(middle!.getBoundingClientRect().left);
+    await focusByKeyboard(middle!);
+    await sendKeys({ press: 'ArrowRight' });
+    await el.updateComplete;
+    expect(el.value).to.equal('month');
+    expect(el.shadowRoot!.activeElement === last).to.equal(true);
+
+    el.style.direction = 'rtl';
+    el.value = 'week';
+    await el.updateComplete;
+    expect(first!.getBoundingClientRect().left).to.be.greaterThan(middle!.getBoundingClientRect().left);
+    await focusByKeyboard(middle!);
+    await sendKeys({ press: 'ArrowRight' });
+    await el.updateComplete;
+    expect(el.value).to.equal('day');
+    expect(el.shadowRoot!.activeElement === first).to.equal(true);
   });
 
   it("swaps Arrow key semantics under dir=\"rtl\": ArrowLeft moves forward, ArrowRight moves backward", async () => {
@@ -1420,7 +1444,7 @@ describe("track height", () => {
     // --lr-segmented-track-min-height fallback dead code (the trap lr-select fell into).
     // The shared ladder's own heights (internal/sizes.styles.ts), not a scale of this component's
     // own -- the 2xs track floor is the ladder's 1.25rem. The segments themselves keep their
-    // separate 1.5rem/24px WCAG 2.5.8 floor at 2xs/xs, so the rendered track is still a
+    // separate 24px WCAG 2.5.8 floor, so the rendered track is still a
     // conformant row of targets; see the target-size test below.
     const floors = new Map([
       ["2xs", "20px"],
@@ -1529,15 +1553,16 @@ describe("size", () => {
     );
   });
 
-  it("keeps 2xs/xs segment targets and adjacent centers at least 24px apart", async () => {
+  it("keeps segment targets at least 24px in compact themes at every tier", async () => {
     const narrowItems = [
       { value: "i", label: "I" },
       { value: "j", label: "J" },
     ];
-    for (const size of ["2xs", "xs"] as const) {
+    for (const size of ["2xs", "xs", "s", "m", "l", "xl", "small", "medium", "large"] as const) {
       const el = (await fixture(
         html`<lr-segmented
           size=${size}
+          style="--lr-segmented-segment-padding: 0; --lr-segmented-track-min-height: 20px"
           .items=${narrowItems}
           value="i"
         ></lr-segmented>`

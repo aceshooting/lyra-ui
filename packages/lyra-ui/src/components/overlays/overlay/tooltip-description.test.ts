@@ -1,4 +1,5 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { accessibleName } from '../../../../test/accessible-name.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './tooltip.js';
@@ -237,4 +238,115 @@ describe('content property beside a named trigger and whitespace-only default co
     await el.updateComplete;
     expect(flatText(body).trim()).to.equal('Fallback text');
   });
+});
+
+it('keeps an icon trigger named while closed and releases only its own relationships on mode changes', async () => {
+  const el = await fixture<LyraTooltip>(html`
+    <lr-tooltip label-mode="label" content="Edit" manual>
+      <button aria-labelledby="file-name" aria-describedby="hint"></button>
+    </lr-tooltip>
+  `);
+  const button = el.querySelector('button')!;
+  const proxy = el.querySelector('[data-lyra-tooltip-description]')!;
+  await waitUntil(() => button.getAttribute('aria-labelledby') === `file-name ${proxy.id}`);
+  expect(proxy.textContent).to.equal('Edit');
+  await expect(el).to.be.accessible();
+  expect(accessibleName(button)).to.equal('Edit');
+  expect(button.getAttribute('aria-describedby')).to.equal('hint');
+  await el.show();
+  await el.hide();
+  expect(button.getAttribute('aria-labelledby')).to.equal(`file-name ${proxy.id}`);
+  el.setAttribute('label-mode', 'none');
+  await el.updateComplete;
+  await el.show();
+  expect(button.getAttribute('aria-labelledby')).to.equal('file-name');
+  expect(button.getAttribute('aria-describedby')).to.equal('hint');
+  el.removeAttribute('label-mode');
+  await el.updateComplete;
+  expect(button.getAttribute('aria-describedby')).to.equal(`hint ${proxy.id}`);
+  await el.hide();
+  expect(button.getAttribute('aria-describedby')).to.equal('hint');
+});
+
+it('preserves a shadow control’s own label when a closed tooltip moves between interaction owners', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <span id="title">Document</span>
+      <div id="edit" aria-labelledby="title"></div>
+      <button id="other"></button>
+      <lr-tooltip for="edit" label-mode="label" content="Edit"></lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-tooltip')!;
+  const host = wrapper.querySelector<HTMLElement>('#edit')!;
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = '<span id="title">File</span><button aria-labelledby="title"></button>';
+  let control = root.querySelector('button')!;
+  const other = wrapper.querySelector<HTMLElement>('#other')!;
+  const proxy = el.querySelector('[data-lyra-tooltip-description]')!;
+  await focusByKeyboard(control);
+  await waitUntil(() => control.ariaLabelledByElements?.includes(proxy) === true);
+  expect(control.ariaLabelledByElements?.map(node => node.textContent)).to.deep.equal(['File', 'Edit']);
+  expect(host.getAttribute('aria-labelledby')).to.equal(`title ${proxy.id}`);
+  expect(control.hasAttribute('aria-describedby')).to.be.false;
+  const replacement = control.cloneNode(false) as HTMLButtonElement;
+  replacement.setAttribute('aria-labelledby', 'title');
+  control.replaceWith(replacement);
+  await waitUntil(() => replacement.ariaLabelledByElements?.includes(proxy) === true);
+  expect(control.getAttribute('aria-labelledby')).to.equal('title');
+  control = replacement;
+  el.for = 'other';
+  await el.updateComplete;
+  expect(host.getAttribute('aria-labelledby')).to.equal('title');
+  expect(control.getAttribute('aria-labelledby')).to.equal('title');
+  expect(other.getAttribute('aria-labelledby')).to.equal(proxy.id);
+  const slotted = document.createElement('button');
+  slotted.slot = 'trigger';
+  el.append(slotted);
+  await waitUntil(() => slotted.getAttribute('aria-labelledby') === proxy.id);
+  expect(other.hasAttribute('aria-labelledby')).to.be.false;
+  el.remove();
+  expect(slotted.hasAttribute('aria-labelledby')).to.be.false;
+  wrapper.append(el);
+  await waitUntil(() => slotted.getAttribute('aria-labelledby') === proxy.id);
+});
+
+it('names the native button of a custom trigger that upgrades while the tooltip is closed', async () => {
+  const el = await fixture<LyraTooltip>(html`
+    <lr-tooltip label-mode="label" content="Print">
+      <test-tooltip-late-label-trigger slot="trigger" tabindex="0"></test-tooltip-late-label-trigger>
+    </lr-tooltip>
+  `);
+  const trigger = el.querySelector('test-tooltip-late-label-trigger')!;
+  const proxy = el.querySelector('[data-lyra-tooltip-description]')!;
+  await waitUntil(() => trigger.getAttribute('aria-labelledby') === proxy.id);
+  if (!customElements.get(trigger.localName)) {
+    customElements.define(trigger.localName, class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).append(document.createElement('button'));
+      }
+    });
+  }
+  const button = trigger.shadowRoot!.querySelector('button')!;
+  await waitUntil(() => button.ariaLabelledByElements?.includes(proxy) === true);
+  expect(el.open).to.be.false;
+});
+
+it('moves the active default description when a wrapper replaces its native focus control', async () => {
+  const el = await fixture<LyraTooltip>(html`
+    <lr-tooltip content="Print" manual><div slot="trigger"></div></lr-tooltip>
+  `);
+  const root = el.querySelector('div')!.attachShadow({ mode: 'open' });
+  root.innerHTML = '<span id="hint">Device</span><button aria-describedby="hint">Printer</button>';
+  const previous = root.querySelector('button')!;
+  const proxy = el.querySelector('[data-lyra-tooltip-description]')!;
+  await el.show();
+  expect(describedByElements(previous).map(element => element.id)).to.deep.equal(['hint', proxy.id]);
+  const replacement = document.createElement('button');
+  previous.replaceWith(replacement);
+  await waitUntil(() => describedByElements(replacement).includes(proxy));
+  expect(previous.getAttribute('aria-describedby')).to.equal('hint');
+  await el.hide();
+  expect(replacement.hasAttribute('aria-describedby')).to.be.false;
 });

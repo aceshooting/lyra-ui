@@ -792,7 +792,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   // to the block above: a fill that jumps in one frame. They are listed rather than repaired for
   // the same reason, and they discharge the same way.
   'src/components/agent-tools/terminal/terminal.styles.ts:jump-to-latest',
-  'src/components/conversation/chat-viewport/chat-viewport.styles.ts:jump-pill',
   'src/components/conversation/message-feedback/message-feedback.styles.ts:submit-button',
   'src/components/data/calendar/calendar.styles.ts:event',
   'src/components/forms/input/time-input.styles.ts:now-button',

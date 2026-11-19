@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -1176,32 +1177,91 @@ it("reveals aggregate ARIA through native form validation exactly once and remai
 });
 
 // brand default under the pointer. Unset hover/active hooks now fall back to the checked border.
-it("keeps --lr-radio-checked-border-color while checked and hovered or pressed", async () => {
+it("keeps the checked circle surface and themed border at rest, on hover, and on press", async () => {
   const el = (await fixture(html`
     <lr-radio data-lr-theme-scope
       checked
-      style="--lr-transition-fast: 0s; --lr-radio-checked-border-color: rgb(10, 20, 30);"
+      style="
+        --lr-transition-fast: 0s;
+        --lr-radio-checked-border-color: rgb(10, 20, 30);
+        --lr-radio-button-checked-bg: rgb(40, 50, 60);
+        --lr-radio-button-checked-hover-bg: rgb(70, 80, 90);
+        --lr-radio-button-checked-active-bg: rgb(100, 110, 120);
+      "
       >Choice</lr-radio
     >
   `)) as LyraRadio;
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   const circle = el.shadowRoot!.querySelector<HTMLElement>('[part~="circle"]')!;
-  expect(getComputedStyle(circle).borderTopColor, "resting").to.equal("rgb(10, 20, 30)");
+  const surface = resolvedInShadow(el, "background: var(--lr-color-surface)", "background-color");
+  expect(getComputedStyle(circle).backgroundColor, "resting fill").to.equal(surface);
+  expect(getComputedStyle(circle).borderTopColor, "resting border").to.equal("rgb(10, 20, 30)");
   try {
     await hoverUntilMatched(base, "the radio base never reported :hover");
     await waitUntil(
       () => getComputedStyle(circle).borderTopColor === "rgb(10, 20, 30)",
       "hovering replaced the themed checked border"
     );
+    expect(getComputedStyle(circle).backgroundColor, "hover fill").to.equal(surface);
     await sendMouse({ type: "down" });
     await waitUntil(() => base.matches(":active"), "the radio never reported :active");
     await waitUntil(
       () => getComputedStyle(circle).borderTopColor === "rgb(10, 20, 30)",
       "pressing replaced the themed checked border"
     );
+    expect(getComputedStyle(circle).backgroundColor, "pressed fill").to.equal(surface);
   } finally {
     await sendMouse({ type: "up" });
     await resetMouse();
   }
+});
+
+it('keeps toolbar controls outside selection and keeps the hidden group label available', async () => {
+  const group = await fixture<LyraRadioGroup>(html`
+    <lr-radio-group>
+      <span slot="label">Topics</span>
+      <div slot="toolbar"><lr-radio value="all" checked>All</lr-radio></div>
+      <lr-radio value="news" checked>News</lr-radio>
+    </lr-radio-group>
+  `);
+  const root = group.shadowRoot!;
+  const label = root.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+  const toolbar = root.querySelector<HTMLElement>('[part="toolbar"]')!;
+  const owner = root.querySelector('[role="radiogroup"]')!;
+  expect(group.labelDisplay).to.equal('visible');
+  expect(getComputedStyle(label).position).not.to.equal('absolute');
+  expect(toolbar.previousElementSibling?.id).to.equal(label.id);
+  expect(toolbar.nextElementSibling?.getAttribute('part')).to.include('form-control-input');
+  expect(toolbar.hidden).to.equal(false);
+  expect(group.value).to.deep.equal('news');
+  group.labelDisplay = 'hidden';
+  await group.updateComplete;
+  expect(label.hidden).to.equal(false);
+  expect(getComputedStyle(label).position).to.equal('absolute');
+  expect(owner.getAttribute('aria-labelledby')).to.equal(label.id);
+  group.setAttribute('aria-label', 'Host name');
+  group.accessibleLabel = 'Property name';
+  await group.updateComplete;
+  expect(owner.getAttribute('aria-label')).to.equal('Host name');
+  group.querySelector('[slot="toolbar"]')!.remove();
+  await waitUntil(() => toolbar.hidden);
+});
+
+it('keeps required validation pristine when focus leaves the toolbar for an option', async () => {
+  const group = await fixture<LyraRadioGroup>(html`
+    <lr-radio-group required label="Topics">
+      <button type="button" slot="toolbar">Filter</button>
+      <lr-radio value="news">News</lr-radio>
+    </lr-radio-group>
+  `);
+  const toolbarButton = group.querySelector('button')!;
+  const option = group.querySelector('lr-radio')!;
+  await focusByKeyboard(toolbarButton);
+  await focusByKeyboard(option);
+  await group.updateComplete;
+  expect(group.matches(':state(user-invalid)')).to.equal(false);
+  await focusByKeyboard(toolbarButton);
+  await group.updateComplete;
+  expect(group.matches(':state(user-invalid)')).to.equal(true);
 });

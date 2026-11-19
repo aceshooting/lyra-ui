@@ -409,7 +409,17 @@ export function bindAccessibleTextObserver(
   for (const root of result.traversedShadowRoots) {
     if (root !== host.shadowRoot) observeAccessibleTextNode(observer, root, extraAttributes);
   }
-  if (!references) return;
+  if (references) observeAccessibleTextReferences(observer, host, result, references, extraAttributes);
+}
+
+/** Tracks the resolved and unresolved labels used by a particular text projection. */
+export function observeAccessibleTextReferences(
+  observer: MutationObserver,
+  host: Element,
+  result: ComposedAccessibilityTextResult,
+  references: AccessibleTextReferences,
+  extraAttributes: readonly string[] = [],
+): void {
   for (const reference of result.referencedElements) observeAccessibleTextNode(observer, reference, extraAttributes);
   if (!result.labelReferenceIds.size) return;
   const Observer = host.ownerDocument.defaultView?.MutationObserver;

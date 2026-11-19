@@ -33,7 +33,8 @@ export type {
  */
 export class LyraRelativeTime extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property({ converter: dateSourceConverter }) date: string | number | Date = new Date();
+  /** Construction-time instant by default. Removing the date attribute restores that instant. */
+  @property({ converter: dateSourceConverter, useDefault: true }) date: string | number | Date = new Date();
   @property() unit: LyraRelativeTimeUnit | 'auto' = 'auto';
   @property() format: LyraFormatDisplay = 'long';
   @property() numeric: LyraRelativeTimeNumeric = 'auto';
@@ -91,7 +92,9 @@ export class LyraRelativeTime extends LyraElement {
         candidates.push(relativeTimeDivisor(RELATIVE_TIME_UNITS[index - 1]!) - magnitude);
       }
     }
-    const secondsUntilChange = Math.min(...candidates.filter((candidate) => candidate > 0));
+    // At a future unit threshold the larger unit still wins at equality. Keep zero so
+    // the minimum delay wakes just after that threshold rather than at the next rounding step.
+    const secondsUntilChange = Math.min(...candidates.filter((candidate) => candidate >= 0));
     const delay = finiteDuration(secondsUntilChange * 1000, 1000, 20);
     const generation = this.timerGeneration;
     const handle = ownerWindow.setTimeout(() => {

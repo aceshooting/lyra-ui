@@ -4,8 +4,9 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
+import { finiteCount, finiteDuration, isSliderKey } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { preserveRangeKeyboardShortcut } from '../../../internal/range-keyboard-shortcut.js';
 import { styles } from './sequence-playback.styles.js';
 import { registerSequencePlayback, type SequencePlaybackCommands, type SequencePlaybackOwner, type SequencePlaybackProjection } from '../../../internal/sequence-playback-binding.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -396,6 +397,10 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   }
 
   private onSliderKeyDown = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      if (isSliderKey(event.key)) preserveRangeKeyboardShortcut(event);
+      return;
+    }
     const delta = this.keyboardStepDelta(event.key);
     if (delta === undefined) return;
     event.preventDefault();

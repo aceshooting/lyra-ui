@@ -118,3 +118,23 @@ it('passes the first day of an older month to the authored date formatter for it
   expect(received).to.deep.equal([[2020, 1, 1]]);
   expect(element.itemElement('old')!.label).to.equal('Older conversation');
 });
+
+it('keeps early-year local month dates and orders them from newest to oldest', async () => {
+  const threads = [
+    { id: 'older', title: 'Older', timestamp: '0099-12-31T00:00:00Z' },
+    { id: 'newer', title: 'Newer', timestamp: '0100-01-15T00:00:00Z' },
+  ];
+  const received: number[][] = [];
+  const formatDate = (date: Date) => {
+    received.push([date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()]);
+    return `Archive ${date.getFullYear()}`;
+  };
+  const element = await fixture<LyraThreadList>(
+    html`<lr-thread-list style="block-size:400px" .formatDate=${formatDate} .threads=${threads}></lr-thread-list>`
+  );
+  await waitUntil(() => element.itemElement('older') !== null && element.itemElement('newer') !== null);
+  const list = element.shadowRoot!.querySelector('lr-virtual-list')!;
+  const labels = list.renderedRows.flatMap(row => [...row.querySelectorAll('[part="group-label"]')].map(label => label.textContent));
+  expect(labels).to.deep.equal(['Archive 100', 'Archive 99']);
+  expect(received).to.deep.equal([[100, 0, 1, 0], [99, 11, 1, 0]]);
+});

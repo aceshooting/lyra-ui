@@ -646,6 +646,10 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     // republished under the group's name. Stopping propagation keeps the canceled flag, so a veto
     // applied below still reaches the toggle's pending commit.
     event.stopImmediatePropagation();
+    if (this.disabled) {
+      event.preventDefault();
+      return;
+    }
     const proposed = (event as CustomEvent<LyraToggleChangeDetail>).detail.pressed;
     let allowed = false;
     requestThenCommit({
@@ -661,7 +665,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
       // A flag set here stays correct alongside the guard, because a listener that resolved the
       // request by assigning `value` leaves `defaultPrevented` false while still suppressing it.
       commit: () => {
-        allowed = true;
+        allowed = !this.disabled;
       },
     });
     if (!allowed) event.preventDefault();

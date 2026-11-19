@@ -1,4 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 import type { LyraPointColumns } from '../../../internal/typed-columns.js';
@@ -46,4 +48,18 @@ it('ignores retained pagination controls from replaced data and after disconnect
   expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('data-id')).to.equal('point-0');
   current.click(); await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('data-id')).to.equal('point-200');
+});
+
+it('moves keyboard focus to the enabled pager control at either boundary', async () => {
+  const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .pointColumns=${columns(205)}></lr-embedding-explorer>`);
+  const [previous, next] = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="page-button"]');
+  await focusByKeyboard(next!);
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(next!.disabled).to.equal(true);
+  expect(el.shadowRoot!.activeElement === previous).to.equal(true);
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(previous!.disabled).to.equal(true);
+  expect(el.shadowRoot!.activeElement === next).to.equal(true);
 });

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -296,6 +296,7 @@ in brackets:
 
 - `--lr-button-padding-block` (default `--lr-form-control-padding-block`; `--lr-space-xs` at `m`)
 - `--lr-button-padding-inline` (default `--lr-form-control-padding-inline`; `--lr-space-m` at `m`)
+- `--lr-button-font-weight` (default `var(--lr-font-weight-semibold)`) controls the label weight.
 - `--lr-button-font-size` (default `--lr-form-control-font-size`; `--lr-font-size-m` at `m`)
 - `--lr-button-min-height` (default `--lr-form-control-height`) — the active tier's `min-block-size`
   floor. Its private default follows that tier's own `--lr-button-size-*` token, and it is used as the

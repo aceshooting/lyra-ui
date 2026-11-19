@@ -183,6 +183,8 @@ substitute the one you actually use:
 checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
 reads.
 
+Keyboard focus outlines the visible checkbox box. Clicking the label still toggles the checkbox.
+
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases directly control the visible
 checkmark/dash color and scale.
 

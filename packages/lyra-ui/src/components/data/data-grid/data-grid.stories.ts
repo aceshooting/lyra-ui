@@ -93,6 +93,19 @@ export const Default: Story = {
   `,
 };
 
+export const NumberedPages: Story = {
+  render: () => html`
+    <lr-data-grid
+      label="Engineering roster"
+      paginate
+      page-size="1"
+      .page=${1}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `,
+};
+
 export const FullClientFeatures: Story = {
   render: () => html`
     <lr-data-grid

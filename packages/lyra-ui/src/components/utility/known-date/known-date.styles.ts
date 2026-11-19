@@ -1,5 +1,6 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import {
+  formControlLabelTypography,
   formControlSupportingText,
 } from '../../../internal/form-control.styles.js';
 import { css } from 'lit';
@@ -70,12 +71,10 @@ export const styles = css`
   }
 
   [part="legend"] {
+    ${formControlLabelTypography}
     display: block;
     padding: 0;
     margin-block-end: var(--lr-space-xs);
-    color: var(--lr-color-text);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
   /* [part] always contains a literal <slot> child, so :empty never matches -- emptiness is tracked

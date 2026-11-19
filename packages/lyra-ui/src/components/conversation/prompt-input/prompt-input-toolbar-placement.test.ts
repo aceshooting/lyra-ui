@@ -41,6 +41,37 @@ describe('prompt input toolbar placement forwarding', () => {
     expect(chips.bottom).to.be.at.most(textarea.top + 1);
   });
 
+  it('aligns the forwarded bottom toolbar at the inline end through the attribute and property', async () => {
+    const el = await fixture<LyraPromptInput>(html`
+      <lr-prompt-input actions-layout="below" toolbar-placement="actions" toolbar-align="end"
+        style="inline-size: 480px">
+        <button slot="toolbar" type="button">Generation options</button>
+        <button slot="start" type="button">Attach</button>
+      </lr-prompt-input>
+    `);
+    await settle(el);
+    const toolbar = composerPart(composerOf(el), 'toolbar');
+    const options = el.querySelector('[slot="toolbar"]')!;
+    const gapAt = (edge: 'left' | 'right') =>
+      Math.abs(toolbar.getBoundingClientRect()[edge] - options.getBoundingClientRect()[edge]);
+
+    expect(el.toolbarAlign).to.equal('end');
+    expect(gapAt('right')).to.be.at.most(1);
+    expect(gapAt('left')).to.be.greaterThan(100);
+
+    el.toolbarAlign = 'start';
+    await settle(el);
+    expect(gapAt('left')).to.be.at.most(1);
+
+    el.toolbarAlign = 'end';
+    await settle(el);
+    expect(gapAt('right')).to.be.at.most(1);
+
+    el.removeAttribute('toolbar-align');
+    await settle(el);
+    expect(gapAt('left')).to.be.at.most(1);
+  });
+
   it('forwards bottom toolbar placement and restores above placement without moving the separate model controls', async () => {
     const el = await fixture<LyraPromptInput>(html`
       <lr-prompt-input actions-layout="below" toolbar-placement="actions" value="A preserved prompt"
@@ -60,6 +91,7 @@ describe('prompt input toolbar placement forwarding', () => {
       el.addEventListener(name, () => events.push(name));
     }
     expect(composer.getAttribute('toolbar-placement')).to.equal('actions');
+    expect(composer.toolbarAlign).to.equal('start');
     const chips = composerPart(composer, 'chips').getBoundingClientRect();
     const textarea = composer.input!.getBoundingClientRect();
     const toolbar = composerPart(composer, 'toolbar').getBoundingClientRect();

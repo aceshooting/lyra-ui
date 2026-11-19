@@ -204,7 +204,8 @@ children changing on their own)
 
 When collapse, `max-visible`, or controlled child removal hides the focused chip action, focus moves
 to the nearest enabled visible chip control, then the overflow disclosure, then the stable group
-base. Focus already moved outside the group is preserved.
+base. When the focused overflow disclosure disappears, focus moves to the nearest enabled
+visible chip control or the group base. Focus already moved outside the group is preserved.
 
 **Slots:** default (`<lr-chip>` elements, or any content, though the chip pairing is the intended
 usage)

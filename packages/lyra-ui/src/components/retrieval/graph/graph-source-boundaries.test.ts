@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './graph.js';
 import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from './graph.js';
@@ -30,6 +31,33 @@ function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>(done => { resolve = done; });
   return { promise, resolve };
+}
+
+for (const moveOutside of [false, true]) {
+  it(`handles focus after a deferred provider page when external focus is ${moveOutside ? 'chosen' : 'untouched'}`, async () => {
+    const provider = source();
+    const page = deferred<Awaited<ReturnType<Source['records']['query']>>>();
+    const query = provider.records.query;
+    provider.records.query = request => request.page === 1 ? page.promise : query(request);
+    const host = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button">Outside</button>
+        <lr-graph view="list" source-page-size="1" .graphSource=${provider}></lr-graph>
+      </div>
+    `);
+    const graph = host.querySelector<LyraGraph>('lr-graph')!;
+    const outside = host.querySelector('button')!;
+    await ready(graph);
+    const row = graph.shadowRoot!.querySelector<HTMLElement>('[data-source-key="node:a"]')!;
+    await focusByKeyboard(row);
+    graph.sourcePage = 1;
+    if (moveOutside) outside.focus();
+    page.resolve({ rows: [node('b', 1)], total: 2, summary });
+    await waitUntil(() => !!graph.shadowRoot!.querySelector('[data-source-key="node:b"]'));
+    await graph.updateComplete;
+    if (moveOutside) expect(document.activeElement === outside).to.equal(true);
+    else expect(graph.shadowRoot!.activeElement?.getAttribute('data-source-key')).to.equal('node:b');
+  });
 }
 
 for (const renderer of ['svg', 'canvas'] as const) {

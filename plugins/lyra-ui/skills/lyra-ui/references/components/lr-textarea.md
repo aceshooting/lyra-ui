@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -226,11 +226,9 @@ With no label text the part is hidden and no glyph is painted.
   retune the surface without a `::part(textarea)` rule; the public value remains authoritative
   across appearances.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
-  native textarea is hovered, independent of its resting border and every other brand-colored
-  component state.
+  native textarea is hovered and unfocused.
 - `--lr-textarea-focus-border-color` (default `var(--lr-color-brand)`) — the field border while
-  the native textarea is focused: the brand edge every text and date field shows on focus, with no
-  separate outline ring.
+  the native textarea is focused, including while the pointer is over it.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
   so a halo is configured once instead of per component; additive to the brand border.
@@ -239,7 +237,8 @@ With no label text the part is hidden and no glyph is painted.
 inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
 field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead of
 staying at its `rows`-derived intrinsic height. An unsized host stays content-sized, including
-inside a grid/flex item stretched to a taller row. With `resize="auto"`, content grows up to the
+inside a grid/flex item stretched to a taller row. With `resize="auto"`, an empty field uses its `rows` height even with a long placeholder.
+Entered content grows the field up to the
 `--lr-textarea-max-block-size` cap or a smaller explicit host allocation. Overflow stays scrollable,
 including when that allocation shrinks after the content renders.
 

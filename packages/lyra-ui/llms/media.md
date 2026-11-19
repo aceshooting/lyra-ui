@@ -1094,7 +1094,8 @@ cannot load rejects with `capture-failed`.
 - `legendGradientLoLabel: string | null = null` (attribute `legend-gradient-lo-label`),
   `legendGradientHiLabel: string | null = null` (attribute `legend-gradient-hi-label`) — override
   the endpoint captions, which otherwise default to the lowest/highest stop value in the component's
-  own locale-aware numeric formatting
+  own locale-aware numeric formatting. Default endpoints and ticks show extra decimal places
+  for small values and use scientific notation for very small nonzero values.
 - `legendGradientTicks: readonly (number | LyraMapLegendGradientTick)[]` (attribute: false; the
   getter returns the frozen `LyraMapLegendGradientTick { value: number; label?: string }` list) —
   labelled marks under the `legendGradient` bar, each at its value's true position on the ramp
@@ -3400,7 +3401,7 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 - `position: number = 50` (attribute `position`, reflected) — divider position from 0 to 100
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (attribute `orientation`, reflected)
 - `accessibleLabel: string | null` (attribute `aria-label`) — accessible name for the comparison
-  and its range handle
+  and its range handle. Blank labels use the localized default.
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
 **Events:** exactly one owner-realm, bubbling/composed native `input` (`Event`) after every live
@@ -4616,8 +4617,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   delayed image source finishes loading, so navigation and opening do not require consumer timers.
   Fit is the base zoom policy: an explicit user zoom remains until navigation or a reset, and
   changing the theme does not mutate the lightbox's zoom property.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
-  overriding the localized `lightboxLabel`.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — the dialog's accessible name.
+  Blank labels use the localized `lightboxLabel` default.
 
 **Methods:** promise-based `show()`, `hide()`, and `close(reason?)`, plus `next()`, `previous()`, and
 `goTo(index)`. `show()`/`hide()` resolve after the successful rendered transition; a veto resolves

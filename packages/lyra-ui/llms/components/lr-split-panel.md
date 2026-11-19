@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -74,13 +74,17 @@ individual token plus the shared `panel` token), and `divider` (focusable `role=
 with value/min/max and disabled ARIA state).
 
 **Themeable custom properties:** `--divider-width` (default `4px`), `--divider-hit-area` (requested
-default `12px`, with Lyra's `--lr-icon-button-size` minimum target remaining the floor), `--min`
+default `12px`), `--min`
 (default `0`) and `--max` (default `100%`) for the primary pane, or the start pane when no primary is
 selected. Lyra-prefixed aliases are `--lr-split-panel-divider-width`,
 `--lr-split-panel-divider-hit-area`, `--lr-split-panel-min`, and `--lr-split-panel-max`; when both
 spellings are set, the Lyra-prefixed value wins. Constraint values may be lengths, percentages, or
 `calc()` expressions and are re-applied when their computed sizes change.
 
+`--lr-split-panel-divider-min-hit-area` (default `var(--lr-icon-button-size)`) sets the divider's
+minimum hit region in both orientations. Together with the requested hit area, it lets a
+fine-pointer layout narrow the grab zone independently of surrounding controls.
+`--lr-split-panel-divider-color` (default `var(--lr-color-border)`) styles the resting divider.
 `--lr-split-panel-divider-hover-color` (default `var(--lr-color-brand)`) is the divider's background
 on hover/keyboard focus. `--lr-split-panel-divider-active-color` (default
 a `color-mix()` of the hover color, so the pressed divider deepens like the other splitters) is its

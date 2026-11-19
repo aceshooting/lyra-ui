@@ -204,6 +204,47 @@ function deferred<T>(): {
  *  to have run (mirrors the identical helper in virtual-list.test.ts). */
 
 describe("lr-pdf-viewer", () => {
+  it('starts only the replacement transport after its loading notification changes src', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(2));
+    const original = window.fetch;
+    const paths: string[] = [];
+    window.fetch = url => {
+      paths.push(new URL(String(url)).pathname);
+      return Promise.resolve(response());
+    };
+    try {
+      el.addEventListener('lr-page-viewer-state-change', event => {
+        if (event.detail.snapshot.status === 'loading' && el.src === '/first') el.src = '/second';
+      });
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = '/first';
+      await loaded;
+      expect(paths).to.deep.equal(['/second']);
+    } finally { window.fetch = original; }
+  });
+
+  for (const action of ['remove', 'replace']) {
+    it(`suppresses the retired load after a ready listener chooses to ${action} the viewer source`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+      installFakeLoader(el, fakeDocument(2));
+      const restore = stubFetch();
+      let ready = false, loaded = 0;
+      try {
+        el.addEventListener('lr-page-viewer-state-change', event => {
+          if (event.detail.snapshot.status !== 'ready') return;
+          ready = true;
+          if (action === 'remove') el.remove();
+          else el.src = '';
+        });
+        el.addEventListener('lr-load', () => { loaded++; });
+        el.src = '/presentation';
+        await waitUntil(() => ready);
+        expect(loaded).to.equal(0);
+      } finally { restore(); }
+    });
+  }
+
   it("defaults to an empty document, page one, and 100% zoom", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
@@ -406,6 +447,9 @@ describe("lr-pdf-viewer", () => {
       expect((await eventPromise).detail.error).to.exist;
       await waitFor(el, '[part="error"]');
       expect(called).to.be.false;
+      el.strings = { documentPreviewUrlNotAllowed: 'Blocked document address' };
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Blocked document address');
     } finally {
       window.fetch = original;
     }

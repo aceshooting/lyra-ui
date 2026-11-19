@@ -1,6 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlPresetButton } from '../../../internal/form-control.styles.js';
+import { formControlPresetButton } from '../../../internal/form-control/preset-button.styles.js';
 
 export const styles = css`
   :host {

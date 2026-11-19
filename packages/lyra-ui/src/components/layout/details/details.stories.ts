@@ -239,3 +239,20 @@ export const Lifecycle: StoryObj = {
     </lr-details>
   `,
 };
+
+export const CompactRoundedSummary: StoryObj = {
+  render: () => html`
+    <lr-details
+      appearance="plain"
+      summary="Sources"
+      open
+      style="
+        --lr-form-control-height: 28px;
+        --lr-details-summary-padding-block: var(--lr-space-2xs);
+        --lr-details-summary-radius: var(--lr-radius-pill);
+      "
+    >
+      Release notes and component documentation
+    </lr-details>
+  `,
+};

@@ -23,6 +23,21 @@ it('renders the label (with trailing colon) and the plain value prop', async () 
   expect(value.textContent!.trim()).to.equal('200 OK');
 });
 
+it('renders the value when default-slot text consists only of whitespace', async () => {
+  const el = await fixture<LyraResultField>(html`<lr-result-field label="Status" value="200 OK">
+
+  </lr-result-field>`);
+  const value = el.shadowRoot!.querySelector('[part="value"]')!;
+  const text = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let visibleText = '';
+  for (let node = text.nextNode(); node; node = text.nextNode()) {
+    range.selectNodeContents(node);
+    if (range.getBoundingClientRect().width > 0) visibleText += node.textContent;
+  }
+  expect(visibleText.trim()).to.equal('200 OK');
+});
+
 it('renders no label part when label is unset', async () => {
   const el = (await fixture(html`<lr-result-field value="200 OK"></lr-result-field>`)) as LyraResultField;
   expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;

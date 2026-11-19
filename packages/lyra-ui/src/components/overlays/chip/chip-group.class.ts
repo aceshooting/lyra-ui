@@ -133,10 +133,11 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   @state() private expanded = false;
   private readonly authorHidden = new Map<Element, boolean>();
   private readonly observedChildren = new Set<Element>();
-  private readonly pendingHiddenWrites = new Map<Element, boolean[]>();
+  private readonly pendingHiddenWrites = new Map<Element, { values: boolean[]; cursor: number }>();
   private visibilityObserver?: MutationObserver;
   private visibilityObserverDocument?: Document;
   private trackedChipFocus?: TrackedChipFocus;
+  private overflowFocusRepair?: ComposedFocusRepairSnapshot;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -155,8 +156,8 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     if (!MutationObserverCtor) return;
     const observer = new MutationObserverCtor((records) => {
       // No staleness guard: every path that retires this observer (disconnect, adoption, a
-      // new owner document) calls disconnect(), which discards queued records, so the callback
-      // never runs for a retired observer or a disconnected group.
+      // new owner document) drains queued records before disconnecting, so the callback never
+      // runs for a retired observer or a disconnected group.
       if (this.processHiddenMutations(records)) {
         this.reconcileChildVisibilityAndFocus();
         this.requestUpdate();
@@ -178,7 +179,11 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     // on the indicator does (see the class doc). Corrected here (not in
     // `updated()`) so it folds into the update already in progress instead
     // of scheduling a second one.
-    if (this.expanded && !this.hasOverflow) this.expanded = false;
+    if (!this.hasOverflow) {
+      this.expanded = false;
+      const disclosure = this.shadowRoot?.querySelector<HTMLButtonElement>('[part="overflow-indicator"]');
+      if (disclosure) this.overflowFocusRepair = captureComposedFocusRepair(disclosure, disclosure) ?? undefined;
+    }
   }
 
   override firstUpdated(changed: PropertyValues<this>): void {
@@ -197,7 +202,9 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    this.reconcileChildVisibilityAndFocus();
+    const overflowRepair = this.overflowFocusRepair;
+    this.overflowFocusRepair = undefined;
+    this.reconcileChildVisibilityAndFocus(overflowRepair);
   }
 
   override disconnectedCallback(): void {
@@ -218,6 +225,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   private resetVisibilityObserver(): void {
+    this.drainVisibilityRecords();
     this.visibilityObserver?.disconnect();
     this.visibilityObserver = undefined;
     this.visibilityObserverDocument = undefined;
@@ -315,9 +323,11 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     }).elements.find((target) => target === base) ?? null;
   }
 
-  private reconcileChildVisibilityAndFocus(): void {
+  private reconcileChildVisibilityAndFocus(overflowRepair?: ComposedFocusRepairSnapshot): void {
     const assignedChildren = this.assignedChildren();
-    const focusRepair = this.focusRepairBeforeVisibility(assignedChildren);
+    const focusRepair = overflowRepair
+      ? { index: assignedChildren.length, repair: overflowRepair }
+      : this.focusRepairBeforeVisibility(assignedChildren);
     this.syncChildVisibility(assignedChildren);
     if (!focusRepair) return;
     const candidate = this.focusTargetAfterVisibility(assignedChildren, focusRepair.index);
@@ -357,8 +367,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     ) {
       return;
     }
-    const queued = this.visibilityObserver?.takeRecords() ?? [];
-    if (queued.length > 0) this.processHiddenMutations(queued);
+    this.drainVisibilityRecords();
     this.visibilityObserver?.disconnect();
     this.observedChildren.clear();
     for (const child of children) {
@@ -371,11 +380,16 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     }
   }
 
+  private drainVisibilityRecords(): void {
+    const records = this.visibilityObserver?.takeRecords();
+    if (records?.length) this.processHiddenMutations(records);
+  }
+
   private processHiddenMutations(records: MutationRecord[]): boolean {
     let authorChanged = false;
-    for (let index = 0; index < records.length; index++) {
-      const record = records[index];
-      if (!record || record.type !== 'attributes') continue;
+    const hiddenTargets = new Set<Element>();
+    for (const record of records) {
+      if (record.type !== 'attributes') continue;
       const child = record.target as Element;
       if (!this.authorHidden.has(child)) continue;
       if (record.attributeName === 'inert') {
@@ -383,35 +397,34 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
         continue;
       }
       if (record.attributeName !== 'hidden') continue;
-      let nextRecord: MutationRecord | undefined;
-      for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
-        const candidate = records[nextIndex];
-        if (candidate?.type === 'attributes' && candidate.attributeName === 'hidden' && candidate.target === child) {
-          nextRecord = candidate;
-          break;
-        }
-      }
-      const hidden = nextRecord ? nextRecord.oldValue !== null : child.hasAttribute('hidden');
-      const pending = this.pendingHiddenWrites.get(child);
-      if (pending?.[0] === hidden) {
-        pending.shift();
-        if (pending.length === 0) this.pendingHiddenWrites.delete(child);
-        continue;
-      }
-      this.authorHidden.set(child, hidden);
-      authorChanged = true;
+      // The next record for this child supplies the previous write's resulting value.
+      if (hiddenTargets.has(child) && this.recordHiddenWrite(child, record.oldValue !== null)) authorChanged = true;
+      hiddenTargets.add(child);
+    }
+    for (const child of hiddenTargets) {
+      if (this.recordHiddenWrite(child, child.hasAttribute('hidden'))) authorChanged = true;
     }
     return authorChanged;
+  }
+
+  private recordHiddenWrite(child: Element, hidden: boolean): boolean {
+    const pending = this.pendingHiddenWrites.get(child);
+    if (pending && pending.values[pending.cursor] === hidden) {
+      if (++pending.cursor === pending.values.length) this.pendingHiddenWrites.delete(child);
+      return false;
+    }
+    this.authorHidden.set(child, hidden);
+    return true;
   }
 
   private setManagedHidden(child: Element, hidden: boolean): void {
     if (child.hasAttribute('hidden') === hidden) return;
     let pending = this.pendingHiddenWrites.get(child);
     if (!pending) {
-      pending = [];
+      pending = { values: [], cursor: 0 };
       this.pendingHiddenWrites.set(child, pending);
     }
-    pending.push(hidden);
+    pending.values.push(hidden);
     child.toggleAttribute('hidden', hidden);
   }
 

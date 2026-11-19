@@ -16,7 +16,7 @@ export const styles = css`
   :host([contained]) [part~="backdrop"] {
     display: none;
   }
-  :host([placement="end"]) {
+  :host(:is([placement="end"], :not([placement]))) {
     justify-content: flex-end;
   }
   :host([placement="top"]) {
@@ -64,7 +64,7 @@ export const styles = css`
     max-inline-size: 100%;
     max-block-size: 100%;
   }
-  :host([placement="end"]) [part~="panel"] {
+  :host(:is([placement="end"], :not([placement]))) [part~="panel"] {
     --_lr-drawer-enter-x: var(--lr-size-1rem);
   }
   /* translateX is a physical transform with no logical equivalent, so the enter-from offset flips
@@ -74,7 +74,7 @@ export const styles = css`
   :host(:dir(rtl)) [part~="panel"] {
     --_lr-drawer-enter-x: var(--lr-size-1rem);
   }
-  :host(:dir(rtl)[placement="end"]) [part~="panel"] {
+  :host(:dir(rtl):is([placement="end"], :not([placement]))) [part~="panel"] {
     --_lr-drawer-enter-x: calc(-1 * var(--lr-size-1rem));
   }
   :host([placement="bottom"]) [part~="panel"] {

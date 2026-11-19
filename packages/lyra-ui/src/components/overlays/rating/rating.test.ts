@@ -1,3 +1,5 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./rating.js";
 import { LyraRating } from "./rating.js";
@@ -1987,4 +1989,23 @@ describe("lr-rating activation event", () => {
       "a host writing `value` is not a user activation"
     ).to.equal(0);
   });
+});
+
+it('leaves navigation keys to the page while the read-only rating is focused', async () => {
+  const el = await fixture<LyraRating>(html`<lr-rating readonly value="3"></lr-rating>`);
+  await focusByKeyboard(el);
+  const keys = ['PageDown', 'ArrowDown', 'Home', 'End'];
+  const received: string[] = [];
+  const handled: string[] = [];
+  el.addEventListener('keydown', (event) => {
+    received.push(event.key);
+    if (event.defaultPrevented) handled.push(event.key);
+  });
+  for (const key of keys) {
+    await sendKeys({ press: key });
+  }
+
+  expect(received).to.deep.equal(keys);
+  expect(handled).to.deep.equal([]);
+  expect(el.value).to.equal(3);
 });

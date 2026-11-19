@@ -43,7 +43,7 @@ export abstract class LyraProgressBase extends LyraElement {
 
   /** The live indicator element, or `null` before the render root is populated. */
   get indicator(): Element | null {
-    return this.renderRoot.querySelector('[part="indicator"]');
+    return this.renderRoot?.querySelector('[part="indicator"]') ?? null;
   }
 
   /** How far the indicator is from full: the unfilled percentage on the bar, the normalized stroke

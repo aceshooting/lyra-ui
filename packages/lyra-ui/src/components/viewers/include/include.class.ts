@@ -5,7 +5,6 @@ import { srOnly } from '../../../internal/a11y.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
-  isAbortError,
   resolveOwnerFetchTarget,
   type OwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
@@ -503,7 +502,6 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       this.emit('lr-load', { src: this.src });
     } catch (error) {
       if (
-        isAbortError(error) ||
         !this.isConnected ||
         generation !== this.generation ||
         (source.kind === 'remote' && this.ownerDocument.defaultView !== source.owner)

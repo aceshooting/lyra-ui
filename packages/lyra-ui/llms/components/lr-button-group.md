@@ -36,8 +36,8 @@ use `lr-toggle-group`.
 between slotted controls on both axes.
 
 **Sizing.** The group derives its width from its content and wraps within a constrained
-allocation. A definite host width does not stretch the row automatically. Opt into a filled row
-with `lr-button-group::part(base) { inline-size: 100%; }`; this also preserves the former narrow
-allocation fill behavior. `min-inline-size: var(--lr-icon-button-size)` remains the lower bound.
+allocation. The host can shrink to fit the available space. Each control retains its own
+minimum hit target and may extend past an allocation narrower than that target.
+To fill a definite host width, set `lr-button-group::part(base) { inline-size: 100%; }`.
 
 ---

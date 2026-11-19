@@ -307,6 +307,19 @@ describe('lr-app-rail auto-hide: pin control', () => {
     expect(button.getBoundingClientRect().height).to.be.at.least(24);
   });
 
+  it('renders a custom decorative pin glyph inside the named pin control', async () => {
+    const { el } = await peeked();
+    const glyph = document.createElement('span');
+    glyph.slot = 'pin-icon';
+    glyph.textContent = '◆';
+    el.append(glyph);
+    const button = pin(el)!;
+    const wrapper = button.querySelector('[part="pin-icon"]')!;
+    expect(wrapper.getAttribute('aria-hidden')).to.equal('true');
+    expect(wrapper.querySelector('slot')?.assignedElements().map(element => element.textContent)).to.deep.equal(['◆']);
+    expect(button.getAttribute('aria-label')).to.equal('Pin navigation');
+  });
+
   it('pins the rail docked at full width, without overlaying, and unpins back to the strip', async () => {
     const { el, main } = await peeked();
     const seen = peekEvents(el);

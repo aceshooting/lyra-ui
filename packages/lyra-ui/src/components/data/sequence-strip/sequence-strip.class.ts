@@ -444,17 +444,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this.emit('lr-item-activate', { index, id: item.id, item });
   }
 
-  /** Activates the item a cell stands for — itself below the cap, its range's first item above it.
-   *  Reporting the first item keeps a playback consumer's `selectedIndex` on a real sequence
-   *  position it can scrub from, which a synthesized range midpoint would not be. */
-  private activateCell(cellIndex: number): void {
-    const cell = this.cells()[cellIndex];
-    if (!cell) return;
-    this.activateItem(cell.start);
-  }
-
-  /** A cell's disabled state follows the item it activates -- itself below the cap, its range's
-   *  first item above it (see `activateCell()`). */
+  /** A cell's disabled state follows the item it activates: the first item in its range. */
   private cellDisabled(cell: SequenceStripCell): boolean {
     return this.items[cell.start]?.disabled === true;
   }
@@ -730,12 +720,12 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (!(next instanceof Element) || next.getAttribute('part') !== 'cell') this.keyboardIndex = null;
   }
 
-  private onCellKeyDown(e: KeyboardEvent, index: number): void {
+  private onCellKeyDown(e: KeyboardEvent, index: number, cell: SequenceStripCell): void {
     // A focused cell has to be activatable from the keyboard, not only the pointer -- the cells
     // already carry a roving tabindex, so without this they were reachable but inert.
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
-      this.activateCell(index);
+      this.activateItem(cell.start);
       return;
     }
     const cells = this.cells();
@@ -907,6 +897,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   override render(): TemplateResult {
     if (this.sourceMode) return this.renderSource();
+    const items = this.items;
+    const current = (): boolean => this.isConnected && !this.sourceMode && this.items === items;
     const cells = this.cells();
     const view = this.cellView(cells);
     const ariaLabel = this.hostAccessibleLabel ?? view.summary;
@@ -948,8 +940,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               @pointerenter=${() => this.onCellEnter(index)}
               @pointerleave=${() => this.onCellLeave()}
               @focus=${(e: FocusEvent) => this.onCellFocus(index, e)}
-              @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
-              @click=${() => this.activateCell(index)}
+              @keydown=${(e: KeyboardEvent) => { if (current()) this.onCellKeyDown(e, index, cell); }}
+              @click=${() => { if (current()) this.activateItem(cell.start); }}
               aria-current=${selectedCell === index ? 'true' : 'false'}
               ?data-selected=${selectedCell === index}
             >

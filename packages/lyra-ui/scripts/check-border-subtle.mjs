@@ -13,8 +13,7 @@ import { isMainModule } from './is-main-module.mjs';
 // against adjacent colours. Every form control therefore stays on `--lr-color-border` (or
 // `--lr-color-border-strong`), and this gate fails the build if the subtle tier -- or its theme
 // input, which paints the same colour when read directly -- appears anywhere in
-// `src/components/forms/**` or in the shared `src/internal/form-control.styles.ts` that every
-// labelled control adopts. Nothing else would notice: with the input unset the two tokens resolve
+// `src/components/forms/**` or the shared form-control styles. With the input unset the two tokens resolve
 // to the same colour, so a control re-pointed by mistake renders identically in every test until
 // a theme sets the input, and then fails contrast only in that theme.
 //
@@ -43,6 +42,7 @@ export const SUBTLE_BORDER_TOKENS = Object.freeze([
 export const GUARDED_PATHS = Object.freeze([
   'src/components/forms',
   'src/internal/form-control.styles.ts',
+  'src/internal/form-control',
 ]);
 
 const TOKEN_PATTERN = new RegExp(
@@ -152,7 +152,7 @@ export function formatReport({ files, missing, findings }) {
           'items. A theme may set it well below 3:1 against the page. A form control\'s border is the ' +
           'visible boundary a user finds and identifies the control by, and WCAG 2.2 SC 1.4.11 ' +
           '(Non-text Contrast) requires that boundary to reach 3:1 against adjacent colours -- so ' +
-          'src/components/forms/** and src/internal/form-control.styles.ts draw it with ' +
+          'src/components/forms/** and the shared form-control styles draw it with ' +
           '--lr-color-border (or --lr-color-border-strong). The rule is on the literal name, comments ' +
           'included; only *.test.* files are exempt.',
       ].join('\n'),

@@ -1,4 +1,7 @@
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { localDate } from '../../../internal/calendar-date.js';
+
+export { localDate, utcDate } from '../../../internal/calendar-date.js';
 
 export type WeekdayFormat = 'narrow' | 'short' | 'long';
 export type CalendarMode = 'single' | 'range';
@@ -38,22 +41,6 @@ export function dateTimeFormat(
   } catch {
     return getDateTimeFormat(undefined, { calendar: 'gregory', ...options });
   }
-}
-
-/** Local proleptic-Gregorian date construction without Date's legacy 0–99 → 1900 remap. */
-export function localDate(year: number, month = 0, day = 1): Date {
-  const date = new Date(0);
-  date.setHours(0, 0, 0, 0);
-  date.setFullYear(year, month, day);
-  return date;
-}
-
-/** UTC counterpart of {@link localDate}, used for calendar-day arithmetic across DST. */
-export function utcDate(year: number, month = 0, day = 1): Date {
-  const date = new Date(0);
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCFullYear(year, month, day);
-  return date;
 }
 
 /** Parse `YYYY-MM-DD` into a local Date, or null if invalid. */

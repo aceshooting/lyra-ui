@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -51,6 +51,13 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
+- `grouped: boolean = false` (reflected) — wraps the timeline in one initially closed disclosure.
+  The summary lists distinct tool display names in chronological order with a locale-aware
+  conjunction. The first status present in `error`, `denied`, `running`, `pending`, `incomplete`,
+  `success` order supplies the group glyph and accessible status text. Empty timelines still show
+  the empty state.
+- `groupSummary: string = ''` (attribute `group-summary`) — overrides the generated summary text
+  in grouped mode. The `summary` slot takes precedence over this property.
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
 - `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while
@@ -113,11 +120,15 @@ timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
 
 **Registration:** `lr-tool-result-view` registers when the first entry's details open, so a timeline that never opens one does not load it; it upgrades in place.
 
+**Slots:** `summary` supplies custom content for the grouped disclosure while retaining the
+group status.
+
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
 `entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit` (input-retention
-and rendered-window notices).
+and rendered-window notices), `group` (the grouped disclosure), and `group-summary` (its glyph and
+summary content, with the aggregate status in `data-status`).
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
 repeated bare "Details" label.
 

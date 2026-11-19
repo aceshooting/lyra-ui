@@ -921,3 +921,20 @@ it('roots every run of a parent cycle and keeps a root in place on the parent ke
   expect(left.defaultPrevented).to.equal(true);
   expect(el.shadowRoot!.activeElement === rows[0]).to.equal(true);
 });
+
+for (const [action, status] of [['cancel', 'running'], ['retry', 'error']] as const) {
+  it(`ignores a rendered ${action} action after its run becomes ineligible during click capture`, async () => {
+    const run: SubagentRun = { id: 'test', label: 'Run', status };
+    const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${[run]}></lr-subagent-panel>`);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${action}"]`)!;
+    const emitted: string[] = [];
+    el.addEventListener(`lr-run-${action}`, ({ detail }) => emitted.push(detail.runId));
+    el.addEventListener('click', () => {
+      el.runs = [{ ...run, status: 'done' }];
+    }, { capture: true, once: true });
+    button.click();
+    await el.updateComplete;
+    expect(emitted).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelector(`[part="${action}"]`) === null).to.equal(true);
+  });
+}

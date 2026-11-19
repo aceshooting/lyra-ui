@@ -126,6 +126,20 @@ it('keeps visible-label extraction safe when the style engine rejects a visibili
   }
 });
 
+for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
+  it(`returns null from ${tag}.indicator until first render`, async () => {
+    const host = await fixture(html`<div></div>`);
+    const el = document.createElement(tag);
+    expect(el.indicator === null).to.equal(true);
+    host.append(el);
+    expect(el.indicator === null).to.equal(true);
+    await el.updateComplete;
+    expect(el.indicator?.getAttribute('part')).to.equal('indicator');
+    el.remove();
+    expect(el.indicator?.getAttribute('part')).to.equal('indicator');
+  });
+}
+
 it('exposes the live progress-ring indicator and normalized offset', async () => {
   const el = (await fixture(html`<lr-progress-ring value="25"></lr-progress-ring>`)) as LyraProgressRing;
   const first = el.indicator;

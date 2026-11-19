@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -222,7 +222,9 @@ the normal combobox trigger continues to expose `aria-required`.
 - `withClear: boolean = false` (attribute `with-clear`, reflected) — renders a clear button while
   anything is selected (and nothing at all while the selection is empty). It sits in the trigger's
   inline-end band as a **sibling** of the trigger rather than a child of it — same nesting reason as
-  the chips — so pressing it clears the selection without opening the listbox
+  the chips — so pressing it clears the selection without opening the listbox. When keyboard
+  activation removes the focused clear button, focus returns to the trigger unless a listener
+  moved it elsewhere.
 - `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
   button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins if both
@@ -552,6 +554,8 @@ purposes.
   A silent `checkValidity()` leaves a pristine control unchanged; `form.reset()` restores that state.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup,
   without restoring focus and undoing the browser's native Tab/Shift+Tab destination.
+- A failed initial or replacement popup placement closes and conceals the listbox. The next
+  opening retries placement; a superseded failure leaves a newer opening intact.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty

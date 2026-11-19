@@ -82,6 +82,7 @@ import type {
   LyraDataGridEventMap,
   SortingState,
 } from './data-grid-types.js';
+import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -805,7 +806,7 @@ function normalizedGroupBy(
  * @csspart next-icon - The next-page directional icon.
  * @csspart no-results - No-filter-results state.
  * @csspart page - A numbered page button.
- * @csspart page-current - The current numbered page button.
+ * @csspart page-current - The applied numbered page button, shown with a solid brand fill.
  * @csspart page-size - Page-size selector.
  * @csspart pager - Pagination controls.
  * @csspart pager-button - Shared part for every pager button.
@@ -2513,6 +2514,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       'lr-page-change',
       Object.freeze({ page: next, pageSize: this.safePageSize })
     );
+  }
+
+  private async activatePagerButton(event: Event, page: number, fallbackPart: string): Promise<void> {
+    const control = event.currentTarget as HTMLButtonElement;
+    const ownerDocument = this.ownerDocument;
+    const ownsFocus = shadowFocusTarget(this) === control;
+    this.applyPageChange(page);
+    if (!ownsFocus) return;
+    await this.updateComplete;
+    if (!this.isConnected || this.ownerDocument !== ownerDocument) return;
+    repairUnavailableControlFocus(control, [
+      this.renderRoot.querySelector<HTMLElement>(`[part~="${fallbackPart}"]`),
+      this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]'),
+      this.renderRoot.querySelector<HTMLElement>('[part="page-size"]'),
+    ]);
   }
 
   /** Applies a search-input event or re-evaluates the current search term. */
@@ -6008,7 +6024,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           type="button"
           aria-label=${this.localize('paginationFirstPage')}
           ?disabled=${current <= 0 || count === 0}
-          @click=${() => this.applyPageChange(0)}
+          @click=${(event: Event) => this.activatePagerButton(event, 0, 'next-button')}
         >
           <span part="first-icon" aria-hidden="true"
             >${chevronIcon()}${chevronIcon()}</span
@@ -6019,45 +6035,28 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           type="button"
           aria-label=${this.localize('previous')}
           ?disabled=${current <= 0 || count === 0}
-          @click=${() => this.applyPageChange(current - 1)}
+          @click=${(event: Event) => this.activatePagerButton(event, current - 1, 'next-button')}
         >
           <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
         ${numbers[0] !== undefined && numbers[0] > 0
           ? html`<span part="ellipsis" aria-hidden="true">…</span>`
           : nothing}
-        ${numbers.map((page) =>
-          page === current
-            ? html`
-                <button
-                  part="pager-button page page-current"
-                  type="button"
-                  aria-current="page"
-                  aria-label=${this.localize(
-                    'paginationJumpToPage',
-                    undefined,
-                    { page: format.format(page + 1) }
-                  )}
-                  @click=${() => this.applyPageChange(page)}
-                >
-                  ${format.format(page + 1)}
-                </button>
-              `
-            : html`
-                <button
-                  part="pager-button page"
-                  type="button"
-                  aria-label=${this.localize(
-                    'paginationJumpToPage',
-                    undefined,
-                    { page: format.format(page + 1) }
-                  )}
-                  @click=${() => this.applyPageChange(page)}
-                >
-                  ${format.format(page + 1)}
-                </button>
-              `
-        )}
+        ${repeat(numbers, (page) => page, (page) => html`
+          <button
+            part=${page === current ? 'pager-button page page-current' : 'pager-button page'}
+            type="button"
+            aria-current=${page === current ? 'page' : nothing}
+            aria-label=${this.localize(
+              'paginationJumpToPage',
+              undefined,
+              { page: format.format(page + 1) }
+            )}
+            @click=${(event: Event) => this.activatePagerButton(event, page, 'page-current')}
+          >
+            ${format.format(page + 1)}
+          </button>
+        `)}
         ${numbers.at(-1) !== undefined && numbers.at(-1)! < count - 1
           ? html`<span part="ellipsis" aria-hidden="true">…</span>`
           : nothing}
@@ -6066,7 +6065,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           type="button"
           aria-label=${this.localize('next')}
           ?disabled=${current >= count - 1 || count === 0}
-          @click=${() => this.applyPageChange(current + 1)}
+          @click=${(event: Event) => this.activatePagerButton(event, current + 1, 'previous-button')}
         >
           <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
@@ -6075,7 +6074,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           type="button"
           aria-label=${this.localize('paginationLastPage')}
           ?disabled=${current >= count - 1 || count === 0}
-          @click=${() => this.applyPageChange(Math.max(0, count - 1))}
+          @click=${(event: Event) => this.activatePagerButton(event, Math.max(0, count - 1), 'previous-button')}
         >
           <span part="last-icon" aria-hidden="true"
             >${chevronIcon()}${chevronIcon()}</span

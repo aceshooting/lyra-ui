@@ -3,7 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -23,7 +24,7 @@ import { LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddr
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: string };
+type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: () => string };
 export interface LyraContactViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
@@ -164,7 +165,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -177,7 +178,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: error.message };
+      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -192,7 +193,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
     } catch (error) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
     }
   }
@@ -262,7 +263,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       // it must not be funneled into the same error chrome/assertive announcement as a genuine fetch/parse
       // failure (matching <lr-calendar-viewer>'s identical zero-events handling).
       case 'empty': return html`<p class="empty-note">${this.localize('contactViewerNoContacts')}</p>`;
-      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeContact') })}</p>`;
     }

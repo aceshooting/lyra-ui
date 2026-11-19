@@ -23,7 +23,7 @@ import {
 } from '../../../internal/aria-controls.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
@@ -86,6 +86,7 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @customElement lr-checkbox-group
  * @slot - `<lr-checkbox>` children.
  * @slot label - Visible group label.
+ * @slot toolbar - Supplementary controls between the label and the options.
  * @slot hint - Supporting text.
  * @slot error - Custom validation message.
  * @event {Event} input - User selection changed.
@@ -120,7 +121,12 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * rather than `invalid`: a pristine required group is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
  * @csspart form-control - Group wrapper.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Label.
+ * @csspart toolbar - Container for the supplementary controls.
  * @csspart options - Checkbox collection.
  * @csspart form-control-input - WA name for the same checkbox collection.
  * @csspart hint - Supporting text.
@@ -194,6 +200,8 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   orientation: CheckboxGroupOrientation = 'vertical';
 
   @property() label = '';
+  /** Visually hide the group label while preserving its accessible name. */
+  @property({ attribute: 'label-display', reflect: true, useDefault: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   /** SSR slot-presence hint for label content unavailable before hydration. */
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
@@ -340,7 +348,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     }
     if (topLevelChild.parentElement !== group) return null;
     const slot = topLevelChild.getAttribute('slot');
-    return slot === 'label' || slot === 'hint' || slot === 'error' ? null : group;
+    return slot ? null : group;
   }
 
   private ownsCheckbox(element: Element): element is LyraCheckbox {
@@ -402,6 +410,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   private sync(): void {
     const next: string[] = [];
+    const data = new FormData();
     // Children sharing a `value` (the default `'on'` makes that the easy mistake) produce
     // indistinguishable FormData entries. The content attribute is read too, so an un-upgraded child
     // still counts.
@@ -410,13 +419,14 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       const value = box.value ?? (box as unknown as Element).getAttribute('value') ?? 'on';
       if (seen.has(value)) devWarnOnce(DUPLICATE_VALUE_WARNING_KEY, DUPLICATE_VALUE_WARNING);
       seen.add(value);
-      if (box.checked) next.push(value);
+      if (box.checked) {
+        next.push(value);
+        if (this.name && !box.matches(':disabled')) data.append(this.name, value);
+      }
     }
     const old = this._value;
     this._value = next;
     this.requestUpdate('value', old);
-    const data = new FormData();
-    if (this.name) next.forEach((value) => data.append(this.name, value));
     this.internals.setFormValue(
       this.name ? data : null,
       createStringArrayFormDataState(this.name, next),
@@ -424,7 +434,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     // A barred group reports no violation at all, exactly like a native disabled control --
     // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required groups,
     // and with it the documented `:state(user-invalid)` error styling.
-    if (!this.barredFromValidation && this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxGroupRequired'));
+    if (!this.barredFromValidation && this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, () => this.localize('checkboxGroupRequired'));
     else this.validityController.setValidity({});
     this.reflectValidityStates();
   }
@@ -514,10 +524,10 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     // what makes that interception reliable). Stopping propagation does not clear the canceled
     // flag, so the veto this handler may apply still reaches the child that dispatched it.
     event.stopImmediatePropagation();
-    // A disabled group propagates its state to every child, so a request should not reach here at
-    // all; if one does, it is left to commit exactly as today's `change` translation leaves it,
-    // rather than silently vetoed.
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) {
+      event.preventDefault();
+      return;
+    }
     const option = event.target;
     const proposed = (event as CustomEvent<{ checked: boolean }>).detail.checked;
     let allowed = false;
@@ -535,7 +545,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       // guard -- a listener that resolved the request by assigning `value` leaves
       // `defaultPrevented` false while still suppressing the commit.
       commit: () => {
-        allowed = true;
+        allowed = !this.liveDisabled;
       },
     });
     if (!allowed) event.preventDefault();
@@ -762,13 +772,11 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       // that comes with it, natively and synchronously, *before* `formDisabledCallback()` (what
       // updates `effectiveDisabled`) runs; at exactly this moment `effectiveDisabled` would still
       // read `false`. `:disabled` has no such lag, and also covers a single child disabled directly
-      // (independently of the group). Falls back to the group's own `effectiveDisabled` if the
-      // target isn't an `Element` (defensive). Mirrors `<lr-input>`'s identical `onBlur` guard.
-      const blurredControl = event.target as Element | null;
-      const disabled = typeof blurredControl?.matches === 'function'
-        ? blurredControl.matches(':disabled')
-        : this.effectiveDisabled;
-      if (!disabled) this.hasInteracted = true;
+      // (independently of the group). Supplementary controls have independent interaction and validation lifecycles.
+      if (!this.isOwnedCheckbox(event.target)) return;
+      if (!event.target.matches(':disabled') && !this.matches(':disabled') && !this.effectiveDisabled) {
+        this.hasInteracted = true;
+      }
       this.sync();
     }, true);
   }
@@ -937,6 +945,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       aria-invalid=${invalid ? 'true' : 'false'}
     >
       <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></legend>
+      <div part="toolbar" ?hidden=${!this.slotPresence.has('toolbar')}><slot name="toolbar"></slot></div>
       <div part="options form-control-input">
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>

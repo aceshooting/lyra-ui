@@ -191,3 +191,22 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+
+export const PlainToolbarTriggers: Story = {
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: var(--lr-space-s)">
+      <lr-export-button appearance="plain" .rows=${rows}>
+        <svg slot="icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" focusable="false">
+          <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"></path>
+        </svg>
+      </lr-export-button>
+      <lr-export-button
+        appearance="plain"
+        icon-only
+        aria-label="Download data"
+        .formats=${['csv', 'json']}
+        .rows=${rows}
+      ></lr-export-button>
+    </div>
+  `,
+};

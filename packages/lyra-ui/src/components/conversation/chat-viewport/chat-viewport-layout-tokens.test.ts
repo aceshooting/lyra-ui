@@ -75,6 +75,30 @@ describe('lr-chat-viewport layout tokens', () => {
     expect(Math.abs(dividerMid - (second! - 6))).to.be.lessThan(1.5);
   });
 
+  it('applies inherited jump fill, color, border, radius, and shadow', async () => {
+    const host = await fixture<HTMLElement>(html`
+      <div style="
+        block-size:200px;
+        --lr-chat-viewport-jump-bg: rgb(251, 251, 251);
+        --lr-chat-viewport-jump-color: rgb(23, 23, 23);
+        --lr-chat-viewport-jump-border: 2px solid rgb(97, 97, 97);
+        --lr-chat-viewport-jump-radius: 9px;
+        --lr-chat-viewport-jump-shadow: none;
+      ">
+        <lr-chat-viewport follow="false"><div style="block-size:400px">Message</div></lr-chat-viewport>
+      </div>
+    `);
+    const viewport = host.querySelector<LyraChatViewport>('lr-chat-viewport')!;
+    await viewport.updateComplete;
+    const pill = viewport.shadowRoot!.querySelector('[part="jump-pill"]')!;
+    const style = getComputedStyle(pill);
+    expect(style.backgroundColor).to.equal('rgb(251, 251, 251)');
+    expect(style.color).to.equal('rgb(23, 23, 23)');
+    expect(style.borderTop).to.equal('2px solid rgb(97, 97, 97)');
+    expect(style.borderTopLeftRadius).to.equal('9px');
+    expect(style.boxShadow).to.equal('none');
+  });
+
   it('centres a constrained content column under RTL too', async () => {
     const host = await fixture<HTMLElement>(html`<div dir="rtl" style="block-size:300px;inline-size:600px">
       <lr-chat-viewport style="--lr-chat-viewport-content-max-inline-size:240px">

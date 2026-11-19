@@ -36,3 +36,11 @@ it('is skipped by the owning menu roving tabindex', async () => {
   expect(items.every((item) => item.hasAttribute('tabindex'))).to.equal(true);
   expect(label.hasAttribute('tabindex')).to.equal(false);
 });
+
+it('restores the host presentation role when the authored role is removed', async () => {
+  const label = await fixture<HTMLElementTagNameMap['lr-menu-label']>(html`<lr-menu-label role="note">Groups</lr-menu-label>`);
+  label.removeAttribute('role');
+  await label.updateComplete;
+  expect(label.getAttribute('role')).to.equal('presentation');
+  expect(label.role).to.equal('presentation');
+});

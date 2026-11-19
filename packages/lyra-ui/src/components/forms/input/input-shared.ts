@@ -1,5 +1,7 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   FormAssociated,
@@ -144,6 +146,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @slot show-password-icon - Replaces the glyph shown while the password is hidden.
  * @slot hide-password-icon - Replaces the glyph shown while the password is visible.
  * @csspart form-control - The outer wrapper around label, input, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart base - Compatibility name for the control row; use `input-wrapper`.
@@ -247,6 +253,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
 
   override set value(next: string | null) {
     const normalized = next ?? '';
+    if (!this.settlingValueFromInput && normalized !== this.value) this.inputGeneration++;
     super.value = normalized;
     // A write reaching here that did NOT come from `onInput`'s own guarded assignment below is a
     // programmatic `value` write (including `formResetCallback()`'s restore) -- cancel any pending
@@ -436,6 +443,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   // own assignment, so that write is never mistaken for the programmatic one the setter otherwise
   // cancels a pending debounce for.
   private settlingValueFromInput = false;
+  private inputGeneration = 0;
   private readonly settledDebounce = new DebounceController<string>(0, (value) => {
     this.emit('lr-input-settled', { value });
   });
@@ -471,12 +479,11 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
 
   constructor() {
     super();
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
 
   override disconnectedCallback(): void {
+    this.inputGeneration++;
     // `cancel()`, not `dispose()`: a detached input still fires its timer into a torn-down host
     // without this, but a re-parent (which also runs this) must leave the control able to debounce
     // a later edit -- the same reconnect contract `<lr-filter-bar>`'s own `cancelDebounce()` keeps.
@@ -874,14 +881,17 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
 
   private onInput = (event: InputEvent): void => {
     if (!this.inputEl) return;
+    const generation = ++this.inputGeneration;
     this.settlingValueFromInput = true;
     this.value = this.valueFromNativeText(this.inputEl.value);
     this.settlingValueFromInput = false;
+    const value = this.value;
     relayNativeEvent(this, event);
-    this.emit('lr-input', { value: this.value });
+    this.emit('lr-input', { value });
+    if (generation !== this.inputGeneration) return;
     if (this.isDebounced()) {
       this.settledDebounce.delayMs = this.effectiveDebounceMs;
-      this.settledDebounce.push(this.value);
+      this.settledDebounce.push(value);
     } else {
       this.settledDebounce.cancel();
     }
@@ -1036,7 +1046,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             minlength=${this.minlength ?? nothing}
             maxlength=${this.maxlength ?? nothing}
             pattern=${this.pattern ?? nothing}
-            .value=${this.nativeInputText}
+            .value=${live(this.nativeInputText)}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}

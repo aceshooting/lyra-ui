@@ -1,6 +1,7 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
+  formControlLabelTypography,
   formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -83,8 +84,7 @@ export const styles = css`
     gap: var(--lr-token-input-gap, var(--_lr-token-input-gap));
   }
   [part="form-control-label"] {
-    color: var(--lr-color-text);
-    font-weight: var(--lr-font-weight-semibold);
+    ${formControlLabelTypography}
   }
   /* The required marker comes from the one shared sheet (internal/form-control.styles.ts), keeping
      its glyph, colour and spacing consumer-settable. The rule below hides the older hand-rolled

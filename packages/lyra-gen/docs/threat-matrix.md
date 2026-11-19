@@ -12,7 +12,7 @@ memory and execution time.
 
 ## Composed browser scenes
 
-[The composed threat suite](../test/browser/threat-matrix.test.ts) uses these stable scene IDs:
+[The composed threat suite](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/test/browser/threat-matrix.test.ts) uses these stable scene IDs:
 
 | Scene | Threat and boundary | Asserted outcome |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ memory and execution time.
 | TM-04 | A trusted property adapter accidentally changes an admitted media URL to an unapproved destination | Final prepared properties reject before an image receives its source or enters the document. The development server counts zero target requests. A direct image load to the same synthetic target then counts one, proving the counter and target are active. |
 | TM-05 | A model forges field approval, changes reviewed field presentation or reuses an approval on another surface | Forged document permissions and changed fields do not render. Only the exact host-approved node on its approved surface renders for the declared sensitive purpose. The approval cannot be reused on another surface. |
 
-TM-01 and TM-04 use [a development-only request-counter plugin](../test/threat-plugin.mjs).
+TM-01 and TM-04 use [a development-only request-counter plugin](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/test/threat-plugin.mjs).
 The probe is a synthetic image served by the test server. Counting requests at the server covers
 native image loading, which a `fetch` spy alone would miss. These checks concern the named targets;
 they do not claim that all dependency/module traffic or every possible browser effect is absent.
@@ -53,14 +53,14 @@ browser suite discovers this file, and the shared configuration enrolls the coun
 | Replay that restores authority or overwrites edits | Runtime test `dirty owned fields survive follow-ups, deleted fields disappear and snapshots restore`; repair test `repair budgets and revision preconditions prevent stale or expanded-scope writes`; TM-03 and TM-05 | Restoring content does not replay actions. Reauthorize source access and retain exact catalog/version checks before mounting a stored view. |
 | Observation that leaks content | Diagnostic observer unit/property fixtures and renderer categories-only observer cases | The observer receives finite categories, not source text, values or diagnostic messages. It starts no telemetry transport; application observers retain their own obligations. |
 
-The lexical fixtures are in [the Markup corpus](../test/fixtures/markup.ts) and executed by
-[parser tests](../src/parser.test.ts). The other named tests live in
-[schema](../src/schema.test.ts), [islands](../src/islands.test.ts),
-[runtime](../src/runtime.test.ts), [functions](../src/functions.test.ts),
-[references](../src/references.test.ts), [chat](../src/chat.test.ts),
-[repair](../src/repair.test.ts), [content policy](../src/content-policy.test.ts) and
-[diagnostic observer](../src/diagnostics.test.ts) suites. Renderer approval cases are in
-[the form/action browser suite](../test/browser/gen-view.test.ts).
+The lexical fixtures are in [the Markup corpus](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/test/fixtures/markup.ts) and executed by
+[parser tests](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/parser.test.ts). The other named tests live in
+[schema](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/schema.test.ts), [islands](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/islands.test.ts),
+[runtime](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/runtime.test.ts), [functions](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/functions.test.ts),
+[references](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/references.test.ts), [chat](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/chat.test.ts),
+[repair](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/repair.test.ts), [content policy](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/content-policy.test.ts) and
+[diagnostic observer](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/src/diagnostics.test.ts) suites. Renderer approval cases are in
+[the form/action browser suite](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/test/browser/gen-view.test.ts).
 
 ## Selecting host policy
 

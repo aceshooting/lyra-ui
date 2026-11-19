@@ -175,7 +175,11 @@ export interface LyraAppRailEventMap {
  *   consumer's responsibility. While the mobile overlay is open, clicking inside this slot closes
  *   it, except on a group's or item's disclosure toggle, a group's `header-actions` and an item's
  *   `meta`/`end` content.
- * @slot header - Logo/brand content, shown above the nav items in every mode.
+ * @slot header - Logo/brand content, shown above the nav items in every mode. In desktop icon-only
+ *   mode with the built-in collapse control, the brand stacks above the control.
+ * @slot collapse-icon - Decorative glyph for the desktop collapse control. The default chevron
+ *   tracks the rail state and direction. Slotted glyphs keep their own orientation.
+ * @slot pin-icon - Decorative glyph for the auto-hide pin control. Defaults to a pushpin.
  * @slot footer - A trailing user/settings trigger, shown below the nav items.
  * @event lr-mode-change - The effective mode changed. A LIVE breakpoint crossing (after mount) or
  *   an explicit `forceMode` assignment fires immediately, synchronously with the change. The mode
@@ -238,9 +242,9 @@ export interface LyraAppRailEventMap {
  *   names `[part="nav"]` — the item list whose presentation actually changes — never the
  *   `[part="base"]`/`[part="panel"]` element, which CONTAINS this button and would make the
  *   control claim to expand its own ancestor.
- * @csspart collapse-icon - The wrapper around `[part="collapse-toggle"]`'s chevron. The glyph is
- *   direction-aware through this wrapper's own `transform` (never a second, mirrored icon), so it
- *   always points toward the edge the rail is about to move to, under both `dir` values.
+ * @csspart collapse-icon - The decorative wrapper around `[part="collapse-toggle"]`'s glyph.
+ *   Its transform points the default chevron toward the edge the rail is about to move to
+ *   in each direction. A slotted glyph keeps its own orientation.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once. Casts its elevation
  *   (`--lr-app-rail-panel-shadow`, default `--lr-shadow-l`) only while the overlay is open; closed,
@@ -316,6 +320,13 @@ export interface LyraAppRailEventMap {
  *   mobile overlay is open. Read only in the open state: the closed, off-canvas panel never casts a
  *   shadow, whatever this is set to. Set `none` to remove the open elevation.
  * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
+ * @cssprop --lr-app-rail-header-border - Header block-end border shorthand.
+ *   Defaults to a thin subtle border.
+ * @cssprop --lr-app-rail-footer-border - Footer block-start border shorthand.
+ *   Defaults to a thin subtle border.
+ * @cssprop --lr-app-rail-edge-border - Docked rail inline-end border shorthand. Defaults to a thin
+ *   subtle border, with a stronger boundary when the resizer is present and no border for the
+ *   plain frame. The plain frame keeps its system-colored boundary in forced colors.
  * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
  * @cssprop [--lr-app-rail-nav-padding=var(--lr-space-s)] - `[part="nav"]`'s padding, unset
  *   reproducing the value this rule hard-coded before the token existed.
@@ -324,6 +335,10 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-header-min-block-size=auto] - `[part="header"]`'s minimum block size.
  *   `auto` (the default) is the property's own initial value, so unset reproduces today's exact
  *   height; set it to reserve room for header content that mounts or resizes asynchronously.
+ * @cssprop [--lr-app-rail-collapse-toggle-size=var(--lr-icon-button-size)] - Collapse-control square
+ *   size. Clamped to at least 24 CSS px, with the shared icon-button floor on touch-capable or
+ *   non-hovering devices.
+ * @cssprop [--lr-app-rail-collapse-toggle-color=var(--lr-color-text)] - Resting collapse glyph color.
  * @cssprop [--lr-app-rail-collapse-toggle-hover-bg=var(--lr-color-brand-quiet)] - Collapse-control
  *   hover background.
  * @cssprop [--lr-app-rail-collapse-toggle-hover-color=var(--lr-color-brand)] - Collapse-control
@@ -1869,6 +1884,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (event.target === event.currentTarget && event.propertyName === 'transform') this.baseEl?.removeAttribute('data-sliding');
   };
 
+  private onCollapseIconSlotChange = (event: Event): void => {
+    const slot = event.currentTarget as HTMLSlotElement;
+    slot.parentElement?.toggleAttribute('data-custom-glyph', slot.assignedNodes().length > 0);
+  };
+
   private onCollapseToggleClick = (): void => {
     this.toggleCollapse();
   };
@@ -2123,7 +2143,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                   ? this.localize('appRailCollapse')
                   : this.localize('appRailExpand')}
                 @click=${this.onCollapseToggleClick}
-              ><span part="collapse-icon" aria-hidden="true">${chevronIcon()}</span></button>`
+              ><span part="collapse-icon" aria-hidden="true"
+                ><slot name="collapse-icon" @slotchange=${this.onCollapseIconSlotChange}>${chevronIcon()}</slot></span
+              ></button>`
             : nothing}
           ${showPin
             ? html`<button
@@ -2132,7 +2154,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 aria-pressed=${pinned ? 'true' : 'false'}
                 aria-label=${pinned ? this.localize('appRailUnpin') : this.localize('appRailPin')}
                 @click=${this.onPinClick}
-              ><span part="pin-icon" aria-hidden="true">${pinIcon()}</span></button>`
+              ><span part="pin-icon" aria-hidden="true"
+                ><slot name="pin-icon">${pinIcon()}</slot></span
+              ></button>`
             : nothing}
         </div>
         <div part="nav" id=${this.navRegionId}>

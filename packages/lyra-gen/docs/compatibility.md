@@ -178,7 +178,7 @@ not establish full A2UI, AG-UI, MCP Apps or OpenUI conformance.
 The supported static SSR profile is described above. In-place hydration, remote-code sandboxes,
 simultaneous collaborative editing and provider-specific constrained decoding require their own
 documented support and qualification.
-The [roadmap](../../../docs/roadmap/generative-ui.md) records remaining and conditional work;
+The [roadmap](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/generative-ui.md) records remaining and conditional work;
 planned acceptance criteria are not release evidence.
 
 ## Qualification limits

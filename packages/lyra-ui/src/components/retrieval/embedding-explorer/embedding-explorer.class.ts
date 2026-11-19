@@ -23,16 +23,17 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
-import { extent, finiteRange, finiteCount } from '../../../internal/numbers.js';
+import { extent, finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { styles } from './embedding-explorer.styles.js';
+import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint, LYRA_DEFAULT_embeddingExplorerPointLimit, LYRA_DEFAULT_embeddingExplorerSpatialBin, LYRA_DEFAULT_embeddingExplorerSpatialBounds, LYRA_DEFAULT_embeddingExplorerSpatialError, LYRA_DEFAULT_embeddingExplorerSpatialLoading, LYRA_DEFAULT_embeddingExplorerSpatialSummary } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const WIDTH = 640;
@@ -197,11 +198,14 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     model: LYRA_DEFAULT_model,
+    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     paginationApplied: LYRA_DEFAULT_paginationApplied,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
     previous: LYRA_DEFAULT_previous,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -596,21 +600,16 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     bounds: { minX: number; maxX: number; minY: number; maxY: number }
   ): { x: number; y: number } {
     const { minX, maxX, minY, maxY } = bounds;
-    if (this.source || this.enhanced) {
-      const ratio = (value: number, min: number, max: number): number => min === max ? 0.5 :
-        Number.isFinite(max - min) ? (value - min) / (max - min) : (value / 2 - min / 2) / (max / 2 - min / 2);
-      return { x: PAD + ratio(point.x, minX, maxX) * (WIDTH - PAD * 2), y: HEIGHT - PAD - ratio(point.y, minY, maxY) * (HEIGHT - PAD * 2) };
-    }
-    const x =
-      PAD +
-      finiteRange((point.x - minX) / (maxX - minX || 1), 0.5, 0, 1) *
-        (WIDTH - PAD * 2);
-    const y =
-      HEIGHT -
-      PAD -
-      finiteRange((point.y - minY) / (maxY - minY || 1), 0.5, 0, 1) *
-        (HEIGHT - PAD * 2);
-    return { x, y };
+    const collapsed = this.source || this.enhanced ? 0.5 : 0;
+    const ratio = (value: number, min: number, max: number): number => {
+      if (min === max) return collapsed;
+      const span = max - min;
+      return Number.isFinite(span) ? (value - min) / span : (value / 2 - min / 2) / (max / 2 - min / 2);
+    };
+    return {
+      x: PAD + ratio(point.x, minX, maxX) * (WIDTH - PAD * 2),
+      y: HEIGHT - PAD - ratio(point.y, minY, maxY) * (HEIGHT - PAD * 2),
+    };
   }
 
   private announceLabel(point: EmbeddingPoint, index: number, label = point.label || point.id): string {
@@ -738,6 +737,19 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     this.emit('lr-spatial-bin-select', Object.freeze({ revision: binding.revision, bounds: bin.bounds, count: bin.count }));
   }
 
+  private renderLegend(clusterIndices: ReadonlyMap<string, number>): TemplateResult | typeof nothing {
+    const visibleClusters = [...clusterIndices].filter(([cluster]) => cluster.trim());
+    if (!visibleClusters.length) return nothing;
+    return html`<div part="legend" role="list">${visibleClusters.map(([cluster, index]) => html`
+      <span part="legend-item" role="listitem" data-cluster=${cluster}>
+        <svg part="legend-swatch" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+          <circle cx="6" cy="6" r="5" fill=${PALETTE[index % PALETTE.length]}></circle>
+        </svg>
+        <span part="legend-label">${cluster}</span>
+      </span>`
+    )}</div>`;
+  }
+
   private renderSpatial(): TemplateResult {
     const model = this.spatial, binding = model.binding, view = model.view;
     const label = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : this.label ?? this.accessibleLabel ?? this.localize('embeddingExplorerLabel');
@@ -746,6 +758,8 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       this.localize('embeddingExplorerSpatialBounds', undefined, { minX: number.format(bounds.minX), maxX: number.format(bounds.maxX), minY: number.format(bounds.minY), maxY: number.format(bounds.maxY) }) : this.localize('embeddingExplorerEmpty');
     const summary = this.localize('embeddingExplorerSpatialSummary', undefined, { total: number.format(binding?.count ?? 0), matched: number.format(model.result?.matchedCount ?? 0), global: formatBounds(binding?.bounds), viewport: formatBounds(view) });
     const points = this.renderedPoints;
+    const clusters = [...new Set(points.map((point) => String(point.cluster ?? '').trim()))].sort();
+    const clusterIndices = new Map(clusters.map((cluster, index) => [cluster, index]));
     const bins = model.result?.bins ?? [];
     return html`<div part="base" role="region" aria-label=${label} aria-busy=${model.loading ? 'true' : 'false'}>
       ${this.engineNotice()}
@@ -769,8 +783,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
             ${nativeSvgTitle(name)}
           </g>`;
         })}
-        ${points.map((point, index) => this.renderPoint(point, index, view, new Map()))}
-      </svg>` : nothing}
+        ${points.map((point, index) => this.renderPoint(point, index, view, clusterIndices))}
+      </svg>
+      ${this.renderLegend(clusterIndices)}` : nothing}
       ${model.loading ? html`<p part="limit">${this.localize('embeddingExplorerSpatialLoading')}</p>` : html`<p part="limit">${summary}</p>`}
       ${!model.loading && !model.error && binding?.count === 0 ? html`<p part="empty">${this.localize('embeddingExplorerEmpty')}</p>` : nothing}
     </div>`;
@@ -792,9 +807,19 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     return nothing;
   }
 
-  private movePage(delta: number): void {
+  private async movePage(delta: number, event: Event): Promise<void> {
+    const control = event.currentTarget as HTMLButtonElement;
+    const ownerDocument = this.ownerDocument;
+    const ownsFocus = shadowFocusTarget(this) === control;
     const page = largeDataPage(this.rows?.count ?? 0, Math.floor(this.activeIndex / LARGE_DATA_PAGE_SIZE) + delta);
     this.activeIndex = page.start;
+    if (!ownsFocus) return;
+    await this.updateComplete;
+    if (!this.isConnected || this.ownerDocument !== ownerDocument) return;
+    repairUnavailableControlFocus(control, [
+      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="page-button"]'),
+      this.renderRoot.querySelector<HTMLElement>('[role="option"][tabindex="0"]'),
+    ]);
   }
 
   private renderEnhanced(): TemplateResult {
@@ -831,11 +856,13 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
             ><span>${point.label || point.id}</span> <span>${coordinates}</span> <span>${point.cluster ?? ''}</span></div>`;
           })}
         </div>` : nothing}
-        ${!textOnly ? html`<div part="legend" role="list">${[...new Map(this.renderedPoints.map((point, offset) => [String(point.cluster ?? ''), page.start + offset])).entries()].filter(([cluster]) => cluster.trim()).map(([cluster, index]) => html`<span part="legend-item" role="listitem"><svg part="legend-swatch" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><circle cx="6" cy="6" r="5" fill=${PALETTE[(rows.category(index)) % PALETTE.length]}></circle></svg><span part="legend-label">${cluster}</span></span>`)}</div>` : nothing}
+        ${!textOnly ? this.renderLegend(new Map(this.renderedPoints.map((point, offset) => [
+          String(point.cluster ?? ''), rows.category(page.start + offset),
+        ]))) : nothing}
         <div part="pagination" role="group" aria-label=${this.localize('paginationLabel')}>
-          <button part="page-button" type="button" ?disabled=${page.page === 0} @click=${() => { if (current()) this.movePage(-1); }}>${this.localize('previous')}</button>
+          <button part="page-button" type="button" ?disabled=${page.page === 0} @click=${(event: Event) => { if (current()) void this.movePage(-1, event); }}>${this.localize('previous')}</button>
           <span>${this.localize('paginationApplied', undefined, { page: number.format(page.page + 1), totalPages: number.format(page.pageCount) })}</span>
-          <button part="page-button" type="button" ?disabled=${page.page + 1 === page.pageCount} @click=${() => { if (current()) this.movePage(1); }}>${this.localize('next')}</button>
+          <button part="page-button" type="button" ?disabled=${page.page + 1 === page.pageCount} @click=${(event: Event) => { if (current()) void this.movePage(1, event); }}>${this.localize('next')}</button>
         </div>` : nothing}
     </div>`;
   }
@@ -857,7 +884,6 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     const clusterIndices = new Map(
       clusters.map((cluster, index) => [cluster, index])
     );
-    const visibleClusters = clusters.filter((cluster) => cluster.trim() !== '');
     const numberFormat = getNumberFormat(this.effectiveLocale);
     return html`<div part="base" aria-busy=${this.pointScan ? 'true' : 'false'}>
       <svg
@@ -876,34 +902,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
               total: numberFormat.format(this.sampledFrom || points.length),
             })}</p>`
         : nothing}
-      ${visibleClusters.length > 0
-        ? html`<div part="legend" role="list">
-            ${visibleClusters.map(
-              (cluster) => html`<span
-                part="legend-item"
-                role="listitem"
-                data-cluster=${cluster}
-              >
-                <svg
-                  part="legend-swatch"
-                  viewBox="0 0 12 12"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <circle
-                    cx="6"
-                    cy="6"
-                    r="5"
-                    fill=${PALETTE[
-                      (clusterIndices.get(cluster) ?? 0) % PALETTE.length
-                    ]}
-                  ></circle>
-                </svg>
-                <span part="legend-label">${cluster}</span>
-              </span>`
-            )}
-          </div>`
-        : nothing}
+      ${this.renderLegend(clusterIndices)}
     </div>`;
   }
 }

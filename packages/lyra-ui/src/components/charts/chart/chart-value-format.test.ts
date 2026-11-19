@@ -1,5 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './line-chart.js';
+import './bubble-chart.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './lite-chart.js';
 import './box-plot.js';
 import '../../data/sparkline/sparkline.js';
@@ -7,7 +9,7 @@ import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import type { LyraSparkline } from '../../data/sparkline/sparkline.class.js';
-import { chartValueFractionDigits, formatChartValue } from './chart-number-format.js';
+import { chartValueFractionDigits, formatChartValue } from '../../../internal/chart-number-format.js';
 
 const tableText = (el: Element): string =>
   el.shadowRoot!.querySelector('table')?.textContent?.replace(/\s+/g, ' ') ?? '';
@@ -28,6 +30,27 @@ describe('chart default value formatting', () => {
       .labels=${['a', 'b']} .datasets=${[{ label: 'p', data: [0.0004, 0.0007] }]}></lr-line-chart>`);
     await waitUntil(() => tableText(el).includes('0.0004'), 'table value');
     expect(tableText(el)).to.contain('0.0007');
+  });
+
+  it('uses localized scientific notation before the decimal digit cap erases a finite value', () => {
+    const scientific = new Intl.NumberFormat('fr', { notation: 'scientific', maximumSignificantDigits: 3 });
+    for (const value of [1.25e-30, -2.5e-30, Number.MIN_VALUE]) {
+      expect(formatChartValue(value, 'fr')).to.equal(scientific.format(value));
+    }
+    expect(formatChartValue(0, 'fr')).to.equal('0');
+  });
+
+  it('keeps tiny bubble coordinates distinct in its table and keyboard announcement', async () => {
+    const el = await fixture<LyraChart>(html`<lr-bubble-chart lang="en" without-animation with-data-table
+      .datasets=${[{ label: 'p', points: [{ x: 1e-30, y: 0, r: 3 }, { x: 2e-30, y: -3e-30, r: 4 }] }]}
+    ></lr-bubble-chart>`);
+    expect(tableText(el)).to.contain('1E-30');
+    expect(tableText(el)).to.contain('2E-30');
+    expect(tableText(el)).to.contain('-3E-30');
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    await focusByKeyboard(canvas);
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await waitUntil(() => document.querySelector('[data-lr-live-region="polite"]')?.textContent?.includes('2E-30') === true);
   });
 
   it('lr-lite-chart tables and titles small values instead of "0"', async () => {

@@ -25,7 +25,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatChartValue } from './chart-number-format.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { decimalPlaces, finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -2309,6 +2309,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private onPointKeyDown(e: KeyboardEvent, datasetIndex: number, index: number, markIndex: number): void {
+    if (e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
+      e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.onMarkFocus(markIndex);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,7 +35,8 @@ empty and later replacement strings remain supported.
 
 Editable token labels vertically center their text within the existing pointer target while
 retaining narrow-content ellipsis, wrapping and alignment with the remove action. The ordinary
-noneditable token layout remains the default.
+noneditable token layout remains the default. Reassigning the same committed token sequence
+preserves the inline editor, its draft, and its focus. A changed sequence ends the edit.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`

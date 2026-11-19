@@ -341,6 +341,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       this.onRectClick(this.items[itemIndex]!.id);
       return;
     }
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const rtl = this.effectiveDirection === 'rtl';
     const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
     const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');

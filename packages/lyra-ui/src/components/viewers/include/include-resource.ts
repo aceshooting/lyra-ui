@@ -1,5 +1,4 @@
 import {
-  isAbortError,
   isResourceLimitError,
   readResponseText,
   type OwnerFetchTarget,
@@ -66,23 +65,24 @@ export function acquireSanitizedIncludeResource(
       try {
         response = await owner.fetch(url, signal ? { mode, signal } : { mode });
       } catch (error) {
-        if (isAbortError(error)) throw error;
         throw new IncludeResourceError('network', 0, error);
       }
+      signal?.throwIfAborted();
       if (!response.ok) throw new IncludeResourceError('http', response.status);
 
       let raw: string;
       try {
         raw = await readResponseText(response, MAX_INCLUDE_BYTES);
       } catch (error) {
-        if (isAbortError(error)) throw error;
         if (isResourceLimitError(error)) {
           throw new IncludeResourceError('resource-too-large', 0, error);
         }
         throw new IncludeResourceError('network', 0, error);
       }
 
+      signal?.throwIfAborted();
       const sanitizer = await loadHtmlSanitizer();
+      signal?.throwIfAborted();
       if (!sanitizer) throw new IncludeResourceError('missing-sanitizer', 0);
       return sanitizePassiveMarkup(sanitizer, raw, owner.document, 'transclusion');
     },

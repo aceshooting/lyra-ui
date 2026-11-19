@@ -8,18 +8,6 @@ export const styles = css`
     max-inline-size: 100%;
   }
 
-  /* An owning group projects its tier without rewriting the toggle's own size: explicit inherit
-     beats the local ladder default and reads the group host's already-resolved knobs, including
-     its coarse-pointer floor. Leaving the group removes the private marker and restores the
-     toggle's own tier. */
-  :host([data-lr-group-size]) {
-    --lr-form-control-height: inherit;
-    --lr-form-control-font-size: inherit;
-    --lr-form-control-padding-inline: inherit;
-    --lr-form-control-padding-block: inherit;
-    --lr-form-control-gap: inherit;
-    --lr-form-control-radius: inherit;
-  }
 
   [part~='button'] {
     --_lr-toggle-border-default: transparent;

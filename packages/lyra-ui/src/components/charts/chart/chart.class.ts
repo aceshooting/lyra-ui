@@ -37,7 +37,7 @@ import { styles } from './chart.styles.js';
 import { chartSurfaceStyles } from './chart-surface.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatChartValue } from './chart-number-format.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
@@ -4741,6 +4741,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private onCanvasKeyDown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (this.spatialActive) { this.spatialKeyDown(event); return; }
     const datums = this.chartDatums();
     if (!datums.length) return;

@@ -11,7 +11,6 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   LyraResourceLimitError,
@@ -19,6 +18,7 @@ import {
   resolveOwnerFetchTarget,
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange } from '../../../internal/cell-range.js';
@@ -66,7 +66,7 @@ type DatasetFetchState =
   | { kind: 'loading' }
   | { kind: 'loaded'; table: DatasetTable }
   | { kind: 'empty' }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 /** Which element scrolls when `<lr-dataset-viewer>` overflows. */
 export type DatasetViewerScrollMode = 'self' | 'page';
@@ -400,19 +400,27 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
         }
         const table = this._table;
         this.fetchState = table.rows.length && table.fields.length ? { kind: 'loaded', table } : { kind: 'empty' };
-      } catch (error) { this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') }; this.emit('lr-render-error', { error }); }
+      } catch (error) {
+        this.fetchState = {
+          kind: 'error',
+          message: isResourceLimitError(error)
+            ? () => this.localize('documentPreviewResourceTooLarge')
+            : () => this.localize('documentPreviewFailedToLoad'),
+        };
+        this.emit('lr-render-error', { error });
+      }
       return;
     }
     if (!this.src) {
       this.fetchState = { kind: 'idle' };
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    const src = this.src;
+    const fetchTarget = resolveOwnerFetchTarget(this, src);
     if (!fetchTarget) {
-      const error = new LyraUserFacingError(
-        this.localize('documentPreviewUrlNotAllowed')
-      );
-      this.fetchState = { kind: 'error', message: error.message };
+      const message = () => this.localize('documentPreviewUrlNotAllowed');
+      const error = new LyraUserFacingError(message());
+      this.fetchState = { kind: 'error', message };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -451,21 +459,14 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       }
     } catch (error) {
       if (
-        isAbortError(error) ||
         !this.isConnected ||
-        !this.loadTask.isCurrent(generation)
-      )
-        return;
+        !this.loadTask.isCurrent(generation) ||
+        signal?.aborted ||
+        this.src !== src
+      ) return;
       this.fetchState = {
         kind: 'error',
-        message:
-          error instanceof LyraUserFacingError
-            ? error.message
-            : this.localize(
-                isResourceLimitError(error)
-                  ? 'documentPreviewResourceTooLarge'
-                  : 'documentPreviewFailedToLoad'
-              ),
+        message: viewerFailureMessage(error, this.localize.bind(this)),
       };
       this.emit('lr-render-error', { error });
     }
@@ -484,7 +485,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       return undefined;
     if (!papa)
       throw new LyraUserFacingError(
-        this.localize('datasetViewerMissingParser')
+        this.localize('datasetViewerMissingParser'),
+        localize => localize('datasetViewerMissingParser')
       );
     const result = await parseDelimitedRecordsYielding(papa, text, this.parseLimits, () => yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && this.loadTask.isCurrent(generation)));
     if (!this.isConnected || !this.loadTask.isCurrent(generation)) return undefined;
@@ -686,7 +688,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
           'datasetViewerEmpty'
         )}</p>`;
       case 'error':
-        return html`<div part="error">${this.fetchState.message}</div>`;
+        return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':
       default:
         return html`<p class="empty-note">${this.localize(

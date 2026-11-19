@@ -8,11 +8,11 @@ import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyr
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
 import {
-  isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { getDateTimeFormat, getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/file-size.js';
 import { loadEmailDeps } from './email-loader.js';
@@ -52,7 +52,7 @@ type EmailFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; email: ParsedEmail; fromAddress?: Address; toAddresses?: readonly Address[] }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -572,7 +572,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -585,7 +585,9 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
-      this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
+      this.emit('lr-render-error', { error });
       return;
     }
     this.fetchState = { kind: 'loading' };
@@ -605,17 +607,11 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       }
     } catch (error) {
       if ((acquiringMessage && signal?.aborted) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
     } finally {
       if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
     }
-  }
-
-  private failWithLocalizedMessage(message: string): void {
-    const error = new LyraUserFacingError(message);
-    this.fetchState = { kind: 'error', message };
-    this.emit('lr-render-error', { error });
   }
 
   private isCurrentLoad(generation: number, ownerView: Window): boolean {
@@ -631,11 +627,21 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   ): Promise<{ email: ParsedEmail; fromAddress?: Address; toAddresses?: readonly Address[] } | null> {
     const { PostalMime, DOMPurify } = await loadEmailDeps();
     if (!this.isCurrentLoad(generation, ownerView)) return null;
-    if (!PostalMime) throw new LyraUserFacingError(this.localize('emailViewerMissingParser'));
+    if (!PostalMime) {
+      throw new LyraUserFacingError(
+        this.localize('emailViewerMissingParser'),
+        (localize) => localize('emailViewerMissingParser'),
+      );
+    }
     const rawParsed = await PostalMime.parse(buffer);
     if (!this.isCurrentLoad(generation, ownerView)) return null;
     const parsed = normalizeParsedEmail(rawParsed);
-    if (!parsed) throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
+    if (!parsed) {
+      throw new LyraUserFacingError(
+        this.localize('documentPreviewFailedToLoad'),
+        (localize) => localize('documentPreviewFailedToLoad'),
+      );
+    }
     const sanitized = parsed.html !== undefined && DOMPurify
       ? sanitizePassiveMarkup(DOMPurify, parsed.html, this.ownerDocument, 'passive-document')
       : '';
@@ -648,7 +654,10 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       // peer" message the other sanitizer-dependent viewers already show
       // (`<lr-html-viewer>`, `<lr-svg-viewer>`) instead of silently
       // dropping the only content the message has.
-      throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
+      throw new LyraUserFacingError(
+        this.localize('documentViewerMissingSanitizer'),
+        (localize) => localize('documentViewerMissingSanitizer'),
+      );
     }
     return {
       ...(parsed.from === undefined ? {} : { fromAddress: parsed.from }),
@@ -797,7 +806,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     switch (this.fetchState.kind) {
       case 'loaded': return html`<div>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? this.getFoldedHtml(this.fetchState.email.bodyHtml) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
-      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeEmail') })}</p>`;
     }
   }

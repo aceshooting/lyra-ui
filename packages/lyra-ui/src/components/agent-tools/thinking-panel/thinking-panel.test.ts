@@ -1190,3 +1190,21 @@ for (const connection of ['constructed', 'connected before rendering'] as const)
     expect(transitions).to.equal(0);
   });
 }
+
+it('moves focus from the body or its slotted content to the header on external collapse', async () => {
+  const el = await fixture<LyraThinkingPanel>(html`
+    <lr-thinking-panel expanded><button type="button">Read more</button></lr-thinking-panel>
+  `);
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  for (const target of [body, el.querySelector('button')!]) {
+    await focusByKeyboard(target);
+    el.expanded = false;
+    await el.updateComplete;
+
+    expect(body.hidden).to.equal(true);
+    expect(el.shadowRoot!.activeElement === header).to.equal(true);
+    el.expanded = true;
+    await el.updateComplete;
+  }
+});

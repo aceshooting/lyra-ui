@@ -71,7 +71,8 @@ The host is the one focusable `role="slider"` owner and carries `tabindex`, its 
 `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
 readonly, required and invalid states (`aria-invalid` turns `"true"` once the user has interacted
 while the rating fails its constraints). The shadow star row is `aria-hidden` presentation only, so custom
-host ARIA never creates a competing second slider.
+host ARIA never creates a competing second slider. A read-only rating remains focusable and leaves
+arrow keys, Page Up/Down, Home and End available for normal page navigation.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.

@@ -24,15 +24,21 @@ export const styles = css`
 
   /* -- author ------------------------------------------------------------- */
   :host([message-role='user']) [part='bubble'] {
+    padding: var(--lr-chat-message-user-bubble-padding, var(--lr-chat-message-bubble-padding, var(--lr-space-m)));
+    border-radius: var(--lr-chat-message-user-bubble-radius, var(--lr-chat-message-bubble-radius, var(--lr-radius)));
     margin-inline-start: auto;
     background: var(--lr-chat-message-user-bubble-bg, var(--lr-color-brand-quiet));
     color: var(--lr-chat-message-user-bubble-color, var(--lr-color-text));
     border-color: var(--lr-chat-message-user-bubble-border-color, transparent);
   }
   :host([message-role='assistant']) [part='bubble'] {
+    padding: var(--lr-chat-message-assistant-bubble-padding, var(--lr-chat-message-bubble-padding, var(--lr-space-m)));
+    border-radius: var(--lr-chat-message-assistant-bubble-radius, var(--lr-chat-message-bubble-radius, var(--lr-radius)));
     margin-inline-end: auto;
   }
   :host([message-role='system']) [part='bubble'] {
+    padding: var(--lr-chat-message-system-bubble-padding, var(--lr-chat-message-bubble-padding, var(--lr-space-m)));
+    border-radius: var(--lr-chat-message-system-bubble-radius, var(--lr-chat-message-bubble-radius, var(--lr-radius)));
     margin-inline-end: auto;
     color: var(--lr-chat-message-system-color, var(--lr-color-text-quiet));
     font-style: italic;
@@ -68,6 +74,39 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+  }
+
+  /* The avatar and header share a track sized to the taller item. */
+  [part='bubble']:where([data-aligned-header]) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'avatar header';
+    row-gap: var(--lr-space-xs);
+  }
+  :host([avatar-placement='end']) [part='bubble']:where([data-aligned-header]) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'header avatar';
+  }
+  [data-aligned-header] > [part='avatar'] {
+    grid-area: avatar;
+    align-self: center;
+  }
+  [data-aligned-header] > .content,
+  .details {
+    display: contents;
+  }
+  [data-aligned-header] [part='header'] {
+    grid-area: header;
+    align-self: center;
+  }
+  [data-aligned-header] .details:not([hidden]) {
+    grid-area: 2 / header-start / auto / header-end;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+  }
+  .details[hidden] {
+    display: none;
   }
 
   [part='header'] {

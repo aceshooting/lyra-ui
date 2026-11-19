@@ -50,7 +50,9 @@ array does not update the view. Rows or attachments without valid direct data ar
 after validation, so the first valid item wins. `metadata` is opaque and retains identity in
 proposed queue/send-now payloads. Proposals contain the complete admitted queue in a frozen array;
 unchanged frozen exported rows and attachment arrays are reused, including after the host accepts
-a proposal. Send-now includes all retained attachments. Draft text survives page navigation.
+a proposal. Send-now includes all retained attachments and the currently visible editor draft, even
+while the host defers applying the edit proposal. In read-only mode it sends the displayed
+controlled value. Draft text survives page navigation.
 
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:

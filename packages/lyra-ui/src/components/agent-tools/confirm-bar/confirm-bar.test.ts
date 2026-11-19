@@ -1173,6 +1173,27 @@ describe('waitUntil (deferred decisions)', () => {
     return { promise, reject, resolve };
   }
 
+  for (const rejects of [false, true]) {
+    it(`keeps a retried approval pending when the previous deferral ${rejects ? 'rejects' : 'resolves'}`, async () => {
+      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar></lr-confirm-bar>`);
+      let settle!: () => void;
+      const work = new Promise<void>((resolve, reject) => { settle = rejects ? () => reject(new Error('retired')) : resolve; });
+      el.addEventListener('lr-approve-request', event => event.detail.waitUntil(work), { once: true });
+      el.shadowRoot!.querySelector<LyraButton>('[part="approve-button"]')!.click();
+      expect(el.pendingAction).to.equal('approve');
+      el.pendingAction = null;
+      await el.updateComplete;
+      el.addEventListener('lr-approve-request', event => event.preventDefault(), { once: true });
+      el.shadowRoot!.querySelector<LyraButton>('[part="approve-button"]')!.click();
+      expect(el.pendingAction).to.equal('approve');
+      settle();
+      await Promise.allSettled([work]);
+      await el.updateComplete;
+      expect(el.pendingAction).to.equal('approve');
+      expect(el.decision).to.equal(null);
+    });
+  }
+
   it('lr-approve-request\'s detail carries waitUntil; calling it holds the bar pending with no preventDefault()', async () => {
     const el = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();

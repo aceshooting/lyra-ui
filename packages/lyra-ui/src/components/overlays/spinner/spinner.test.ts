@@ -429,3 +429,11 @@ it('drops the visible label from the accessible name when label-placement leaves
   await el.updateComplete;
   expect(base.getAttribute('aria-label')).to.equal('Saving draft');
 });
+
+it('hides the visible label when its placement override is removed', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-spinner']>(html`<lr-spinner label-placement="after">Progress</lr-spinner>`);
+  el.removeAttribute('label-placement');
+  await el.updateComplete;
+  expect(el.labelPlacement).to.equal('none');
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!.hidden).to.be.true;
+});

@@ -263,10 +263,11 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
    * Optional discrete presets rendered as a `[part="presets"]` button row
    * above the track. Purely additive: leaving this empty (the default)
    * renders nothing extra and leaves the continuous brush untouched. The exposed array is frozen and
-   * holds the caller's own valid entries; reassigning it is a no-op, replacing it clears
-   * `appliedPreset`.
+   * holds the caller's own valid entries. Rebinding the same array with unchanged admitted rows
+   * preserves `appliedPreset`. Replacing the array or changing admitted rows clears the selection.
    */
   private _presets: readonly TimeRangePreset[] = Object.freeze([]);
+  private presetSource?: WeakRef<readonly TimeRangePreset[]>;
   @property({ attribute: false })
   get presets(): readonly TimeRangePreset[] { return this._presets; }
   set presets(next: readonly TimeRangePreset[]) {
@@ -277,16 +278,24 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
       for (let index = 0; index < Math.min(next.length, 256); index += 1) {
         try {
           const raw = next[index];
-          if (
-            raw === null || typeof raw !== 'object' || typeof raw.label !== 'string' ||
-            typeof raw.start !== 'number' || typeof raw.end !== 'number'
-          ) continue;
-          rows.push({ source: raw, label: raw.label, start: raw.start, end: raw.end });
+          if (raw === null || typeof raw !== 'object') continue;
+          const { label, start, end } = raw;
+          if (typeof label !== 'string' || typeof start !== 'number' || typeof end !== 'number') continue;
+          rows.push({ source: raw, label, start, end });
         } catch {
           // A hostile getter invalidates only its own preset; later valid rows remain reachable.
         }
       }
     }
+    if (
+      next === this.presetSource?.deref() && rows.length === this.presetRows.length &&
+      rows.every(({ source, label, start, end }, index) => {
+        const prior = this.presetRows[index]!;
+        return source === prior.source && label === prior.label && Object.is(start, prior.start) && Object.is(end, prior.end);
+      })
+    ) return;
+
+    this.presetSource = Array.isArray(next) ? new WeakRef(next) : undefined;
     this._appliedPreset = undefined;
     this.presetRows = rows;
     this._presets = Object.freeze(rows.map((row) => row.source));
@@ -301,8 +310,8 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
    * preset is selected and after a manual handle move, a controlled endpoint change away from
    * that preset, a preset-collection replacement, or a form reset. Read it inside an
    * `input`/`change` or `lr-input`/`lr-change` handler; preset application updates this identity
-   * before dispatching the synchronous event pair. No-op endpoint and same-array `presets` writes
-   * preserve it.
+   * before dispatching the synchronous event pair. No-op endpoint writes and same-array `presets`
+   * rebinds with unchanged admitted rows preserve it.
    *
    * Numeric equality deliberately does not infer identity. Two presets can resolve to the same
    * range, and a manual drag can land on exactly the same values, while only a preset click means

@@ -7,7 +7,8 @@ import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';
 
 const originalFetch = window.fetch; const originalAvailable = modelEngineEnvironment.available;
 let fetched: number; let imports: number; let admitted: number; let disposed: number; let signal: AbortSignal | undefined;
-beforeEach(() => {
+beforeEach(async () => {
+  await Promise.resolve(); // Finish deferred teardown from the previous fixture.
   fetched = imports = admitted = disposed = 0; signal = undefined; modelEngineEnvironment.available = () => true;
   window.fetch = async (_input, init) => { fetched++; signal = init?.signal ?? undefined; return new Response('v 0 0 0\n'); };
   modelEngineLoader.override(async () => { imports++; return { createEngine: () => {

@@ -9,7 +9,7 @@ export const styles = css`
   [part="base"] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-app-rail-group-gap, var(--lr-space-xs));
+    row-gap: var(--lr-app-rail-group-heading-gap, var(--lr-app-rail-group-gap, var(--lr-space-xs)));
     padding-block: var(--lr-app-rail-group-padding-block, var(--lr-space-xs));
     min-inline-size: 0;
   }
@@ -24,7 +24,7 @@ export const styles = css`
     min-inline-size: 0;
     color: var(--lr-app-rail-group-heading-color, var(--lr-color-text-quiet));
     font-size: var(--lr-app-rail-group-heading-font-size, var(--lr-font-size-sm));
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-app-rail-group-heading-font-weight, var(--lr-font-weight-semibold));
   }
   /* Blockified explicitly. Without collapsible the span is a plain inline child of the heading
      div, and inline boxes ignore inline-size, block-size and overflow -- so both the ellipsis

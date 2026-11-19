@@ -9,6 +9,7 @@ import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
   nearestExternalFocusTarget,
+  repairComposedFocus,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -303,11 +304,11 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if ((changed.has('withRemove') && !this.withRemove) || (changed.has('disabled') && this.disabled)) {
+      const button = this.removeButtonEl;
+      if (button) repairComposedFocus(button, () => [nearestExternalFocusTarget(this)]);
+    }
     if (changed.has('withRemove')) {
-      if (!this.withRemove) {
-        const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
-        if (repair) applyComposedFocusRepair(repair);
-      }
       this.syncLabelObserver();
       if (this.withRemove && this.hasUpdated) this.recomputeLabelText();
     }

@@ -40,11 +40,8 @@ import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-lis
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { advanceViewerSearchIndex, sameViewerSearchDetail, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import {
-  writeClipboardText,
-  type LyraClipboardWriteFailure,
-  type LyraClipboardWriteSuccess,
-} from '../../../internal/clipboard.js';
+import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
+import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -384,7 +381,13 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.linesRevision += 1;
   }
   @state() private scrollTargetLineNumber: number | null = null;
-  @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
+  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.linesRevision, outcome => {
+    if (outcome.ok) this.emit('lr-copy', outcome);
+    else {
+      this.emit('lr-error');
+      this.emit('lr-copy-error', outcome);
+    }
+  });
 
   private buffer: TerminalLine[] = [];
   private retainedCellCount = 0;
@@ -393,10 +396,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private appliedContent = '';
   private readonly terminalLineKey = (item: unknown): number => (item as TerminalLine).number;
   private readonly ansiParser = createAnsiParser();
-  private copyTimeoutId?: number;
-  private copyTimeoutWindow?: Window;
-  private copyTimeoutGeneration?: number;
-  private copyGeneration = 0;
   /** Plain text appended since the last announcer flush -- coalesced so a burst of small
    *  `write()` chunks (a common line-by-line stdout pattern) becomes one throttled announcement
    *  instead of one per chunk. Reset in the announcer's own `onFlush` callback below, so it always
@@ -438,7 +437,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.resetCopyFeedback();
+    this.downloadGeneration += 1;
     this.cancelPendingAnnouncement();
     this.sink?.release();
     this.sink = undefined;
@@ -446,7 +445,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.resetCopyFeedback();
+    this.copyFeedback.reset();
+    this.downloadGeneration += 1;
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }
@@ -877,65 +877,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   // --- Copy / download ------------------------------------------------------
 
   private onCopy = (): void => {
-    void this.copyOutput();
+    void this.copyFeedback.write(this.getPlainText());
   };
-
-  private async copyOutput(): Promise<void> {
-    const text = this.getPlainText();
-    const ownerWindow = this.isConnected ? this.ownerDocument.defaultView : null;
-    const generation = ++this.copyGeneration;
-    this.clearCopyTimeout();
-    this.copyStatus = 'rest';
-    const outcome = await writeClipboardText(ownerWindow, text);
-    if (!ownerWindow || !this.isCurrentCopy(generation, ownerWindow)) return;
-    if (!outcome.ok) {
-      this.showCopyStatus('error', generation, ownerWindow);
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-      return;
-    }
-    this.showCopyStatus('success', generation, ownerWindow);
-    this.emit('lr-copy', outcome);
-  }
-
-  private isCurrentCopy(generation: number, ownerWindow: Window): boolean {
-    return this.isConnected
-      && generation === this.copyGeneration
-      && this.ownerDocument.defaultView === ownerWindow;
-  }
-
-  private showCopyStatus(status: 'success' | 'error', generation: number, ownerWindow: Window): void {
-    this.copyStatus = status;
-    this.clearCopyTimeout();
-    this.copyTimeoutWindow = ownerWindow;
-    this.copyTimeoutGeneration = generation;
-    this.copyTimeoutId = ownerWindow.setTimeout(() => {
-      if (
-        this.copyTimeoutWindow !== ownerWindow
-        || this.copyTimeoutGeneration !== generation
-        || generation !== this.copyGeneration
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== ownerWindow
-      ) return;
-      this.copyTimeoutId = undefined;
-      this.copyTimeoutWindow = undefined;
-      this.copyTimeoutGeneration = undefined;
-      this.copyStatus = 'rest';
-    }, 1500);
-  }
-
-  private resetCopyFeedback(): void {
-    this.copyGeneration += 1;
-    this.clearCopyTimeout();
-    this.copyStatus = 'rest';
-  }
-
-  private clearCopyTimeout(): void {
-    if (this.copyTimeoutId !== undefined) this.copyTimeoutWindow?.clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = undefined;
-    this.copyTimeoutWindow = undefined;
-    this.copyTimeoutGeneration = undefined;
-  }
 
   private cancelPendingAnnouncement(): void {
     this.pendingAnnounceText = '';
@@ -944,8 +887,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   private downloadDispatching = false;
+  private downloadGeneration = 0;
   private onDownload = (): void => {
-    if (this.downloadDispatching) return;
+    if (this.downloadDispatching || !this.isConnected || !this.downloadable) return;
+    const generation = this.downloadGeneration;
     this.downloadDispatching = true;
     try {
       const filename = this.filename || 'terminal.log';
@@ -954,6 +899,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       // (e.g. routing a large log through a server-side export), matching <lr-media-card>'s
       // `lr-open` convention. See the class doc's event list.
       if (this.emitDownloadRequest({ filename }).defaultPrevented) return;
+      if (generation !== this.downloadGeneration || !this.isConnected || !this.downloadable) return;
       const ownerWindow = this.ownerDocument.defaultView;
       if (!ownerWindow) return;
       const blob = new ownerWindow.Blob([this.getPlainText()], { type: 'text/plain' });
@@ -1183,10 +1129,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           ? html`
               <div part="toolbar">
                 ${!this.withoutCopyButton
-                  ? html`<button part="copy-button" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
-                      ${this.copyStatus === 'success'
+                  ? html`<button part="copy-button" type="button" data-copy-status=${this.copyFeedback.status} @click=${this.onCopy}>
+                      ${this.copyFeedback.status === 'success'
                         ? this.localize('copied')
-                        : this.copyStatus === 'error'
+                        : this.copyFeedback.status === 'error'
                           ? this.localize('copyFailed')
                           : this.localize('copy')}
                     </button>`

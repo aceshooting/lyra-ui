@@ -1762,6 +1762,13 @@ describe('timeline keyboard seeking', () => {
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
     el.currentTime = 50;
 
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey'] as const) {
+      const shortcut = new KeyboardEvent('keydown', { key: 'ArrowLeft', [modifier]: true, bubbles: true, cancelable: true });
+      timeline.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented, modifier).to.be.false;
+      expect(media.currentTime).to.equal(50);
+    }
+
     const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true, bubbles: true });
     timeline.dispatchEvent(right);
     expect(media.currentTime).to.equal(55);

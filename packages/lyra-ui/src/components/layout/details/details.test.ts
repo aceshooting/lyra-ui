@@ -2026,3 +2026,33 @@ describe('details focus repair and summary transition', () => {
     expect(Number.parseFloat(style.transitionDuration)).to.be.greaterThan(0);
   });
 });
+
+it('includes summary padding in the minimum hit area and grows for taller content', async () => {
+  const el = await fixture<LyraDetails>(html`
+    <lr-details
+      style="--lr-form-control-height: 28px; --lr-details-summary-padding-block: 4px"
+    >
+      <span slot="summary" style="display: block; block-size: 16px">Sources</span>
+      Source list
+    </lr-details>
+  `);
+  const summary = summaryOf(el);
+  expect(summary.getBoundingClientRect().height).to.equal(28);
+  el.querySelector<HTMLElement>('[slot="summary"]')!.style.blockSize = '40px';
+  expect(summary.getBoundingClientRect().height).to.equal(48);
+});
+
+it('rounds all summary corners in both disclosure states and supports an independent radius', async () => {
+  const el = await fixture<LyraDetails>(html`
+    <lr-details appearance="plain" style="--lr-details-radius: 7px" summary="Sources">
+      Source list
+    </lr-details>
+  `);
+  const summary = summaryOf(el);
+  expect(getComputedStyle(summary).borderRadius).to.equal('7px');
+  el.open = true;
+  await el.updateComplete;
+  expect(getComputedStyle(summary).borderRadius).to.equal('7px');
+  el.style.setProperty('--lr-details-summary-radius', '16px');
+  expect(getComputedStyle(summary).borderRadius).to.equal('16px');
+});

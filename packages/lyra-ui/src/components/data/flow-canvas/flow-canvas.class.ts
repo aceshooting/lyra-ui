@@ -22,7 +22,7 @@ import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
-import { isActionableElement } from '../../../internal/focus-navigation.js';
+import { isActionableElement, repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
@@ -610,23 +610,73 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (!target) return false;
     target.scrollIntoView({ block: 'nearest' }); if (!current()) return false; target.focus(); return current();
   }
-  private async focusSourceRecord(index: number): Promise<void> {
-    const query = this.sourceQuery, authority = this.sourceAuthority();
+  private async focusSourceRecord(
+    index: number,
+    direction: 1 | -1,
+    total: number,
+    origin: HTMLButtonElement,
+  ): Promise<void> {
+    const document = this.ownerDocument;
+    if (deepActiveElementIn(document) !== origin) return;
+    const startIntent = this.sourceIntent;
+    const authority = this.sourceAuthority();
+    if (!authority() || this.sourceIntent !== startIntent) return;
+    const startPage = this.sourcePage;
+    const startKey = origin.dataset['sourceKey'];
     const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-    this.sourcePage = Math.floor(index / size);
-    const intent = this.sourceIntent;
-    const current = () => authority() && this.sourceIntent === intent && this.sourceQuery === query;
-    await this.sourcePagePromise;
-    if (!current()) return;
-    await this.updateComplete;
-    if (!current()) return;
-    const key = this.sourcePages.state.result?.rows[index % size]?.key;
-    const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')]
-      .find(button => button.dataset['sourceKey'] === key);
-    if (!target || target.disabled) return;
-    target.scrollIntoView({ block: 'nearest' });
-    if (current()) target.focus();
+    let intent = ++this.sourceIntent;
+    const current = () => {
+      const focused = deepActiveElementIn(document);
+      return authority() && this.sourceIntent === intent &&
+        (focused === origin || !focused || focused === document.body || focused === document.documentElement);
+    };
+    const load = async (page: number): Promise<boolean> => {
+      if (this.sourcePage !== page) {
+        intent++;
+        this.sourcePage = page;
+        if (!current() || !await this.sourcePagePromise) return false;
+      }
+      await this.updateComplete;
+      return current() && this.sourcePage === page && !this.sourcePages.state.pending;
+    };
+
+    while (index >= 0 && index < total) {
+      const page = Math.floor(index / size);
+      if (!await load(page)) return;
+      const buttons = this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]');
+      for (; index >= page * size && index < Math.min(total, (page + 1) * size); index += direction) {
+        const button = buttons[index % size];
+        if (!button || button.disabled) continue;
+        button.scrollIntoView({ block: 'nearest' });
+        if (current()) button.focus();
+        return;
+      }
+    }
+    // If all remaining pages on this side were disabled, keep the starting record available.
+    if (this.sourcePage !== startPage && await load(startPage)) {
+      const restored = Array.from(this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]'))
+        .find((button) => button.dataset['sourceKey'] === startKey);
+      repairUnavailableControlFocus(origin, [
+        restored,
+        this.renderRoot.querySelector<HTMLElement>('[data-source-page]'),
+      ]);
+    }
   }
+
+  private async activateSourcePager(event: Event, page: number): Promise<void> {
+    const control = event.currentTarget as HTMLButtonElement;
+    const ownerDocument = this.ownerDocument;
+    const ownsFocus = deepActiveElementIn(ownerDocument) === control;
+    this.sourcePage = page;
+    if (!ownsFocus) return;
+    await this.updateComplete;
+    if (!this.isConnected || this.ownerDocument !== ownerDocument) return;
+    repairUnavailableControlFocus(control, [
+      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-page-button]'),
+      this.renderRoot.querySelector<HTMLElement>('[data-source-page]'),
+    ]);
+  }
+
   private renderSourceNavigator(): TemplateResult {
     const state = this.sourcePages.state, query = this.sourceQuery, authority = this.sourceAuthority(), error = this.sourceError;
     const current = () => authority() && this.sourcePages.state === state && this.sourceQuery === query && this.sourceError === error;
@@ -651,16 +701,19 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
           @keydown=${(event: KeyboardEvent) => {
             if (!rowCurrent() || total === null || total === 0) return;
             const index = page * size + state.result!.rows.indexOf(row);
-            const next = event.key === 'Home' ? 0 : event.key === 'End' ? total - 1 :
-              event.key === 'ArrowDown' ? Math.min(total - 1, index + 1) : event.key === 'ArrowUp' ? Math.max(0, index - 1) : null;
-            if (next !== null) { event.preventDefault(); void this.focusSourceRecord(next); }
+            const direction = event.key === 'Home' || event.key === 'ArrowDown' ? 1 :
+              event.key === 'End' || event.key === 'ArrowUp' ? -1 : null;
+            if (direction === null) return;
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? total - 1 : index + direction;
+            event.preventDefault();
+            void this.focusSourceRecord(next, direction, total, event.currentTarget as HTMLButtonElement);
           }}
           @click=${(event: MouseEvent) => { if (!rowCurrent()) return; if (value.kind === 'node') this.onNodeActivate(value.value, event.ctrlKey || event.metaKey); else this.onEdgeActivate(value.value, event.ctrlKey || event.metaKey); }}>${value.kind === 'node' ? this.nodeAccessibleText(value.value) : this.edgeAccessibleText(value.value)}</button>
           ${value.kind === 'node' ? html`<button type="button" @click=${() => { if (rowCurrent()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: 'edges', centerKey: row.key }); }}>${this.localize('graphSourceIncidentEdges', undefined, { label: this.nodeAccessibleText(value.value as FlowNode) })}</button>` : html`<button type="button" @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.source}`); }}>${value.value.source}</button><button type="button" @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.target}`); }}>${value.value.target}</button>`}</div>`;
       })}</div>
-      <div part="source-controls"><button type="button" ?disabled=${state.pending || page === 0} @click=${() => changePage(page - 1)}>${this.localize('previous')}</button>
+      <div part="source-controls"><button type="button" data-source-page-button ?disabled=${state.pending || page === 0} @click=${(event: Event) => { if (current()) void this.activateSourcePager(event, page - 1); }}>${this.localize('previous')}</button>
         <label>${this.localize('paginationPage')}<input data-source-page type="number" min="1" .value=${String(page + 1)} @change=${(event: Event) => changePage(finiteInteger(Number((event.target as HTMLInputElement).value) - 1, 0, 0))}></label>
-        <button type="button" ?disabled=${state.pending || total === null || (page + 1) * size >= total} @click=${() => changePage(page + 1)}>${this.localize('next')}</button></div>
+        <button type="button" data-source-page-button ?disabled=${state.pending || total === null || (page + 1) * size >= total} @click=${(event: Event) => { if (current()) void this.activateSourcePager(event, page + 1); }}>${this.localize('next')}</button></div>
     </section>`;
   }
 

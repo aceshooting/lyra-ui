@@ -74,6 +74,35 @@ const GRID_WORKBOOK = {
 };
 
 describe('lr-spreadsheet-viewer', () => {
+  it('reports a current fetch AbortError and relocalizes the error without retrying', async () => {
+    const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`);
+    const original = window.fetch;
+    const failure = new DOMException('Transport canceled the request.', 'AbortError');
+    let fetchCount = 0;
+    window.fetch = async (_input, init) => {
+      fetchCount++;
+      expect(init?.signal?.aborted).to.equal(false);
+      throw failure;
+    };
+    try {
+      const errors: unknown[] = [];
+      el.addEventListener('lr-render-error', (event) => errors.push(event.detail.error));
+      el.src = 'https://example.test/document';
+      const errorPart = () => el.shadowRoot!.querySelector('[part="error"]');
+      await waitUntil(() => errorPart() !== null);
+      expect(errors).to.deep.equal([failure]);
+      expect(el.shadowRoot!.querySelectorAll('[aria-busy="true"]').length).to.equal(0);
+
+      el.strings = { documentPreviewFailedToLoad: 'Preview could not be opened.' };
+      await el.updateComplete;
+      expect(errorPart()?.textContent).to.equal('Preview could not be opened.');
+      expect(errors).to.have.length(1);
+      expect(fetchCount).to.equal(1);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('keeps the shared anchor live region visually hidden once it carries an announcement', async () => {
     const el = await fixture<LyraSpreadsheetViewer>(
       html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`

@@ -185,6 +185,28 @@ it('keeps keyboard focus on the host while loading, then hands it back', async (
   expect(el.hasAttribute('tabindex'), 'the temporary tabindex is removed').to.equal(false);
 });
 
+for (const setting of ['authored tabindex', 'consumer shadow root', 'tabindex changed while loading', 'focus moved while loading'] as const) {
+  it(`restores only parked focus with ${setting}`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><button>Elsewhere</button><div></div></div>`);
+    const root = setting === 'authored tabindex' ? wrapper : wrapper.lastElementChild!.attachShadow({ mode: 'open' });
+    const el = document.createElement('lr-button') as LyraButton;
+    if (setting === 'authored tabindex') el.tabIndex = 3;
+    root.append(el);
+    await el.updateComplete;
+    await focusByKeyboard(el, document.body);
+    el.loading = true;
+    await el.updateComplete;
+    if (setting === 'tabindex changed while loading') el.tabIndex = 2;
+    const elsewhere = wrapper.querySelector('button')!;
+    if (setting === 'focus moved while loading') await focusByKeyboard(elsewhere);
+    el.loading = false;
+    await el.updateComplete;
+    if (setting === 'focus moved while loading') expect(document.activeElement === elsewhere).to.equal(true);
+    else expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part~="base"]')).to.equal(true);
+    expect(el.getAttribute('tabindex')).to.equal(setting === 'authored tabindex' ? '3' : setting === 'tabindex changed while loading' ? '2' : null);
+  });
+}
+
 it('names itself from an external label without its hidden helper text', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div><label for="hidden-helper-button">Save <span aria-hidden="true">Ctrl+S</span></label><lr-button id="hidden-helper-button">Go</lr-button></div>`);
   const el = wrapper.querySelector<LyraButton>('lr-button')!;
@@ -208,6 +230,22 @@ it('matches type case-insensitively, like a native button', async () => {
 });
 
 describe('lr-button as the default submit button for native fields', () => {
+  it('submits from a field in an iframe form after adopting the submit button', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><iframe></iframe><lr-button type="submit">Go</lr-button></div>`);
+    const button = wrapper.querySelector<LyraButton>('lr-button')!;
+    const doc = wrapper.querySelector('iframe')!.contentDocument!;
+    const form = doc.createElement('form');
+    const field = doc.createElement('input');
+    form.append(field, doc.createElement('input'), button);
+    doc.body.append(form);
+    await button.updateComplete;
+    let submissions = 0;
+    form.addEventListener('submit', event => { event.preventDefault(); submissions++; });
+    await focusByKeyboard(field);
+    await sendKeys({ press: 'Enter' });
+    expect(submissions).to.equal(1);
+  });
+
   const enterIn = async (markup: string, target = 'input'): Promise<FormData[]> => {
     const form = await fixture<HTMLFormElement>(markup);
     const submissions: FormData[] = [];

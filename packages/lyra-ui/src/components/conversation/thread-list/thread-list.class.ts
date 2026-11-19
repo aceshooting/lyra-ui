@@ -34,6 +34,7 @@ import { styles } from './thread-list.styles.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
+import { localDate } from '../../../internal/calendar-date.js';
 import { calendarDaysAgo, startOfLocalDay } from '../../../internal/group-by-recency.js';
 import {
   optionalSizeConverter,
@@ -1159,9 +1160,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private dateForBucket(key: ThreadBucketKey): Date | undefined {
     if (!key.startsWith('month:')) return undefined;
-    const [, ym] = key.split(':');
-    const [year, month] = ym!.split('-').map(Number);
-    return new Date(year!, month! - 1, 1);
+    const separator = key.lastIndexOf('-');
+    return localDate(Number(key.slice(6, separator)), Number(key.slice(separator + 1)) - 1);
   }
 
   private orderedCustomGroupIds(grouped: Map<string, LyraChatThread[]>): string[] {
@@ -1248,13 +1248,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     }
 
     const grouped = new Map<string, LyraChatThread[]>();
-    const monthKeys = new Set<string>();
+    const monthKeys = new Map<ThreadBucketKey, number>();
     for (const thread of visible) {
       const id = this.bucketFor(thread, today);
       const existing = grouped.get(id);
       if (existing) existing.push(thread);
       else grouped.set(id, [thread]);
-      if (id.startsWith('month:')) monthKeys.add(id);
+      if (id.startsWith('month:') && !monthKeys.has(id)) monthKeys.set(id, this.dateForBucket(id)!.getTime());
     }
     const order: ThreadBucketKey[] = [
       'pinned',
@@ -1262,7 +1262,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       'yesterday',
       'previous7',
       'previous30',
-      ...([...monthKeys].sort().reverse() as ThreadBucketKey[]),
+      ...[...monthKeys.keys()].sort((a, b) => monthKeys.get(b)! - monthKeys.get(a)!),
       'archived',
     ];
     return this.groupedItems(

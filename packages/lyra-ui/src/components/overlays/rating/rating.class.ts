@@ -667,7 +667,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
     } else if (this.required && this.safeValue <= 0) {
       this.validityController.setValidity(
         { valueMissing: true },
-        this.localize('fieldRequired')
+        () => this.localize('fieldRequired')
       );
     } else {
       this.validityController.setValidity({});
@@ -796,6 +796,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || !this.interactive) return;
     const forwardKey =
       this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey =

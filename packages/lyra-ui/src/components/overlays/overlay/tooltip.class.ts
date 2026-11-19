@@ -31,11 +31,14 @@ import {
   type VirtualAnchor,
 } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
+import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
+  declaredDefaultConverter,
+  literalSetConverter,
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
 } from '../../../internal/converters.js';
@@ -62,6 +65,7 @@ import {
   OverlayDelayTimer,
   OverlayTransitionGate,
   resolveOverlayAnchor,
+  resolveOverlayAccessibleTrigger,
   resolveOverlayInteractionTrigger,
   settleOverlayTransition,
   type OverlayVirtualRect,
@@ -100,6 +104,14 @@ function safelyComposedContains(container: Element, candidate: unknown): boolean
 /** One keyword of the space-separated `trigger` list. `focus` means keyboard focus: the focused
  *  control must match `:focus-visible` and the last input must not have been a pointer press. */
 export type LyraTooltipTrigger = 'hover' | 'focus' | 'click' | 'manual';
+
+/** How tooltip text participates in the trigger's accessible name or description. */
+export type LyraTooltipLabelMode = 'description' | 'label' | 'none';
+
+const TOOLTIP_LABEL_MODE = literalSetConverter<LyraTooltipLabelMode>(
+  ['description', 'label', 'none'],
+  'description',
+);
 
 export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
 
@@ -163,7 +175,7 @@ export interface LyraTooltipEventMap {
  *
  * Interaction/ARIA ownership is independent of positioning. A slotted trigger wins; without one,
  * a live HTML element resolved by `for` receives the configured interaction listeners and
- * `aria-describedby`. A direct `.anchor` is positioning-only. `showAt()`'s virtual anchor wins
+ * the selected label-mode relationship. A direct `.anchor` is positioning-only. `showAt()`'s virtual anchor wins
  * positioning and deliberately has no DOM interaction/ARIA owner while active. Losing the sole
  * live positioning anchor force-closes the tooltip, while a remaining slotted/`for` fallback is
  * rebound and keeps the tooltip open.
@@ -182,7 +194,7 @@ export interface LyraTooltipEventMap {
  * Content/trigger observers and delayed transitions bind to the current owner window; disconnect
  * and cross-document adoption cancel the old realm before reconnect creates replacements.
  *
- * While open, and whenever focus is inside the trigger (when `focus` is among the active
+ * In the default description mode, while open, and whenever focus is inside the trigger (when `focus` is among the active
  * keywords), the trigger's `aria-describedby` targets a hidden text proxy in this component's
  * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly.
  * A description is only announced on the node that actually holds focus, so a custom-element
@@ -193,6 +205,8 @@ export interface LyraTooltipEventMap {
  * attribute is intentionally empty; descriptions the control already had are kept, merged while
  * described and restored once the tooltip is neither open nor focused, when the trigger is
  * replaced, or when the tooltip disconnects.
+ * In label mode the same proxy names both targets through `aria-labelledby` even while closed.
+ * In none mode the tooltip contributes neither relationship.
  * Bubbling `focusin`/`focusout` observes those real composed targets, and moving focus within the
  * trigger or between interactive popup controls does not spuriously close the tooltip.
  *
@@ -288,7 +302,18 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    * narrows `wa-tooltip`/`sl-tooltip` focus activation deliberately, following the WAI-ARIA
    * tooltip pattern.
    */
-  @property() trigger = 'hover focus';
+  @property({ converter: declaredDefaultConverter('hover focus') }) trigger = 'hover focus';
+  private _labelMode: LyraTooltipLabelMode = 'description';
+  /** Relationship between the trigger and tooltip text. The default describes an open or focused
+   * trigger. `label` names the trigger even while closed, and `none` leaves its ARIA untouched.
+   * @default 'description' */
+  @property({ attribute: 'label-mode', converter: TOOLTIP_LABEL_MODE })
+  get labelMode(): LyraTooltipLabelMode {
+    return this._labelMode;
+  }
+  set labelMode(next: LyraTooltipLabelMode) {
+    this._labelMode = TOOLTIP_LABEL_MODE.normalize(next);
+  }
   /** Equivalent to including `manual` in `trigger`; kept because it reads better as a boolean
    *  attribute on a tooltip that is only ever driven from script. */
   @property({ type: Boolean }) manual = false;
@@ -298,7 +323,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /** Delay (ms) before an interaction closes the tooltip again. `0` by default, so leaving the
    *  trigger closes it at once. */
   @property({ type: Number, attribute: 'hide-delay' }) hideDelay = 0;
-  @property({ reflect: true }) placement: Placement = 'top';
+  @property({ reflect: true, converter: declaredDefaultConverter('top') })
+  placement: Placement = 'top';
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware -- identical
    *  semantics to `<lr-popover>.distance` (can legitimately be negative for overlap). */
   @property({ type: Number }) distance = 8;
@@ -307,7 +333,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /**
    * Id of an element elsewhere in this tooltip's own root. It participates in positioning behind
    * a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, that
-   * element also owns the configured interactions and `aria-describedby`. A slotted trigger wins
+   * element also owns the configured interactions and label-mode relationship. A slotted trigger wins
    * interaction ownership, while `showAt()` wins positioning and suppresses every DOM owner.
    */
   private _for = '';
@@ -430,6 +456,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private readonly anchorIdentity = new OverlayAnchorIdentity();
   private triggerAria?: AriaOwnershipLease;
   private accessibleTriggerAria?: AriaOwnershipLease;
+  private triggerTargetObserver?: MutationObserver;
+  private triggerTargetUpgrades?: CustomElementUpgradeObserver;
   /** The virtual anchor set by `showAt()`, taking priority over `for`/`trigger` for positioning
    *  while set. Cleared whenever the tooltip closes, so a later `open = true` with no fresh
    *  `showAt()` call reverts to plain trigger-based behavior. */
@@ -615,6 +643,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       }
       this.syncTriggerA11y();
     }
+    if (changed.has('labelMode')) this.syncTriggerA11y();
     if (changed.has('content') || changed.has('accessibleLabel')) this.updateDescriptionProxy();
   }
   override connectedCallback(): void {
@@ -715,7 +744,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.anchorIdentity.stop();
     const directAnchor = this.open ? (this.anchor ?? undefined) : undefined;
     this.anchorIdentity.observe(this, directAnchor, this.for, () => this.anchor, (directAnchorRemoved) => {
-      // A closed tooltip contributes nothing to its unchanged trigger, so unrelated mutations stay cheap.
+      // An active relationship tracks changes inside its trigger separately.
       if (this.resolveInteractionTrigger() !== this.triggerElement || this.open || this.focusDescribesTrigger) {
         this.syncInteractionTrigger();
       }
@@ -1006,12 +1035,16 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
   private syncTriggerA11y(): void {
     const trigger = this.triggerElement ?? null;
-    const proxy = this.open || this.focusDescribesTrigger ? this.descriptionProxy : undefined;
-    const contribution = { descriptions: proxy ? [proxy] : [] };
+    const proxy = this.descriptionProxy;
+    const contribution = {
+      labels: proxy && this.labelMode === 'label' ? [proxy] : [],
+      descriptions: proxy && this.labelMode === 'description' && (this.open || this.focusDescribesTrigger) ? [proxy] : [],
+    };
     if (this.triggerAria) this.triggerAria.update(trigger, contribution);
     else this.triggerAria = acquireAriaOwnership(trigger, contribution);
 
     const accessibleTrigger = this.accessibleTrigger;
+    this.observeTriggerTarget(contribution.labels.length || contribution.descriptions.length ? trigger : null, accessibleTrigger);
     const distinctAccessibleTrigger = accessibleTrigger !== trigger ? accessibleTrigger : null;
     if (this.accessibleTriggerAria) {
       this.accessibleTriggerAria.update(distinctAccessibleTrigger, contribution);
@@ -1023,11 +1056,43 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
   }
 
+  /** Track replacement focus controls only while a trigger relationship is active. */
+  private observeTriggerTarget(trigger: HTMLElement | null, control: HTMLElement | null): void {
+    this.triggerTargetObserver?.disconnect();
+    if (!trigger || !this.isConnected) {
+      this.triggerTargetUpgrades?.disconnect();
+      return;
+    }
+    this.triggerTargetUpgrades ??= new CustomElementUpgradeObserver(() => this.syncTriggerA11y());
+    this.triggerTargetUpgrades.observeElement(trigger);
+    const Observer = this.ownerDocument.defaultView?.MutationObserver;
+    if (!Observer) return;
+    this.triggerTargetObserver ??= new Observer(() => this.syncTriggerA11y());
+    const options: MutationObserverInit = {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-disabled', 'aria-hidden', 'class', 'disabled', 'hidden', 'href', 'inert', 'name', 'role', 'slot', 'style', 'tabindex', 'type'],
+    };
+    this.triggerTargetObserver.observe(trigger, options);
+    for (let node: Element | null = control; node; node = composedParentElement(node)) {
+      if (node.shadowRoot) this.triggerTargetObserver.observe(node.shadowRoot, options);
+      if (node === trigger) break;
+    }
+  }
+
   private get accessibleTrigger(): HTMLElement | null {
-    return this.triggerElement ? resolveAccessibleTrigger(this.triggerElement) : null;
+    if (!this.triggerElement) return null;
+    return this.labelMode === 'label'
+      ? resolveOverlayAccessibleTrigger(this.triggerElement)
+      : resolveAccessibleTrigger(this.triggerElement);
   }
 
   private releaseTriggerA11y(): void {
+    this.triggerTargetObserver?.disconnect();
+    this.triggerTargetObserver = undefined;
+    this.triggerTargetUpgrades?.disconnect();
+    this.triggerTargetUpgrades = undefined;
     this.accessibleTriggerAria?.release();
     this.accessibleTriggerAria = undefined;
     this.triggerAria?.release();
@@ -1174,7 +1239,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       if (this.contentSnapshot) this.bindContentObservation(this.contentSnapshot);
       this.syncTriggerA11y();
     }
-    if (this.interactiveContent && this.isPopupTarget(next)) return;
+    if (this.interactiveContent && (this.isPopupTarget(next) || this.retainsPopupInteraction(event))) return;
     this.requestTransition(false);
   };
   private onTriggerClick = (): void => {
@@ -1190,7 +1255,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     void this.show();
   };
   private onPopupLeave = (event: Event): void => {
-    if (!this.interactiveContent || this.isManual) return;
+    if (!this.interactiveContent || this.isManual || this.retainsPopupInteraction(event)) return;
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
     if (
       next !== null
@@ -1202,6 +1267,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     ) return;
     this.requestTransition(false);
   };
+  private retainsPopupInteraction(event: Event): boolean {
+    if (event.type === 'mouseleave') return this.isPopupTarget(deepActiveElementIn(this.ownerDocument));
+    return this.opensOn('hover') && (
+      this.triggerElement?.matches(':hover') === true ||
+      this.renderRoot.querySelector('[part~="popup"]:hover') !== null
+    );
+  }
   private isPopupTarget(target: EventTarget | null): boolean {
     if (target === null || (target as Node).nodeType !== 1) return false;
     const element = target as Element;

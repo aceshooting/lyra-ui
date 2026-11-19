@@ -604,20 +604,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/data/context-meter/context-meter.class.ts",
-    "to": "src/components/charts/chart/chart-number-format.ts",
-    "unresolvedTo": "../../charts/chart/chart-number-format.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/data/data-grid/data-grid-processing.ts",
     "to": "src/components/utility/export-button/csv.ts",
     "unresolvedTo": "../../utility/export-button/csv.js",
@@ -835,34 +821,6 @@
     "from": "src/components/data/flow-run-status/flow-run-status.styles.ts",
     "to": "src/components/data/flow-canvas/flow-status.styles.ts",
     "unresolvedTo": "../flow-canvas/flow-status.styles.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/data/funnel/funnel.class.ts",
-    "to": "src/components/charts/chart/chart-number-format.ts",
-    "unresolvedTo": "../../charts/chart/chart-number-format.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/data/gauge/gauge.class.ts",
-    "to": "src/components/charts/chart/chart-number-format.ts",
-    "unresolvedTo": "../../charts/chart/chart-number-format.js",
     "dependencyTypes": [
       "local",
       "import"

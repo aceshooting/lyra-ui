@@ -124,7 +124,7 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
     if (this.barredFromValidation) {
       this.validityController.setValidity({});
     } else if (this.required && !(this as unknown as { value: string }).value) {
-      this.validityController.setValidity({ valueMissing: true }, this.requiredMessage());
+      this.validityController.setValidity({ valueMissing: true }, () => this.requiredMessage());
     } else {
       this.validityController.setValidity({});
     }

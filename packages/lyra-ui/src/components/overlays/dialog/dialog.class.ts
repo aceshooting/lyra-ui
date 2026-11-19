@@ -20,9 +20,14 @@ import {
   captureFocusReturnOpener,
   scheduleDeferredFocusReturn,
 } from '../../../internal/deferred-focus-return.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   composedAccessibilityText,
+  composedAccessibilityTextResult,
+  observeAccessibleTextReferences,
+  releaseAccessibleTextReferences,
+  type AccessibleTextReferences,
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -390,6 +395,10 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  exit animation actually finishes (`settleTransition()`'s `'lr-after-hide'` branch), or right
    *  away on disconnect/reopen, since nothing is left to visually protect in either case. */
   private pendingScrollLockRelease?: () => void;
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[role="dialog"]'),
+  );
+  private headingReferences?: AccessibleTextReferences;
   private headingObserver?: MutationObserver;
   private headingObserverDocument?: Document;
   private headingObserverOpen?: boolean;
@@ -578,6 +587,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.resetHeadingObserver();
     this.resetBodyOverflowObserver();
     if (this.isConnected) {
@@ -599,7 +609,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
     const generation = this.headingObserverGeneration;
-    const observer = new MutationObserverCtor(() => {
+    const changed = () => {
       if (
         this.headingObserver !== observer ||
         this.headingObserverDocument !== ownerDocument ||
@@ -613,7 +623,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.syncBodyTabIndex();
       this.resetHeadingObserver();
       this.armHeadingObserver();
-    });
+    };
+    const observer = new MutationObserverCtor(changed);
     this.headingObserver = observer;
     this.headingObserverDocument = ownerDocument;
     this.headingObserverOpen = this.open;
@@ -625,17 +636,26 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       const heading = Array.from(this.children).find(
         child => child.getAttribute('slot') === null && child.matches(HEADING_SELECTOR),
       );
-      if (heading) observer.observe(heading, {
+      if (!heading) return;
+      observer.observe(heading, {
         attributes: true,
         attributeFilter: ['aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'inert', 'class', 'style', 'slot'],
         characterData: true,
         childList: true,
         subtree: true,
       });
+      if (heading.hasAttribute('aria-labelledby')) {
+        this.headingReferences = { releases: [], changed };
+        observeAccessibleTextReferences(observer, heading,
+          composedAccessibilityTextResult(heading, { ancestorBoundary: this, requireRendered: false }),
+          this.headingReferences);
+      }
     }
   }
 
   private resetHeadingObserver(): void {
+    if (this.headingReferences) releaseAccessibleTextReferences(this.headingReferences);
+    this.headingReferences = undefined;
     this.headingObserverGeneration += 1;
     this.headingObserver?.disconnect();
     this.headingObserver = undefined;

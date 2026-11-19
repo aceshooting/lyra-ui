@@ -13,6 +13,27 @@ const mount = () => fixture<LyraToolApprovalDialog>(html`
 describe('tool approval decision boundaries', () => {
   afterEach(() => fixtureCleanup());
 
+  for (const rejects of [false, true]) {
+    it(`keeps a retried approval pending when the previous deferral ${rejects ? 'rejects' : 'resolves'}`, async () => {
+      const el = await mount();
+      let settle!: () => void;
+      const work = new Promise<void>((resolve, reject) => { settle = rejects ? () => reject(new Error('retired')) : resolve; });
+      el.addEventListener('lr-approve-request', event => event.detail.waitUntil(work), { once: true });
+      control(el, 'approve').click();
+      expect(el.pendingAction).to.equal('approve');
+      el.pendingAction = null;
+      await el.updateComplete;
+      el.addEventListener('lr-approve-request', event => event.preventDefault(), { once: true });
+      control(el, 'approve').click();
+      expect(el.pendingAction).to.equal('approve');
+      settle();
+      await Promise.allSettled([work]);
+      await el.updateComplete;
+      expect(el.pendingAction).to.equal('approve');
+      expect(el.open).to.equal(true);
+    });
+  }
+
   for (const action of ['approve', 'deny'] as const) {
     it(`ignores nested decision clicks during the ${action} request`, async () => {
       const element = await mount();
@@ -108,6 +129,11 @@ describe('tool approval decision boundaries', () => {
     expect(element.open).to.equal(true);
     await element.updateComplete;
     expect(element.shadowRoot!.textContent).to.include('Correct the draft');
+    element.strings = { invalidJson: '' };
+    await element.updateComplete;
+    expect(editor(element).getAttribute('aria-invalid')).to.equal('true');
+    expect(control(element, 'approve').hasAttribute('disabled')).to.equal(true);
+    expect(element.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('');
     editor(element).value = '{"query":"corrected"}';
     editor(element).dispatchEvent(new Event('input', { bubbles: true }));
     await element.updateComplete;

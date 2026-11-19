@@ -1057,19 +1057,18 @@ it('visibly changes the divider on hover and press', async () => {
   }
 });
 
-it('lets --lr-split-panel-divider-hover-color/-active-color retint the divider independently of the shared brand/border tokens', async () => {
+it('lets each divider color independently theme its own interaction state', async () => {
   const element = (await fixture(html`
     <lr-split-panel
       aria-label="Resize panes"
-      style="inline-size: 400px; block-size: 100px; --lr-split-panel-divider-hover-color: rgb(70, 80, 90); --lr-split-panel-divider-active-color: rgb(100, 110, 120)"
+      style="inline-size: 400px; block-size: 100px; --lr-split-panel-divider-color: rgb(12, 23, 34); --lr-split-panel-divider-hover-color: rgb(70, 80, 90); --lr-split-panel-divider-active-color: rgb(100, 110, 120)"
     ></lr-split-panel>
   `)) as LyraSplitPanel;
   const handle = divider(element);
-  const resting = getComputedStyle(handle).backgroundColor;
+  expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(12, 23, 34)');
   try {
     await hoverUntilMatched(handle, 'divider never reported :hover');
     await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(70, 80, 90)', 'handle background color never reached rgb(70, 80, 90)');
-    expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
     await sendMouse({ type: 'down' });
     await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(100, 110, 120)', 'handle background color never reached rgb(100, 110, 120)');
     await sendMouse({ type: 'up' });
@@ -1644,3 +1643,33 @@ it('tolerates releasePointerCapture rejecting an already-released capture', asyn
     await resetMouse();
   }
 });
+
+for (const orientation of ['horizontal', 'vertical'] as const) {
+  it(`scopes the ${orientation} divider hit floor to its own grab region`, async () => {
+    const element = await fixture<LyraSplitPanel>(html`
+      <lr-split-panel orientation=${orientation}
+        style="inline-size: 240px; block-size: 180px; --divider-width: 1px; --divider-hit-area: 12px">
+        <span slot="end" id="pane-content" style="display: block; block-size: 100%">Pane content</span>
+      </lr-split-panel>
+    `);
+    const handle = divider(element);
+    const rect = handle.getBoundingClientRect();
+    const vertical = orientation === 'vertical';
+    const hitAt = (offset: number) => element.shadowRoot!.elementFromPoint(
+      rect.left + rect.width / 2 + (vertical ? 0 : offset),
+      rect.top + rect.height / 2 + (vertical ? offset : 0),
+    );
+    const content = element.querySelector<HTMLElement>('#pane-content')!;
+    const iconSize = getComputedStyle(content).getPropertyValue('--lr-icon-button-size');
+
+    expect(vertical ? rect.height : rect.width).to.be.closeTo(1, 0.5);
+    expect(hitAt(14) === handle, 'default floor enlarges the hit target').to.equal(true);
+    element.style.setProperty('--lr-split-panel-divider-min-hit-area', '12px');
+    expect(hitAt(4) === handle, 'narrow target still extends past the divider').to.equal(true);
+    expect(hitAt(14) === handle, 'neighboring pane falls outside the narrow target').to.equal(false);
+    expect(getComputedStyle(content).getPropertyValue('--lr-icon-button-size')).to.equal(iconSize);
+
+    element.style.setProperty('--lr-split-panel-divider-hit-area', '40px');
+    expect(hitAt(14) === handle, 'requested hit area can exceed the scoped floor').to.equal(true);
+  });
+}

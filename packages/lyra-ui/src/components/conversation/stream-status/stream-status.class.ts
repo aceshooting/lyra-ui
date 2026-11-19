@@ -74,7 +74,7 @@ export interface LyraStreamStatusEventMap {
  * stalled a streaming connection. A host that detects a semantic stall through another signal
  * calls `markStalled()` instead of writing component-owned state. `recordActivity()` clears that
  * override and resumes the timer. `lr-stall`/`lr-recover` fire exactly once for actual effective
- * transitions into/out of `stalled`.
+ * transitions into/out of `stalled` while connected.
  * Like `<lr-chat-message>`'s `status`, whatever phase this element happens
  * to *mount* with is never itself treated as an eventful transition — only a
  * later change fires an event or an announcement.
@@ -83,10 +83,8 @@ export interface LyraStreamStatusEventMap {
  * through an internal `<lr-live-region>` (see that component for the
  * throttled/coalesced-announcement machinery this composes) rather than a
  * hand-rolled `aria-live` region. `recordActivity()` itself never announces
- * anything, no matter how often the host calls it — only the *transition*
- * announces, exactly once per transition, which is the entire point of
- * routing through the throttled announcer instead of writing to a live
- * region on every call. Entering `'stalled'` announces with `mode="assertive"`
+ * anything while already streaming. A stalled transition is only announced if it
+ * remains current after event listeners run. Entering `'stalled'` announces with `mode="assertive"`
  * (a stall can need the user's attention, e.g. before they give up and
  * navigate away); leaving `'stalled'` always announces with `mode="polite"`
  * (good news doesn't need to interrupt), but the *wording* depends on where
@@ -112,8 +110,8 @@ export interface LyraStreamStatusEventMap {
  * @slot actions - A stop/retry button row. Always present in the template regardless of phase; visibility is driven by whether anything is slotted.
  * @event lr-resume - Requests host-managed resume of an interrupted, resumable connection. `detail: null`.
  * @csspart resume - The interrupted connection's resume button.
- * @event lr-stall - Fired whenever the effective phase transitions into `stalled`.
- * @event lr-recover - Fired whenever the effective phase transitions out of `stalled`.
+ * @event lr-stall - Fired after the connected element enters the effective `stalled` phase.
+ * @event lr-recover - Fired after the connected element leaves the effective `stalled` phase.
  * @csspart base - The root layout container; takes focus from a focused resume button that unmounts.
  * @csspart indicator - The decorative (`aria-hidden`) status dot.
  * @csspart phase - Persistent localized phase text.
@@ -216,6 +214,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   private lastRenderedPhase?: StreamStatusPhase;
   private phaseAtDisconnect?: StreamStatusPhase;
+  private notificationGeneration = 0;
 
   constructor() {
     super();
@@ -280,12 +279,14 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.notificationGeneration++;
     this.phaseAtDisconnect = this.phase;
     this.disarmStallTimer();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
+    this.notificationGeneration++;
     super.adoptedCallback();
     this.disarmStallTimer();
     if (this.isConnected && this.phase === 'streaming') this.armStallTimer();
@@ -322,28 +323,26 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     previous: StreamStatusPhase | undefined,
     current: StreamStatusPhase
   ): void {
-    if (previous === undefined || previous === current) return;
+    if (!this.isConnected || previous === undefined || previous === current) return;
+    if (current !== 'stalled' && previous !== 'stalled') return;
 
-    if (current === 'stalled' && previous !== 'stalled') {
-      this.emit('lr-stall', null);
+    const generation = this.notificationGeneration;
+    // Run after Lit's update hooks so a listener can change the phase immediately.
+    queueMicrotask(() => {
+      const isCurrent = (): boolean =>
+        this.isConnected && this.notificationGeneration === generation && this.phase === current;
+      if (!isCurrent()) return;
+
+      const stalled = current === 'stalled';
+      this.emit(stalled ? 'lr-stall' : 'lr-recover', null);
+      if (!isCurrent()) return;
       this.announceTransition(
-        'assertive',
-        this.localize('streamStallAnnounce')
+        stalled ? 'assertive' : 'polite',
+        this.localize(stalled
+          ? 'streamStallAnnounce'
+          : current === 'streaming' ? 'streamRecoverAnnounce' : 'streamStallClearedAnnounce'),
       );
-    } else if (previous === 'stalled' && current !== 'stalled') {
-      // `lr-recover` fires unconditionally -- a host may still want the
-      // event for any exit from 'stalled' -- but the *announced text* must
-      // not claim the connection was "restored" when the destination is
-      // 'idle'/'connecting': that's the host abandoning the stream, not it
-      // recovering, and telling a screen-reader user otherwise would be the
-      // opposite of what a sighted user sees on screen.
-      this.emit('lr-recover', null);
-      const text =
-        current === 'streaming'
-          ? this.localize('streamRecoverAnnounce')
-          : this.localize('streamStallClearedAnnounce');
-      this.announceTransition('polite', text);
-    }
+    });
   }
 
   private armStallTimer(): void {

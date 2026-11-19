@@ -926,3 +926,21 @@ describe('run-scoped events', () => {
     ]);
   });
 });
+
+for (const [action, kind] of [['cancel', 'running'], ['retry', 'error']] as const) {
+  it(`ignores a rendered ${action} control if capture-phase code replaces its run`, async () => {
+    const el = await fixture<LyraAgentRun>(html`
+      <lr-agent-run .run=${makeRun({ id: 'run-a', status: { kind } })}></lr-agent-run>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${action}-button"]`)!;
+    const emitted: string[] = [];
+    el.addEventListener(`lr-run-${action}`, (event) => emitted.push(event.detail.runId));
+    el.addEventListener('click', () => {
+      el.run = makeRun({ id: 'run-b', status: { kind: 'done' } });
+    }, { capture: true, once: true });
+    button.click();
+    await el.updateComplete;
+    expect(emitted).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelector(`[part="${action}-button"]`) === null).to.equal(true);
+  });
+}

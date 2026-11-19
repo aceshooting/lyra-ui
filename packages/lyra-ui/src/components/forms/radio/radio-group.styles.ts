@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlLabelDisplay, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const groupStyles = css`
   :host {
@@ -18,15 +18,14 @@ export const groupStyles = css`
     gap: var(--lr-radio-group-row-gap, var(--_lr-radio-group-row-gap));
   }
   [part~="label"] {
-    color: var(--lr-color-text);
-    font-weight: var(--lr-font-weight-semibold);
-    font-size: var(--lr-form-control-font-size);
+    ${formControlLabelTypography}
   }
   [part~="label"][hidden],
   [part~="hint"][hidden],
   [part="error"][hidden] {
     display: none;
   }
+  ${formControlLabelDisplay}
   ${formControlRequiredMarker}
   [part~='radios'] {
     display: flex;

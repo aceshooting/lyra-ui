@@ -3,7 +3,7 @@
 Generated views, interactive chat and saved/live dashboard contracts for Lyra UI. It accepts a
 reviewed component catalog and bounded declarative data; the host supplies model requests, authorized
 data, action handling and storage. Check the installed package's version and compatibility profile.
-The [program roadmap](../../docs/roadmap/generative-ui.md) separates implementation from remaining
+The [program roadmap](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/generative-ui.md) separates implementation from remaining
 qualification, planned features and conditional work.
 
 The package provides catalog subsets, deterministic JSON generation prompts, a restricted Markup
@@ -25,7 +25,7 @@ from a built workspace or adapt their source into the application.
 | Select roles and generate prompts | [Catalog presets](docs/catalog-presets.md) |
 | Stream JSON or expand keyed rows | [Structured input and templates](docs/structured-input.md) |
 | Mix prose and generated views | [Interactive chat](docs/interactive-chat.md) |
-| Connect an existing transport | [AI SDK](docs/ai-sdk.md), [AG-UI adapter](../../docs/ag-ui-adapter.md), [A2UI processor](docs/a2ui.md) |
+| Connect an existing transport | [AI SDK](docs/ai-sdk.md), [AG-UI adapter](https://github.com/aceshooting/lyra-ui/blob/main/docs/ag-ui-adapter.md), [A2UI processor](docs/a2ui.md) |
 | Run a server/client example | [Server transport](docs/server-transport.md) |
 | Render, schedule and restore | [Browser rendering](docs/rendering.md), [server snapshots](docs/ssr.md) |
 | Confirm an action | [Approval composition](docs/approval.md) |
@@ -142,7 +142,7 @@ const validated = parsed.status === 'complete' && parsed.view
 Parsing checks syntax; a complete parse still needs catalog/runtime validation. Strings are
 quoted, booleans and numbers use JSON braces (`disabled={false}`), and objects use a JSON object
 inside those braces (`action={{"name":"save","payload":{}}}`). No JavaScript is evaluated.
-See [RFC 0006](../../docs/rfcs/0006-lyra-markup.md) for escaping, limits and exact grammar.
+See [RFC 0006](https://github.com/aceshooting/lyra-ui/blob/main/docs/rfcs/0006-lyra-markup.md) for escaping, limits and exact grammar.
 
 `createMarkupParser()` buffers a bounded document and exposes its view at `finish()`.
 `createIslandParser()` from `islands.js` preserves prose and publishes complete fenced `lyra`
@@ -245,7 +245,7 @@ stops pending playback; reset or disposal must abort before replacing the parser
 The [recording](examples/recordings/chat-review.v1.json),
 [browser composition](examples/recorded-replay.ts) and Storybook **Recorded Cadence** scene use
 authored synthetic text and offsets, not provider output or latency. See the
-[measurement guide](../../benchmarks/generative-ui/README.md) for workloads, visual checks and
+[measurement guide](https://github.com/aceshooting/lyra-ui/blob/main/benchmarks/generative-ui/README.md) for workloads, visual checks and
 measurement limits. The [OpenUI experiment](docs/openui-experiment.md) remains a separate no-go
 runtime-importer result.
 

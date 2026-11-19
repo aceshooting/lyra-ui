@@ -124,14 +124,10 @@ export interface LyraDetailsEventMap {
  * @cssprop [--lr-details-spacing=var(--lr-form-control-padding-inline)] - Block rhythm: the
  *   summary's block padding and the panel's trailing padding, kept equal so a stack of
  *   disclosures reads evenly. Its private default follows the shared ladder's inline-padding
- *   knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text
- *   inside a fixed control height and would collapse the summary row. An inherited or direct
- *   public value remains authoritative.
+ *   knob, whose values suit a stacked panel. An inherited or direct public value remains authoritative.
  * @cssprop [--lr-details-summary-padding-block=var(--lr-details-spacing)] - Summary block padding
- *   (top/bottom), independently tunable from the panel content's own padding. Falls through to
- *   `--lr-details-spacing` (and its private ladder default) when unset, so an un-set disclosure
- *   renders unchanged, mirroring how `--lr-details-gap`/`--lr-details-radius` are already
- *   independent of each other.
+ *   (top/bottom), independently tunable from the panel content's own padding. The minimum hit area
+ *   includes this padding. Falls through to `--lr-details-spacing` and its private ladder default.
  * @cssprop [--lr-details-summary-padding-inline=var(--lr-details-spacing)] - Summary inline padding
  *   (start/end), independently tunable from the panel content's own padding. Same fallback chain as
  *   `--lr-details-summary-padding-block`.
@@ -151,6 +147,8 @@ export interface LyraDetailsEventMap {
  *   surface background.
  * @cssprop [--lr-details-filled-outlined-border-color=var(--lr-color-border)] - Filled-outlined
  *   border color.
+ * @cssprop [--lr-details-summary-radius=var(--lr-details-radius,var(--lr-radius-container))] -
+ *   Corner radius of the summary row's hover, pressed, and focus treatments.
  * @cssprop [--lr-details-summary-hover-bg=var(--lr-color-brand-quiet)] - Summary hover background.
  * @cssprop [--lr-details-summary-active-bg=color-mix(...)] - Summary pressed background.
  * @cssprop --spacing - Upstream-compatible spacing override for the summary and content.

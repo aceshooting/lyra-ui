@@ -1,6 +1,7 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
+  formControlLabelTypography,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -63,11 +64,11 @@ export const styles = css`
        host height with labels, selected files and feedback before growing the dropzone. */
   }
   [part~="form-control-label"] {
+    --_lr-form-control-label-font-size: var(--lr-file-input-font-size, var(--_lr-file-input-font-size));
+    ${formControlLabelTypography}
     display: block;
     min-inline-size: 0;
     margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-file-input-font-size, var(--_lr-file-input-font-size));
-    font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
   [part~="form-control-label"][hidden],

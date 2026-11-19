@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
@@ -102,6 +103,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   override distance = 0;
 
   /** Action menus retain their mapped below-trigger placement. */
+  @property({ reflect: true, converter: declaredDefaultConverter('bottom-start') })
   override placement: Placement = 'bottom-start';
 
   /** Density propagated to directly owned mapped items. */
@@ -237,7 +239,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   private get menuEngine(): LyraMenu | undefined {
     return this.consumerMenu ??
-      (this.renderRoot.querySelector('[part~="menu"]') as LyraMenu | null) ??
+      (this.renderRoot?.querySelector('[part~="menu"]') as LyraMenu | null) ??
       undefined;
   }
 
@@ -315,7 +317,8 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   }
 
   protected override onTriggerKeyDown(event: KeyboardEvent): void {
-    if (this.disabled || this.open) return;
+    if (this.disabled || this.open || event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     let focus: MenuFocusTarget | undefined;
     if (event.key === 'ArrowDown') focus = 'first';
     else if (event.key === 'ArrowUp') focus = 'last';
@@ -335,7 +338,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   /** Focus the assigned trigger, when one is present. */
   focusOnTrigger(options?: FocusOptions): void {
     const trigger = this.renderRoot
-      .querySelector<HTMLSlotElement>('slot[name="trigger"]')
+      ?.querySelector<HTMLSlotElement>('slot[name="trigger"]')
       ?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
     trigger?.focus(options);
   }

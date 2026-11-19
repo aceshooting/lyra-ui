@@ -622,6 +622,23 @@ it('jumps to the input value when the rendered slider fires an input event', asy
   expect(detail.currentIndex).to.equal(3);
 });
 
+it('keeps the native frame range steady through a modified arrow shortcut', async () => {
+  const el = await fixture<LyraSequencePlayback>(html`<lr-sequence-playback item-count="5" current-index="2"></lr-sequence-playback>`);
+  const slider = el.shadowRoot!.querySelector<HTMLInputElement>('[part="slider"]')!;
+  const defaults: boolean[] = [];
+  let steps = 0;
+  el.addEventListener('keydown', event => {
+    if (event.key === 'ArrowLeft') defaults.push(event.defaultPrevented);
+  });
+  el.addEventListener('lr-sequence-step', () => { steps++; });
+  await focusByKeyboard(slider);
+  await sendKeys({ press: 'Alt+ArrowLeft' });
+  expect(defaults).to.deep.equal([false]);
+  expect([el.currentIndex, slider.value, steps]).to.deep.equal([2, '3', 0]);
+  await sendKeys({ press: 'ArrowLeft' });
+  expect([el.currentIndex, slider.value, steps]).to.deep.equal([1, '2', 1]);
+});
+
 it('pins ArrowLeft/ArrowRight step direction to a fixed next/previous meaning in both LTR and RTL, independent of native engine handling', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="5" current-index="2"></lr-sequence-playback>`)) as LyraSequencePlayback;
   const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
@@ -637,6 +654,13 @@ it('pins ArrowLeft/ArrowRight step direction to a fixed next/previous meaning in
     el.setAttribute('dir', testCase.direction);
     el.currentIndex = 2;
     await el.updateComplete;
+
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+      const shortcut = new KeyboardEvent('keydown', { key: testCase.key, [modifier]: true, bubbles: true, cancelable: true });
+      slider.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented, modifier).to.be.false;
+      expect(el.currentIndex).to.equal(2);
+    }
 
     const stepEvent = oneEvent(el, 'lr-sequence-step');
     const keydown = new KeyboardEvent('keydown', {

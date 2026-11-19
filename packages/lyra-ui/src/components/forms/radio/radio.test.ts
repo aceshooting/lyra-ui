@@ -1,3 +1,5 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./radio.js";
@@ -909,4 +911,78 @@ describe("pill", () => {
     );
     expect(radius).to.be.at.least(circle.getBoundingClientRect().width / 2);
   });
+});
+
+it('preserves selection and focus when a radio cancels a navigation key', async () => {
+  const group = await fixture<LyraRadioGroup>(html`
+    <lr-radio-group label="Choices" value="first">
+      <lr-radio value="first">First</lr-radio>
+      <lr-radio value="second">Second</lr-radio>
+    </lr-radio-group>
+  `);
+  const first = group.querySelector('lr-radio')!;
+  const base = first.shadowRoot!.querySelector<HTMLElement>('[role="radio"]')!;
+  const changes: string[] = [];
+  for (const type of ['input', 'change', 'lr-change']) {
+    group.addEventListener(type, () => changes.push(type));
+  }
+  first.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') event.preventDefault();
+  });
+  await focusByKeyboard(base);
+  await sendKeys({ press: 'ArrowDown' });
+  await group.updateComplete;
+
+  expect(group.value).to.equal('first');
+  expect(first.shadowRoot!.activeElement === base).to.equal(true);
+  expect(changes).to.deep.equal([]);
+});
+
+it('distinguishes a checked empty value from no selection in validation and submission', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-radio-group name="choice" required>
+    <lr-radio value="">None of these</lr-radio><lr-radio value="a">A</lr-radio>
+  </lr-radio-group></form>`);
+  const group = form.querySelector('lr-radio-group')!;
+  const empty = group.querySelector('lr-radio')!;
+  const submitted = () => new FormData(form).getAll('choice');
+  expect(group.validity.valueMissing).to.equal(true);
+  expect(submitted()).to.deep.equal([]);
+  empty.checked = true;
+  expect(group.value).to.equal('');
+  expect(group.validity.valueMissing).to.equal(false);
+  expect(submitted()).to.deep.equal(['']);
+  form.reset();
+  expect(empty.checked).to.equal(false);
+  expect(submitted()).to.deep.equal([]);
+  group.formStateRestoreCallback('', 'restore');
+  expect(empty.checked).to.equal(true);
+  expect(submitted()).to.deep.equal(['']);
+  group.formStateRestoreCallback(null, 'restore');
+  expect(empty.checked).to.equal(false);
+  expect(submitted()).to.deep.equal([]);
+});
+
+it('reconciles selected child value writes with the group and FormData in the same task', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-radio-group name="choice">
+    <lr-radio value="a" checked>A</lr-radio><lr-radio-button value="b">B</lr-radio-button>
+  </lr-radio-group></form>`);
+  const group = form.querySelector('lr-radio-group')!;
+  const first = group.querySelector('lr-radio')!;
+  const second = group.querySelector('lr-radio-button')!;
+  let edits = 0;
+  for (const name of ['input', 'change', 'lr-input', 'lr-change']) group.addEventListener(name, () => edits++);
+  const submitted = () => new FormData(form).getAll('choice');
+  first.value = 'edited';
+  expect(group.value).to.equal('edited');
+  expect(submitted()).to.deep.equal(['edited']);
+  second.value = 'unselected';
+  expect(submitted()).to.deep.equal(['edited']);
+  second.checked = true;
+  second.setAttribute('value', '');
+  expect(group.value).to.equal('');
+  expect(submitted()).to.deep.equal(['']);
+  second.removeAttribute('value');
+  expect(group.value).to.equal('on');
+  expect(submitted()).to.deep.equal(['on']);
+  expect(edits).to.equal(0);
 });

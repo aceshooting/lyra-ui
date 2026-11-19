@@ -76,6 +76,13 @@ Three consumer-settable properties replace it, retune its colour, or suppress it
 once. Full description, worked examples, and why the content string is never localized by the
 library: `llms/shared.md` → "The required-field marker".
 
+## Field and group label typography
+
+Set `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, or
+`--lr-form-control-label-color` on a control or a containing form. Field and group labels
+follow the control’s size tier by default. Their default weight and color come from
+`--lr-font-weight-semibold` and `--lr-color-text`.
+
 ## Hiding the label visually: `label-display`
 
 Form controls need a `label` for their accessible name. In a compact toolbar or table cell where
@@ -90,12 +97,26 @@ unaffected, and an unset control renders exactly as before.
 <lr-select label="Sort order" label-display="hidden"> … </lr-select>
 ```
 
-It is one shared rule, so it is identical on `lr-select`, `lr-combobox`, `lr-input`,
+It is one shared rule, so it is identical on `lr-checkbox-group`, `lr-radio-group`, `lr-select`, `lr-combobox`, `lr-input`,
 `lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`,
 `lr-token-input`, the catalog pickers (`lr-country-picker`, `lr-currency-picker`,
 `lr-time-zone-picker`, `lr-unit-picker`) and, in the conversation family, `lr-model-select` and
 `lr-voice-picker`. Prefer it to dropping `label`: a control with no label has no name. The attribute
 reflects, so `[label-display='hidden']` is also a styling hook.
+
+## Authored errors and constraint validation
+
+A visible `error-text` or populated `error` slot marks the control’s focus target
+`aria-invalid="true"`. An authored error alone preserves the control’s native validity and
+allows submission. Use `setCustomValidity(message)` to block submission.
+
+Library-supplied required messages follow changes to the active message locale. A message set
+through `setCustomValidity()` takes precedence until cleared, at which point the current
+localized constraint message is available immediately.
+
+A direct `checkValidity()` on a pristine text-entry control returns its validity and fires
+`invalid` when a constraint fails. The control keeps its pristine presentation until user
+interaction, `reportValidity()`, or a submission attempt.
 
 ## Disabled and readonly controls publish no invalid state
 
@@ -256,8 +277,9 @@ other value (a plain object, a function) is dropped from the row instead of reac
   combobox, making it `readonly` or disabling its fieldset closes an open listbox at once; that
   close is policy, so it emits no `lr-hide`/`lr-after-hide` and cannot be vetoed.
 - `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
-  localized create row. Activating it emits cancelable `lr-create`; unless vetoed, the component
-  appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
+  localized create row. Activating it emits cancelable `lr-create`. After listeners return, the
+  combobox appends and selects the option if creation is still enabled, the field is editable,
+  and the request was accepted. This also applies in `multiple` mode.
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option
 - `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
@@ -870,10 +892,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 - a host-level `aria-label` attribute on `<lr-combobox>` now takes priority over `label`/
   `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
   previously it was silently ignored. Matches the same fallback on `<lr-select>`.
-- `aria-required` reflects `required` immediately; `aria-invalid`, by contrast, only reflects
-  **after the field has been touched** (first `blur`) — a `required` field with a validity error
-  doesn't look invalid to assistive tech before that, by design (avoids flashing invalid styling on
-  first render). Moving focus outside the combobox trigger (Tab away) closes an open listbox,
+- `aria-required` reflects `required` immediately. Visible authored error content sets
+  `aria-invalid="true"` immediately. Native constraint failures appear after interaction. Moving focus outside the combobox trigger (Tab away) closes an open listbox,
   the same as a native `<select>`'s popup. Moving from the input to its clear button retains the
   filter until the button activates; clearing returns focus to the input without changing whether
   the listbox is open.
@@ -1115,7 +1135,9 @@ the normal combobox trigger continues to expose `aria-required`.
 - `withClear: boolean = false` (attribute `with-clear`, reflected) — renders a clear button while
   anything is selected (and nothing at all while the selection is empty). It sits in the trigger's
   inline-end band as a **sibling** of the trigger rather than a child of it — same nesting reason as
-  the chips — so pressing it clears the selection without opening the listbox
+  the chips — so pressing it clears the selection without opening the listbox. When keyboard
+  activation removes the focused clear button, focus returns to the trigger unless a listener
+  moved it elsewhere.
 - `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
   button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins if both
@@ -1445,6 +1467,8 @@ purposes.
   A silent `checkValidity()` leaves a pristine control unchanged; `form.reset()` restores that state.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup,
   without restoring focus and undoing the browser's native Tab/Shift+Tab destination.
+- A failed initial or replacement popup placement closes and conceals the listbox. The next
+  opening retries placement; a superseded failure leaves a newer opening intact.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
@@ -2198,11 +2222,9 @@ With no label text the part is hidden and no glyph is painted.
   retune the surface without a `::part(textarea)` rule; the public value remains authoritative
   across appearances.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
-  native textarea is hovered, independent of its resting border and every other brand-colored
-  component state.
+  native textarea is hovered and unfocused.
 - `--lr-textarea-focus-border-color` (default `var(--lr-color-brand)`) — the field border while
-  the native textarea is focused: the brand edge every text and date field shows on focus, with no
-  separate outline ring.
+  the native textarea is focused, including while the pointer is over it.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
   so a halo is configured once instead of per component; additive to the brand border.
@@ -2211,7 +2233,8 @@ With no label text the part is hidden and no glyph is painted.
 inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
 field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead of
 staying at its `rows`-derived intrinsic height. An unsized host stays content-sized, including
-inside a grid/flex item stretched to a taller row. With `resize="auto"`, content grows up to the
+inside a grid/flex item stretched to a taller row. With `resize="auto"`, an empty field uses its `rows` height even with a long placeholder.
+Entered content grows the field up to the
 `--lr-textarea-max-block-size` cap or a smaller explicit host allocation. Overflow stays scrollable,
 including when that allocation shrinks after the content renders.
 
@@ -2503,6 +2526,7 @@ in brackets:
 
 - `--lr-button-padding-block` (default `--lr-form-control-padding-block`; `--lr-space-xs` at `m`)
 - `--lr-button-padding-inline` (default `--lr-form-control-padding-inline`; `--lr-space-m` at `m`)
+- `--lr-button-font-weight` (default `var(--lr-font-weight-semibold)`) controls the label weight.
 - `--lr-button-font-size` (default `--lr-form-control-font-size`; `--lr-font-size-m` at `m`)
 - `--lr-button-min-height` (default `--lr-form-control-height`) — the active tier's `min-block-size`
   floor. Its private default follows that tier's own `--lr-button-size-*` token, and it is used as the
@@ -4777,6 +4801,8 @@ substitute the one you actually use:
 checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
 reads.
 
+Keyboard focus outlines the visible checkbox box. Clicking the label still toggles the checkbox.
+
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases directly control the visible
 checkmark/dash color and scale.
 
@@ -5400,6 +5426,8 @@ an empty-label control; the visible density can still grow with the shared size 
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
 `--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
+The checked radio circle keeps its surface color behind the dot. The
+`--lr-radio-button-checked-bg` hook applies to the button appearance.
 The pointer states are independently themeable with `--lr-radio-hover-border-color` (default
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
 and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset
@@ -5738,9 +5766,14 @@ control cannot be edited and restores the current intrinsic result when editing 
 
 ## `lr-radio-group`
 
+Place supplementary controls in `slot="toolbar"` between the group label and its options.
+Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
+Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+
 A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
 focus and select the next enabled radio, whatever the orientation: Down/Right select the next
 option and Up/Left the previous one. Left/Right mirror under RTL, and disabled options are skipped.
+A descendant can cancel navigation by calling `preventDefault()` on the keydown event.
 
 For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
 `lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
@@ -5770,7 +5803,7 @@ When renaming `<sl-radio-group>` manually, set `name="option"` if the old markup
 Shoelace's implicit form-data key. Lyra deliberately defaults `name` to empty; the bundled migration
 codemod inserts the compatibility value automatically.
 
-The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
+The group is the sole aggregate form-associated owner. A selected radio, including one with an empty string value, contributes one
 `name=value` entry; owned radios suppress their own entries and validity while a standalone radio
 continues to participate independently. `form`, `getForm()`, `labels`, native validity, external
 form ownership, fieldset disablement, reset, and session restoration all live on the group.
@@ -5827,6 +5860,10 @@ group has no selected radio. `focus()` moves focus to the selected (or first ena
 fieldset disablement, so the group behaves like one native control.
 
 ## `lr-checkbox-group`
+
+Place supplementary controls in `slot="toolbar"` between the group label and its options.
+Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
+Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
 
 Long group labels, hints, errors, and horizontal option labels wrap within the host in both logical
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
@@ -5916,7 +5953,8 @@ invalid option-collection border without changing other danger-colored surfaces.
 the children.** The children remain the single source of truth. An internal sync recomputes `value`
 on every child toggle, programmatic child `checked`/`value`/`disabled` update, `slotchange`,
 `name`/`required` change, blur, and `form.reset()`. Mutating an obtained array cannot mutate the
-group — assign a new array instead.
+group — assign a new array instead. Disabled checked options stay in this snapshot and in restored
+selection state. Only enabled checked options contribute submission entries.
 Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
 group owns its own descendants and form entries. `connectedCallback()` runs that sync before the
 first render.
@@ -5957,7 +5995,8 @@ empty and later replacement strings remain supported.
 
 Editable token labels vertically center their text within the existing pointer target while
 retaining narrow-content ellipsis, wrapping and alignment with the remove action. The ordinary
-noneditable token layout remains the default.
+noneditable token layout remains the default. Reassigning the same committed token sequence
+preserves the inline editor, its draft, and its focus. A changed sequence ends the edit.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
@@ -8167,7 +8206,8 @@ are out of scope.
 
 **Keyboard and assistive technology.** The surface is one tab stop with `role="application"` and the
 role description "signature pad". It is named by a host `aria-label`, else by the label, else
-"Signature", and described by the error, the hint, the keyboard instructions and its state ("No signature",
+"Signature". The focused surface follows the host’s `aria-describedby` references as they change,
+then announces the error, the hint, the keyboard instructions and its state ("No signature",
 "Signed, 2 strokes"). The arrow keys move a visible pen cursor by 1 % of the box (10 % with Shift),
 Space or Enter lowers or lifts the pen, moves draw while it is down, and Escape lifts it. Pen changes
 are announced through the shared polite live region. **The arrow keys keep their physical direction
@@ -8199,8 +8239,9 @@ must never be mirrored.
 
 **Events:**
 
-- `change` — native event, after the user finishes a stroke (pointer released or cancelled, pen
-  lifted) or clears the pad.
+- `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
+  pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting
+  the keyboard pen also commits the stroke.
 - `lr-change` — not cancelable, no detail; fired with every `change`.
 - `lr-invalid` — cancelable; the validity alias.
 

@@ -115,6 +115,8 @@ an empty-label control; the visible density can still grow with the shared size 
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
 `--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
+The checked radio circle keeps its surface color behind the dot. The
+`--lr-radio-button-checked-bg` hook applies to the button appearance.
 The pointer states are independently themeable with `--lr-radio-hover-border-color` (default
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
 and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset

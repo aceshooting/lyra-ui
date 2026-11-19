@@ -186,9 +186,12 @@ it("renders the native autocomplete attribute only when configured", async () =>
   el.autocomplete = "";
   await el.updateComplete;
   expect(input().hasAttribute("autocomplete")).to.be.false;
-  el.autocomplete = "one-time-code";
+  el.setAttribute("autocomplete", "one-time-code");
   await el.updateComplete;
   expect(input().getAttribute("autocomplete")).to.equal("one-time-code");
+  el.removeAttribute("autocomplete");
+  await el.updateComplete;
+  expect(input().autocomplete).to.equal("off");
 });
 
 it("is accessible", async () => {

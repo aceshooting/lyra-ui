@@ -180,6 +180,13 @@ function isSubmitControl(element: Element): boolean {
   return element.localName.includes('-') && customElementType(element) === 'submit';
 }
 
+/** Native single-line fields that participate in implicit submission, including adopted inputs. */
+export function isImplicitSubmissionInput(target: EventTarget | null): target is HTMLInputElement {
+  const element = target as Element | null;
+  return element !== null && nativeButtonKind(element) === 'input'
+    && BLOCKING_INPUT_TYPES.has((element as HTMLInputElement).type);
+}
+
 /**
  * Whether `element` counts against the platform's "more than one field blocks implicit submission"
  * rule. Native inputs use the spec's own type list. A custom element counts unless it declares
@@ -189,9 +196,7 @@ function isSubmitControl(element: Element): boolean {
  * does today.
  */
 function blocksImplicitSubmission(element: Element): boolean {
-  if (nativeButtonKind(element) === 'input') {
-    return BLOCKING_INPUT_TYPES.has(customElementType(element) ?? '');
-  }
+  if (isImplicitSubmissionInput(element)) return true;
   if (!element.localName.includes('-')) return false;
   const type = customElementType(element);
   return type === undefined || !BUTTON_TYPES.has(type);

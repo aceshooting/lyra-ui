@@ -411,8 +411,23 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     if (runId) this.focusedId = runId;
   };
 
+  private requestRunAction(event: Event, run: SubagentRun, runId: string, retry: boolean): void {
+    const runs = this.runs;
+    if (!this.isConnected || !this.shadowRoot?.contains(event.currentTarget as Node) ||
+      !Array.isArray(runs)) return;
+    const current: SubagentRun | undefined = runs.find((candidate: SubagentRun) => {
+      try { return candidate?.id === runId; } catch { return false; }
+    });
+    if (current !== run) return;
+    const status = current.status;
+    if (this.runs === runs && (retry ? status === 'error' || status === 'cancelled' : ACTIVE.has(status))) {
+      this.emit(retry ? 'lr-run-retry' : 'lr-run-cancel', { runId });
+    }
+  }
+
   private renderRun = ({ run, depth, posInSet, setSize }: SubagentRow, firstId: string | undefined): TemplateResult => {
-    const selected = run.id === this.selectedRunId;
+    const runId = run.id;
+    const selected = runId === this.selectedRunId;
     const progress = typeof run.progressRatio === 'number' ? finiteRange(run.progressRatio, 0, 0, 1) : null;
     const runPart = selected ? 'run run-selected' : 'run';
     const tabbable = this.focusedId === run.id || (this.focusedId == null && run.id === firstId);
@@ -460,7 +475,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                   type="button"
                   tabindex=${buttonTabindex}
                   aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
-                  @click=${() => this.emit('lr-run-cancel', { runId: run.id })}
+                  @click=${(event: Event) => this.requestRunAction(event, run, runId, false)}
                 >×</button>`
               : nothing}
             ${run.status === 'error' || run.status === 'cancelled'
@@ -470,7 +485,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                   type="button"
                   tabindex=${buttonTabindex}
                   aria-description=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
-                  @click=${() => this.emit('lr-run-retry', { runId: run.id })}
+                  @click=${(event: Event) => this.requestRunAction(event, run, runId, true)}
                 >${this.localize('subagentPanelRetry')}</button>`
               : nothing}
           </span>

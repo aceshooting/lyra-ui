@@ -235,7 +235,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 466,
+              "line": 464,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -443,7 +443,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 466,
+              "line": 464,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -926,7 +926,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-question/agent-question.test.ts",
-              "test": "blocks unknown schemas, still allows declining, and never submits hidden draft keys",
+              "test": "moves focus from the ${response} button to the submitted message and then to the next control",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -3811,7 +3811,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 414,
+              "line": 424,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5609,7 +5609,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "keyboard",
           "rtl",
           "reducedMotion",
           "narrowAllocation",
@@ -5642,9 +5641,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/branch-picker/branch-picker.test.ts",
+              "test": "moves focus from ${direction} to ${opposite} when the consumer applies the endpoint",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -5740,7 +5744,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
@@ -5854,8 +5857,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "test": "contains a long localized RTL trail at an exact 320px allocation",
+              "file": "src/components/layout/breadcrumb/breadcrumb-separator-sources.test.ts",
+              "test": "projects only the live override and restores the shared separator after removal",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6067,8 +6070,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "test": "contains a long localized RTL trail at an exact 320px allocation",
+              "file": "src/components/layout/breadcrumb/breadcrumb-separator-sources.test.ts",
+              "test": "projects only the live override and restores the shared separator after removal",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7593,7 +7596,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-              "line": 10,
+              "line": 9,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8178,7 +8181,7 @@
           "evidence": [
             {
               "file": "src/components/layout/carousel/carousel-remediation.test.ts",
-              "line": 47,
+              "line": 70,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -8363,7 +8366,7 @@
           "evidence": [
             {
               "file": "src/components/layout/carousel/carousel-remediation.test.ts",
-              "line": 47,
+              "line": 70,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -9052,6 +9055,12 @@
           "evidence": [
             {
               "file": "src/components/charts/chart-3d/chart-3d-engine.test.ts",
+              "test": "keeps the table and cursor named when WebGL draws a point with a blank label",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d-engine.test.ts",
               "test": "mounts once, resolves the tokens and fits when no camera was authored",
               "target": "el",
               "state": "populated"
@@ -9103,6 +9112,12 @@
               "test": "reports an empty, fully filtered and invalid state separately and recovers when valid data arrives",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "uses the point ID for blank labels in the narrow chart table and cursor",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -9146,7 +9161,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart-3d/chart-3d.test.ts",
-              "test": "contains long content inside a 320px allocation and keeps every control reachable",
+              "test": "uses the point ID for blank labels in the narrow chart table and cursor",
               "kind": "320px allocation test signal"
             }
           ]
@@ -9336,7 +9351,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer-toolbar-placement.test.ts",
-              "line": 102,
+              "line": 36,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -9705,6 +9720,12 @@
               "test": "is accessible populated with real chat messages, an unread divider, and a failed message",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/chat-viewport/chat-viewport.test.ts",
+              "test": "keeps the localized icon button action, unread description, and keyboard focus repair",
+              "target": "viewport",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -9715,7 +9736,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.test.ts",
-              "test": "clears settled virtual keyboard intent before later programmatic scrolling with and without reduced motion",
+              "test": "keeps the localized icon button action, unread description, and keyboard focus repair",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -9806,7 +9827,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 956,
+              "line": 967,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10388,7 +10409,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.class.ts",
-              "line": 141,
+              "line": 143,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11905,7 +11926,7 @@
           "evidence": [
             {
               "file": "src/components/forms/code-editor/code-editor.test.ts",
-              "test": "renders line numbers and inserts spaces for Tab",
+              "test": "leaves composing Tab with the input method without replacing selected code",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -12212,7 +12233,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1245,
+              "line": 1250,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12484,7 +12505,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2883,
+              "line": 2890,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12898,16 +12919,10 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 312,
-              "kind": "remote-content or trust-boundary source signal"
-            }
-          ],
-          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -12934,7 +12949,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -13654,7 +13669,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.class.ts",
-              "line": 556,
+              "line": 554,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15519,7 +15534,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/csv-viewer/csv-viewer.class.ts",
-              "line": 17,
+              "line": 16,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16151,7 +16166,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2944,
+              "line": 2960,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16379,7 +16394,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
-              "line": 17,
+              "line": 16,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17017,7 +17032,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 466,
+              "line": 464,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17880,7 +17895,6 @@
           "reducedMotion",
           "visual",
           "peerFailure",
-          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -18001,8 +18015,14 @@
         },
         "security": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/document-compare/document-compare.class.ts",
+              "line": 472,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
           "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
@@ -18575,7 +18595,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 378,
+              "line": 379,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19852,7 +19872,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1093,
+              "line": 1098,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20283,7 +20303,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/ebook-viewer/ebook-viewer.class.ts",
-              "line": 11,
+              "line": 9,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25681,7 +25701,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
-              "line": 16,
+              "line": 15,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26404,7 +26424,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 990,
+              "line": 992,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27053,7 +27073,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2820,
+              "line": 2814,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28673,7 +28693,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/include/include-resource.ts",
-              "line": 4,
+              "line": 3,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29094,10 +29114,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/input/input-shared.ts",
+              "line": 891,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -29122,7 +29148,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -29144,6 +29170,7 @@
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
+          "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -30615,7 +30642,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 377,
+              "line": 381,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30807,7 +30834,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 472,
+              "line": 471,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31874,7 +31901,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1017,
+              "line": 1021,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37230,10 +37257,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/input/input-shared.ts",
+              "line": 891,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -37258,7 +37291,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -37280,6 +37313,7 @@
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
+          "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -38458,10 +38492,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/input/input-shared.ts",
+              "line": 891,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -38486,7 +38526,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -38508,6 +38548,7 @@
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
+          "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -38681,7 +38722,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2883,
+              "line": 2890,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38904,7 +38945,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 348,
+              "line": 352,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39992,7 +40033,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 5333,
+              "line": 5377,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40089,7 +40130,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 15,
+              "line": 14,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41829,7 +41870,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1093,
+              "line": 1098,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42753,7 +42794,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 577,
+              "line": 580,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47498,7 +47539,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 1034,
+              "line": 1090,
               "kind": "320px allocation test signal"
             }
           ]
@@ -47561,7 +47602,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
-              "line": 285,
+              "line": 286,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47833,7 +47874,7 @@
           "evidence": [
             {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
-              "test": "submits on Ctrl/Cmd+Enter, but not on a plain Enter or an unmodified other key (onFormKeyDown)",
+              "test": "honors a nested comment control canceling the submit shortcut",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -49281,7 +49322,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
-              "line": 200,
+              "line": 201,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49505,7 +49546,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 563,
+              "line": 553,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50089,7 +50130,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 811,
+              "line": 815,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51612,7 +51653,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-              "line": 18,
+              "line": 17,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51810,16 +51851,10 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/agent-tools/stack-trace/stack-trace.class.ts",
-              "line": 289,
-              "kind": "remote-content or trust-boundary source signal"
-            }
-          ],
-          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -51846,7 +51881,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -54011,7 +54046,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 507,
+              "line": 513,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54267,7 +54302,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 507,
+              "line": 513,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54518,7 +54553,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 507,
+              "line": 513,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55431,7 +55466,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 903,
+              "line": 902,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55824,10 +55859,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/textarea/textarea.class.ts",
+              "line": 758,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -55853,7 +55894,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -56259,7 +56300,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 1014,
+              "line": 1015,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56462,10 +56503,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/input/input-shared.ts",
+              "line": 891,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -56490,7 +56537,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -56512,6 +56559,7 @@
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
+          "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -59329,7 +59377,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-view/tool-result-view.class.ts",
-              "line": 214,
+              "line": 229,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -59628,6 +59676,12 @@
               "test": "is accessible with a populated timeline and the approval dialog open",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
+              "test": "keeps the default chronology and folds a group behind one named disclosure",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -59819,6 +59873,12 @@
             },
             {
               "file": "src/components/overlays/overlay/tooltip-description.test.ts",
+              "test": "keeps an icon trigger named while closed and releases only its own relationships on mode changes",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/tooltip-description.test.ts",
               "test": "paints and describes with content when the default slot holds only template whitespace",
               "target": "el",
               "state": "populated"
@@ -59946,7 +60006,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1093,
+              "line": 1098,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -60799,7 +60859,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 720,
+              "line": 724,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -61051,7 +61111,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 720,
+              "line": 724,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62637,7 +62697,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 608,
+              "line": 587,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

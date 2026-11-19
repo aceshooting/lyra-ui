@@ -187,6 +187,11 @@ export function nextInteractiveCalendarCell(
   }
 }
 
+export function isoDateAtOffset(firstWeekStart: Date, dayOffset: number): string {
+  const iso = new Date(firstWeekStart.getTime() + dayOffset * MS_PER_DAY).toISOString();
+  return iso.slice(0, iso.indexOf('T'));
+}
+
 export function calendarDateAt(
   week: number,
   weekday: number,
@@ -194,12 +199,7 @@ export function calendarDateAt(
   firstWeekStart: Date,
 ): string {
   const index = week * 7 + weekday;
-  return (
-    datesByPosition[index] ??
-    new Date(firstWeekStart.getTime() + index * MS_PER_DAY)
-      .toISOString()
-      .slice(0, 10)
-  );
+  return datesByPosition[index] ?? isoDateAtOffset(firstWeekStart, index);
 }
 
 export function calendarCellAt(

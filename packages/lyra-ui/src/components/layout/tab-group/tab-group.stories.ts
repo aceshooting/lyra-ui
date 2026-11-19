@@ -602,3 +602,21 @@ export const ManualFocusRemoval: StoryObj = {
     <lr-tab-panel name="a">First panel</lr-tab-panel><lr-tab-panel name="b">Second panel</lr-tab-panel><lr-tab-panel name="c">Third panel</lr-tab-panel>
   </lr-tab-group>`,
 };
+
+export const FilledPanel: Story = {
+  render: () => html`
+    <lr-tab-group fill style="block-size: 16rem">
+      <lr-tab panel="files">Files</lr-tab>
+      <lr-tab panel="summary">Summary</lr-tab>
+      <lr-tab-panel name="files">
+        <div style="block-size: 100%; display: flex; flex-direction: column">
+          <strong>Recent files</strong>
+          <ul style="overflow: auto; margin-block: 0">
+            ${Array.from({ length: 24 }, (_, index) => html`<li>Document ${index + 1}</li>`)}
+          </ul>
+        </div>
+      </lr-tab-panel>
+      <lr-tab-panel name="summary">24 recent files</lr-tab-panel>
+    </lr-tab-group>
+  `,
+};

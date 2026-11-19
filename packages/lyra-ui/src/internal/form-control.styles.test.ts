@@ -1,5 +1,10 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import '../components/forms/input/input.js';
+import '../components/forms/input/number-input.js';
+import '../components/forms/radio/radio-group.js';
+import '../components/forms/select/select.js';
+import '../components/forms/code-editor/code-editor.js';
+import '../components/forms/otp-input/otp-input.js';
 import '../components/forms/checkbox-group/checkbox-group.js';
 import '../components/forms/token-input/token-input.js';
 import '../components/media/file-input/file-input.js';
@@ -95,5 +100,38 @@ describe('the shared required marker', () => {
     expect(
       parseFloat(markerFor(offset, '[part="form-control-label"]').marginInlineStart),
     ).to.be.closeTo(rootFontSize, 0.5);
+  });
+});
+
+describe('field and group label typography', () => {
+  it('matches field and group labels at every size and accepts ancestor overrides', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-input label="Name"></lr-input>
+        <lr-checkbox-group label="Topics"></lr-checkbox-group>
+        <lr-radio-group label="Priority"></lr-radio-group>
+        <lr-select label="Country"></lr-select>
+        <lr-number-input label="Count"></lr-number-input>
+        <lr-code-editor label="Code"></lr-code-editor>
+        <lr-otp-input label="Passcode"></lr-otp-input>
+      </div>
+    `);
+    const controls = [...wrapper.children];
+    const labels = controls.map(control => control.shadowRoot!.querySelector('[part~="form-control-label"]')!);
+    const fontSizes: string[] = [];
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
+      for (const control of controls) control.setAttribute('size', size);
+      const sizes = labels.map(label => getComputedStyle(label).fontSize);
+      expect(new Set(sizes).size, size).to.equal(1);
+      fontSizes.push(sizes[0]!);
+    }
+    expect(fontSizes[0]).not.to.equal(fontSizes.at(-1));
+    wrapper.style.cssText = '--lr-form-control-label-font-size: 19px; --lr-form-control-label-font-weight: 800; --lr-form-control-label-color: rgb(11, 22, 33)';
+    for (const label of labels) {
+      const style = getComputedStyle(label);
+      expect(style.fontSize).to.equal('19px');
+      expect(style.fontWeight).to.equal('800');
+      expect(style.color).to.equal('rgb(11, 22, 33)');
+    }
   });
 });

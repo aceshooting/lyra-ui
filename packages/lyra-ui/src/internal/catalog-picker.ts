@@ -637,7 +637,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   handleInputKeyDown(event: KeyboardEvent): void {
-    if (event.isComposing || event.keyCode === 229) return;
+    if (event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const rows = this.filteredEntries;
     switch (event.key) {
       case 'ArrowDown':

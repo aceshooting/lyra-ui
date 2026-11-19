@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './checkbox-group.js';
 import '../checkbox/checkbox.js';
@@ -2313,4 +2314,76 @@ it('renders the hint prop and slot together', async () => {
   const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
   expect(hint.textContent).to.contain('Prop hint');
   expect(hint.querySelector<HTMLSlotElement>('slot[name="hint"]')).to.not.equal(null);
+});
+
+it('keeps toolbar controls outside selection and keeps the hidden group label available', async () => {
+  const group = await fixture<LyraCheckboxGroup>(html`
+    <lr-checkbox-group>
+      <span slot="label">Topics</span>
+      <div slot="toolbar"><lr-checkbox value="all" checked>All</lr-checkbox></div>
+      <lr-checkbox value="news" checked>News</lr-checkbox>
+    </lr-checkbox-group>
+  `);
+  const root = group.shadowRoot!;
+  const label = root.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+  const toolbar = root.querySelector<HTMLElement>('[part="toolbar"]')!;
+  const owner = root.querySelector('fieldset')!;
+  expect(group.labelDisplay).to.equal('visible');
+  expect(getComputedStyle(label).position).not.to.equal('absolute');
+  expect(toolbar.previousElementSibling?.id).to.equal(label.id);
+  expect(toolbar.nextElementSibling?.getAttribute('part')).to.include('form-control-input');
+  expect(toolbar.hidden).to.equal(false);
+  expect(group.value).to.deep.equal(['news']);
+  group.labelDisplay = 'hidden';
+  await group.updateComplete;
+  expect(label.hidden).to.equal(false);
+  expect(getComputedStyle(label).position).to.equal('absolute');
+  expect(owner.querySelector('legend')?.id).to.equal(label.id);
+  group.setAttribute('aria-label', 'Host name');
+  group.accessibleLabel = 'Property name';
+  await group.updateComplete;
+  expect(owner.getAttribute('aria-label')).to.equal('Host name');
+  group.querySelector('[slot="toolbar"]')!.remove();
+  await waitUntil(() => toolbar.hidden);
+});
+
+it('keeps required validation pristine when focus leaves the toolbar for an option', async () => {
+  const group = await fixture<LyraCheckboxGroup>(html`
+    <lr-checkbox-group required label="Topics">
+      <button type="button" slot="toolbar">Filter</button>
+      <lr-checkbox value="news">News</lr-checkbox>
+    </lr-checkbox-group>
+  `);
+  const toolbarButton = group.querySelector('button')!;
+  const option = group.querySelector('lr-checkbox')!;
+  await focusByKeyboard(toolbarButton);
+  await focusByKeyboard(option);
+  await group.updateComplete;
+  expect(group.matches(':state(user-invalid)')).to.equal(false);
+  await focusByKeyboard(toolbarButton);
+  await group.updateComplete;
+  expect(group.matches(':state(user-invalid)')).to.equal(true);
+});
+
+it('submits only enabled checked options while preserving checked values', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-checkbox-group name="choices">
+    <lr-checkbox value="a" checked>A</lr-checkbox>
+    <fieldset><lr-checkbox value="b" checked>B</lr-checkbox></fieldset>
+  </lr-checkbox-group></form>`);
+  const group = form.querySelector('lr-checkbox-group')!;
+  const options = group.querySelectorAll('lr-checkbox');
+  const second = options[1]!;
+  const fieldset = group.querySelector('fieldset')!;
+  const submitted = () => new FormData(form).getAll('choices');
+  expect(submitted()).to.deep.equal(['a', 'b']);
+  second.disabled = true;
+  expect(submitted()).to.deep.equal(['a']);
+  expect(second.checked).to.equal(true);
+  expect(group.value).to.deep.equal(['a', 'b']);
+  second.disabled = false;
+  expect(submitted()).to.deep.equal(['a', 'b']);
+  fieldset.disabled = true;
+  expect(submitted()).to.deep.equal(['a']);
+  fieldset.disabled = false;
+  expect(submitted()).to.deep.equal(['a', 'b']);
 });

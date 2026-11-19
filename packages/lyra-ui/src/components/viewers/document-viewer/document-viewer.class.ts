@@ -266,6 +266,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   override disconnectedCallback(): void {
+    this.searchGeneration++;
     this.generation++;
     this.renderState = { kind: 'fallback' };
     this.announcements.disconnect();
@@ -376,9 +377,10 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       resolved = await loadDocumentRenderer(def);
     } catch (error) {
       if (generation === this.generation && this.isConnected && this.open) {
-        this.renderState = { kind: 'error' };
+        const fallback = file.anchor != null;
+        this.renderState = { kind: fallback ? 'fallback' : 'error' };
         this.emit('lr-render-error', { error });
-        this.finishAnchorResult(undefined, file, generation);
+        this.finishAnchorResult(undefined, file, generation, fallback);
       }
       return;
     }
@@ -506,9 +508,15 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     return this.currentSearchTarget();
   }
 
+  private searchGeneration = 0;
+
   /** Searches the open file through a search-capable renderer; resolves its match count, else `0`. */
   async search(query: string): Promise<number> {
-    return (await (await this.searchTarget())?.search(query)) ?? 0;
+    const generation = ++this.searchGeneration;
+    await this.updateComplete;
+    if (generation !== this.searchGeneration) return 0;
+    const count = await this.currentSearchTarget()?.search(query);
+    return generation === this.searchGeneration ? count ?? 0 : 0;
   }
 
   /** Moves to the renderer's next match; resolves `false` without a searchable renderer or match. */
@@ -523,6 +531,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   /** Clears the renderer's search state; a no-op when there is no searchable renderer. */
   clearSearch(): void {
+    this.searchGeneration++;
     this.currentSearchTarget()?.clearSearch();
   }
 

@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlLabelDisplay, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -27,10 +27,9 @@ export const styles = css`
   /* The rendered legend's real part is "form-control-label" (checkbox-group.class.ts's render()),
      not "label" -- this must match it exactly or the rule is dead code. */
   [part~="form-control-label"] {
-    font-weight: var(--lr-font-weight-semibold);
-    color: var(--lr-color-text);
-    font-size: var(--lr-form-control-font-size);
+    ${formControlLabelTypography}
   }
+  ${formControlLabelDisplay}
   ${formControlRequiredMarker}
   [part~='options'] {
     display: flex;

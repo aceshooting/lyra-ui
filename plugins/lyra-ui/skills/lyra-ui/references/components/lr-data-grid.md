@@ -279,6 +279,11 @@ search-cancel glyph the component resets; rendered only while it has a value),
 `select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`, `row-limit`, `tree-limit`.
 
+The numbered pager marks the applied page with `page-current`, `aria-current="page"`, and a
+solid brand fill that remains visible when focus moves elsewhere. Activating a numbered button
+keeps focus with that page. If an endpoint action disables its focused button, focus moves to an
+available pager control.
+
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
 its buttons have localized pin-to-start, pin-to-end, and unpin names; its visibility toggle has one
 native checkbox semantic owner; and `aria-controls` links trigger and group. The per-column group,

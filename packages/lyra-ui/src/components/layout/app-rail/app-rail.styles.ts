@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 
@@ -105,7 +106,10 @@ export const styles = css`
     flex-direction: column;
     inline-size: var(--lr-app-rail-width, var(--_lr-app-rail-width));
     block-size: 100%;
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-inline-end: var(
+      --lr-app-rail-edge-border,
+      var(--lr-border-width-thin) solid var(--lr-color-border-subtle)
+    );
     background: var(
       --lr-app-rail-bg,
       var(--lr-color-surface)
@@ -120,8 +124,11 @@ export const styles = css`
   /* The resizer-track below is transparent at rest, so while the resizer renders this edge is the
      only visible mark of that focusable separator (WCAG 2.2 SC 1.4.11) -- it stays on the
      control-grade token, like lr-split-panel's and lr-multi-split's dividers. */
-  :host([resizable][mode="full"]) [part="base"] {
-    border-inline-end-color: var(--lr-color-border);
+  :host([resizable][mode="full"]:where(:not([frame="plain"]))) [part="base"] {
+    border-inline-end: var(
+      --lr-app-rail-edge-border,
+      var(--lr-border-width-thin) solid var(--lr-color-border)
+    );
   }
   :host([mode="icon-only"]) [part="base"] {
     inline-size: var(--lr-app-rail-icon-width, var(--_lr-app-rail-icon-width));
@@ -292,7 +299,10 @@ export const styles = css`
        resizes asynchronously (e.g. an avatar image). Mirrors --lr-command-palette-search-min-
        height's identical auto-default shape. */
     min-block-size: var(--lr-app-rail-header-min-block-size, auto);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(
+      --lr-app-rail-header-border,
+      var(--lr-border-width-thin) solid var(--lr-color-border-subtle)
+    );
   }
   [part="header"][hidden] {
     display: none;
@@ -305,7 +315,7 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
   :host([collapsible][mode="icon-only"]) [part="header"] {
-    justify-content: center;
+    flex-direction: column;
   }
   [part="collapse-toggle"] {
     display: inline-flex;
@@ -316,15 +326,23 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     font: inherit;
-    /* Same shared WCAG 2.5.8 floor [part="toggle"] takes. */
-    ${iconHitTarget}
+    inline-size: var(--lr-app-rail-collapse-toggle-size, var(--lr-icon-button-size));
+    block-size: var(--lr-app-rail-collapse-toggle-size, var(--lr-icon-button-size));
+    min-inline-size: max(${minimumPointerTarget}, var(--lr-icon-button-size));
+    min-block-size: max(${minimumPointerTarget}, var(--lr-icon-button-size));
     padding: 0;
     border: 0;
     border-radius: var(--lr-radius);
     background: transparent;
-    color: var(--lr-color-text);
+    color: var(--lr-app-rail-collapse-toggle-color, var(--lr-color-text));
     cursor: pointer;
     transition: var(--lr-transition-interactive);
+  }
+  @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+    [part="collapse-toggle"] {
+      min-inline-size: ${minimumPointerTarget};
+      min-block-size: ${minimumPointerTarget};
+    }
   }
   :host([collapsible][mode="icon-only"]) [part="collapse-toggle"] {
     margin-inline-start: 0;
@@ -352,18 +370,20 @@ export const styles = css`
      toward; collapsed, at the edge it expands toward; both flip under RTL. */
   [part="collapse-icon"] {
     display: inline-flex;
+  }
+  [part="collapse-icon"]:where(:not([data-custom-glyph])) {
     transform: rotate(180deg);
   }
   /* The collapsed state is read off the control's own rendered aria-expanded rather than a second
      :host() qualifier, so the four orientations stay one readable pair of rules; :where() keeps
      the state qualifier at zero specificity, as the rest of this package's state rules do. */
-  [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"] {
+  [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"]:where(:not([data-custom-glyph])) {
     transform: none;
   }
-  :host(:dir(rtl)) [part="collapse-icon"] {
+  :host(:dir(rtl)) [part="collapse-icon"]:where(:not([data-custom-glyph])) {
     transform: none;
   }
-  :host(:dir(rtl)) [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"] {
+  :host(:dir(rtl)) [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"]:where(:not([data-custom-glyph])) {
     transform: rotate(180deg);
   }
   /* Row layout for the header only while it can hold the pin control; the hidden resting-strip
@@ -414,7 +434,10 @@ export const styles = css`
   }
   [part="footer"] {
     padding: var(--lr-app-rail-footer-padding, var(--lr-space-m));
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-start: var(
+      --lr-app-rail-footer-border,
+      var(--lr-border-width-thin) solid var(--lr-color-border-subtle)
+    );
   }
   [part="footer"][hidden] {
     display: none;
@@ -459,6 +482,10 @@ export const styles = css`
     margin: var(--_lr-app-rail-frame-gap);
     block-size: calc(100% - 2 * var(--_lr-app-rail-frame-gap));
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-inline-end: var(
+      --lr-app-rail-edge-border,
+      var(--lr-border-width-thin) solid var(--lr-color-border-subtle)
+    );
     border-radius: var(--lr-app-rail-frame-radius, var(--lr-radius));
     box-shadow: var(--lr-app-rail-frame-shadow, var(--lr-shadow-s));
   }
@@ -467,7 +494,7 @@ export const styles = css`
     inset-inline-end: calc(var(--_lr-app-rail-frame-gap) - var(--lr-icon-button-size) * 0.5);
   }
   :host([frame="plain"]) [part="base"] {
-    border-inline-end: 0;
+    border-inline-end: var(--lr-app-rail-edge-border, none);
     background: var(--lr-app-rail-bg, transparent);
   }
   @media (forced-colors: active) {

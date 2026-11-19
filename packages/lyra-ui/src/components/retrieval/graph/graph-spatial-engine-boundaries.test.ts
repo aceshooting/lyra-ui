@@ -200,6 +200,20 @@ describe('graph spatial engine boundaries', () => {
     expect(await value.graph.focusNode('missing')).to.equal(false);
   });
 
+  it('retires a hover transition when the leave listener removes the graph', async () => {
+    const value = setup();
+    await mount(value);
+    const transitions: string[] = [];
+    value.graph.addEventListener('lr-node-enter', event => transitions.push('enter ' + event.detail.nodeId));
+    value.graph.addEventListener('lr-node-leave', event => {
+      transitions.push('leave ' + event.detail.nodeId);
+      value.graph.remove();
+    });
+    value.callbacks().hover(0);
+    value.callbacks().hover(1);
+    expect(transitions).to.deep.equal(['enter a', 'leave a']);
+  });
+
   it('maps local edge picks and rejects invalid indices without manufacturing node events', async () => {
     const value = setup(); const edges: unknown[] = []; let nodes = 0;
     value.graph.addEventListener('lr-edge-activate', event => edges.push(event.detail));

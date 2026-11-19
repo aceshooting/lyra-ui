@@ -45,9 +45,9 @@ export const AutoResize: Story = {
     <lr-textarea
       label="Growing notes"
       resize="auto"
-      rows="2"
-      style="--lr-textarea-max-block-size: 12rem"
-      placeholder="Add several lines…"
+      rows="1"
+      style="max-inline-size: var(--lr-size-12rem); --lr-textarea-max-block-size: 12rem"
+      placeholder="Describe what happened and include any details that would help us follow up."
     ></lr-textarea>
   `,
 };
@@ -191,16 +191,21 @@ export const IndependentHoverTheme: Story = {
 
 /**
  * `--lr-textarea-focus-border-color` gives focus its own border color, independent of the hover
- * hook above and the shared focus halo. Unset, focus renders with the field's resting border
- * color, unchanged from before this hook existed.
+ * hook above and the shared focus halo. The focus color stays visible while the pointer rests on
+ * the field.
  */
 export const IndependentFocusTheme: Story = {
   name: 'Independent focus-border theme',
   render: () => html`
     <lr-textarea
       label="Focus-border hook"
+      appearance="plain"
       rows="2"
-      style="max-inline-size: var(--lr-size-24rem); --lr-textarea-focus-border-color: var(--lr-color-success);"
+      style="
+        max-inline-size: var(--lr-size-24rem);
+        --lr-textarea-hover-border-color: transparent;
+        --lr-textarea-focus-border-color: var(--lr-color-success);
+      "
     ></lr-textarea>
   `,
 };

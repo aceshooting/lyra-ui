@@ -10,6 +10,7 @@ import {
 } from './build-skill-bundle.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const { version } = JSON.parse(readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8'));
 
 test('rewrites plugin references to the package llms/ directory and drops plugin-only text', () => {
   const source = [
@@ -23,9 +24,9 @@ test('rewrites plugin references to the package llms/ directory and drops plugin
     '',
     'Fall back: <!-- plugin-only:start -->to the plugin copy. <!-- plugin-only:end -->Done.',
   ].join('\n');
-  const out = bundleText(source, 'lyra-ui');
+  const out = bundleText(source, 'lyra-ui', '1.2.3');
   assert.ok(out.includes(`\`${PACKAGE_PREFIX}/llms/components/lr-table.md\``));
-  assert.ok(out.includes(`(${PACKAGE_PREFIX}/llms/shared/styles-and-tokens.md#a)`));
+  assert.ok(out.includes('(https://github.com/aceshooting/lyra-ui/blob/lyra-ui@1.2.3/packages/lyra-ui/llms/shared/styles-and-tokens.md#a)'));
   assert.ok(out.includes(`${PACKAGE_PREFIX}/llms/index.md`));
   assert.ok(out.includes(`${PACKAGE_PREFIX}/skills/lyra-ui/commands/frontend.md`));
   assert.ok(out.includes(`${PACKAGE_PREFIX}/skills/lyra-ui/reporting.md.`));
@@ -36,8 +37,8 @@ test('rewrites plugin references to the package llms/ directory and drops plugin
 });
 
 test('the compose skill keeps its own references/ and rewrites only the sibling skill path', () => {
-  const out = bundleText('[x](references/composition-patterns.md) [y](../lyra-ui/references/shared/a.md)', 'compose');
-  assert.equal(out, `[x](references/composition-patterns.md) [y](${PACKAGE_PREFIX}/llms/shared/a.md)`);
+  const out = bundleText('[x](references/composition-patterns.md) [y](../lyra-ui/references/shared/a.md)', 'compose', '1.2.3');
+  assert.equal(out, '[x](references/composition-patterns.md) [y](https://github.com/aceshooting/lyra-ui/blob/lyra-ui@1.2.3/packages/lyra-ui/llms/shared/a.md)');
 });
 
 test('parses folded and plain frontmatter', () => {
@@ -66,7 +67,7 @@ test('the committed bundle is current, valid and within the size budget', () => 
 test('the installed skill includes the companion guide referenced by its entry page', () => {
   const { files } = renderSkillBundle(repoRoot);
   assert.ok(files.get('lyra-ui/SKILL.md').includes('[lyra-gen.md](lyra-gen.md)'));
-  assert.equal(files.get('lyra-ui/lyra-gen.md'), bundleText(readFileSync(path.join(repoRoot, 'plugins/lyra-ui/skills/lyra-ui/lyra-gen.md'), 'utf8'), 'lyra-ui'));
+  assert.equal(files.get('lyra-ui/lyra-gen.md'), bundleText(readFileSync(path.join(repoRoot, 'plugins/lyra-ui/skills/lyra-ui/lyra-gen.md'), 'utf8'), 'lyra-ui', version));
 });
 
 test('reports stale, missing and unexpected files and rewrites the tree', () => {

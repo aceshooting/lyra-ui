@@ -1,5 +1,6 @@
 import { panelListItem } from '../../../internal/layout-fragments.styles.js';
-import { focusRing, panelFrame } from '../../../internal/interactive-control.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { panelFrame } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
 
 export const styles = css`

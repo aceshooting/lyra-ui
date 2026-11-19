@@ -550,14 +550,18 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     this.requestUpdate();
   }
 
+  private restartVideo(video: LyraVideo): void {
+    const generation = this.activationGeneration;
+    // seek() synchronously dispatches timeupdate, which can change the active item.
+    video.seek(0);
+    if (generation !== this.activationGeneration || video.parentElement !== this || !this.isEnabled(video)) return;
+    void video.play().catch(() => undefined);
+  }
+
   private handleCompletion(video: LyraVideo): void {
     if (video !== this.activeVideo || this.withoutAutoAdvance) return;
     if (this.repeat === 'one') {
-      video.seek(0);
-      const generation = this.activationGeneration;
-      void video.play().catch(() => {
-        if (generation !== this.activationGeneration || video !== this.activeVideo) return;
-      });
+      this.restartVideo(video);
       return;
     }
     const nextIndex = this.nearestEnabledIndex(this.playlistVideos, this.activeIndex + 1);
@@ -570,11 +574,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       if (first >= 0 && first !== this.activeIndex) {
         this.switchTo(first, true);
       } else if (first === this.activeIndex) {
-        video.seek(0);
-        const generation = this.activationGeneration;
-        void video.play().catch(() => {
-          if (generation !== this.activationGeneration || video !== this.activeVideo) return;
-        });
+        this.restartVideo(video);
       }
     }
   }
@@ -759,13 +759,16 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     const button = event.currentTarget as HTMLButtonElement;
     const index = Number(button.dataset['index']);
     if (!Number.isInteger(index) || button.disabled) return;
-    const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.navigationIndex = index;
       this.goTo(index);
-    } else if (event.key === 'ArrowDown' || event.key === forward) {
+      return;
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+    const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    if (event.key === 'ArrowDown' || event.key === forward) {
       event.preventDefault();
       this.moveNavigation(index, 1);
     } else if (event.key === 'ArrowUp' || event.key === backward) {

@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { html, render, type TemplateResult } from 'lit';
 import {
   acquireAnnouncementSink,
@@ -120,7 +121,8 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Where the stack anchors on screen. */
-  @property({ reflect: true }) placement: LyraToastPlacement = 'top-end';
+  @property({ reflect: true, converter: declaredDefaultConverter('top-end') })
+  placement: LyraToastPlacement = 'top-end';
 
   private readonly toastInternals = attachInternalsSafely(this);
   private childObserver?: MutationObserver;

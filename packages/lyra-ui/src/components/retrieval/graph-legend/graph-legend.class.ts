@@ -140,14 +140,12 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     super.disconnectedCallback();
   }
 
-  private isVisible(id: string): boolean {
-    return !canonicalIdentityList(this.hiddenTypes).includes(id);
-  }
-
   private toggle(type: LyraNodeTypeStyle): void {
     if (this.withoutInteraction) return;
-    const hiddenTypes = canonicalIdentityList(this.hiddenTypes);
-    const wasVisible = this.isVisible(type.id);
+    const { types, hiddenTypes: previous } = this;
+    const owner = this.announcementSink;
+    const hiddenTypes = canonicalIdentityList(previous);
+    const wasVisible = !hiddenTypes.includes(type.id);
     const next = wasVisible
       ? [...hiddenTypes, type.id]
       : hiddenTypes.filter((id) => id !== type.id);
@@ -156,7 +154,8 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       { hiddenTypes: next },
       { cancelable: true },
     );
-    if (proposal.defaultPrevented) return;
+    if (proposal.defaultPrevented || this.withoutInteraction || !owner || this.announcementSink !== owner ||
+        this.types !== types || this.hiddenTypes !== previous) return;
     this.hiddenTypes = next;
     this.liveText = this.localize(
       wasVisible ? 'legendTypeHidden' : 'legendTypeShown',

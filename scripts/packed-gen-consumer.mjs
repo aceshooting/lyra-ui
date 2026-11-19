@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, posix, relative } from 'node:path';
 import { attwCommandArguments } from './packed-attw.mjs';
 import { packedManifest } from './packed-tarball-input.mjs';
 
@@ -25,6 +25,16 @@ export const REQUIRED_GEN_FILES = Object.freeze([
   'dist/index.js', 'dist/index.d.ts', 'dist/gen-view.js', 'dist/gen-view.d.ts',
   ...PUBLIC_GEN_EXAMPLES,
 ]);
+
+/** Resolve package-relative guide links against archive entries, including omitted source trees. */
+export function checkPackedGenGuideLinks(file, markdown, files) {
+  for (const [, href] of markdown.matchAll(/\]\(([^\s)]+)\)/gu)) {
+    const target = href.split('#')[0];
+    if (!target || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/iu.test(target)) continue;
+    const destination = posix.join(posix.dirname(file), target);
+    assert.ok(files.has(destination), `${file}: ${href} does not resolve in the installed package`);
+  }
+}
 
 /** Copy the installed archive's examples out of its package scope, as application code. */
 export async function copyPackedGuidedExamples(fixture) {
@@ -135,6 +145,11 @@ if (checked.ok) {
 }
 `);
   await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixture, 'lyra-gen packed fixture install');
+  const archive = new Set(files);
+  const installed = dirname(createRequire(join(fixture, 'package.json')).resolve('@aceshooting/lyra-gen/package.json'));
+  for (const file of files.filter(entry => entry.endsWith('.md'))) {
+    checkPackedGenGuideLinks(file, await readFile(join(installed, file), 'utf8'), archive);
+  }
   const guidedExamples = await copyPackedGuidedExamples(fixture);
   await run(process.execPath, ['load.mjs'], fixture, 'lyra-gen pure root and granular registration');
   await run(pnpm, ['--config.auto-install-peers=false', 'exec', 'tsc', '--noEmit', '--skipLibCheck', 'false', '--strict', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.ts', ...guidedExamples], fixture, 'lyra-gen packed declaration and guided example check');

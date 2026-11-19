@@ -506,6 +506,18 @@ test('arrow keys, Home and End move focus between the enabled tools, wrap around
   }
 });
 
+test('modified arrow keys leave the toolbar focus and shortcut available', context => {
+  withPageGlobals(context);
+  for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+    const focused: string[] = [];
+    const tools = ['a', 'b', 'c'].map(key => new Tool(key, focused));
+    const { i, keydown } = toolbarEditor('ltr', () => tools);
+    const { event, trace } = keyEvent({ key: 'ArrowLeft', [modifier]: true }, [tools[1]!]);
+    keydown(event);
+    assert.deepEqual([focused, i.toolbarKey, trace], [[], 'b', { prevented: 0, stopped: 0 }], modifier);
+  }
+});
+
 test('arrow keys on a toolbar tool keep their default action while no tool is enabled', context => {
   withPageGlobals(context);
   for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End']) {

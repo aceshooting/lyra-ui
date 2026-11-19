@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -135,7 +136,8 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property() anchor: LyraPopupAnchor | null = null;
 
   /** Preferred placement. `flip`/`shift` may override it; the result is reported by `lr-reposition`. */
-  @property({ reflect: true }) placement: Placement = 'top';
+  @property({ reflect: true, converter: declaredDefaultConverter('top') })
+  placement: Placement = 'top';
 
   /**
    * CSS positioning scheme. `fixed` positions against the viewport; under a transformed, filtered

@@ -68,3 +68,45 @@ describe('lr-chip-group focus repair after the focused chip leaves', () => {
     expect(focusedPart(chips[0]!)).to.equal(null);
   });
 });
+
+describe('lr-chip-group focus repair after the overflow control leaves', () => {
+  for (const update of ['raise the visible cap', 'remove the hidden chip'] as const) {
+    it(`retains focus when consumers ${update}`, async () => {
+      const el = await fixture<LyraChipGroup>(html`
+        <lr-chip-group max-visible="1">
+          <lr-chip toggleable>One</lr-chip>
+          <lr-chip toggleable>Two</lr-chip>
+        </lr-chip-group>
+      `);
+      const chips = [...el.querySelectorAll('lr-chip')];
+      const overflow = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="overflow-indicator"]')!;
+      await focusByKeyboard(overflow);
+
+      if (update === 'raise the visible cap') el.maxVisible = 2;
+      else chips[1]!.remove();
+
+      await waitUntil(() => !overflow.isConnected, 'the overflow action left the group');
+      const surviving = chips.filter((chip) => chip.isConnected);
+      expect(surviving.some((chip) => focusedPart(chip) === 'toggle-button')).to.equal(true);
+    });
+  }
+
+  it('preserves focus moved outside by the consumer before rendering', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-chip-group max-visible="1"><lr-chip toggleable>One</lr-chip><lr-chip toggleable>Two</lr-chip></lr-chip-group>
+        <input aria-label="Next filter" />
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-chip-group')!;
+    const overflow = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="overflow-indicator"]')!;
+    const next = wrapper.querySelector('input')!;
+    await focusByKeyboard(overflow);
+    el.maxVisible = 2;
+    next.focus();
+
+    await el.updateComplete;
+    expect(overflow.isConnected).to.equal(false);
+    expect(document.activeElement === next).to.equal(true);
+  });
+});

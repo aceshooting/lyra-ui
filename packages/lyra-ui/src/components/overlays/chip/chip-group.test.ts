@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './chip-group.js';
 import './chip.js';
@@ -261,6 +261,85 @@ it('tracks live author hidden edits instead of restoring the initial snapshot', 
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   el.remove();
   expect(second.hidden, 'disconnect must restore the latest authored hidden state').to.be.true;
+});
+
+it('preserves authored hidden edits made immediately before reconnect', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-chip-group max-visible="1">
+        <lr-chip>One</lr-chip><lr-chip>Two</lr-chip><lr-chip>Three</lr-chip>
+      </lr-chip-group>
+      <div></div>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-chip-group')!;
+  const [, second, third] = el.querySelectorAll<HTMLElement>('lr-chip');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="overflow-indicator"]')!.click();
+  await el.updateComplete;
+  expect(second!.hidden).to.equal(false);
+
+  second!.hidden = true;
+  third!.hidden = true;
+  third!.hidden = false;
+  wrapper.querySelector('div')!.append(el);
+
+  expect(second!.hidden).to.equal(true);
+  expect(third!.hidden).to.equal(false);
+});
+
+it('drains pending managed collapse records before restoring visibility', async () => {
+  const el = await fixture<LyraChipGroup>(html`
+    <lr-chip-group>
+      <lr-chip>One</lr-chip><lr-chip>Two</lr-chip><lr-chip>Three</lr-chip>
+    </lr-chip-group>
+  `);
+  const [, second, third] = el.querySelectorAll<HTMLElement>('lr-chip');
+  el.maxVisible = 1;
+  // This microtask runs after the render writes the managed attributes and before observer delivery.
+  await Promise.resolve();
+  expect(second!.hidden).to.equal(true);
+  second!.hidden = false;
+  second!.hidden = true;
+  el.remove();
+
+  expect(second!.hidden, 'the interleaved author writes end hidden').to.equal(true);
+  expect(third!.hidden, 'the managed-only hidden write is undone').to.equal(false);
+});
+
+it('reads each distinct target a bounded number of times in a managed visibility batch', async () => {
+  const Observer = window.MutationObserver;
+  let targetReads = 0;
+  let recordsDelivered = 0;
+  class CountingObserver extends Observer {
+    constructor(callback: MutationCallback) {
+      super((records, observer) => {
+        for (const record of records) {
+          if (record.attributeName !== 'hidden') continue;
+          const target = record.target;
+          recordsDelivered += 1;
+          Object.defineProperty(record, 'target', { get() { targetReads += 1; return target; } });
+        }
+        callback(records, observer);
+      });
+    }
+  }
+  const count = 32;
+  window.MutationObserver = CountingObserver;
+  try {
+    const el = await fixture<LyraChipGroup>(html`
+      <lr-chip-group max-visible="1">
+        ${Array.from({ length: count }, () => html`<span>Chip</span>`)}
+      </lr-chip-group>
+    `);
+    targetReads = 0;
+    recordsDelivered = 0;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="overflow-indicator"]')!.click();
+    await el.updateComplete;
+    await waitUntil(() => recordsDelivered >= count - 1);
+    expect(targetReads).to.be.at.most(2 * recordsDelivered);
+  } finally {
+    window.MutationObserver = Observer;
+  }
 });
 
 it('settles rapid author hidden toggles to the final state', async () => {

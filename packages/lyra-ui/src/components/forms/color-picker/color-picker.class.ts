@@ -14,7 +14,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
-import { literalSetConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter, literalSetConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import {
@@ -316,6 +316,10 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart base - Permanent compatibility name on the same field wrapper as `color-picker`.
  * @csspart color-picker - The field wrapper. It is the same node as `base` and `form-control`.
  * @csspart form-control - The field wrapper. It is the same node as `base` and `color-picker`.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The label. It also carries the `label` compatibility name.
  * @csspart label - Permanent compatibility name on the same label as `form-control-label`.
  * @csspart trigger-container - The row wrapping the trigger.
@@ -568,7 +572,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   /** Preferred panel placement; the resolved side still flips to stay in the viewport. */
-  @property({ reflect: true }) placement: Placement = 'bottom-start';
+  @property({ reflect: true, converter: declaredDefaultConverter('bottom-start') })
+  placement: Placement = 'bottom-start';
 
   private _open = false;
   /** Whether the popup panel is open. The panel remains visible in `inline` mode. */

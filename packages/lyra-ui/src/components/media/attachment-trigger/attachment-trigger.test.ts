@@ -824,6 +824,36 @@ it('ignores a terminal native file selection that arrives after the host becomes
   expect(input.value).to.equal('');
 });
 
+it('retires a native pick when its capability is withdrawn and lets a fresh pick complete', async () => {
+  const el = await fixture<LyraAttachmentTrigger>(html`
+    <lr-attachment-trigger .capabilities=${['image']}></lr-attachment-trigger>
+  `);
+  const capabilities: string[] = [];
+  el.addEventListener('lr-files', event => capabilities.push(event.detail.capability));
+
+  trigger(el).click();
+  el.capabilities = ['files'];
+  await el.updateComplete;
+  const old = hiddenInput(el)!;
+  selectFiles(old, [makeFile('obsolete.png', 'image/png')]);
+  expect(capabilities).to.deep.equal([]);
+  expect(old.value).to.equal('');
+
+  trigger(el).click();
+  selectFiles(hiddenInput(el)!, [makeFile('current.txt')]);
+  expect(capabilities).to.deep.equal(['files']);
+
+  el.capabilities = ['image'];
+  await el.updateComplete;
+  trigger(el).click();
+  el.capabilities = ['files'];
+  await el.updateComplete;
+  el.capabilities = ['image'];
+  await el.updateComplete;
+  selectFiles(hiddenInput(el)!, [makeFile('still-obsolete.png', 'image/png')]);
+  expect(capabilities).to.deep.equal(['files']);
+});
+
 it('ignores a stale picker result after disconnect and reconnect', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
   const input = hiddenInput(el)!;

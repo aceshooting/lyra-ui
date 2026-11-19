@@ -11,7 +11,6 @@ import {
   type LyraTextViewerTargetEventMap,
 } from '../../../internal/text-viewer-target.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
@@ -483,7 +482,7 @@ type GeoJsonViewerState =
       peerAvailable: boolean;
       dataLayers?: readonly LyraMapGeoJsonDataLayer[];
     }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 export interface LyraGeoJsonViewerEventMap
   extends LyraTextViewerTargetEventMap {
@@ -667,7 +666,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
         'load',
         this.loadState.kind,
         this.loadState.kind === 'error'
-          ? this.loadState.message
+          ? this.loadState.message()
           : this.localize('loadingDocument')
       );
     }
@@ -710,11 +709,13 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       this.loadState = { kind: 'idle' };
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    const src = this.src;
+    const fetchTarget = resolveOwnerFetchTarget(this, src);
     if (!fetchTarget) {
-      this.failWithLocalizedMessage(
-        this.localize('documentPreviewUrlNotAllowed')
-      );
+      const message = () => this.localize('documentPreviewUrlNotAllowed');
+      const error = new LyraUserFacingError(message());
+      this.loadState = { kind: 'error', message };
+      this.emit('lr-render-error', { error });
       return;
     }
     this.loadState = { kind: 'loading' };
@@ -761,27 +762,19 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       }
     } catch (error) {
       if (
-        isAbortError(error) ||
         !this.isConnected ||
-        generation !== this.generation
-      )
-        return;
+        generation !== this.generation ||
+        signal?.aborted ||
+        this.src !== src
+      ) return;
       this.loadState = {
         kind: 'error',
-        message: this.localize(
-          isResourceLimitError(error)
-            ? 'documentPreviewResourceTooLarge'
-            : 'geojsonViewInvalid'
-        ),
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('geojsonViewInvalid'),
       };
       this.emit('lr-render-error', { error });
     }
-  }
-
-  private failWithLocalizedMessage(message: string): void {
-    const error = new LyraUserFacingError(message);
-    this.loadState = { kind: 'error', message };
-    this.emit('lr-render-error', { error });
   }
 
   private get effectiveLabel(): string {
@@ -848,7 +841,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
           <span class="sr-only">${this.localize('loadingDocument')}</span>
         </div>`;
       case 'error':
-        return html`<div part="error">${this.loadState.message}</div>`;
+        return html`<div part="error">${this.loadState.message()}</div>`;
       case 'idle':
       default:
         return html`<p>

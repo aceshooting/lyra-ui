@@ -200,6 +200,7 @@ export class LyraNumberInput extends LyraInput {
 
   private onLocalizedKeyDown = (event: KeyboardEvent): void => {
     if (!this.localized || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     if (event.composedPath()[0] !== this.input) return;
     event.preventDefault();

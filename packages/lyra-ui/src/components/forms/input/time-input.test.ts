@@ -54,6 +54,26 @@ expectLocaleFallback('de-DE', ['fieldRequired', 'timeInputHour', 'timeInputLabel
 expectLocaleFallback('ja-JP', ['fieldRequired', 'timeInputEmptySegment', 'timeInputHour', 'timeInputInvalid', 'timeInputLabel', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
 
 describe('lr-time-input segmented field', () => {
+  it('keeps the keyboard focus fill when a focused segment is hovered', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input
+        style="
+          --lr-time-input-segment-hover-bg: rgb(1, 2, 3);
+          --lr-time-input-segment-focus-bg: rgb(4, 5, 6);
+        "
+      ></lr-time-input>
+    `);
+    const target = segment(el, 'hour');
+    await focusByKeyboard(target);
+    try {
+      await hoverUntilMatched(target, 'the pointer reached the focused hour segment');
+      expect(target.matches(':focus-visible:hover')).to.be.true;
+      expect(getComputedStyle(target).backgroundColor).to.equal('rgb(4, 5, 6)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('contains a throwing shadow-root activeElement getter while blurring', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
     const root = el.shadowRoot!;
@@ -607,10 +627,11 @@ describe('lr-time-input popup and actions', () => {
 
     const closing = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:00"></lr-time-input>`);
     await closing.show();
+    const closingHour = closing.shadowRoot!.querySelector<HTMLButtonElement>('[data-column="hour"][data-value="9"]')!;
     closing.readonly = true;
     await closing.updateComplete;
     expect(closing.open, 'setting readonly closes an open picker').to.equal(false);
-    (closing.shadowRoot!.querySelector('[data-column="hour"][data-value="9"]') as HTMLButtonElement).click();
+    closingHour.click();
     expect(closing.value).to.equal('10:00');
   });
 
@@ -664,15 +685,15 @@ describe('lr-time-input popup and actions', () => {
   });
 
   it('ignores popup column keydowns while disabled and for keys outside the roving set', async () => {
-    // Options render once opened; disabling force-closes and leaves them behind the hidden popup.
+    // A same-task keydown can still reach an option before the forced close unmounts it.
     const disabled = await fixture<LyraTimeInput>(
       html`<lr-time-input hour-format="24" value="10:05"></lr-time-input>`,
     );
     await disabled.show();
-    disabled.disabled = true;
-    await disabled.updateComplete;
     const option = disabled.shadowRoot!.querySelector<HTMLButtonElement>('[role="option"]')!;
+    disabled.disabled = true;
     key(option, 'ArrowDown');
+    await disabled.updateComplete;
     expect(disabled.shadowRoot!.activeElement === null, 'no focus change while disabled').to.equal(true);
 
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:05"></lr-time-input>`);
@@ -767,17 +788,15 @@ describe('lr-time-input popup and actions', () => {
     expect(el.shadowRoot!.querySelectorAll('[role="option"]').length).to.equal(0);
   });
 
-  it('projects disabled state to every popup option and removes all option tab stops', async () => {
+  it('removes popup options and their tab stops when disabled', async () => {
     const el = await fixture<LyraTimeInput>(html`
       <lr-time-input hour-format="24" value="10:05"></lr-time-input>
     `);
     await el.show();
+    expect(el.shadowRoot!.querySelectorAll('[role="option"]').length).to.be.greaterThan(0);
     el.disabled = true;
     await el.updateComplete;
-    const options = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="option"]')];
-    expect(options.length).to.be.greaterThan(0);
-    expect(options.every((option) => option.disabled)).to.equal(true);
-    expect(options.every((option) => option.tabIndex === -1)).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[role="option"]').length).to.equal(0);
   });
 
   it('supports localized clear and now actions while a footer slot replaces the default now action', async () => {

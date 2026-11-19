@@ -12,7 +12,8 @@ export type Chart3dType = 'scatter' | 'bubble' | 'line';
  * Immutable typed columns; publish changes by assigning a new object. Row `i` of every column
  * describes row `i`. `ids` must be unique and non-empty. `x`, `y` and `z` are required and finite.
  * `size` holds CSS-pixel diameters from 0 to 1024 and only affects bubble charts. `category`
- * indexes `categories`, and `labels` names rows in the data table.
+ * indexes `categories`, and `labels` names rows in the data table. Missing or whitespace-only
+ * labels use the corresponding point ID.
  */
 export interface LyraChart3dColumns {
   readonly ids: readonly string[];
@@ -259,11 +260,13 @@ export class Chart3dRows {
     if (!Number.isSafeInteger(index) || index < 0 || index >= this.count) return undefined;
     const row = this.visible[index]!;
     const c = this.columns;
+    const id = c.ids[row]!;
+    const label = c.labels?.[row];
     const category = c.category?.[row];
     return {
-      id: c.ids[row]!,
+      id,
       index: row,
-      label: c.labels?.[row] ?? c.ids[row]!,
+      label: label?.trim() ? label : id,
       x: c.x[row]!,
       y: c.y[row]!,
       z: c.z[row]!,

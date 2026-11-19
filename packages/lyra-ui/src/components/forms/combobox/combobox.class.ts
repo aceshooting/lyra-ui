@@ -24,6 +24,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import {
   VALIDITY_ANCHOR,
+  type IntrinsicValidityMessage,
 } from '../../../internal/anchored-validity.js';
 import {
   setCustomState,
@@ -40,6 +41,7 @@ import type { LyraSelectionDirection } from '../../../internal/shared-unions.js'
 import { styles } from './combobox.styles.js';
 import type { LyraOption } from './option.class.js';
 import {
+  declaredDefaultConverter,
   autocorrectConverter,
   literalSetConverter,
   omittedEmptyStringConverter,
@@ -571,6 +573,10 @@ export type LyraComboboxSourceErrorEvent =
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Compatibility wrapper around the visible label content.
  * @csspart form-control-input - Compatibility wrapper around the editable control.
@@ -891,7 +897,8 @@ export class LyraCombobox<
     this.requestUpdate('appearance', old);
   }
   /** Preferred vertical side for the floating listbox. */
-  @property({ reflect: true }) placement: LyraComboboxPlacement = 'bottom';
+  @property({ reflect: true, converter: declaredDefaultConverter('bottom') })
+  placement: LyraComboboxPlacement = 'bottom';
   /**
    * Copies the trigger's width, height, or both onto the listbox -- the same property
    * `<lr-dropdown>`/`<lr-popup>` spell. Unset (the default), the listbox sizes to its own content,
@@ -988,7 +995,7 @@ export class LyraCombobox<
    * `observedAttributes` that should trigger live revalidation. */
   @property({ attribute: false }) validators: LyraComboboxValidator[] = [];
   /** Native editing-assistance attributes forwarded to the wrapped input. */
-  @property() autocomplete = 'off';
+  @property({ useDefault: true }) autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Native spellchecking forwarded to the filter input. Attribute removal restores this
@@ -1995,10 +2002,10 @@ export class LyraCombobox<
       return;
     }
     const flags: ValidityStateFlags = {};
-    let message = '';
+    let message: IntrinsicValidityMessage = '';
     if (this.required && this._selected.length === 0) {
       flags.valueMissing = true;
-      message = this.localize('comboboxRequired');
+      message = () => this.localize('comboboxRequired');
     }
     const configured = this.validatorResult();
     if (configured.flags) Object.assign(flags, configured.flags);
@@ -3099,7 +3106,7 @@ export class LyraCombobox<
   private createOption(inputValue: string): void {
     if (this.liveDisabled || this.readonly) return;
     const event = this.emit('lr-create', { inputValue }, { cancelable: true });
-    if (event.defaultPrevented) return;
+    if (event.defaultPrevented || this.liveDisabled || this.readonly || !this.allowCreate) return;
     const option = this.ownerDocument.createElement(
       tag('option')
     ) as LyraOption;
@@ -3429,7 +3436,7 @@ export class LyraCombobox<
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.isComposing || e.keyCode === 229 || this.liveDisabled || this.readonly) return;
+    if (e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey || this.liveDisabled || this.readonly) return;
     const navigable = ['ArrowDown', 'ArrowUp', 'Enter', 'End'].includes(e.key)
       ? this.renderedRows.rows.filter((r) => !r.disabled)
       : [];

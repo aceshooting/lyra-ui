@@ -84,6 +84,9 @@ export interface LyraAppRailGroupEventMap {
  * @cssprop [--lr-app-rail-group-padding-block=var(--lr-space-xs)] - Block padding around
  *   `[part="base"]`.
  * @cssprop [--lr-app-rail-group-heading-color=var(--lr-color-text-quiet)] - Heading text color.
+ * @cssprop [--lr-app-rail-group-heading-font-weight=var(--lr-font-weight-semibold)] - Heading weight.
+ * @cssprop [--lr-app-rail-group-heading-gap=var(--lr-app-rail-group-gap)] - Space between the
+ *   header and visible items. Falls back to the item gap when unset.
  * @cssprop [--lr-app-rail-group-heading-font-size=var(--lr-font-size-sm)] - Heading font size.
  * @cssprop [--lr-app-rail-group-hover-bg=var(--lr-color-brand-quiet)] - Collapse-control hover
  *   background.

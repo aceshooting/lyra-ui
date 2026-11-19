@@ -473,6 +473,68 @@ it('clears the stall timer on disconnect so it cannot fire on a detached element
   expect(stalled, 'a disconnected element must not still transition to stalled').to.be.false;
 });
 
+it('suppresses detached stall and recovery notifications even when Lit renders while detached', async () => {
+  const host = await renderFixture(html`<div><lr-stream-status connection-state="streaming" stall-threshold-ms="0"></lr-stream-status></div>`);
+  const el = host.querySelector('lr-stream-status')!;
+  const events: string[] = [];
+  el.addEventListener('lr-stall', (event) => events.push(event.type));
+  el.addEventListener('lr-recover', (event) => events.push(event.type));
+  el.remove();
+  el.markStalled();
+  await el.updateComplete;
+  expect(el.phase).to.equal('stalled');
+  el.recordActivity();
+  await el.updateComplete;
+  expect(el.phase).to.equal('streaming');
+  expect(events).to.deep.equal([]);
+  expect(liveRegionText(el)).to.equal('');
+
+  host.append(el);
+  el.markStalled();
+  await el.updateComplete;
+  expect(events).to.deep.equal(['lr-stall']);
+});
+
+it('skips the assertive stall announcement if a stall listener immediately records activity', async () => {
+  const el = await renderFixture<LyraStreamStatus>(html`
+    <lr-stream-status connection-state="streaming" stall-threshold-ms="0"></lr-stream-status>
+  `);
+  const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
+  const announcements: Array<[string, string]> = [];
+  const announce = region.announce.bind(region);
+  region.announce = (text, options) => {
+    announcements.push([region.mode, text]);
+    announce(text, options);
+  };
+  el.addEventListener('lr-stall', () => el.recordActivity(), { once: true });
+  const recovered = oneEvent(el, 'lr-recover');
+  el.markStalled();
+  await recovered;
+  expect(el.phase).to.equal('streaming');
+  expect(announcements).to.deep.equal([['polite', 'Connection restored.']]);
+});
+
+it('does not announce a stall from a previous connection after a listener moves the element', async () => {
+  const host = await renderFixture(html`
+    <div><lr-stream-status connection-state="streaming" stall-threshold-ms="0"></lr-stream-status></div>
+  `);
+  const el = host.querySelector('lr-stream-status')!;
+  el.addEventListener('lr-stall', () => {
+    el.remove();
+    host.append(el);
+  }, { once: true });
+
+  el.markStalled();
+  await el.updateComplete;
+  expect(el.isConnected).to.equal(true);
+  expect(el.phase).to.equal('stalled');
+  expect(liveRegionText(el)).to.equal('');
+
+  el.recordActivity();
+  await el.updateComplete;
+  expect(liveRegionText(el)).to.equal('Connection restored.');
+});
+
 it('does not emit or announce a phase transition applied while detached', async () => {
   const wrapper = (await fixture(html`<div><lr-stream-status connection-state="idle"></lr-stream-status></div>`)) as HTMLElement;
   const el = wrapper.querySelector('lr-stream-status') as LyraStreamStatus;

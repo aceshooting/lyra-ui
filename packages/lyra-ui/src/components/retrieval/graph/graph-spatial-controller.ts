@@ -76,7 +76,7 @@ export interface GraphSpatialOptions {
   readonly paint: (nodes: readonly SpatialWorldNode[], edges: readonly LyraGraphEdge[]) => GraphBuiltin3dPaint;
   readonly activate: (hit: SpatialHit, event: MouseEvent | KeyboardEvent) => void;
   readonly expand: (id: string) => void;
-  readonly hover: (previous: SpatialHit | undefined, next: SpatialHit | undefined) => void;
+  readonly hover: (phase: 'enter' | 'leave', hit: SpatialHit) => void;
   readonly community: (community: LyraGraphCommunity) => void;
   readonly cameraChanged: (camera: LyraGraphCamera) => void;
   readonly viewChanged: () => void;
@@ -866,7 +866,11 @@ export class GraphSpatialController {
     const previous = this.hover; this.hover = next;
     const surface = this.selection.renderer === 'webgl' ? this.engineSurface : this.canvas;
     if (surface) surface.title = next?.kind === 'node' ? this.options.nodeTooltip(next.node) : next?.kind === 'link' ? this.options.edgeTooltip(next.edge) : '';
-    this.options.hover(previous, next);
+    const engine = this.host.engine;
+    if (previous) this.options.hover('leave', previous);
+    if (next && this.hover === next && this.host.isConnected && this.host.view === '3d' && this.host.engine === engine) {
+      this.options.hover('enter', next);
+    }
     this.schedule();
   }
 

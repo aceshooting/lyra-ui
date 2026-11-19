@@ -163,6 +163,24 @@ describe("lr-widget-renderer", () => {
     expect(event.detail.actionId).to.equal("second");
   });
 
+  it('retires a mapped action immediately when capture replaces its document', async () => {
+    const action = (actionId: string, payload: number) =>
+      documentFor({ type: 'button', id: 'stable', actionId, payload });
+    const el = await fixture<LyraWidgetRenderer>(html`
+      <lr-widget-renderer .document=${action('first', 1)}></lr-widget-renderer>
+    `);
+    const button = el.shadowRoot!.querySelector('lr-button')!;
+    const actions: unknown[] = [];
+    el.addEventListener('lr-widget-action', event => actions.push(event.detail));
+    button.addEventListener('click', () => { el.document = action('second', 2); }, { capture: true, once: true });
+    button.click();
+    expect(actions).to.deep.equal([]);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-button') === button).to.equal(true);
+    button.click();
+    expect(actions).to.deep.equal([{ actionId: 'second', payload: 2, nodeId: 'stable', nodeKey: 'id:stable', nodePath: '0' }]);
+  });
+
   it('does not reassign props or churn listeners when the resolved mapped node is unchanged', async () => {
     const el = await fixture<LyraWidgetRenderer>(html`
       <lr-widget-renderer
@@ -590,6 +608,8 @@ describe("lr-widget-renderer", () => {
     el.addEventListener("lr-widget-action", () => actions++);
 
     el.document = documentFor({ type: "row" });
+    input.dispatchEvent(new Event('lr-input', { bubbles: true, composed: true }));
+    expect(stateChanges).to.equal(0);
     await el.updateComplete;
     input.dispatchEvent(
       new Event("lr-input", { bubbles: true, composed: true })

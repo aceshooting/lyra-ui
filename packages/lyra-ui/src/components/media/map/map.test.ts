@@ -3566,6 +3566,14 @@ it('exposes every declarative marker as a named button and emits one immutable a
   expect(markerElement.getAttribute('tabindex')).to.equal('0');
   expect(markerElement.getAttribute('aria-label')).to.equal('Station A');
 
+  for (const init of [{ key: ' ', ctrlKey: true }, { key: 'Enter', isComposing: true },
+    { key: 'Enter', keyCode: 229 }]) {
+    const key = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    markerElement.dispatchEvent(key);
+    expect(key.defaultPrevented).to.equal(false);
+  }
+  expect(details).to.have.length(0);
+
   markerElement.click();
   markerElement.dispatchEvent(new KeyboardEvent('keydown', {
     key: 'Enter', bubbles: true, composed: true, cancelable: true,
@@ -9512,4 +9520,20 @@ describe('fitBounds and lr-map-view-change', () => {
       }
     });
   });
+});
+
+it('ignores a legend click if capture replaces its category before activation', async () => {
+  const el = await interactiveLegendMap();
+  const requested: string[] = [];
+  el.addEventListener('lr-map-legend-toggle-request', (event) => requested.push(event.detail.value));
+  el.addEventListener('click', () => {
+    el.legend = [{ color: '#0a0', label: 'Replacement', pattern: 'solid', value: 'replacement' }];
+  }, { capture: true, once: true });
+  legendToggles(el)[0]!.click();
+  expect(requested).to.deep.equal([]);
+  expect([...el.hiddenCategories]).to.deep.equal([]);
+  await el.updateComplete;
+  legendToggles(el)[0]!.click();
+  expect(requested).to.deep.equal(['replacement']);
+  expect([...el.hiddenCategories]).to.deep.equal(['replacement']);
 });

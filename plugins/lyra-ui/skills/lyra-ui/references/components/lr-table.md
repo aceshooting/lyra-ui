@@ -507,6 +507,10 @@ are neither). `lr-retry-request` — the built-in `[part='retry-button']` was ac
 it set, for a consumer that owns its own retry timing (e.g. it wants to keep the banner up until a
 fresh load has actually started, or failed again immediately).
 
+A sort-request listener can replace the columns or set a different sort to retire the pending
+proposal. When a row-activation listener replaces the row model or assigns selection, the table
+keeps the new state and skips the activation's automatic selection.
+
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
 renders as this slot's fallback content. The no-columns branch is deliberately **not**

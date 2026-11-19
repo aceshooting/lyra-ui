@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import type { Placement } from '@floating-ui/dom';
@@ -11,7 +12,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
-import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -238,6 +239,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @slot footer - Replaces the default Now footer action.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-input - The row containing segments and actions.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The wrap-safe label wrapper; unbroken localized text stays within
  *   the host allocation.
  * @csspart label - Compatibility alias for `form-control-label` on the same node.
@@ -471,9 +476,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   constructor() {
     super();
     new GlassScrollLayer(this, '[part="popup"]', () => this.open);
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
 
   /** Whether the column picker is open.
@@ -1079,19 +1082,20 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private forceClose(restoreFocus: boolean): void {
     if (!this._open) return;
+    this.popupController.cancel();
+    this.popupHidden = true;
+    this.popupPositioned = false;
     this.restoreFocusOnClose = restoreFocus;
     this.setOpen(false);
+    // Release the old overlay before a same-task reopening can install its replacement.
+    this.teardownPopup();
   }
 
   private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     return this.popupController.settle(event, {
       waitForPosition: async (stale) => {
         const positioned = await waitForDeferredPlacement(() => this.cleanupPositioner);
-        if (stale() || !this.open) return false;
-        if (!positioned) {
-          this.forceClose(false);
-          return false;
-        }
+        if (stale() || !this.open || !positioned) return false;
         // No active positioner to wait for also resolves `true`; the popup still renders open.
         this.popupPositioned = true;
         return true;
@@ -1114,9 +1118,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     });
     const operation = this.cleanupPositioner;
     void operation.ready.then((positioned) => {
-      if (positioned && this.cleanupPositioner === operation && this.open && this.isConnected) {
-        this.popupPositioned = true;
-      }
+      if (this.cleanupPositioner !== operation || !this.open || !this.isConnected) return;
+      if (positioned) this.popupPositioned = true;
+      else this.forceClose(false);
     });
   }
 
@@ -1239,7 +1243,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       return;
     }
     const flags: ValidityStateFlags = {};
-    let message = '';
+    let message: IntrinsicValidityMessage = '';
     if (this.required && this.value === '') flags.valueMissing = true;
     if (this.partial) flags.badInput = true;
     const parsed = parseTimeValue(this.value);
@@ -1267,7 +1271,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       message ||= this.localize('timeInputStepMessage');
     }
     if (flags.badInput) message = this.localize('timeInputInvalid');
-    else if (flags.valueMissing) message = this.localize('fieldRequired');
+    else if (flags.valueMissing) message = () => this.localize('fieldRequired');
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
@@ -1303,7 +1307,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (this.open && this.effectiveDisabled) this.forceClose(false);
+    if (this.open && (this.effectiveDisabled || this.readonly)) this.forceClose(false);
     const order = this.segmentOrder;
     const orderKey = order.join('|');
     const orderChanged = orderKey !== this.segmentOrderKey;

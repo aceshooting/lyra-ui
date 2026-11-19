@@ -60,6 +60,68 @@ describe('lr-agent-question', () => {
     expect(el.status).to.equal('submitted');
   });
 
+  for (const response of ['accept', 'decline', 'cancel'] as const) {
+    it(`moves focus from the ${response} button to the submitted message and then to the next control`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <lr-agent-question request-id="q" .schema=${schema} .value=${{ name: 'Ada' }}></lr-agent-question>
+          <input aria-label="Next action" />
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-agent-question')!;
+      const button = action(el, response);
+      await focusByKeyboard(button);
+      await sendKeys({ press: 'Enter' });
+      await el.updateComplete;
+
+      const status = el.shadowRoot!.querySelector('[part="status"]');
+      expect(button.disabled).to.equal(true);
+      expect(el.shadowRoot!.activeElement === status, 'the visible submitted message receives focus').to.equal(true);
+      expect(status?.textContent).to.include('Response submitted');
+      expect(status?.getAttribute('tabindex')).to.equal('-1');
+      expect(getComputedStyle(status!).outlineStyle).to.equal('solid');
+
+      await sendKeys({ press: 'Tab' });
+      expect(document.activeElement === wrapper.querySelector('input')).to.equal(true);
+    });
+  }
+
+  it('repairs response focus on the first update after reconnecting', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div><lr-agent-question request-id="q"></lr-agent-question></div>
+    `);
+    const el = wrapper.querySelector('lr-agent-question')!;
+    await el.updateComplete;
+    el.remove();
+    wrapper.append(el);
+
+    await focusByKeyboard(action(el, 'decline'));
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+
+    const status = el.shadowRoot!.querySelector('[part="status"]');
+    expect(el.status).to.equal('submitted');
+    expect(el.shadowRoot!.activeElement === status, 'the submitted message receives focus').to.equal(true);
+  });
+
+  it('preserves focus moved by the response handler', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <input aria-label="Conversation" />
+        <lr-agent-question request-id="q"></lr-agent-question>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-agent-question')!;
+    const receiver = wrapper.querySelector('input')!;
+    el.addEventListener('lr-question-response', () => receiver.focus());
+    await focusByKeyboard(action(el, 'decline'));
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+
+    expect(el.status).to.equal('submitted');
+    expect(document.activeElement === receiver).to.equal(true);
+  });
+
   it('emits one owned draft snapshot for a field edit and ignores a stale request edit', async () => {
     const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="first" .schema=${schema}></lr-agent-question>`);
     const input = form(el).shadowRoot!.querySelector<HTMLInputElement>('input[type="text"]')!;

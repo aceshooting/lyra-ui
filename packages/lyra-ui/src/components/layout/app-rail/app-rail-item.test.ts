@@ -1087,7 +1087,7 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
     expect(getComputedStyle(icon).inlineSize).to.equal('40px');
   });
 
-  it('never shrinks the row below the WCAG 2.5.8 --lr-icon-button-size hit-area floor', async () => {
+  it('keeps an accessible row floor with a smaller custom value', async () => {
     const wrapper = (await fixture(html`
       <div style="--lr-app-rail-item-min-block-size: 4px;">
         <lr-app-rail-item href="/home">Home</lr-app-rail-item>
@@ -1098,9 +1098,10 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
     const floor = parseFloat(
       resolvedInShadow(el, 'min-block-size: var(--lr-icon-button-size)', 'min-block-size')
     );
-    const actual = parseFloat(getComputedStyle(base).minBlockSize);
-    expect(actual).to.be.at.least(floor);
-    expect(actual).to.not.equal(4);
+    const compact = matchMedia('(hover: hover) and (pointer: fine) and (not (any-pointer: coarse))').matches;
+    expect(parseFloat(getComputedStyle(base).minBlockSize)).to.equal(compact ? 24 : Math.max(24, floor));
+    wrapper.style.setProperty('--lr-app-rail-item-min-block-size', '32px');
+    expect(parseFloat(getComputedStyle(base).minBlockSize)).to.equal(compact ? 32 : Math.max(32, floor));
   });
 
   it('renders font-size byte-identical to the inherited value when unset', async () => {
@@ -1836,4 +1837,22 @@ describe('app-rail-item flyout, name and rel', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toggle');
   });
+});
+
+it('themes resting text and the base radius independently of current text color', async () => {
+  const el = await fixture<LyraAppRailItem>(html`
+    <lr-app-rail-item data-lr-theme-scope href="/home" style="--lr-app-rail-item-color: rgb(40, 50, 60);
+      --lr-app-rail-item-current-color: rgb(50, 60, 70); --lr-app-rail-item-radius: 17px;
+      --lr-transition-fast: 0s;">
+      Home
+    </lr-app-rail-item>
+  `);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(getComputedStyle(base).color).to.equal('rgb(40, 50, 60)');
+  expect(getComputedStyle(base).borderRadius).to.equal('17px');
+  el.current = true;
+  el.setAttribute('icon-only', '');
+  await el.updateComplete;
+  expect(getComputedStyle(base).color).to.equal('rgb(50, 60, 70)');
+  expect(getComputedStyle(base).borderRadius).to.equal('17px');
 });

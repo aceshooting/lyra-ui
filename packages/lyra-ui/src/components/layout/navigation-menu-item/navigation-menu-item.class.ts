@@ -206,6 +206,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   private hideAnimation?: Animation;
   private hideAnimationStarted = false;
   private transitionToken = 0;
+  private toggleNotificationSequence = 0;
   private morphCleanup?: () => void;
   private focusInPanel = false;
   private semanticFocusOrigin?: Element;
@@ -307,6 +308,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   }
 
   override disconnectedCallback(): void {
+    this.toggleNotificationSequence++;
     this.removeEventListener('focusin', this.onFocusIn);
     this.removeEventListener('focusout', this.onFocusOut);
     this.removeEventListener('keydown', this.onHostKeyDown);
@@ -424,8 +426,12 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   }
 
   private queueToggle(open: boolean, source: NavigationMenuToggleSource | null): void {
+    const sequence = ++this.toggleNotificationSequence;
     if (source === null) return;
+    const owner = this.ownerContext;
     void this.updateComplete.then(() => {
+      if (!this.isConnected || this._open !== open || sequence !== this.toggleNotificationSequence ||
+          this.ownerContext !== owner) return;
       this.emit('lr-toggle', { expanded: open, source });
     });
   }

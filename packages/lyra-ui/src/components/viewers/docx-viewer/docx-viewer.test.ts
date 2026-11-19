@@ -366,6 +366,10 @@ describe('lr-docx-viewer', () => {
       expect(called).to.be.false;
       expect(count).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+      el.strings = { documentPreviewUrlNotAllowed: 'Blocked document address' };
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Blocked document address');
+      expect(count).to.equal(1);
     } finally {
       window.fetch = original;
     }

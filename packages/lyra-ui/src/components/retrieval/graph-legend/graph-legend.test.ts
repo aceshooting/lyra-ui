@@ -162,6 +162,21 @@ it('toggles hiddenTypes and emits lr-visibility-change with the full updated arr
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
+it('preserves a replacement legend binding installed by a visibility listener', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  let changes = 0;
+  el.addEventListener('lr-visibility-change', () => { changes++; });
+  el.addEventListener('lr-visibility-change-request', () => {
+    el.types = [{ id: 'place', label: 'Place' }];
+    el.hiddenTypes = ['place'];
+  });
+  el.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
+  await el.updateComplete;
+  expect(el.hiddenTypes).to.deep.equal(['place']);
+  expect(el.shadowRoot!.querySelector('button')!.getAttribute('aria-pressed')).to.equal('false');
+  expect(changes).to.equal(0);
+});
+
 it('ignores an activation that lands after interaction was switched off', async () => {
   const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;

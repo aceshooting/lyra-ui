@@ -33,6 +33,49 @@ function assertBelow(el: LyraChatComposer): void {
 }
 
 describe('chat composer toolbar placement', () => {
+  for (const direction of ['ltr', 'rtl']) {
+    it(`aligns the actions toolbar with send in ${direction} and restores start alignment`, async () => {
+      const el = await fixture<LyraChatComposer>(html`
+        <lr-chat-composer dir=${direction} actions-layout="below" toolbar-placement="actions" style="inline-size: 480px">
+          <button slot="start" type="button">Attach</button>
+          <button slot="toolbar" type="button">Model</button>
+        </lr-chat-composer>
+      `);
+      await settle(el);
+      const model = el.querySelector<HTMLButtonElement>('[slot="toolbar"]')!;
+      const toolbar = part(el, 'toolbar');
+      const offset = () => {
+        const region = toolbar.getBoundingClientRect();
+        const control = model.getBoundingClientRect();
+        return direction === 'rtl' ? region.right - control.right : control.left - region.left;
+      };
+      expect(el.toolbarAlign).to.equal('start');
+      expect(offset()).to.be.at.most(1);
+      await focusByKeyboard(model);
+
+      el.toolbarAlign = 'end';
+      await settle(el);
+      expect(el.getAttribute('toolbar-align')).to.equal('end');
+      expect(offset()).to.be.greaterThan(100);
+      const region = toolbar.getBoundingClientRect();
+      const control = model.getBoundingClientRect();
+      expect(Math.abs(direction === 'rtl' ? control.left - region.left : region.right - control.right))
+        .to.be.at.most(1);
+      expect(document.activeElement === model).to.equal(true);
+
+      el.setAttribute('toolbar-align', 'middle');
+      await settle(el);
+      expect(el.toolbarAlign).to.equal('start');
+      expect(el.getAttribute('toolbar-align')).to.equal('start');
+      el.toolbarAlign = 'end';
+      await settle(el);
+      el.removeAttribute('toolbar-align');
+      await settle(el);
+      expect(el.toolbarAlign).to.equal('start');
+      expect(offset()).to.be.at.most(1);
+    });
+  }
+
   it('keeps an unset toolbar placement above attachments in every existing actions layout', async () => {
     for (const layout of ['inline', 'stacked', 'below']) {
       const el = await fixture<LyraChatComposer>(html`
@@ -62,7 +105,7 @@ describe('chat composer toolbar placement', () => {
 
   it('keeps actions placement above attachments while the actions layout is inline', async () => {
     const el = await fixture<LyraChatComposer>(html`
-      <lr-chat-composer actions-layout="inline" toolbar-placement="actions" style="inline-size: 480px">
+      <lr-chat-composer actions-layout="inline" toolbar-placement="actions" toolbar-align="end" style="inline-size: 480px">
         <button slot="toolbar" type="button">Model</button>
         <span slot="chips">notes.txt</span>
         <button slot="start" type="button">Attach</button>
@@ -72,6 +115,8 @@ describe('chat composer toolbar placement', () => {
     expect(el.getAttribute('toolbar-placement')).to.equal('actions');
     expect(el.actionsLayout).to.equal('inline');
     expect(part(el, 'toolbar').getBoundingClientRect().bottom).to.be.at.most(part(el, 'chips').getBoundingClientRect().top + 1);
+    const model = el.querySelector('button')!.getBoundingClientRect();
+    expect(Math.abs(model.left - part(el, 'toolbar').getBoundingClientRect().left)).to.be.at.most(1);
     expect(getComputedStyle(part(el, 'row')).display).to.equal('flex');
   });
 
@@ -103,7 +148,7 @@ describe('chat composer toolbar placement', () => {
     it(`contains a long bottom toolbar at 320px in ${direction} while keeping attach and send at the logical edges`, async () => {
       const wrapper = await fixture<HTMLElement>(html`
         <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
-          <lr-chat-composer actions-layout="below" toolbar-placement="actions"
+          <lr-chat-composer actions-layout="below" toolbar-placement="actions" toolbar-align="end"
             .value=${'A draft that wraps across several lines in a narrow conversation panel.'}>
             <select slot="toolbar" aria-label="Model">
               <option>Research model with extended reasoning and a long translated name</option>
@@ -126,6 +171,11 @@ describe('chat composer toolbar placement', () => {
       expect(base.scrollWidth, 'toolbar overflow stays inside its own region').to.be.at.most(base.clientWidth + 1);
       expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
       expect(toolbar.width).to.be.greaterThan(0);
+      const toolbarPart = part(el, 'toolbar');
+      expect(toolbarPart.scrollWidth).to.be.greaterThan(toolbarPart.clientWidth);
+      const model = el.querySelector('select')!.getBoundingClientRect();
+      expect(Math.abs(direction === 'rtl' ? toolbar.right - model.right : model.left - toolbar.left))
+        .to.be.at.most(1);
       expect(toolbar.left).to.be.at.least(row.left - 1);
       expect(toolbar.right).to.be.at.most(row.right + 1);
       expect(part(el, 'action-button').getBoundingClientRect().width).to.be.greaterThan(0);
@@ -146,7 +196,7 @@ describe('chat composer toolbar placement', () => {
   it('tabs from the textarea through attach and toolbar controls to the built-in send action', async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="inline-size: 480px">
-        <lr-chat-composer actions-layout="below" toolbar-placement="actions">
+        <lr-chat-composer actions-layout="below" toolbar-placement="actions" toolbar-align="end">
           <button id="attach" slot="start" type="button">Attach</button>
           <span slot="toolbar"><button id="model" type="button">Model</button><button id="options" type="button">Options</button></span>
         </lr-chat-composer>

@@ -254,3 +254,40 @@ describe('lr-resize-observer box option fallback', () => {
     }
   });
 });
+
+it('isolates a target rejected both with and without the resize box option', async () => {
+  const originalObserver = window.ResizeObserver;
+  const instances: RejectingResizeObserver[] = [];
+  class RejectingResizeObserver implements ResizeObserver {
+    attempts: string[] = [];
+    observed: Element[] = [];
+    constructor(readonly callback: ResizeObserverCallback) { instances.push(this); }
+    observe(target: Element, options?: ResizeObserverOptions): void {
+      this.attempts.push(`${target.id}:${options?.box ?? 'default'}`);
+      if (target.id === 'rejected') throw new TypeError('target unsupported');
+      this.observed.push(target);
+    }
+    unobserve(): void {}
+    disconnect(): void { this.observed = []; }
+  }
+  window.ResizeObserver = RejectingResizeObserver as unknown as typeof ResizeObserver;
+  try {
+    const el = await fixture<LyraResizeObserver>(html`
+      <lr-resize-observer box="border-box"><div id="rejected"></div><div id="valid"></div></lr-resize-observer>
+    `);
+    await aTimeout(0);
+    const observer = instances.at(-1)!;
+    expect(observer.attempts).to.deep.equal(['rejected:border-box', 'rejected:default', 'valid:border-box']);
+    expect(observer.observed.map(target => target.id)).to.deep.equal(['valid']);
+    const reported: string[][] = [];
+    el.addEventListener('lr-resize', event => reported.push(event.detail.entries.map(item => item.target.id)));
+    const entries = observer.observed.map(resizeEntry);
+    observer.callback(entries, observer);
+    el.remove();
+    expect(observer.observed).to.have.length(0);
+    observer.callback(entries, observer);
+    expect(reported).to.deep.equal([['valid']]);
+  } finally {
+    window.ResizeObserver = originalObserver;
+  }
+});

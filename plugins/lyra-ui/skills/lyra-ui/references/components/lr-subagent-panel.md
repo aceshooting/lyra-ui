@@ -40,7 +40,8 @@ Empty/blank run ids are omitted and later duplicate ids are ignored before hiera
 counts, selection, and events.
 
 **Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), and
-`lr-run-retry` (`{ runId }`).
+`lr-run-retry` (`{ runId }`). Cancel and Retry check that the rendered run still exists and allows
+that action before emitting.
 
 **Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request. Unknown status kinds render title-cased.
 

@@ -94,9 +94,10 @@ export type LyraLocaleBridgeCleanup = () => void;
 
 interface LocaleBridgeState {
   readonly previousLang: string | null;
-  readonly previousDir: string | null;
+  previousDir?: string | null;
   count: number;
   directionCount: number;
+  revision: number;
   unsubscribe: () => void;
 }
 
@@ -109,10 +110,15 @@ function restoreAttribute(target: Element, name: string, value: string | null): 
   else target.setAttribute(name, value);
 }
 
-function applyLocaleBridge(target: Element, state: LocaleBridgeState, locale = getLyraLocale()): void {
+function applyLocaleBridge(target: Element, state: LocaleBridgeState): void {
+  const revision = ++state.revision;
+  const locale = state.count ? getLyraLocale() : '';
   restoreAttribute(target, 'lang', locale || state.previousLang);
-  restoreAttribute(target, 'dir', locale && state.directionCount
-    ? getLyraLocaleDirection(locale) : state.previousDir);
+  // A synchronous lang reaction can install a bridge or change the active locale.
+  if (revision !== state.revision || state.previousDir === undefined) return;
+  const dir = locale && state.directionCount ? getLyraLocaleDirection(locale) : state.previousDir;
+  if (!state.directionCount) state.previousDir = undefined;
+  restoreAttribute(target, 'dir', dir);
 }
 
 /**
@@ -166,9 +172,9 @@ export function bridgeLyraLocale(options: LyraLocaleBridgeOptions = {}): LyraLoc
     state = {
       unsubscribe: subscribeLyraLocale(() => applyLocaleBridge(target, state!)),
       previousLang: target.getAttribute('lang'),
-      previousDir: target.getAttribute('dir'),
       count: 0,
       directionCount: 0,
+      revision: 0,
     };
     localeBridgeStates.set(target, state);
     // A registration reachable from the active locale also notifies: a declared `dir` arrives
@@ -176,7 +182,10 @@ export function bridgeLyraLocale(options: LyraLocaleBridgeOptions = {}): LyraLoc
     // Unrelated registrations are filtered, and every handle shares this one subscription.
   }
   state.count += 1;
-  if (mirrorDirection) state.directionCount += 1;
+  if (mirrorDirection) {
+    if (state.previousDir === undefined) state.previousDir = target.getAttribute('dir');
+    state.directionCount += 1;
+  }
   applyLocaleBridge(target, state);
   let disposed = false;
 
@@ -185,12 +194,12 @@ export function bridgeLyraLocale(options: LyraLocaleBridgeOptions = {}): LyraLoc
     disposed = true;
     if (localeBridgeStates.get(target) !== state) return;
     if (mirrorDirection) state.directionCount -= 1;
-    if (--state.count) {
-      applyLocaleBridge(target, state);
-      return;
+    state.count -= 1;
+    applyLocaleBridge(target, state);
+    // Preserve the original authored snapshot and subscription if restoration acquired a handle.
+    if (!state.count && localeBridgeStates.get(target) === state) {
+      state.unsubscribe();
+      localeBridgeStates.delete(target);
     }
-    state.unsubscribe();
-    applyLocaleBridge(target, state, '');
-    localeBridgeStates.delete(target);
   };
 }

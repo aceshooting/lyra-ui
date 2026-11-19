@@ -22,9 +22,9 @@ resolution and `Intl`-instance caching are as described in
 
 **Properties:**
 
-- `date: string | number | Date = new Date()` — unset means the construction-time current instant.
-  Numeric HTML attributes are epoch milliseconds, matching numeric property assignment (including
-  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
+- `date: string | number | Date = new Date()` — removing the attribute restores the construction-time
+  instant. Numeric HTML attributes are epoch milliseconds, matching numeric property assignment.
+  Nonnumeric strings retain ordinary date parsing. An explicitly empty attribute renders the fallback.
 - optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
   and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
   `Intl.DateTimeFormat` literal set

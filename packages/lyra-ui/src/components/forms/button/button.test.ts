@@ -3504,3 +3504,17 @@ describe('lr-button content-aware shared padding', () => {
     expect(getComputedStyle(base).overflowY).to.equal('visible');
   });
 });
+
+it('supports an inherited font weight override on native button and link surfaces', async () => {
+  const group = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-button appearance="plain">Save</lr-button>
+      <lr-button appearance="plain" href="/settings">Settings</lr-button>
+    </div>
+  `);
+  const buttons = Array.from(group.querySelectorAll<LyraButton>('lr-button'));
+  const bases = buttons.map((button) => button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!);
+  for (const base of bases) expect(getComputedStyle(base).fontWeight).to.equal('600');
+  group.style.setProperty('--lr-button-font-weight', '400');
+  for (const base of bases) expect(getComputedStyle(base).fontWeight).to.equal('400');
+});

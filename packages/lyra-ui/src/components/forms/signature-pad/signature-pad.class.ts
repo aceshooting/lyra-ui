@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { projectFrozenRows, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { isBarredFromValidation } from '../../../internal/form-associated.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { AnchoredValidityController } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
@@ -76,6 +77,9 @@ function pathData(stroke: SignatureStroke): string {
  * the box (10 % with Shift), Space or Enter lowers and lifts the pen, and Escape lifts it. Arrow keys
  * keep their physical direction in right-to-left documents, because a signature is never mirrored.
  *
+ * A pointer release, cancellation or loss of capture commits the drawn portion once. Host
+ * `aria-describedby` references precede the focused surface’s error, hint, instructions and status.
+ *
  * @customElement lr-signature-pad
  * @event change - Native event fired when the user finishes a stroke or clears the pad.
  * @event lr-change - Fired with every `change`. Programmatic changes fire neither.
@@ -85,6 +89,10 @@ function pathData(stroke: SignatureStroke): string {
  * @slot hint - Rich hint content, after the `hint` text.
  * @slot error - Rich error content, after the `errorText` text.
  * @csspart form-control - Wrapper around the label, pad, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label.
  * @csspart base - Wrapper around the surface and the clear button.
  * @csspart surface - The focusable drawing surface.
@@ -146,6 +154,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
 
   private readonly internals = attachInternalsSafely(this);
   private readonly validityController = new AnchoredValidityController(this, this.internals, () => this.surface);
+  private readonly hostDescription = new HostDescriptionController(this, () => this.surface ?? null);
   private readonly slots = new SlotPresenceController(this);
   private _name = '';
   private _required = false;
@@ -289,6 +298,11 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     this.sink = undefined;
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
+
   private get inactive(): boolean {
     return this._disabled || this.fieldsetDisabled;
   }
@@ -310,7 +324,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     const missing = this._required && !this._strokes.length && !this.barred;
     this.validityController.setValidity(
       missing ? { valueMissing: true } : {},
-      missing ? this.localize('fieldRequired') : '',
+      missing ? () => this.localize('fieldRequired') : '',
     );
     this.syncStates();
   }
@@ -426,6 +440,11 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     if (event.pointerId === this.pointerId) this.commit();
   }
 
+  private onLostPointerCapture(event: PointerEvent): void {
+    // Touch may transfer implicit capture from a descendant to the surface at the start of a stroke.
+    if (event.target === event.currentTarget) this.onPointerEnd(event);
+  }
+
   private point({ clientX, clientY }: PointerEvent): Point {
     const { left, top, width, height } = this.rect!;
     return at((clientX - left) / width, (clientY - top) / height);
@@ -501,11 +520,12 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
             aria-labelledby=${hostLabel === null && hasLabel ? 'label' : nothing}
             aria-describedby=${[hasError && 'error', hasHint && 'hint', 'instructions', 'status'].filter(Boolean).join(' ')}
             aria-disabled=${this.inactive ? 'true' : 'false'}
-            aria-invalid=${this.hasInteracted && !this.internals.validity.valid ? 'true' : 'false'}
+            aria-invalid=${hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
             @pointerdown=${this.onPointerDown}
             @pointermove=${this.onPointerMove}
             @pointerup=${this.onPointerEnd}
             @pointercancel=${this.onPointerEnd}
+            @lostpointercapture=${this.onLostPointerCapture}
             @keydown=${this.onKeyDown}
             @focus=${this.onFocus}
             @blur=${this.onBlur}

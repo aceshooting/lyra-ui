@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 8 custom properties — see `lr-app-rail.md`
+- **Themeable via** 8 parts, 10 custom properties — see `lr-app-rail.md`
 - **Documented with** `lr-app-rail`: see [lr-app-rail.md](./lr-app-rail.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

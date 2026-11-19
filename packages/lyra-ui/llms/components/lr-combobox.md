@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -145,8 +145,9 @@ other value (a plain object, a function) is dropped from the row instead of reac
   combobox, making it `readonly` or disabling its fieldset closes an open listbox at once; that
   close is policy, so it emits no `lr-hide`/`lr-after-hide` and cannot be vetoed.
 - `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
-  localized create row. Activating it emits cancelable `lr-create`; unless vetoed, the component
-  appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
+  localized create row. Activating it emits cancelable `lr-create`. After listeners return, the
+  combobox appends and selects the option if creation is still enabled, the field is editable,
+  and the request was accepted. This also applies in `multiple` mode.
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option
 - `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
@@ -759,10 +760,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 - a host-level `aria-label` attribute on `<lr-combobox>` now takes priority over `label`/
   `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
   previously it was silently ignored. Matches the same fallback on `<lr-select>`.
-- `aria-required` reflects `required` immediately; `aria-invalid`, by contrast, only reflects
-  **after the field has been touched** (first `blur`) — a `required` field with a validity error
-  doesn't look invalid to assistive tech before that, by design (avoids flashing invalid styling on
-  first render). Moving focus outside the combobox trigger (Tab away) closes an open listbox,
+- `aria-required` reflects `required` immediately. Visible authored error content sets
+  `aria-invalid="true"` immediately. Native constraint failures appear after interaction. Moving focus outside the combobox trigger (Tab away) closes an open listbox,
   the same as a native `<select>`'s popup. Moving from the input to its clear button retains the
   filter until the button activates; clearing returns focus to the input without changing whether
   the listbox is open.

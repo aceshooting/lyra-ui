@@ -729,6 +729,32 @@ describe('auto-advance and backspace navigation', () => {
 });
 
 describe('arrow-key field-to-field navigation and RTL', () => {
+  it('leaves modified boundary arrows and Backspace available to the native field', async () => {
+    const el = await fixture<LyraKnownDate>(html`
+      <lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>
+    `);
+    const month = fieldFor(el, 'month');
+    await focusByKeyboard(month);
+    month.setSelectionRange(0, 0);
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true, [modifier]: true,
+      });
+      month.dispatchEvent(event);
+      expect(event.defaultPrevented).to.equal(false);
+      expect(el.shadowRoot!.activeElement === month).to.equal(true);
+    }
+
+    month.value = '';
+    month.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    const deletion = new KeyboardEvent('keydown', {
+      key: 'Backspace', bubbles: true, composed: true, cancelable: true, ctrlKey: true,
+    });
+    month.dispatchEvent(deletion);
+    expect(deletion.defaultPrevented).to.equal(false);
+    expect(el.shadowRoot!.activeElement === month).to.equal(true);
+  });
+
   it('moves to the next field on ArrowRight at the end of the text, and to the previous on ArrowLeft at the start', async () => {
     const el = (await fixture(
       html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`,

@@ -411,3 +411,64 @@ describe('<lr-signature-pad>', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('settles the drawn stroke once when capture transfers and accepts the next stroke', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-signature-pad style="inline-size: 300px"></lr-signature-pad><button>Other target</button></div>
+  `);
+  const el = wrapper.querySelector('lr-signature-pad')!;
+  const surface = part(el, 'surface');
+  const counts = countEvents(el);
+  let pointerId = -1;
+  surface.addEventListener('pointerdown', event => { pointerId = event.pointerId; }, { once: true });
+  await sendMouse({ type: 'move', position: at(el, 0.2, 0.2) });
+  await sendMouse({ type: 'down' });
+  try {
+    await sendMouse({ type: 'move', position: at(el, 0.4, 0.5) });
+    surface.dispatchEvent(new PointerEvent('lostpointercapture', { pointerId: pointerId + 1 }));
+    surface.querySelector('svg')!.dispatchEvent(
+      new PointerEvent('lostpointercapture', { pointerId, bubbles: true }),
+    );
+    expect(counts.change).to.equal(0);
+    wrapper.querySelector('button')!.setPointerCapture(pointerId);
+    await sendMouse({ type: 'move', position: at(el, 0.7, 0.8) });
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+  expect(el.strokes.length).to.equal(1);
+  expect(el.strokes[0]!.length).to.be.at.least(2);
+  surface.dispatchEvent(new PointerEvent('pointerup', { pointerId }));
+  expect(counts).to.deep.equal({ change: 1, lrChange: 1 });
+  await sendMouse({ type: 'click', position: at(el, 0.6, 0.6) });
+  expect(el.strokes.length).to.equal(2);
+  expect(counts).to.deep.equal({ change: 2, lrChange: 2 });
+  await resetMouse();
+});
+
+it('keeps host descriptions on the focus owner alongside its changing local descriptions', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <p id="signature-help">Sign using your full name.</p>
+      <p id="signature-policy">Use your legal name.</p>
+      <lr-signature-pad aria-describedby="signature-help" hint="Sign here."></lr-signature-pad>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-signature-pad')!;
+  const surface = part(el, 'surface');
+  await focusByKeyboard(surface);
+  expect(el.shadowRoot!.activeElement?.id).to.equal('surface');
+  const ids = () => Reflect.has(surface, 'ariaDescribedByElements')
+    ? Array.from(surface.ariaDescribedByElements ?? [], element => element.id)
+    : (surface.getAttribute('aria-describedby') ?? '').split(/\s+/);
+  await waitUntil(() => ids().includes('signature-help'));
+  expect(ids()).to.deep.equal(['signature-help', 'hint', 'instructions', 'status']);
+  el.setAttribute('aria-describedby', 'signature-policy');
+  el.errorText = 'Signature required.';
+  await el.updateComplete;
+  await waitUntil(() => ids().includes('signature-policy'));
+  expect(ids()).to.deep.equal(['signature-policy', 'error', 'hint', 'instructions', 'status']);
+  el.removeAttribute('aria-describedby');
+  await waitUntil(() => !ids().includes('signature-policy'));
+  expect(ids()).to.deep.equal(['error', 'hint', 'instructions', 'status']);
+});

@@ -6,6 +6,7 @@ import { resolveLyraString } from './localization-runtime.js';
 import type { LyraLocaleStrings } from './localization-types.js';
 import {
   SET_ANCHORED_VALIDITY,
+  type IntrinsicValidityMessage,
   VALIDITY_ANCHOR,
 } from './anchored-validity.js';
 import { setCustomState, syncValidityStates } from './custom-states.js';
@@ -324,7 +325,7 @@ export interface FormAssociatedInterface<TValue = string> {
     reason: 'autocomplete' | 'restore',
   ): void;
   /** @internal */
-  [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message?: string): void;
+  [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message?: IntrinsicValidityMessage): void;
 }
 
 /** Subclass-only transaction seam retained in the mixin's explicit constructor return type. */
@@ -516,7 +517,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     }
 
     /** @internal */
-    [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message = ''): void {
+    [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message: IntrinsicValidityMessage = ''): void {
       this.validityController.setValidity(flags, message);
       this.syncValidityStates();
     }
@@ -809,7 +810,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // Emptiness is the adapter's answer, never `=== ''`: a `[]`, a `null` date and a `0` rating
       // are each "missing" for their own control and none of them is the empty string.
       if (this.required && this.isMissingValue()) {
-        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.requiredMessage());
+        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, () => this.requiredMessage());
       } else {
         this[SET_ANCHORED_VALIDITY]({});
       }
@@ -989,6 +990,8 @@ export declare class CheckedFormAssociatedSubclassInterface {
   protected checkedWritten(previous: boolean): void;
   /** Runs after every `value` write. */
   protected valueWritten(previous: string): void;
+  /** Updates live checkedness on behalf of a peer without making a pristine control dirty. */
+  protected setCheckedPreservingDirty(value: boolean): void;
   /** Restores the live checked state from the reset default and clears the dirty flag. */
   protected restoreCheckedFromDefault(): void;
 }
@@ -1148,13 +1151,18 @@ export function CheckedFormAssociated<T extends Constructor<LitElement>>(
       return !this._checked;
     }
 
-    protected restoreCheckedFromDefault(): void {
+    protected setCheckedPreservingDirty(value: boolean): void {
+      const previous = this.settingDefaultChecked;
       this.settingDefaultChecked = true;
       try {
-        this.checked = this._defaultChecked;
+        this.checked = value;
       } finally {
-        this.settingDefaultChecked = false;
+        this.settingDefaultChecked = previous;
       }
+    }
+
+    protected restoreCheckedFromDefault(): void {
+      this.setCheckedPreservingDirty(this._defaultChecked);
       this._checkedDirty = false;
     }
 

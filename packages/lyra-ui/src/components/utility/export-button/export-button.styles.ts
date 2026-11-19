@@ -41,7 +41,16 @@ export const styles = css`
     --_lr-export-button-active-color: var(--lr-color-text-quiet);
     --_lr-export-button-active-border: var(--lr-color-brand);
   }
+  :host([appearance='plain']) {
+    --_lr-export-button-background: transparent;
+    --_lr-export-button-border: transparent;
+    --_lr-export-button-hover-background: var(--lr-color-brand-quiet);
+    --_lr-export-button-hover-border: transparent;
+    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-border: transparent;
+  }
   [part~='trigger'] {
+    --_lr-export-button-icon-size: var(--lr-icon-button-size);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -98,10 +107,20 @@ export const styles = css`
   :host([size='l']) [part='menu-item'],
   :host([size='large']) [part='menu-item'],
   :host([size='xl']) [part='menu-item'] {
+    --_lr-export-button-icon-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
     font-size: var(--lr-form-control-font-size);
     padding-block: var(--lr-form-control-padding-block);
     padding-inline: var(--lr-form-control-padding-inline);
     min-block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
+  }
+  .trigger-icon {
+    display: contents;
+  }
+  :host([icon-only]) [part~='trigger'] {
+    box-sizing: border-box;
+    inline-size: var(--_lr-export-button-icon-size);
+    block-size: var(--_lr-export-button-icon-size);
+    padding: 0;
   }
   [part~='trigger']:disabled {
     opacity: var(--lr-opacity-disabled);

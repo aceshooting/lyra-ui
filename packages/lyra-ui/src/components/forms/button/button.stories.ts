@@ -700,3 +700,11 @@ export const StretchedLabelLayout: Story = {
     </div>
   `,
 };
+
+export const RegularWeightPlainButton: Story = {
+  render: () => html`
+    <lr-button appearance="plain" with-caret style="--lr-button-font-weight: var(--lr-font-weight-normal)">
+      Open settings
+    </lr-button>
+  `,
+};

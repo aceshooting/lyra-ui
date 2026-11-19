@@ -3929,3 +3929,36 @@ describe("lr-combobox activation event", () => {
     ).to.equal(0);
   });
 });
+
+it('leaves browser-modified navigation keys available while closed and open', async () => {
+  const el = await fixture<LyraCombobox>(basic());
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox-input"]')!;
+  for (const open of [false, true]) {
+    if (open) await el.show();
+    const previous = control.getAttribute('aria-activedescendant');
+    for (const modifier of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true, ...modifier });
+      control.dispatchEvent(event);
+      await el.updateComplete;
+      expect(event.defaultPrevented).to.equal(false);
+      expect(el.open).to.equal(open);
+      expect(control.getAttribute('aria-activedescendant')).to.equal(previous);
+    }
+  }
+  await el.hide();
+});
+
+it('rechecks creation policy after the synchronous create listener returns', async () => {
+  for (const policy of ['readonly', 'disabled', 'allowCreate'] as const) {
+    const el = await fixture<LyraCombobox>(html`<lr-combobox allow-create></lr-combobox>`);
+    await typeQuery(el, 'New tag');
+    let changes = 0;
+    el.addEventListener('lr-change', () => changes++);
+    el.addEventListener('lr-create', () => { el[policy] = policy !== 'allowCreate'; }, { once: true });
+    el.shadowRoot!.querySelector<HTMLElement>('[data-create]')!.click();
+    await el.updateComplete;
+    expect(el.querySelectorAll('lr-option').length).to.equal(0);
+    expect(el.value).to.equal('');
+    expect(changes).to.equal(0);
+  }
+});

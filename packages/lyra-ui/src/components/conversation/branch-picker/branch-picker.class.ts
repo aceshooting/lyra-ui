@@ -9,6 +9,8 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -154,8 +156,22 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     (target ?? this.previousButtonEl ?? this.nextButtonEl)?.click();
   }
 
+  private focusedChevron?: HTMLButtonElement;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('index') || changed.has('count')) {
+      const active = shadowFocusTarget(this);
+      if (active === this.previousButtonEl) this.focusedChevron = this.previousButtonEl;
+      else if (active === this.nextButtonEl) this.focusedChevron = this.nextButtonEl;
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const focused = this.focusedChevron;
+    this.focusedChevron = undefined;
+    if (focused) repairUnavailableControlFocus(focused, [this.previousButtonEl, this.nextButtonEl]);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('index') && !wasMounting) {

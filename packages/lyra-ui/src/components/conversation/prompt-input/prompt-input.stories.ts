@@ -109,7 +109,7 @@ export const InputLimit: StoryObj = {
 
 export const BottomToolbar: Story = {
   render: () => html`
-    <lr-prompt-input actions-layout="below" toolbar-placement="actions"
+    <lr-prompt-input actions-layout="below" toolbar-placement="actions" toolbar-align="end"
       .modelCatalog=${[{ id: 'fast', label: 'Fast' }]} model="fast"
       style="inline-size: 320px; max-inline-size: 100%">
       <button slot="start" type="button" aria-label="Attach file">+</button>
@@ -118,6 +118,6 @@ export const BottomToolbar: Story = {
     </lr-prompt-input>
   `,
   parameters: {
-    docs: { description: { story: 'Caller toolbar content moves into the bottom action row. The independent model, voice and source controls remain above the composer.' } },
+    docs: { description: { story: 'Caller toolbar content sits beside the end actions in the bottom row. The independent model, voice and source controls remain above the composer.' } },
   },
 };

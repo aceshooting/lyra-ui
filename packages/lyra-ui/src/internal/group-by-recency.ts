@@ -1,3 +1,5 @@
+import { localDate } from './calendar-date.js';
+
 /** Per-bucket English defaults, overridable the same "no i18n, but
  *  overridable via an options object" way `<lr-date-picker>`/
  *  `<lr-source-list>`'s `label-plural` already establish. */
@@ -45,7 +47,7 @@ const DEFAULT_LABELS: Required<RecencyLabels> = {
  *  built from `d`'s own local-timezone Y/M/D fields, so this is a calendar-
  *  day boundary, not a rolling 24-hour offset from `d` itself. */
 export function startOfLocalDay(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return localDate(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
 /** Whole local calendar days from `date` back to the day starting at `todayStart`; 0 or negative

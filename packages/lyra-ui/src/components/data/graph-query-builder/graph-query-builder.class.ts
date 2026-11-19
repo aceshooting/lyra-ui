@@ -321,6 +321,10 @@ export interface LyraGraphQueryBuilderEventMap {
  * @event lr-invalid - Cancelable alias when the complete builder fails native validity; vetoing it
  *   also suppresses the native invalid default.
  * @csspart base - The outer wrapper around every section.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Visible label for the complete form control; shares the same
  *   node as the `label` compatibility alias.
  * @csspart label - Compatibility alias for `form-control-label`.
@@ -922,23 +926,21 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   private runQuery(): void {
     if (this.effectiveDisabled) return;
     if (!this.reportValidity()) return;
-    const detail = (): GraphQueryRunDetail =>
-      Object.freeze({ query: normalizeGraphQuery(this._value) });
-    const request = this.emit('lr-query-run-request', detail(), { cancelable: true });
+    const detail = Object.freeze({ query: this._value });
+    const request = this.emit('lr-query-run-request', detail, { cancelable: true });
     if (request.defaultPrevented) return;
-    this.emit('lr-query-run', detail());
+    this.emit('lr-query-run', detail);
   }
 
   private saveQuery(): void {
     if (this.effectiveDisabled) return;
     const name = this.saveName.trim();
     if (!name) return;
-    const detail = (): GraphQuerySaveDetail =>
-      Object.freeze({ name, query: normalizeGraphQuery(this._value) });
-    const request = this.emit('lr-query-save-request', detail(), { cancelable: true });
+    const detail = Object.freeze({ name, query: this._value });
+    const request = this.emit('lr-query-save-request', detail, { cancelable: true });
     if (request.defaultPrevented) return;
     this.saveName = '';
-    this.emit('lr-query-save', detail());
+    this.emit('lr-query-save', detail);
   }
 
   private loadQuery(item: GraphQuerySavedItem): void {

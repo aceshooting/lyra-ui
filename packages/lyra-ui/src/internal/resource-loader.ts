@@ -14,9 +14,11 @@ export class LyraResourceLimitError extends Error {
   }
 }
 
+type ViewerLocalize = (key: string) => string;
+
 /** Marks a deliberately localized component message safe to show to users. */
 export class LyraUserFacingError extends Error {
-  constructor(message: string) {
+  constructor(message: string, readonly resolveMessage?: (localize: ViewerLocalize) => string) {
     super(message);
     this.name = 'LyraUserFacingError';
   }
@@ -146,7 +148,7 @@ export async function readResponseArrayBuffer(response: Response, maxBytes = DEF
   } finally {
     reader.releaseLock();
   }
-  return output.slice(0, total).buffer;
+  return (total === output.byteLength ? output : output.slice(0, total)).buffer;
 }
 
 export async function readResponseText(response: Response, maxBytes = DEFAULT_MAX_RESOURCE_BYTES): Promise<string> {

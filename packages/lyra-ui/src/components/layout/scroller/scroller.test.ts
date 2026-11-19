@@ -71,6 +71,24 @@ describe("<lr-scroller>", () => {
     expect("hideScrollbar" in el).to.be.false;
   });
 
+  it('restores horizontal controls and scroll geometry when orientation is removed', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls orientation="vertical" style="inline-size:100px">
+        <div style="inline-size:500px;block-size:20px"></div>
+      </lr-scroller>
+    `);
+    const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    await waitUntil(() => next.disabled, 'no content overflows vertically');
+    el.removeAttribute('orientation');
+    await el.updateComplete;
+    expect(el.orientation).to.equal('horizontal');
+    await waitUntil(() => !next.disabled, 'horizontal overflow enables the next control');
+    next.click();
+    await waitUntil(() => viewport.scrollLeft > 0, 'the next control scrolls horizontally');
+    expect(viewport.scrollTop).to.equal(0);
+  });
+
   it("renders logical start/end shadow parts only where more content exists", async () => {
     const el = await fixture<LyraScroller>(html`
       <lr-scroller label="Items" style="inline-size: 100px;">

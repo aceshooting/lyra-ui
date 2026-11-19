@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -18,6 +19,7 @@ import {
 import {
   SET_ANCHORED_VALIDITY,
   VALIDITY_ANCHOR,
+  type IntrinsicValidityMessage,
 } from '../../../internal/anchored-validity.js';
 import {
   deferredPlaceReady as place,
@@ -392,6 +394,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart date-input - The date-input wrapper.
  * @csspart base - Permanent compatibility name for the nested base wrapper.
  * @csspart form-control - The outer form-control wrapper.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The outer label wrapper.
  * @csspart label - Permanent compatibility name for the inner label-content wrapper.
  * @csspart form-control-input - The editable date surface.
@@ -811,9 +817,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   constructor() {
     super();
     new GlassScrollLayer(this, '[part="popup"]', () => this.open);
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
   // `[part]:empty` never matches — the part always contains a literal
   // `<slot>` child element regardless of assigned content — so real
@@ -1257,13 +1261,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const configured = this.validatorResult();
     if (configured.flags) Object.assign(flags, configured.flags);
 
-    let message = '';
+    let message: IntrinsicValidityMessage = '';
     if (configured.message) message = configured.message;
     else if (flags.badInput || flags.customError)
       message = this.localize('dateInputInvalid');
     else if (flags.rangeUnderflow) message = underflowMessage;
     else if (flags.rangeOverflow) message = overflowMessage;
-    else if (flags.valueMissing) message = this.localize('fieldRequired');
+    else if (flags.valueMissing) message = () => this.localize('fieldRequired');
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 

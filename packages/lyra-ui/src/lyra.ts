@@ -985,6 +985,7 @@ export type {
 } from './components/agent-tools/tool-result-dialog/tool-result-dialog.class.js';
 export type {
   ChatComposerActionsLayout,
+  ChatComposerToolbarAlign,
   ChatComposerToolbarPlacement,
   ChatComposerFrame,
   ChatComposerStatus,
@@ -1151,6 +1152,7 @@ export type {
 } from './components/overlays/overlay/popover.class.js';
 export type {
   LyraTooltipEventMap,
+  LyraTooltipLabelMode,
   LyraTooltipTrigger,
 } from './components/overlays/overlay/tooltip.class.js';
 export type { LyraArrowPlacement } from './components/overlays/overlay/popover.class.js';

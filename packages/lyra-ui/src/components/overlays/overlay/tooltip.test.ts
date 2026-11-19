@@ -288,8 +288,10 @@ describe('keyboard-only focus activation', () => {
       <lr-tooltip show-delay="0">Keyboard help<button type="button" slot="trigger">Help</button></lr-tooltip>
     `);
     const trigger = el.querySelector('button')!;
+    const shown = oneEvent(el, 'lr-after-show');
     await focusByKeyboard(trigger);
-    await waitUntil(() => el.open, 'keyboard focus opens the tooltip');
+    await shown;
+    expect(el.open).to.be.true;
     expect(describesWithProxy(el, trigger)).to.equal(true);
     await expect(el).to.be.accessible();
   });
@@ -1449,4 +1451,46 @@ it('does not re-inspect content for unrelated mutations in a label-reference roo
   const label = wrapper.querySelector('#ref-label-quiet')!;
   label.removeAttribute('id');
   await waitUntil(() => inspections > 0);
+});
+
+it('restores hover and keyboard activation after removing trigger and preserves an explicit empty list', async () => {
+  const el = await fixture<LyraTooltip>(html`<lr-tooltip trigger="click" show-delay="0" content="Help"><button>Help</button></lr-tooltip>`);
+  const trigger = el.querySelector('button')!;
+  el.setAttribute('trigger', '');
+  trigger.dispatchEvent(new MouseEvent('mouseenter'));
+  expect(el.open).to.be.false;
+  el.removeAttribute('trigger');
+  expect(el.trigger).to.equal('hover focus');
+  const shown = oneEvent(el, 'lr-after-show');
+  await focusByKeyboard(trigger);
+  await shown;
+  await el.hide();
+  trigger.dispatchEvent(new MouseEvent('mouseenter'));
+  expect(el.open).to.be.true;
+});
+
+it('retains a hover tooltip while its action has focus and closes after both pointer and focus leave', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="margin:100px"><button id="outside">Outside</button>
+      <lr-tooltip trigger="hover" show-delay="0" hide-delay="300" placement="bottom" distance="0">
+        <button slot="trigger">Help</button><button id="action">Details</button>
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-tooltip')!;
+  const trigger = el.querySelector<HTMLButtonElement>('[slot="trigger"]')!;
+  const action = el.querySelector<HTMLButtonElement>('#action')!;
+  const shown = oneEvent(el, 'lr-after-show');
+  await hoverUntilMatched(trigger, 'trigger is hovered');
+  await shown;
+  await hoverUntilMatched(action, 'action is hovered');
+  await focusByKeyboard(action);
+  el.hideDelay = 0;
+  await el.updateComplete;
+  await resetMouse();
+  await nextFrame();
+  expect(document.activeElement === action).to.be.true;
+  expect(el.open).to.be.true;
+  await focusByKeyboard(wrapper.querySelector<HTMLButtonElement>('#outside')!);
+  await waitUntil(() => !el.open);
 });

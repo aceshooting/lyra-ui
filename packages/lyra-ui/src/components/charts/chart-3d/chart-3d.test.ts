@@ -69,6 +69,22 @@ describe('lr-chart-3d data table', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('uses the point ID for blank labels in the narrow chart table and cursor', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div style="inline-size: 320px">
+      <lr-chart-3d lang="en" .data=${columns(3, {
+        ids: ['north', 'east', 'south'],
+        labels: ['', ' \t\u00a0 ', 'South'],
+      })}></lr-chart-3d>
+    </div>`);
+    const el = wrapper.querySelector<LyraChart3d>('lr-chart-3d')!;
+    await el.updateComplete;
+    const rowHeaders = [...el.shadowRoot!.querySelectorAll('th[scope="row"]')];
+    expect(rowHeaders.map((header) => header.textContent?.trim())).to.deep.equal(['north', 'east', 'South']);
+    expect(parts(el, 'row-button').map((button) => button.textContent?.trim())).to.deep.equal(['north', 'east', 'South']);
+    expect(cursorText(el)).to.contain('north');
+    await expect(el).to.be.accessible();
+  });
+
   it('adds the diameter column for bubble charts, names categories and renders both aria-pressed values', async () => {
     const el = await fixture<LyraChart3d>(html`<lr-chart-3d lang="en" type="bubble" selected-id="row-1" .data=${columns(3, {
       size: Float32Array.of(8, 16, 24), category: Uint16Array.of(0, 1, 0), categories: ['Control', 'Treatment'],

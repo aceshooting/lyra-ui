@@ -49,20 +49,26 @@ describe('generated view state and host actions', () => {
     expect(node(element, 'note').textContent).to.equal('After');
   });
 
-  it('preserves focused native selection when keyed controls reorder', async () => {
+  for (const placement of ['light', 'shadow'] as const) it(`preserves focused native selection on keyed reorder in consumer ${placement} DOM`, async () => {
     const note: LyraGenNode = { id: 'note', type: 'text', text: 'Note' };
-    const element = await mounted({ id: 'root', type: 'stack', children: [note, field('name', 'Selection')] });
+    const consumer = await fixture<HTMLElement>(html`<div></div>`);
+    const parent = placement === 'shadow' ? consumer.attachShadow({ mode: 'open' }) : consumer;
+    const element = new LyraGenViewElement();
+    element.document = view({ id: 'root', type: 'stack', children: [note, field('name', 'Selection')] });
+    parent.append(element);
+    await waitUntil(() => Boolean(element.shadowRoot?.querySelector('lr-input')));
     const control = node<Control>(element, 'name');
     await control.updateComplete;
     const native = control.shadowRoot!.querySelector('input')!;
     await focusByKeyboard(native);
-    native.setSelectionRange(1, 4);
+    native.setSelectionRange(1, 4, 'backward');
     element.document = view({ id: 'root', type: 'stack', children: [field('name', 'Selection'), note] }, initialCatalog, 1);
     await element.updateComplete;
     expect(node(element, 'name') === control).to.equal(true);
     expect(control.shadowRoot!.activeElement === native).to.equal(true);
     expect(native.selectionStart).to.equal(1);
     expect(native.selectionEnd).to.equal(4);
+    expect(native.selectionDirection).to.equal('backward');
   });
 
   it('publishes controlled proposals and restores host values', async () => {
@@ -107,6 +113,26 @@ describe('generated view state and host actions', () => {
     expect(result.detail.dirty).to.deep.equal(['/b']);
     expect(node<Control>(element, 'a').value).to.equal('Default A');
     expect(node<Control>(element, 'b').value).to.equal('Edited B');
+  });
+
+  for (const replaceDocument of [false, true]) it(`retires a queued native reset after ${replaceDocument ? 'document and bindings' : 'bindings'} change`, async () => {
+    const root: LyraGenNode = { id: 'form', type: 'form', props: { ariaLabel: 'Entry' }, children: [field('name', 'Default')] };
+    const element = await mounted(root);
+    await edit(element, 'name', 'Edited');
+    const changes: LyraGenStateChange[] = [];
+    element.addEventListener('lr-gen-state-change', event => changes.push(event.detail));
+    const form = node<HTMLFormElement>(element, 'form');
+    form.addEventListener('reset', () => {
+      if (replaceDocument) element.document = view(root, initialCatalog, 1);
+      element.bindingState = { name: 'Replacement' };
+    }, { once: true });
+    form.reset();
+    await element.updateComplete;
+    expect(changes.length).to.equal(0);
+    expect(node<Control>(element, 'name').value).to.equal('Replacement');
+    const pending = oneEvent(element, 'lr-gen-state-change');
+    form.reset();
+    expect((await pending as CustomEvent<LyraGenStateChange>).detail.revision).to.equal(replaceDocument ? 1 : 0);
   });
 
   it('uses native form validity before emitting a bound submit payload', async () => {
@@ -180,6 +206,27 @@ describe('generated view state and host actions', () => {
     await element.updateComplete;
     expect(actions).to.equal(0);
     expect(signal?.aborted).to.equal(true);
+  });
+
+  it('ignores a retired confirmation rejection and reports a current rejection', async () => {
+    const catalog = actionCatalog(true);
+    const root: LyraGenNode = { id: 'save', type: 'button', text: 'Save', action: { name: 'save', payload: null } };
+    const element = await mounted(root, catalog);
+    let reject!: () => void;
+    element.confirmAction = () => new Promise<boolean>((_resolve, fail) => { reject = fail; });
+    await element.updateComplete;
+    const errors: string[] = [];
+    element.addEventListener('lr-gen-error', event => errors.push(event.detail.diagnostics[0]!.code));
+    node(element, 'save').click();
+    // Queue the rejection continuation before Lit processes the synchronous replacement.
+    reject();
+    element.document = view({ ...root, text: 'New revision' }, catalog, 1);
+    await element.updateComplete;
+    expect(errors).to.deep.equal([]);
+    node(element, 'save').click();
+    reject();
+    await Promise.resolve();
+    expect(errors).to.deep.equal(['action.denied']);
   });
 
   it('emits a typed action only after affirmative host confirmation', async () => {

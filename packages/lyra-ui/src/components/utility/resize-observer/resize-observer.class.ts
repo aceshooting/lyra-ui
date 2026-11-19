@@ -91,8 +91,14 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
 
   private disconnect(): void {
     this.observerGeneration += 1;
-    this.observer = disconnectObserver(this.observer);
+    const observer = this.observer;
+    this.observer = undefined;
     this.observerDocument = undefined;
+    try {
+      disconnectObserver(observer);
+    } catch {
+      // The observer is retired even when its implementation refuses cleanup.
+    }
   }
 
   private observeTargets = (): void => {
@@ -117,13 +123,21 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     });
     this.observer = observer;
     this.observerDocument = ownerDocument;
+    let observed = false;
     for (const target of targets) {
       try {
         observer.observe(target, { box: this.box });
       } catch {
-        observer.observe(target);
+        try {
+          observer.observe(target);
+        } catch {
+          // A rejected target must not prevent registration of the remaining targets.
+          continue;
+        }
       }
+      observed = true;
     }
+    if (!observed && this.observer === observer) this.disconnect();
   };
 
   override render(): TemplateResult {

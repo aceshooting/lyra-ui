@@ -172,7 +172,8 @@ function isContextMenuKey(event: KeyboardEvent): boolean {
  * @event lr-after-show - The menu is open and its transition has finished.
  * @event lr-hide - The menu is about to close. Cancelable; preventing it keeps the menu open.
  * @event lr-after-hide - The menu is closed and its transition has finished. Not delivered for a
- *   close that a new gesture interrupts before its transition settles.
+ *   close that a new gesture interrupts before its transition settles. A listener can call
+ *   `showAt()` immediately to open another menu with its own anchor and focus-return target.
  * @event lr-select - A menu item was activated. `detail: { item }`. Cancelable; preventing the
  *   event keeps the menu open. This is the menu's own event bubbling through.
  * @cssprop [--max-width=var(--lr-overlay-max-inline-size,var(--lr-size-20rem))] - Maximum inline
@@ -235,6 +236,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   private anchorElement?: Element;
   private anchorRect?: DOMRect;
   private watchCleanup?: () => void;
+  private pendingOpen?: OpenRequest;
   private expectingInnerShow = false;
   private silentClose = false;
   private closingForMove = false;
@@ -307,6 +309,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
     this.returnFocusTo = undefined;
     this.anchorElement = undefined;
     this.anchorRect = undefined;
+    this.pendingOpen = undefined;
     this.expectingInnerShow = false;
     this.closingForMove = false;
     super.disconnectedCallback();
@@ -579,8 +582,11 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   private requestOpen(request: OpenRequest): boolean {
     const shell = this.shell;
     if (this.disabled || !this.isConnected || this.open || !shell) return false;
+    request = { ...request, returnFocusTo: request.returnFocusTo ?? this.relatedFocusTarget(request) };
+    const inPreflight = this.pendingOpen !== undefined;
+    this.pendingOpen = request;
+    if (inPreflight) return false;
     this.silentClose = false;
-    const returnFocusTo = request.returnFocusTo ?? this.relatedFocusTarget(request);
     const event = this.emit('lr-show', {
       source: request.source,
       target: request.target,
@@ -589,12 +595,15 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
       clientY: request.y,
       originalEvent: request.originalEvent,
     }, { cancelable: true });
-    if (event.defaultPrevented) return false;
-    if (this.disabled || !this.isConnected) return false;
+    // A synchronous showAt() updates the destination of this same cancelable preflight.
+    const accepted = this.pendingOpen;
+    this.pendingOpen = undefined;
+    if (event.defaultPrevented || !accepted || this.disabled || !this.isConnected) return false;
+    const { x, y, anchor, returnFocusTo } = accepted;
     this.expectingInnerShow = true;
     try {
       shell.showAt(
-        { x: request.x, y: request.y, contextElement: request.anchor },
+        { x, y, contextElement: anchor },
         { returnFocusTo },
       );
     } finally {
@@ -603,7 +612,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
     if (!shell.open) return false;
     this.returnFocusTo = returnFocusTo;
     setCustomState(this.contextMenuInternals, 'open', true);
-    if (request.anchor) this.startWatching(request.anchor);
+    if (anchor) this.startWatching(anchor);
     else this.stopWatching();
     return true;
   }
@@ -677,11 +686,11 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   private onInnerAfterHide = (event: Event): void => {
     if (event.target !== this.shell) return;
     event.stopPropagation();
-    if (this.silentClose) this.silentClose = false;
-    else this.emit('lr-after-hide');
     this.returnFocusTo = undefined;
     this.anchorElement = undefined;
     this.anchorRect = undefined;
+    if (this.silentClose) this.silentClose = false;
+    else this.emit('lr-after-hide');
   };
 
   // ---- anchor watcher ------------------------------------------------------------------------

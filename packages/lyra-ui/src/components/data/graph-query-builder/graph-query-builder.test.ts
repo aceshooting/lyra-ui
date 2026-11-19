@@ -428,6 +428,23 @@ describe('lr-graph-query-builder', () => {
   }
   });
 
+  for (const action of ['run', 'save'] as const) {
+    it(`posts the proposed ${action} query after a listener replaces the value`, async () => {
+      const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder .value=${query({ startId: 'old' })}></lr-graph-query-builder>`);
+      if (action === 'save') {
+        el.shadowRoot!.querySelector('[part="save-name-input"]')!.dispatchEvent(
+          new CustomEvent('lr-input', { detail: { value: 'Saved' } }),
+        );
+        await el.updateComplete;
+      }
+      el.addEventListener(`lr-query-${action}-request`, () => { el.value = query({ startId: 'new' }); });
+      const accepted = oneEvent(el, `lr-query-${action}`);
+      el.shadowRoot!.querySelector<HTMLElement>(`[part="${action}-button"]`)!.click();
+      expect((await accepted).detail.query.startId).to.equal('old');
+      expect(el.value.startId).to.equal('new');
+    });
+  }
+
   it('lets every canonical query request veto its action without an accepted event or local mutation', async () => {
     const saved: GraphQuerySavedItem[] = [
       { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },

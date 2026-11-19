@@ -381,6 +381,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       || (isCameraCapture(this.cameraCapture) && this.effectiveCapabilities.includes('camera'));
   }
 
+  private canReturnFiles(capability: LyraAttachmentFilesCapability): boolean {
+    return this.effectiveCapabilities.includes(capability)
+      && (capability !== 'camera' || (isCameraCapture(this.cameraCapture) && this.captureSupported));
+  }
+
   /** Whether this realm's file input implements `capture` -- only touch engines do; a desktop
    *  engine ignores the attribute and would show a plain file picker. */
   private get captureSupported(): boolean {
@@ -395,6 +400,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       const normalized = normalizeCapabilities(this.capabilities);
       if (!isCanonicalCapabilitySnapshot(this.capabilities)) this.capabilities = normalized;
     }
+    if (
+      (changed.has('capabilities') || changed.has('cameraCapture'))
+      && this.pendingPickerGeneration !== -1
+      && !this.canReturnFiles(this.pendingCapability)
+    ) this.pendingPickerGeneration = -1;
   }
 
   // Merges a consumer-set host `aria-describedby` onto whichever internal trigger button is
@@ -472,6 +482,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   private onInputChange = (e: Event): void => {
     e.stopPropagation();
     const input = e.target as HTMLInputElement;
+    if (input !== this.inputEl) {
+      input.value = '';
+      return;
+    }
     const selected = input.files;
     const generation = this.pendingPickerGeneration;
     this.pendingPickerGeneration = -1;
@@ -479,6 +493,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       this.isConnected
       && generation === this.pickerGeneration
       && !this.disabled
+      && this.canReturnFiles(this.pendingCapability)
       && selected
       && selected.length > 0
     ) {

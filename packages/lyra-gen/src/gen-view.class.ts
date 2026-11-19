@@ -388,7 +388,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   }
 
   private commitRender(surface: HTMLElement, plan: RenderPlan): void {
-    let focused = this.ownerDocument.activeElement === this ? this.ownerDocument.activeElement : null;
+    let focused = this.shadowRoot?.activeElement ?? null;
     while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
     for (const prepared of plan.commits) {
       this.applyPrepared(prepared);
@@ -400,7 +400,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.placeChildren(surface, [plan.root.record.element]);
     this.nodes = plan.records;
     for (const definition of this.loads.keys()) if (!plan.definitions.has(definition)) this.loads.delete(definition);
-    if (focused instanceof HTMLElement && focused.isConnected && this.ownerDocument.activeElement !== this && focused.getRootNode() instanceof ShadowRoot) {
+    if (focused instanceof HTMLElement && focused.isConnected && !this.shadowRoot?.activeElement) {
       // A real reorder may detach a focused subtree; same-position patches never move it.
       focused.focus({ preventScroll: true });
     }
@@ -675,7 +675,17 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       const target = record.element as unknown as Record<string, unknown>;
       if (target['disabled'] === true || target['effectiveDisabled'] === true || record.element.closest('[inert]')) return;
       if ((name === 'reset' || name === 'submit') && (this.renderTask || this.committedSource !== this.document)) { event.preventDefault(); return; }
-      if (name === 'reset') { queueMicrotask(() => { if (!event.defaultPrevented) this.resetState(record.node.id); }); return; }
+      if (name === 'reset') {
+        const source = this.committedSource, bindings = this.processedBindingState, generation = this.generation;
+        const controlled = this.controlled;
+        queueMicrotask(() => {
+          if (!event.defaultPrevented && this.generation === generation && this.document === source &&
+            this.bindingState === bindings && this.catalog === this.acceptedCatalog && this.controlled === controlled) {
+            this.resetState(record.node.id);
+          }
+        });
+        return;
+      }
       if (name === 'submit') {
         event.preventDefault();
         if (!(record.element as HTMLFormElement).reportValidity()) return;
@@ -737,10 +747,14 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       this.confirmations.get(record.node.id)?.abort();
       const controller = new AbortController();
       this.confirmations.set(record.node.id, controller);
+      const current = () => !controller.signal.aborted && this.isConnected && this.accepted === view &&
+        this.document === sourceDocument && this.catalog === sourceCatalog && this.confirmAction === sourceConfirmation &&
+        this.enabledActions === sourceActions && this.bindingState === sourceState && this.localState === sourceLocalState &&
+        (!this.enabledActions || this.enabledActions.includes(name));
       try {
         const confirmed = await this.confirmAction(action.value, controller.signal);
-        if (confirmed !== true || controller.signal.aborted || !this.isConnected || this.accepted !== view || this.document !== sourceDocument || this.catalog !== sourceCatalog || this.confirmAction !== sourceConfirmation || this.enabledActions !== sourceActions || this.bindingState !== sourceState || this.localState !== sourceLocalState || (this.enabledActions && !this.enabledActions.includes(name))) { controller.abort(); return; }
-      } catch { if (!controller.signal.aborted) this.report('genViewActionDenied', 'action.denied'); return; }
+        if (confirmed !== true || !current()) { controller.abort(); return; }
+      } catch { if (current()) this.report('genViewActionDenied', 'action.denied'); return; }
       finally { if (this.confirmations.get(record.node.id) === controller) this.confirmations.delete(record.node.id); }
     }
     this.emit('lr-gen-action', action.value);

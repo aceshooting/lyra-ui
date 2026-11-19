@@ -8,9 +8,8 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel, nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
-import { collectComposedFocusTargets } from '../../../internal/focus-navigation.js';
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import {
   acquireAriaOwnership,
@@ -35,6 +34,7 @@ import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import {
+  declaredDefaultConverter,
   literalSetConverter,
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
@@ -54,6 +54,7 @@ import {
   OverlayDelayTimer,
   OverlayTransitionGate,
   resolveOverlayAnchor,
+  resolveOverlayAccessibleTrigger,
   resolveOverlayInteractionTrigger,
   settleOverlayTransition,
   type OverlayVirtualRect,
@@ -317,7 +318,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (normalized) void this.show();
     else void this.hide();
   }
-  @property({ reflect: true }) placement: Placement = 'top';
+  @property({ reflect: true, converter: declaredDefaultConverter('top') })
+  placement: Placement = 'top';
   private _positioningStrategy?: PlaceStrategy;
   /**
    * CSS positioning scheme the popup is laid out with -- the one property `<lr-popover>`,
@@ -880,6 +882,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   private teardownOnDisconnect(): void {
+    this.connectionSequence = 0;
     this.anchorIdentity.stop();
     this.invalidatePositioning();
     this.stopLightDismiss();
@@ -934,15 +937,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     return resolveOverlayInteractionTrigger(this, this.virtualAnchor, this.slottedTrigger, this.for);
   }
 
-  private syncInteractionTrigger(): void {
+  private syncInteractionTrigger(slotChanged = false): void {
     if (!this.isConnected) return;
     const next = this.resolveInteractionTrigger();
-    if (next === this.triggerElement) {
+    if (next === this.triggerElement && !slotChanged) {
       // Re-resolve a custom trigger's real focus target after late upgrade without interpreting an
       // unrelated root mutation as the loss of an initially undistributed declarative trigger.
       this.syncTriggerA11y();
       return;
     }
+    this.cancelPendingTransition();
     const previous = this.triggerElement;
     previous?.removeEventListener('click', this.onTriggerClick);
     previous?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
@@ -1069,6 +1073,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     });
   }
   protected positionPopup(): void {
+    if (!this.renderRoot) return;
     this.invalidatePositioning();
     const popup = this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null;
     const arrowElement = this.renderRoot.querySelector('[part~="arrow"]') as HTMLElement | null;
@@ -1201,15 +1206,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private get accessibleTrigger(): HTMLElement | null {
     const trigger = this.triggerElement;
     if (!trigger) return null;
-    const resolved = resolveAccessibleTrigger(trigger);
-    // Roving controls forward a host tabindex to their native control. That generic host is not
-    // itself the semantic focus target, despite its explicit tabindex.
-    if (resolved === trigger && !trigger.hasAttribute('role')
-      && !trigger.matches('button, a[href], input, select, textarea, summary')) {
-      return collectComposedFocusTargets(trigger, { includeRoot: false, mode: 'programmatic' })
-        .elements[0] ?? trigger;
-    }
-    return resolved;
+    return resolveOverlayAccessibleTrigger(trigger);
   }
 
   private observeAccessibleTrigger(target: HTMLElement | null): void {
@@ -1262,7 +1259,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const next = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
     if (next === this.slottedTrigger) return;
     this.slottedTrigger = next;
-    this.syncInteractionTrigger();
+    // The same for target can gain or lose the slot's delegated click and key listeners.
+    this.syncInteractionTrigger(true);
   }
   private onTriggerClick = (): void => {
     if (this.virtualAnchor) return;
@@ -1543,6 +1541,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     });
   }
 
+  private hasPopoverAncestor(peer: Element): boolean {
+    const trigger = this.triggerElement ?? this.resolveInteractionTrigger();
+    return composedContains(peer, this) || (trigger !== undefined && composedContains(peer, trigger));
+  }
+
   /** Generic DOM-anchored popovers are a same-root singleton, except for a peer containing this
    * popover or its trigger. Dropdown subclasses and virtual `showAt()` surfaces are intentionally
    * outside that contract. A peer veto leaves the newcomer closed; focus never jumps through the
@@ -1552,7 +1555,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const root = this.getRootNode() as Document | ShadowRoot;
     for (const peer of root.querySelectorAll<LyraPopover>(tag('popover'))) {
       if (peer === this || !peer.open || peer.virtualAnchor) continue;
-      if (composedContains(peer, this) || (this.triggerElement && composedContains(peer, this.triggerElement))) continue;
+      if (this.hasPopoverAncestor(peer)) continue;
       void peer.hide({ focusTrigger: false });
       if (peer.open) return false;
     }
@@ -1582,11 +1585,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       !latest || peer.connectionSequence > latest.connectionSequence ? peer : latest,
     undefined);
     if (winner !== this) {
-      this.closeForInitialPeerReconciliation();
+      if (!winner?.hasPopoverAncestor(this)) this.closeForInitialPeerReconciliation();
       return;
     }
     for (const peer of peers) {
-      if (peer !== this) peer.closeForInitialPeerReconciliation();
+      if (peer !== this && !this.hasPopoverAncestor(peer)) peer.closeForInitialPeerReconciliation();
     }
   }
 

@@ -38,6 +38,9 @@ describe('lr-email-viewer parser results', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "postal-mime" package installed to parse this message.',
       );
+      el.strings = { emailViewerMissingParser: 'Le module de lecture est indisponible.' };
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Le module de lecture est indisponible.');
     } finally {
       restore();
     }

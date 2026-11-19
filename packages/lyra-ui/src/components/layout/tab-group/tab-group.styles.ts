@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
-import { css } from 'lit';
+import { css, unsafeCSS } from 'lit';
+import { tag } from '../../../internal/prefix.js';
 
 export const styles = css`
   :host {
@@ -22,6 +23,8 @@ export const styles = css`
      container without becoming children of role="tablist", whose only legal children are tabs.
      min-inline-size: 0 lets the tablist shrink below its content width and scroll at all. */
   [part="nav"] {
+    /* The body absorbs block-axis overflow without hiding the horizontal tab strip. */
+    flex: none;
     position: relative;
     display: flex;
     align-items: stretch;
@@ -227,6 +230,18 @@ export const styles = css`
     min-block-size: 0;
     overflow: auto;
   }
+  :host([fill]) [part="body"] {
+    overflow: clip;
+  }
+  :host([fill]) [part="panel"] {
+    block-size: 100%;
+    box-sizing: border-box;
+  }
+  :host([fill]) [part="panel"] ::slotted(${unsafeCSS(tag('tab-panel'))}) {
+    --_lr-tab-panel-block-size: 100%;
+    block-size: 100%;
+    box-sizing: border-box;
+  }
   /* no-pressed-state: the panel is a container for slotted content, not a target -- :active also
      matches the ancestors of whatever was pressed, so clicking any control inside would flash this
      outline around the whole panel. */
@@ -245,6 +260,10 @@ export const styles = css`
       var(--lr-focus-ring-offset)
     );
     border-radius: var(--lr-radius);
+  }
+  /* A filled panel touches the clipping boundary of the body. Keep its focus ring inside. */
+  :host([fill]) [part="panel"]:focus-visible {
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   [part="panel"]:focus-visible {
     ${focusRing}

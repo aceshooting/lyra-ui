@@ -68,6 +68,28 @@ describe('intersection observer capability boundaries', () => {
     }
   });
 
+  it('consumes a once target within a batch and preserves other entries', async () => {
+    const wrapper = await fixture<LyraIntersectionObserver>(html`
+      <lr-intersection-observer once intersect-class="visible"><div>First</div><div>Second</div></lr-intersection-observer>
+    `);
+    await aTimeout(0);
+    const [first, second] = [...wrapper.children];
+    const observer = latestObserver();
+    const items: number[] = [], batches: number[][] = [];
+    wrapper.addEventListener('lr-intersect', event => items.push(event.detail.entry.time));
+    wrapper.addEventListener('lr-intersection', event => batches.push(event.detail.entries.map(item => item.time)));
+    observer.callback([
+      { ...entry(first!), time: 1, isIntersecting: false },
+      { ...entry(first!), time: 2 },
+      { ...entry(first!), time: 3, isIntersecting: false },
+      { ...entry(second!), time: 4 },
+    ], observer);
+    observer.callback([{ ...entry(first!), time: 5, isIntersecting: false }], observer);
+    expect(items).to.deep.equal([1, 2, 4]);
+    expect(batches).to.deep.equal([[1, 2, 4]]);
+    expect([first, second].map(target => target!.classList.contains('visible'))).to.deep.equal([true, true]);
+  });
+
   it('retains earlier callback entries when iteration fails and keeps once targets consumed after failed cleanup', async () => {
     const wrapper = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer once><div>Target</div></lr-intersection-observer>`);
     await aTimeout(0);

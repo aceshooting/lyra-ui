@@ -295,7 +295,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
    *  to `null` every time the dialog transitions from closed to open, mirroring
-   *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
+   *  `editing`/`draftText`/`draftInvalid`'s own reset-on-reopen contract below, so a reused instance
    *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
    *  enabled backdrop dismissal are suppressed (see `activateOverlay()`). Unknown values read as `null`. */
   @property({ attribute: 'pending-action', reflect: true, converter: TOOL_APPROVAL_PENDING_ACTION })
@@ -303,6 +303,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   set pendingAction(value: ToolApprovalDialogPending) {
     const previous = this._pendingAction;
     this._pendingAction = TOOL_APPROVAL_PENDING_ACTION.normalizeReflected(this, 'pending-action', value) ?? null;
+    if (previous !== this._pendingAction) this.deferralGeneration++;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pendingAction', previous);
   }
@@ -319,8 +320,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   @state() private editing = false;
   /** The textarea's current raw text while editing — deliberately independent of `args` until Approve is pressed, so a malformed in-progress edit never overwrites it. */
   @state() private draftText = '';
-  /** `JSON.parse` failure message for `draftText`, or `''` while it parses cleanly. Empty string (not `undefined`) so it can drive `?hidden` directly. */
-  @state() private draftError = '';
+  /** Whether the current draft failed JSON parsing. */
+  @state() private draftInvalid = false;
 
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: () => {
@@ -343,7 +344,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private resetProposalState(): void {
     this.editing = false;
     this.draftText = '';
-    this.draftError = '';
+    this.draftInvalid = false;
     this.pendingAction = null;
   }
 
@@ -352,13 +353,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     if (
       this.hasUpdated &&
       !this.suppressNextErrorAnnouncement &&
-      changed.has('draftError') &&
-      this.draftError &&
-      !(changed.get('draftError') as string | undefined)
+      changed.has('draftInvalid') &&
+      this.draftInvalid &&
+      !changed.get('draftInvalid')
     ) {
       // Announce only the transition into an invalid edit. Further keystrokes that remain invalid
       // keep the visible description current without repeatedly interrupting the user.
-      this.errorAnnouncementSink?.announce(this.draftError);
+      this.errorAnnouncementSink?.announce(this.localize('invalidJson'));
     }
     if (changed.has('open')) {
       if (this.open) {
@@ -387,7 +388,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     if (changed.has('readonly') && this.readonly && this.editing) {
       this.editing = false;
       this.draftText = '';
-      this.draftError = '';
+      this.draftInvalid = false;
     }
   }
 
@@ -537,11 +538,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     if (this.editing) {
       this.editing = false;
       this.draftText = '';
-      this.draftError = '';
+      this.draftInvalid = false;
     } else {
       this.editing = true;
       this.draftText = this.stringifyArgs();
-      this.draftError = '';
+      this.draftInvalid = false;
     }
   };
 
@@ -554,19 +555,19 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.draftText = value;
     try {
       JSON.parse(value);
-      this.draftError = '';
+      this.draftInvalid = false;
     } catch {
       // Never surface the engine's raw SyntaxError.message here -- it's
       // untranslated and wording differs across browsers (V8 vs.
       // SpiderMonkey vs. JavaScriptCore). Always show the localized message.
-      this.draftError = this.localize('invalidJson');
+      this.draftInvalid = true;
     }
     e.stopPropagation();
   };
   private onEditorFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
   private onEditorBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 
-  /** Bumped per deferred decision, so a stale settlement never resolves a newer one. */
+  /** Bumped when pending ownership changes, so a stale settlement never resolves a newer one. */
   private deferralGeneration = 0;
 
   /** Applies a veto (`preventDefault()` or `waitUntil()`); true when the dispatch was vetoed. */
@@ -579,7 +580,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
     this.pendingAction = action;
     if (deferrals.length > 0) {
-      this.deferralGeneration += 1;
       const generation = this.deferralGeneration;
       const stillOurs = (): boolean =>
         generation === this.deferralGeneration && this.open && this.pendingAction === action;
@@ -599,7 +599,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       if (this.pendingAction != null) return;
       let currentArgs: unknown = this.args;
       if (this.editing) {
-        // The Approve button is disabled whenever draftError is non-empty, so
+        // The Approve button is disabled while the draft is invalid, so
         // this should always succeed -- the try/catch is defense-in-depth
         // against a state desync rather than an expected path.
         try {
@@ -647,7 +647,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
 
   override render(): TemplateResult {
-    const hasError = this.editing && this.draftError.length > 0;
+    const hasError = this.editing && this.draftInvalid;
     const toolName = this.toolName || this.localize('toolApprovalGenericTool');
     const headingTemplate = this.localize('toolApprovalHeading');
     // Resolve through the normal interpolation path while preserving a distinct, themeable node
@@ -698,7 +698,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   @focus=${this.onEditorFocus}
                   @blur=${this.onEditorBlur}
                 ></textarea>
-                <p part="error" id=${this.errorId} ?hidden=${!hasError}>${this.draftError}</p>
+                <p part="error" id=${this.errorId} ?hidden=${!hasError}>${hasError ? this.localize('invalidJson') : nothing}</p>
               `
             : html`<lr-json-viewer part="args-view" .data=${this.args}></lr-json-viewer>`}
         </div>

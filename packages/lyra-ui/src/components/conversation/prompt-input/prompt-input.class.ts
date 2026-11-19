@@ -45,6 +45,7 @@ import type {
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type {
   ChatComposerActionsLayout,
+  ChatComposerToolbarAlign,
   ChatComposerToolbarPlacement,
   ChatComposerFrame,
   ChatComposerSelectionDirection,
@@ -290,6 +291,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ attribute: 'actions-layout' }) actionsLayout: ChatComposerActionsLayout = 'inline';
   /** Forwarded toolbar position; data-driven model/voice/source controls remain above the composer. */
   @property({ attribute: 'toolbar-placement' }) toolbarPlacement: ChatComposerToolbarPlacement = 'above';
+  /** Forwarded toolbar alignment. `'end'` places a bottom-row toolbar beside the end actions. */
+  @property({ attribute: 'toolbar-align' }) toolbarAlign: ChatComposerToolbarAlign = 'start';
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
@@ -956,6 +959,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .frame=${this.frame}
         .actionsLayout=${this.actionsLayout}
         .toolbarPlacement=${this.toolbarPlacement}
+        .toolbarAlign=${this.toolbarAlign}
         aria-label=${label}
         @lr-input=${this.onInput}
         @lr-change=${this.onChange}

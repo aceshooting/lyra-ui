@@ -63,8 +63,9 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 - `size?: LyraSize` — optional density on the shared `2xs` through `xl` ladder, including the
   `small`/`medium`/`large` aliases. It changes trigger and menu-row typography and padding while
   retaining the shared `--lr-icon-button-size` minimum hit-area floor. Unset preserves the established geometry
-- `appearance?: LyraExportButtonAppearance` — `outlined` or `quiet` trigger treatment. Unset
-  preserves the established surface, border, and text colors
+- `appearance?: LyraExportButtonAppearance` — `outlined`, `quiet`, or `plain` trigger treatment.
+  `plain` is transparent at rest and adds a background on hover and press while keeping the edge
+  transparent. Unset preserves the established surface, border, and text colors
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
@@ -75,6 +76,9 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   Every supplied string, including `''` and `'Export'`, remains caller-owned visible copy. An empty
   or whitespace-only visible label keeps the localized default as the trigger's accessible name;
   the effective accessible name also feeds the format-choice menu's localized name
+- `iconOnly: boolean = false` (attribute `icon-only`, reflected) — shows a square trigger
+  with a download glyph or a supplied `icon` slot. Its name comes from `aria-label`, `label`,
+  or the localized default
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the trigger's
   accessible name and feeds the localized format-menu name without changing the visible label.
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
@@ -95,7 +99,8 @@ region, so a listener is needed only for additional handling; activation does no
 consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions; self-imposed
 closes caused by disablement, loading, or an unusable format list emit neither event).
 
-**Slots:** none.
+**Slots:** `icon` accepts a decorative glyph beside the label or within the icon-only trigger.
+Supply non-interactive content.
 
 **CSS parts:** `trigger`, `trigger-error` (present alongside `trigger` on the same button —
 `part="trigger trigger-error"` — after a built-in CSV/JSON export fails; cleared on the next export

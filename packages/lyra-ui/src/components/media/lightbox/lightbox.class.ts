@@ -21,6 +21,7 @@ import { LightboxSourceController } from './lightbox-source.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
+import { isElement } from '../../../internal/rendered-tree-traversal.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
@@ -380,9 +381,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
 
-  /** Host-level `aria-label` override for the panel's accessible name -- wins over the
-   *  localized `lightboxLabel` default. Exactly `<lr-pan-zoom>`'s own `accessibleLabel`
-   *  pattern (no other label source to arbitrate against here). */
+  /** A nonblank host label names the dialog. Blank labels use the localized `lightboxLabel` default. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private readonly slotPresence = new SlotPresenceController(this);
@@ -765,11 +764,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     // A slotted button/link (actions slot) owns Arrow keys; the lightbox's own shadow controls do not.
-    for (const target of event.composedPath()) {
+    for (const target of event.composedPath() as Node[]) {
       if (target === this) break;
       if (
-        target instanceof Element && target.getRootNode() !== this.shadowRoot &&
+        isElement(target) && target.getRootNode() !== this.shadowRoot &&
         target.matches('a[href], button, [role="button"], [role="link"]')
       ) return;
     }
@@ -803,7 +803,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const image = this.imageSource === undefined
       ? (count > 0 ? this.images[current] : undefined) : this.sourceController.image;
     const sourceState = this.imageSource === undefined ? undefined : this.sourceController.state;
-    const label = this.accessibleLabel ?? this.localize('lightboxLabel');
+    const label = this.accessibleLabel?.trim() ? this.accessibleLabel : this.localize('lightboxLabel');
     const hasCaption = Boolean(image?.caption);
     const formatter = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,

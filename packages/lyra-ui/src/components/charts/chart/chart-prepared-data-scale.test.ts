@@ -297,6 +297,14 @@ it('activates prepared observations from the focused canvas keyboard route', asy
   const events: { sourceIndex: number }[] = [];
   element.addEventListener('lr-source-point-select', event => events.push((event as CustomEvent).detail));
   await focusByKeyboard(element.shadowRoot!.querySelector('canvas')!);
+  const canvas = element.shadowRoot!.querySelector('canvas')!;
+  for (const init of [{ key: 'ArrowRight', altKey: true }, { key: ' ', ctrlKey: true },
+    { key: 'Enter', metaKey: true }, { key: 'Enter', isComposing: true }, { key: 'End', keyCode: 229 }]) {
+    const key = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    canvas.dispatchEvent(key);
+    expect(key.defaultPrevented).to.equal(false);
+  }
+  expect(events).to.have.length(0);
   await sendKeys({ press: 'ArrowRight' });
   await sendKeys({ press: 'Enter' });
   expect(events.at(-1)!.sourceIndex).to.equal(element.preparedData!.kind === 'series' ? element.preparedData!.series[0]!.samples[1]!.sourceIndex : -1);

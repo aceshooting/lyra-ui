@@ -219,11 +219,15 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @csspart divider - The draggable separator. Its numeric ARIA range remains percentages while
  *   `aria-valuetext` reports the measured current percentage through the effective locale.
  * @cssprop [--divider-width=4px] - Visible divider thickness.
- * @cssprop [--divider-hit-area=12px] - Requested divider hit area; Lyra's minimum hit-area token remains the floor.
+ * @cssprop [--divider-hit-area=12px] - Requested divider hit area, subject to the divider's minimum.
  * @cssprop [--min=0] - Minimum size of the primary pane, or the start pane when `primary` is unset.
  * @cssprop [--max=100%] - Maximum size of the primary pane, or the start pane when `primary` is unset.
  * @cssprop [--lr-split-panel-divider-width=var(--divider-width)] - Lyra-prefixed divider-width alias.
  * @cssprop [--lr-split-panel-divider-hit-area=var(--divider-hit-area)] - Lyra-prefixed hit-area alias.
+ * @cssprop [--lr-split-panel-divider-min-hit-area=var(--lr-icon-button-size)] - Minimum interactive
+ *   divider size in either orientation. Scope a smaller minimum to fine-pointer layouts with
+ *   controls close to the divider. Set the requested hit area separately when needed.
+ * @cssprop [--lr-split-panel-divider-color=var(--lr-color-border)] - Resting divider background.
  * @cssprop [--lr-split-panel-min=var(--min)] - Lyra-prefixed minimum-size alias.
  * @cssprop [--lr-split-panel-max=var(--max)] - Lyra-prefixed maximum-size alias.
  * @cssprop [--lr-split-panel-divider-hover-color=var(--lr-color-brand)] - Background of `divider`

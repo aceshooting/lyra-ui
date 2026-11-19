@@ -507,3 +507,30 @@ describe('revealSourcePoint() supersession while a step is pending', () => {
     expect(el.viewport).to.deep.equal(fine);
   });
 });
+
+it('renders a legend that matches the distinct marker colors of retained spatial clusters', async () => {
+  const source = provider();
+  source.query = () => ({
+    ...response(),
+    points: [
+      { id: '1', sourceIndex: 1, x: 1, y: 1, cluster: 'Alpha' },
+      { id: '2', sourceIndex: 2, x: 2, y: 2, cluster: 'Beta' },
+      { id: '3', sourceIndex: 3, x: 3, y: 3, cluster: 'Alpha' },
+    ],
+  });
+  const el = await spatial(source);
+  const root = el.shadowRoot!;
+  await waitUntil(() => root.querySelectorAll('[part="point"]').length === 3);
+  const markerColors = [...root.querySelectorAll('[part="point"] .point-marker')]
+    .map((marker) => marker.getAttribute('fill'));
+  expect(markerColors[0]).not.to.equal(markerColors[1]);
+  expect(markerColors[0]).to.equal(markerColors[2]);
+  const legend = [...root.querySelectorAll('[part="legend-item"]')].map((item) => ({
+    label: item.querySelector('[part="legend-label"]')?.textContent,
+    color: item.querySelector('circle')?.getAttribute('fill'),
+  }));
+  expect(legend).to.deep.equal([
+    { label: 'Alpha', color: markerColors[0] },
+    { label: 'Beta', color: markerColors[1] },
+  ]);
+});

@@ -10,12 +10,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-checkbox-group`
+
+Place supplementary controls in `slot="toolbar"` between the group label and its options.
+Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
+Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
 
 Long group labels, hints, errors, and horizontal option labels wrap within the host in both logical
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
@@ -105,7 +109,8 @@ invalid option-collection border without changing other danger-colored surfaces.
 the children.** The children remain the single source of truth. An internal sync recomputes `value`
 on every child toggle, programmatic child `checked`/`value`/`disabled` update, `slotchange`,
 `name`/`required` change, blur, and `form.reset()`. Mutating an obtained array cannot mutate the
-group — assign a new array instead.
+group — assign a new array instead. Disabled checked options stay in this snapshot and in restored
+selection state. Only enabled checked options contribute submission entries.
 Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
 group owns its own descendants and form entries. `connectedCallback()` runs that sync before the
 first render.

@@ -119,10 +119,14 @@ function snapshotSegmentedItems(
  * @slot label - Field caption; assigned content replaces the `label` property fallback.
  * @slot hint - Supporting text; assigned content replaces the `hint` property fallback.
  * @csspart form-control - The outer caption, track and hint wrapper.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The noninteractive field caption, visually hidden by default.
  * @csspart hint - Supporting text referenced by the radiogroup when supplied.
  * @csspart base - The `role="radiogroup"` root and horizontal scroll owner.
- * @csspart segment - A single `role="radio"` button.
+ * @csspart segment - A single `role="radio"` button with a 24×24 CSS pixel minimum box at every size tier.
  * @csspart segment-icon - Optional decorative leading visual supplied by the item's `icon` field.
  *   Content may have a natural aspect ratio and is not restricted to a square icon; it is inert and
  *   hidden from assistive technology, so it cannot provide an independent action or accessible name.
@@ -395,11 +399,16 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
       selectedIndex < 0 && this.segmentButtonAt(originIndex)?.tabIndex === 0
         ? -1
         : navigable.findIndex(({ index }) => index === originIndex);
+    // The track's CSS direction determines the physical order of its segments.
+    const track = e.currentTarget as HTMLElement;
+    const direction = e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+      ? track.ownerDocument.defaultView?.getComputedStyle?.(track).direction
+      : undefined;
     const targetIndex = resolveListMove(e, {
       count: navigable.length,
       current: currentIndex,
       orientation: 'both',
-      direction: this.effectiveDirection,
+      direction: direction === 'ltr' || direction === 'rtl' ? direction : this.effectiveDirection,
     });
     if (targetIndex === null) return;
     e.preventDefault();

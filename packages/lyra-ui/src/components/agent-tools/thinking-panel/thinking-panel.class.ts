@@ -7,6 +7,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -270,6 +271,12 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.get('expanded') === true && !this.expanded) {
+      const body = this.renderRoot.querySelector('[part="body"]');
+      if (body) repairComposedFocus(body, () => [
+        this.renderRoot.querySelector<HTMLElement>('[part="header"]'),
+      ]);
+    }
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Re-engagement is part of the update being prepared. Doing it here keeps the reflected
       // property and the rendered scroll behavior in one update instead of scheduling a second

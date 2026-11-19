@@ -42,6 +42,7 @@ import {
   calendarCellAt as readCalendarCell,
   calendarCellRect,
   calendarDateAt as readCalendarDate,
+  isoDateAtOffset,
   calendarValueAt as readCalendarValue,
   firstInteractiveCalendarCell as findFirstInteractiveCalendarCell,
   firstInteractiveMatrixCell as findFirstInteractiveMatrixCell,
@@ -241,13 +242,6 @@ export interface CalendarCellPos {
   date: string;
 }
 type CellPos = MatrixCellPos | CalendarCellPos;
-
-/** The ISO `yyyy-mm-dd` date `dayOffset` days after a calendar grid's anchor week start. */
-function isoDateAtOffset(firstWeekStart: Date, dayOffset: number): string {
-  return new Date(firstWeekStart.getTime() + dayOffset * MS_PER_DAY)
-    .toISOString()
-    .slice(0, 10);
-}
 
 /**
  * A marker drawn as a stroked ring over a matching cell (matrix mode:
@@ -794,7 +788,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (current()) this.announcements.announcePolite(label);
     return Boolean(control) && current();
   }
-  private sourceCurrent(source: LyraHeatmapMatrixSource, epoch: number): boolean {
+  private sourceCurrent(source: LyraHeatmapMatrixSource | null, epoch: number): boolean {
     return this.isConnected && this.matrixSource === source && this.sourceController.requests.epoch === epoch;
   }
   private configureSource(): void {
@@ -1965,15 +1959,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     truncated: boolean;
   } = { rowLabels: [], colLabels: [], values: [], truncated: false };
   /**
-   * The calendar-mode grid layout, refreshed by `willUpdate()` only when
-   * `days` actually changes (see `computeValueRange()`'s twin comment above)
-   * — `buildCalendarGrid()` parses every date, filters invalid ones, and does
-   * a full `.slice().sort()` for month labels, so recomputing it from
+   * The calendar-mode grid layout, cached across paints and rebuilt when the data,
+   * cell budget or effective locale changes. `buildCalendarGrid()` parses and filters dates,
+   * then sorts cells for the month labels, so recomputing it from
    * `drawCalendar()`, `hitTestCalendar()`, `calendarCellAt()`, and
    * `onCalendarKeyDown()` independently would redo that work 2-4x for a
    * single hover/click/keydown.
    */
   private cachedCalendarGrid = buildCalendarGrid(this.calendarDays);
+  private lastUpdatedLocale?: string;
   private cachedCalendarSortedValues: number[] = [];
   private cachedCalendarCellsByPos = new Map<string, CalendarCell>();
   private cachedCalendarCellsByDate = new Map<string, CalendarCell>();
@@ -2296,18 +2290,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.hoverCell = null;
       this.liveText = '';
     }
-    // Calendar-mode grid layout depends only on `days`/`firstDayOfWeek`/`monthLabelText`/`locale`
-    // (not `mode`) — rebuilt here, once per cycle, instead of independently by
-    // every call site (see `cachedCalendarGrid`'s doc comment). `locale` is included so the
-    // default month label (like every other locale-derived string on this canvas) re-resolves
-    // when the component's locale changes, rather than staying pinned to whatever locale was
-    // in effect the first time a calendar grid was built.
-    if (changed.has('data') || changed.has('maxCells') || changed.has('locale') || !this.hasUpdated) {
+    // Inherited locale changes schedule an update without changing the locale property.
+    const locale = this.effectiveLocale;
+    if (changed.has('data') || changed.has('maxCells') || changed.has('locale') ||
+      this.lastUpdatedLocale !== locale || !this.hasUpdated) {
       this.cachedCalendarGrid = buildCalendarGrid(
         this.calendarDays,
         this.normalizedFirstDayOfWeek,
         this.calendarMonthLabelText,
-        this.effectiveLocale,
+        locale,
         this.cellBudget
       );
       this.cachedCalendarSortedValues = this.cachedCalendarGrid.cells
@@ -2712,6 +2703,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const locale = this.effectiveLocale;
+    const localeChanged = this.lastUpdatedLocale !== locale;
+    this.lastUpdatedLocale = locale;
     if (this.matrixSource) {
       if (this.sourceController.error) {
         if (this.sourceHasSucceeded && !this.sourceFailureAnnounced) this.announcements.announcePolite(this.localize('heatmapSourceError'));
@@ -2787,10 +2781,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         // Toggling this replaces the canvas element (the frozen modes wrap it in a scrollport), so
         // the new, blank canvas needs a full repaint -- and the bands need their first one.
         'stickyLabels',
-      ].some((name) => changed.has(name))
+      ].some((name) => changed.has(name)) || localeChanged
     ) {
       const focusOnly =
-        changed.has('focusedCell') &&
+        !localeChanged && changed.has('focusedCell') &&
         [...changed.keys()].every(
           (key) => key === 'focusedCell' || key === 'liveText'
         );
@@ -2803,7 +2797,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         return;
       const smallSelection = this.pendingSelectionRepaint;
       const onlySelectionAndFocus = [...changed.keys()].every(key => ['selectedCells', 'focusedCell', 'liveText'].includes(String(key)));
-      const repainted = smallSelection !== undefined && onlySelectionAndFocus &&
+      const repainted = !localeChanged && smallSelection !== undefined && onlySelectionAndFocus &&
         (!changed.has('focusedCell') || this.repaintFocusRing(changed.get('focusedCell') as CellPos | null | undefined)) &&
         smallSelection.every(pos => this.repaintCell(pos));
       this.pendingSelectionRepaint = undefined;
@@ -4785,9 +4779,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // still-focused position) even if some future caller forgets to reset the cursor first.
     if (!this.isCellInteractive(pos) || current && !current()) return;
     if (this.multiple && select) {
+      const epoch = this.sourceController.requests.epoch;
       this.selectionAnchor = pos;
       this.selectionRangeBase = undefined;
       this.toggleSelectionPositions([pos], source);
+      if (!this.sourceCurrent(null, epoch)) return;
     }
     let detail: LyraHeatmapCellClickDetail;
     if ('week' in pos) {

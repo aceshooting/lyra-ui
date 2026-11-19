@@ -318,6 +318,34 @@ describe('lr-chart-3d optional renderer', () => {
       await expect(el).to.be.accessible();
     });
 
+    it('distinguishes small coordinates in table cells and WebGL ticks', async () => {
+      const el = await chart('engine=webgl lang=en', columns(2, {
+        x: Float32Array.of(1e-8, 2e-8),
+        y: Float32Array.of(-0, 0),
+        z: Float32Array.of(1.2345678, 2.3456789),
+      }));
+      await ready(el);
+      const coordinates = [...el.shadowRoot!.querySelectorAll('tbody tr')].map((row) =>
+        [...row.querySelectorAll('td')].slice(0, 3).map((cell) => cell.textContent?.trim()),
+      );
+      expect(coordinates).to.deep.equal([
+        ['0.00000001', '0', '1.234568'],
+        ['0.00000002', '0', '2.345679'],
+      ]);
+      const x = peer.data[0]!.value.axes.find((axis) => axis.axis === 'x')!;
+      expect(x.ticks.map((tick) => tick.label)).to.deep.equal([
+        '0.00000001', '0.0000000125', '0.000000015', '0.0000000175', '0.00000002',
+      ]);
+    });
+
+    it('keeps the table and cursor named when WebGL draws a point with a blank label', async () => {
+      const el = await chart('engine=webgl lang=en', columns(1, { ids: ['north'], labels: ['  '] }));
+      await ready(el);
+      expect(text(el, 'row-button')).to.equal('north');
+      expect(text(el, 'cursor')).to.contain('north');
+      await expect(el).to.be.accessible();
+    });
+
     it('uses an authored camera instead of fitting', async () => {
       const el = await chart('engine=webgl');
       el.camera = { yaw: 1, pitch: 0.5, distance: 7, target: { x: 0, y: 0, z: 0 } };

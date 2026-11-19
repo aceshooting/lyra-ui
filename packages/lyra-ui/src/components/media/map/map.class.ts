@@ -26,7 +26,7 @@ import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { DEFAULT_CANVAS_COLOR, resolveCanvasColor } from '../../../internal/canvas-color.js';
-import { finiteDuration, finiteRange } from '../../../internal/numbers.js';
+import { finiteDuration, finiteInterpolate, finiteRange, finiteRatio } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { admitMapViewpoint, type MapViewpoint } from '../../../internal/map-camera-session-data.js';
@@ -45,6 +45,7 @@ export type { LyraMapPosition, LyraMapQuaternion, LyraMapModelFormat, LyraMapMod
   LyraMapSceneObject, LyraMapScene, LyraMapSceneErrorCode, LyraMapSceneStateDetail,
   LyraMapSceneActivateDetail } from './map-scene-types.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -810,11 +811,11 @@ function choroplethLegendGradientImage(
 ): string {
   const lo = stops[0]!;
   const hi = stops[stops.length - 1]!;
-  const span = hi[0] - lo[0];
+  const hasRange = hi[0] > lo[0];
   const stopPercent = (value: number, index: number): number =>
-    span > 0 ? ((value - lo[0]) / span) * 100 : (index / (stops.length - 1)) * 100;
+    (hasRange ? finiteRatio(value, lo[0], hi[0]) : index / (stops.length - 1)) * 100;
 
-  if (interpolation !== 'logarithmic' || span <= 0) {
+  if (interpolation !== 'logarithmic' || !hasRange) {
     const image = stops
       .map(
         ([value, color], index) =>
@@ -828,15 +829,14 @@ function choroplethLegendGradientImage(
   for (let index = 1; index < stops.length; index += 1) {
     const lower = stops[index - 1]!;
     const upper = stops[index]!;
-    const interval = upper[0] - lower[0];
-    if (interval <= 0) {
+    if (upper[0] <= lower[0]) {
       image.push(`${upper[1]} ${compactGradientPercent(stopPercent(upper[0], index))}%`);
       continue;
     }
     for (let sample = 1; sample <= CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL; sample += 1) {
       const intervalProgress = sample / CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL;
-      const input = lower[0] + interval * intervalProgress;
-      const position = ((input - lo[0]) / span) * 100;
+      const input = finiteInterpolate(lower[0], upper[0], intervalProgress);
+      const position = finiteRatio(input, lo[0], hi[0]) * 100;
       if (sample === CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL) {
         image.push(`${upper[1]} ${compactGradientPercent(position)}%`);
         continue;
@@ -7184,7 +7184,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const down = (): void => { this.suppressDrawingClick = false; };
     const click = (event: MouseEvent): void => { if (this.suppressDrawingClick) { this.suppressDrawingClick = false; event.preventDefault(); event.stopImmediatePropagation(); } };
     const key = (event: KeyboardEvent): void => {
-      if (!current() || !this.keyboardActivation || (event.key !== 'Enter' && event.key !== ' ') || event.repeat || event.isComposing ||
+      if (!current() || !this.keyboardActivation || (event.key !== 'Enter' && event.key !== ' ') || event.repeat || event.isComposing || event.keyCode === 229 ||
         event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (this.pickMode || this.drawMode !== 'none' || this.drawingController?.active || !this.mapInteractionAllowed()) return;
       event.preventDefault();
@@ -9000,8 +9000,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     markerElement.addEventListener('keydown', (event) => {
       if (
         (event.key !== ' ' && event.key !== 'Enter') ||
-        event.repeat ||
-        event.defaultPrevented
+        event.repeat || event.isComposing || event.keyCode === 229 ||
+        event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
       ) return;
       // MapLibre owns any popup toggle on its later keypress handler. Suppress only Space's page
       // scroll here while preserving propagation, then publish the same activation as Enter.
@@ -9479,9 +9479,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * self-consistent by construction rather than by a per-row visibility flag that two rows
    * describing one category could disagree about.
    */
-  private toggleLegendCategory(entry: LyraMapLegendEntry): void {
+  private toggleLegendCategory(entry: LyraMapLegendEntry, index: number): void {
     const value = entry.value;
-    if (!this.legendInteractive || value === undefined) return;
+    const current = (): boolean => this.isConnected && this.legendInteractive && this.legend[index] === entry;
+    if (value === undefined || !current()) return;
     const hidden = this.hiddenCategories;
     const wasHidden = hidden.includes(value);
     const next = wasHidden ? hidden.filter((key) => key !== value) : [...hidden, value];
@@ -9492,7 +9493,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     );
     // The veto is the absence of a write, not a write that is undone afterwards: a listener that
     // owns the set can assign its own `hiddenCategories` without this handler clobbering it.
-    if (proposal.defaultPrevented) return;
+    if (proposal.defaultPrevented || !current()) return;
     this.hiddenCategories = next;
     this.announceLegendVisibility(entry, wasHidden);
   }
@@ -9537,7 +9538,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
                           role=${checkbox ? 'checkbox' : nothing}
                           aria-pressed=${checkbox ? nothing : visible ? 'true' : 'false'}
                           aria-checked=${checkbox ? (visible ? 'true' : 'false') : nothing}
-                          @click=${(): void => this.toggleLegendCategory(entry)}
+                          @click=${(): void => this.toggleLegendCategory(entry, index)}
                         >${this.renderLegendRowContent(entry)}</button>`
                       : this.renderLegendRowContent(entry)}
                   </div>`;
@@ -9612,8 +9613,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const ticks = this._legendGradientTicksAssigned || explicit.length >= 2
       ? this.legendGradientTicks
       : derived.ticks;
-    const span = hi[0] - lo[0];
-    const marks = span > 0 ? ticks.filter((tick) => tick.value >= lo[0] && tick.value <= hi[0]) : [];
+    const marks = hi[0] > lo[0] ? ticks.filter((tick) => tick.value >= lo[0] && tick.value <= hi[0]) : [];
+    const locale = this.effectiveLocale;
+    const format = (value: number): string => formatChartValue(value, locale);
     const bar = html`<span
         part="legend-gradient"
         class="gradient-bar"
@@ -9622,17 +9624,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         style=${styleMap({ backgroundImage: image })}
       ></span>`;
     return html`<div class="legend-gradient" ?hidden=${this.legendCollapsed}>
-      <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
+      <span part="legend-lo">${this.legendGradientLoLabel ?? format(lo[0])}</span>
       ${marks.length === 0
         ? bar
         : html`<span class="gradient-track">${bar}<span class="gradient-ticks" part="legend-ticks">${marks.map(
             (tick) => html`<span
               part="legend-tick"
-              style=${styleMap({ '--_lr-map-tick-position': `${compactGradientPercent(((tick.value - lo[0]) / span) * 100)}%` })}
-              >${tick.label ?? this.formatCount(tick.value)}</span
+              style=${styleMap({ '--_lr-map-tick-position': `${compactGradientPercent(finiteRatio(tick.value, lo[0], hi[0]) * 100)}%` })}
+              >${tick.label ?? format(tick.value)}</span
             >`,
           )}</span></span>`}
-      <span part="legend-hi">${this.legendGradientHiLabel ?? this.formatCount(hi[0])}</span>
+      <span part="legend-hi">${this.legendGradientHiLabel ?? format(hi[0])}</span>
     </div>`;
   }
 

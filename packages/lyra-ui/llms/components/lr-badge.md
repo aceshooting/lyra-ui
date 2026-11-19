@@ -82,8 +82,8 @@ tag remains connected even if a listener calls `preventDefault()` (the event is 
 and the consumer removes it by updating the collection that rendered it.
 
 If that controlled listener synchronously removes the focused tag, or a direct property write
-removes its action, focus moves to the nearest available composed action. Focus explicitly moved by
-the listener is preserved.
+removes or disables the focused remove button, focus moves to the nearest available composed
+action. Focus explicitly moved by the listener is preserved.
 
 For a removable tag, `focus(options?)`, `blur()`, and `click()` delegate to its native remove
 button. A plain tag's `click()` retains native `HTMLElement.click()` behavior and dispatches one

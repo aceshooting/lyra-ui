@@ -35,6 +35,9 @@ replacement request.
 supplies `{ requestId, action: 'accept' | 'decline' | 'cancel', content? }`. Acceptance validates
 and returns only schema-declared fields. Decline/cancel omit content. A response immediately sets
 `status='submitted'` to prevent duplicates; set it back to `'pending'` after a failed send.
+If submission disables the focused response button, focus moves to the visible submitted message.
+The message is skipped during ordinary Tab navigation. A response handler can move focus to
+another control and retain it.
 Changing `requestId` resets draft and status, preserving explicit same-update property assignments.
 Stale rendered request actions are ignored. This request interaction is not outer-form-associated;
 the composed parameter form owns field validation. Collection values and emitted details are owned.

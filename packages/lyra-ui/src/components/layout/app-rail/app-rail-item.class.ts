@@ -164,14 +164,16 @@ export interface LyraAppRailItemEventMap {
  *   presentation, which already conveys current state through the indicator bar and
  *   `--lr-app-rail-item-current-font-weight`, stays ring-free (`none`) by default. Setting this
  *   token explicitly applies the same value in both presentations.
+ * @cssprop [--lr-app-rail-item-color=var(--lr-color-text)] - Resting text/icon color.
+ * @cssprop [--lr-app-rail-item-radius=var(--lr-radius)] - Corner radius of the row and icon-only tile.
  * @cssprop [--lr-app-rail-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
  * @cssprop [--lr-app-rail-item-hover-color=var(--lr-color-brand)] - Hover text/icon color.
  * @cssprop --lr-app-rail-item-active-bg - Pressed background; defaults to the former brand-quiet
  *   active mix.
  * @cssprop [--lr-app-rail-item-active-color=var(--lr-color-brand)] - Pressed text/icon color.
  * @cssprop [--lr-app-rail-item-min-block-size=var(--lr-icon-button-size)] - `[part="base"]`'s row
- *   height. Floor-clamped to `--lr-icon-button-size` regardless of the override, preserving the
- *   WCAG 2.5.8 hit-area minimum.
+ *   minimum height. Hovering fine-pointer devices without touch input may shrink a labeled row to
+ *   24 CSS px. Other devices and auto-sized icon-only tiles keep the shared icon-button floor.
  * @cssprop [--lr-app-rail-item-padding=var(--lr-space-s)] - `[part="base"]`'s padding.
  * @cssprop [--lr-app-rail-item-gap=var(--lr-space-s)] - Gap between `[part="icon"]` and
  *   `[part="label"]`, and between the item's own control and its `[part="meta"]`/`[part="end"]`
@@ -185,8 +187,8 @@ export interface LyraAppRailItemEventMap {
  * @cssprop [--lr-app-rail-item-icon-only-size] - When set, sizes `[part="base"]`'s icon-only
  *   square (`inline-size` and `block-size` alike) directly, independent of the row's own
  *   `--lr-app-rail-item-min-block-size`. Unset (the default), the square is still derived via
- *   `aspect-ratio: 1` against the row's block size, exactly as before. Still floor-clamped to
- *   `--lr-icon-button-size` by `[part="base"]`'s shared `min-block-size` rule.
+ *   `aspect-ratio: 1` against the row's block size with the shared icon-button floor.
+ *   Explicit squares have a 24 CSS px minimum.
  * @cssprop [--lr-app-rail-item-font-size=inherit] - `[part="base"]`'s font size, set after the
  *   `font` shorthand so it alone can be retuned while family/weight/line-height stay inherited.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the icon-only

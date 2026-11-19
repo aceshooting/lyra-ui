@@ -141,3 +141,20 @@ export const ReactivationAndInvalid: StoryObj = {
     </div>
   `,
 };
+
+export const WithToolbar: StoryObj = {
+  render: () => html`
+    <lr-radio-group label="Topics" label-display="hidden">
+      <label slot="toolbar">Filter topics
+        <input type="search" @input=${(event: Event) => {
+          const field = event.currentTarget as HTMLInputElement;
+          for (const option of field.closest('lr-radio-group')!.querySelectorAll('lr-radio')) {
+            option.hidden = !(option.textContent ?? '').toLowerCase().includes(field.value.toLowerCase());
+          }
+        }}>
+      </label>
+      <lr-radio value="news">News</lr-radio>
+      <lr-radio value="sports">Sports</lr-radio>
+    </lr-radio-group>
+  `,
+};

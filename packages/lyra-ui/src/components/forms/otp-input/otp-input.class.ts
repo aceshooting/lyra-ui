@@ -154,6 +154,10 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @csspart base - The outer wrapper; retained alias for `form-control`.
  * @csspart form-control - The outer wrapper; shared form-control alias for `base`.
  * @csspart label - The field label; retained alias for `form-control-label`.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The field label; shared form-control alias for `label`.
  * @csspart field - Retained Lyra alias for the row of segments.
  * @csspart segments - The allocation-bounded, horizontally scrollable row of fixed-size segments;
@@ -303,7 +307,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private readonly errorId = nextId('otp-input-error');
   @state() private activeSegmentIndex = 0;
   private segmentValues: string[] = [];
-  /** The last raw string passed to the `value` setter, before length/format-dependent truncation.
+  /** The latest segment edit or raw `value` assignment before length/format truncation.
    *  `willUpdate()` re-derives the live value from this (not from the already-truncated `value`)
    *  whenever `type`/`case`/`length`/`format` changes, so a `value` assignment that lands in the
    *  same batched update as a widening `length`/`format` (e.g. `el.value = '12345678'; el.length =
@@ -483,6 +487,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     const previousFilled = this.filledSegmentCount;
     this.segmentValues = this.normalizedSegmentValues(values);
     const nextValue = this.segmentValues.join('');
+    this.rawValue = nextValue;
     super.value = nextValue;
     if (this.control) this.control.value = nextValue;
     this.touched = true;
@@ -691,7 +696,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     // A narrower `type`/`case`/`length` must not leave a stale value that the same input could no
     // longer produce.
     if (changed.has('type') || changed.has('case') || changed.has('length') || changed.has('format')) {
-      // Re-derive from the last RAW assignment, not from `this.value` -- the setter may already
+      // Re-derive from the latest edit or raw assignment, since the setter may already
       // have truncated it against the stale segment count from before this same update batch.
       const next = this.sanitize(this.rawValue);
       if (next !== this.value) this.value = next;
@@ -733,7 +738,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     const filled = this.filledSegmentCount;
     const complete = filled === total;
     if (this.required && filled === 0) {
-      this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
+      this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, () => this.localize('fieldRequired'));
       return;
     }
     if (filled > 0 && !complete) {
@@ -768,7 +773,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.effectiveDisabled || event.isComposing || event.keyCode === 229) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       const physical = event.key === 'ArrowRight' ? 1 : -1;
@@ -787,7 +792,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       if (!this.readonly) submitOnEnter(this, event, { beforeSubmit: () => this.flushPendingChange() });
       return;
     }
-    if (this.readonly || event.isComposing) return;
+    if (this.readonly) return;
     const selection = this.selectedSegmentRange;
     if (event.key === 'Backspace' || event.key === 'Delete') {
       event.preventDefault();

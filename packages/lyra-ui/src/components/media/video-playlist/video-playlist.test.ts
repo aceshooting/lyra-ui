@@ -706,6 +706,42 @@ describe('lr-video-playlist public contract', () => {
     expect(aPlayback.playCalls).to.equal(2);
   });
 
+  it('retires a repeat-one replay when seek changes the active item, even if it switches back', async () => {
+    for (const switchBack of [false, true]) {
+      const el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist repeat="one"><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+      `);
+      await settle(el);
+      const [video, next] = childVideos(el);
+      const playback = stubPlayback(video!);
+      stubPlayback(next!);
+      Object.defineProperty(media(video!), 'currentTime', { configurable: true, value: 9, writable: true });
+
+      video!.addEventListener('timeupdate', () => {
+        el.goTo(1);
+        if (switchBack) el.goTo(0);
+      }, { once: true });
+      video!.dispatchEvent(new Event('ended'));
+      await el.updateComplete;
+      expect(video!.hidden, 'the seek listener changed selection').to.equal(!switchBack);
+      expect(playback.playCalls, 'the retired repeat did not replay').to.equal(0);
+    }
+  });
+
+  it('retires a repeat-all replay when seek makes the only child unavailable', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist repeat="all"><lr-video title="Only"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    const video = childVideos(el)[0]!;
+    const playback = stubPlayback(video);
+    Object.defineProperty(media(video), 'currentTime', { configurable: true, value: 9, writable: true });
+    video.addEventListener('timeupdate', () => { video.inert = true; }, { once: true });
+    video.dispatchEvent(new Event('ended'));
+    expect(video.inert).to.be.true;
+    expect(playback.playCalls).to.equal(0);
+  });
+
   it('swallows a rejected repeat-one replay instead of leaking the rejection', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist repeat="one"><lr-video title="Only"></lr-video></lr-video-playlist>
@@ -1261,6 +1297,14 @@ describe('lr-video-playlist public contract', () => {
     await el.updateComplete;
     const rtlFirst = items(el)[0]!;
     rtlFirst.focus();
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+      const shortcut = new KeyboardEvent('keydown', { key: 'ArrowLeft', [modifier]: true, bubbles: true, cancelable: true });
+      rtlFirst.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented, modifier).to.be.false;
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement === rtlFirst).to.be.true;
+    }
+
     press(rtlFirst, 'ArrowLeft');
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement === items(el)[1]).to.be.true;

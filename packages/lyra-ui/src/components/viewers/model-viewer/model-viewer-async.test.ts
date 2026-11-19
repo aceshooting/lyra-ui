@@ -28,7 +28,8 @@ function install(capability: 'async' | 'absent' | 'noncallable' = 'async') {
     } };
   } }));
 }
-beforeEach(() => {
+beforeEach(async () => {
+  await Promise.resolve(); // Finish deferred teardown from the previous fixture.
   announcements = [];
   AnnouncementSinkController.prototype.announce = function (message: string, politeness: AnnouncementPoliteness = 'polite') { announcements.push(message); announce.call(this, message, politeness); };
   jobs = []; syncCalls = disposals = 0; modelEngineEnvironment.available = () => true; install(); });

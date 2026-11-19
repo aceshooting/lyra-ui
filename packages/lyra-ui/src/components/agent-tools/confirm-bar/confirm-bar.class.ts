@@ -324,6 +324,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   set pendingAction(value: ApprovalAction | null) {
     const previous = this._pending;
     this._pending = CONFIRM_BAR_PENDING_ACTION.normalizeReflected(this, 'pending-action', value) ?? null;
+    if (previous !== this._pending) this.deferralGeneration++;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pendingAction', previous);
   }
@@ -400,9 +401,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   private readonly headingId = nextId('confirm-bar-heading');
 
-  /** Bumped by every `decide()` that starts awaiting a `waitUntil()` promise, so a settlement that
-   *  arrives after a newer decision began (a bounce, then a second activation) is discarded instead
-   *  of resolving the wrong one. */
+  /** Changes whenever pending ownership changes, including externally held retries. */
   private deferralGeneration = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -550,7 +549,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    */
   private awaitDeferredDecision(promise: Promise<unknown>, next: 'approved' | 'denied'): void {
     const action = approvalAction(next);
-    this.deferralGeneration += 1;
     const generation = this.deferralGeneration;
     const stillOurs = (): boolean =>
       generation === this.deferralGeneration && this.decision == null && this.pendingAction === action;

@@ -23,6 +23,38 @@ it('safely removes the dialog label and restores later text', async () => {
 });
 
 for (const tag of ['lr-dialog', 'lr-drawer']) {
+  it(`tracks sibling text referenced by the ${tag} heading`, async () => {
+    const dialog = await fixture<LyraDialog>(`<${tag} label="Fallback" style="--lr-duration-base: 0ms">
+      <h2 aria-labelledby="referenced-title"></h2><span id="referenced-title">Initial</span>
+    </${tag}>`);
+    try {
+      await dialog.show();
+      await waitUntil(() => panelName(dialog) === 'Initial');
+      dialog.querySelector('span')!.textContent = 'Updated';
+      await waitUntil(() => panelName(dialog) === 'Updated');
+      dialog.querySelector('span')!.id = 'retired-title';
+      await waitUntil(() => panelName(dialog) === 'Fallback');
+      dialog.querySelector('span')!.id = 'referenced-title';
+      await waitUntil(() => panelName(dialog) === 'Updated');
+    } finally { await dialog.hide(); }
+  });
+
+  for (const native of [false, true]) {
+    it(`forwards the ${tag} description to its ${native ? 'native' : 'ordinary'} dialog owner`, async () => {
+      const predecessor = await fixture<HTMLDialogElement>(html`<dialog>Outer dialog</dialog>`);
+      if (native) predecessor.showModal();
+      const dialog = await fixture<LyraDialog>(`<${tag} label="Details" aria-describedby="dialog-description" style="--lr-duration-base: 0ms">
+        <p id="dialog-description">Action consequences</p>
+      </${tag}>`);
+      try {
+        await dialog.show();
+        const owner = dialog.shadowRoot!.querySelector<HTMLElement>('[role="dialog"]')!;
+        expect(owner.localName).to.equal(native ? 'dialog' : 'div');
+        expect(owner.ariaDescribedByElements?.map(element => element.textContent)).to.deep.equal(['Action consequences']);
+      } finally { await dialog.hide(); predecessor.close(); }
+    });
+  }
+
   for (const attribute of ['aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'inert', 'style', 'class']) {
     it(`updates ${tag} naming when its direct heading ${attribute} changes`, async () => {
       const dialog = await fixture<LyraDialog>(`<${tag} label="Fallback" style="--lr-duration-base: 0ms">

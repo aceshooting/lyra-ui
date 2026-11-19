@@ -155,6 +155,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // a newer toolName/result/args/registry before it settles) can detect it's
   // no longer current and skip writing its result over a more recent one.
   private generation = 0;
+  private resolveOnConnect = false;
 
   // A synchronous renderer may retain its context and report a status later.
   // This token keeps that callback scoped to the render invocation that
@@ -169,16 +170,30 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // skeleton again for a load() that's already resolved and cached.
   private resolvedLazy?: { def: ToolRendererDefinition; resolved: DirectToolRendererDefinition };
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.resolveOnConnect) this.requestUpdate();
+  }
+
+  override disconnectedCallback(): void {
+    if (this.renderState.kind === 'loading') {
+      this.generation++;
+      this.resolveOnConnect = true;
+    }
+    super.disconnectedCallback();
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
-      !this.hasUpdated ||
+      !this.hasUpdated || this.resolveOnConnect ||
       changed.has('toolName') ||
       changed.has('result') ||
       changed.has('args') ||
       changed.has('registry')
     ) {
-      void this.resolve();
+      this.resolveOnConnect = !this.isConnected;
+      if (!this.resolveOnConnect) void this.resolve();
     }
   }
 

@@ -18,6 +18,7 @@ import {
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   deferredPlaceReady as place,
+  waitForDeferredPlacement,
   syncTopLayerRelease,
   topLayerPlacement,
   type DeferredOperationHandle,
@@ -59,6 +60,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import {
+  declaredDefaultConverter,
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
 } from '../../../internal/converters.js';
@@ -339,6 +341,10 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * before the user has done anything is hostile.
  * @cssstate blank - Matches while no option is selected.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart form-control-input - Compatibility name for the control wrapper.
@@ -601,7 +607,8 @@ export class LyraSelect<
   /** Preferred listbox placement. `flip`/`shift` may still override it to keep the popup in view,
    *  and the `left`/`right` component is swapped under RTL. Changes reposition an already-open
    *  listbox without closing it or changing overlay stack ownership. */
-  @property({ reflect: true }) placement: Placement = 'bottom';
+  @property({ reflect: true, converter: declaredDefaultConverter('bottom') })
+  placement: Placement = 'bottom';
   /**
    * Copies the trigger's width, height, or both onto the listbox -- the same property
    * `<lr-popup>`/`<lr-popover>`/`<lr-dropdown>`/`<lr-combobox>` spell, with the same values. Unset
@@ -827,7 +834,6 @@ export class LyraSelect<
   private triggerId = nextId('select-trigger');
   private valueTextId = nextId('select-value');
   private cleanup?: DeferredOperationHandle;
-  private positioningReady: Promise<boolean> = Promise.resolve(false);
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private positionedDirection?: 'ltr' | 'rtl';
@@ -1071,6 +1077,7 @@ export class LyraSelect<
    * cancel a user-requested close. */
   private forceCloseOpenState(): void {
     this.listboxHidden = true;
+    this.listboxRendered = false;
     // A normal close may already have changed `_open` in this task while its willUpdate veto point
     // is still pending. Suppress that exact transition as well, but do not leave a sticky flag on a
     // control that was already settled closed: it could be re-enabled and shown before this batch
@@ -1434,7 +1441,7 @@ export class LyraSelect<
     } else if (this.required && this._selected.length === 0) {
       this.validityController.setValidity(
         { valueMissing: true },
-        this.localize('selectValueMissing')
+        () => this.localize('selectValueMissing')
       );
     } else {
       this.validityController.setValidity({});
@@ -2169,12 +2176,15 @@ export class LyraSelect<
       sync: this.sync,
     });
     const operation = this.cleanup;
-    this.positioningReady = operation.ready.then((positioned) => {
-      if (positioned && this.cleanup === operation && this.open && this.isConnected) {
-        this.listboxPositioned = true;
-        this.revealActiveOption();
+    void operation.ready.then((positioned) => {
+      if (this.cleanup !== operation || !this.open || !this.isConnected) return;
+      if (!positioned) {
+        this.restoreFocusOnClose = false;
+        this.forceCloseOpenState();
+        return;
       }
-      return positioned;
+      this.listboxPositioned = true;
+      this.revealActiveOption();
     });
   }
 
@@ -2296,19 +2306,7 @@ export class LyraSelect<
 
   private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     return this.popupController.settle(event, {
-      waitForPosition: async (stale) => {
-        while (this.open) {
-          const readiness = this.positioningReady;
-          const positioned = await readiness;
-          if (stale()) return false;
-          if (positioned) break;
-          if (readiness === this.positioningReady) {
-            this.forceCloseOpenState();
-            return false;
-          }
-        }
-        return true;
-      },
+      waitForPosition: () => waitForDeferredPlacement(() => this.cleanup),
       conceal: () => { this.listboxHidden = true; this.listboxRendered = false; },
     });
   }
@@ -2449,11 +2447,12 @@ export class LyraSelect<
   }
 
   /** A canceled clear leaves the selection, form state, and clear notification untouched. */
-  private clear(): void {
+  private clear(button?: HTMLElement): void {
     if (this.effectiveDisabled || this._selected.length === 0) return;
     this.requestSelection([], [], () => {
       this.emitValueEvents();
       this.emit('lr-clear');
+      if (!this._selected.length && button?.matches(':focus')) this.triggerElement?.focus();
     });
   }
 
@@ -2542,7 +2541,7 @@ export class LyraSelect<
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.isComposing || e.keyCode === 229) return;
+    if (e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return;
     const navigable = this.navigableOptions();
     const move = (): number | null => resolveListMove(e, {
       count: navigable.length,
@@ -2888,7 +2887,7 @@ export class LyraSelect<
             (hasLabel ? nothing : this.placeholder || this.localize('select'))}
             aria-describedby=${describedBy || nothing}
             aria-required=${isSingleOption ? nothing : this.required ? 'true' : 'false'}
-            aria-invalid=${this.touched && !this.internals.validity.valid
+            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid)
               ? 'true'
               : 'false'}
             ?disabled=${this.effectiveDisabled}
@@ -2968,7 +2967,7 @@ export class LyraSelect<
                 aria-label=${this.localize('clear')}
                 @click=${(e: Event) => {
                   e.stopPropagation();
-                  this.clear();
+                  this.clear(e.currentTarget as HTMLButtonElement);
                 }}
               >
                 <span aria-hidden="true" inert

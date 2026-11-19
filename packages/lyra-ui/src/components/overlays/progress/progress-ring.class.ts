@@ -107,7 +107,7 @@ export class LyraProgressRing extends LyraProgressBase {
 
   /** Live SVG indicator circle, or `null` before the render root is populated. */
   override get indicator(): SVGCircleElement | null {
-    return this.renderRoot.querySelector<SVGCircleElement>('[part="indicator"]');
+    return this.renderRoot?.querySelector<SVGCircleElement>('[part="indicator"]') ?? null;
   }
 
   /** Current normalized stroke offset used by the rendered indicator. */

@@ -6,12 +6,12 @@ import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
-  isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
   readResponseText,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { loadIcal, type IcalTimeApi } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
@@ -42,7 +42,7 @@ export interface ParsedCalendarEvent {
   location: string;
   description: string;
 }
-type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
+type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: () => string };
 export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
@@ -209,7 +209,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -222,7 +222,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: error.message };
+      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -239,7 +239,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', events };
     } catch (error) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
     }
   }
@@ -247,7 +247,12 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   private async parse(source: string, generation: number, signal: AbortSignal | undefined): Promise<ParsedCalendarEvent[] | undefined> {
     const ical = await loadIcal();
     if (signal?.aborted || !this.isConnected || generation !== this.generation) return undefined;
-    if (!ical) throw new LyraUserFacingError(this.localize('calendarViewerMissingParser'));
+    if (!ical) {
+      throw new LyraUserFacingError(
+        this.localize('calendarViewerMissingParser'),
+        (localize) => localize('calendarViewerMissingParser'),
+      );
+    }
     // Count events before the peer materializes the whole (up to 25 MB) calendar tree.
     if ((source.match(/^BEGIN:VEVENT\r?$/gim)?.length ?? 0) > MAX_CALENDAR_EVENTS) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
@@ -296,7 +301,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     switch (this.fetchState.kind) {
       case 'loaded': return this.fetchState.events.length ? html`<ul part="event-list">${this.fetchState.events.map((event) => this.renderEvent(event))}</ul>` : html`<p class="empty-note">${this.localize('calendarViewerEmpty')}</p>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
-      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeCalendar') })}</p>`;
     }
   }

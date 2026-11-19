@@ -19,7 +19,7 @@ export interface ResolveCssLengthOptions {
 /** The element's computed `font-size` in px, or the CSS initial size if it has no computed style. */
 function fontSizePx(element: Element, view: Window): number {
   const size = Number.parseFloat(view.getComputedStyle(element).fontSize);
-  return Number.isFinite(size) && size > 0 ? size : FALLBACK_FONT_SIZE_PX;
+  return Number.isFinite(size) && size >= 0 ? size : FALLBACK_FONT_SIZE_PX;
 }
 
 /**

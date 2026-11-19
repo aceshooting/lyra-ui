@@ -13,7 +13,6 @@ import { tag } from '../../../internal/prefix.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   assertTableDimensions,
-  isAbortError,
   isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
@@ -61,7 +60,7 @@ type SpreadsheetState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; sheets: SpreadsheetSheet[] }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 const MAX_SPREADSHEET_SHEETS = 256;
 const MAX_SPREADSHEET_CELLS = 1_000_000;
 
@@ -381,19 +380,27 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         }
         const workbook = this._workbook;
         this.fetchState = { kind: 'loaded', sheets: workbook.sheets.map(sheet => ({ ...sheet, body: sheet.rows.slice(1), columns: delimitedColumnCount(sheet.rows) })) };
-      } catch (error) { this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') }; this.emit('lr-render-error', { error }); }
+      } catch (error) {
+        this.fetchState = {
+          kind: 'error',
+          message: isResourceLimitError(error)
+            ? () => this.localize('documentPreviewResourceTooLarge')
+            : () => this.localize('documentPreviewFailedToLoad'),
+        };
+        this.emit('lr-render-error', { error });
+      }
       return;
     }
     if (!this.src) {
       this.fetchState = { kind: 'idle' };
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    const src = this.src;
+    const fetchTarget = resolveOwnerFetchTarget(this, src);
     if (!fetchTarget) {
-      const error = new LyraUserFacingError(
-        this.localize('documentPreviewUrlNotAllowed')
-      );
-      this.fetchState = { kind: 'error', message: error.message };
+      const message = () => this.localize('documentPreviewUrlNotAllowed');
+      const error = new LyraUserFacingError(message());
+      this.fetchState = { kind: 'error', message };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -409,10 +416,9 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       const library = await this.loadLibrary();
       if (!this.isConnected || generation !== this.generation) return;
       if (!library) {
-        const error = new LyraUserFacingError(
-          this.localize('spreadsheetViewerUnavailable')
-        );
-        this.fetchState = { kind: 'error', message: error.message };
+        const message = () => this.localize('spreadsheetViewerUnavailable');
+        const error = new LyraUserFacingError(message());
+        this.fetchState = { kind: 'error', message };
         this.emit('lr-render-error', { error });
         return;
       }
@@ -486,18 +492,16 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       }
     } catch (error) {
       if (
-        isAbortError(error) ||
         !this.isConnected ||
-        generation !== this.generation
-      )
-        return;
+        generation !== this.generation ||
+        signal?.aborted ||
+        this.src !== src
+      ) return;
       this.fetchState = {
         kind: 'error',
-        message: this.localize(
-          isResourceLimitError(error)
-            ? 'documentPreviewResourceTooLarge'
-            : 'documentPreviewFailedToLoad'
-        ),
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
     }
@@ -749,7 +753,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         : this.fetchState.kind === 'loading'
         ? renderViewerLoading(this.localize('loadingDocument'))
         : this.fetchState.kind === 'error'
-        ? html`<div part="error">${this.fetchState.message}</div>`
+        ? html`<div part="error">${this.fetchState.message()}</div>`
         : html`<p class="empty-note">${this.localize(
             'documentPreviewEmpty',
             undefined,

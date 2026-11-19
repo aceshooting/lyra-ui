@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import {
+  formControlLabelTypography,
   formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -64,8 +65,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
   [part~='label'] {
-    color: var(--lr-color-text);
-    font-weight: var(--lr-font-weight-semibold);
+    ${formControlLabelTypography}
   }
   /* The one required-marker rule the library shares, in place of a literal <span> glyph in the
      template: a stylesheet marker is suppressible and retunable by a consumer, and generated

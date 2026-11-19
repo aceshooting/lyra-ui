@@ -8,6 +8,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteRange, isSliderKey } from '../../../internal/numbers.js';
+import { preserveRangeKeyboardShortcut } from '../../../internal/range-keyboard-shortcut.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './image-comparer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -114,6 +115,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   }
   @property({ attribute: 'before-label' }) beforeLabel = '';
   @property({ attribute: 'after-label' }) afterLabel = '';
+  /** A nonblank host label names the comparison and its range. Blank labels use the localized default. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @query('[part="input"]') private handleEl?: HTMLInputElement;
@@ -183,6 +185,10 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
   private onKeyDown = (event: KeyboardEvent): void => {
     if (!isSliderKey(event.key)) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      preserveRangeKeyboardShortcut(event);
+      return;
+    }
     const next = this.keyboardPosition(event.key);
     if (next === undefined) return;
     event.preventDefault();
@@ -195,7 +201,8 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
   private onKeyUp = (event: KeyboardEvent): void => {
     if (!isSliderKey(event.key) || !this.keyboardDirty) return;
-    event.preventDefault();
+    // A modifier pressed after keydown still lets the earlier value change commit.
+    if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) event.preventDefault();
     this.keyboardDirty = false;
     emitValueEvents(this, 'change', { value: this.position }, detail => this.emit('lr-change', detail));
   };
@@ -249,7 +256,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
   override render(): TemplateResult {
     const position = `${this.normalizedPosition}%`;
-    const label = this.accessibleLabel ?? this.localize('imageComparerLabel');
+    const label = this.accessibleLabel?.trim() ? this.accessibleLabel : this.localize('imageComparerLabel');
     return html`<div
       part="base comparison"
       data-orientation=${this.orientation}

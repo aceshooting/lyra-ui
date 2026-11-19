@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -132,6 +133,12 @@ const virtualCount = (list: LyraVirtualList): number => {
  * @cssprop [--lr-chat-viewport-gap=0] - Block-direction gap between slotted messages (slotted mode).
  * @cssprop [--lr-chat-viewport-content-max-inline-size=none] - Maximum inline size of the transcript
  *   column; a narrower column is centred in the scroll container.
+ * @cssprop [--lr-chat-viewport-jump-bg=var(--lr-color-surface)] - Resting jump button fill.
+ * @cssprop [--lr-chat-viewport-jump-hover-bg=var(--lr-color-brand-quiet)] - Jump button hover fill and the base for its active fill.
+ * @cssprop [--lr-chat-viewport-jump-color=var(--lr-color-text)] - Jump button text and icon color.
+ * @cssprop [--lr-chat-viewport-jump-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Jump button border shorthand.
+ * @cssprop [--lr-chat-viewport-jump-radius=var(--lr-radius-pill)] - Jump button corner radius.
+ * @cssprop [--lr-chat-viewport-jump-shadow=var(--lr-shadow-m)] - Jump button shadow.
  * @status stable
  * @since 4.0.0
  */
@@ -160,6 +167,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
+
+  /** Shows a down chevron in place of the visible jump label. The button keeps its localized
+   * action name and, when present, announces the unread count as its accessible description. */
+  @property({ type: Boolean, attribute: 'jump-icon-only' }) jumpIconOnly = false;
 
   /** Live-region policy for newly appended direct children. Keep `off` for token-by-token
    * streaming; use `polite` or `assertive` only when messages are appended at an announcement-safe
@@ -1119,9 +1130,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           </div>
         </div>
         ${!this.follow
-          ? html`<button part="jump-pill" type="button" @click=${() => this.scrollToBottom()}>
-              ${this.pillLabel()}
-            </button>`
+          ? html`<button
+              part="jump-pill"
+              type="button"
+              ?data-icon-only=${this.jumpIconOnly}
+              aria-label=${this.jumpIconOnly ? this.localize('jumpToLatest') : nothing}
+              aria-description=${this.jumpIconOnly && this.unreadCount > 0 ? this.pillLabel() : nothing}
+              @click=${() => this.scrollToBottom()}
+            >${this.jumpIconOnly ? html`<span class="jump-icon">${chevronIcon()}</span>` : this.pillLabel()}</button>`
           : nothing}
       </div>
     `;

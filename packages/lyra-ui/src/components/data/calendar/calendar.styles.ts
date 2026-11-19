@@ -22,6 +22,11 @@ export const styles = css`
      while lr-button/lr-icon-button ease. */
   button[part~='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; font: inherit; transition: background-color var(--lr-transition-fast); }
   button[part~='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
+  button[part~='nav']:disabled, [part='day'][aria-disabled='true'] {
+    cursor: default;
+    pointer-events: none;
+  }
+  button[part~='nav']:disabled { opacity: var(--lr-opacity-disabled); }
   [part='nav-glyph'] { font-size: var(--lr-size-1em); }
   button[part~='nav']:hover { background: var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)); }
   /* Pressed: the hovered fill carried further toward --lr-color-mix-partner, which follows the

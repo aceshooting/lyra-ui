@@ -41,6 +41,10 @@ export const styles = css`
     ${iconHitTarget}
   }
   .checkbox-owner:focus-visible {
+    /* The hit target can extend beneath the label. Outline the visible box instead. */
+    outline: none;
+  }
+  :where(.checkbox-owner:focus-visible) [part~="box"] {
     ${focusRing}
   }
   :host(:disabled) .checkbox-layout {

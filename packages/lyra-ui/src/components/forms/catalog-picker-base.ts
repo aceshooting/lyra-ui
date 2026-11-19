@@ -74,7 +74,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   /** Explicit popup strategy; omission inherits --lr-positioning-strategy. */
   @property({ attribute: 'positioning-strategy' }) positioningStrategy?: PlaceStrategy;
   /** Native autocomplete guidance for the optional filter input. */
-  @property() autocomplete = 'off';
+  @property({ useDefault: true }) autocomplete = 'off';
   /** Native input keyboard hint for the optional filter. */
   @property({ attribute: 'inputmode' }) override inputMode = '';
   /** Native enter-key hint for the optional filter. */
@@ -176,7 +176,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     if (isBarredFromValidation(this, this.internals)) this[SET_ANCHORED_VALIDITY]({});
     else if (this.value && !this.entries.some((row) => row.code === this.value && !row.disabled)) {
       this[SET_ANCHORED_VALIDITY]({ customError: true }, this.localize('notInCatalog'));
-    } else if (this.required && !this.value) this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
+    } else if (this.required && !this.value) this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, () => this.localize('fieldRequired'));
     else this[SET_ANCHORED_VALIDITY]({});
   }
   /** @internal */
@@ -234,7 +234,8 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   private projectValidation(): void {
     const child = this.validationChild;
     if (!child || !this.isConnected || child !== this.control || this.validationDocument !== this.ownerDocument) return;
-    resolveValidityAnchor(child)?.setAttribute('aria-invalid', hasCustomState(this.internals, 'user-invalid') ? 'true' : 'false');
+    const invalid = this.errorText || this.slots.has('error') || hasCustomState(this.internals, 'user-invalid');
+    resolveValidityAnchor(child)?.setAttribute('aria-invalid', invalid ? 'true' : 'false');
   }
   private syncRelationships(): void {
     const anchor = this[VALIDITY_ANCHOR]();
@@ -368,7 +369,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
       ${current?.disabled ? html`<span slot="end">${this.localize('notInCatalog')}</span>` : nothing}
       ${this.slots.has('label') ? html`<slot name="label" slot="label"></slot>` : nothing}
       ${this.slots.has('hint') ? html`<slot name="hint" slot="hint"></slot>` : nothing}
-      ${this.slots.has('error') ? html`<slot name="error" slot="error"></slot>` : nothing}
+      <slot name="error" slot="error"></slot>
     </${controlTag}>${this.inputLimitMessage ? html`<p part="limit">${this.inputLimitMessage}</p>` : nothing}`;
   }
 }

@@ -335,7 +335,7 @@ export class MapDrawingController {
     let canvas: HTMLCanvasElement;
     try { canvas = map.getCanvas(); } catch { return; }
     const key = (event: KeyboardEvent): void => {
-      if (this.session !== session || host.map() !== map || event.defaultPrevented || event.isComposing ||
+      if (this.session !== session || host.map() !== map || event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
         event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target !== canvas) return;
       if (event.key === 'Enter' && !event.repeat) { event.preventDefault(); this.complete(); }
       else if (event.key === 'Backspace' && !this.editingState) { event.preventDefault(); this.undo(); }
@@ -438,6 +438,8 @@ export class MapDrawingController {
   }
 
   vertexKey(event: KeyboardEvent, index: number): void {
+    if (event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
+      event.altKey || event.ctrlKey || event.metaKey || (event.shiftKey && !event.key.startsWith('Arrow'))) return;
     const host = this.host, session = this.session, state = this.snapshotState, map = host.map(), epoch = host.epoch();
     if (!session || !state || !map || this.dispatchingState || !host.interactionAllowed()) return;
     const current = (): boolean => this.session === session && this.snapshotState === state && host.map() === map && host.epoch() === epoch && host.interactionAllowed();

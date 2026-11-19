@@ -1,7 +1,9 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { live } from 'lit/directives/live.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import {
   acquireAnnouncementSink,
@@ -106,8 +108,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  *
  * An unsized host follows its content. Set a host block size (such as `block-size: 100%` in a
  * bounded parent) to fill that allocation, with label and hint chrome outside the text viewport.
- * `resize="auto"` grows to the content up to `--lr-textarea-max-block-size`; a smaller host
- * allocation takes precedence and overflowing text remains scrollable as that allocation changes.
+ * `resize="auto"` sizes an empty field from `rows` regardless of the placeholder and grows to
+ * fit the value up to `--lr-textarea-max-block-size`. A smaller host allocation takes precedence,
+ * and overflowing text remains scrollable as that allocation changes.
  *
  * Removing `label`, `hint`, `help-text` or `error-text` safely omits that content while preserving
  * native null property readback. Explicit empty strings stay empty; later text renders normally.
@@ -137,6 +140,10 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
  * @csspart form-control - The outer wrapper around label, textarea, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart base - Compatibility name for the control wrapper; use `textarea-wrapper`.
@@ -167,9 +174,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field. Its
  * private default follows `appearance` in the same way as `--lr-textarea-fill`.
  * @cssprop [--lr-textarea-hover-border-color=var(--lr-color-brand)] - Field border color while the
- * native textarea is hovered.
+ * native textarea is hovered and unfocused.
  * @cssprop [--lr-textarea-focus-border-color=var(--lr-color-brand)] - Field border color while the
- * native textarea is focused.
+ * native textarea is focused, including when hovered.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
  * library, so a halo is configured once rather than per component. Additive: the brand border cue
@@ -222,6 +229,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
   override set value(next: string | null) {
     const normalized = next ?? '';
+    if (!this.settlingValueFromInput && normalized !== this.value) this.inputGeneration++;
     super.value = normalized;
     // A write reaching here that did NOT come from `onInput`'s own guarded assignment below is a
     // programmatic `value` write (including `formResetCallback()`'s restore) -- cancel any pending
@@ -378,6 +386,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // own assignment, so that write is never mistaken for the programmatic one the setter otherwise
   // cancels a pending debounce for.
   private settlingValueFromInput = false;
+  private inputGeneration = 0;
   private readonly settledDebounce = new DebounceController<string>(0, (value) => {
     this.emit('lr-input-settled', { value });
   });
@@ -392,9 +401,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
   constructor() {
     super();
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
 
   /** The internal native `<textarea>` element, for direct DOM access (caret position, selection,
@@ -519,6 +526,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   override disconnectedCallback(): void {
+    this.inputGeneration++;
     // `cancel()`, not `dispose()`: a detached textarea still fires its timer into a torn-down host
     // without this, but a re-parent (which also runs this) must leave the control able to debounce
     // a later edit -- the same reconnect contract `<lr-filter-bar>`'s own `cancelDebounce()` keeps.
@@ -605,7 +613,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (this.required && this.value === '') {
       this[SET_ANCHORED_VALIDITY](
         { valueMissing: true },
-        this.localize('fieldRequired')
+        () => this.localize('fieldRequired')
       );
       return;
     }
@@ -703,6 +711,11 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // down too, not just grow it -- scrollHeight never reports smaller than the box's current
     // height otherwise.
     ta.style.blockSize = 'auto';
+    // Keep content scrollable when the cap or a flex parent constrains the rendered height.
+    ta.style.overflowY = 'auto';
+    // Native auto sizing honors rows. An empty textarea's scrollHeight can include its wrapped
+    // placeholder, so only measure scrollHeight when there is a value to fit.
+    if (ta.value === '') return;
     const computed = ta.ownerDocument.defaultView?.getComputedStyle(ta);
     if (!computed) return;
     const borderBlock =
@@ -714,10 +727,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       : Number.POSITIVE_INFINITY;
     const contentBlockSize = ta.scrollHeight + borderBlock;
     ta.style.blockSize = `${Math.min(contentBlockSize, maxBlockSize)}px`;
-    // Always scrollable: the fitted height equals the content (no scrollbar), but flex shrink from
-    // a constraining parent can render the field smaller than its own cap, and that content must
-    // stay reachable rather than clipped.
-    ta.style.overflowY = 'auto';
   }
 
   /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for
@@ -737,16 +746,19 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       return;
     }
     if (!this.textareaEl) return;
+    const generation = ++this.inputGeneration;
     this.settlingValueFromInput = true;
     this.value = this.textareaEl.value;
     this.settlingValueFromInput = false;
+    const value = this.value;
     if (this.resize === 'auto') this.fitToContent();
     this.scheduleCountAnnouncement();
     relayNativeEvent(this, event);
-    this.emit('lr-input', { value: this.value });
+    this.emit('lr-input', { value });
+    if (generation !== this.inputGeneration) return;
     if (this.isDebounced()) {
       this.settledDebounce.delayMs = this.effectiveDebounceMs;
-      this.settledDebounce.push(this.value);
+      this.settledDebounce.push(value);
     } else {
       this.settledDebounce.cancel();
     }
@@ -858,7 +870,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             minlength=${normalizeLengthLimit(this.minlength) ?? nothing}
             maxlength=${normalizeLengthLimit(this.maxlength) ?? nothing}
             wrap=${this.wrap}
-            .value=${this.value}
+            .value=${live(this.value)}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}

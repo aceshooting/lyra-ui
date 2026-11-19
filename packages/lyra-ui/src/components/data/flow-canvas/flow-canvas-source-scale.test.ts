@@ -1,4 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './flow-canvas.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
@@ -117,9 +119,10 @@ it('provides localized source controls at a narrow RTL allocation',async()=>{
 });
 it('reaches the final and first global records by keyboard',async()=>{
  const data=provider();const el=await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}></lr-flow-canvas>`);await ready(el);await el.updateComplete;
- el.shadowRoot!.querySelector('[data-source-key="node:0"]')!.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));
+ await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:0"]')!);
+ await sendKeys({ press: 'End' });
  await waitUntil(()=>el.shadowRoot!.activeElement?.getAttribute('data-source-key')==='node:999999');expect(el.sourcePage).to.equal(9999);
- el.shadowRoot!.activeElement!.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));
+ await sendKeys({ press: 'Home' });
  await waitUntil(()=>el.shadowRoot!.activeElement?.getAttribute('data-source-key')==='node:0');expect(el.sourcePage).to.equal(0);
 });
 for(const action of ['replace','revision','reveal'] as const)it(`stops inspecting a stale record after descriptor ${action} reentry`,async()=>{
@@ -310,4 +313,50 @@ it('revokes detached source controls immediately when a different provider is as
   expect(latest.queries.length).to.equal(1);
   expect(latest.queries[0]!.query).to.include({ kind: 'nodes', search: '', centerKey: null });
   expect(latest.queries[0]!.page).to.equal(0); expect(el.sourcePage).to.equal(0);
+});
+
+function disabledRecordProvider() {
+  const { source } = provider();
+  source.scene = async () => ({
+    nodes: [], edges: [], coverage: 'aggregate', total: { nodes: 6, edges: 0 },
+    worldBounds: { x: 0, y: 0, width: 100, height: 100 },
+  });
+  source.overview = undefined;
+  source.records.query = async ({ page, pageSize }) => ({
+    rows: Array.from({ length: 6 }, (_, index) => ({
+      key: `node:${index}`, order: index,
+      value: { kind: 'node' as const, value: { id: String(index), disabled: index !== 1 && index !== 4 } },
+    })).slice(page * pageSize, (page + 1) * pageSize),
+    total: 6, summary: { nodes: 6, edges: 0 },
+  });
+  return source;
+}
+
+it('skips disabled source records with arrows and endpoints across bounded pages', async () => {
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${disabledRecordProvider()} .sourcePageSize=${2}></lr-flow-canvas>`);
+  const root = el.shadowRoot!;
+  const record = (id: number) => root.querySelector<HTMLButtonElement>(`[data-source-key="node:${id}"]`);
+  await waitUntil(() => Boolean(record(1)));
+  await focusByKeyboard(record(1)!);
+  const expectFocus = (id: number) => waitUntil(() => root.activeElement?.getAttribute('data-source-key') === `node:${id}`);
+  await sendKeys({ press: 'ArrowDown' });
+  await expectFocus(4);
+  await sendKeys({ press: 'ArrowUp' });
+  await expectFocus(1);
+  await sendKeys({ press: 'End' });
+  await expectFocus(4);
+  await sendKeys({ press: 'Home' });
+  await expectFocus(1);
+});
+
+it('retains a usable page control after a source navigation button becomes disabled', async () => {
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${disabledRecordProvider()} .sourcePageSize=${3}></lr-flow-canvas>`);
+  const root = el.shadowRoot!;
+  const [previous, next] = root.querySelectorAll<HTMLButtonElement>('[part="source-controls"] button');
+  await waitUntil(() => Boolean(next && !next.disabled));
+  await focusByKeyboard(next!);
+  await sendKeys({ press: 'Enter' });
+  await waitUntil(() => el.sourcePage === 1 && Boolean(previous && !previous.disabled));
+  const usable = () => root.activeElement === previous || root.activeElement?.hasAttribute('data-source-page');
+  await waitUntil(usable, 'the pager retains focus within usable controls');
 });

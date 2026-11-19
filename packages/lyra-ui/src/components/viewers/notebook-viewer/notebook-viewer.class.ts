@@ -9,6 +9,7 @@ import { specialistTokens } from '../../../internal/specialist-host-tokens.style
 import { DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
@@ -436,7 +437,7 @@ type NotebookState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; doc: NotebookDoc }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 /** Which DOMPurify profile to sanitize an embedded output under -- `svg` output enables the
  *  `svg`/`svgFilters` profiles, `html` uses DOMPurify's default profile. */
@@ -715,7 +716,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.announcements.transition(
       'load',
       this.loadState.kind,
-      this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
+      this.loadState.kind === 'error' ? this.loadState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src') && this._notebook === undefined) this.scheduleSourceLoad();
     const locale = this.effectiveLocale;
@@ -790,7 +791,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       const raw = typeof this._notebook === 'string' ? JSON.parse(this._notebook) : this._notebook;
       this.setDoc(raw, generation);
     } catch (error) {
-      this.loadState = { kind: 'error', message: this.localize('notebookViewerInvalid') };
+      this.loadState = { kind: 'error', message: () => this.localize('notebookViewerInvalid') };
       this.emit('lr-render-error', { error });
     }
   }
@@ -841,7 +842,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.loadState = { kind: 'error', message: error.message };
+      this.loadState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -857,9 +858,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.loadState = {
         kind: 'error',
-        message: error instanceof LyraUserFacingError
-          ? error.message
-          : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
+        message: viewerFailureMessage(error, this.localize.bind(this)),
       };
       this.emit('lr-render-error', { error });
     }
@@ -868,20 +867,21 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   private setDoc(raw: unknown, generation: number): void {
     if (generation !== this.generation) return;
     if (!isNotebookShape(raw)) {
-      this.loadState = { kind: 'error', message: this.localize('notebookViewerInvalid') };
+      this.loadState = { kind: 'error', message: () => this.localize('notebookViewerInvalid') };
       this.emit('lr-render-error', { error: new Error('invalid notebook shape') });
       return;
     }
     if (raw.nbformat !== SUPPORTED_MAJOR || !SUPPORTED_MINORS.includes(raw.nbformat_minor)) {
+      const version = `${raw.nbformat}.${raw.nbformat_minor}`;
       this.loadState = {
         kind: 'error',
-        message: this.localize('notebookViewerUnsupportedVersion', undefined, { version: `${raw.nbformat}.${raw.nbformat_minor}` }),
+        message: () => this.localize('notebookViewerUnsupportedVersion', undefined, { version }),
       };
       this.emit('lr-render-error', { error: new Error('unsupported nbformat version') });
       return;
     }
     if (raw.cells.length > MAX_CELLS) {
-      this.loadState = { kind: 'error', message: this.localize('notebookViewerTooManyCells') };
+      this.loadState = { kind: 'error', message: () => this.localize('notebookViewerTooManyCells') };
       this.emit('lr-render-error', { error: new Error('too many cells') });
       return;
     }
@@ -1317,7 +1317,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         : this.loadState.kind === 'loading'
           ? renderViewerLoading(this.localize('loadingDocument'))
           : this.loadState.kind === 'error'
-            ? html`<div part="error">${this.loadState.message}</div>`
+            ? html`<div part="error">${this.loadState.message()}</div>`
             : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
       ${this.renderAnchorLiveRegion()}
     </div>`;

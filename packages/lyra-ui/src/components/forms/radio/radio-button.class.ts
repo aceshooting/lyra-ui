@@ -1,6 +1,6 @@
 import type { TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { sizes } from '../../../internal/sizes.styles.js';
+import { groupOptionSize, sizes } from '../../../internal/sizes.styles.js';
 import { LyraRadio } from './radio.class.js';
 import { styles } from './radio-button.styles.js';
 /**
@@ -101,7 +101,7 @@ import { styles } from './radio-button.styles.js';
  * @since 8.0.0
  */
 export class LyraRadioButton extends LyraRadio {
-  static override styles = [LyraElement.styles, sizes, styles];
+  static override styles = [LyraElement.styles, sizes, groupOptionSize, styles];
 
   override render(): TemplateResult {
     return this.renderButtonControl();

@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { chartValueFractionDigits } from '../../charts/chart/chart-number-format.js';
+import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';

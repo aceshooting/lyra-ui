@@ -22,6 +22,65 @@ import { formatNumber } from '../../../utilities/format.js';
 // sibling rename by temporarily reverting the export and re-running tsc, which failed with
 // "Cannot find name" at the usage sites; the same shape applies here.
 
+it('switches byte units exactly at numeric powers of the step', async () => {
+  const el = await fixture<LyraFormatBytes>(html`
+    <lr-format-bytes locale="en-US" value="1000" display="long" unit-step="10"></lr-format-bytes>
+  `);
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('1 gigabyte');
+  el.value = 999.9999999999999;
+  el.unitStep = 1000;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('1,000 bytes');
+});
+
+for (const tag of ['lr-format-date', 'lr-relative-time'] as const) {
+  it(`restores the original ${tag} instant when the date attribute is removed`, async () => {
+    const host = await fixture(html`<div></div>`);
+    const el = document.createElement(tag);
+    const originalInstant = (el.date as Date).toISOString();
+    el.setAttribute('date', '0');
+    host.append(el);
+    await el.updateComplete;
+    const dateTime = () => el.shadowRoot?.querySelector('time')?.dateTime;
+    expect(dateTime()).to.equal('1970-01-01T00:00:00.000Z');
+    el.removeAttribute('date');
+    await el.updateComplete;
+    expect(dateTime()).to.equal(originalInstant);
+
+    el.setAttribute('date', '');
+    await el.updateComplete;
+    expect(dateTime()).to.equal(undefined);
+    expect(el.date).to.equal('');
+    el.removeAttribute('date');
+    await el.updateComplete;
+    expect(dateTime()).to.equal(originalInstant);
+  });
+}
+
+it('clears optional number precision on attribute removal', async () => {
+  const el = await fixture<LyraFormatNumber>(html`<lr-format-number locale="en-US" value="1.23456"></lr-format-number>`);
+  const text = () => el.shadowRoot?.textContent?.trim();
+  expect(text()).to.equal('1.235');
+  for (const [attribute, property, precision, formatted] of [
+    ['minimum-integer-digits', 'minimumIntegerDigits', '2', '01.235'],
+    ['minimum-fraction-digits', 'minimumFractionDigits', '6', '1.234560'],
+    ['maximum-fraction-digits', 'maximumFractionDigits', '1', '1.2'],
+    ['minimum-significant-digits', 'minimumSignificantDigits', '8', '1.2345600'],
+    ['maximum-significant-digits', 'maximumSignificantDigits', '1', '1'],
+  ] as const) {
+    el.setAttribute(attribute, precision);
+    await el.updateComplete;
+    expect(text()).to.equal(formatted);
+    el.removeAttribute(attribute);
+    await el.updateComplete;
+    expect(el[property]).to.equal(undefined);
+    expect(text()).to.equal('1.235');
+  }
+  el.maximumFractionDigits = 0;
+  await el.updateComplete;
+  expect(text()).to.equal('1');
+});
+
 it('formats numbers and bytes through Intl', async () => {
   const el = await fixture(
     html`<div>
@@ -362,6 +421,40 @@ it('schedules sync relative-time at the next rounded unit boundary instead of fi
     expect(scheduled).to.be.greaterThan(9_000);
     expect(scheduled).to.be.lessThan(11_000);
   } finally {
+    window.setTimeout = originalSetTimeout;
+    window.clearTimeout = originalClearTimeout;
+  }
+});
+
+it('refreshes sync relative time immediately after an exact future auto-unit boundary', async () => {
+  const originalNow = Date.now;
+  const originalSetTimeout = window.setTimeout;
+  const originalClearTimeout = window.clearTimeout;
+  let now = Date.UTC(2030, 0, 1);
+  let wake: (() => void) | undefined;
+  let delay = Infinity;
+  let handle = 0;
+  let el: LyraRelativeTime | undefined;
+  Date.now = () => now;
+  window.setTimeout = ((handler: TimerHandler, milliseconds?: number) => {
+    if (typeof handler === 'function') wake = () => handler();
+    delay = milliseconds ?? 0;
+    return ++handle;
+  }) as typeof window.setTimeout;
+  window.clearTimeout = () => {};
+  try {
+    el = await fixture<LyraRelativeTime>(html`
+      <lr-relative-time .date=${now + 3_600_000} sync locale="en-US"></lr-relative-time>
+    `);
+    expect(el.shadowRoot?.textContent?.trim()).to.equal('in 1 hour');
+    expect(delay).to.be.within(1, 1000);
+    now += 60_000;
+    wake?.();
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent?.trim()).to.equal('in 59 minutes');
+  } finally {
+    el?.remove();
+    Date.now = originalNow;
     window.setTimeout = originalSetTimeout;
     window.clearTimeout = originalClearTimeout;
   }

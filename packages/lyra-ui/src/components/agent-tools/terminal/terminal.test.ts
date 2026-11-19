@@ -358,6 +358,50 @@ describe('lr-terminal', () => {
     expect(event.detail.filename).to.equal('out.log');
   });
 
+  it('retires a download if the listener disconnects the terminal, even when it reattaches it', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div><lr-terminal downloadable content="retained output"></lr-terminal></div>
+    `);
+    const terminal = wrapper.querySelector('lr-terminal')!;
+    const button = terminal.shadowRoot!.querySelector<HTMLButtonElement>('[part="download-button"]')!;
+    const OriginalBlob = window.Blob;
+    const createObjectURL = URL.createObjectURL;
+    const anchorClick = HTMLAnchorElement.prototype.click;
+    const downloads: string[] = [];
+    let blobCount = 0;
+    window.Blob = class extends OriginalBlob {
+      constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
+        super(parts, options);
+        blobCount++;
+      }
+    };
+    URL.createObjectURL = () => 'blob:terminal-test';
+    HTMLAnchorElement.prototype.click = function () { downloads.push(this.download); };
+    try {
+      terminal.addEventListener('lr-download-request', () => terminal.remove(), { once: true });
+      button.click();
+      expect(blobCount).to.equal(0);
+      expect(downloads).to.deep.equal([]);
+
+      wrapper.append(terminal);
+      terminal.addEventListener('lr-download-request', () => {
+        terminal.remove();
+        wrapper.append(terminal);
+      }, { once: true });
+      button.click();
+      expect(blobCount).to.equal(0);
+      expect(downloads).to.deep.equal([]);
+
+      button.click();
+      expect(blobCount).to.equal(1);
+      expect(downloads).to.deep.equal(['terminal.log']);
+    } finally {
+      window.Blob = OriginalBlob;
+      URL.createObjectURL = createObjectURL;
+      HTMLAnchorElement.prototype.click = anchorClick;
+    }
+  });
+
   it('lr-download-request is cancelable; preventDefault() suppresses the built-in Blob download', async () => {
     const el = (await fixture(
       html`<lr-terminal downloadable filename="out.log"></lr-terminal>`,

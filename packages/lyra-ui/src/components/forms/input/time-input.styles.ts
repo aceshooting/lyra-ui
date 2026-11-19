@@ -5,11 +5,12 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
-  formControlAppearance,
+  formControlLabelTypography,
   formControlFocusHalo,
   formControlRequiredMarker,
   formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 
 export const styles = css`
   :host {
@@ -31,12 +32,11 @@ export const styles = css`
   }
 
   [part~='form-control-label'] {
+    ${formControlLabelTypography}
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
     margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
   [part~='form-control-label'][hidden] {
@@ -135,7 +135,7 @@ export const styles = css`
      form-associated custom element (static formAssociated = true), the host's :disabled/:enabled
      state comes from its own disabled content attribute *or* an ancestor <fieldset disabled>'s
      cascade -- the same gating as lr-time-range's [part^='handle']:hover. */
-  :host(:not(:disabled)) [part='segment']:hover {
+  :host(:not(:disabled)) [part='segment']:hover:where(:not(:focus-visible)) {
     background: var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet));
   }
   :host(:not(:disabled)) [part='segment']:active {

@@ -286,6 +286,67 @@ it('recursively adds files from a dropped folder when multiple', async () => {
   expect(detail.files.map((f) => f.name)).to.deep.equal(['nested.csv']);
 });
 
+it('retires a pending directory drop when the bound target changes', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div>
+      <section id="first">First drop target</section>
+      <section id="second">Second drop target</section>
+      <lr-drop-zone for="first" multiple></lr-drop-zone>
+    </div>
+  `);
+  const zone = root.querySelector('lr-drop-zone')!;
+  const first = root.querySelector<HTMLElement>('#first')!;
+  const second = root.querySelector<HTMLElement>('#second')!;
+  const received: string[] = [];
+  zone.addEventListener('lr-files', (event) => received.push(...event.detail.files.map(file => file.name)));
+
+  const dispatchFolder = (target: HTMLElement, name: string): (() => void) => {
+    let complete: (() => void) | undefined;
+    const file = makeFile(name);
+    const directory = {
+      isDirectory: true,
+      name: 'folder',
+      createReader: () => ({
+        readEntries: (success: (entries: unknown[]) => void) => {
+          if (complete) {
+            success([]);
+            return;
+          }
+          complete = () => success([{
+            isDirectory: false,
+            isFile: true,
+            name,
+            file: (onFile: (file: File) => void) => onFile(file),
+          }]);
+        },
+      }),
+    };
+    const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', {
+      value: { files: [], items: [{ kind: 'file', webkitGetAsEntry: () => directory }] },
+    });
+    target.dispatchEvent(event);
+    if (!complete) throw new Error('The drop did not start directory traversal');
+    return complete;
+  };
+
+  const retire = dispatchFolder(first, 'obsolete.txt');
+  zone.target = second;
+  await zone.updateComplete;
+  zone.target = first;
+  await zone.updateComplete;
+  retire();
+  // Directory readers resume via promises. Wait for the continued asynchronous traversal to settle.
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  expect(received).to.deep.equal([]);
+
+  const finish = dispatchFolder(first, 'current.txt');
+  const current = oneEvent(zone, 'lr-files');
+  finish();
+  await current;
+  expect(received).to.deep.equal(['current.txt']);
+});
+
 it('honors the plain-HTML attribute form multiple="false"', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple="false"><div>region</div></lr-drop-zone>`);
   expect(el.multiple).to.equal(false);

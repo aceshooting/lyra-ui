@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -63,8 +63,9 @@ after the write fulfills.
 - `avatarPlacement: ChatMessageAvatarPlacement = 'top'` (`'top' | 'start' | 'end'`, attribute
   `avatar-placement`, reflected) — `'top'` keeps `[part="avatar"]` in the header row above the body;
   `'start'`/`'end'` move it into its own column of `[part="bubble"]` beside the body at the inline
-  start/end (mirrored under RTL), while badges and the collapse toggle stay in the header. Any
-  other value behaves as `'top'`.
+  start/end (mirrored under RTL). When the message has both an avatar and a visible header, the
+  badges and collapse toggle align to the avatar's block midpoint. Any other value behaves as
+  `'top'`.
 - `announceStatus: boolean = true` (attribute `announce-status`, reflected; `announce-status="false"`
   in markup turns it off) — whether status transitions are announced through the shared live region
   (see "Accessibility of `status`" below). Off, neither the failure nor the streaming-complete
@@ -149,6 +150,11 @@ Two matching geometry properties cover the bubble's box:
   Bubble-only by design: `[part='collapse-button']` and `[part='retry-button']` keep reading the
   shared `--lr-radius`, so a rounder bubble never desyncs those controls from the rest of the
   library.
+- `--lr-chat-message-user-bubble-padding` and `--lr-chat-message-user-bubble-radius` override those
+  values for user messages. `--lr-chat-message-assistant-bubble-padding` and
+  `--lr-chat-message-assistant-bubble-radius` apply to assistant messages.
+  `--lr-chat-message-system-bubble-padding` and `--lr-chat-message-system-bubble-radius` apply to
+  system messages. Each falls back to the matching shared bubble property.
 
 **Prefer these to a `::part(bubble)` padding/radius override.** A consumer `::part()` rule wins only
 for the CSS properties it actually declares; changing padding or radius does not erase unrelated

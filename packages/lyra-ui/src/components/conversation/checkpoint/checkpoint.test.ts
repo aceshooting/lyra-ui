@@ -341,6 +341,51 @@ describe('confirm flow (the default)', () => {
   });
 });
 
+it('treats host click as a no-op before the Restore control renders', async () => {
+  const el = document.createElement('lr-checkpoint');
+  el.withoutRestoreConfirmation = true;
+  el.checkpointId = 'ready';
+  const restored: string[] = [];
+  el.addEventListener('lr-restore', event => restored.push(event.detail.checkpointId));
+  expect(() => el.click()).not.to.throw();
+
+  const container = await fixture<HTMLDivElement>(html`<div></div>`);
+  container.append(el);
+  expect(() => el.click()).not.to.throw();
+  expect(restored).to.deep.equal([]);
+  await el.updateComplete;
+  el.click();
+  expect(restored).to.deep.equal(['ready']);
+});
+
+for (const flush of [false, true]) {
+  it(`requires a fresh confirmation when the checkpoint changes and stale Confirm is clicked ${flush ? 'after rendering' : 'in the same task'}`, async () => {
+    const el = await fixture<LyraCheckpoint>(html`<lr-checkpoint checkpoint-id="first"></lr-checkpoint>`);
+    const button = (part: string) => el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`);
+    const restored: string[] = [];
+    el.addEventListener('lr-restore', event => restored.push(event.detail.checkpointId));
+    el.click();
+    await el.updateComplete;
+    const oldConfirm = button('confirm-button')!;
+    expect(el.shadowRoot!.activeElement === oldConfirm).to.equal(true);
+
+    el.checkpointId = 'second';
+    if (flush) await el.updateComplete;
+    oldConfirm.click();
+    expect(restored).to.deep.equal([]);
+    await el.updateComplete;
+    expect(button('confirm-button') === null).to.equal(true);
+    expect(el.shadowRoot!.activeElement === button('restore-button')).to.equal(true);
+
+    el.click();
+    await el.updateComplete;
+    oldConfirm.click();
+    expect(restored).to.deep.equal([]);
+    button('confirm-button')!.click();
+    expect(restored).to.deep.equal(['second']);
+  });
+}
+
 it('forwards host click to Restore only while the primary action is available', async () => {
   const immediate = (await fixture(
     html`<lr-checkpoint without-restore-confirmation></lr-checkpoint>`,

@@ -1794,6 +1794,13 @@ describe('per-box interactivity', () => {
 
     const details: unknown[] = [];
     el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
+    for (const init of [{ key: 'ArrowRight', altKey: true }, { key: ' ', ctrlKey: true },
+      { key: 'Enter', metaKey: true }, { key: 'Enter', isComposing: true }, { key: 'End', keyCode: 229 }]) {
+      const key = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+      canvas.dispatchEvent(key);
+      expect(key.defaultPrevented).to.equal(false);
+    }
+    expect(details).to.have.length(0);
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(details).to.deep.equal([
       {

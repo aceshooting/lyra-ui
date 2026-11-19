@@ -134,7 +134,11 @@ describe('lr-html-viewer', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
     expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
     const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response('', false))) as typeof window.fetch;
+    let requests = 0;
+    window.fetch = (() => {
+      requests++;
+      return Promise.resolve(response('', false));
+    }) as typeof window.fetch;
     try {
       const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/b.html';
@@ -142,6 +146,11 @@ describe('lr-html-viewer', () => {
       expect(event.detail.error).to.exist;
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+
+      el.strings = { documentPreviewFailedToLoad: 'Impossible de charger le document.' };
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Impossible de charger le document.');
+      expect(requests).to.equal(1);
     } finally { window.fetch = original; }
   });
   it('keeps its loaded content across a same-task DOM move', async () => {

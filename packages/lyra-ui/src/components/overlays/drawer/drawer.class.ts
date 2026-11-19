@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { property } from 'lit/decorators.js';
 import type { PropertyValues } from 'lit';
 import { LyraDialog } from '../dialog/dialog.class.js';
@@ -71,7 +72,8 @@ export class LyraDrawer extends LyraDialog {
 
   /** Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be
    *  `start`, so a mechanical rename silently moved every migrated drawer to the other side. */
-  @property({ reflect: true }) placement: LyraDrawerPlacement = 'end';
+  @property({ reflect: true, converter: declaredDefaultConverter('end') })
+  placement: LyraDrawerPlacement = 'end';
 
   /** Positions inside the nearest containing block without modal inerting, focus trapping,
    * scroll locking, top-layer promotion, backdrop, or Escape dismissal. */

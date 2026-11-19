@@ -435,15 +435,15 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     return !this.withoutRetry && (kind === 'error' || kind === 'cancelled');
   }
 
-  private onCancelClick = (): void => {
-    const runId = this.run?.id ?? '';
-    this.emit('lr-run-cancel', { runId });
-  };
-
-  private onRetryClick = (): void => {
-    this.retryAttempt += 1;
-    this.emit('lr-run-retry', { runId: this.run?.id ?? '', attempt: this.retryAttempt });
-  };
+  private onRunAction(event: Event, run: AgentRun, runId: string, retry: boolean): void {
+    if (!(event.currentTarget as HTMLButtonElement).isConnected ||
+      this.run !== run || run.id !== runId) return;
+    if (retry) {
+      if (this.canRetry) this.emit('lr-run-retry', { runId, attempt: ++this.retryAttempt });
+    } else if (this.canCancel) {
+      this.emit('lr-run-cancel', { runId });
+    }
+  }
 
   override render(): TemplateResult {
     const run = this.run;
@@ -451,6 +451,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }
 
+    const runId = run.id;
     const kind = agentStatusKind(run.status);
     const message = agentStatusMessage(run.status);
     const step = this.currentStep;
@@ -515,12 +516,12 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                 <div part="actions">
                   <slot name="actions"></slot>
                   ${this.canCancel
-                    ? html`<button part="cancel-button" data-agent-action="neutral" type="button" @click=${this.onCancelClick}>
+                    ? html`<button part="cancel-button" data-agent-action="neutral" type="button" @click=${(event: Event) => this.onRunAction(event, run, runId, false)}>
                         ${this.localize('cancel')}
                       </button>`
                     : nothing}
                   ${this.canRetry
-                    ? html`<button part="retry-button" data-agent-action="neutral" type="button" @click=${this.onRetryClick}>
+                    ? html`<button part="retry-button" data-agent-action="neutral" type="button" @click=${(event: Event) => this.onRunAction(event, run, runId, true)}>
                         ${this.localize('retry')}
                       </button>`
                     : nothing}

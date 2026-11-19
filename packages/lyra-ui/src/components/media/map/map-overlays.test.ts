@@ -275,6 +275,50 @@ describe('map overlays and data', () => {
       expect(el.shadowRoot!.querySelectorAll('[part="legend-tick"]')).to.have.length(0);
     });
 
+    it('formats small continuous legend values distinctly and keeps explicit captions', async () => {
+      registerLyraLocale('de-x-small-map-legend', { ...LYRA_DEFAULT_STRINGS });
+      const { el } = await liveScriptedMap((map) => {
+        map.legendGradient = [[0.0001, '#ffffff'], [0.0004, '#ff0000']];
+        map.legendGradientTicks = [0.0002];
+      });
+      const captions = () => [...el.shadowRoot!.querySelectorAll('[part="legend-lo"], [part="legend-tick"], [part="legend-hi"]')].map(text);
+      expect(captions()).to.deep.equal(['0.0001', '0.0002', '0.0004']);
+
+      el.locale = 'de-x-small-map-legend';
+      await el.updateComplete;
+      expect(captions()).to.deep.equal(['0,0001', '0,0002', '0,0004']);
+
+      el.legendGradientLoLabel = 'Minimum';
+      el.legendGradientHiLabel = '';
+      el.legendGradientTicks = [{ value: 0.0002, label: 'Typical' }];
+      await el.updateComplete;
+      expect(captions()).to.deep.equal(['Minimum', 'Typical', '']);
+    });
+
+    it('keeps scientific-scale derived legend captions meaningful alongside exact zero', async () => {
+      const { el } = await liveScriptedMap((map) => {
+        map.choroplethLegend = true;
+        map.choropleth = choropleth({ stops: [[-2e-30, '#ffffff'], [0, '#ffaaaa'], [1e-30, '#ff0000']] });
+      });
+      const root = el.shadowRoot!;
+      const scientific = new Intl.NumberFormat('en', { notation: 'scientific', maximumSignificantDigits: 3 });
+      expect(text(root.querySelector('[part="legend-lo"]'))).to.equal(scientific.format(-2e-30));
+      expect(text(root.querySelector('[part="legend-tick"]'))).to.equal('0');
+      expect(text(root.querySelector('[part="legend-hi"]'))).to.equal(scientific.format(1e-30));
+    });
+
+    it('positions gradient stops and ticks across a large finite range', async () => {
+      const { el } = await liveScriptedMap((map) => {
+        map.legendGradient = [[-1e308, '#ffffff'], [0, '#ff0000'], [1e308, '#000000']];
+        map.legendGradientTicks = [-1e308, 0, 1e308];
+      });
+      const gradient = el.shadowRoot!.querySelector('[part="legend-gradient"]')!;
+      expect(getComputedStyle(gradient).backgroundImage).to.match(/linear-gradient.*0%.*50%.*100%/);
+      const ticks = [...el.shadowRoot!.querySelectorAll('[part="legend-tick"]')];
+      expect(ticks.map(tick => getComputedStyle(tick).getPropertyValue('--_lr-map-tick-position').trim()))
+        .to.deep.equal(['0%', '50%', '100%']);
+    });
+
     it('places ticks on the physical ramp under RTL, mirroring with the flipped bar', async () => {
       const { el } = await liveScriptedMap((map) => {
         map.setAttribute('dir', 'rtl');

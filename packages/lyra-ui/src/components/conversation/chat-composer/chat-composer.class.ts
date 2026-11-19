@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import {
   html,
@@ -75,6 +76,14 @@ export type ChatComposerToolbarPlacement = 'above' | 'actions';
 const CHAT_COMPOSER_TOOLBAR_PLACEMENT = literalSetConverter<ChatComposerToolbarPlacement>(
   ['above', 'actions'],
   'above'
+);
+
+/** Logical alignment of a toolbar placed in the bottom action row. */
+export type ChatComposerToolbarAlign = 'start' | 'end';
+
+const CHAT_COMPOSER_TOOLBAR_ALIGN = literalSetConverter<ChatComposerToolbarAlign>(
+  ['start', 'end'],
+  'start'
 );
 
 export interface LyraChatComposerEventMap {
@@ -165,7 +174,26 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @csspart end - The wrapper around the `end` slot and the built-in `action-button`.
  * @csspart send-glyph - Directional send glyph wrapper; mirrored automatically in RTL.
  * @csspart stop-glyph - Symmetric stop glyph wrapper.
- * @csspart action-button - The built-in send/stop button. Absent whenever `end` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
+ * @csspart action-button - The built-in send/stop button. Absent whenever `end` has assigned content.
+ * @cssprop [--lr-chat-composer-action-bg=var(--lr-color-brand)] - Resting Send button background.
+ * @cssprop [--lr-chat-composer-action-color=var(--lr-color-on-brand)] - Send glyph colour.
+ * @cssprop [--lr-chat-composer-action-radius=var(--lr-radius)] - Send/Stop button corner radius.
+ * @cssprop [--lr-chat-composer-action-size=auto] - Send/Stop button inline and block size, subject
+ *   to the shared `--lr-icon-button-size` minimum hit target.
+ * @cssprop --lr-chat-composer-action-hover-bg - Send/Stop hover background. Defaults to a tint of
+ *   the current Send or Stop background.
+ * @cssprop --lr-chat-composer-action-active-bg - Send/Stop pressed background. Defaults to a
+ *   stronger tint of the current Send or Stop background.
+ * @cssprop --lr-chat-composer-action-hover-color - Send/Stop hover glyph colour. Defaults to the
+ *   current Send or Stop glyph colour.
+ * @cssprop --lr-chat-composer-action-active-color - Send/Stop pressed glyph colour. Defaults to the
+ *   current Send or Stop glyph colour.
+ * @cssprop --lr-chat-composer-action-disabled-bg - Disabled Send/Stop background. Defaults to the
+ *   current Send or Stop background, with the existing disabled opacity.
+ * @cssprop --lr-chat-composer-action-disabled-color - Disabled Send/Stop glyph colour. Defaults to
+ *   the current Send or Stop glyph colour, with the existing disabled opacity.
+ * @cssprop [--lr-chat-composer-busy-color=var(--lr-color-on-brand)] - Stop glyph colour while
+ *   `status` is `"sending"` or `"streaming"`.
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
  * @cssprop [--lr-chat-composer-bg=var(--lr-color-surface)] - Fill of the card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
@@ -173,6 +201,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  *   border. The `:focus-within` border stays on the brand token -- it is state paint, not chrome.
  * @cssprop [--lr-chat-composer-radius=var(--lr-radius)] - Corner radius of the card.
  *   `frame="plain"` still squares the corners.
+ * @cssprop [--lr-chat-composer-shadow=none] - Box shadow of the card. The shadow stays visible
+ *   while focused and is omitted under `frame="plain"`.
  * @cssprop [--lr-chat-composer-padding=var(--lr-space-s)] - Padding of the card (`[part="base"]`).
  *   `frame="plain"` still zeroes it, same as the background/border-color/radius hooks above.
  * @cssprop [--lr-chat-composer-gap=var(--lr-space-xs)] - Row gap between the `toolbar`, `chips` and
@@ -298,6 +328,32 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.requestUpdate('toolbarPlacement', previous);
   }
 
+  /** Aligns the toolbar controls within the bottom action row. Set to `'end'` to place them next
+   * to the end actions. Applies only with `toolbar-placement="actions"` and `actions-layout="below"`.
+   * Invalid or removed values normalize to `'start'`.
+   * @default 'start'
+   */
+  @property({
+    reflect: true,
+    attribute: 'toolbar-align',
+    converter: CHAT_COMPOSER_TOOLBAR_ALIGN,
+  })
+  get toolbarAlign(): ChatComposerToolbarAlign {
+    return this.toolbarAlignValue;
+  }
+  set toolbarAlign(next: ChatComposerToolbarAlign) {
+    const normalized = CHAT_COMPOSER_TOOLBAR_ALIGN.normalizeReflected(this, 'toolbar-align', next);
+    if (this.hasUpdated && !this.hasAttribute('toolbar-align')) {
+      this.setAttribute('toolbar-align', normalized);
+    }
+    const previous = this.toolbarAlignValue;
+    if (previous === normalized) return;
+    this.toolbarAlignValue = normalized;
+    this.requestUpdate('toolbarAlign', previous);
+  }
+
+  private toolbarAlignValue: ChatComposerToolbarAlign = 'start';
+
   private get toolbarInActions(): boolean {
     return this.actionsLayout === 'below' && this.toolbarPlacement === 'actions';
   }
@@ -389,9 +445,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   constructor() {
     super();
     this.requestUpdate('toolbarPlacement', undefined);
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    this.requestUpdate('toolbarAlign', undefined);
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
 
   /** The internal native textarea for integrations that require direct DOM access. */
@@ -563,7 +618,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (this.required && this.value === '') {
       this[SET_ANCHORED_VALIDITY](
         { valueMissing: true },
-        this.localize('fieldRequired')
+        () => this.localize('fieldRequired')
       );
       return;
     }
@@ -624,7 +679,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // apples-to-apples against min/maxHeight, both of which are border-box
     // figures (this component inherits box-sizing: border-box from
     // LyraElement's tokens.styles.ts).
-    const contentHeight = ta.scrollHeight + borderBlock;
+    // Some browsers include wrapped placeholder text in scrollHeight. An empty draft
+    // stays at the minimum number of rows.
+    const contentHeight = ta.value === '' ? minHeight : ta.scrollHeight + borderBlock;
     const next = Math.min(Math.max(contentHeight, minHeight), maxHeight);
     ta.style.height = `${next}px`;
     ta.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';

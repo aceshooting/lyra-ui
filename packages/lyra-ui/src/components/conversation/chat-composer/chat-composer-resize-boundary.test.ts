@@ -52,3 +52,28 @@ it('coalesces legacy resize notifications and ignores callbacks retained after d
     el?.remove();
   }
 });
+
+it('sizes an empty draft to min-rows even when its placeholder wraps', async () => {
+  const longText = 'Describe your goal and include the details that matter. '.repeat(8);
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size: 200px">
+      <lr-chat-composer actions-layout="below" min-rows="2" max-rows="4"></lr-chat-composer>
+      <lr-chat-composer actions-layout="below" min-rows="2" max-rows="4" placeholder=${longText}></lr-chat-composer>
+    </div>
+  `);
+  const [empty, withPlaceholder] = [...wrapper.querySelectorAll('lr-chat-composer')];
+  const input = withPlaceholder!.input!;
+  const emptyHeight = empty!.input!.getBoundingClientRect().height;
+  expect(input.getBoundingClientRect().height).to.equal(emptyHeight);
+  expect(getComputedStyle(input).overflowY).to.equal('hidden');
+
+  withPlaceholder!.value = longText;
+  await withPlaceholder!.updateComplete;
+  expect(input.getBoundingClientRect().height).to.be.greaterThan(emptyHeight);
+  expect(getComputedStyle(input).overflowY).to.equal('auto');
+
+  withPlaceholder!.value = '';
+  await withPlaceholder!.updateComplete;
+  expect(input.getBoundingClientRect().height).to.equal(emptyHeight);
+  expect(getComputedStyle(input).overflowY).to.equal('hidden');
+});

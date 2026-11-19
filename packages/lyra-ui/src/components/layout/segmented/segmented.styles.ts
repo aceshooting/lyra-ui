@@ -1,7 +1,8 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
-import { formControlChrome, formControlTextWrap } from '../../../internal/form-control.styles.js';
+import { formControlTextWrap } from '../../../internal/form-control.styles.js';
+import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 
 export const styles = css`
   :host {
@@ -63,7 +64,8 @@ export const styles = css`
     gap: var(--lr-segmented-track-gap, var(--lr-size-0-125rem));
   }
   [part="segment"] {
-    min-inline-size: 0;
+    min-inline-size: var(--lr-size-24px);
+    min-block-size: var(--lr-size-24px);
     border: none;
     border-radius: var(
       --lr-segmented-segment-radius,
@@ -80,11 +82,6 @@ export const styles = css`
     cursor: pointer;
     /* Shared transition tokens flatten under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
-  }
-  :host([size="2xs"]) [part="segment"],
-  :host([size="xs"]) [part="segment"] {
-    min-inline-size: var(--lr-size-1-5rem);
-    min-block-size: var(--lr-size-1-5rem);
   }
   [part="segment-icon"] {
     display: inline-flex;

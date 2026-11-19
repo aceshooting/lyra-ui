@@ -10,7 +10,7 @@ import "../../layout/virtual-list/virtual-list.js";
 import type { LyraChatViewport } from "./chat-viewport.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 
 function sinkElement(
@@ -1006,6 +1006,46 @@ describe("jump pill", () => {
     expect(pill != null).to.equal(true);
   });
 
+  it('shows the shipped text label when icon-only mode is unset', async () => {
+    const viewport = await fixture<LyraChatViewport>(html`
+      <lr-chat-viewport follow="false" style="block-size:100px">
+        ${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}
+      </lr-chat-viewport>
+    `);
+    const pill = viewport.shadowRoot!.querySelector<HTMLButtonElement>('[part="jump-pill"]')!;
+    expect(pill.textContent?.trim()).to.equal('Jump to latest');
+    expect(pill.hasAttribute('aria-label')).to.equal(false);
+    expect(pill.querySelectorAll('svg')).to.have.lengthOf(0);
+  });
+
+  it('keeps the localized icon button action, unread description, and keyboard focus repair', async () => {
+    const viewport = await fixture<LyraChatViewport>(html`
+      <lr-chat-viewport
+        follow="false"
+        jump-icon-only
+        unread-start-index="8"
+        style="block-size:100px"
+        .strings=${{ jumpToLatest: 'Go to the end' }}
+      >
+        ${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}
+      </lr-chat-viewport>
+    `);
+    const pill = viewport.shadowRoot!.querySelector<HTMLButtonElement>('[part="jump-pill"]')!;
+    expect(pill.textContent?.trim()).to.equal('');
+    expect(pill.getAttribute('aria-label')).to.equal('Go to the end');
+    expect(pill.getAttribute('aria-description')).to.equal('2 new messages');
+    expect(pill.querySelector('svg')?.getAttribute('aria-hidden')).to.equal('true');
+    const rect = pill.getBoundingClientRect();
+    expect(rect.width).to.be.closeTo(rect.height, 0.1);
+    expect(rect.width).to.be.at.least(parseFloat(getComputedStyle(pill).minInlineSize));
+    await expect(viewport).to.be.accessible();
+    await focusByKeyboard(pill);
+    await sendKeys({ press: 'Enter' });
+    await viewport.updateComplete;
+    expect(viewport.follow).to.equal(true);
+    expect(viewport.shadowRoot!.activeElement?.getAttribute('part')).to.equal('scroll');
+  });
+
   it("shows a pluralized unread count once unreadStartIndex yields a positive count", async () => {
     const el = (await fixture(
       html`<lr-chat-viewport style="block-size:100px" unread-start-index="8"
@@ -1114,28 +1154,12 @@ describe("jump pill", () => {
     `);
     await el.updateComplete;
     const pill = el.shadowRoot!.querySelector<HTMLElement>('[part="jump-pill"]')!;
-    el.scrollIntoView({ block: "center" });
-    const center = (): [number, number] => {
-      const rect = pill.getBoundingClientRect();
-      return [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ];
-    };
-    await waitUntil(() => {
-      const hit = el.shadowRoot!.elementFromPoint(...center());
-      return hit === pill || (hit != null && pill.contains(hit));
-    }, "the jump pill never became hit-testable");
     try {
-      await sendMouse({
-        type: "move",
-        position: center(),
-      });
+      await hoverUntilMatched(pill, 'the real pointer never hovered the jump pill');
       await waitUntil(
-        () => pill.matches(":hover"),
-        "the real pointer never hovered the jump pill",
+        () => getComputedStyle(pill).backgroundColor === 'rgb(1, 2, 3)',
+        'the jump pill did not paint its hover fill',
       );
-      expect(getComputedStyle(pill).backgroundColor).to.equal("rgb(1, 2, 3)");
     } finally {
       await resetMouse();
     }

@@ -16,7 +16,7 @@ import { styles } from './box-plot.styles.js';
 import { chartSurfaceStyles } from './chart-surface.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatChartValue } from './chart-number-format.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { showChartActiveDatum } from './chart-active-datum.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -1316,6 +1316,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private onCanvasKeyDown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const datums = this.boxDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);

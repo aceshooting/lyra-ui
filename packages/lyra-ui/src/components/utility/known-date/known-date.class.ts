@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -11,6 +12,7 @@ import {
 import {
   SET_ANCHORED_VALIDITY,
   VALIDITY_ANCHOR,
+  type IntrinsicValidityMessage,
 } from '../../../internal/anchored-validity.js';
 import {
   isAccessibilitySubtreeExcluded,
@@ -172,6 +174,10 @@ function addCompatibilityDetail<T extends Event>(
  * @csspart form-control - The outer wrapper. It is the same node as `base` and `known-date`.
  * @csspart fieldset - The `<fieldset>` grouping the three fields.
  * @csspart legend - The `<legend>` element.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label wrapper inside the legend.
  * @csspart fields - The row wrapping the three field blocks.
  * @csspart form-control-input - Alias on the fields row matching other form controls.
@@ -348,9 +354,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   constructor() {
     super();
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
 
   override connectedCallback(): void {
@@ -659,7 +663,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       return;
     }
     const flags: ValidityStateFlags = {};
-    let message = '';
+    let message: IntrinsicValidityMessage = '';
     const blank =
       this._parts.day === '' &&
       this._parts.month === '' &&
@@ -672,7 +676,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       // instead, since an incomplete date is bad input, not a missing one.
       if (this.required && blank) {
         flags.valueMissing = true;
-        message = this.localize('fieldRequired');
+        message = () => this.localize('fieldRequired');
       } else if (!blank) {
         flags.badInput = true;
         message = this.localize('dateInputInvalid');
@@ -874,6 +878,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       });
       return;
     }
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key === 'Backspace' && this.textFor(field) === '') {
       e.preventDefault();
       this.focusAdjacentField(field, -1);
@@ -996,7 +1001,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     const renderedError = this.errorText || validationError;
     const hasHint = this.withHint || this.hasHintSlot || (this.hint ?? '').length > 0;
     const hasError = this.hasErrorSlot || renderedError.length > 0;
-    const invalid = this.touched && !this.internals.validity.valid;
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     const describedBy = [
       hasHint ? this.hintId : '',
       hasError ? this.errorId : '',

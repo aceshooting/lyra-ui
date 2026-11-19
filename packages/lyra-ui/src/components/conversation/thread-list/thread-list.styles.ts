@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing, nativeControlSurface } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { css } from 'lit';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
 

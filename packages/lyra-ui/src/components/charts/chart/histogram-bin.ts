@@ -1,7 +1,7 @@
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../../../internal/localization-runtime.js';
 import { finiteInterpolate, finiteRatio } from '../../../internal/numbers.js';
-import { chartValueFractionDigits } from './chart-number-format.js';
+import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
 
 export interface HistogramBucket {
   label: string;

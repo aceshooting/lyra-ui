@@ -61,3 +61,14 @@ export const HeadingLevels: StoryObj = {
     </lr-app-rail-group>
   `,
 };
+
+export const QuietHeading: StoryObj = {
+  render: () => html`
+    <lr-app-rail-group heading="Recent"
+      style="--lr-app-rail-group-heading-font-weight: var(--lr-font-weight-normal);
+        --lr-app-rail-group-heading-gap: var(--lr-space-2xs);">
+      <lr-app-rail-item href="/atlas">Atlas</lr-app-rail-item>
+      <lr-app-rail-item href="/beacon">Beacon</lr-app-rail-item>
+    </lr-app-rail-group>
+  `,
+};

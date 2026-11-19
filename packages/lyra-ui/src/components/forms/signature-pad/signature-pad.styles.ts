@@ -1,6 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -9,9 +9,8 @@ export const styles = css`
   }
 
   [part='form-control-label'] {
+    ${formControlLabelTypography}
     margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
   }
   ${formControlRequiredMarker}
 

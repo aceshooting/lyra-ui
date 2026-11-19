@@ -9,7 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import {
@@ -179,6 +179,10 @@ export interface LyraFileInputEventMap {
  *   the slotted content while remaining its sibling in the accessibility tree so arbitrary slotted
  *   controls are never nested in it.
  * @csspart form-control - The complete label, dropzone, selected-file, error, and hint frame.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-file-input-font-size, var(--lr-form-control-font-size))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The form-control label.
  * @csspart hint - The form-control hint.
  * @csspart error - The visible validation message or authored error content.
@@ -880,10 +884,10 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
       return;
     }
     const flags: ValidityStateFlags = {};
-    let message = '';
+    let message: IntrinsicValidityMessage = '';
     if (this.required && !this.hasEffectiveValue) {
       flags.valueMissing = true;
-      message = this.localize('fieldRequired');
+      message = () => this.localize('fieldRequired');
     }
     const configured = this.validatorResult();
     if (configured.flags) Object.assign(flags, configured.flags);

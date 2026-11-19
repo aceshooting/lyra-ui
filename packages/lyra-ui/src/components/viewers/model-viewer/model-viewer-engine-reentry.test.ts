@@ -20,6 +20,7 @@ describe('model renderer callback ownership', () => {
   let prepare: ((engine: Engine3dInstance) => void) | undefined;
 
   beforeEach(async () => {
+    await Promise.resolve(); // Finish deferred teardown from the previous fixture.
     engines = []; hosts = []; calls = []; disposals = [];
     errors = loads = changes = 0; prepare = undefined;
     modelEngineEnvironment.available = () => true;

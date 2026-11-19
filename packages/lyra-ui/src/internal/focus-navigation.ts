@@ -503,6 +503,33 @@ export function applyComposedFocusRepair(
   );
 }
 
+/** Repairs focus after updating native pager controls with a short, known fallback list. */
+export function repairUnavailableControlFocus(
+  control: HTMLElement,
+  fallbacks: readonly (BrowserFocusElement | null | undefined)[],
+): boolean {
+  const ownerDocument = control.ownerDocument;
+  const current = deepActiveElementIn(ownerDocument);
+  if (current === control && !control.matches(':disabled')) return false;
+  if (current && current !== control && current !== ownerDocument.body &&
+    current !== ownerDocument.documentElement) return false;
+
+  for (const candidate of fallbacks) {
+    if (!candidate?.isConnected || candidate.ownerDocument !== ownerDocument ||
+      candidate.matches(':disabled')) continue;
+    let branch: Element | null = candidate;
+    for (let depth = 0; branch && depth <= DEFAULT_FOCUS_MAX_DEPTH; depth++) {
+      if (hasFocusExcludingAttributes(branch)) break;
+      branch = composedParentElement(branch);
+    }
+    if (branch || !rendersAsFocusTarget(candidate, ownerDocument.defaultView?.getComputedStyle(candidate).visibility)) continue;
+    // The browser also enforces CSS visibility and closed native disclosure boundaries.
+    candidate.focus();
+    if (deepActiveElementIn(ownerDocument) === candidate) return true;
+  }
+  return false;
+}
+
 /**
  * Focuses the first of an ordered target list that both passes `isComposedFocusAvailable()` and
  * actually ends up holding focus, and reports whether any of them did.

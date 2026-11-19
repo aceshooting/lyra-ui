@@ -17,7 +17,6 @@ import { resolveActiveOrExplicitLocale } from '../internal/localization-runtime.
 import { finiteInteger } from '../internal/numbers.js';
 import {
   byteFormat,
-  byteUnitIndex,
   relativeTimeFormatOptions,
   resolveDateSource,
   resolveRelativeTimeState,
@@ -184,14 +183,10 @@ function divideExact(numerator: bigint, scale: number, divisor: bigint, decimals
 
 /**
  * Locale-aware byte/bit-size output (`"1.5 MB"`), sharing the library's memoized formatter cache
- * and the same unit-ladder selection `<lr-format-bytes>` renders with. `value` may be a `bigint`
- * or a decimal string: the unit ladder is still selected from an approximate magnitude (which
- * unit is only ever a display choice), but the displayed amount itself is computed with exact
- * `bigint` division, so a byte count beyond `Number.MAX_SAFE_INTEGER` -- an exact file size, a
- * cumulative transfer counter -- never gets rounded away. Returns `undefined` for a non-finite or
- * unparseable `value`, matching `formatDate()`/`formatRelativeTime()`'s "unresolvable input"
- * convention -- `Intl.NumberFormat` throws for `style: 'unit'` paired with the undefined unit a
- * `NaN` magnitude would otherwise select.
+ * and the same unit-ladder selection `<lr-format-bytes>` renders with. The ladder is selected
+ * from the numeric approximation. For integer unit steps, exact `bigint` division preserves
+ * the displayed amount of high-precision `bigint` or decimal-string inputs. Fractional unit steps
+ * use numeric scaling. Returns `undefined` when the input cannot be resolved by the selected path.
  *
  * An omitted `locale` (or `'auto'`) resolves the same way {@link formatNumber} does (this function
  * delegates the actual number formatting to it): to the page's active `setLyraLocale()` locale,
@@ -204,23 +199,17 @@ export function formatBytes(
 ): string | undefined {
   const unit = options.unit ?? 'byte';
   const display = options.display ?? 'short';
-  const unitStep = options.unitStep ?? DEFAULT_BYTES_UNIT_STEP;
+  const unitStep = safeByteUnitStep(options.unitStep ?? DEFAULT_BYTES_UNIT_STEP);
   const decimals = finiteInteger(options.decimals ?? DEFAULT_BYTES_DECIMALS, 1, 0, 10);
 
-  const exact = exactDecimal(value);
-  if (exact === undefined) {
-    // A non-finite number or a malformed string: fall back to `<lr-format-bytes>`'s existing
-    // float-based scaling so behavior matches the element for the same bad input.
-    const numeric = typeof value === 'number' ? value : Number(value);
-    if (!Number.isFinite(numeric)) return undefined;
-    const { amount, options: formatOptions } = byteFormat(numeric, unit, display, unitStep, decimals);
-    return formatNumber(amount, locale, formatOptions);
-  }
-
-  const approximateMagnitude = Number(exact.numerator) / 10 ** exact.scale;
-  const { options: formatOptions } = byteFormat(approximateMagnitude, unit, display, unitStep, decimals);
-  const index = byteUnitIndex(approximateMagnitude, unitStep);
-  const divisor = BigInt(Math.round(safeByteUnitStep(unitStep))) ** BigInt(index);
-  const amount = divideExact(exact.numerator, exact.scale, divisor, decimals);
-  return formatNumber(amount, locale, formatOptions);
+  const exact = Number.isInteger(unitStep) ? exactDecimal(value) : undefined;
+  // Convert the original value, keeping its decimal point intact. Converting the numerator
+  // and its scale separately would divide Infinity by Infinity for long, bounded fractions.
+  const numeric = Number(value);
+  if (!exact && !Number.isFinite(numeric)) return undefined;
+  const { index, amount, options: formatOptions } = byteFormat(numeric, unit, display, unitStep, decimals);
+  const scaled = exact
+    ? divideExact(exact.numerator, exact.scale, BigInt(unitStep) ** BigInt(index), decimals)
+    : amount;
+  return formatNumber(scaled, locale, formatOptions);
 }

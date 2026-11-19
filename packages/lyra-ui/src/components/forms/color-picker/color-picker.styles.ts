@@ -4,6 +4,7 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlLabelTypography,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -87,8 +88,7 @@ export const styles = css`
     gap: var(--lr-color-picker-gap, var(--_lr-color-picker-gap));
   }
   [part~="label"] {
-    color: var(--lr-color-text);
-    font-size: var(--lr-font-size-md-sm);
+    ${formControlLabelTypography}
   }
   /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
      tracked in JS (hasLabel/hasHint/hasError) and reflected via hidden; otherwise the required

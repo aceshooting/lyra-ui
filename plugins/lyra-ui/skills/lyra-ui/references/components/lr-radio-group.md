@@ -10,16 +10,21 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-radio-group`
 
+Place supplementary controls in `slot="toolbar"` between the group label and its options.
+Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
+Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+
 A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
 focus and select the next enabled radio, whatever the orientation: Down/Right select the next
 option and Up/Left the previous one. Left/Right mirror under RTL, and disabled options are skipped.
+A descendant can cancel navigation by calling `preventDefault()` on the keydown event.
 
 For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
 `lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
@@ -49,7 +54,7 @@ When renaming `<sl-radio-group>` manually, set `name="option"` if the old markup
 Shoelace's implicit form-data key. Lyra deliberately defaults `name` to empty; the bundled migration
 codemod inserts the compatibility value automatically.
 
-The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
+The group is the sole aggregate form-associated owner. A selected radio, including one with an empty string value, contributes one
 `name=value` entry; owned radios suppress their own entries and validity while a standalone radio
 continues to participate independently. `form`, `getForm()`, `labels`, native validity, external
 form ownership, fieldset disablement, reset, and session restoration all live on the group.

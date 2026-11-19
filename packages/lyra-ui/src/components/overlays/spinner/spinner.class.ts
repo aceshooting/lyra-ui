@@ -4,6 +4,7 @@ import {
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './spinner.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -48,7 +49,7 @@ export class LyraSpinner extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraSpinnerLabelPlacement = 'none';
+  @property({ attribute: 'label-placement', reflect: true, converter: declaredDefaultConverter('none') }) labelPlacement: LyraSpinnerLabelPlacement = 'none';
   /** Accessible name for the busy progress indicator, forwarded from a host `aria-label`. When unset, a
    *  visible `label-placement="after"` label names it, then the localized "Loading…" fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;

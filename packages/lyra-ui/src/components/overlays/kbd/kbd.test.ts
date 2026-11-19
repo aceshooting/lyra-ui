@@ -483,3 +483,16 @@ it('draws the key-cap border and its inset edge in the subtle border tier', asyn
   expect(getComputedStyle(key).boxShadow).to.include('rgb(1, 2, 3)');
   expect(getComputedStyle(key).boxShadow).to.not.include('rgb(7, 8, 9)');
 });
+
+it('resumes automatic keycap rendering after removal of the platform override', async () => {
+  const kbd = await fixture<LyraKbd>(html`<lr-kbd keys="mod+k"></lr-kbd>`);
+  const automatic = kbd.effectivePlatform;
+  const keys = kbd.shadowRoot!.textContent;
+  kbd.setAttribute('platform', automatic === 'mac' ? 'windows' : 'mac');
+  await kbd.updateComplete;
+  kbd.removeAttribute('platform');
+  await kbd.updateComplete;
+  expect(kbd.platform).to.equal('auto');
+  expect(kbd.effectivePlatform).to.equal(automatic);
+  expect(kbd.shadowRoot!.textContent).to.equal(keys);
+});

@@ -81,7 +81,8 @@ assigned array or record has no effect; create and reassign a new value after ch
 **Events:** `lr-run-cancel` (`detail: { runId }`, extending `CancelEventDetail` = `{ reason?: string }` from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
-this component's own retry counter, reset when `run.id` changes).
+this component's own retry counter, reset when `run.id` changes). A visible action belongs to
+the run that rendered it. Replacing the run before the click handler runs discards that action.
 
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.

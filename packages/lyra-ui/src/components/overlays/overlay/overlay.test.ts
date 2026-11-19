@@ -3507,3 +3507,22 @@ it('contains a nested declarative close activation even when its own hide is vet
   action.click(); await waitUntil(() => !inner.open, 'next inner close succeeds');
   expect(outer.open).to.equal(true); expect(outerHides).to.equal(0);
 });
+
+it('keeps declaratively open nested popovers and their ancestor open across reconnection', async () => {
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  const outer = document.createElement('lr-popover');
+  outer.open = true;
+  outer.innerHTML = '<button slot="trigger">Outer</button><lr-popover open><button slot="trigger">Inner</button>Contents</lr-popover>';
+  const inner = outer.querySelector('lr-popover')!;
+  const events: string[] = [];
+  for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    outer.addEventListener(name, () => events.push(name));
+  }
+  for (let connection = 0; connection < 2; connection++) {
+    host.append(outer);
+    await Promise.all([outer.updateComplete, inner.updateComplete]);
+    expect([outer.open, inner.open]).to.deep.equal([true, true]);
+    expect(events).to.deep.equal([]);
+    outer.remove();
+  }
+});

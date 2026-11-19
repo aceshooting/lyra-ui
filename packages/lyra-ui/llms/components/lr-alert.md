@@ -49,8 +49,11 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 - `variant: 'primary' | 'brand' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` and `brand` resolve through Lyra's shared brand semantic tokens. Unsupported attributes and
   untyped property writes normalize to reflected `primary`.
-- `duration: number = Infinity` — milliseconds before automatic dismissal. `Infinity` stays open;
-  hover or focus pauses the timer, and leaving interaction restarts the full duration.
+- `duration: number = Infinity` — milliseconds before automatic dismissal. Removing the attribute
+  restores `Infinity` and keeps the alert open. An explicit `0` dismisses immediately when eligible.
+  Hover or focus pauses the timer, and leaving interaction restarts the full duration. A hidden
+  document pauses the timer and countdown bar for inline alerts and toasts. The remaining time
+  resumes when the document becomes visible and the alert is neither hovered nor focused.
 - `countdown: 'rtl' | 'ltr' | undefined` (reflected, unset by default) — adds a decorative visual
   bar that empties in the requested physical direction. Its motion is removed under
   `prefers-reduced-motion: reduce`. Unsupported attributes and untyped property writes normalize

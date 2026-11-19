@@ -5,10 +5,10 @@ import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.sty
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
   formControlTextWrap,
-  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
+import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,

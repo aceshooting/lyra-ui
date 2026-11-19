@@ -283,8 +283,9 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
       previous.removeEventListener('dragover', this.onTargetDragOver);
       previous.removeEventListener('dragleave', this.onTargetDragLeave);
       previous.removeEventListener('drop', this.onTargetDrop);
-      if (this.dropSession.dragging) this.dropSession.reset();
     }
+    // A drop clears the overlay before its folder traversal finishes.
+    this.dropSession.reset();
     this.boundTarget = next;
     if (next) {
       next.addEventListener('dragenter', this.onTargetDragEnter);

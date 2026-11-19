@@ -563,6 +563,23 @@ describe("lr-rubric-form", () => {
     expect(ev.detail.valid).to.be.true;
   });
 
+  it('honors a nested comment control canceling the submit shortcut', async () => {
+    const el = await fixture<LyraRubricForm>(html`
+      <lr-rubric-form .keys=${[{ key: 'comment', type: 'comment', label: 'Comment' }]}></lr-rubric-form>
+    `);
+    const comment = el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea')!;
+    let submits = 0;
+    el.addEventListener('lr-submit', () => { submits++; });
+    comment.addEventListener('keydown', event => event.preventDefault(), { once: true });
+    const shortcut = (): KeyboardEvent => new KeyboardEvent('keydown', {
+      key: 'Enter', ctrlKey: true, bubbles: true, composed: true, cancelable: true,
+    });
+    comment.dispatchEvent(shortcut());
+    expect(submits).to.equal(0);
+    comment.dispatchEvent(shortcut());
+    expect(submits).to.equal(1);
+  });
+
   it("emits lr-submit with the value and itemId only after validity passes", async () => {
     const el = (await fixture(
       html`<lr-rubric-form

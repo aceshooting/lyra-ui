@@ -151,13 +151,15 @@ it('resolves zero, signed, and fractional lengths faithfully', () => {
   expect(resolveCssLength('-2rem')).to.equal(-32);
 });
 
-it('treats an unusable computed font size as the CSS initial size for rem and em', () => {
+it('preserves a zero computed font size for rem and em', async () => {
   document.documentElement.style.fontSize = '0px';
-  expect(resolveCssLength('2rem')).to.equal(32);
-  expect(resolveCssLength('3em')).to.equal(48);
+  expect(resolveCssLength('2rem')).to.equal(0);
+  expect(resolveCssLength('3em')).to.equal(0);
 
   document.documentElement.style.fontSize = '20px';
-  expect(resolveCssLength('2rem')).to.equal(40);
+  const host = await fixture(html`<div style="font-size:0"></div>`);
+  expect(resolveCssLength('2em', { host })).to.equal(0);
+  expect(resolveCssLength('2rem', { host })).to.equal(40);
 });
 
 it('returns undefined for a number too large to be a finite length', () => {

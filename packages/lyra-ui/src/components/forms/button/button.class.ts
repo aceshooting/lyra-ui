@@ -41,9 +41,9 @@ import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../form-validator.js';
-import { findDefaultButton, isImplicitSubmission, submitFormImplicitly } from '../../../internal/submit-on-enter.js';
+import { findDefaultButton, isImplicitSubmission, isImplicitSubmissionInput, submitFormImplicitly } from '../../../internal/submit-on-enter.js';
 import { createButtonExternalLabelController } from './button-external-label.js';
-import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
@@ -70,9 +70,6 @@ export type ButtonFormEnctype =
 export type ButtonFormMethod = 'get' | 'post' | 'dialog';
 
 const BUTTON_TYPE = literalSetConverter<ButtonType>(['button', 'submit', 'reset'], 'button');
-/** Native `<input>` types where Enter submits the form implicitly. */
-const IMPLICIT_SUBMIT_INPUT = /^(text|search|url|tel|email|password|date|month|week|time|datetime-local|number)$/;
-
 export interface LyraButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
@@ -251,6 +248,7 @@ export interface LyraButtonEventMap {
  * tier without a `::part(base)` rule; `appearance="link"` ignores it (it renders with zero padding).
  * @cssprop [--lr-button-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
  * the internal button, from the active `size` tier. `appearance="link"` ignores it.
+ * @cssprop [--lr-button-font-weight=var(--lr-font-weight-semibold)] - Font weight of the label.
  * @cssprop [--lr-button-font-size=var(--lr-form-control-font-size)] - Font size of the internal
  * button, from the active `size` tier. `appearance="link"` ignores it and inherits the ambient font
  * instead.
@@ -349,7 +347,7 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
   private _required = false;
   private _variant: LyraVariant = 'neutral';
   private _type: ButtonType = 'button';
-  private injectedHostTabIndex = false;
+  private loadingFocus?: 'authored' | 'temporary';
   private implicitForm: HTMLFormElement | null = null;
   private readonly localDescriptionIds = '';
   private externalDescriptionLease?: NativeControlDescriptionLease;
@@ -744,8 +742,7 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
     if (
       !form ||
       !isImplicitSubmission(event) ||
-      !(field instanceof HTMLInputElement) ||
-      !IMPLICIT_SUBMIT_INPUT.test(field.type) ||
+      !isImplicitSubmissionInput(field) ||
       field.form !== form ||
       this.baseEl?.localName === 'a' ||
       findDefaultButton(form) !== this
@@ -903,10 +900,8 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
     // `null` (no focused control, or no DOM at all during SSR) must not match a missing base element.
     const focusedControl = shadowFocusTarget(this);
     if (changed.has('loading') && this.loading && focusedControl !== null && focusedControl === this.baseEl) {
-      if (!this.hasAttribute('tabindex')) {
-        this.tabIndex = -1;
-        this.injectedHostTabIndex = true;
-      }
+      this.loadingFocus = this.hasAttribute('tabindex') ? 'authored' : 'temporary';
+      if (this.loadingFocus === 'temporary') this.tabIndex = -1;
       HTMLElement.prototype.focus.call(this, { preventScroll: true });
     }
     // Seed the wrapper-visibility flags from light-DOM children before the first render, so the
@@ -962,10 +957,10 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('type')) this.syncImplicitSubmission();
-    if (changed.has('loading') && !this.loading && this.injectedHostTabIndex) {
-      const parked = this.ownerDocument.activeElement === this && !shadowFocusTarget(this);
-      this.removeAttribute('tabindex');
-      this.injectedHostTabIndex = false;
+    if (changed.has('loading') && !this.loading && this.loadingFocus) {
+      const parked = deepActiveElementIn(this.getRootNode() as Document | ShadowRoot) === this;
+      if (this.loadingFocus === 'temporary' && this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
+      this.loadingFocus = undefined;
       if (parked) this.baseEl?.focus({ preventScroll: true });
     }
     syncAriaControlsElements(this, this.baseEl, this.triggerControls);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-accordion`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -303,8 +303,10 @@ summary's block padding and the panel's trailing padding, kept equal so a stack 
 evenly. Each `size` tier changes both private defaults from the shared ladder; a public value on an
 ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
-whereas the ladder's own block padding exists to fit text inside a fixed control height and would
-collapse the summary row. The summary's and the panel content's padding can also be tuned
+whereas the ladder's own block padding fits text inside a fixed control height. The summary's
+minimum block size includes its padding and is the smaller of `--lr-icon-button-size` and
+`--lr-form-control-height`, with a floor of 24 CSS pixels. Taller content can grow the summary.
+The summary's and the panel content's padding can also be tuned
 independently of each other and of `--lr-details-spacing`: `--lr-details-summary-padding-block` and
 `--lr-details-summary-padding-inline` control the summary alone, and
 `--lr-details-content-padding-block-end` and `--lr-details-content-padding-inline` control the
@@ -315,8 +317,10 @@ override, ahead of these four as well. `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
 `--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon
-gap, and `--lr-details-radius` (default `var(--lr-radius)`) controls the surface corners. Both use
-inline fallbacks, inherit from ancestors, and remain independent of the `size` density ladder.
+gap, and `--lr-details-radius` (default `var(--lr-radius-container)`) controls the surface corners.
+`--lr-details-summary-radius` defaults to the surface radius and applies to all four summary
+corners in both open and closed states. These properties inherit from ancestors and remain
+independent of the `size` density ladder.
 Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-border-color`,
 `--lr-details-filled-bg` / `--lr-details-filled-border-color`, and
 `--lr-details-filled-outlined-bg` / `--lr-details-filled-outlined-border-color`; their defaults are

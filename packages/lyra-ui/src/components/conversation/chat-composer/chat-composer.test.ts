@@ -4,6 +4,7 @@ import {
   resetMouse,
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import { CHAT_COMPOSER_STATUSES } from "./chat-composer.js";
 import type { LyraChatComposer } from "./chat-composer.js";
 
@@ -1287,103 +1288,93 @@ function resolveInShadow(
   return computed;
 }
 
-/** The computed background `selector`'s own rule paints, resolved in the component's shadow scope. */
-function renderedRuleBackground(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = "";
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector)
-      ) {
-        const value =
-          rule.style.getPropertyValue("background") ||
-          rule.style.getPropertyValue("background-color");
-        if (value) declared = value;
-      }
-    }
-  }
-  return resolveInShadow(el, "background", declared, "background-color");
-}
+it('escalates the send button from resting to hover to pressed with the shared colour-mix tokens', async () => {
+  const el = await fixture<LyraChatComposer>(html`
+    <lr-chat-composer data-lr-theme-scope style="--lr-transition-fast: 0s"></lr-chat-composer>
+  `);
+  const button = actionButtonOf(el)!;
+  const styles = getComputedStyle(button);
+  const fill = (value: string) => resolveInShadow(el, 'background', value, 'background-color');
+  const resting = fill('var(--lr-color-brand)');
+  const hovered = fill('color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))');
+  const pressed = fill('color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))');
 
-/** The computed filter `selector`'s own rule applies, resolved the same way. `none` means none. */
-function renderedRuleFilter(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = "";
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.filter
-      ) {
-        declared = rule.style.filter;
-      }
-    }
-  }
-  return resolveInShadow(el, "filter", declared);
-}
-
-it("escalates the send button from resting to hover to pressed with the shared colour-mix tokens", async () => {
-  const el = (await fixture(
-    html`<lr-chat-composer></lr-chat-composer>`
-  )) as LyraChatComposer;
-  await el.updateComplete;
-  const resting = resolveInShadow(
-    el,
-    "background",
-    "var(--lr-color-brand)",
-    "background-color"
-  );
-  const hovered = renderedRuleBackground(
-    el,
-    ":where([part='action-button']):hover:where(:not(:disabled))"
-  );
-  const pressed = renderedRuleBackground(
-    el,
-    ":where([part='action-button']):active:where(:not(:disabled))"
-  );
-
-  // Each step actually moves. The middle assertion is the one that matters most: an :active rule
-  // byte-identical to its :hover rule is the same "no pressed state" defect wearing a costume.
   expect(hovered).to.not.equal(resting);
   expect(pressed).to.not.equal(hovered);
   expect(pressed).to.not.equal(resting);
 
-  // ...and each step is exactly the shared token's mix of the resting brand fill, so hover is the
-  // 12% step and pressed the 22% one -- provably a stronger press, and both retintable at once.
-  expect(hovered).to.equal(
-    resolveInShadow(
-      el,
-      "background",
-      "color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))",
-      "background-color"
-    )
-  );
-  expect(pressed).to.equal(
-    resolveInShadow(
-      el,
-      "background",
-      "color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
-      "background-color"
-    )
-  );
+  try {
+    await resetMouse();
+    expect(styles.backgroundColor).to.equal(resting);
+    await hoverUntilMatched(button, 'the Send action never took the pointer');
+    await waitUntil(() => styles.backgroundColor === hovered, 'hover uses the shared hover mix');
+    expect(styles.filter).to.equal('none');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => styles.backgroundColor === pressed, 'press uses the shared press mix');
+    expect(styles.filter).to.equal('none');
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+  }
+});
 
-  // No filter in either state: brightness() applies to the subtree, so it would dim the send glyph
-  // along with the fill -- and does nothing at all to a pure white or pure black brand colour.
-  expect(
-    renderedRuleFilter(
-      el,
-      ":where([part='action-button']):hover:where(:not(:disabled))"
-    )
-  ).to.equal("none");
-  expect(
-    renderedRuleFilter(
-      el,
-      ":where([part='action-button']):active:where(:not(:disabled))"
-    )
-  ).to.equal("none");
+it('themes the built-in action across idle, hover, pressed, disabled and busy states', async () => {
+  const el = await fixture<LyraChatComposer>(html`
+    <lr-chat-composer data-lr-theme-scope
+      style="
+        --lr-chat-composer-action-bg: rgb(20, 30, 40);
+        --lr-chat-composer-action-color: rgb(250, 250, 250);
+        --lr-chat-composer-action-radius: 50%;
+        --lr-chat-composer-action-size: 52px;
+        --lr-chat-composer-action-hover-bg: rgb(30, 40, 50);
+        --lr-chat-composer-action-hover-color: rgb(240, 240, 240);
+        --lr-chat-composer-action-active-bg: rgb(40, 50, 60);
+        --lr-chat-composer-action-active-color: rgb(230, 230, 230);
+        --lr-chat-composer-action-disabled-bg: rgb(50, 60, 70);
+        --lr-chat-composer-action-disabled-color: rgb(220, 220, 220);
+        --lr-chat-composer-busy-bg: rgb(60, 70, 80);
+        --lr-chat-composer-busy-color: rgb(210, 210, 210);
+        --lr-transition-fast: 0s"
+    ></lr-chat-composer>
+  `);
+  const button = actionButtonOf(el)!;
+  const styles = getComputedStyle(button);
+  const paint = () => [styles.backgroundColor, styles.color];
+
+  try {
+    await resetMouse();
+    expect(paint()).to.deep.equal(['rgb(20, 30, 40)', 'rgb(250, 250, 250)']);
+    expect([styles.inlineSize, styles.blockSize, styles.borderStartStartRadius])
+      .to.deep.equal(['52px', '52px', '50%']);
+
+    await hoverUntilMatched(button, 'the Send action never took the pointer');
+    await waitUntil(() => styles.backgroundColor === 'rgb(30, 40, 50)');
+    expect(paint()).to.deep.equal(['rgb(30, 40, 50)', 'rgb(240, 240, 240)']);
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => styles.backgroundColor === 'rgb(40, 50, 60)');
+    expect(paint()).to.deep.equal(['rgb(40, 50, 60)', 'rgb(230, 230, 230)']);
+    await sendMouse({ type: 'up' });
+
+    el.submitDisabled = true;
+    await el.updateComplete;
+    expect(button.disabled).to.equal(true);
+    expect(paint()).to.deep.equal(['rgb(50, 60, 70)', 'rgb(220, 220, 220)']);
+    expect(Number(styles.opacity)).to.be.lessThan(1);
+    await resetMouse();
+
+    el.status = 'streaming';
+    await el.updateComplete;
+    expect(button.disabled).to.equal(false);
+    expect(button.getAttribute('aria-label')).to.equal('Stop generating');
+    expect(paint()).to.deep.equal(['rgb(60, 70, 80)', 'rgb(210, 210, 210)']);
+    expect([styles.inlineSize, styles.blockSize, styles.borderStartStartRadius])
+      .to.deep.equal(['52px', '52px', '50%']);
+    const minimum = Number.parseFloat(styles.minInlineSize);
+    el.style.setProperty('--lr-chat-composer-action-size', '1px');
+    expect(Number.parseFloat(styles.inlineSize)).to.equal(minimum);
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("gives the busy Stop action distinct hover and pressed feedback", async () => {
@@ -1852,6 +1843,27 @@ describe("frame", () => {
     expect(chrome.borderTopWidth).to.equal("1px");
     expect(chrome.borderTopStyle).to.equal("solid");
     expect(chrome.backgroundColor).to.not.equal("rgba(0, 0, 0, 0)");
+  });
+
+  it('keeps the configured card shadow while focused and restores the plain focus underline', async () => {
+    const el = await fixture<LyraChatComposer>(html`
+      <lr-chat-composer style="--lr-chat-composer-focus-shadow: inset 0 -3px 0 rgb(9, 9, 9)">
+      </lr-chat-composer>
+    `);
+    const shadow = () => getComputedStyle(baseOf(el)).boxShadow;
+    expect(shadow()).to.equal('none');
+    el.style.setProperty('--lr-chat-composer-shadow', '0 8px 20px rgb(9, 9, 9)');
+    const cardShadow = shadow();
+    expect(cardShadow).to.contain('0px 8px 20px');
+    await focusByKeyboard(textareaOf(el));
+    expect(shadow()).to.equal(cardShadow);
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(shadow()).to.contain('inset');
+    expect(shadow()).to.contain('0px -3px');
+    textareaOf(el).blur();
+    expect(shadow()).to.equal('none');
   });
 
   it('drops border, background, padding and radius under frame="plain"', async () => {

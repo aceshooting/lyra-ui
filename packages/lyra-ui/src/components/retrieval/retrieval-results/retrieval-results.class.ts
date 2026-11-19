@@ -636,7 +636,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   /** Chunk ids whose text is expanded, owned here so a row keeps it across scrolling and re-sorting. */
   @state() private expandedChunkIds: readonly string[] = [];
   /** A chunk id, or the literal `'base'` for the results container itself. */
-  private pendingFocusTarget: string | undefined;
+  private pendingFocusTarget: string | null | undefined;
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
   private isMounting = true;
@@ -828,7 +828,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const focusedIndex = Math.max(0, previousIds.indexOf(focusedId));
     const nextChunks = this.errorText ? [] : this.processedChunks.chunks;
     if (nextChunks.length === 0) {
-      this.pendingFocusTarget = 'base';
+      this.pendingFocusTarget = null;
       return;
     }
     const survivingIndex = nextChunks.findIndex(
@@ -915,12 +915,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   private async restoreControlledFocus(
-    target: string,
+    target: string | null,
     generation: number
   ): Promise<void> {
     await this.updateComplete;
     if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
-    if (target === 'base') {
+    if (target === null) {
       this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }

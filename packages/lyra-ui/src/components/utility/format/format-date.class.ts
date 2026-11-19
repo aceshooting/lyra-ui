@@ -38,7 +38,8 @@ export type {
  */
 export class LyraFormatDate extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property({ converter: dateSourceConverter }) date: string | number | Date = new Date();
+  /** Construction-time instant by default. Removing the date attribute restores that instant. */
+  @property({ converter: dateSourceConverter, useDefault: true }) date: string | number | Date = new Date();
   @property() weekday?: LyraFormatDateText;
   @property() era?: LyraFormatDateText;
   @property() year?: LyraFormatDateNumeric;

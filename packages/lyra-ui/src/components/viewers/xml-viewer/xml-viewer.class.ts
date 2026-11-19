@@ -108,7 +108,7 @@ type XmlState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; doc: Document }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 function elementChildren(node: Element): Element[] {
   return Array.from(node.children);
@@ -854,7 +854,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.announcements.transition(
       'load',
       this.xmlState.kind,
-      this.xmlState.kind === 'error' ? this.xmlState.message : this.localize('loadingDocument'),
+      this.xmlState.kind === 'error' ? this.xmlState.message() : this.localize('loadingDocument'),
     );
     if ((changed.has('src') || changed.has('xml') || changed.has('maxNodes') || changed.has('maxBytes')) && this._xml === undefined) {
       this.scheduleAfterUpdate(() => {
@@ -929,7 +929,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     try {
       this.setDoc(parseXmlDocument(raw, this.ownerDocument, this.effectiveMaxBytes, this.effectiveMaxNodes), generation);
     } catch (error) {
-      this.xmlState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'xmlViewerTooManyNodes' : 'xmlViewerParseError') };
+      this.xmlState = {
+        kind: 'error',
+        message: isResourceLimitError(error)
+          ? () => this.localize('xmlViewerTooManyNodes')
+          : () => this.localize('xmlViewerParseError'),
+      };
       this.emit('lr-render-error', { error });
     }
   }
@@ -950,7 +955,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.xmlState = { kind: 'error', message: error.message };
+      this.xmlState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -969,13 +974,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.xmlState = {
         kind: 'error',
-        message: this.localize(
-          error instanceof XmlDoctypeError
-            ? 'xmlViewerParseError'
-            : isResourceLimitError(error)
-              ? 'documentPreviewResourceTooLarge'
-              : 'documentPreviewFailedToLoad',
-        ),
+        message: error instanceof XmlDoctypeError
+          ? () => this.localize('xmlViewerParseError')
+          : isResourceLimitError(error)
+            ? () => this.localize('documentPreviewResourceTooLarge')
+            : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
     }
@@ -1002,14 +1005,14 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       // Safari each word it completely differently, and always in English regardless of the
       // page's locale). The raw diagnostic is preserved only in the emitted event's `error`
       // detail, mirroring every other viewer in this family (LyraUserFacingError's convention).
-      this.xmlState = { kind: 'error', message: this.localize('xmlViewerParseError') };
+      this.xmlState = { kind: 'error', message: () => this.localize('xmlViewerParseError') };
       this.emit('lr-render-error', { error: new Error(parseError) });
       return;
     }
     try {
       this.childCounts = validateDocumentComplexity(doc, this.effectiveMaxNodes);
     } catch (error) {
-      this.xmlState = { kind: 'error', message: this.localize('xmlViewerTooManyNodes') };
+      this.xmlState = { kind: 'error', message: () => this.localize('xmlViewerTooManyNodes') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -1620,7 +1623,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
           : state.kind === 'loading'
             ? renderViewerLoading(this.localize('loadingDocument'))
             : state.kind === 'error'
-              ? html`<div part="error">${state.message}</div>`
+              ? html`<div part="error">${state.message()}</div>`
               : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
         ${this.renderAnchorLiveRegion()}
       </div>

@@ -186,6 +186,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   @state() private resolved: ResolvedNode | null = null;
 
+  private ownsInteractions = () => false;
   private readonly warned = new Set<string>();
   private warningScope?: {
     root: LyraWidgetNode | null;
@@ -220,6 +221,9 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       try {
         const registry = this.registry;
         const widgetDocument = this.document;
+        const bindings = this.bindingState;
+        this.ownsInteractions = () => this.document === widgetDocument && this.registry === registry &&
+          Object.is(this.bindingState, bindings);
         let root: LyraWidgetNode | null = null;
         if (widgetDocument !== null) {
           const version = readDocumentField(widgetDocument, 'version');
@@ -245,7 +249,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
         const next = resolveTree(root, {
           registry,
           warned: this.warned,
-          bindingState: this.bindingState,
+          bindingState: bindings,
         });
         if (widgetDocument !== null && next === null) {
           throw new Error(
@@ -293,9 +297,10 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       this.actionHandlers.delete(el);
     }
     if (node.actionEvent) {
+      const current = this.ownsInteractions;
       const handler: EventListener = (e) => {
         e.stopPropagation();
-        if (node.actionId !== undefined) {
+        if (node.actionId !== undefined && current()) {
           this.emit('lr-widget-action', {
             actionId: node.actionId,
             payload: node.payload,
@@ -315,10 +320,12 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       el.removeEventListener(existing.event, existing.handler);
     }
     const states: BindingHandlerState[] = [];
+    const current = this.ownsInteractions;
     for (const binding of node.bindings) {
       if (!binding.event) continue;
       const handler: EventListener = (event) => {
         event.stopPropagation();
+        if (!current()) return;
         const detail = (event as CustomEvent<unknown>).detail;
         const hasDetailValue =
           detail !== null &&
@@ -327,6 +334,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
         const value = hasDetailValue
           ? (detail as { value: unknown }).value
           : (el as unknown as Record<string, unknown>)[binding.prop];
+        if (!current()) return;
         this.emit('lr-widget-state-change', {
           path: binding.path,
           value,

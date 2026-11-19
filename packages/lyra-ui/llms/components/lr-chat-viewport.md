@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -52,7 +52,10 @@ slotted and virtual mode.
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
 counted as "at bottom," in both modes. While `follow` is released, the browser's native scroll
-anchoring keeps the reading position when content above it changes. `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
+anchoring keeps the reading position when content above it changes. `jumpIconOnly: boolean = false`
+(attribute `jump-icon-only`) renders a down chevron with a localized accessible name and, when
+there are unread messages, a localized unread count as its accessible description.
+`unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
@@ -114,6 +117,11 @@ messages. In slotted mode `[part="content"]` is a flex column, so adjacent messa
 rather than collapse. The unread divider is centred in the space above the first unread message.
 `--lr-chat-viewport-content-max-inline-size` (default `none`) — maximum inline size of the
 transcript column (`[part="content"]`), centred in the scroll container when narrower.
+
+`--lr-chat-viewport-jump-bg` (surface), `--lr-chat-viewport-jump-hover-bg` (brand quiet),
+`--lr-chat-viewport-jump-color` (text), `--lr-chat-viewport-jump-border` (thin solid border),
+`--lr-chat-viewport-jump-radius` (pill), and `--lr-chat-viewport-jump-shadow` (medium shadow)
+style the jump-to-latest button.
 
 ```html
 <lr-chat-viewport

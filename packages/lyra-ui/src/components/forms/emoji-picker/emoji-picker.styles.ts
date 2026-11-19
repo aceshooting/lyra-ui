@@ -1,6 +1,7 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
+  formControlLabelTypography,
   formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -63,8 +64,7 @@ export const styles = css`
     gap: var(--lr-emoji-picker-control-gap, var(--_lr-emoji-picker-control-gap-default));
   }
   [part='form-control-label'] {
-    color: var(--lr-color-text);
-    font-size: var(--lr-font-size-md-sm);
+    ${formControlLabelTypography}
   }
   /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
      tracked by SlotPresenceController and reflected as the hidden attribute. */

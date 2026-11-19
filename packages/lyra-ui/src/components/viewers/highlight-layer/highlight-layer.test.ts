@@ -400,6 +400,14 @@ describe('lr-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     const first = itemActions(el)[0]!;
     first.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+      const shortcut = new KeyboardEvent('keydown', { key: 'ArrowRight', [modifier]: true, bubbles: true, cancelable: true });
+      first.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented, modifier).to.be.false;
+      await el.updateComplete;
+      expect(first.getAttribute('tabindex')).to.equal('0');
+    }
+
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await el.updateComplete;
     const rects = itemActions(el);

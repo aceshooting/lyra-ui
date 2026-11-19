@@ -193,7 +193,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-button-border, var(--_lr-button-border));
     font: inherit;
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-button-font-weight, var(--lr-font-weight-semibold));
     /* After the "font" shorthand, which would otherwise reset font-size back to the inherited one. */
     font-size: var(--lr-button-font-size, var(--_lr-button-font-size));
     /* In href mode the root is an <a>, which the UA stylesheet underlines while a native <button>

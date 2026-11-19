@@ -12,10 +12,10 @@ import {
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
@@ -86,6 +86,7 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @customElement lr-radio-group
  * @slot - Radio controls.
  * @slot label - Visible group label.
+ * @slot toolbar - Supplementary controls between the label and the options.
  * @slot hint - Supporting text.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Validation text.
@@ -113,7 +114,12 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @csspart base - The radiogroup wrapper.
  * @csspart form-control - Mapped form-control wrapper.
  * @csspart label - The group label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Mapped name on the same group label.
+ * @csspart toolbar - Container for the supplementary controls.
  * @csspart radios - WA option collection.
  * @csspart form-control-input - Mapped name on the same option collection.
  * @csspart button-group - Shoelace segmented-option collection alias.
@@ -191,6 +197,8 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   /** Option layout and `aria-orientation`. Arrow keys move in either axis; Left/Right are mirrored under RTL. */
   orientation: RadioGroupOrientation = 'vertical';
   @property() label = '';
+  /** Visually hide the group label while preserving its accessible name. */
+  @property({ attribute: 'label-display', reflect: true, useDefault: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are supplied. */
   @property({ attribute: 'help-text' }) helpText = '';
@@ -220,7 +228,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   private internals: ElementInternals;
   private validityController: FormControlController;
   private _name = '';
-  private _value = '';
+  private _value: string | null = null;
   private _defaultValue = '';
   private _valueDirty = false;
   private reflectingDefaultValue = false;
@@ -229,7 +237,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   private _disabled = false;
   private _fieldsetDisabled = false;
   private hasInteracted = false;
-  private pendingSelection?: string;
+  private pendingSelection?: string | null;
   private hadShoelaceDefaultValue = false;
 
   /** Submitted form-data key. Lyra defaults to empty, unlike `<sl-radio-group>`'s `"option"`;
@@ -245,7 +253,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     this.requestUpdate('name', old);
   }
 
-  get value(): string { return this._value; }
+  get value(): string { return this._value ?? ''; }
   set value(next: string | null) {
     this._valueDirty = true;
     this.selectValue(next ?? '');
@@ -490,7 +498,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     }
     if (topLevelChild.parentElement !== group) return null;
     const slot = topLevelChild.getAttribute('slot');
-    return slot === 'label' || slot === 'hint' || slot === 'help-text' || slot === 'error' ? null : group;
+    return slot ? null : group;
   }
 
   /** @internal Whether this group owns the radio through its default option slot. */
@@ -537,12 +545,11 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   // happens here in `selectValue()`'s sync loop as a side effect of a NEW selection existing, not
   // as a state a user can reach on its own. A required-but-empty group is already reachable only
   // before first interaction, which `lr-invalid`'s existing veto already covers.
-  private selectValue(next: string): void {
-    const desired = next ?? '';
+  private selectValue(desired: string | null): void {
     const radios = this.radios();
     if (radios.length === 0) {
       const old = this._value;
-      this._value = desired;
+      this._value = desired || null;
       this.pendingSelection = desired;
       this.syncFormState();
       this.updateValidity();
@@ -605,10 +612,10 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
         radio.setGroupTabbable(radio === tabbableRadio);
       }
       const oldValue = this._value;
-      this._value = checkedRadio?.value ?? '';
+      this._value = checkedRadio?.value ?? null;
       this.syncFormState();
       this.updateValidity();
-      if (oldValue !== this._value) this.requestUpdate('value', oldValue);
+      if (oldValue !== this._value) this.requestUpdate();
       this.runs.schedule();
     } finally {
       this.syncingRadios = false;
@@ -665,12 +672,14 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   }
   private onFocusOut = (event: FocusEvent): void => {
     // `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered.
-    if (this.hasInteracted || this.effectiveDisabled || this.matches(':disabled') || (event.target as Element).matches(':disabled')) return;
+    const radio = event.target as Element;
+    if (!this.ownsRadio(radio) || this.hasInteracted || this.effectiveDisabled || this.matches(':disabled') || radio.matches(':disabled')) return;
     this.hasInteracted = true;
     this.reflectValidityStates();
     this.requestUpdate();
   };
   private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented) return;
     if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     if (this.effectiveDisabled) return;
     const radios = this.radios().filter((radio) => this.isRadioAvailable(radio));
@@ -740,7 +749,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
 
   private syncFormState(): void {
     if (!this.internals) return;
-    this.internals.setFormValue(this.name && this.value ? this.value : null, this.value);
+    this.internals.setFormValue(this.name ? this._value : null, this._value);
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -752,10 +761,10 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     if (!this.validityController) return;
     // A barred group reports no violation at all, exactly like a native disabled control --
     // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required groups.
-    const missing = !this.barredFromValidation && this.required && !this.value;
+    const missing = !this.barredFromValidation && this.required && this._value === null;
     this.validityController.setValidity(
       missing ? { valueMissing: true } : {},
-      missing ? this.localize('radioRequired') : '',
+      missing ? () => this.localize('radioRequired') : '',
     );
     this.reflectValidityStates();
   }
@@ -819,8 +828,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     void reason;
     this._valueDirty = true;
     this.hasInteracted = false;
-    this.pendingSelection = typeof state === 'string' ? state : '';
-    this.selectValue(this.pendingSelection);
+    this.selectValue(typeof state === 'string' ? state : null);
   }
   formDisabledCallback(disabled: boolean): void {
     if (this.validityController?.reflectingDisabled) return;
@@ -835,7 +843,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
 
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
-    const hasAccessibleLabel = this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
+    const accessibleLabel = hostAriaLabel(this);
     const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText) || this.withHint;
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
@@ -844,8 +852,8 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     const ariaOrientation = RADIO_GROUP_ORIENTATION.normalize(this.orientation);
     return html`
       <div part="base" role="radiogroup"
-        aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
-        aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing}
+        aria-label=${accessibleLabel ?? nothing}
+        aria-labelledby=${accessibleLabel === null && hasLabel ? this.labelId : nothing}
         aria-describedby=${described}
         aria-required=${this.required ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
@@ -855,6 +863,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
         @focusout=${this.onFocusOut}>
         <div part="form-control">
           <div part="label form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label"></slot></div>
+          <div part="toolbar" ?hidden=${!this.slotPresence.has('toolbar')}><slot name="toolbar"></slot></div>
           <div part="radios form-control-input button-group button-group__base">
             <slot @slotchange=${this.onRadioSlotChange}></slot>
           </div>

@@ -67,7 +67,7 @@ type TextFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; text: string }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 const IDLE_TEXT_FETCH: TextFetchState = { kind: 'idle' };
 
@@ -503,7 +503,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       return;
     }
     if (this.textFetch.kind === 'error') {
-      this.announcements.transition('preview', 'error', this.textFetch.message);
+      this.announcements.transition('preview', 'error', this.textFetch.message());
       return;
     }
     if (this.textFetch.kind === 'loaded') {
@@ -519,7 +519,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     const fetchTarget = resolveOwnerFetchTarget(this, url);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.textFetch = { kind: 'error', message: error.message };
+      this.textFetch = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -533,8 +533,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       this.textFetch = { kind: 'loaded', text };
     } catch (error) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const message = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
-      this.textFetch = { kind: 'error', message };
+      this.textFetch = {
+        kind: 'error',
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
+      };
       this.emit('lr-render-error', { error });
     }
   }
@@ -620,7 +624,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       case 'loaded':
         return html`<pre class="text">${this.textFetch.text}</pre>`;
       case 'error':
-        return this.renderError(this.textFetch.message);
+        return this.renderError(this.textFetch.message());
       case 'loading':
       case 'idle':
       default:

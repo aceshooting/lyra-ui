@@ -116,10 +116,10 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** Let the model control accept a value outside `catalog`; passed straight through. */
   @property({ type: Boolean, attribute: 'allow-custom' }) allowCustom = false;
   /** The current sampling temperature. */
-  @property({ type: Number }) temperature = DEFAULT_TEMPERATURE;
-  @property({ type: Number, attribute: 'temperature-min' }) temperatureMin = DEFAULT_TEMPERATURE_MIN;
-  @property({ type: Number, attribute: 'temperature-max' }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
-  @property({ type: Number, attribute: 'temperature-step' }) temperatureStep = DEFAULT_TEMPERATURE_STEP;
+  @property({ type: Number, useDefault: true }) temperature = DEFAULT_TEMPERATURE;
+  @property({ type: Number, attribute: 'temperature-min', useDefault: true }) temperatureMin = DEFAULT_TEMPERATURE_MIN;
+  @property({ type: Number, attribute: 'temperature-max', useDefault: true }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
+  @property({ type: Number, attribute: 'temperature-step', useDefault: true }) temperatureStep = DEFAULT_TEMPERATURE_STEP;
   /** `vertical` stacks full-width rows with visible labels; `compact` runs
    *  the same two rows side by side with a smaller temperature caption, for
    *  toolbars/sidebars where the vertical layout's height doesn't fit. */

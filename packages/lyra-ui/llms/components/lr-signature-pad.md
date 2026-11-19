@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -31,7 +31,8 @@ are out of scope.
 
 **Keyboard and assistive technology.** The surface is one tab stop with `role="application"` and the
 role description "signature pad". It is named by a host `aria-label`, else by the label, else
-"Signature", and described by the error, the hint, the keyboard instructions and its state ("No signature",
+"Signature". The focused surface follows the host’s `aria-describedby` references as they change,
+then announces the error, the hint, the keyboard instructions and its state ("No signature",
 "Signed, 2 strokes"). The arrow keys move a visible pen cursor by 1 % of the box (10 % with Shift),
 Space or Enter lowers or lifts the pen, moves draw while it is down, and Escape lifts it. Pen changes
 are announced through the shared polite live region. **The arrow keys keep their physical direction
@@ -63,8 +64,9 @@ must never be mirrored.
 
 **Events:**
 
-- `change` — native event, after the user finishes a stroke (pointer released or cancelled, pen
-  lifted) or clears the pad.
+- `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
+  pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting
+  the keyboard pen also commits the stroke.
 - `lr-change` — not cancelable, no detail; fired with every `change`.
 - `lr-invalid` — cancelable; the validity alias.
 

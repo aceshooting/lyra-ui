@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 
 export const styles = css`
   :host {
@@ -35,18 +36,16 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     inline-size: 100%;
-    /* max() floors the row's own hit target at the shared WCAG 2.5.8 minimum regardless of the
-       override -- a consumer can grow the row but never shrink it below the accessible floor.
-       Unset, max(icon-button-size, icon-button-size) resolves to exactly today's value. */
     min-block-size: max(
+      ${minimumPointerTarget},
       var(--lr-icon-button-size),
       var(--lr-app-rail-item-min-block-size, var(--lr-icon-button-size))
     );
     padding: var(--lr-app-rail-item-padding, var(--lr-space-s));
     border: 0;
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-app-rail-item-radius, var(--lr-radius));
     background: transparent;
-    color: var(--lr-color-text);
+    color: var(--lr-app-rail-item-color, var(--lr-color-text));
     font: inherit;
     /* After the "font" shorthand, which would otherwise reset font-size back to the inherited
        one -- mirrors lr-button's own --lr-button-font-size ordering. */
@@ -55,6 +54,15 @@ export const styles = css`
     text-decoration: none;
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  /* Keep larger row targets on devices with touch input or without a hovering fine pointer. */
+  @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+    :host(:not([icon-only])) [part="base"] {
+      min-block-size: max(
+        ${minimumPointerTarget},
+        var(--lr-app-rail-item-min-block-size, var(--lr-icon-button-size))
+      );
+    }
   }
   [part="base"]:not([aria-disabled="true"]):hover {
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
@@ -174,17 +182,14 @@ export const styles = css`
        then has nothing left to resolve, since neither axis is auto anymore. */
     inline-size: var(--lr-app-rail-item-icon-only-size, auto);
     block-size: var(--lr-app-rail-item-icon-only-size, auto);
-    /* Re-asserts [part="base"]'s own min-block-size formula above (more specific selector, so it
-       wins outright rather than stacking) -- unset, the fallback is that exact same formula, so
-       the floor-clamped derived square is untouched. Set, the token replaces the whole formula,
-       including the row's own --lr-app-rail-item-min-block-size: the icon-only square is then
-       sized from --lr-app-rail-item-icon-only-size alone, independent of a taller row height set
-       through that other token. */
-    min-block-size: var(
-      --lr-app-rail-item-icon-only-size,
-      max(
-        var(--lr-icon-button-size),
-        var(--lr-app-rail-item-min-block-size, var(--lr-icon-button-size))
+    /* An explicit square size is independent of the labeled row height. The derived
+       square retains the shared icon-button floor. Both enforce the pointer minimum. */
+    min-inline-size: ${minimumPointerTarget};
+    min-block-size: max(
+      ${minimumPointerTarget},
+      var(
+        --lr-app-rail-item-icon-only-size,
+        max(var(--lr-icon-button-size), var(--lr-app-rail-item-min-block-size, var(--lr-icon-button-size)))
       )
     );
     aspect-ratio: 1;

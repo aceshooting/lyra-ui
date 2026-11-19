@@ -28,9 +28,7 @@ export class LyraFormatBytes extends LyraElement {
   @property({ type: Number }) decimals = DEFAULT_DECIMALS;
 
   override render(): TemplateResult {
-    // NaN/Infinity (a malformed attribute, or a missing value assigned programmatically) must
-    // never reach Intl.NumberFormat: a NaN index would look up units[NaN] === undefined, and
-    // Intl.NumberFormat throws when style: 'unit' is paired with an undefined unit.
+    // NaN/Infinity (a malformed attribute or an invalid programmatic value) render the fallback.
     let text = '';
     if (Number.isFinite(this.value)) {
       // Guaranteed finite by the check above; routed through the shared helper anyway so this

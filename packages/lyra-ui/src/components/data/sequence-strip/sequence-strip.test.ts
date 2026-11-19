@@ -1719,3 +1719,18 @@ it('lets host aria-label presence override the generated name, including empty',
   await el.updateComplete;
   expect(owner().getAttribute('aria-label')).to.equal('Text: 2, Tool: 1');
 });
+
+it('ignores a local cell click if capture replaces its items before activation', async () => {
+  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .items=${items}></lr-sequence-strip>`);
+  const ids: string[] = [];
+  el.addEventListener('lr-item-activate', (event) => ids.push(event.detail.id));
+  el.addEventListener('click', () => {
+    el.items = [{ id: 'replacement', categoryId: 'text' }];
+  }, { capture: true, once: true });
+  const cell = () => el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+  cell().click();
+  expect(ids).to.deep.equal([]);
+  await el.updateComplete;
+  cell().click();
+  expect(ids).to.deep.equal(['replacement']);
+});

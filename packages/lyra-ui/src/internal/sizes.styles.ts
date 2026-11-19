@@ -1,8 +1,5 @@
 import { css } from 'lit';
 
-/** Physical minimum for an independently compacted pointer target, in CSS pixels. */
-export const minimumPointerTarget = css`24px`;
-
 // The ONE size ladder. Twenty-two components carried their own copy of this scale, and four
 // different ladders were in circulation ('2xs..xl', 'xs..xl', 'small|medium|large', 'sm|md').
 //
@@ -125,5 +122,18 @@ export const sizes = css`
     :host([size='xl']) {
       --lr-form-control-height: max(var(--lr-form-control-height-xl), 2.75rem);
     }
+  }
+`;
+
+/** An owning group supplies its resolved size tier while preserving an option's authored size.
+ * Compose after the local size ladder so removing the group marker restores that ladder. */
+export const groupOptionSize = css`
+  :host([data-lr-group-size]) {
+    --lr-form-control-height: inherit;
+    --lr-form-control-font-size: inherit;
+    --lr-form-control-padding-inline: inherit;
+    --lr-form-control-padding-block: inherit;
+    --lr-form-control-gap: inherit;
+    --lr-form-control-radius: inherit;
   }
 `;

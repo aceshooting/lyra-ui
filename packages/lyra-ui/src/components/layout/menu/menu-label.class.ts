@@ -28,6 +28,11 @@ export class LyraMenuLabel extends LyraElement {
    * browser connection; authored values remain authoritative. */
   @property({ reflect: true }) override role: string | null = 'presentation';
 
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'role' && value === null) this.setAttribute('role', 'presentation');
+  }
+
   override render(): TemplateResult {
     return html`<div part="base"><slot></slot></div>`;
   }

@@ -1406,6 +1406,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (this.targetsInteractiveContent(event, true)) return;
     const vertical = this.effectiveOrientation() === 'vertical';
     const rtl = this.effectiveDirection === 'rtl';

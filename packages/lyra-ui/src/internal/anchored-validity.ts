@@ -6,6 +6,9 @@ export const VALIDITY_ANCHOR = Symbol('lr-validity-anchor');
 /** @internal */
 export const SET_ANCHORED_VALIDITY = Symbol('lr-set-anchored-validity');
 
+/** A translated intrinsic message can be resolved again when the host updates its locale. */
+export type IntrinsicValidityMessage = string | (() => string);
+
 /** @internal */
 interface ValidityAnchorProvider {
   [VALIDITY_ANCHOR](): HTMLElement | null | undefined;
@@ -51,10 +54,9 @@ function isNotFoundDomException(error: unknown): boolean {
 export class AnchoredValidityController implements ReactiveController {
   /** Effective state actually handed to `internals.setValidity()`: intrinsic + custom overlay. */
   private flags: ValidityStateFlags = {};
-  private message = '';
   /** Last state the control computed from its own constraints. */
   private intrinsicFlags: ValidityStateFlags = {};
-  private intrinsicMessage = '';
+  private intrinsicMessage: IntrinsicValidityMessage = '';
   /** Consumer-supplied error; empty means "no custom error". */
   private customMessage = '';
   private revision = 0;
@@ -69,7 +71,7 @@ export class AnchoredValidityController implements ReactiveController {
   }
 
   /** The control's own constraint state. Never clears a custom error — see `commit()`. */
-  setValidity(flags: ValidityStateFlags = {}, message = ''): void {
+  setValidity(flags: ValidityStateFlags = {}, message: IntrinsicValidityMessage = ''): void {
     this.intrinsicFlags = { ...flags };
     this.intrinsicMessage = message;
     this.commit();
@@ -98,7 +100,6 @@ export class AnchoredValidityController implements ReactiveController {
     this.flags = this.customMessage
       ? { ...this.intrinsicFlags, customError: true }
       : { ...this.intrinsicFlags };
-    this.message = this.customMessage || this.intrinsicMessage;
     this.revision += 1;
     this.apply();
   }
@@ -131,10 +132,13 @@ export class AnchoredValidityController implements ReactiveController {
 
   /** Returns true when an invalid state was installed with a real anchor. */
   private apply(): boolean {
+    const message = this.customMessage || (typeof this.intrinsicMessage === 'function'
+      ? this.intrinsicMessage()
+      : this.intrinsicMessage);
     const anchor = this.isInvalid() ? this.getAnchor() : undefined;
     if (anchor?.isConnected) {
       try {
-        this.internals.setValidity(this.flags, this.message, anchor);
+        this.internals.setValidity(this.flags, message, anchor);
         return true;
       } catch (error) {
         // A stale or incorrectly provided non-descendant anchor must not
@@ -143,7 +147,7 @@ export class AnchoredValidityController implements ReactiveController {
         if (!isNotFoundDomException(error)) throw error;
       }
     }
-    this.internals.setValidity(this.flags, this.message);
+    this.internals.setValidity(this.flags, message);
     return false;
   }
 }

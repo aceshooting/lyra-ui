@@ -11,7 +11,6 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseText,
@@ -61,7 +60,7 @@ type CsvState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; rows: unknown[][] }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 /** A rendered header row shifts every raw-grid (1-based, header row included) row number down by
  *  one to reach the matching index into the virtualized body array. */
@@ -359,19 +358,27 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         }
         const rows = this._rows;
         this.fetchState = { kind: 'loaded', rows };
-      } catch (error) { this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') }; this.emit('lr-render-error', { error }); }
+      } catch (error) {
+        this.fetchState = {
+          kind: 'error',
+          message: isResourceLimitError(error)
+            ? () => this.localize('documentPreviewResourceTooLarge')
+            : () => this.localize('documentPreviewFailedToLoad'),
+        };
+        this.emit('lr-render-error', { error });
+      }
       return;
     }
     if (!this.src) {
       this.fetchState = { kind: 'idle' };
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    const src = this.src;
+    const fetchTarget = resolveOwnerFetchTarget(this, src);
     if (!fetchTarget) {
-      const error = new LyraUserFacingError(
-        this.localize('documentPreviewUrlNotAllowed')
-      );
-      this.fetchState = { kind: 'error', message: error.message };
+      const message = () => this.localize('documentPreviewUrlNotAllowed');
+      const error = new LyraUserFacingError(message());
+      this.fetchState = { kind: 'error', message };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -387,10 +394,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       const library = await this.loadLibrary();
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
       if (!library) {
-        const error = new LyraUserFacingError(
-          this.localize('csvViewerUnavailable')
-        );
-        this.fetchState = { kind: 'error', message: error.message };
+        const message = () => this.localize('csvViewerUnavailable');
+        const error = new LyraUserFacingError(message());
+        this.fetchState = { kind: 'error', message };
         this.emit('lr-render-error', { error });
         return;
       }
@@ -414,18 +420,16 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       }
     } catch (error) {
       if (
-        isAbortError(error) ||
         !this.isConnected ||
-        !this.loadTask.isCurrent(generation)
-      )
-        return;
+        !this.loadTask.isCurrent(generation) ||
+        signal?.aborted ||
+        this.src !== src
+      ) return;
       this.fetchState = {
         kind: 'error',
-        message: this.localize(
-          isResourceLimitError(error)
-            ? 'documentPreviewResourceTooLarge'
-            : 'documentPreviewFailedToLoad'
-        ),
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
     }
@@ -646,7 +650,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     } else if (this.fetchState.kind === 'loading')
       content = renderViewerLoading(this.localize('loadingDocument'));
     else if (this.fetchState.kind === 'error')
-      content = html`<div part="error">${this.fetchState.message}</div>`;
+      content = html`<div part="error">${this.fetchState.message()}</div>`;
     else
       content = html`<p class="empty-note">${this.localize(
         'documentPreviewEmpty',

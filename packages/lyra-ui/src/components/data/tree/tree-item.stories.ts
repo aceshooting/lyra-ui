@@ -48,3 +48,16 @@ export const Declarative: StoryObj = {
     </div>
   `,
 };
+
+export const RowHoverColors: StoryObj = {
+  render: () => html`
+    <div role="tree" style="
+      --lr-tree-selected-bg: var(--lr-color-neutral-fill-normal);
+      --lr-tree-hover-bg: var(--lr-color-neutral-fill-quiet);
+      --lr-tree-selected-hover-bg: var(--lr-color-brand-quiet);
+    ">
+      <lr-tree-item .item=${{ id: 'inbox', label: 'Inbox', selected: true }}></lr-tree-item>
+      <lr-tree-item .item=${{ id: 'archive', label: 'Archive' }}></lr-tree-item>
+    </div>
+  `,
+};

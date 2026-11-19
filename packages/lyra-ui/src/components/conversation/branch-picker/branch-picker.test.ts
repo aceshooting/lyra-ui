@@ -1,5 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LitElement, type PropertyValues } from 'lit';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './branch-picker.js';
@@ -370,4 +372,44 @@ it('blur() releases whichever step button held focus', async () => {
   expect((el.shadowRoot!.activeElement) != null).to.equal(true);
   el.blur();
   expect((el.shadowRoot!.activeElement) === null).to.equal(true);
+});
+
+for (const [direction, opposite, endpoint] of [
+  ['next', 'previous', 2],
+  ['previous', 'next', 0],
+] as const) {
+  it(`moves focus from ${direction} to ${opposite} when the consumer applies the endpoint`, async () => {
+    const el = await fixture<LyraBranchPicker>(html`<lr-branch-picker index="1" count="3"></lr-branch-picker>`);
+    const button = (part: string) =>
+      el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}-button"]`)!;
+    await focusByKeyboard(button(direction));
+    const change = oneEvent(el, 'lr-branch-change');
+    await sendKeys({ press: 'Space' });
+    expect((await change).detail.index).to.equal(endpoint);
+    expect(el.index).to.equal(1);
+    expect(el.shadowRoot!.activeElement === button(direction)).to.equal(true);
+
+    el.index = endpoint;
+    await el.updateComplete;
+    expect(button(direction).disabled).to.equal(true);
+    expect(el.shadowRoot!.activeElement === button(opposite)).to.equal(true);
+  });
+}
+
+it('preserves focus the consumer moved before applying a branch change', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-branch-picker index="1" count="3"></lr-branch-picker><button>Outside</button></div>
+  `);
+  const el = wrapper.querySelector<LyraBranchPicker>('lr-branch-picker')!;
+  const outside = wrapper.querySelector('button')!;
+  await el.updateComplete;
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!);
+  el.addEventListener('lr-branch-change', ({ detail }) => {
+    outside.focus();
+    el.index = detail.index;
+  }, { once: true });
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(el.index).to.equal(2);
+  expect(document.activeElement === outside).to.equal(true);
 });

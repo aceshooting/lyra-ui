@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -30,8 +30,7 @@ export const styles = css`
   }
 
   [part~='aggregate-label'] {
-    color: var(--lr-color-text);
-    font-weight: var(--lr-font-weight-semibold);
+    ${formControlLabelTypography}
   }
 
   [part~='aggregate-hint'] {

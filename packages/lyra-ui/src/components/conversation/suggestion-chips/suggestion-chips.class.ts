@@ -223,7 +223,9 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     const buttons = this.chipButtons();
     const surviving = buttons.find((button) => button.dataset['suggestionId'] === pending.suggestionId);
     const target = surviving ?? buttons[Math.min(pending.index, Math.max(0, buttons.length - 1))] ?? null;
-    applyComposedFocusRepair(pending.repair, target);
+    applyComposedFocusRepair(pending.repair, target?.disabled
+      ? buttons[this.effectiveActiveIndex(this.effectiveSuggestions)]
+      : target);
   }
 
   /** A `disabled` suggestion cannot be activated -- by click or keyboard -- and emits nothing and

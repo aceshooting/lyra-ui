@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './include.js';
 import type { LyraInclude } from './include.js';
 import { __clearIncludeResourceCacheForTesting, acquireSanitizedIncludeResource, MAX_INCLUDE_BYTES } from './include-resource.js';
@@ -85,4 +85,36 @@ it('drops name attributes so included markup cannot clobber window or document p
   expect(viewer.querySelectorAll('[name]').length).to.equal(0);
   expect(typeof (window as unknown as Record<string, unknown>)['lyraIncludeProbe']).to.equal('undefined');
   expect(typeof (document as unknown as Record<string, unknown>)['lyraIncludeProbe']).to.equal('undefined');
+});
+
+it('leaves a late response body unread after source removal', async () => {
+  let resolveFetch!: (response: Response) => void;
+  let signal: AbortSignal | null | undefined;
+  window.fetch = (_url, init) => {
+    signal = init?.signal;
+    return new Promise<Response>((resolve) => { resolveFetch = resolve; });
+  };
+  const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+  let failures = 0;
+  el.addEventListener('lr-include-error', () => { failures++; });
+  el.src = '/retired';
+  await waitUntil(() => Boolean(signal));
+  el.src = '';
+  await waitUntil(() => signal?.aborted === true);
+  const response = new Response('retired');
+  resolveFetch(response);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(response.bodyUsed).to.equal(false);
+  expect(failures).to.equal(0);
+});
+
+it('reports an independent transport abort on the current source', async () => {
+  const failure = new DOMException('Transport canceled', 'AbortError');
+  window.fetch = () => Promise.reject(failure);
+  const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+  const failed = oneEvent(el, 'lr-include-error');
+  el.src = '/current';
+  expect((await failed).detail.error).to.equal(failure);
+  await el.updateComplete;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
 });

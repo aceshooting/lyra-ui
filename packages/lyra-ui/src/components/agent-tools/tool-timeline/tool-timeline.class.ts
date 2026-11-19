@@ -3,7 +3,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { formatTimeOfDay, getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatTimeOfDay, getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -18,7 +18,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { TOOL_CALL_STATUSES, type ToolStatus } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
 import {
   EMPTY_REDACTION_PATHS,
   projectedRedactionFields,
@@ -27,8 +27,8 @@ import {
 } from '../tool-redaction.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -281,6 +281,9 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
  * @event lr-tool-render-error - A nested result renderer failed. `detail: { invocationId,
  *   sourceKey?, toolName, error }`.
  * @csspart base - The root `<ol>`.
+ * @slot summary - Custom summary content in grouped mode. Overrides `groupSummary`; the group status stays accessible.
+ * @csspart group - The plain disclosure wrapping the timeline in grouped mode.
+ * @csspart group-summary - Group status glyph and summary text, with the aggregate status in `data-status`.
  * @csspart entry - One entry's `<li>`; carries `data-status` (the entry's `status`) and
  *   `data-pending-approval` (`"true"`/`"false"`).
  * @csspart entry-marker - The decorative rail dot/connector for one entry.
@@ -330,11 +333,30 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    approve: LYRA_DEFAULT_approve,
+    collapse: LYRA_DEFAULT_collapse,
     confirmApproved: LYRA_DEFAULT_confirmApproved,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    deny: LYRA_DEFAULT_deny,
+    details: LYRA_DEFAULT_details,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    toolCallBlockHeaderSuccess: LYRA_DEFAULT_toolCallBlockHeaderSuccess,
     toolTimelineDetailsFor: LYRA_DEFAULT_toolTimelineDetailsFor,
     toolTimelineInputLimit: LYRA_DEFAULT_toolTimelineInputLimit,
     toolTimelineLimit: LYRA_DEFAULT_toolTimelineLimit,
@@ -365,6 +387,13 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** Forwarded to the shared approval dialog's own `readonly` — withholds editing an entry's
    *  arguments before approving it. */
   @property({ type: Boolean, reflect: true, attribute: 'approval-readonly' }) approvalReadonly = false;
+
+  /** Fold the visible entries into one initially collapsed disclosure. The first matching
+   * status in error, denied, running, pending, incomplete, success order names the group. */
+  @property({ type: Boolean, reflect: true }) grouped = false;
+
+  /** Override the localized summary of distinct displayed tool names in grouped mode. */
+  @property({ attribute: 'group-summary' }) groupSummary = '';
 
   /** Overrides the default `hour:minute` rendering of every entry's `startedAt`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
@@ -738,17 +767,36 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     `;
   }
 
+  private groupTemplate(entries: readonly CanonicalToolTimelineEntry[], list: TemplateResult): TemplateResult {
+    const statuses = new Set(entries.map((entry) => entry.status));
+    const priority: readonly ToolStatus[] = ['error', 'denied', 'running', 'pending', 'incomplete'];
+    const status = priority.find((candidate) => statuses.has(candidate)) ?? 'success';
+    const names = new Set(entries.map((entry) => entry.displayName || entry.name));
+    const label = this.groupSummary || this.localize('toolCallBlockHeaderSuccess', undefined, {
+      name: getListFormat(this.effectiveLocale).format(names),
+    });
+    return html`<lr-details part="group" appearance="plain"
+      @lr-show=${this.stopOwnedEvent} @lr-after-show=${this.stopOwnedEvent}
+      @lr-hide=${this.stopOwnedEvent} @lr-after-hide=${this.stopOwnedEvent}
+      @lr-toggle=${this.stopOwnedEvent}
+    ><span slot="summary" part="group-summary" data-status=${status}
+      >${toolStatusIcon(status)}<span class="sr-only">${this.localize(TOOL_STATUS_LABEL_KEY[status])} </span
+      ><slot name="summary">${label}</slot></span
+    >${list}</lr-details>`;
+  }
+
   override render(): TemplateResult {
     const entries = this.sortedEntries;
     const reviewing = this.reviewingEntry;
     const placeholder = this.localize('envListValueHidden');
 
+    const list = html`<ol part="base" role="list" aria-label=${overallSemanticLabel(this) ?? nothing}>
+      ${repeat(entries, entryIdentity, (entry) => this.entryTemplate(entry, placeholder))}
+    </ol>`;
     return html`
       ${entries.length === 0
         ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-        : html`<ol part="base" role="list" aria-label=${overallSemanticLabel(this) ?? nothing}>
-            ${repeat(entries, entryIdentity, (entry) => this.entryTemplate(entry, placeholder))}
-          </ol>`}
+        : this.grouped ? this.groupTemplate(entries, list) : list}
       ${publicCollectionTruncation(this, 'entries')
         ? html`<p part="limit" role="note">${this.inputLimitText()}</p>` : nothing}
       ${this.projectionTruncated

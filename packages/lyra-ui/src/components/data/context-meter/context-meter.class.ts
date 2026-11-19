@@ -7,7 +7,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { chartValueFractionDigits } from '../../charts/chart/chart-number-format.js';
+import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
@@ -470,10 +470,9 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private activationDispatching = false;
 
   /** Dispatch both veto names before applying the default toggle to the latest selection. */
-  private activateSegment(index: number): void {
-    if (this.activationDispatching || !this.interactive) return;
-    const segment = this.effectiveSegments[index];
-    if (!segment || segment.disabled) return;
+  private activateSegment(index: number, segment: Readonly<ContextMeterSegment>): void {
+    if (this.activationDispatching || !this.isConnected || !this.interactive || segment.disabled ||
+        this.effectiveSegments[index] !== segment) return;
     this.activationDispatching = true;
     try {
       requestThenCommit({
@@ -500,10 +499,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   }
 
   /** Enter/Space on the ring's `role="button"` arcs, which get none of a native button's keys. */
-  private onArcKeyDown(event: KeyboardEvent, index: number): void {
+  private onArcKeyDown(event: KeyboardEvent, index: number, segment: Readonly<ContextMeterSegment>): void {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    this.activateSegment(index);
+    this.activateSegment(index, segment);
   }
 
   /** The part token list for a band or legend row. `::part(segment)[data-selected]` is invalid
@@ -568,7 +567,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
                   aria-label=${title}
                   title=${title}
                   style=${style}
-                  @click=${() => this.activateSegment(index)}
+                  @click=${() => this.activateSegment(index, segment)}
                 ></button>`
               : html`<span
                   part="segment"
@@ -603,10 +602,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
           aria-pressed=${this.interactive ? (selected ? 'true' : 'false') : nothing}
           aria-label=${this.interactive ? title : nothing}
           @click=${this.interactive && !segment.disabled
-            ? () => this.activateSegment(index)
+            ? () => this.activateSegment(index, segment)
             : nothing}
           @keydown=${this.interactive && !segment.disabled
-            ? (event: KeyboardEvent) => this.onArcKeyDown(event, index)
+            ? (event: KeyboardEvent) => this.onArcKeyDown(event, index, segment)
             : nothing}
           style=${styleMap(color ? { '--lr-context-meter-segment-color': color } : {})}
           cx=${CENTER}
@@ -674,7 +673,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
                 type="button"
                 ?disabled=${segment.disabled === true}
                 aria-pressed=${selected ? 'true' : 'false'}
-                @click=${() => this.activateSegment(index)}
+                @click=${() => this.activateSegment(index, segment)}
               >
                 ${content}
               </button>`

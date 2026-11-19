@@ -1,6 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
@@ -13,11 +13,8 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { firstByIdentity } from '../collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import {
-  writeClipboardText,
-  type LyraClipboardWriteFailure,
-  type LyraClipboardWriteSuccess,
-} from '../../../internal/clipboard.js';
+import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
+import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardFilesLimit, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -212,9 +209,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
    *  both are set (nothing left to tighten). */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
-  @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
-  private copyTimer?: { owner: Window; handle: number; generation: number };
-  private copyGeneration = 0;
+  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.hash, outcome => {
+    if (outcome.ok) this.emit('lr-copy', outcome);
+    else {
+      this.emit('lr-error');
+      this.emit('lr-copy-error', outcome);
+    }
+  });
 
   private get normalizedFiles(): CommitFileChange[] {
     return firstByIdentity(Array.isArray(this.files) ? this.files : [], (file) => file.path)
@@ -226,29 +227,12 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
       });
   }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.resetCopyFeedback();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.limitAnnouncements.adopted();
     // Adoption can occur while already disconnected, so retire the exact window that owns the
     // timer even when no further disconnected callback is delivered.
-    this.resetCopyFeedback();
-  }
-
-  private cancelCopyTimer(): void {
-    const timer = this.copyTimer;
-    this.copyTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
-  }
-
-  private resetCopyFeedback(): void {
-    this.copyGeneration += 1;
-    this.cancelCopyTimer();
-    this.copyStatus = 'rest';
+    this.copyFeedback.reset();
   }
 
   private get subject(): string {
@@ -286,51 +270,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   }
 
   private onCopy = (): void => {
-    void this.copyHash();
+    void this.copyFeedback.write(this.hash);
   };
-
-  private async copyHash(): Promise<void> {
-    const text = this.hash;
-    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    const generation = ++this.copyGeneration;
-    this.cancelCopyTimer();
-    this.copyStatus = 'rest';
-    const outcome = await writeClipboardText(owner, text);
-    if (!owner || !this.isCurrentCopy(generation, owner)) return;
-    if (!outcome.ok) {
-      this.showCopyStatus('error', generation, owner);
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-      return;
-    }
-    this.showCopyStatus('success', generation, owner);
-    this.emit('lr-copy', outcome);
-  }
-
-  private isCurrentCopy(generation: number, owner: Window): boolean {
-    return this.isConnected
-      && generation === this.copyGeneration
-      && this.ownerDocument.defaultView === owner;
-  }
-
-  private showCopyStatus(status: 'success' | 'error', generation: number, owner: Window): void {
-    this.copyStatus = status;
-    this.cancelCopyTimer();
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.copyTimer?.owner !== owner
-        || this.copyTimer.handle !== handle
-        || this.copyTimer.generation !== generation
-        || generation !== this.copyGeneration
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== owner
-      ) return;
-      this.copyTimer = undefined;
-      this.copyStatus = 'rest';
-    }, 1500);
-    this.copyTimer = { owner, handle, generation };
-  }
 
   private toggleFiles = (): void => {
     const expanded = !this.filesExpanded;
@@ -380,17 +321,17 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 part="copy-button"
                 data-agent-action="neutral"
                 type="button"
-                data-copy-status=${this.copyStatus}
-                aria-label=${this.copyStatus === 'success'
+                data-copy-status=${this.copyFeedback.status}
+                aria-label=${this.copyFeedback.status === 'success'
                   ? this.localize('copied')
-                  : this.copyStatus === 'error'
+                  : this.copyFeedback.status === 'error'
                     ? this.localize('copyFailed')
                     : this.localize('commitCardCopyHash')}
                 @click=${this.onCopy}
               >
-                ${this.copyStatus === 'success'
+                ${this.copyFeedback.status === 'success'
                   ? this.localize('copied')
-                  : this.copyStatus === 'error'
+                  : this.copyFeedback.status === 'error'
                     ? this.localize('copyFailed')
                     : this.localize('copy')}
               </button>`

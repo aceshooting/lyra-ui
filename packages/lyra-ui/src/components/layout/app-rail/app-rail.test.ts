@@ -3808,3 +3808,79 @@ describe("app-rail canonical names and their deprecated aliases", () => {
     expect(details.at(-1)).to.equal(JSON.stringify({ expanded: false }));
   });
 });
+
+it('themes the collapse control and stacks it beneath the brand in the icon rail', async () => {
+  const rail = await fixture<LyraAppRail>(html`
+    <lr-app-rail collapsible
+      style="--lr-app-rail-collapse-toggle-size: 48px; --lr-app-rail-collapse-toggle-color: rgb(30, 40, 50);">
+      <span slot="header">Brand</span>
+    </lr-app-rail>
+  `);
+  const button = rail.shadowRoot!.querySelector<HTMLButtonElement>('[part="collapse-toggle"]')!;
+  expect(getComputedStyle(button).inlineSize).to.equal('48px');
+  expect(getComputedStyle(button).blockSize).to.equal('48px');
+  expect(getComputedStyle(button).color).to.equal('rgb(30, 40, 50)');
+  button.click();
+  await rail.updateComplete;
+  const brand = rail.querySelector('span')!.getBoundingClientRect();
+  const control = button.getBoundingClientRect();
+  expect(control.top).to.be.at.least(brand.bottom);
+  expect(control.left + control.width / 2).to.be.closeTo(brand.left + brand.width / 2, 1);
+});
+
+it('lets the public collapse-icon part override the default chevron transform', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <style>lr-app-rail::part(collapse-icon) { transform: none; }</style>
+      <lr-app-rail collapsible><span slot="header">Brand</span></lr-app-rail>
+    </div>
+  `);
+  const glyph = wrapper.querySelector('lr-app-rail')!.shadowRoot!.querySelector('[part="collapse-icon"]')!;
+  expect(getComputedStyle(glyph).transform).to.equal('none');
+});
+
+it('keeps a custom collapse glyph upright and the toggle named in RTL', async () => {
+  const rail = await fixture<LyraAppRail>(html`
+    <lr-app-rail dir="rtl" collapsible>
+      <span slot="collapse-icon">▣</span>
+    </lr-app-rail>
+  `);
+  const button = rail.shadowRoot!.querySelector<HTMLButtonElement>('[part="collapse-toggle"]')!;
+  const wrapper = button.querySelector<HTMLElement>('[part="collapse-icon"]')!;
+  const slot = wrapper.querySelector('slot');
+  expect(slot?.assignedElements().map(element => element.textContent)).to.deep.equal(['▣']);
+  expect(wrapper.getAttribute('aria-hidden')).to.equal('true');
+  expect(button.getAttribute('aria-label')).to.equal('Collapse navigation');
+  expect(getComputedStyle(wrapper).transform).to.equal('none');
+  button.click();
+  await rail.updateComplete;
+  expect(button.getAttribute('aria-expanded')).to.equal('false');
+  expect(getComputedStyle(wrapper).transform).to.equal('none');
+
+  const reassigned = oneEvent(slot!, 'slotchange');
+  rail.querySelector('[slot="collapse-icon"]')!.remove();
+  await reassigned;
+  expect(getComputedStyle(wrapper).transform).to.equal('matrix(-1, 0, 0, -1, 0, 0)');
+});
+
+it('applies separator shorthands to the logical edges in RTL', async () => {
+  const rail = await fixture<LyraAppRail>(html`
+    <lr-app-rail dir="rtl" style="--lr-app-rail-header-border: none;
+      --lr-app-rail-footer-border: 2px dashed red; --lr-app-rail-edge-border: 3px solid blue;">
+      <span slot="header">Brand</span>
+      <span slot="footer">Settings</span>
+    </lr-app-rail>
+  `);
+  const root = rail.shadowRoot!;
+  expect(getComputedStyle(root.querySelector('[part="header"]')!).borderBottomStyle).to.equal('none');
+  expect(getComputedStyle(root.querySelector('[part="footer"]')!).borderTop).to.equal('2px dashed rgb(255, 0, 0)');
+  expect(getComputedStyle(root.querySelector('[part="base"]')!).borderLeft).to.equal('3px solid rgb(0, 0, 255)');
+});
+
+it('preserves the plain frame edge default when the resizer is present', async () => {
+  const rail = await fixture<LyraAppRail>(html`<lr-app-rail frame="plain" resizable></lr-app-rail>`);
+  const base = rail.shadowRoot!.querySelector('[part="base"]')!;
+  expect(getComputedStyle(base).borderInlineEndWidth).to.equal('0px');
+  rail.style.setProperty('--lr-app-rail-edge-border', '2px solid red');
+  expect(getComputedStyle(base).borderInlineEndWidth).to.equal('2px');
+});

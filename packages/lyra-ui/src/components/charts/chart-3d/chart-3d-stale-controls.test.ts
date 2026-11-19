@@ -109,3 +109,20 @@ describe('lr-chart-3d normalization edges', () => {
     expect(hidden.has(65_536)).to.equal(false);
   });
 });
+
+for (const control of ['cursor', 'row-button'] as const) {
+  it(`ignores a ${control} click if capture replaces its data before activation`, async () => {
+    const el = await mount(columns());
+    const ids: string[] = [];
+    el.addEventListener('lr-chart-row-select', (event) => ids.push(event.detail.id));
+    el.addEventListener('click', () => {
+      el.data = { ...columns(), ids: ['replacement', 'second', 'third'] };
+    }, { capture: true, once: true });
+    part(el, control)!.click();
+    expect(ids).to.deep.equal([]);
+    expect(el.selectedId).to.equal('');
+    await el.updateComplete;
+    part(el, control)!.click();
+    expect(ids).to.deep.equal(['replacement']);
+  });
+}

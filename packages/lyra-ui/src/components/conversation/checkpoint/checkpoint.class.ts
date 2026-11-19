@@ -113,6 +113,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   private readonly confirmPromptId = nextId('checkpoint-confirm-prompt');
   private focusGeneration = 0;
+  private confirmingCheckpointId = '';
 
   private get computedLabel(): string {
     return this.label || this.localize('checkpointLabel');
@@ -135,6 +136,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
       this.fireRestore();
       return;
     }
+    this.confirmingCheckpointId = this.checkpointId;
     this.confirming = true;
     const generation = ++this.focusGeneration;
     void this.updateComplete.then(() => {
@@ -168,7 +170,15 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
     }
   }
 
-  private onConfirmClick = (): void => {
+  private cancelStaleConfirmation(): boolean {
+    if (!this.confirming || this.confirmingCheckpointId === this.checkpointId) return false;
+    const focused = this.shadowRoot?.activeElement?.closest('[part="confirm-group"]');
+    this.revertToRestore(Boolean(focused));
+    return true;
+  }
+
+  private onConfirmClick = (event: Event): void => {
+    if (!(event.currentTarget as HTMLElement).isConnected || this.cancelStaleConfirmation()) return;
     if (!this.confirming || this.withoutRestore || this.withoutRestoreConfirmation || this.restoring) {
       this.revertToRestore(false);
       return;
@@ -194,6 +204,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('checkpointId')) this.cancelStaleConfirmation();
     if (
       this.confirming &&
       (changed.has('withoutRestore') ||
@@ -213,8 +224,8 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   override click(): void {
-    if (this.withoutRestore || this.restoring || this.confirming) return;
-    (this.renderRoot.querySelector('[part="restore-button"]') as HTMLButtonElement | null)?.click();
+    if (!this.isConnected || this.withoutRestore || this.restoring || this.confirming) return;
+    this.renderRoot?.querySelector<HTMLButtonElement>('[part="restore-button"]')?.click();
   }
 
   override render(): TemplateResult {

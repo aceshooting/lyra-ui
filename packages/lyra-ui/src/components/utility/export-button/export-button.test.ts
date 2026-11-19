@@ -1100,6 +1100,31 @@ it('opens the menu and focuses the last item on ArrowUp from the trigger', async
   expect((el.shadowRoot!.activeElement) === (items[items.length - 1])).to.equal(true);
 });
 
+it('leaves modified navigation keys available from the trigger and open menu', async () => {
+  const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${['csv', 'json']}></lr-export-button>`);
+  const trigger = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;
+  await focusByKeyboard(trigger);
+  const open = new KeyboardEvent('keydown', {
+    key: 'ArrowDown', bubbles: true, composed: true, cancelable: true, altKey: true,
+  });
+  trigger.dispatchEvent(open);
+  expect(open.defaultPrevented).to.equal(false);
+  expect(el.open).to.equal(false);
+
+  trigger.click();
+  await el.updateComplete;
+  const item = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="menu-item"]')!;
+  await waitUntil(() => el.shadowRoot!.activeElement === item, 'first menu item was not focused');
+  for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey'] as const) {
+    const event = new KeyboardEvent('keydown', {
+      key: 'End', bubbles: true, composed: true, cancelable: true, [modifier]: true,
+    });
+    item.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+    expect(el.shadowRoot!.activeElement === item).to.equal(true);
+  }
+});
+
 it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with Home/End', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
@@ -2110,3 +2135,60 @@ for (const failure of ['import', 'setup'] as const) {
     }
   });
 }
+
+it('paints a plain trigger without an edge at rest, on hover, and while pressed', async () => {
+  const el = await fixture<LyraExportButton>(html`
+    <lr-export-button appearance="plain" .formats=${['csv', 'json']}></lr-export-button>
+  `);
+  const trigger = el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;
+  const style = getComputedStyle(trigger);
+  const transparent = 'rgba(0, 0, 0, 0)';
+  try {
+    expect(el.appearance).to.equal('plain');
+    expect(style.backgroundColor).to.equal(transparent);
+    expect(style.borderTopColor).to.equal(transparent);
+    await hoverUntilMatched(trigger, 'the plain trigger did not receive hover');
+    expect(style.backgroundColor).not.to.equal(transparent);
+    expect(style.borderTopColor).to.equal(transparent);
+    const hoverFill = style.backgroundColor;
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => trigger.matches(':active'));
+    expect(style.backgroundColor).not.to.equal(hoverFill);
+    expect(style.borderTopColor).to.equal(transparent);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('keeps an icon-only trigger square and named when its slotted glyph changes', async () => {
+  const el = await fixture<LyraExportButton>(html`
+    <lr-export-button size="l" icon-only .strings=${{ exportButtonLabel: 'Download data' }}>
+      <span slot="icon">↓</span>
+    </lr-export-button>
+  `);
+  const trigger = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="trigger"]')!;
+  const icon = trigger.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+  expect(icon.assignedElements().length).to.equal(1);
+  expect(icon.closest('[aria-hidden]')?.getAttribute('aria-hidden')).to.equal('true');
+  expect(trigger.textContent?.trim()).not.to.include('Download data');
+  expect(trigger.getAttribute('aria-label')).to.equal('Download data');
+  const { width, height } = trigger.getBoundingClientRect();
+  expect(width).to.equal(height);
+  expect(height).to.be.at.least(24);
+
+  el.querySelector('[slot="icon"]')!.remove();
+  await el.updateComplete;
+  expect(icon.assignedElements().length).to.equal(0);
+  expect(icon.querySelector('svg')?.getAttribute('aria-hidden')).to.equal('true');
+
+  el.setAttribute('aria-label', 'Export report');
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-label')).to.equal('Export report');
+
+  el.removeAttribute('aria-label');
+  el.removeAttribute('icon-only');
+  await el.updateComplete;
+  expect(icon.querySelector('svg') === null).to.equal(true);
+  expect(trigger.getAttribute('aria-label')).to.equal(null);
+  expect(trigger.textContent?.trim()).to.equal('Download data');
+});

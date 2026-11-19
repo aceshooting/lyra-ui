@@ -22,6 +22,7 @@ export const menuItemOwner = Symbol('lyra-menu-item-owner');
 
 /** @internal */
 export interface MenuItemOwner {
+  ownsItem(item: HTMLElement): boolean;
   activate(item: HTMLElement): void;
   /** Enforces `type="radio"` exclusive choice: unchecks every other radio item this owner owns
    *  directly whose `group` matches `group` (including the shared `undefined` scope), so a newly

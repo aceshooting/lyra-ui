@@ -10,6 +10,8 @@
  * live here instead, on this library's `x-shared.ts` convention.
  */
 
+import { resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import { collectComposedFocusTargets } from '../../../internal/focus-navigation.js';
 import type { VirtualAnchor } from '../../../internal/positioner.js';
 import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 
@@ -205,6 +207,19 @@ export function observeOverlayAnchorRoots(
   }
   const cleanups = [...roots].map(root => observeOverlayAnchorIdentity(root, onIdentityChange));
   return () => { for (const cleanup of cleanups) cleanup(); };
+}
+
+/** Resolves the control bearing trigger relationships, including managed focus inside a wrapper. */
+export function resolveOverlayAccessibleTrigger(trigger: HTMLElement): HTMLElement {
+  const resolved = resolveAccessibleTrigger(trigger);
+  // Roving controls forward a host tabindex to their native control. That generic host is not
+  // itself the semantic focus target, despite its explicit tabindex.
+  if (resolved === trigger && !trigger.hasAttribute('role')
+    && !trigger.matches('button, a[href], input, select, textarea, summary')) {
+    return collectComposedFocusTargets(trigger, { includeRoot: false, mode: 'programmatic' })
+      .elements[0] ?? trigger;
+  }
+  return resolved;
 }
 
 /** The element a popover or tooltip binds interactions to: none for a virtual anchor, else the

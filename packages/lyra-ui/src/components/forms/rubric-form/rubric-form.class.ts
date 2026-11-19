@@ -435,6 +435,10 @@ export interface LyraRubricFormEventMap {
  * @csspart base - The outer wrapper around all fields.
  * @csspart form-control - Aggregate form-control wrapper around label, fields, hint, and error.
  * @csspart aggregate-label - Aggregate rubric label; separate from per-field `label` parts.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Shared form-control alias on the aggregate label.
  * @csspart fields - Wrapper around every rubric field or the empty state.
  * @csspart form-control-input - Shared form-control alias on the fields wrapper.
@@ -948,7 +952,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   }
 
   private onFormKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (!e.defaultPrevented && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       this.submit();
     }

@@ -1,5 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './data-grid.js';
@@ -1372,4 +1373,67 @@ it("leaves Alt+Arrow on a resizable header to the browser instead of resizing", 
   await element.updateComplete;
   expect(resizes).to.equal(0);
   expect(event.defaultPrevented).to.equal(false);
+});
+
+it('keeps the applied numbered page visibly distinct when focus and pointer are elsewhere', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate page-size="1"
+      style="--transition-duration: 0ms"
+      .columns=${columns} .data=${rows}
+    ></lr-data-grid>
+  `);
+  const root = element.shadowRoot!;
+  const initial = root.querySelector<HTMLButtonElement>('[part~="page-current"]')!;
+  const next = root.querySelector<HTMLButtonElement>('[part~="page"]:not([aria-current])')!;
+  expect(getComputedStyle(initial).backgroundColor).not.to.equal(getComputedStyle(next).backgroundColor);
+  next.click();
+  await element.updateComplete;
+  const current = root.querySelector<HTMLButtonElement>('[part~="page-current"]')!;
+  const inactive = root.querySelector<HTMLButtonElement>('[part~="page"]:not([aria-current])')!;
+  expect(current.getAttribute('aria-current')).to.equal('page');
+  expect(current.textContent?.trim()).to.equal('2');
+  expect(getComputedStyle(current).backgroundColor).not.to.equal(getComputedStyle(inactive).backgroundColor);
+  expect(getComputedStyle(current).fontWeight).not.to.equal(getComputedStyle(inactive).fontWeight);
+});
+
+it('keeps keyboard focus on an enabled pager control at endpoints and on a chosen number', async () => {
+  const grid = await dataGrid(html`
+    <lr-data-grid label="People" paginate page-size="1" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const root = grid.shadowRoot!;
+  const button = (part: string) => root.querySelector<HTMLButtonElement>(`[part~="${part}"]`)!;
+  await focusByKeyboard(button('last-button'));
+  await sendKeys({ press: 'Enter' });
+  await grid.updateComplete;
+  expect(button('last-button').disabled).to.equal(true);
+  expect(root.activeElement === button('previous-button')).to.equal(true);
+  await focusByKeyboard(button('first-button'));
+  await sendKeys({ press: 'Enter' });
+  await grid.updateComplete;
+  expect(button('first-button').disabled).to.equal(true);
+  expect(root.activeElement === button('next-button')).to.equal(true);
+  const second = root.querySelectorAll<HTMLButtonElement>('[part~="page"]')[1]!;
+  await focusByKeyboard(second);
+  await sendKeys({ press: 'Enter' });
+  await grid.updateComplete;
+  expect(button('page-current').textContent?.trim()).to.equal('2');
+  expect(root.activeElement === button('page-current')).to.equal(true);
+});
+
+it('preserves focus moved outside the pager by an lr-page-change listener', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-data-grid label="People" paginate page-size="1" .columns=${columns} .data=${rows}></lr-data-grid>
+      <button type="button">Outside</button>
+    </div>
+  `);
+  const grid = wrapper.querySelector<LyraDataGrid<Person>>('lr-data-grid')!;
+  await grid.updateComplete;
+  const outside = wrapper.querySelector('button')!;
+  await focusByKeyboard(grid.shadowRoot!.querySelector<HTMLButtonElement>('[part~="last-button"]')!);
+  // The consumer deliberately assigns focus synchronously during the page change event.
+  grid.addEventListener('lr-page-change', () => outside.focus(), { once: true });
+  await sendKeys({ press: 'Enter' });
+  await grid.updateComplete;
+  expect(document.activeElement === outside).to.equal(true);
 });

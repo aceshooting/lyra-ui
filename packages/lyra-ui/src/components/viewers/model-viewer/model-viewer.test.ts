@@ -25,7 +25,10 @@ function install() {
     }) };
   });
 }
-beforeEach(install);
+beforeEach(async () => {
+  await Promise.resolve(); // Let the previous fixture release its renderer before resetting counters.
+  install();
+});
 afterEach(() => { modelEngineLoader.override(undefined); modelEngineEnvironment.available = available; });
 const ready = async (viewer: LyraModelViewer) => { await waitUntil(() => viewer.shadowRoot!.querySelector('[part="viewport"]')?.hasAttribute('data-ready') === true); await viewer.updateComplete; };
 
@@ -68,11 +71,11 @@ it('retains the context-lost engine for restoration and retires it exactly once 
   const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`); await ready(viewer);
   const host = hosts[0]!; host.lost('context-lost'); await viewer.updateComplete; expect(disposed).to.equal(0);
   expect(viewer.shadowRoot!.textContent).to.contain('context'); host.restored?.(); await viewer.updateComplete;
-  viewer.remove(); expect(disposed).to.equal(1); host.lost('error'); host.progress?.(1, 1); await viewer.updateComplete; expect(disposed).to.equal(1);
+  viewer.remove(); await Promise.resolve(); expect(disposed).to.equal(1); host.lost('error'); host.progress?.(1, 1); await viewer.updateComplete; expect(disposed).to.equal(1);
 });
 it('reconnect loads a fresh owned engine and populated controls fit a narrow allocation', async () => {
   const holder = await fixture<HTMLDivElement>(html`<div style="inline-size:320px"><lr-model-viewer src=${source} format="obj" name="A long descriptive title for a small three-dimensional example"></lr-model-viewer></div>`);
-  const viewer = holder.firstElementChild as LyraModelViewer; await ready(viewer); viewer.remove(); holder.append(viewer);
+  const viewer = holder.firstElementChild as LyraModelViewer; await ready(viewer); viewer.remove(); await Promise.resolve(); holder.append(viewer);
   await waitUntil(() => data.length === 2); await ready(viewer);
   expect(data).to.have.length(2); expect(disposed).to.equal(1); expect(viewer.scrollWidth).to.be.at.most(holder.clientWidth); await expect(viewer).to.be.accessible();
 });
@@ -541,6 +544,7 @@ describe('engine lifecycle edges', () => {
     const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`); await ready(viewer);
     const parent = viewer.parentNode!;
     viewer.remove();
+    await Promise.resolve();
     expect(disposed).to.equal(1);
     parent.appendChild(viewer);
     await waitUntil(() => data.length === 2); await ready(viewer);
@@ -573,4 +577,33 @@ describe('engine lifecycle edges', () => {
       HTMLCanvasElement.prototype.getContext = getContext;
     }
   });
+});
+
+it('preserves the loaded engine across a same-document move and releases it on adoption', async () => {
+  const holder = await fixture<HTMLDivElement>(html`<div><section></section><lr-model-viewer src=${source} format="obj"></lr-model-viewer></div>`);
+  const viewer = holder.lastElementChild as LyraModelViewer;
+  await ready(viewer);
+  let loads = 0;
+  viewer.addEventListener('lr-load', () => loads++);
+  holder.firstElementChild!.append(viewer);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(disposed).to.equal(0);
+  expect(loads).to.equal(0);
+  expect(data.length).to.equal(1);
+  document.implementation.createHTMLDocument().adoptNode(viewer);
+  expect(disposed).to.equal(1);
+});
+
+it('reports an AbortError from a current fetch', async () => {
+  const original = window.fetch;
+  window.fetch = async () => { throw new DOMException('Transport stopped', 'AbortError'); };
+  try {
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer></lr-model-viewer>`);
+    let failures = 0;
+    viewer.addEventListener('lr-render-error', () => failures++);
+    viewer.src = '/triangle.obj';
+    await waitUntil(() => failures === 1);
+    await viewer.updateComplete;
+    expect(Boolean(viewer.shadowRoot!.querySelector('[part="error"]'))).to.equal(true);
+  } finally { window.fetch = original; }
 });

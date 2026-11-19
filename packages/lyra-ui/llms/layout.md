@@ -495,13 +495,17 @@ individual token plus the shared `panel` token), and `divider` (focusable `role=
 with value/min/max and disabled ARIA state).
 
 **Themeable custom properties:** `--divider-width` (default `4px`), `--divider-hit-area` (requested
-default `12px`, with Lyra's `--lr-icon-button-size` minimum target remaining the floor), `--min`
+default `12px`), `--min`
 (default `0`) and `--max` (default `100%`) for the primary pane, or the start pane when no primary is
 selected. Lyra-prefixed aliases are `--lr-split-panel-divider-width`,
 `--lr-split-panel-divider-hit-area`, `--lr-split-panel-min`, and `--lr-split-panel-max`; when both
 spellings are set, the Lyra-prefixed value wins. Constraint values may be lengths, percentages, or
 `calc()` expressions and are re-applied when their computed sizes change.
 
+`--lr-split-panel-divider-min-hit-area` (default `var(--lr-icon-button-size)`) sets the divider's
+minimum hit region in both orientations. Together with the requested hit area, it lets a
+fine-pointer layout narrow the grab zone independently of surrounding controls.
+`--lr-split-panel-divider-color` (default `var(--lr-color-border)`) styles the resting divider.
 `--lr-split-panel-divider-hover-color` (default `var(--lr-color-brand)`) is the divider's background
 on hover/keyboard focus. `--lr-split-panel-divider-active-color` (default
 a `color-mix()` of the hover color, so the pressed divider deepens like the other splitters) is its
@@ -972,9 +976,9 @@ use `lr-toggle-group`.
 between slotted controls on both axes.
 
 **Sizing.** The group derives its width from its content and wraps within a constrained
-allocation. A definite host width does not stretch the row automatically. Opt into a filled row
-with `lr-button-group::part(base) { inline-size: 100%; }`; this also preserves the former narrow
-allocation fill behavior. `min-inline-size: var(--lr-icon-button-size)` remains the lower bound.
+allocation. The host can shrink to fit the available space. Each control retains its own
+minimum hit target and may extend past an allocation narrower than that target.
+To fill a definite host width, set `lr-button-group::part(base) { inline-size: 100%; }`.
 
 ---
 
@@ -1103,6 +1107,9 @@ selection.
   edge the strip sits on. `start`/`end` are _logical_, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
   switches the navigation keys to Up/Down per the APG.
+- `fill: boolean = false` (reflected) — stretches the active panel to the body's available block
+  size in a height-bounded group. The panel's content can own scrolling in this mode. By default
+  the body scrolls while a top or bottom tab strip keeps its natural height.
 - `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
   moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
   expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the
@@ -1810,7 +1817,8 @@ or any ancestor to retheme only the hover or pressed move affordance.
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
-non-disabled items (ArrowDown/ArrowUp step like ArrowRight/ArrowLeft). First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
+non-disabled items (ArrowDown/ArrowUp step like ArrowRight/ArrowLeft). Left and Right follow the
+track's rendered direction, including CSS direction overrides. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
 Re-picking the selected value never clears it; for an optional choice the user may clear, or for
 zero-or-more pressed buttons, use `lr-toggle-group`.
@@ -1903,9 +1911,9 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
-The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `xs`), but every
-`2xs`/`xs` _segment_ separately carries a 24×24px minimum box, so the tappable target holds even
-when a label is a single character and the track ends up taller than its nominal floor.
+The track floor at the two smallest tiers is 20px at `2xs` and 24px at `xs`. Each segment has a
+24×24 CSS pixel minimum box at every size, including with compact padding and a single-character
+label. The track can grow beyond its nominal floor to fit these targets.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-text)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-surface)`), `--lr-segmented-selected-font-weight` (default
@@ -2690,7 +2698,10 @@ consumer property writes emit no committed event).
 builds with its own icon+label structure; clicking in this slot closes the mobile overlay if open,
 except on a group's or item's disclosure toggle, a group's `header-actions` and an item's `meta`/`end`
 content), `header` (logo/brand content, shown above the nav items in every mode), `footer` (a trailing
-user/settings trigger, shown below the nav items).
+user/settings trigger, shown below the nav items), `collapse-icon` (decorative glyph for the
+desktop collapse button) and `pin-icon` (decorative glyph for the auto-hide pin button). In
+icon-only mode, the brand stacks above the desktop collapse control. The default collapse
+chevron follows the rail state and reading direction. Custom glyphs keep their orientation.
 
 **CSS parts:** `base`, `header`, `nav`, `footer`, `toggle` (hidden via CSS outside `'mobile'` mode, or
 -- while it is not also serving as the panel's only in-panel dismiss control -- via `withoutToggle`;
@@ -2708,9 +2719,8 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
-`transform` under RTL), `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]`
-while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
+`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the decorative glyph wrapper),
+`pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
 while pinned and `"false"` otherwise, the name comes from the `appRailPin`/`appRailUnpin` keys, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
@@ -2776,15 +2786,21 @@ tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
 open only), `--lr-shadow-s` (the `frame="card"` default elevation), `--lr-icon-button-size`,
-`--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
-use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
-`'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
-mark and stays on `--lr-color-border`. `resizable`'s width is driven entirely by
+`--lr-focus-ring-*`, `--lr-transition-base`). The logical edge shorthands
+`--lr-app-rail-header-border`, `--lr-app-rail-footer-border`, and `--lr-app-rail-edge-border`
+control the header block-end, footer block-start, and docked rail inline-end borders respectively.
+Set a shorthand to `none` to hide its border. The default uses `--lr-color-border-subtle`.
+The docked resizable rail uses `--lr-color-border` for the visible separator in its default frame.
+The plain frame omits the edge by default and keeps a system-colored boundary in forced colors. `resizable`'s width is driven entirely by
 `railWidth`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
 `--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. `[part="collapse-toggle"]`
-has the matching set: `--lr-app-rail-collapse-toggle-hover-bg` (default
+takes `--lr-app-rail-collapse-toggle-size` (default `var(--lr-icon-button-size)`) for both axes,
+with a 24 CSS px minimum on hovering fine-pointer devices without touch input and the larger
+shared icon-button floor on other devices. Its resting glyph color uses
+`--lr-app-rail-collapse-toggle-color` (default `var(--lr-color-text)`). The matching
+interaction hooks are `--lr-app-rail-collapse-toggle-hover-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
 `var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
 `--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
@@ -3135,9 +3151,13 @@ Ordinary interaction states are independently inheritable through
 `--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
 brand/active-mix values as fallbacks.
-`--lr-app-rail-item-min-block-size` (default `var(--lr-icon-button-size)`, floor-clamped to that
-same token regardless of the override so the row's own hit target can never shrink below the WCAG
-2.5.8 minimum), `--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
+`--lr-app-rail-item-color` (default `var(--lr-color-text)`) sets the resting text and icon color.
+`--lr-app-rail-item-radius` (default `var(--lr-radius)`) applies to labeled rows and icon-only
+tiles. `--lr-app-rail-item-min-block-size` defaults to `var(--lr-icon-button-size)`. To make
+labeled rows more compact, set it to `2rem` and reduce block padding as needed. The minimum is
+24 CSS px on hovering fine-pointer devices without touch input. Other devices retain the
+shared icon-button floor. Other controls keep their own sizes.
+`--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
 `--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
 `[part="label"]`, and now also between the item's control and the `meta`/`end` adornments),
 `--lr-app-rail-item-meta-color` (default `var(--lr-color-text-quiet)`),
@@ -3149,10 +3169,10 @@ is retuned while family/weight/line-height stay inherited) retune the row's geom
 While `icon-only`, `[part="base"]` resolves to a square hit target matching the icon-button
 footprint used elsewhere in this library (`aspect-ratio: 1` against its already floor-clamped
 block size) instead of stretching across the rail's icon column. `--lr-app-rail-item-icon-only-size`
-(no default) sizes that square directly — both `inline-size` and `block-size`, and the row's own
-`min-block-size` floor — independent of `--lr-app-rail-item-min-block-size`, so a taller expanded
-row and an icon-only square pinned to `--lr-icon-button-size` can coexist. Unset, the square is
-still derived via `aspect-ratio: 1` against the row's block size exactly as before.
+(no default) sizes that square directly on both axes, with a 24 CSS px minimum. This size is
+independent of `--lr-app-rail-item-min-block-size`, so a taller expanded row can coexist with
+an icon-only square pinned to `--lr-icon-button-size`. When unset, the square derives its size
+from the row's block size and the shared icon-button floor.
 
 **`--lr-positioning-strategy`** (16.0.0) — the icon-only flyout tooltip reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -3221,6 +3241,8 @@ closes it). Collapsing a group that holds focus moves focus to the collapse cont
 `--lr-app-rail-group-padding-block` (default `var(--lr-space-xs)`),
 `--lr-app-rail-group-heading-color` (default `var(--lr-color-text-quiet)`),
 `--lr-app-rail-group-heading-font-size` (default `var(--lr-font-size-sm)`),
+`--lr-app-rail-group-heading-font-weight` (default `var(--lr-font-weight-semibold)`),
+`--lr-app-rail-group-heading-gap` (defaults to the item gap, `--lr-app-rail-group-gap`), and
 `--lr-app-rail-group-hover-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-app-rail-group-hover-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-group-active-bg` (no default), `--lr-app-rail-group-active-color` (default
@@ -4643,8 +4665,10 @@ summary's block padding and the panel's trailing padding, kept equal so a stack 
 evenly. Each `size` tier changes both private defaults from the shared ladder; a public value on an
 ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
-whereas the ladder's own block padding exists to fit text inside a fixed control height and would
-collapse the summary row. The summary's and the panel content's padding can also be tuned
+whereas the ladder's own block padding fits text inside a fixed control height. The summary's
+minimum block size includes its padding and is the smaller of `--lr-icon-button-size` and
+`--lr-form-control-height`, with a floor of 24 CSS pixels. Taller content can grow the summary.
+The summary's and the panel content's padding can also be tuned
 independently of each other and of `--lr-details-spacing`: `--lr-details-summary-padding-block` and
 `--lr-details-summary-padding-inline` control the summary alone, and
 `--lr-details-content-padding-block-end` and `--lr-details-content-padding-inline` control the
@@ -4655,8 +4679,10 @@ override, ahead of these four as well. `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
 `--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon
-gap, and `--lr-details-radius` (default `var(--lr-radius)`) controls the surface corners. Both use
-inline fallbacks, inherit from ancestors, and remain independent of the `size` density ladder.
+gap, and `--lr-details-radius` (default `var(--lr-radius-container)`) controls the surface corners.
+`--lr-details-summary-radius` defaults to the surface radius and applies to all four summary
+corners in both open and closed states. These properties inherit from ancestors and remain
+independent of the `size` density ladder.
 Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-border-color`,
 `--lr-details-filled-bg` / `--lr-details-filled-border-color`, and
 `--lr-details-filled-outlined-bg` / `--lr-details-filled-outlined-border-color`; their defaults are
@@ -4741,8 +4767,9 @@ decorative-only: their rendered content is inert and hidden from assistive techn
 provide interactive behavior, a focus target, or form state. Generated shared copies omit identifiers,
 ID-reference relationships, form associations, and submission attributes. Source text, attributes,
 and compatible subtrees update live; identity-compatible clone nodes are patched in place instead of
-being disconnected and recreated. The first owned breadcrumb item is determined independently of
-separator sources or other auxiliary siblings, so it never renders a leading separator. An item's default slot is
+being disconnected and recreated. An item-level separator takes precedence when added, and the
+shared separator returns when the override is removed. The first visible item in the default
+slot never renders a leading separator. An item's default slot is
 its label; `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and
 `separator` overrides the `/` fallback.
 

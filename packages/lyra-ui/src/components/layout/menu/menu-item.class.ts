@@ -611,16 +611,18 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       void this.openSubmenu('none');
       return;
     }
-    if (this.type === 'checkbox') {
+    const type = this.type;
+    if (type === 'checkbox' || (type === 'radio' && !this.checked)) {
+      const owner = this.owningMenu;
+      const connected = this.isConnected;
       const checked = !this.checked;
-      if (this.proposeChecked(checked)) this.checked = checked;
-    } else if (this.type === 'radio' && !this.checked) {
-      // An already-checked radio proposes nothing and changes nothing here -- matching native
-      // radio semantics (see the class doc) -- but still falls through to activate() below, same
-      // as re-selecting any other item.
-      if (this.proposeChecked(true)) {
-        this.checked = true;
-        this.owningMenu?.uncheckRadioGroup(this, this.group);
+      const accepted = this.proposeChecked(checked);
+      // Slot ownership can change during the proposal, before slotchange updates the cached owner.
+      if (this.isConnected !== connected || this.owningMenu !== owner ||
+          (owner && !owner.ownsItem(this)) || this.interactionDisabled || this.type !== type) return;
+      if (accepted) {
+        this.checked = checked;
+        if (type === 'radio') owner?.uncheckRadioGroup(this, this.group);
       }
     }
     this.owningMenu?.activate(this);

@@ -51,8 +51,9 @@ decorative-only: their rendered content is inert and hidden from assistive techn
 provide interactive behavior, a focus target, or form state. Generated shared copies omit identifiers,
 ID-reference relationships, form associations, and submission attributes. Source text, attributes,
 and compatible subtrees update live; identity-compatible clone nodes are patched in place instead of
-being disconnected and recreated. The first owned breadcrumb item is determined independently of
-separator sources or other auxiliary siblings, so it never renders a leading separator. An item's default slot is
+being disconnected and recreated. An item-level separator takes precedence when added, and the
+shared separator returns when the override is removed. The first visible item in the default
+slot never renders a leading separator. An item's default slot is
 its label; `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and
 `separator` overrides the `/` fallback.
 

@@ -57,6 +57,41 @@ it('renders the image frame and exposes a dialog when opened', async () => {
   el.open = false;
 });
 
+it('uses localized names for blank host labels and honors named overrides on the active dialog', async () => {
+  for (const native of [false, true]) {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <dialog><button>Background dialog</button></dialog>
+      <lr-lightbox aria-label="" .strings=${{ lightboxLabel: 'Localized gallery' }} .images=${[image]}></lr-lightbox>
+    </div>`);
+    const underlying = wrapper.querySelector('dialog')!;
+    const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
+    try {
+      if (native) underlying.showModal();
+      el.open = true;
+      await el.updateComplete;
+      const dialog = el.shadowRoot!.querySelector(native
+        ? 'dialog[data-native-modal-carrier]' : '[part="panel"][role="dialog"]')!;
+      expect(dialog.getAttribute('aria-label')).to.equal('Localized gallery');
+
+      el.setAttribute('aria-label', 'Named gallery');
+      await el.updateComplete;
+      expect(dialog.getAttribute('aria-label')).to.equal('Named gallery');
+
+      el.setAttribute('aria-label', ' \t ');
+      await el.updateComplete;
+      expect(dialog.getAttribute('aria-label')).to.equal('Localized gallery');
+
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(dialog.getAttribute('aria-label')).to.equal('Localized gallery');
+    } finally {
+      el.open = false;
+      await el.updateComplete;
+      if (native) underlying.close();
+    }
+  }
+});
+
 it('fits landscape and tall images on open and navigation at narrow allocations', async () => {
   const landscape = sizedImage(720, 360, '#0969da', 'Landscape');
   const tall = sizedImage(360, 720, '#cf222e', 'Tall');
@@ -611,6 +646,13 @@ it('mirrors next/previous under dir="rtl" so the physical arrow key stays consis
   await el.updateComplete;
   expect(el.index).to.equal(1);
 
+  for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+    const shortcut = new KeyboardEvent('keydown', { key: 'ArrowRight', [modifier]: true, bubbles: true, cancelable: true });
+    panel.dispatchEvent(shortcut);
+    expect(shortcut.defaultPrevented, modifier).to.be.false;
+    expect(el.index).to.equal(1);
+  }
+
   panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }));
   await el.updateComplete;
   expect(el.index).to.equal(0);
@@ -1048,26 +1090,36 @@ it('does not hijack navigation keys from iframe-realm slotted controls after ado
   frameDocument.adoptNode(el);
   const input = frameDocument.createElement('input');
   input.slot = 'actions';
-  el.append(input);
+  const button = frameDocument.createElement('button');
+  button.slot = 'actions';
+  button.textContent = 'Share';
+  const link = frameDocument.createElement('a');
+  link.slot = 'actions';
+  link.href = '#share';
+  link.textContent = 'Share link';
+  el.append(input, button, link);
 
   try {
     frameDocument.body.append(el);
     await el.updateComplete;
     el.open = true;
     await el.updateComplete;
-    const key = new frameWindow.KeyboardEvent('keydown', {
+    const press = (target: Element) => target.dispatchEvent(new frameWindow.KeyboardEvent('keydown', {
       key: 'ArrowRight',
       bubbles: true,
       composed: true,
       cancelable: true,
-    });
+    }));
 
-    input.dispatchEvent(key);
+    for (const action of [input, button, link]) {
+      expect(action instanceof frameWindow.HTMLElement).to.be.true;
+      expect(press(action), action.localName).to.be.true;
+      await el.updateComplete;
+      expect(el.index, action.localName).to.equal(0);
+    }
+    expect(press(el.shadowRoot!.querySelector('[part="panel"]')!)).to.be.false;
     await el.updateComplete;
-
-    expect(input instanceof frameWindow.HTMLElement).to.be.true;
-    expect(el.index).to.equal(0);
-    expect(key.defaultPrevented).to.be.false;
+    expect(el.index).to.equal(1);
   } finally {
     el.open = false;
     iframe.remove();

@@ -1938,6 +1938,7 @@ Arrow keys move one row (horizontal arrows swap under right-to-left layouts), Ho
 the first and last row, Page Up and Page Down move by one page, and Enter or Space selects the
 cursor's row. Keys pressed with Alt, Ctrl or Meta are left to the browser. Each table row also has
 a native `row-button` whose `aria-pressed` is `"true"` or `"false"`. Cursor moves are announced politely.
+When a point label is absent or contains only whitespace, the point ID names its row and controls.
 
 **Optional WebGL renderer:**
 - `engine: Engine3dPreference = 'builtin'` — `'builtin'` shows only the table. `'webgl'` lazily

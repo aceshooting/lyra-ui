@@ -4047,10 +4047,9 @@ inlineSize: number; blockSize: number }> }`.
   `formatNumber()` and `formatBytes()` accept a `bigint` or a decimal/integer string, not just a
   `number`, for exact-precision input (large ids, monetary amounts, exact byte counts) — a plain
   `number` is a float64 and cannot exactly represent an integer beyond `Number.MAX_SAFE_INTEGER` or
-  most decimal fractions. `formatBytes()` still selects its unit (`byte`..`petabyte`/`bit`..
-  `petabit`) from an approximate magnitude, since which unit is only ever a display choice, but
-  computes the displayed amount itself with exact `bigint` division, so the digits a `bigint`/string
-  input carries are never rounded away. `formatDate()` and `formatRelativeTime()` accept the same
+  most decimal fractions. `formatBytes()` selects the unit from the numeric approximation. With an
+  integer unit step, it computes the displayed amount using exact `bigint` division and rounds to
+  the requested display precision. Fractional steps use numeric scaling. `formatDate()` and `formatRelativeTime()` accept the same
   date sources as `<lr-format-date>`/`<lr-relative-time>`'s `date` property (an ISO/date string,
   epoch milliseconds, or a `Date`) and return `undefined` for an unresolvable source instead of
   throwing; `formatBytes()` likewise returns `undefined` for a non-finite or unparseable `value`.

@@ -1,5 +1,6 @@
 import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   fixture,
@@ -3186,4 +3187,70 @@ describe("lr-tab-group activation event", () => {
       "a host writing `active` is not a user activation"
     ).to.equal(0);
   });
+});
+
+for (const placement of ['top', 'bottom', 'start', 'end'] as const) {
+  it(`preserves the ${placement} tab strip and lets the active panel manage its scroll area when filled`, async () => {
+    const group = await fixture<LyraTabGroup>(html`
+      <lr-tab-group placement=${placement} style="block-size: 180px; inline-size: 360px">
+        <lr-tab panel="list">List</lr-tab>
+        <lr-tab panel="summary">Summary</lr-tab>
+        <lr-tab-panel name="list" style="--padding: 8px">
+          <div class="content" style="block-size: 100%; display: flex; flex-direction: column">
+            <div>Toolbar</div>
+            <div class="scroll" style="overflow: auto"><div style="block-size: 3000px">Rows</div></div>
+          </div>
+        </lr-tab-panel>
+        <lr-tab-panel name="summary">Summary content</lr-tab-panel>
+      </lr-tab-group>
+    `);
+    const nav = group.shadowRoot!.querySelector<HTMLElement>('[part="nav"]')!;
+    const body = group.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const [list, summary] = group.querySelectorAll<LyraTabPanel>('lr-tab-panel');
+    const [listPanel, summaryPanel] = panels(group);
+    const base = list!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const scroll = list!.querySelector<HTMLElement>('.scroll')!;
+    const content = list!.querySelector<HTMLElement>('.content')!;
+
+    expect(nav.clientHeight, 'tab strip remains visible above tall content').to.be.at.least(24);
+    expect(body.scrollHeight, 'body owns scrolling by default').to.be.greaterThan(body.clientHeight);
+    expect(getComputedStyle(body).overflowY).to.equal('auto');
+
+    group.setAttribute('fill', '');
+    await group.updateComplete;
+    expect(group.fill).to.equal(true);
+    expect(getComputedStyle(body).overflowY).to.equal('clip');
+    expect(listPanel!.offsetHeight).to.equal(body.clientHeight);
+    expect(list!.offsetHeight).to.equal(base.offsetHeight);
+    expect(base.offsetHeight - content.offsetHeight, 'base includes both padding edges').to.equal(16);
+    expect(scroll.clientHeight).to.be.greaterThan(0);
+    expect(scroll.scrollHeight).to.be.greaterThan(scroll.clientHeight);
+    expect(body.scrollHeight).to.equal(body.clientHeight);
+
+    group.show('summary');
+    await group.updateComplete;
+    await summary!.updateComplete;
+    expect(listPanel!.offsetHeight).to.equal(0);
+    expect(summaryPanel!.offsetHeight).to.equal(body.clientHeight);
+    expect(summary!.offsetHeight).to.equal(body.clientHeight - parseInt(getComputedStyle(summaryPanel!).paddingBlockStart));
+
+    group.fill = false;
+    await group.updateComplete;
+    expect(group.hasAttribute('fill')).to.equal(false);
+    expect(getComputedStyle(body).overflowY).to.equal('auto');
+    expect(summary!.offsetHeight).to.be.lessThan(body.clientHeight);
+  });
+}
+
+
+it('keeps the keyboard focus ring inside a filled panel so the body does not clip it', async () => {
+  const group = await fixture<LyraTabGroup>(basic());
+  group.fill = true;
+  group.style.blockSize = '180px';
+  await group.updateComplete;
+  const [panel] = panels(group);
+  await focusByKeyboard(panel!);
+  const { outlineOffset, outlineWidth } = getComputedStyle(panel!);
+  expect(parseFloat(outlineWidth)).to.be.greaterThan(0);
+  expect(parseFloat(outlineOffset)).to.equal(-parseFloat(outlineWidth));
 });

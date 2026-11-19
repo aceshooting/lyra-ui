@@ -16,6 +16,7 @@ import {
   deferredPlaceReady as place,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { downloadIcon } from '../../../internal/icons.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -42,11 +43,12 @@ import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel } fr
 export type LyraExportFormat = 'csv' | 'json';
 
 /** The export trigger's compact treatments. Unset preserves its established chrome. */
-export type LyraExportButtonAppearance = Extract<LyraAppearance, 'outlined'> | 'quiet';
+export type LyraExportButtonAppearance = Extract<LyraAppearance, 'outlined' | 'plain'> | 'quiet';
 
 const EXPORT_BUTTON_APPEARANCE = optionalLiteralSetConverter<LyraExportButtonAppearance>([
   'outlined',
   'quiet',
+  'plain',
 ]);
 
 export interface LyraExportFormatDescriptor {
@@ -164,6 +166,7 @@ export interface LyraExportButtonEventMap {
  * @event lr-hide - The format menu is about to close. Cancelable on the same terms as `lr-show`.
  *   A close this component imposes on itself (disablement, `loading`, or a format list collapsing
  *   to one entry) emits no lifecycle event and therefore offers no veto point.
+ * @slot icon - Decorative trigger glyph. An icon-only trigger uses a download glyph by default.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart trigger-error - Present alongside `trigger` after a built-in CSV/JSON export fails,
  *   until the next export attempt. Style with `::part(trigger-error)`.
@@ -201,7 +204,7 @@ export interface LyraExportButtonEventMap {
  * @property size - Optional density on the shared `2xs` through `xl` ladder, including the
  *   `small`/`medium`/`large` aliases. It changes the trigger and menu-row typography and padding;
  *   the `--lr-icon-button-size` hit-area floor remains in place. Unset preserves the established geometry.
- * @property appearance - Optional `outlined` or `quiet` trigger treatment. Unset preserves the
+ * @property appearance - Optional `outlined`, `quiet`, or borderless `plain` trigger treatment. Unset preserves the
  *   established surface, border, and text colors.
  * @status stable
  * @since 4.0.0
@@ -370,6 +373,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    * supplied string, including `''` and `'Export'`, is caller-owned visible copy. An empty or
    * whitespace-only visible label retains the localized default as the trigger's accessible name. */
   @property() label?: string;
+  /** Renders a square trigger with a download glyph or the decorative icon slot.
+   * The trigger retains its name from `aria-label`, `label`, or the localized default. */
+  @property({ attribute: 'icon-only', type: Boolean, reflect: true }) iconOnly = false;
   /** Accessible name forwarded from the host to the native trigger button.
    * When unset, a nonempty visible `label` provides the name; an empty visible label uses the
    * localized default. An explicit empty `aria-label` remains authoritative by presence. */
@@ -616,6 +622,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (this.formats.length <= 1 || this.disabled || this.loading) return;
 
     const items = this.menuItemEls();
@@ -896,7 +903,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const accessibleLabel =
       this.accessibleLabel ?? (labelNamesTrigger ? label : this.localize('exportButtonLabel'));
     const triggerAriaLabel =
-      this.accessibleLabel !== null || !labelNamesTrigger ? accessibleLabel : nothing;
+      this.iconOnly || this.accessibleLabel !== null || !labelNamesTrigger ? accessibleLabel : nothing;
     return html`
       <button
         part=${this.exportFailed ? 'trigger trigger-error' : 'trigger'}
@@ -909,7 +916,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         aria-controls=${this.formats.length > 1 ? this.menuId : nothing}
         @click=${() => this.onTriggerClick()}
       >
-        ${label}
+        <span class="trigger-icon" aria-hidden="true"><slot name="icon">${this.iconOnly ? downloadIcon() : nothing}</slot></span>
+        ${this.iconOnly ? nothing : label}
       </button>
       ${this.formats.length > 1
         ? html`<div

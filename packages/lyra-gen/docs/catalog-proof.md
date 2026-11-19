@@ -42,7 +42,7 @@ The dependency directory must contain the exact versions and npm integrity recor
 `test/fixtures/a2ui/v0.9.1/reference-results.json`. The command verifies the clean reference revision,
 bundles the unmodified catalog consumer in disposable scratch, and records source, artifact and
 compiler hashes. It performs no installation or network access. See
-[`catalog-export-results.json`](../test/fixtures/a2ui/catalog-export-results.json) for the separate
+[`catalog-export-results.json`](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/test/fixtures/a2ui/catalog-export-results.json) for the separate
 stable and candidate outcomes. These are catalog-loader checks, not reference renderer or protocol
 conformance results.
 

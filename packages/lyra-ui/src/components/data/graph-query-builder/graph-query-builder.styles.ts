@@ -1,3 +1,4 @@
+import { formControlLabelTypography } from '../../../internal/form-control.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -14,7 +15,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
   [part~='label'] {
-    font-weight: var(--lr-font-weight-semibold);
+    ${formControlLabelTypography}
   }
   [part='hint'],
   [part='error'] {

@@ -1481,6 +1481,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   };
 
   private onTimelineKeyDown = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (!(this.duration > 0)) return;
     const delta = event.shiftKey ? 15 : 5;
     switch (event.key) {

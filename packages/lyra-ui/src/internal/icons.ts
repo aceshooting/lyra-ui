@@ -40,6 +40,11 @@ export function chevronIcon(): SVGTemplateResult {
   return icon(svg`<polyline points="9 6 15 12 9 18"></polyline>`);
 }
 
+/** A downward arrow into a tray. */
+export function downloadIcon(): SVGTemplateResult {
+  return icon(svg`<path d="M12 3v12 M7 11l5 5 5-5 M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>`);
+}
+
 /** Paired vertical chevrons indicate a sortable column with no active direction. */
 export function sortIcon(): SVGTemplateResult {
   return icon(svg`<polyline points="8 8 12 4 16 8"></polyline><polyline points="8 16 12 20 16 16"></polyline>`);

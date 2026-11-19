@@ -1,6 +1,7 @@
 import {
   acquireAriaControls,
   acquireAriaDescription,
+  acquireAriaLabel,
   type AriaControlsLease,
   type AriaDescriptionLease,
 } from './aria-controls.js';
@@ -15,6 +16,8 @@ export interface AriaOwnershipContribution {
   controls?: readonly Element[];
   /** Elements describing the semantic target; relationships compose across owners. */
   descriptions?: readonly Element[];
+  /** Elements naming the semantic target, appended to authored label references. */
+  labels?: readonly Element[];
 }
 
 export interface AriaOwnershipLease {
@@ -242,7 +245,11 @@ export function acquireAriaOwnership(
   let controls: AriaControlsLease | undefined;
   let descriptions: AriaDescriptionLease | undefined;
 
+  let labels: ReturnType<typeof acquireAriaLabel> | undefined;
+
   const detach = (): void => {
+    labels?.release();
+    labels = undefined;
     descriptions?.release();
     descriptions = undefined;
     controls?.release();
@@ -282,6 +289,14 @@ export function acquireAriaOwnership(
     } else {
       controls?.release();
       controls = undefined;
+    }
+
+    if (contribution.labels?.length) {
+      if (labels) labels.update(contribution.labels);
+      else labels = acquireAriaLabel(target, contribution.labels);
+    } else {
+      labels?.release();
+      labels = undefined;
     }
 
     const nextDescriptions = contribution.descriptions ?? [];

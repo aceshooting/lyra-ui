@@ -852,3 +852,46 @@ describe('deprecated lr-table aliases', () => {
   });
 
 });
+
+for (const action of ['selection', 'rows', 'both'] as const) {
+  it(`retires row activation when its listener replaces ${action}`, async () => {
+    const el = await fixture<LyraTable<Row>>(html`
+      <lr-table aria-label="Scores" selection-mode="single" .columns=${columns} .rows=${rows}
+        .rowKey=${(row: Row) => row.id}></lr-table>
+    `);
+    const [first, second] = rows;
+    let commits = 0;
+    el.addEventListener('lr-selection-change', () => commits++);
+    el.addEventListener('lr-row-activate', () => {
+      if (action !== 'selection') el.rows = [second!];
+      if (action !== 'rows') el.selectedRowKeys = new Set([second!.id]);
+    }, { once: true });
+    el.rowElement(first!.id)!.click();
+    await el.updateComplete;
+    expect([...el.selectedRowKeys]).to.deep.equal(action === 'rows' ? [] : [second!.id]);
+    expect(el.rowElement(second!.id)?.getAttribute('aria-selected')).to.equal(String(action !== 'rows'));
+    expect(commits).to.equal(0);
+  });
+}
+
+for (const action of ['sort', 'columns', 'both'] as const) {
+  it(`retires a sort request when its listener replaces ${action}`, async () => {
+    const el = await fixture<LyraTable<Row>>(html`
+      <lr-table aria-label="Scores" .columns=${columns} .rows=${rows}></lr-table>
+    `);
+    let commits = 0;
+    el.addEventListener('lr-sort', () => commits++);
+    el.addEventListener('lr-sort-request', () => {
+      if (action !== 'sort') el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (row) => row.name }];
+      if (action !== 'columns') {
+        el.sortKey = 'name';
+        el.sortDir = 'desc';
+      }
+    }, { once: true });
+    el.shadowRoot!.querySelector<HTMLElement>('[part="header-cell"][data-col-key="score"]')!.click();
+    await el.updateComplete;
+    expect(el.sortKey).to.equal(action === 'columns' ? '' : 'name');
+    expect(el.sortDir).to.equal(action === 'columns' ? 'asc' : 'desc');
+    expect(commits).to.equal(0);
+  });
+}

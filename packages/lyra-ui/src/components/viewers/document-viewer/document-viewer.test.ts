@@ -409,6 +409,23 @@ describe("registry dispatch", () => {
     el.clearSearch();
     expect(calls).to.deep.equal(['search:needle', 'next', 'previous', 'clear']);
 
+    calls.length = 0;
+    const retired = el.search('retired');
+    el.clearSearch();
+    expect(await retired).to.equal(0);
+    expect(calls).to.deep.equal(['clear']);
+
+    const target = el.shadowRoot!.querySelector<HTMLElement & { search(query: string): Promise<number> }>('x-k09-searchable-renderer')!;
+    let finish!: (count: number) => void;
+    let begin!: () => void;
+    const started = new Promise<void>(resolve => { begin = resolve; });
+    target.search = () => new Promise<number>(resolve => { finish = resolve; begin(); });
+    const pending = el.search('pending');
+    await started;
+    el.clearSearch();
+    finish(5);
+    expect(await pending).to.equal(0);
+
     el.mimeType = 'text/x-plain';
     await el.updateComplete;
     calls.length = 0;
@@ -1059,6 +1076,26 @@ describe("anchor/highlights/alt widening", () => {
     el.anchor = "cite-1";
     expect((await resultPromise).detail).to.deep.equal({ found: true });
   });
+
+  for (const target of ['match', 'absent']) {
+    it(`delegates the ${target} anchor to the preview after a lazy renderer rejects`, async () => {
+      const error = new Error('Renderer unavailable');
+      const registry = new Map([['image/png', { load: async () => { throw error; } }]]);
+      const highlights = [{ id: 'match', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 30, height: 40 } } }];
+      const el = await fixture<LyraDocumentViewer>(html`
+        <lr-document-viewer mime-type="image/png" src="data:image/png;base64,iVBORw0KGgo="
+          .registry=${registry} .anchor=${target} .highlights=${highlights}></lr-document-viewer>
+      `);
+      const results: boolean[] = [];
+      el.addEventListener('lr-anchor-result', event => results.push(event.detail.found));
+      const failure = oneEvent(el, 'lr-render-error');
+      el.open = true;
+      expect((await failure).detail.error === error).to.equal(true);
+      await waitUntil(() => results.length > 0);
+      expect(results).to.deep.equal([target === 'match']);
+      expect(Boolean(el.shadowRoot!.querySelector('lr-document-preview'))).to.equal(true);
+    });
+  }
 
   it("leaves the shell as the only download-action owner for generic fallback content", async () => {
     const el = (await fixture(html`

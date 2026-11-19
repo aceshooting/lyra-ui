@@ -7,7 +7,7 @@ import { AccessibleTextController } from '../../../internal/accessible-text-cont
 import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { tag } from '../../../internal/prefix.js';
-import { sizes } from '../../../internal/sizes.styles.js';
+import { groupOptionSize, sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './radio.styles.js';
 import { appearanceStyles } from './radio-button.styles.js';
@@ -121,7 +121,7 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  * @csspart control - WA/Shoelace name for the indicator, or the interactive button in
  * `appearance="button"`.
  * @csspart control--checked - Shoelace state alias on the selected indicator.
- * @csspart dot - The selected indicator.
+ * @csspart dot - The selected indicator, drawn against the circle's surface background.
  * @csspart checked-icon - WA/Shoelace name for the same selected indicator.
  * @csspart button - Shoelace button-chrome alias in `appearance="button"` mode.
  * @csspart button--checked - Shoelace selected-button state alias.
@@ -183,7 +183,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   static get validators(): LyraFormValidator<LyraRadio>[] {
     return [currentValidityValidator('required', 'disabled', 'checked', 'value')];
   }
-  static override styles = [LyraElement.styles, sizes, styles, appearanceStyles];
+  static override styles = [LyraElement.styles, sizes, groupOptionSize, styles, appearanceStyles];
   static override properties = {
     appearance: { reflect: true,
       converter: declaredDefaultConverter<RadioAppearance>('default'),
@@ -238,6 +238,18 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   private _tabbable = true;
   private _buttonRunPosition: RadioButtonRunPosition = 'standalone';
   private groupOwner: RadioGroupController | null = null;
+  private standaloneRoot?: Document | ShadowRoot;
+  private standaloneForm: HTMLFormElement | null = null;
+  private standaloneName = '';
+  private standaloneMissing = false;
+
+  override get required(): boolean { return super.required; }
+  override set required(value: boolean) {
+    const old = super.required;
+    super.required = value;
+    if (old !== value) this.syncStandaloneRadios();
+  }
+
   override get name(): string { return this._radioName; }
   override set name(value: string | null) {
     const old = this._radioName;
@@ -252,6 +264,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     } else if (this.hasAttribute('name')) {
       this.removeAttribute('name');
     }
+    this.syncStandaloneRadios();
     this.requestUpdate('name', old);
   }
   override get value(): string { return this._radioValue; }
@@ -266,6 +279,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
       this.setAttribute('value', next);
     }
     this.syncFormState();
+    if (this.checked) this.currentGroup()?.reconcileRadio?.(this);
     this.requestUpdate('value', old);
   }
   /** The consumer error: the owning group's while grouped, otherwise this radio's own. */
@@ -288,7 +302,10 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
 
   protected override checkedWritten(previous: boolean): void {
     void previous;
-    if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
+    if (!this.isConnected) return;
+    const group = this.group();
+    if (group) group.radioCheckedChanged?.(this);
+    else this.syncStandaloneRadios();
   }
 
   protected override isDisabledByOwner(): boolean {
@@ -312,7 +329,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   protected override updateValidity(): void {
     const owned = Boolean(this.currentGroup());
     const violates =
-      !this.isBarredFromValidation() && !owned && this.effectiveRequired && !this.checked;
+      !this.isBarredFromValidation() && !owned && (this.standaloneRoot ? this.standaloneMissing : this.required && !this.checked);
     this[SET_ANCHORED_VALIDITY](violates ? { valueMissing: true } : {}, this.requiredMessage());
   }
 
@@ -388,6 +405,12 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.recomputeButtonAdornments();
     this.updateValidity();
     this.group();
+    this.syncStandaloneRadios();
+  }
+
+  /** @internal Reconcile standalone sets when the platform changes this control's form owner. */
+  formAssociatedCallback(): void {
+    this.syncStandaloneRadios();
   }
 
   override adoptedCallback(): void {
@@ -401,6 +424,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.removeEventListener('slotchange', this.onAdornmentSlotChange);
+    this.syncStandaloneRadios();
     super.disconnectedCallback();
   }
 
@@ -449,6 +473,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.groupOwner?.releaseRadio?.(this);
     const standaloneCustomError = this.validityController.customValidityMessage;
     this.groupOwner = owner;
+    this.syncStandaloneRadios();
     if (standaloneCustomError && owner.setCustomValidity) {
       owner.setCustomValidity(standaloneCustomError);
       this.validityController.setCustomValidity('');
@@ -459,6 +484,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   releaseGroupOwner(owner: RadioGroupController): void {
     if (this.groupOwner !== owner) return;
     this.groupOwner = null;
+    this.syncStandaloneRadios();
     this.setGroupRequired(false);
     this.setGroupDisabled(false);
     this.setGroupSize(null);
@@ -584,7 +610,6 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     }
     if (!this.checked) {
       this.checked = true;
-      this.uncheckSameNameRadios();
       dispatchNativeEvent(this, 'input');
       this.emit('lr-input', { checked: true, value: this.value });
       dispatchNativeEvent(this, 'change');
@@ -592,12 +617,41 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     }
     this.emit('lr-activate', { value: this.value });
   }
-  /** Standalone radios sharing a non-empty `name` and form owner behave like a native radio set. */
-  private uncheckSameNameRadios(): void {
-    if (!this.name) return;
-    for (const other of (this.getRootNode() as ParentNode).querySelectorAll<LyraRadio>(`${tag('radio')},${tag('radio-button')}`)) {
-      if (other !== this && other.name === this.name && other.form === this.form && !other.currentGroup()) {
-        other.checked = false;
+  /** Follow native tree, form and name boundaries, including externally associated controls.
+   * Refresh only on selection, requiredness and membership changes. */
+  private syncStandaloneRadios(): void {
+    const root = this.isConnected && this.name && !this.currentGroup()
+      ? this.getRootNode() as Document | ShadowRoot : undefined;
+    const form = root ? this.form : null;
+    const oldRoot = this.standaloneRoot;
+    const oldForm = this.standaloneForm;
+    const oldName = this.standaloneName;
+    this.standaloneRoot = root;
+    this.standaloneForm = form;
+    this.standaloneName = this.name;
+    if (oldRoot && (oldRoot !== root || oldForm !== form || oldName !== this.name)) {
+      this.refreshStandaloneSet(oldRoot, oldForm, oldName);
+    }
+    if (root) this.refreshStandaloneSet(root, form, this.name);
+    else if (oldRoot) this.updateValidity();
+  }
+
+  private refreshStandaloneSet(root: Document | ShadowRoot, form: HTMLFormElement | null, name: string): void {
+    const candidates = 'getElementsByName' in root ? root.getElementsByName(name)
+      : root.querySelectorAll(`${tag('radio')},${tag('radio-button')}`);
+    const peers: LyraRadio[] = [];
+    for (const element of candidates) {
+      const peer = element as LyraRadio;
+      if (peer.standaloneRoot === root && peer.standaloneForm === form && peer.standaloneName === name) peers.push(peer);
+    }
+    if (this.checked && peers.includes(this)) {
+      for (const peer of peers) if (peer !== this && peer.checked) peer.setCheckedPreservingDirty(false);
+    }
+    const missing = peers.some(peer => peer.required) && !peers.some(peer => peer.checked);
+    for (const peer of peers) {
+      if (peer.standaloneMissing !== missing || peer === this) {
+        peer.standaloneMissing = missing;
+        peer.updateValidity();
       }
     }
   }

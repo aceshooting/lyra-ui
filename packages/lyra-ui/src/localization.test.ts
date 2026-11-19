@@ -35,7 +35,60 @@ it('exposes the active-locale subscription, which is not the registry subscripti
   });
 });
 
+class LocaleTarget extends HTMLElement {
+  onLanguage?: (value: string | null) => void;
+  static observedAttributes = ['lang'];
+  attributeChangedCallback(_name: string, _previous: string | null, value: string | null): void {
+    this.onLanguage?.(value);
+  }
+}
+customElements.define('test-bridge-replacement', LocaleTarget);
+
 describe('bridgeLyraLocale', () => {
+  it('keeps a bridge installed while final cleanup restores the authored language', () => {
+    const target = new LocaleTarget();
+    target.lang = 'en';
+    target.dir = 'rtl';
+    withActiveLocale(() => {
+      setLyraLocale('fr');
+      const first = bridgeLyraLocale({ target });
+      let replacement: (() => void) | undefined;
+      target.onLanguage = value => {
+        if (value !== 'en') return;
+        target.onLanguage = undefined;
+        replacement = bridgeLyraLocale({ target });
+      };
+      try {
+        first();
+        expect(target.lang).to.equal('fr');
+        expect(target.dir).to.equal('ltr');
+        setLyraLocale('de');
+        expect(target.lang).to.equal('de');
+      } finally {
+        replacement?.();
+      }
+      expect(target.lang).to.equal('en');
+      expect(target.dir).to.equal('rtl');
+    });
+  });
+
+  it('keeps direction aligned with a locale selected by a synchronous language reaction', () => {
+    const target = new LocaleTarget();
+    withActiveLocale(() => {
+      setLyraLocale('en');
+      const stop = bridgeLyraLocale({ target });
+      target.onLanguage = value => { if (value === 'ar') setLyraLocale('fr'); };
+      try {
+        setLyraLocale('ar');
+        expect(getLyraLocale()).to.equal('fr');
+        expect(target.lang).to.equal('fr');
+        expect(target.dir).to.equal('ltr');
+      } finally {
+        stop();
+      }
+    });
+  });
+
   it('does not let a released handle remove a later bridge on the same target', async () => {
     const el = await host();
     el.setAttribute('lang', 'fr');
@@ -254,18 +307,28 @@ describe('bridgeLyraLocale', () => {
     });
   });
 
-  it('leaves dir untouched when direction mirroring is opted out', async () => {
+  it('leaves application direction live between direction-mirroring owners', async () => {
     const el = await host();
-    el.setAttribute('dir', 'rtl');
+    el.dir = 'ltr';
     withActiveLocale(() => {
       setLyraLocale('en');
       const stop = bridgeLyraLocale({ target: el, direction: false });
       try {
-        expect(el.getAttribute('lang')).to.equal('en');
-        expect(el.getAttribute('dir')).to.equal('rtl');
+        el.dir = 'rtl';
+        setLyraLocale('fr');
+        expect(el.lang).to.equal('fr');
+        expect(el.dir).to.equal('rtl');
+        const stopDirection = bridgeLyraLocale({ target: el });
+        expect(el.dir).to.equal('ltr');
+        stopDirection();
+        expect(el.dir).to.equal('rtl');
+        el.removeAttribute('dir');
+        setLyraLocale('de');
+        expect(el.hasAttribute('dir')).to.equal(false);
       } finally {
         stop();
       }
+      expect(el.hasAttribute('dir')).to.equal(false);
     });
   });
 

@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './heatmap.js';
 import { resolveRgb, type CalendarCellPos, type LyraHeatmap, type MatrixCellPos } from './heatmap.js';
 
@@ -311,6 +312,38 @@ describe('oversized backing stores', () => {
   });
 });
 
+it('paints and exports literal early ISO years across a year boundary', async () => {
+  const days = [{ date: '0099-12-31', value: 5 }, { date: '0100-01-01', value: 7 }];
+  const element = await fixture<LyraHeatmap>(html`
+    <lr-heatmap accessible-cells
+      .cellColor=${(_position: CalendarCellPos, value: number) => value === 5 ? '#ff0000' : value === 7 ? '#0000ff' : undefined}
+      .data=${{ kind: 'calendar', firstDayOfWeek: 1, days }}></lr-heatmap>
+  `);
+  await waitUntil(() => element.calendarGeometry !== undefined);
+  expect(element.exportData('csv')).to.equal('date,value\r\n0099-12-31,5\r\n0100-01-01,7');
+  const canvas = element.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!;
+  const { padLeft, padTop, cellSize, cellGapY, weekCount } = element.calendarGeometry!;
+  expect(weekCount).to.equal(1);
+  for (const [day, expected] of [[days[0]!, [255, 0, 0, 255]], [days[1]!, [0, 0, 255, 255]]] as const) {
+    const weekday = (new Date(`${day.date}T00:00:00Z`).getUTCDay() + 6) % 7;
+    expect(paintedAt(canvas, padLeft + cellSize / 2, padTop + weekday * (cellSize + cellGapY) + cellSize / 2))
+      .to.deep.equal(expected);
+  }
+});
+
+it('keeps a year-zero calendar accessible when its first week starts in the preceding year', async () => {
+  const element = await fixture<LyraHeatmap>(html`
+    <lr-heatmap accessible-cells
+      .selectedCell=${{ date: '0000-01-01' }}
+      .data=${{ kind: 'calendar', days: [{ date: '0000-01-01', value: 1 }, { date: '0000-02-29', value: 2 }] }}
+    ></lr-heatmap>
+  `);
+  await waitUntil(() => element.calendarGeometry !== undefined);
+  const selected = element.shadowRoot!.querySelector('[part="cell"][aria-selected="true"]');
+  expect(selected?.getAttribute('aria-label')).to.include('Jan 1');
+  expect(element.exportData('csv')).to.include('0000-02-29,2');
+});
+
 describe('accessible calendar overlay', () => {
   async function accessibleCalendar(): Promise<LyraHeatmap> {
     const element = await fixture<LyraHeatmap>(html`<lr-heatmap accessible-cells .data=${{ kind: 'calendar', days: yearOfDays() }}></lr-heatmap>`);
@@ -555,6 +588,31 @@ describe('Home and End keys', () => {
     keydown(button('matrix-1-2'), 'Home', { ctrlKey: true });
     await waitUntil(() => element.shadowRoot!.activeElement?.getAttribute('data-cell-key') === 'matrix-0-0');
   });
+});
+
+describe('local selection activation ownership', () => {
+  for (const action of ['keep', 'remove', 'reattach']) {
+    it(`checks pending activation when the selection listener chooses to ${action} the heatmap`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div><lr-heatmap multiple .data=${{
+          kind: 'matrix', rowLabels: ['a'], colLabels: ['b'], values: [[1]],
+        }}></lr-heatmap></div>
+      `);
+      const element = wrapper.querySelector<LyraHeatmap>('lr-heatmap')!;
+      const canvas = element.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
+      await focusByKeyboard(canvas);
+      await sendKeys({ press: 'ArrowRight' });
+      const seen: string[] = [];
+      element.addEventListener('lr-selection-change', () => {
+        seen.push('selection');
+        if (action !== 'keep') element.remove();
+        if (action === 'reattach') wrapper.append(element);
+      });
+      element.addEventListener('lr-cell-activate', () => seen.push('activation'));
+      await sendKeys({ press: 'Enter' });
+      expect(seen).to.deep.equal(action === 'keep' ? ['selection', 'activation'] : ['selection']);
+    });
+  }
 });
 
 describe('theme invalidation', () => {

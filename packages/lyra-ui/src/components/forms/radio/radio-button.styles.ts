@@ -2,14 +2,6 @@ import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 const buttonChromeStyles = css`
-  :host([data-lr-group-size]) {
-    --lr-form-control-height: inherit;
-    --lr-form-control-font-size: inherit;
-    --lr-form-control-padding-inline: inherit;
-    --lr-form-control-padding-block: inherit;
-    --lr-form-control-gap: inherit;
-    --lr-form-control-radius: inherit;
-  }
   [part~="button"] {
     display: inline-flex;
     align-items: center;
@@ -125,7 +117,7 @@ const buttonChromeStyles = css`
 
   /* State lives in the part name, never as ::part(base)[aria-checked] -- an attribute selector
      after ::part() never matches. */
-  [part~="checked"] {
+  [part~="button"]:where([part~="checked"]) {
     background: var(--lr-radio-button-checked-bg, var(--lr-color-brand));
     border-color: var(
       --lr-radio-button-checked-border-color,
@@ -133,14 +125,14 @@ const buttonChromeStyles = css`
     );
     color: var(--lr-radio-button-checked-color, var(--lr-color-on-brand));
   }
-  [part~="checked"] [part="label"] {
+  [part~="button"]:where([part~="checked"]) [part="label"] {
     color: inherit;
   }
   /* The checked segment keeps its loud brand fill under the pointer -- the unchecked rules' quiet
      tint would read as a DESELECTION -- but must still move, and the press must out-read the hover.
      Both mix that fill toward --lr-color-mix-partner, which follows the text colour, so the
      on-brand label stays legible at either share. */
-  [part~="checked"]:not([part~="disabled"]):hover {
+  [part~="button"]:where([part~="checked"]):not([part~="disabled"]):hover {
     background: var(
       --lr-radio-button-checked-hover-bg,
       color-mix(
@@ -154,7 +146,7 @@ const buttonChromeStyles = css`
       var(--lr-radio-button-checked-border-color, var(--lr-color-brand))
     );
   }
-  [part~="checked"]:not([part~="disabled"]):active {
+  [part~="button"]:where([part~="checked"]):not([part~="disabled"]):active {
     background: var(
       --lr-radio-button-checked-active-bg,
       color-mix(
@@ -171,7 +163,7 @@ const buttonChromeStyles = css`
       )
     );
   }
-  [part~="disabled"] {
+  [part~="button"]:where([part~="disabled"]) {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }

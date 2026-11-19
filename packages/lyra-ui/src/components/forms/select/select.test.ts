@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifecycle.js';
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import {
@@ -1558,7 +1559,7 @@ describe("placement", () => {
 
     el.placement = "top-start";
     await el.updateComplete;
-    await (el as unknown as { positioningReady: Promise<boolean> }).positioningReady;
+    await (el as unknown as { cleanup: { ready: Promise<boolean> } }).cleanup.ready;
     const listbox =
       el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
     expect(listbox.getBoundingClientRect().bottom).to.be.at.most(
@@ -1647,7 +1648,7 @@ describe("placement", () => {
 
     el.dir = "rtl";
     await el.updateComplete;
-    await (el as unknown as { positioningReady: Promise<boolean> }).positioningReady;
+    await (el as unknown as { cleanup: { ready: Promise<boolean> } }).cleanup.ready;
     expect((el as unknown as { cleanup?: () => void }).cleanup !== before).to.be
       .true;
     expect(
@@ -2588,3 +2589,110 @@ describe('loading presentation for a pending value', () => {
 // [part='option'] rows rather than by exposing the option elements, so none of them rendered at
 // all -- mirrors lr-combobox's identical popup-adornment contract (cloneSlot/adornmentsFor,
 // renderInertPresentation).
+
+for (const path of ['initial markup', 'reposition'] as const) {
+  it(`retires a failed positioning operation during ${path} and permits retry`, async () => {
+    const runtime = await import('../../../internal/positioner.js');
+    let failing = path === 'initial markup';
+    let attempts = 0;
+    let afterShows = 0;
+    __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({
+      place: (...args) => {
+        attempts++;
+        if (failing) throw new Error('Placement failed');
+        return runtime.placeAnchoredSurface(...args);
+      },
+      trackRect: runtime.trackRect,
+    }));
+    try {
+      const el = await fixture<LyraSelect>(html`
+        <lr-select ?open=${failing} @lr-after-show=${() => afterShows++}
+          @lr-hide=${(event: Event) => event.preventDefault()}>
+          <lr-option value="a">A</lr-option>
+        </lr-select>`);
+      if (path === 'reposition') {
+        await el.show();
+        failing = true;
+        el.placement = 'top-end';
+      }
+      await waitUntil(() => attempts >= (path === 'reposition' ? 2 : 1) && !el.open);
+      await el.updateComplete;
+      const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+      expect(trigger(el).getAttribute('aria-expanded')).to.equal('false');
+      expect(popup.hidden).to.equal(true);
+      expect(popup.hasAttribute('data-positioned')).to.equal(false);
+      expect(rows(el).length).to.equal(0);
+      const successes = path === 'reposition' ? 1 : 0;
+      expect(afterShows).to.equal(successes);
+      failing = false;
+      await el.show();
+      expect(el.open).to.equal(true);
+      expect(afterShows).to.equal(successes + 1);
+    } finally { __setAnchoredOverlayRuntimeLoaderForTesting(undefined); }
+  });
+}
+
+it('returns keyboard focus to the trigger after Clear unless a listener moved it', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><lr-select clearable value="a">
+    <lr-option value="a">Apple</lr-option></lr-select><button>Next field</button></div>`);
+  const el = wrapper.querySelector('lr-select')!;
+  const next = wrapper.querySelector('button')!;
+  await focusByKeyboard(clearButton(el)!);
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+  el.value = 'a';
+  await el.updateComplete;
+  el.addEventListener('lr-clear', () => next.focus(), { once: true });
+  await focusByKeyboard(clearButton(el)!);
+  await sendKeys({ press: 'Space' });
+  await el.updateComplete;
+  expect(document.activeElement === next).to.equal(true);
+});
+
+it('leaves browser-modified navigation keys available while closed and open', async () => {
+  const el = await fixture<LyraSelect>(basic());
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+  for (const open of [false, true]) {
+    if (open) await el.show();
+    const previous = control.getAttribute('aria-activedescendant');
+    for (const modifier of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true, ...modifier });
+      control.dispatchEvent(event);
+      await el.updateComplete;
+      expect(event.defaultPrevented).to.equal(false);
+      expect(el.open).to.equal(open);
+      expect(control.getAttribute('aria-activedescendant')).to.equal(previous);
+    }
+  }
+  await el.hide();
+});
+
+it('keeps a replacement positioning operation after the superseded one fails', async () => {
+  const runtime = await import('../../../internal/positioner.js');
+  let rejectOld: ((reason: Error) => void) | undefined;
+  __setAnchoredOverlayRuntimeLoaderForTesting(() =>
+    new Promise((_resolve, reject) => { rejectOld = reject; }));
+  const el = await fixture<LyraSelect>(basic());
+  try {
+    let afterShows = 0;
+    el.addEventListener('lr-after-show', () => afterShows++);
+    const showing = el.show();
+    await waitUntil(() => rejectOld !== undefined);
+    __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({
+      place: runtime.placeAnchoredSurface, trackRect: runtime.trackRect,
+    }));
+    el.placement = 'top-end';
+    await showing;
+    rejectOld!(new Error('Superseded positioner unavailable'));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(el.open).to.equal(true);
+    expect(trigger(el).getAttribute('aria-expanded')).to.equal('true');
+    expect(afterShows).to.equal(1);
+  } finally {
+    rejectOld?.(new Error('Test ended'));
+    el.remove();
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
+});

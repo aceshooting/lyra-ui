@@ -206,8 +206,9 @@ function clearPending(claim: PendingMarkerClaim): void {
   const owners = markerOwners.get(claim.element);
   if (!owners?.delete(claim)) return;
   if (owners.size > 0) return;
-  claim.element.removeAttribute(AUTOLOADER_PENDING_ATTRIBUTE);
+  // Removing the marker can synchronously claim it again in an attribute reaction.
   markerOwners.delete(claim.element);
+  claim.element.removeAttribute(AUTOLOADER_PENDING_ATTRIBUTE);
 }
 
 function clearAllPending(context: LoaderContext): void {
@@ -693,6 +694,8 @@ export async function start(
   options?: AutoloaderOptions,
 ): Promise<readonly AutoloadableTagName[]> {
   stop();
+  // A newer start() from a marker-removal reaction already owns the observer.
+  if (activeContext) return [];
   if (!root || typeof root.querySelectorAll !== 'function') return [];
   const context = createContext(root, options);
   activeContext = context;

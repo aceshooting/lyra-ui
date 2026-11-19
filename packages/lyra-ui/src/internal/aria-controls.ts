@@ -716,6 +716,11 @@ export function acquireAriaDescription(
   );
 }
 
+/** Appends naming elements while preserving authored and peer label relationships. */
+export function acquireAriaLabel(target: HTMLElement, labels: readonly Element[]): FixedRelationshipLease {
+  return acquireFixedRelationship(target, labels, LABEL_RELATIONSHIP, 'after');
+}
+
 /** Shares the relationship baseline, peer composition, and adoption guards used by descriptions. */
 export interface AriaControlsLease {
   readonly target: HTMLElement;

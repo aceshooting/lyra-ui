@@ -47,8 +47,9 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 - `size?: LyraSize` — optional density on the shared `2xs` through `xl` ladder, including the
   `small`/`medium`/`large` aliases. It changes trigger and menu-row typography and padding while
   retaining the shared `--lr-icon-button-size` minimum hit-area floor. Unset preserves the established geometry
-- `appearance?: LyraExportButtonAppearance` — `outlined` or `quiet` trigger treatment. Unset
-  preserves the established surface, border, and text colors
+- `appearance?: LyraExportButtonAppearance` — `outlined`, `quiet`, or `plain` trigger treatment.
+  `plain` is transparent at rest and adds a background on hover and press while keeping the edge
+  transparent. Unset preserves the established surface, border, and text colors
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
@@ -59,6 +60,9 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   Every supplied string, including `''` and `'Export'`, remains caller-owned visible copy. An empty
   or whitespace-only visible label keeps the localized default as the trigger's accessible name;
   the effective accessible name also feeds the format-choice menu's localized name
+- `iconOnly: boolean = false` (attribute `icon-only`, reflected) — shows a square trigger
+  with a download glyph or a supplied `icon` slot. Its name comes from `aria-label`, `label`,
+  or the localized default
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the trigger's
   accessible name and feeds the localized format-menu name without changing the visible label.
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
@@ -79,7 +83,8 @@ region, so a listener is needed only for additional handling; activation does no
 consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions; self-imposed
 closes caused by disablement, loading, or an unusable format list emit neither event).
 
-**Slots:** none.
+**Slots:** `icon` accepts a decorative glyph beside the label or within the icon-only trigger.
+Supply non-interactive content.
 
 **CSS parts:** `trigger`, `trigger-error` (present alongside `trigger` on the same button —
 `part="trigger trigger-error"` — after a built-in CSV/JSON export fails; cleared on the next export
@@ -407,6 +412,8 @@ the default slot and emits a composed event, while adding no layout of its own.
 
 **Events:** `lr-resize` with a frozen `Readonly<{ entries: readonly ResizeObserverEntry[] }>`
 detail. The sequence is detached and bounded while each native observer entry retains identity.
+If a target rejects observation both with the requested box and without options, the other
+targets can still be observed.
 Because this event bubbles and is composed, a listener on a layout ancestor can distinguish its
 own resize event from an observed child's event with `event.target === event.currentTarget`.
 
@@ -425,7 +432,8 @@ space-separated values), `root: Element | string | null = null` (an element or m
 tree before the document),
 `intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
 boolean = false` (reflected; unobserves a target after its first intersection). A once-consumed
-target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
+target is omitted from subsequent entries, including entries in the same native batch. It
+stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
 setting `once` to false is the explicit reset boundary.
 
 The browser capability is optional. A missing or throwing owner-window lookup or unavailable
@@ -1738,8 +1746,9 @@ e.g. a malformed attribute) or the formatted string is empty.
 
 All digit properties are finite-integer guarded before `Intl` construction: integer/significant
 digits clamp to `[1, 21]`, fractions to `[0, 100]`, and crossed minimum/maximum pairs are ordered.
-Leaving one `undefined` preserves `Intl`'s own defaults. Closed-set values assigned through untyped
-JavaScript fall back to their documented defaults.
+Leaving a digit property `undefined` preserves `Intl`'s defaults. Removing its attribute restores
+that `undefined` value. Closed-set values assigned through untyped JavaScript fall back to their
+documented defaults.
 
 ## `lr-format-date`
 
@@ -1749,9 +1758,9 @@ resolution and `Intl`-instance caching are as described in
 
 **Properties:**
 
-- `date: string | number | Date = new Date()` — unset means the construction-time current instant.
-  Numeric HTML attributes are epoch milliseconds, matching numeric property assignment (including
-  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
+- `date: string | number | Date = new Date()` — removing the attribute restores the construction-time
+  instant. Numeric HTML attributes are epoch milliseconds, matching numeric property assignment.
+  Nonnumeric strings retain ordinary date parsing. An explicitly empty attribute renders the fallback.
 - optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
   and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
   `Intl.DateTimeFormat` literal set
@@ -1788,11 +1797,11 @@ Text-only host — no CSS parts, events, or own tokens; locale resolution and
 
 **Slots:** default — fallback content, rendered only when `value` is not finite.
 
-The selected ladder is `byte`/`kilobyte`… or `bit`/`kilobit`… through peta and saturates at the
-top; the index is `floor(log|value| / log(unitStep))`, and zero stays in the base unit. Magnitudes
-below one remain at index zero. `unitStep` is normalized to a finite number `> 1`, falling back to
-`1000`; `decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` still prints SI-named `kB`/`MB`
-units, not `KiB`/`MiB`, because `Intl` exposes no binary unit names.
+The selected ladder is `byte`/`kilobyte`… or `bit`/`kilobit`… through peta. Each unit starts at its
+corresponding power of `unitStep` in absolute magnitude. The base unit includes zero, and the peta
+unit covers all larger values. A non-finite `unitStep` or a step of `1` or less falls back to `1000`.
+`decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` prints SI-named units such as `kB` and
+`MB` through `Intl`.
 
 ## `lr-relative-time`
 
@@ -1802,9 +1811,9 @@ are as described under `lr-format-number` above.
 
 **Properties:**
 
-- `date: string | number | Date = new Date()` — the target instant; unset means now. Numeric HTML
-  attributes are epoch milliseconds, matching numeric property assignment (including zero and
-  negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
+- `date: string | number | Date = new Date()` — removing the attribute restores the construction-time
+  instant. Numeric HTML attributes are epoch milliseconds, matching numeric property assignment.
+  Nonnumeric strings retain ordinary date parsing. An explicitly empty attribute renders no text.
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)

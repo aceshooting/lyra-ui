@@ -678,7 +678,8 @@ cannot load rejects with `capture-failed`.
 - `legendGradientLoLabel: string | null = null` (attribute `legend-gradient-lo-label`),
   `legendGradientHiLabel: string | null = null` (attribute `legend-gradient-hi-label`) — override
   the endpoint captions, which otherwise default to the lowest/highest stop value in the component's
-  own locale-aware numeric formatting
+  own locale-aware numeric formatting. Default endpoints and ticks show extra decimal places
+  for small values and use scientific notation for very small nonzero values.
 - `legendGradientTicks: readonly (number | LyraMapLegendGradientTick)[]` (attribute: false; the
   getter returns the frozen `LyraMapLegendGradientTick { value: number; label?: string }` list) —
   labelled marks under the `legendGradient` bar, each at its value's true position on the ramp

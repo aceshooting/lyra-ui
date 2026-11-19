@@ -267,22 +267,24 @@ export const AvatarBesideBody: Story = {
     docs: {
       description: {
         story:
-          "`avatar-placement=\"start\"` (or `\"end\"`) lays the avatar beside the body instead of in the header row. `--lr-chat-message-bubble-border-width: 0` and a transparent `--lr-chat-message-bubble-bg` turn the assistant bubble into plain text.",
+          "`avatar-placement=\"start\"` (or `\"end\"`) places the avatar beside the body and centres the badges alongside it. `--lr-chat-message-bubble-border-width: 0` and a transparent `--lr-chat-message-bubble-bg` turn the assistant bubble into plain text.",
       },
     },
   },
   render: () => html`
-    <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
+    <div style="display:flex; flex-direction:column; gap:var(--lr-space-s); max-width:32rem; --lr-chat-message-assistant-bubble-padding:0; --lr-chat-message-user-bubble-padding:var(--lr-space-xs) var(--lr-space-m); --lr-chat-message-user-bubble-radius:var(--lr-radius-pill);">
       <lr-chat-message
         message-role="assistant"
         avatar-placement="start"
         style="--lr-chat-message-bubble-border-width: 0; --lr-chat-message-bubble-bg: transparent;"
       >
-        <span slot="avatar" aria-hidden="true">🤖</span>
+        <span slot="avatar" aria-hidden="true" style="font-size:var(--lr-font-size-xl);">🤖</span>
+        <strong slot="badges">Assistant</strong>
         Plain reply text with the avatar at the side, as in common chat designs.
       </lr-chat-message>
       <lr-chat-message message-role="user" avatar-placement="end">
-        <span slot="avatar" aria-hidden="true">🙂</span>
+        <span slot="avatar" aria-hidden="true" style="font-size:var(--lr-font-size-xl);">🙂</span>
+        <strong slot="badges">You</strong>
         A user turn with the avatar at the inline end.
       </lr-chat-message>
     </div>

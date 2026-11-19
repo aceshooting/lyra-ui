@@ -276,11 +276,12 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
 
     event.preventDefault();
     const next = tabs[nextIndex]!;
+    const origin = shadowFocusTarget(this);
     this.setTab(next);
+    if (!origin) return;
     void this.updateComplete.then(() => {
-      this.shadowRoot
-        ?.querySelector<HTMLButtonElement>(`#${this.tabId(next)}`)
-        ?.focus();
+      if (this.activeTab !== next || shadowFocusTarget(this) !== origin) return;
+      this.shadowRoot?.querySelector<HTMLButtonElement>(`#${this.tabId(next)}`)?.focus();
     });
   }
 

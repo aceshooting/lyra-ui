@@ -171,6 +171,10 @@ const stringArrayConverter = {
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
  * @csspart form-control - Outer control wrapper.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
  * @csspart token-overflow - Count of tokens omitted by `max-tokens-visible`.
@@ -450,6 +454,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   private _disabled = false;
   private _readonly = false;
 
+  /** Committed tokens. Reassigning the same token sequence preserves any inline edit. */
   @property({ attribute: false })
   get value(): readonly string[] {
     return this._value;
@@ -458,8 +463,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
     const normalized = normalizeStringArray(next);
+    if (normalized.length === old.length && normalized.every((token, index) => token === old[index])) return;
     this.captureTokenFocusRepair(normalized);
-    if (this.editingIndex >= 0 && normalized !== old) {
+    if (this.editingIndex >= 0) {
       this.editingIndex = -1;
       this.editDraft = '';
       this.focusEditorPending = false;
@@ -744,7 +750,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     const missing = !barred && this.required && this.value.length === 0;
     this.validityController.setValidity(
       missing ? { valueMissing: true } : {},
-      missing ? this.localize('tokenInputRequired') : ''
+      missing ? () => this.localize('tokenInputRequired') : ''
     );
     this.toggleAttribute(
       'data-invalid',
@@ -1279,7 +1285,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
             : nothing}
           aria-describedby=${described}
           aria-required=${this.required ? 'true' : 'false'}
-          aria-invalid=${this.touched && !this.internals.validity.valid
+          aria-invalid=${hasError || (this.touched && !this.internals.validity.valid)
             ? 'true'
             : 'false'}
           @input=${this.onInput}

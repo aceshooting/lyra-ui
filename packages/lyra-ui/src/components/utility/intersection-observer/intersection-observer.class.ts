@@ -103,7 +103,7 @@ function observerEntries(entries: readonly IntersectionObserverEntry[]): readonl
  *
  * @customElement lr-intersection-observer
  * @slot - Elements to observe.
- * @event lr-intersect - Emitted once per native entry with `detail: { entry }`.
+ * @event lr-intersect - Emitted once per accepted native entry with `detail: { entry }`.
  * @event lr-intersection - Compatibility batch event emitted once per callback with
  * frozen `detail: { entries: readonly IntersectionObserverEntry[] }`; the detached bounded
  * sequence retains native entry identities.
@@ -131,8 +131,9 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   /** Element root or mapped element-ID string, resolved in the host's tree before the document. */
   @property() root: Element | string | null = null;
   @property({ attribute: 'intersect-class' }) intersectClass = '';
-  /** Stops observing each target after its first intersection. Consumed targets stay consumed
-   * across option-driven observer rebuilds and reconnects; setting `once` to false resets them. */
+  /** Stops observing each target after its first intersection. Later entries for that target are
+   * ignored even within the same batch. Consumed targets stay consumed across observer rebuilds
+   * and reconnects; setting `once` to false resets them. */
   @property({ type: Boolean, reflect: true }) once = false;
 
   private observer?: IntersectionObserver;
@@ -252,12 +253,10 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     );
     const callback: IntersectionObserverCallback = (entries) => {
       if (!isCurrentObserver()) return;
-      const batch = observerEntries(entries).filter(
-        ({ target }) => !once || !this.onceIntersectedTargets.has(target),
-      );
-      if (batch.length === 0) return;
-      for (const { entry, target, isIntersecting } of batch) {
+      const delivered: IntersectionObserverEntry[] = [];
+      for (const { entry, target, isIntersecting } of observerEntries(entries)) {
         if (!isCurrentObserver()) return;
+        if (once && this.onceIntersectedTargets.has(target)) continue;
         if (once && isIntersecting) this.onceIntersectedTargets.add(target);
         for (const token of classes) {
           try {
@@ -266,6 +265,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
             // A custom element's class-list boundary cannot prevent later entries from emitting.
           }
         }
+        delivered.push(entry);
         this.emit('lr-intersect', { entry });
         // An item listener may synchronously disconnect or adopt the wrapper. Stop the remainder
         // of the native batch instead of unobserving through, or emitting from, a retired owner.
@@ -278,7 +278,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
           }
         }
       }
-      if (isCurrentObserver()) this.emit('lr-intersection', { entries: batch.map(({ entry }) => entry) });
+      if (delivered.length && isCurrentObserver()) this.emit('lr-intersection', { entries: delivered });
     };
     const options: IntersectionObserverInit = {
       root,

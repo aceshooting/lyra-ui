@@ -264,6 +264,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   private isMounting = true;
   private initialStateAnnounced = false;
   private connectionGeneration = 0;
+  private searchGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private emptyAnnouncementSink?: AnnouncementSink;
   private wasEmptyPresented = false;
@@ -294,6 +295,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   override disconnectedCallback(): void {
     this.isMounting = true;
     this.connectionGeneration += 1;
+    this.searchGeneration += 1;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.emptyAnnouncementSink?.release();
@@ -377,11 +379,17 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   }
 
   private submit(): void {
-    if (this.loading) this.emit('lr-cancel', { reason: 'superseded' });
+    if (!this.isConnected) return;
+    const generation = ++this.searchGeneration;
+    if (this.loading) {
+      this.emit('lr-cancel', { reason: 'superseded' });
+      if (generation !== this.searchGeneration) return;
+    }
     this.emit('lr-search', this.buildQuery());
   }
 
   private cancel(): void {
+    this.searchGeneration += 1;
     this.emit('lr-cancel', {});
   }
 

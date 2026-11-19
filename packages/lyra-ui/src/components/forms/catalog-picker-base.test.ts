@@ -75,3 +75,38 @@ it('discloses the 1,000-row popup cap and reaches a custom tail through search',
   await el.updateComplete;
   expect(el.value).to.equal(entries[1023]);
 });
+
+for (const searchable of [false, true]) {
+  it(`projects authored errors onto the ${searchable ? 'editable' : 'compact'} picker focus target`, async () => {
+    const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker ?searchable=${searchable} value="meter" error-text="Review this"></lr-unit-picker>`);
+    if (searchable) await waitUntil(() => Boolean(el.input));
+    const child = el.shadowRoot!.querySelector<LyraSelect<false> | LyraCombobox<false>>('lr-select, lr-combobox')!;
+    await child.updateComplete;
+    const anchor = child.shadowRoot!.querySelector<HTMLElement>('[aria-invalid]')!;
+    expect(anchor.getAttribute('aria-invalid')).to.equal('true');
+    expect(el.checkValidity()).to.equal(true);
+    el.errorText = '';
+    await el.updateComplete;
+    await child.updateComplete;
+    expect(anchor.getAttribute('aria-invalid')).to.equal('false');
+    const error = document.createElement('span');
+    error.slot = 'error';
+    error.textContent = 'Review this option';
+    el.append(error);
+    await waitUntil(() => anchor.getAttribute('aria-invalid') === 'true');
+    error.remove();
+    await waitUntil(() => anchor.getAttribute('aria-invalid') === 'false');
+  });
+}
+
+it('restores the searchable picker native autocomplete default after removing an override', async () => {
+  const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker searchable></lr-unit-picker>`);
+  await waitUntil(() => Boolean(el.input));
+  expect(el.input!.autocomplete).to.equal('off');
+  el.setAttribute('autocomplete', 'on');
+  await el.updateComplete;
+  expect(el.input!.autocomplete).to.equal('on');
+  el.removeAttribute('autocomplete');
+  await el.updateComplete;
+  expect(el.input!.autocomplete).to.equal('off');
+});

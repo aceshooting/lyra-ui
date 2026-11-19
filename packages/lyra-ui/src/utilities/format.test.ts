@@ -95,6 +95,11 @@ it('formats byte counts and picks a unit exactly like <lr-format-bytes>', () => 
   expect(formatBytes(0, 'en-US')).to.match(/0\s?byte/i);
 });
 
+it('switches byte units exactly at numeric powers of the step', () => {
+  expect(formatBytes(1000, 'en-US', { unitStep: 10, display: 'long' })).to.equal('1 gigabyte');
+  expect(formatBytes(999.9999999999999, 'en-US', { display: 'long' })).to.equal('1,000 bytes');
+});
+
 it('formatBytes accepts a bigint input and scales it to exact digits a JS number cannot represent', () => {
   // 30 significant digits: `Number(value)` only carries ~17 of them, so the naive float path and
   // the exact bigint path visibly diverge once formatted at high decimal precision.
@@ -117,9 +122,20 @@ it('formatBytes accepts a decimal string input and preserves its fractional digi
   expect(exact).to.equal('123,456,789,012,345,678,901,234,567,890.25 byte');
 });
 
+it('formats a bounded value with a decimal fraction longer than the numeric exponent range', () => {
+  const fraction = '1'.repeat(320);
+  expect(formatBytes(`1.${fraction}`, 'en-US', { decimals: 10 })).to.equal('1.1111111111 byte');
+  expect(formatBytes(`1234.${fraction}`, 'en-US', { decimals: 2 })).to.equal('1.23 kB');
+});
+
+it('uses the fractional unit step consistently for integer and fractional input', () => {
+  const options = { unitStep: 1.5, decimals: 2 };
+  for (const value of [5, 5n, '5', 5.000001]) {
+    expect(formatBytes(value, 'en-US', options)).to.equal('1.48 GB');
+  }
+});
+
 it('formatBytes returns undefined for a non-finite or unparseable value instead of throwing', () => {
-  // A NaN unit-ladder index would otherwise select `units[NaN] === undefined`, which
-  // `Intl.NumberFormat` rejects outright for `style: 'unit'`.
   expect(formatBytes('not-a-number', 'en-US')).to.equal(undefined);
   expect(formatBytes(NaN, 'en-US')).to.equal(undefined);
   expect(formatBytes(Infinity, 'en-US')).to.equal(undefined);

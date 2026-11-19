@@ -1,10 +1,33 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { settlePointer } from '../../../../test/wtr-mouse.js';
 import './carousel.js';
 import './carousel-item.js';
 import '../../forms/input/input.js';
 import type { LyraCarousel } from './carousel.js';
+
+it('leaves modified viewport navigation keys to the browser or app', async () => {
+  const el = await fixture<LyraCarousel>(html`
+    <lr-carousel style="inline-size: 24rem">
+      <lr-carousel-item>First</lr-carousel-item>
+      <lr-carousel-item>Second</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part~="scroll-container"]')!;
+  await focusByKeyboard(viewport);
+  for (const [key, modifier] of [
+    ['ArrowRight', { altKey: true }],
+    ['End', { ctrlKey: true }],
+    ['ArrowRight', { metaKey: true }],
+    ['End', { shiftKey: true }],
+  ] as const) {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true, ...modifier });
+    viewport.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+    expect(el.currentSlide).to.equal(0);
+  }
+});
 
 describe('descendant keyboard ownership', () => {
   const editors = [

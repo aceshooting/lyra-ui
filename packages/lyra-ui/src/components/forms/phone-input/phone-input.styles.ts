@@ -1,11 +1,12 @@
 import { css } from 'lit';
 import {
+  formControlLabelTypography,
   formControlTextWrap,
-  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
   formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 
 export const styles = css`
   :host {
@@ -74,11 +75,9 @@ export const styles = css`
   }
 
   [part='form-control-label'] {
+    ${formControlLabelTypography}
     display: block;
     margin-block-end: var(--lr-space-xs);
-    color: var(--lr-color-text);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
   }
 
   [part='form-control-label'][hidden],

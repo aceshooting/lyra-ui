@@ -175,6 +175,18 @@ export const GeometryHooks: StoryObj = {
   `,
 };
 
+export const CompactRows: StoryObj = {
+  render: () => html`
+    <div style="inline-size: 16rem; --lr-app-rail-item-min-block-size: 2rem;
+      --lr-app-rail-item-padding: var(--lr-space-2xs) var(--lr-space-s);
+      --lr-app-rail-item-radius: var(--lr-radius-pill);
+      --lr-app-rail-item-color: var(--lr-color-text-quiet);">
+      <lr-app-rail-item href="/inbox" current>Inbox</lr-app-rail-item>
+      <lr-app-rail-item href="/archived">Archived</lr-app-rail-item>
+    </div>
+  `,
+};
+
 export const WithMetaAndEndSlots: StoryObj = {
   name: 'Meta and end slots',
   render: () => html`

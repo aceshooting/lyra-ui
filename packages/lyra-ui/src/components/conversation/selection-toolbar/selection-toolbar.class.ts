@@ -646,12 +646,14 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.focusedAction = undefined;
     const generation = this.lifecycleGeneration;
     const owner = this.ownerDocument.defaultView;
+    const origin = deepActiveElementIn(this.ownerDocument);
     void this.syncRovingStops(next).then((button) => {
       if (
         !button ||
         !this.isCurrentLifecycle(generation, owner) ||
         !button.isConnected ||
         button.ownerDocument !== this.ownerDocument ||
+        deepActiveElementIn(this.ownerDocument) !== origin ||
         !this.ownsActionButton(button)
       )
         return;

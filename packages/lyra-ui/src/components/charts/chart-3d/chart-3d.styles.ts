@@ -1,6 +1,7 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
-import { focusRing, iconHitTarget, nativeControlSurface } from '../../../internal/interactive-control.styles.js';
+import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
 export const styles = css`
   :host {

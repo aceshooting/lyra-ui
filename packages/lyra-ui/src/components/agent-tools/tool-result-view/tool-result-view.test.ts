@@ -253,6 +253,47 @@ it('shows a lr-skeleton while an async load() is pending, then renders its resol
   expect(base(el).querySelector('.loaded')!.textContent).to.equal('1');
 });
 
+it('defers a detached lazy result until reconnection and renders only the current result', async () => {
+  let finish!: (def: DirectToolRendererDefinition) => void;
+  const pending = new Promise<DirectToolRendererDefinition>(resolve => { finish = resolve; });
+  let loads = 0;
+  const rendered: unknown[] = [];
+  registerToolRenderer('detached_tool', { load: () => { loads++; return pending; } });
+  const el = await fixture<LyraToolResultView>(html`<lr-tool-result-view tool-name="detached_tool" .result=${'old'}></lr-tool-result-view>`);
+  const parent = el.parentNode!;
+  el.remove();
+  finish({ render: result => { rendered.push(result); return litHtml`<span class="loaded">${result}</span>`; } });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  el.result = 'new';
+  await el.updateComplete;
+  expect(rendered).to.deep.equal([]);
+  expect(base(el).querySelector('.loaded') === null).to.equal(true);
+  parent.appendChild(el);
+  await waitUntil(() => base(el).querySelector('.loaded')?.textContent === 'new');
+  expect(rendered).to.deep.equal(['new']);
+  expect(loads).to.equal(1);
+});
+
+it('retries a lazy rejection on reconnection without reporting a detached failure', async () => {
+  let reject!: (error: Error) => void;
+  let loads = 0;
+  registerToolRenderer('retry_tool', { load: async () => {
+    if (++loads === 1) return new Promise<DirectToolRendererDefinition>((_, fail) => { reject = fail; });
+    return { render: () => litHtml`<span class="recovered"></span>` };
+  } });
+  const el = await fixture<LyraToolResultView>(html`<lr-tool-result-view tool-name="retry_tool"></lr-tool-result-view>`);
+  const parent = el.parentNode!;
+  let failures = 0;
+  el.addEventListener('lr-render-error', () => failures++);
+  el.remove();
+  reject(new Error('Renderer unavailable'));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(failures).to.equal(0);
+  parent.appendChild(el);
+  await waitUntil(() => Boolean(base(el).querySelector('.recovered')));
+  expect(loads).to.equal(2);
+});
+
 it('emits lr-render-error and falls back when load() rejects', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   registerToolRenderer('failing_load_tool', { load: () => Promise.reject(new Error('network down')) });

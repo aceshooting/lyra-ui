@@ -4,7 +4,8 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
@@ -27,7 +28,7 @@ type HtmlFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; markup: string }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -112,7 +113,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -152,7 +153,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: error.message };
+      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -163,7 +164,12 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadHtmlSanitizer();
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
+      if (!sanitizer) {
+        throw new LyraUserFacingError(
+          this.localize('documentViewerMissingSanitizer'),
+          (localize) => localize('documentViewerMissingSanitizer'),
+        );
+      }
       const raw = await readResponseText(response);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const markup = sanitizePassiveMarkup(sanitizer, raw, this.ownerDocument, 'passive-document');
@@ -173,7 +179,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       }
     } catch (error) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
     }
   }
@@ -182,7 +188,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     switch (this.fetchState.kind) {
       case 'loaded': return html`<div part="html" role=${viewerSemanticRole(this, 'document') ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('htmlViewerLabel')) ?? nothing}>${unsafeHTML(this.fetchState.markup)}</div>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
-      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }

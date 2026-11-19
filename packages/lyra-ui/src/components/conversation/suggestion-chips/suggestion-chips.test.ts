@@ -699,3 +699,17 @@ describe('multi-line labels / --lr-suggestion-chips-label-lines / -chip-max-inli
     expect(renderedLines(labelOf(wide.el))).to.be.greaterThan(1);
   });
 });
+
+it('moves real focus to the roving stop when a surviving suggestion becomes disabled', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>
+  `);
+  const before = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-suggestion-id="a"]')!;
+  await focusByKeyboard(before);
+  el.suggestions = [{ ...suggestions[0]!, disabled: true }, ...suggestions.slice(1)];
+  await el.updateComplete;
+  const after = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-suggestion-id="b"]')!;
+  expect(before.disabled).to.equal(true);
+  expect(after.tabIndex).to.equal(0);
+  await waitUntil(() => el.shadowRoot!.activeElement === after, 'focus moved to the enabled chip');
+});

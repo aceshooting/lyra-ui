@@ -19,7 +19,9 @@
 Responsive month calendar with event markers and an agenda view.
 
 Early ISO dates such as `0001`, `0099`, and `0100` retain their authored local year in the month
-grid and month navigation. Valid colored agenda actions preserve their foreground/background pairing
+grid and month navigation. Navigation stays within ISO years `0000` through `9999`; slots outside
+that range are blank and unavailable. Month headings, day labels, and agenda dates use the
+Gregorian calendar with the active locale's formatting. Valid colored agenda actions preserve their foreground/background pairing
 through hover and press, with the existing state tokens remaining overridable. Arbitrary caller
 colors still require the caller to choose an accessible contrast pair.
 

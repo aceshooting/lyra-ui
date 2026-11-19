@@ -497,6 +497,25 @@ export const CollapsibleDesktopRail: Story = {
     `),
 };
 
+export const BrandedIconRail: Story = {
+  name: 'Branded icon rail',
+  render: () =>
+    page(html`
+      <lr-app-rail
+        label="Workspace"
+        collapsible
+        preferred-mode="icon-only"
+        style="block-size: 100%; --lr-app-rail-header-border: none;
+          --lr-app-rail-collapse-toggle-size: 2rem;
+          --lr-app-rail-collapse-toggle-color: var(--lr-color-text-quiet);"
+      >
+        <strong slot="header">A</strong>
+        <span slot="collapse-icon">◫</span>
+        ${navItems}
+      </lr-app-rail>
+    `),
+};
+
 export const ReservedHeaderHeight: Story = {
   name: "Reserved header height (cssprop)",
   parameters: {

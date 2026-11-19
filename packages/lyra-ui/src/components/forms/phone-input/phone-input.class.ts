@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
@@ -6,7 +7,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -142,6 +143,10 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
  * @csspart form-control - The outer form-control wrapper.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label.
  * @csspart input-wrapper - The country selector and telephone input wrapper.
  * @csspart country-prefix - Optional country adornment slot wrapper; also receives the `start`
@@ -352,9 +357,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   constructor() {
     super();
     // A submit attempt or reportValidity() counts as interaction.
-    this.addEventListener('invalid', () => {
-      this.touched = true;
-    });
+    installInteractionOnInvalid(this, () => { this.touched = true; });
   }
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
@@ -607,10 +610,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       return;
     }
     const flags: ValidityStateFlags = {};
-    let message = '';
+    let message: IntrinsicValidityMessage = '';
     if (this.required && this.status === 'empty') {
       flags.valueMissing = true;
-      message = this.localize('fieldRequired');
+      message = () => this.localize('fieldRequired');
     } else if (this.status === 'incomplete') {
       flags.badInput = true;
       message = this.incompleteMessage;
@@ -910,7 +913,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
             aria-label=${this.effectivePhoneLabel(hasLabel)}
             aria-describedby=${describedBy || nothing}
-            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}

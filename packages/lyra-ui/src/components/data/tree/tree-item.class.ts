@@ -185,7 +185,11 @@ export interface LyraTreeItemEventMap {
  *   `depth`, written inline onto `[part="row"]` by the component and multiplied by
  *   `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row,
- *   and the base its hover/press mixes from.
+ *   and the base of its default hover and pressed fills.
+ * @cssprop [--lr-tree-hover-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Background of a hovered unselected row.
+ * @cssprop [--lr-tree-selected-hover-bg=color-mix(in oklab, var(--lr-tree-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Background of a hovered selected row.
  * @cssprop --lr-tree-row-height - Minimum block size of the row. Taller content can grow the row.
  * @cssprop --lr-tree-toggle-size - Size of the disclosure button, leaf placeholder and selection checkbox, subject to pointer hit-area minimums.
  * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row in every state; unset pointer states use on-quiet text.

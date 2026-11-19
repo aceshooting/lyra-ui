@@ -575,6 +575,9 @@ describe('parsing and rendering', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
       'Notebook format 4.99 is not supported.',
     );
+    el.strings = { notebookViewerUnsupportedVersion: 'Unsupported version {version}' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Unsupported version 4.99');
   });
 });
 

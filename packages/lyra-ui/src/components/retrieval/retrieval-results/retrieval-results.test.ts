@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -1460,6 +1461,19 @@ it('moves focus to the closest surviving result when controlled chunks remove th
   expect(el.shadowRoot!.activeElement?.getAttribute('data-chunk-id')).to.equal(
     'c3'
   );
+});
+
+it('repairs focus to a surviving checkbox whose caller-provided ID is base', async () => {
+  const remove = { ...chunks[0]!, id: 'remove' };
+  const base = { ...chunks[1]!, id: 'base' };
+  const el = await fixture<LyraRetrievalResults>(html`
+    <lr-retrieval-results .chunks=${[remove, base]} sort="none"></lr-retrieval-results>
+  `);
+  await focusByKeyboard(flatRows(el)[0]!.querySelector<LyraCheckbox>('lr-checkbox')!);
+  el.chunks = [base];
+  await el.updateComplete;
+  await nextFrame();
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-chunk-id')).to.equal('base');
 });
 
 it('moves focus to the stable base when a controlled transition removes every result action', async () => {

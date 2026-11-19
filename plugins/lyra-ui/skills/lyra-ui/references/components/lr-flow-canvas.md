@@ -176,7 +176,10 @@ locale changed. Replacement, unset, disconnect and adoption revoke old provider 
 and effects; superseding query/reveal revokes obsolete record controls. Reconnect captures current
 input. Source navigator/status parts are `source-navigator`, `source-controls`, `source-status`, `source-coverage`,
 `source-records` and `source-record`. Loading, successful empty, missing record, record failure
-and scene failure remain distinct localized states with current guarded retry controls.
+and scene failure remain distinct localized states with current guarded retry controls. When a
+record has focus, Up and Down move to the previous and next enabled records. Home and End move
+to the first and last enabled records, including across pages. If a focused paging button
+becomes disabled during a page change, the navigator keeps focus on an available page control.
 
 The following array admission, legacy auto-layout and complete-model snapshot rules apply with
 `graphSource` unset; source behavior is described above.

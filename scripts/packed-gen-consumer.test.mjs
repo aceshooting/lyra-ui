@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { copyPackedGuidedExamples, genTypedEntrypoints, REQUIRED_GEN_FILES, validatePackedGenManifest } from './packed-gen-consumer.mjs';
+import { checkPackedGenGuideLinks, copyPackedGuidedExamples, genTypedEntrypoints, REQUIRED_GEN_FILES, validatePackedGenManifest } from './packed-gen-consumer.mjs';
 
 const manifest = () => ({
   name: '@aceshooting/lyra-gen', type: 'module', license: 'MIT',
@@ -27,6 +27,14 @@ test('packing rejects leaked workspace ranges, missing docs/types, fixtures and 
   assert.throws(() => validatePackedGenManifest({ ...manifest(), sideEffects: [] }, files, '30.2.0'));
   assert.throws(() => genTypedEntrypoints(manifest(), files.filter(file => file !== 'dist/adapters/a2ui.d.ts')), /declaration/u);
   assert.throws(() => validatePackedGenManifest(manifest(), files, '31.0.0'), /peer/u);
+});
+
+test('guide links resolve relative to the installed file and cannot escape the archive', () => {
+  const archive = new Set(['docs/catalog-presets.md', 'README.md']);
+  checkPackedGenGuideLinks('docs/catalog-presets.md', '[package](../README.md#catalog) [source](https://example.org/source)', archive);
+  for (const href of ['../../docs/ag-ui-adapter.md', '../scripts/fixtures/catalog-preset-prompts.json']) {
+    assert.throws(() => checkPackedGenGuideLinks('docs/catalog-presets.md', `[reference](${href})`, archive), /does not resolve/u);
+  }
 });
 
 test('the archive retains host guides and runnable examples', () => {

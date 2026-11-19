@@ -1664,3 +1664,18 @@ it('publishes selected state only while the live value matches a current swatch'
   expect(el.matches(':state(selected)')).to.equal(false);
   expect(el.shadowRoot!.querySelectorAll('[part~="swatch-selected"]').length).to.equal(0);
 });
+
+it('moves real focus to the roving stop when a focused swatch becomes disabled', async () => {
+  const palette = options();
+  const el = await fixture<LyraSwatchPicker>(html`
+    <lr-swatch-picker .items=${palette}></lr-swatch-picker>
+  `);
+  await focusByKeyboard(swatches(el)[0]!);
+  el.items = [{ ...palette[0]!, disabled: true }, ...palette.slice(1)];
+  await el.updateComplete;
+
+  const [before, after] = swatches(el);
+  expect(before!.disabled).to.equal(true);
+  expect(after!.tabIndex).to.equal(0);
+  expect(el.shadowRoot!.activeElement === after).to.equal(true);
+});

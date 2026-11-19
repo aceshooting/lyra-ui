@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -252,7 +253,12 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   /** Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make
    *  the tablist vertical, which swaps the navigation keys to Up/Down per the APG. */
-  @property({ reflect: true }) placement: LyraTabGroupPlacement = 'top';
+  @property({ reflect: true, converter: declaredDefaultConverter('top') })
+  placement: LyraTabGroupPlacement = 'top';
+
+  /** Fills the body with the active panel in a fixed block allocation. The panel content
+   * manages its own scrolling. */
+  @property({ type: Boolean, reflect: true }) fill = false;
 
   /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
    *  Enter or Space — the APG requirement for panels that are expensive to reveal. */

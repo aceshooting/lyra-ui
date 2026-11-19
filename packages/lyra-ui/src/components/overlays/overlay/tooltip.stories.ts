@@ -269,3 +269,11 @@ export const TopLayer: Story = {
     </div>
   `,
 };
+
+export const IconButtonLabel: Story = {
+  render: () => html`
+    <lr-tooltip content="Add item" label-mode="label">
+      <button type="button"><span aria-hidden="true">+</span></button>
+    </lr-tooltip>
+  `,
+};

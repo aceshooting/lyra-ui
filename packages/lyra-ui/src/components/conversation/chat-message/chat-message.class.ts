@@ -101,8 +101,8 @@ export interface LyraChatMessageEventMap {
  * message bubble instead of nested inside the footer.
  *
  * `avatar-placement="start"` (or `"end"`) moves the `avatar` slot out of the header row into its own
- * column beside the body; badges and the collapse toggle stay in the header. Combine it with
- * `--lr-chat-message-bubble-border-width: 0` and a transparent `--lr-chat-message-bubble-bg` for a
+ * column beside the body. The header is centred alongside the avatar when both are visible.
+ * Combine it with `--lr-chat-message-bubble-border-width: 0` and a transparent `--lr-chat-message-bubble-bg` for a
  * plain-text message with a side avatar. Set `--lr-chat-message-width: fit-content` to size each
  * bubble to its content (up to `--lr-chat-message-max-width`) while it stays on its role's side.
  *
@@ -171,6 +171,12 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-failed-status-color=var(--lr-color-danger)] - Failed status text.
  * @cssprop [--lr-chat-message-bubble-padding=var(--lr-space-m)] - Bubble padding.
  * @cssprop [--lr-chat-message-bubble-radius=var(--lr-radius)] - Bubble corner radius. Bubble-only by design — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`, so a rounder bubble never desyncs the controls from the rest of the library.
+ * @cssprop [--lr-chat-message-user-bubble-padding=var(--lr-chat-message-bubble-padding, var(--lr-space-m))] - Bubble padding for `message-role="user"`.
+ * @cssprop [--lr-chat-message-user-bubble-radius=var(--lr-chat-message-bubble-radius, var(--lr-radius))] - Bubble radius for `message-role="user"`.
+ * @cssprop [--lr-chat-message-assistant-bubble-padding=var(--lr-chat-message-bubble-padding, var(--lr-space-m))] - Bubble padding for `message-role="assistant"`.
+ * @cssprop [--lr-chat-message-assistant-bubble-radius=var(--lr-chat-message-bubble-radius, var(--lr-radius))] - Bubble radius for `message-role="assistant"`.
+ * @cssprop [--lr-chat-message-system-bubble-padding=var(--lr-chat-message-bubble-padding, var(--lr-space-m))] - Bubble padding for `message-role="system"`.
+ * @cssprop [--lr-chat-message-system-bubble-radius=var(--lr-chat-message-bubble-radius, var(--lr-radius))] - Bubble radius for `message-role="system"`.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
  * @status stable
@@ -505,7 +511,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
       ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot
     ></span>`;
 
-    const content = html`
+    const header = html`
         <div part="header" ?hidden=${!showHeader}>
           ${avatarBeside ? nothing : avatarBlock}
           <span part="badges" ?hidden=${!this.hasBadgesSlot}
@@ -524,6 +530,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
               </button>`
             : nothing}
         </div>
+    `;
+    const details = html`
         ${this.attachmentsPlacement === 'before' ? attachmentsBlock : nothing}
         <div part="body" id=${this.bodyId} ?hidden=${this.collapsed}>
           <slot></slot>
@@ -548,19 +556,21 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
         </div>
     `;
 
+    const alignHeader = avatarBeside && showHeader && this.hasAvatarSlot;
+    const showDetails = !this.collapsed || this.hasAttachmentsSlot || suppressBuiltInFailedUi || showFooter;
     return html`
       <div
         part="bubble"
+        ?data-aligned-header=${alignHeader}
         role="article"
         aria-label=${articleLabel}
         tabindex="-1"
       >
         ${avatarBeside
-          ? html`${this.avatarPlacement === 'start' ? avatarBlock : nothing}<div class="content">${content}</div>${this
-                .avatarPlacement === 'end'
-                ? avatarBlock
-                : nothing}`
-          : content}
+          ? html`${this.avatarPlacement === 'start' ? avatarBlock : nothing}<div class="content"
+              >${header}<div class="details" ?hidden=${alignHeader && !showDetails}>${details}</div></div
+            >${this.avatarPlacement === 'end' ? avatarBlock : nothing}`
+          : html`${header}${details}`}
       </div>
       ${actionsOutside ? actionsBlock : nothing}
     `;

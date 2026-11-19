@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -113,18 +113,31 @@ export const styles = css`
     max-inline-size: calc(100% - 2 * var(--lr-space-m));
     padding-inline: var(--lr-space-m);
     padding-block: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    border: var(--lr-chat-viewport-jump-border, var(--lr-border-width-thin) solid var(--lr-color-border));
+    border-radius: var(--lr-chat-viewport-jump-radius, var(--lr-radius-pill));
+    background: var(--lr-chat-viewport-jump-bg, var(--lr-color-surface));
+    color: var(--lr-chat-viewport-jump-color, var(--lr-color-text));
     /* Overlay step: the pill floats over the transcript it scrolls, so it is an anchored layer
        rather than resting chrome. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-chat-viewport-jump-shadow, var(--lr-shadow-m));
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: opacity var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
+  }
+  [part='jump-pill']:where([data-icon-only]) {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: var(--lr-icon-button-size);
+    block-size: var(--lr-icon-button-size);
+    padding: 0;
+    ${iconHitTarget}
+  }
+  .jump-icon {
+    display: inline-flex;
+    transform: rotate(90deg);
   }
   /* inset-inline-start: 50% anchors the pill's *start* edge -- the physical right edge under RTL
    * -- to the horizontal center, so the fixed translateX(-50%) above would push the whole pill
@@ -142,10 +155,14 @@ export const styles = css`
     ${focusRing}
   }
   [part='jump-pill']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-chat-viewport-jump-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='jump-pill']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-chat-viewport-jump-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   @container ${compactContainerQuery} {
     [part='jump-pill'] {

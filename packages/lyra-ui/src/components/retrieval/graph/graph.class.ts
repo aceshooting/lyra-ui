@@ -24,6 +24,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { fitTransform } from '../../../internal/fit-transform.js';
+import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -646,7 +647,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private sourceModelScene?: GraphSourceController['state']['scene'];
   private sourceMissing = false;
   private sourceRovingKey?: string;
-  private sourceRestoreFocus = false;
+  private sourceRestoreFocus: ComposedFocusRepairSnapshot | null = null;
   private sourceRestorePager = false;
   private sourcePagePromise: Promise<boolean> = Promise.resolve(false);
   @state() private sourceState = 0;
@@ -714,6 +715,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   get graphSource(): GraphSource | undefined { return this._graphSource; }
   set graphSource(value: GraphSource | undefined) {
     const previous = this._graphSource;
+    this.sourceRestoreFocus = null;
     this._graphSource = value; this.sourceEpoch++; this.sourceNavigation++;
     this.requestUpdate('graphSource', previous);
   }
@@ -836,7 +838,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.sourceSyncing = false;
     this.syncGraphSource(); await this.sourcePagePromise;
     if (!current()) return false;
-    this.sourceRovingKey = key; this.sourceRestoreFocus = false; this.sourceState++;
+    this.sourceRovingKey = key; this.sourceRestoreFocus = null; this.sourceState++;
     await this.updateComplete;
     if (!current()) return false;
     const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
@@ -1014,7 +1016,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property({ type: Boolean, reflect: true }) glow = false;
   private _engine: Engine3dPreference = 'builtin';
   /** Optional 3D renderer preference. The default never downloads the companion. Failures use
-   * the builtin spatial renderer, then the paginated list. Has no effect in the 2D view. */
+   * the builtin spatial renderer, then the paginated list. Has no effect in the 2D view.
+   * @default 'builtin' */
   @property({ converter: ENGINE_3D_PREFERENCE })
   get engine(): Engine3dPreference { return this._engine; }
   set engine(value: Engine3dPreference) { const old = this._engine; this._engine = ENGINE_3D_PREFERENCE.normalize(value); if (old === this._engine && this.isConnected) { this.spatial?.retryEngine(); this.requestUpdate(); } else this.requestUpdate('engine', old); }
@@ -1038,7 +1041,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
   private _view: LyraGraphView = '2d';
   /** Default '2d' preserves existing SVG/canvas layouts. '3d' uses perspective and true x/y/z
-   * positions; 'list' provides visible paginated activation. The latter two need no optional peer. */
+   * positions; 'list' provides visible paginated activation. The latter two need no optional peer.
+   * @default '2d' */
   @property({ converter: GRAPH_VIEW })
   get view(): LyraGraphView { return this._view; }
   set view(value: LyraGraphView) {
@@ -1071,7 +1075,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  dependency-free util suitable for any future layered-diagram consumer) instead -- no settle
    *  animation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a
    *  documented no-op, `edgeDistance` retunes the layer gap. Switching at runtime repositions
-   *  without a tween. */
+   *  without a tween.
+   * @default 'force' */
   @property({ converter: GRAPH_LAYOUT })
   get layout(): LyraGraphLayout {
     return this._layout;
@@ -1525,11 +1530,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       } else this.onLinkClick(hit.edge, event);
     },
     expand: (nodeId) => this.emit('lr-node-expand', { nodeId }),
-    hover: (previous, next) => {
-      if (previous?.kind === 'node') this.emit('lr-node-leave', { nodeId: previous.id });
-      else if (previous?.kind === 'link') this.emitEdgeHover('leave', this.linkHoverDetail(previous.edge));
-      if (next?.kind === 'node') this.emit('lr-node-enter', { nodeId: next.id });
-      else if (next?.kind === 'link') this.emitEdgeHover('enter', this.linkHoverDetail(next.edge));
+    hover: (phase, hit) => {
+      if (hit.kind === 'node') this.emit(phase === 'enter' ? 'lr-node-enter' : 'lr-node-leave', { nodeId: hit.id });
+      else this.emitEdgeHover(phase, this.linkHoverDetail(hit.edge));
     },
     community: (community) => this.onCommunityClick(community),
     cameraChanged: (camera) => this.emit('lr-camera-change', { camera }),
@@ -1728,6 +1731,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.sourceRestoreFocus = null;
     this.sourceNavigation++; this.sourceEpoch++; this.sourceInputs = undefined; this.sourcePageInputs = undefined;
     super.disconnectedCallback();
     this.spatialGeneration++;
@@ -1775,6 +1779,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.sourceRestoreFocus = null;
     this.announcements.adopted();
     this.sourceEpoch++; this.sourceNavigation++; this.sourceInputs = undefined;
     this.sourceScene.adopted(); this.sourcePages.adopted(); this.sourceState++;
@@ -3452,7 +3457,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.sourceSyncing && ['sourcePage', 'sourcePageSize'].includes(String(args[0]))) {
       this.sourceNavigation = (this.sourceNavigation ?? 0) + 1;
       const active = this.shadowRoot?.activeElement;
-      this.sourceRestoreFocus = !!active && !!this.shadowRoot?.querySelector('[part="source-navigator"]')?.contains(active);
+      const navigator = this.shadowRoot?.querySelector<HTMLElement>('[part="source-navigator"]');
+      this.sourceRestoreFocus = navigator ? captureComposedFocusRepair(navigator, navigator) : null;
       this.sourceRestorePager = active === this.shadowRoot?.querySelector(tag('pagination'));
     }
     if (args[0] === undefined || ['graphSource', 'sourcePage', 'sourcePageSize'].includes(String(args[0]))) this.syncGraphSource();
@@ -3701,15 +3707,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     super.updated(changed);
     this.publishSourceComposition();
     if (this.sourceMode && !this.sourcePages.state.pending && this.sourceRestoreFocus) {
-      this.sourceRestoreFocus = false;
+      const repair = this.sourceRestoreFocus;
+      this.sourceRestoreFocus = null;
       const target = this.sourceRestorePager
         ? this.renderRoot.querySelector<HTMLElement & { updateComplete: Promise<boolean> }>(tag('pagination'))
         : undefined;
       this.sourceRestorePager = false;
       if (target) {
         const current = this.sourceAuthority();
-        void target.updateComplete.then(() => { if (current()) target.focus(); });
-      } else (this.renderRoot.querySelector<HTMLElement>('[data-source-key]') ?? this.renderRoot.querySelector<HTMLElement>('[part="source-navigator"]'))?.focus();
+        void target.updateComplete.then(() => { if (current()) applyComposedFocusRepair(repair, target); });
+      } else applyComposedFocusRepair(repair, [
+        this.renderRoot.querySelector<HTMLElement>('[data-source-key]'),
+        this.renderRoot.querySelector<HTMLElement>('[part="source-navigator"]'),
+      ]);
     }
     if (this.sourceMode && this.focusNodeId && this.focusNodeId !== this.lastAppliedFocusNodeId && (!this.loading || this.view !== '2d')) {
       this.scheduleAfterUpdate(() => {

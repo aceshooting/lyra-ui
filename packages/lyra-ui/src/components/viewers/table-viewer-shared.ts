@@ -253,11 +253,11 @@ export class TableViewerController<M extends { row: number; col: number }> {
   }
 
   /** After `super.updated()`. */
-  updated(changed: PropertyValues, state: { kind: string; message?: string }): void {
+  updated(changed: PropertyValues, state: { kind: string; message?: () => string }): void {
     this.announcements.transition(
       'load',
       state.kind,
-      state.kind === 'error' ? state.message : this.hooks.localize('loadingDocument'),
+      state.message?.() ?? this.hooks.localize('loadingDocument'),
     );
     if (['dataSource', 'src', 'rows', 'table', 'workbook', 'maxRows', 'maxColumns', 'maxBytes'].some(key => changed.has(key))) this.hooks.schedule(() => { void this.hooks.load(); });
     if (this.pendingResetEvent) {

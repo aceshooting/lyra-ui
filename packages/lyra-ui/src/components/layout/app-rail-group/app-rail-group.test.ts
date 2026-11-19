@@ -674,3 +674,18 @@ describe('app-rail-group collapse focus and glass hover', () => {
     }
   });
 });
+
+it('themes the heading independently of the space between items', async () => {
+  const group = await fixture<LyraAppRailGroup>(html`
+    <lr-app-rail-group heading="Workspaces" collapsible
+      style="--lr-app-rail-group-gap: 7px; --lr-app-rail-group-heading-gap: 13px;
+        --lr-app-rail-group-heading-font-weight: 400;">
+      <lr-app-rail-item>Atlas</lr-app-rail-item>
+      <lr-app-rail-item>Beacon</lr-app-rail-item>
+    </lr-app-rail-group>
+  `);
+  const root = group.shadowRoot!;
+  expect(getComputedStyle(root.querySelector('[part="toggle"]')!).fontWeight).to.equal('400');
+  expect(getComputedStyle(root.querySelector('[part="base"]')!).rowGap).to.equal('13px');
+  expect(getComputedStyle(root.querySelector('[part="content"]')!).rowGap).to.equal('7px');
+});

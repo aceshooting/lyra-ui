@@ -104,6 +104,29 @@ describe('lr-number-input localized', () => {
     expect(el.value).to.equal('1000');
   });
 
+  it('leaves composing arrows and the IME fallback for the input method', async () => {
+    const el = await fixture<LyraNumberInput>(html`
+      <lr-number-input localized label="Amount" value="1"></lr-number-input>
+    `);
+    const native = nativeOf(el);
+    await focusByKeyboard(native);
+    let edits = 0;
+    el.addEventListener('lr-input', () => { edits++; });
+    for (const composing of [true, false]) {
+      const key = new KeyboardEvent('keydown', {
+        key: 'ArrowUp', bubbles: true, composed: true, cancelable: true, isComposing: composing,
+      });
+      if (!composing) Object.defineProperty(key, 'keyCode', { value: 229 });
+      native.dispatchEvent(key);
+      expect(key.defaultPrevented).to.equal(false);
+      expect(el.value).to.equal('1');
+    }
+    expect(edits).to.equal(0);
+    await sendKeys({ press: 'ArrowUp' });
+    expect(el.value).to.equal('2');
+    expect(edits).to.equal(1);
+  });
+
   it('keeps spinbutton semantics on the text field and passes axe', async () => {
     const el = await fixture<LyraNumberInput>(html`<lr-number-input lang="de" localized label="Betrag" value="25000" min="0" max="100000"></lr-number-input>`);
     const native = nativeOf(el);

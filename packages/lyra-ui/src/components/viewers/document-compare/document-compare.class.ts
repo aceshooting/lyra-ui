@@ -241,13 +241,12 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   static override styles = [LyraElement.styles, styles];
 
-
+  private _view: LyraDocumentCompareView = 'diff';
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
    *  independently-scrollable `<lr-document-preview>` panes -- see the class doc's "Synchronized
    *  anchors" section for how the two panes are kept in sync. Unsupported values normalize to
-   *  reflected `diff`. */
-  private _view: LyraDocumentCompareView = 'diff';
-
+   *  reflected `diff`.
+   * @default 'diff' */
   @property({ reflect: true, converter: DOCUMENT_COMPARE_VIEW })
   get view(): LyraDocumentCompareView {
     return this._view;
@@ -292,10 +291,10 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     this.requestUpdate('newVersion', previous);
   }
 
-  /** Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view="diff"`;
-   *  unsupported values normalize to reflected `unified`. */
   private _diffLayout: LyraDiffViewLayout = 'unified';
-
+  /** Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view="diff"`;
+   *  unsupported values normalize to reflected `unified`.
+   * @default 'unified' */
   @property({ attribute: 'diff-layout', reflect: true, converter: DOCUMENT_COMPARE_DIFF_LAYOUT })
   get diffLayout(): LyraDiffViewLayout {
     return this._diffLayout;
@@ -313,7 +312,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   private _language = '';
   /** Forwarded to the internal `<lr-diff-view>`'s own `language` property while `view="diff"`.
-   * Runtime values outside the documented string contract fall back to no highlighting. */
+   * Runtime values outside the documented string contract fall back to no highlighting.
+   * @default '' */
   @property()
   get language(): string {
     return this._language;
@@ -359,6 +359,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   private syncReleaseView?: Window;
 
   override disconnectedCallback(): void {
+    this.searchGeneration++;
     this.cancelSyncRelease();
     super.disconnectedCallback();
   }
@@ -462,10 +463,15 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     return found.includes(true);
   }
 
+  private searchGeneration = 0;
+
   /** Searches the diff view (`view="diff"`); resolves its match count, or `0` side by side. */
   async search(query: string): Promise<number> {
+    const generation = ++this.searchGeneration;
     await this.updateComplete;
-    return this.diffEl?.search(query) ?? 0;
+    if (generation !== this.searchGeneration) return 0;
+    const count = await this.diffEl?.search(query);
+    return generation === this.searchGeneration ? count ?? 0 : 0;
   }
 
   /** Moves to the diff view's next match; resolves `false` without matches. */
@@ -480,6 +486,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   /** Clears the diff view's search. */
   clearSearch(): void {
+    this.searchGeneration++;
     this.diffEl?.clearSearch();
   }
 

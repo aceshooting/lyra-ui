@@ -1,4 +1,4 @@
-import { minimumPointerTarget } from '../../../internal/sizes.styles.js';
+import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -15,6 +15,7 @@ export const styles = css`
     }
   }
   [part~='item'] {
+    --_lr-tree-selected-fill: initial;
     border-radius: var(--lr-radius);
     /* Hover/active below (plus the selected variants further down) only ever repaint background,
        so background-color is all this needs; without it this item's fill snaps while
@@ -48,29 +49,27 @@ export const styles = css`
     background: inherit;
   }
   :host([aria-selected='true']) [part~='item'] {
+    --_lr-tree-selected-fill: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
     color: var(--lr-tree-selected-color, var(--lr-color-brand));
-    background: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
+    background: var(--_lr-tree-selected-fill);
   }
-  /* MUST stay after the selected-item rule above, and the second arm exists so it can: that rule
-     matches a selected item at (0,3,0), out of reach of a bare [part~='item']:hover ((0,2,0)), so
-     the selected item -- the likeliest hover target -- would never light up. Going through :host() lands
-     both arms at that rule's specificity so source order decides, with :where() keeping the state
-     qualifier out of the count. A color-mix step rather than the plain brand-quiet fallback used
-     elsewhere, since the selected row's resting fill already resolves to that token. */
-  [part~='item']:hover,
+  [part~='item']:hover {
+    background: var(
+      --lr-tree-hover-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+  }
   :host(:where([aria-selected='true'])) [part~='item']:hover {
-    background: color-mix(in oklab, var(--lr-tree-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(
+      --lr-tree-selected-hover-bg,
+      color-mix(in oklab, var(--_lr-tree-selected-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
   }
-  /* MUST stay after the selected-item rule above, and the second arm exists so it can: that rule
-     matches a selected item at (0,3,0), out of reach of a bare [part~='item']:active ((0,2,0)), so
-     the selected item -- the one a user presses next -- would answer nothing. Going through :host()
-     lands both arms at that rule's specificity so source order decides, with :where() keeping the
-     state qualifier out of the count. */
   [part~='item']:active,
   :host(:where([aria-selected='true'])) [part~='item']:active {
     background: color-mix(
       in oklab,
-      var(--lr-tree-selected-bg, var(--lr-color-brand-quiet)),
+      var(--_lr-tree-selected-fill, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

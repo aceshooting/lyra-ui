@@ -884,3 +884,76 @@ for (const [action, row, expected] of [
     expect(focused?.getAttribute("data-action")).to.equal(expected);
   });
 }
+
+it('sends the visible draft during deferred controlled writeback', async () => {
+  const metadata = { thread: 'current' };
+  const attachment: DocumentRef = { id: 'notes', name: 'notes.txt', mimeType: 'text/plain' };
+  const initial = [{ id: 'one', value: 'Original', attachments: [attachment], metadata, createdAt: 7 }];
+  const el = await fixture<LyraPromptQueue>(html`<lr-prompt-queue .items=${initial}></lr-prompt-queue>`);
+  const editor = el.shadowRoot!.querySelector('lr-textarea')!;
+  const input = editor.shadowRoot!.querySelector('textarea')!;
+  const send = el.shadowRoot!.querySelector<HTMLElement>('[data-action="send"]')!;
+  const proposals: (readonly PromptQueueItem[])[] = [];
+  const sent: PromptQueueItem[] = [];
+  el.addEventListener('lr-queue-change', (event) => proposals.push(event.detail.items));
+  el.addEventListener('lr-send-now', (event) => sent.push(event.detail.item));
+
+  await focusByKeyboard(input);
+  input.setSelectionRange(input.value.length, input.value.length);
+  await sendKeys({ type: ' new' });
+  expect(input.value).to.equal('Original new');
+
+  // Reassigning the accepted value leaves the rejected proposal's draft visible.
+  el.items = [{ ...initial[0]! }];
+  await el.updateComplete;
+  await editor.updateComplete;
+  expect(input.value).to.equal('Original new');
+  send.click();
+  expect(sent.map(item => item.value)).to.deep.equal(['Original new']);
+  expect(sent[0]?.metadata === metadata).to.equal(true);
+  expect(sent[0]?.attachments).to.deep.equal([attachment]);
+  expect(sent[0]?.createdAt).to.equal(7);
+  expect(Object.isFrozen(sent[0])).to.equal(true);
+  expect(el.items[0]?.value).to.equal('Original');
+
+  el.readonly = true;
+  send.click();
+  expect(sent).to.have.lengthOf(1);
+  await el.updateComplete;
+  send.click();
+  expect(sent.map(item => item.value)).to.deep.equal(['Original new', 'Original']);
+
+  el.readonly = false;
+  await el.updateComplete;
+
+  // The same visible value can be sent immediately after the final proposal is accepted.
+  el.items = proposals.at(-1)!;
+  send.click();
+  expect(sent.map(item => item.value)).to.deep.equal(['Original new', 'Original', 'Original new']);
+  await el.updateComplete;
+});
+
+it('drops a stale Send now activation when the controlled row changes before render', async () => {
+  const el = await fixture<LyraPromptQueue>(html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`);
+  const send = () => el.shadowRoot!.querySelector<HTMLElement>('[data-action="send"]')!;
+  const sent: PromptQueueItem[] = [];
+  el.addEventListener('lr-send-now', (event) => sent.push(event.detail.item));
+
+  el.items = [{ id: 'one', value: 'Intermediate writeback' }];
+  el.items = [{ id: 'one', value: 'Final writeback' }];
+  send().click();
+  expect(sent).to.have.lengthOf(0);
+
+  await el.updateComplete;
+  send().click();
+  expect(sent.map(item => item.value)).to.deep.equal(['Final writeback']);
+
+  const stale = send();
+  el.items = [];
+  stale.click();
+  await el.updateComplete;
+  // Even reintroducing the same occurrence before the next render cannot revive a detached action.
+  el.items = [{ id: 'one', value: 'Final writeback' }];
+  stale.click();
+  expect(sent).to.have.lengthOf(1);
+});

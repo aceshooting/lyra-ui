@@ -1663,6 +1663,37 @@ it('preserves preset identity when the exposed preset snapshot is reassigned unc
   ).to.equal('true');
 });
 
+it('retains the applied caller preset on same-array rebind until an admitted row changes', async () => {
+  const entry = { label: 'Working window', start: 20, end: 80 };
+  const source = [entry];
+  const el = await fixture<LyraTimeRange>(html`<lr-time-range .presets=${source}></lr-time-range>`);
+  const button = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+  button().click();
+  await el.updateComplete;
+  const snapshot = el.presets;
+
+  el.presets = source;
+  await el.updateComplete;
+  expect(el.presets === snapshot).to.equal(true);
+  expect(el.appliedPreset === entry).to.equal(true);
+  expect(button().getAttribute('aria-pressed')).to.equal('true');
+  expect([el.start, el.end]).to.deep.equal([20, 80]);
+
+  entry.label = 'Updated window';
+  el.presets = source;
+  await el.updateComplete;
+  expect(el.appliedPreset).to.equal(undefined);
+  expect(button().getAttribute('aria-pressed')).to.equal('false');
+  expect(button().textContent?.trim()).to.equal('Updated window');
+
+  button().click();
+  await el.updateComplete;
+  el.presets = [...source];
+  await el.updateComplete;
+  expect(el.appliedPreset).to.equal(undefined);
+  expect([el.start, el.end]).to.deep.equal([20, 80]);
+});
+
 it('clears preset identity when presets is replaced by an equal-value collection', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,

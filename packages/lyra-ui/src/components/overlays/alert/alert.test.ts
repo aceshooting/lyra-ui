@@ -456,6 +456,28 @@ it('auto-hides after duration and restarts the full timer after interaction', as
   await waitUntil(() => !el.open, 'duration should eventually hide the alert', { timeout: 1000 });
 });
 
+it('restores persistent duration when the attribute is removed from an open alert', async () => {
+  const el = await fixture<LyraAlert>(html`
+    <lr-alert open duration="200" countdown="ltr" style=${motionless}>Saved</lr-alert>
+  `);
+  let hides = 0;
+  el.addEventListener('lr-hide', () => hides++);
+  el.removeAttribute('duration');
+  await el.updateComplete;
+  expect(el.duration).to.equal(Infinity);
+  // wait-reason: verify the original timeout was canceled as well as the immediate dismissal
+  await delay(300);
+  expect(el.open).to.equal(true);
+  expect(hides).to.equal(0);
+  expect(el.shadowRoot!.querySelector('.countdown')!.getAnimations().length).to.equal(0);
+
+  const hidden = oneEvent(el, 'lr-after-hide');
+  el.setAttribute('duration', '0');
+  await hidden;
+  expect(el.open).to.equal(false);
+  expect(hides).to.equal(1);
+});
+
 it('normalizes hostile duration values before timer math', async () => {
   const el = (await fixture(html`
     <lr-alert duration="Infinity" style=${motionless}>Persistent</lr-alert>
@@ -1395,4 +1417,85 @@ describe('size ladder', () => {
     expect(el.size, 'tier applied').to.equal('l');
     await expect(el).to.be.accessible();
   });
+});
+
+for (const mountedAsToast of [false, true]) {
+  it(`suspends a timed ${mountedAsToast ? 'toast' : 'inline'} alert while hidden and resumes its remaining duration`, async () => {
+    const el = await fixture<LyraAlert>(html`
+      <lr-alert duration="600" countdown="ltr" style=${motionless}>Saved</lr-alert>
+    `);
+    let hidden = false;
+    const original = Object.getOwnPropertyDescriptor(document, 'hidden');
+    const setHidden = (value: boolean) => {
+      hidden = value;
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    try {
+      const shown = oneEvent(el, 'lr-after-show');
+      const completion = mountedAsToast ? el.toast() : el.show();
+      await shown;
+      // wait-reason: let a meaningful part of the countdown elapse before hiding the document
+      await delay(250);
+      setHidden(true);
+      // wait-reason: exceed the entire duration while hidden
+      await delay(700);
+      expect(el.open, 'the alert stays open in a hidden document').to.equal(true);
+      expect(el.shadowRoot!.querySelector('.countdown')!.getAnimations()[0]?.playState).to.equal('paused');
+      setHidden(false);
+      expect(el.open, 'remaining time is still available after returning').to.equal(true);
+      await waitUntil(() => !el.open, 'the countdown resumes with its remaining time', { timeout: 525 });
+      await completion;
+    } finally {
+      if (original) Object.defineProperty(document, 'hidden', original);
+      else Reflect.deleteProperty(document, 'hidden');
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+  });
+}
+
+it('keeps a hidden-start alert paused until hover and focus both leave', async () => {
+  const original = Object.getOwnPropertyDescriptor(document, 'hidden');
+  let hidden = true;
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-alert duration="160" style=${motionless}>
+        Saved <button type="button" id="inside">Details</button>
+      </lr-alert>
+      <button type="button" id="outside">Outside</button>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraAlert>('lr-alert')!;
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+  try {
+    await el.show();
+    // wait-reason: an alert first shown in a hidden document receives its full duration on return
+    await delay(250);
+    expect(el.open).to.equal(true);
+    el.dispatchEvent(new PointerEvent('pointerenter'));
+    await focusByKeyboard(wrapper.querySelector<HTMLElement>('#inside')!);
+    hidden = false;
+    document.dispatchEvent(new Event('visibilitychange'));
+    // wait-reason: becoming visible does not dismiss the alert during interaction
+    await delay(250);
+    expect(el.open).to.equal(true);
+    el.dispatchEvent(new PointerEvent('pointerleave'));
+    // wait-reason: leaving hover retains the separate focus pause
+    await delay(250);
+    expect(el.open).to.equal(true);
+    await focusByKeyboard(wrapper.querySelector<HTMLElement>('#outside')!);
+    await waitUntil(() => !el.open, 'the timer starts after focus leaves', { timeout: 750 });
+  } finally {
+    if (original) Object.defineProperty(document, 'hidden', original);
+    else Reflect.deleteProperty(document, 'hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+});
+
+it('restores the alert role after an authored role is removed', async () => {
+  const alert = await fixture<HTMLElementTagNameMap['lr-alert']>(html`<lr-alert role="status">Saved</lr-alert>`);
+  alert.removeAttribute('role');
+  await alert.updateComplete;
+  expect(alert.getAttribute('role')).to.equal('alert');
+  expect(alert.role).to.equal('alert');
 });

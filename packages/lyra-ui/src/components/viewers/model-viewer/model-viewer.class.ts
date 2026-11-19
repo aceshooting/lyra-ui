@@ -9,7 +9,8 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { isResourceLimitError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { engine3dFailureReason, type Engine3dFallbackDetail, type Engine3dFallbackReason } from '../../../internal/engine-3d.js';
 import type { Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
@@ -195,6 +196,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   @state() private total: number | null = null;
 
   private generation = 0;
+  private readonly detached = new DeferredTeardown(() => this.retire());
   private controller?: AbortController;
   private engine?: Engine3dInstance;
   private observers: Array<{ disconnect(): void }> = [];
@@ -212,21 +214,27 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.hasUpdated) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.detached.cancel() && this.engine) {
+      const generation = this.generation;
+      this.watchEnvironment(() => this.isConnected && generation === this.generation);
+      this.refreshEngine();
+    } else if (this.hasUpdated) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
-    this.retire();
+    if (this.status === 'ready' || this.status === 'context-lost') {
+      this.stopWatchingEnvironment();
+      this.detached.schedule();
+    } else this.retire();
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.retire();
+    this.detached.flush();
     this.announcements.adopted();
     this.descriptions.adopted();
-    if (this.isConnected) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -247,10 +255,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     this.generation++;
     this.controller?.abort();
     this.controller = undefined;
-    for (const observer of this.observers) observer.disconnect();
-    this.observers = [];
-    for (const cleanup of this.mediaCleanup) cleanup();
-    this.mediaCleanup = [];
+    this.stopWatchingEnvironment();
     const engine = this.engine;
     this.engine = undefined;
     try { engine?.dispose(); } catch { /* The engine attempts all owned resource releases. */ }
@@ -365,7 +370,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
         if (!current()) return;
       } else engine.setData({ bytes, format }, generation);
     } catch (error) {
-      if (!current() || isAbortError(error)) return;
+      if (!current()) return;
       const reason = engine3dFailureReason(error);
       this.fail(isResourceLimitError(error) ? 'tooLarge' : reason === 'unsupported' ? 'engineUnsupported' : 'invalid', reason, error);
     }
@@ -416,6 +421,13 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     } catch (error) {
       if (generation === this.generation) this.fail('invalid', 'error', error);
     }
+  }
+
+  private stopWatchingEnvironment(): void {
+    for (const observer of this.observers) observer.disconnect();
+    this.observers = [];
+    for (const cleanup of this.mediaCleanup) cleanup();
+    this.mediaCleanup = [];
   }
 
   private watchEnvironment(current: () => boolean): void {

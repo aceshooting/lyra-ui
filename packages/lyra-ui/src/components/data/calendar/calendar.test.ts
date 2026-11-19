@@ -4,6 +4,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -1098,4 +1099,68 @@ describe('lr-calendar render cap', () => {
     )) as LyraCalendar;
     expect(el.shadowRoot!.querySelector('[part="agenda-limit"]') === null).to.equal(true);
   });
+});
+
+for (const { month, endpoint, edge, arrow, page, inward, nextMonth } of [
+  { month: '0000-01-01', endpoint: '0000-01-01', edge: 'previous', arrow: 'ArrowLeft', page: 'PageUp', inward: 'next', nextMonth: '0000-02-01' },
+  { month: '9999-12-01', endpoint: '9999-12-31', edge: 'next', arrow: 'ArrowRight', page: 'PageDown', inward: 'previous', nextMonth: '9999-11-01' },
+]) {
+  it(`keeps month and keyboard navigation within the ISO range at ${endpoint}`, async () => {
+    const el = await fixture<LyraCalendar>(html`<lr-calendar lang="en" view-date=${month}></lr-calendar>`);
+    const root = el.shadowRoot!;
+    const edgeButton = root.querySelector<HTMLButtonElement>(`[part~="${edge}-button"]`)!;
+    const inwardButton = root.querySelector<HTMLButtonElement>(`[part~="${inward}-button"]`)!;
+    const viewChanges: string[] = [];
+    const dates: string[] = [];
+    el.addEventListener('lr-view-change', (event) => viewChanges.push(event.detail.viewDate));
+    el.addEventListener('lr-date-select', (event) => dates.push(event.detail.date));
+
+    expect(edgeButton.disabled).to.equal(true);
+    expect(inwardButton.disabled).to.equal(false);
+    edgeButton.click();
+    const overflow = root.querySelector<HTMLElement>('[role="gridcell"][aria-disabled="true"]')!;
+    expect(overflow.hasAttribute('data-date')).to.equal(false);
+    expect(overflow.getAttribute('aria-selected')).to.equal('false');
+    expect(overflow.tabIndex).to.equal(-1);
+    overflow.click();
+    expect(dates).to.deep.equal([]);
+
+    const day = root.querySelector<HTMLElement>(`[data-date="${endpoint}"]`)!;
+    await focusByKeyboard(day);
+    for (const key of [arrow, page]) {
+      day.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await el.updateComplete;
+      expect(root.activeElement?.getAttribute('data-date')).to.equal(endpoint);
+    }
+    expect(el.viewDate).to.equal(month);
+    expect(el.value).to.equal('');
+    expect(viewChanges).to.deep.equal([]);
+    day.click();
+    expect(dates).to.deep.equal([endpoint]);
+    inwardButton.click();
+    await el.updateComplete;
+    expect(viewChanges).to.deep.equal([nextMonth]);
+  });
+}
+
+it('keeps localized month, accessible dates, agenda dates and selected ISO values Gregorian', async () => {
+  const locale = 'en-US-u-ca-persian';
+  const el = await fixture<LyraCalendar>(html`<lr-calendar
+    lang=${locale} view-date="2026-03-01" .events=${[{ date: '2026-03-31', title: 'Deadline' }]}
+  ></lr-calendar>`);
+  const root = el.shadowRoot!;
+  const last = root.querySelector<HTMLElement>('[data-date="2026-03-31"]')!;
+  const date = new Date(2026, 2, 31);
+  const month = new Intl.DateTimeFormat(locale, { calendar: 'gregory', month: 'long', year: 'numeric' });
+  const full = new Intl.DateTimeFormat(locale, { calendar: 'gregory', dateStyle: 'full' });
+  const medium = new Intl.DateTimeFormat(locale, { calendar: 'gregory', dateStyle: 'medium' });
+  expect(root.querySelector('[part="title"]')?.textContent).to.equal(month.format(date));
+  expect(last.querySelector('[part="date"]')?.textContent).to.equal('31');
+  expect(last.getAttribute('aria-label')).to.equal(full.format(date));
+  const selected = oneEvent(el, 'lr-date-select');
+  last.querySelector<HTMLElement>('[part="date"]')!.click();
+  expect((await selected).detail.date).to.equal('2026-03-31');
+  el.view = 'agenda';
+  await el.updateComplete;
+  expect(root.querySelector('[part="agenda-event"] strong')?.textContent).to.equal(medium.format(date));
 });

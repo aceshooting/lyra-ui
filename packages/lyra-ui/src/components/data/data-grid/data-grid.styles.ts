@@ -236,12 +236,12 @@ export const styles = css`
         var(--lr-easing-standard);
   }
 
-  button:hover:not(:disabled) {
+  button:hover:not(:disabled):where(:not([part~="page-current"])) {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(--_lr-data-grid-control-hover-fill);
   }
 
-  button:active:not(:disabled) {
+  button:active:not(:disabled):where(:not([part~="page-current"])) {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(--_lr-data-grid-control-active-fill);
   }
@@ -716,9 +716,19 @@ export const styles = css`
     transform: rotate(90deg);
   }
 
-  [part="page-current"] {
-    ${iconHitTarget}
-    text-align: center;
+  [part~="page-current"] {
+    background: var(--lr-color-brand);
+    border-color: transparent;
+    color: var(--lr-color-on-brand);
+    font-weight: var(--lr-font-weight-bold);
+  }
+
+  [part~="page-current"]:where(:hover) {
+    background: var(--lr-color-brand);
+  }
+
+  [part~="page-current"]:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 
   [part="first-icon"],

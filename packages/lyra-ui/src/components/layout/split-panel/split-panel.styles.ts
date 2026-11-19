@@ -17,12 +17,16 @@ export const styles = css`
       --lr-split-panel-divider-hit-area,
       var(--divider-hit-area, var(--lr-space-m))
     );
+    --_lr-split-panel-divider-floor: var(
+      --lr-split-panel-divider-min-hit-area,
+      var(--lr-icon-button-size)
+    );
     --_lr-split-panel-effective-min: var(--lr-split-panel-min, var(--min, 0%));
     --_lr-split-panel-effective-max: var(--lr-split-panel-max, var(--max, 100%));
     --_lr-split-panel-divider-hit-slop: calc(
       (
           var(--_lr-split-panel-effective-divider-width) -
-            max(var(--lr-icon-button-size), var(--_lr-split-panel-effective-divider-hit-area))
+            max(var(--_lr-split-panel-divider-floor), var(--_lr-split-panel-effective-divider-hit-area))
         ) / 2
     );
   }
@@ -94,9 +98,9 @@ export const styles = css`
     inline-size: var(--_lr-split-panel-effective-divider-width);
     min-inline-size: var(--_lr-split-panel-effective-divider-width);
     block-size: 100%;
-    min-block-size: var(--lr-icon-button-size);
+    min-block-size: var(--_lr-split-panel-divider-floor);
     margin-inline-start: calc(var(--_lr-split-panel-effective-divider-width) / -2);
-    background: var(--lr-color-border);
+    background: var(--lr-split-panel-divider-color, var(--lr-color-border));
     color: var(--lr-color-text);
     cursor: col-resize;
     touch-action: none;
@@ -118,7 +122,7 @@ export const styles = css`
     inset-block-end: auto;
     inset-inline: 0;
     inline-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
+    min-inline-size: var(--_lr-split-panel-divider-floor);
     block-size: var(--_lr-split-panel-effective-divider-width);
     min-block-size: var(--_lr-split-panel-effective-divider-width);
     margin-block-start: calc(var(--_lr-split-panel-effective-divider-width) / -2);

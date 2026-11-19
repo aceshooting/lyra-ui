@@ -264,3 +264,7 @@ export const NewestHistory: Story = {
     id: `call-${index}`, name: `Tool call ${index + 1}`, args: {}, status: 'success', startedAt: index,
   }))}></lr-tool-timeline>`,
 };
+
+export const Grouped: Story = {
+  render: () => html`<lr-tool-timeline grouped .entries=${mixedEntries()}></lr-tool-timeline>`,
+};

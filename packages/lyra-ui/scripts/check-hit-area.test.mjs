@@ -33,6 +33,11 @@ const included = [
   target({ component: 'lr-calendar', part: 'event' }),
   target({ component: 'lr-segmented', part: 'segment', size: '2xs' }),
   target({ component: 'lr-segmented', part: 'segment', size: 'xs' }),
+  target({ component: 'lr-segmented', part: 'segment', size: 's' }),
+  target({ component: 'lr-segmented', part: 'segment', size: 'm' }),
+  target({ component: 'lr-segmented', part: 'segment', size: 'l' }),
+  target({ component: 'lr-segmented', part: 'segment', size: 'xl' }),
+  target({ component: 'lr-segmented', part: 'segment' }),
   target({ component: 'lr-embedding-explorer', part: 'point', allocationPx: 383 }),
   target({ component: 'lr-media-card', part: 'base', mediaKind: 'image' }),
   target({ component: 'lr-graph', part: 'node', renderer: 'svg', cameraScale: 0.25 }),
@@ -61,7 +66,7 @@ const included = [
 
 assert.deepEqual(
   included.map((fixture) => targetHitAreaContract(fixture)?.minimumPx),
-  [40, 40, 40, 40, 40, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
+  [40, 40, 40, 40, 40, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
   'the approved compact and physical-target states participate at their exact floors',
 );
 
@@ -128,10 +133,6 @@ const excluded = [
   target({ component: 'lr-menu', part: 'item', controlKind: 'full-row' }),
   target({ component: 'lr-dropdown', part: 'item', controlKind: 'full-row' }),
   target({ component: 'lr-stepper', part: 'step', controlKind: 'text' }),
-  target({ component: 'lr-segmented', part: 'segment', size: 's' }),
-  target({ component: 'lr-segmented', part: 'segment', size: 'm' }),
-  target({ component: 'lr-segmented', part: 'segment', size: 'l' }),
-  target({ component: 'lr-segmented', part: 'segment', size: 'xl' }),
   target({ component: 'lr-av-player', part: 'rate', controlKind: 'text' }),
   target({ component: 'lr-av-player', part: 'cue', controlKind: 'text' }),
   target({ component: 'lr-av-player', part: 'seek', controlKind: 'native-range' }),

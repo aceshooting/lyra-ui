@@ -65,6 +65,19 @@ test('a successful response returns an owned copy of its bytes', async () => {
   assert.ok(calls[0]!.init?.signal instanceof AbortSignal);
 });
 
+for (const length of [1023, 1024]) {
+  test(`a streamed ${length}-byte result owns an exact-length backing buffer`, async () => {
+    const expected = Uint8Array.from({ length }, (_, index) => index % 256);
+    const chunk = new Uint8Array(expected);
+    const { fetch } = recordingFetch(() => new Response(chunked([chunk]).body));
+    const result = await fetchDocxBytes('https://example.test/document.docx', { fetch });
+    assert.ok(result.ok);
+    chunk.fill(0);
+    assert.equal(result.value.buffer.byteLength, length);
+    assert.deepEqual(result.value, expected);
+  });
+}
+
 test('an advertised Content-Length above the ceiling is refused before reading', async () => {
   const stream = chunked([new Uint8Array([1])]);
   const { fetch } = recordingFetch(() => new Response(stream.body, { headers: { 'content-length': String(DOCX_LIMITS.inputBytes + 1) } }));

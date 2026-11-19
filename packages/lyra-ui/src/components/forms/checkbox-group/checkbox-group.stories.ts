@@ -217,3 +217,20 @@ export const VetoedEmptyingToggle: Story = {
     </lr-checkbox-group>
   `,
 };
+
+export const WithToolbar: StoryObj = {
+  render: () => html`
+    <lr-checkbox-group label="Topics" label-display="hidden">
+      <label slot="toolbar">Filter topics
+        <input type="search" @input=${(event: Event) => {
+          const field = event.currentTarget as HTMLInputElement;
+          for (const option of field.closest('lr-checkbox-group')!.querySelectorAll('lr-checkbox')) {
+            option.hidden = !(option.textContent ?? '').toLowerCase().includes(field.value.toLowerCase());
+          }
+        }}>
+      </label>
+      <lr-checkbox value="news">News</lr-checkbox>
+      <lr-checkbox value="sports">Sports</lr-checkbox>
+    </lr-checkbox-group>
+  `,
+};

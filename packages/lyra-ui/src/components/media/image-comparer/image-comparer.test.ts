@@ -1,7 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './image-comparer.js';
 import type { LyraImageComparer } from './image-comparer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 it('renders before and after slots with a positioned divider', async () => {
   const el = (await fixture(html`
@@ -167,6 +169,14 @@ it('normalizes every keyboard direction and commit in LTR and RTL', async () => 
     await el.updateComplete;
     emitted.length = 0;
 
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+      const shortcut = new KeyboardEvent('keydown', { key: testCase.key, [modifier]: true, bubbles: true, cancelable: true });
+      input.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented, modifier).to.be.false;
+      expect(el.position).to.equal(50);
+      expect(emitted).to.deep.equal([]);
+    }
+
     const keydown = new KeyboardEvent('keydown', {
       key: testCase.key,
       bubbles: true,
@@ -178,15 +188,35 @@ it('normalizes every keyboard direction and commit in LTR and RTL', async () => 
     expect(el.position, `${testCase.orientation}/${testCase.direction} ${testCase.key}`).to.equal(testCase.expected);
     expect(emitted, `${testCase.orientation}/${testCase.direction} ${testCase.key} live event`).to.deep.equal(['input']);
 
+    const releaseWithModifier = testCase.key === 'ArrowLeft';
     const keyup = new KeyboardEvent('keyup', {
       key: testCase.key,
+      altKey: releaseWithModifier,
       bubbles: true,
       cancelable: true,
     });
     input.dispatchEvent(keyup);
-    expect(keyup.defaultPrevented, `${testCase.orientation}/${testCase.direction} ${testCase.key} commits once`).to.be.true;
+    expect(keyup.defaultPrevented, `${testCase.orientation}/${testCase.direction} ${testCase.key} default action`).to.equal(!releaseWithModifier);
     expect(emitted, `${testCase.orientation}/${testCase.direction} ${testCase.key} event order`).to.deep.equal(['input', 'change']);
   }
+});
+
+it('keeps the native comparison range steady through a modified arrow shortcut', async () => {
+  const el = await fixture<LyraImageComparer>(html`<lr-image-comparer></lr-image-comparer>`);
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  const defaults: boolean[] = [];
+  const changes: Event[] = [];
+  el.addEventListener('keydown', event => {
+    if (event.key === 'ArrowLeft') defaults.push(event.defaultPrevented);
+  });
+  el.addEventListener('lr-input', event => changes.push(event));
+  el.addEventListener('lr-change', event => changes.push(event));
+  await focusByKeyboard(input);
+  await sendKeys({ press: 'Alt+ArrowLeft' });
+  expect(defaults).to.deep.equal([false]);
+  expect([el.position, input.value, changes.length]).to.deep.equal([50, '50', 0]);
+  await sendKeys({ press: 'ArrowLeft' });
+  expect([el.position, input.value, changes.length]).to.deep.equal([49, '49', 2]);
 });
 
 it('renders the handle slot and resolves both upstream sizing properties', async () => {
@@ -524,7 +554,7 @@ it('falls back to the localized default label when no aria-label is set', async 
   expect(handle.getAttribute('aria-label')).to.equal('Image comparison');
 });
 
-it('preserves present host aria-labels on the comparison group and range, then restores the fallback on removal', async () => {
+it('uses localized names for blank host labels and honors named overrides on the comparison group and range', async () => {
   const el = (await fixture(html`
     <lr-image-comparer aria-label="" .strings=${{ imageComparerLabel: 'Localized comparison' }}>
       <div slot="before">Before</div>
@@ -537,15 +567,15 @@ it('preserves present host aria-labels on the comparison group and range, then r
 
   expect(base.getAttribute('role')).to.equal('group');
   expect(input.type).to.equal('range');
-  expect(labels()).to.deep.equal(['', '']);
+  expect(labels()).to.deep.equal(['Localized comparison', 'Localized comparison']);
 
   el.setAttribute('aria-label', 'Updated comparison');
   await el.updateComplete;
   expect(labels()).to.deep.equal(['Updated comparison', 'Updated comparison']);
 
-  el.setAttribute('aria-label', '');
+  el.setAttribute('aria-label', ' \t ');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['', '']);
+  expect(labels()).to.deep.equal(['Localized comparison', 'Localized comparison']);
 
   el.removeAttribute('aria-label');
   await el.updateComplete;

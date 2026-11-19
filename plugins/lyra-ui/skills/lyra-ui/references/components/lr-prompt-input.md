@@ -38,6 +38,8 @@ their corresponding data can be supplied. The default entry registers all childr
 (attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics.
 `toolbarPlacement: ChatComposerToolbarPlacement = 'above'` (attribute `toolbar-placement`) forwards
 `'above' | 'actions'` to that composer; `'actions'` takes effect with `actions-layout="below"`.
+`toolbarAlign: ChatComposerToolbarAlign = 'start'` (attribute `toolbar-align`) forwards
+`'start' | 'end'`; `'end'` places the bottom toolbar beside the composer's end actions.
 A slotted `toolbar` child is forwarded to the composer's `toolbar` slot. The separate data-driven
 model, voice and source controls remain above the composer regardless of toolbar placement;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,

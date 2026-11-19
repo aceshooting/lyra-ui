@@ -10,21 +10,14 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import {
-  writeClipboardText,
-  type LyraClipboardWriteFailure,
-  type LyraClipboardWriteSuccess,
-} from '../../../internal/clipboard.js';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
+import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
+import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** How long the "Copied!" confirmation state lasts before reverting -- matches
- *  `lr-copy-button`'s own confirmation duration. */
-const COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 const MAX_INTERNAL_PATTERNS = 10_000;
 
 function snapshotInternalPatterns(value: unknown): readonly (string | RegExp)[] {
@@ -204,10 +197,14 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @state() private boundedSource = '';
   @state() private parseTruncated = false;
   @state() private expandedInternalRuns = new Set<string>();
-  @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
+  private readonly copyFeedback = new RecordCopyFeedback(this, () => this.trace ?? '', outcome => {
+    if (outcome.ok) this.emit('lr-copy', outcome);
+    else {
+      this.emit('lr-error');
+      this.emit('lr-copy-error', outcome);
+    }
+  });
 
-  private copyTimer?: { owner: Window; handle: number; generation: number };
-  private copyGeneration = 0;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
@@ -218,28 +215,11 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     this.previouslyTruncated = this.parseTruncated;
   }
 
-  override disconnectedCallback(): void {
-    this.resetCopyFeedback();
-    super.disconnectedCallback();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
     // A disconnected node can be adopted without another disconnect notification.
-    this.resetCopyFeedback();
+    this.copyFeedback.reset();
     this.announcements.adopted();
-  }
-
-  private cancelCopyTimer(): void {
-    const timer = this.copyTimer;
-    this.copyTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
-  }
-
-  private resetCopyFeedback(): void {
-    this.copyGeneration += 1;
-    this.cancelCopyTimer();
-    this.copyStatus = 'rest';
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -263,51 +243,8 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   }
 
   private onCopy = (): void => {
-    void this.copyTrace();
+    void this.copyFeedback.write(this.trace ?? '');
   };
-
-  private async copyTrace(): Promise<void> {
-    const text = this.trace ?? '';
-    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    const generation = ++this.copyGeneration;
-    this.cancelCopyTimer();
-    this.copyStatus = 'rest';
-    const outcome = await writeClipboardText(owner, text);
-    if (!owner || !this.isCurrentCopy(generation, owner)) return;
-    if (!outcome.ok) {
-      this.showCopyStatus('error', generation, owner);
-      this.emit('lr-error');
-      this.emit('lr-copy-error', outcome);
-      return;
-    }
-    this.showCopyStatus('success', generation, owner);
-    this.emit('lr-copy', outcome);
-  }
-
-  private isCurrentCopy(generation: number, owner: Window): boolean {
-    return this.isConnected
-      && generation === this.copyGeneration
-      && this.ownerDocument.defaultView === owner;
-  }
-
-  private showCopyStatus(status: 'success' | 'error', generation: number, owner: Window): void {
-    this.copyStatus = status;
-    this.cancelCopyTimer();
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.copyTimer?.owner !== owner
-        || this.copyTimer.handle !== handle
-        || this.copyTimer.generation !== generation
-        || generation !== this.copyGeneration
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== owner
-      ) return;
-      this.copyTimer = undefined;
-      this.copyStatus = 'rest';
-    }, COPY_CONFIRM_MS);
-    this.copyTimer = { owner, handle, generation };
-  }
 
   private onFrameClick(frame: StackFrame): void {
     if (!isSelectableFrame(frame)) return;
@@ -389,10 +326,10 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
         })()}
       >
         ${!this.withoutCopyButton
-          ? html`<button part="copy-button" data-agent-action="neutral" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
-              ${this.copyStatus === 'success'
+          ? html`<button part="copy-button" data-agent-action="neutral" type="button" data-copy-status=${this.copyFeedback.status} @click=${this.onCopy}>
+              ${this.copyFeedback.status === 'success'
                 ? this.localize('copied')
-                : this.copyStatus === 'error'
+                : this.copyFeedback.status === 'error'
                   ? this.localize('copyFailed')
                   : this.localize('copy')}
             </button>`

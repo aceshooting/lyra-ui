@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
@@ -450,7 +451,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   activeIndex = 0;
 
   /** Tour-level default Floating UI placement, overridable per step via `LyraTourStep.placement`. */
-  @property({ reflect: true }) placement: Placement = 'bottom';
+  @property({ reflect: true, converter: declaredDefaultConverter('bottom') })
+  placement: Placement = 'bottom';
 
   /** Distance (px) between the target and the popover, passed straight to Floating UI's
    *  `offset()` middleware -- a tour-level-only setting, mirroring `lr-popover`'s `distance`
@@ -1040,7 +1042,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   };
 
   private onPopoverKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented) return;
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (this.ownsDirectionalKeys(event)) return;
 
     const rtl = this.effectiveDirection === 'rtl';

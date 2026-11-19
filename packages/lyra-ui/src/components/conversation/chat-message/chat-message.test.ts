@@ -1474,6 +1474,31 @@ describe("bubble geometry cssprops", () => {
     expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal("11px");
   });
 
+  it('uses inherited role geometry and falls back to shared geometry for each unset hook', async () => {
+    const wrapper = await fixture(html`
+      <div style="
+        --lr-chat-message-bubble-padding: 7px 9px;
+        --lr-chat-message-bubble-radius: 13px;
+        --lr-chat-message-user-bubble-padding: 3px 11px;
+        --lr-chat-message-user-bubble-radius: 22px;
+        --lr-chat-message-assistant-bubble-padding: 0;
+        --lr-chat-message-system-bubble-radius: 4px;
+      ">
+        <lr-chat-message message-role="user" status="failed">User</lr-chat-message>
+        <lr-chat-message message-role="assistant">Assistant</lr-chat-message>
+        <lr-chat-message message-role="system">System</lr-chat-message>
+      </div>
+    `);
+    const geometry = (index: number) => {
+      const bubble = messageAt(wrapper, index).shadowRoot!.querySelector('[part="bubble"]')!;
+      const style = getComputedStyle(bubble);
+      return [style.paddingBlockStart, style.paddingInlineStart, style.borderStartStartRadius];
+    };
+    expect(geometry(0)).to.deep.equal(['3px', '11px', '22px']);
+    expect(geometry(1)).to.deep.equal(['0px', '0px', '13px']);
+    expect(geometry(2)).to.deep.equal(['7px', '9px', '4px']);
+  });
+
   it("defaults the bubble padding/radius to --lr-space-m/--lr-radius, byte-identical to before", async () => {
     const el = (await fixture(
       html`<lr-chat-message>hi</lr-chat-message>`
@@ -1763,6 +1788,32 @@ describe("avatar-placement", () => {
       partOf(rtlStart, "body").getBoundingClientRect().right - 1,
     );
   });
+
+  for (const placement of ['start', 'end'] as const) {
+    it(`centres badges beside an avatar at the inline ${placement} in both directions`, async () => {
+      const wrapper = await fixture(html`
+        <div>
+          <lr-chat-message .avatarPlacement=${placement}>
+            <span slot="avatar" style="display:block;inline-size:32px;block-size:36px">A</span>
+            <span slot="badges">Model</span>
+            Reply
+          </lr-chat-message>
+        </div>
+      `);
+      const el = messageAt(wrapper, 0);
+      for (const direction of ['ltr', 'rtl']) {
+        wrapper.setAttribute('dir', direction);
+        const avatar = partOf(el, 'avatar').getBoundingClientRect();
+        const badges = partOf(el, 'badges').getBoundingClientRect();
+        const body = partOf(el, 'body').getBoundingClientRect();
+        expect(badges.top + badges.height / 2).to.be.closeTo(avatar.top + avatar.height / 2, 1);
+        expect(body.top).to.be.greaterThan(avatar.bottom);
+        expect(body.left).to.be.closeTo(badges.left, 1);
+        const avatarIsLeft = (placement === 'start') === (direction === 'ltr');
+        expect(avatarIsLeft ? avatar.right < badges.left : avatar.left > badges.right).to.equal(true);
+      }
+    });
+  }
 
   it("keeps badges and the collapse toggle in the header while the avatar sits beside", async () => {
     const el = (await fixture(html`<lr-chat-message avatar-placement="start" collapsible

@@ -2303,7 +2303,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     }
     const toolbarTarget = event.composedPath().find(node => node instanceof HTMLElement &&
       node.hasAttribute('data-tool-key') && this.renderRoot.contains(node));
-    if (toolbarTarget && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+    if (toolbarTarget && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey &&
+      ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       const targets = this.enabledToolbarButtons();
       if (targets.length === 0) return;
       event.preventDefault();

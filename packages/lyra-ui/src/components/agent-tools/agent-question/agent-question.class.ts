@@ -4,6 +4,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { FlatToolParamSchema, LyraToolParamForm, ToolParamFormValue } from '../tool-param-form/tool-param-form.class.js';
 import { snapshotFormValue } from '../tool-param-form/tool-param-snapshot.js';
@@ -58,7 +59,8 @@ const PROPERTY_KEYS = new Set(['type', 'enum', 'description', 'title', 'default'
  * @csspart requester - The server or agent requesting the information.
  * @csspart actions - Response controls.
  * @csspart action - A response button.
- * @csspart status - The submitted-state message.
+ * @csspart status - The submitted-state message. Receives focus if submission disables the focused
+ *   response button and focus has not moved elsewhere.
  * @csspart error - Unsupported-schema explanation.
  * @status experimental
  * @since 22.0.0
@@ -151,7 +153,13 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     }
     this.valueAssignedInCommit = false;
     this.statusAssignedInCommit = false;
+
+    const active = changed.get('status') === 'pending' && this.status === 'submitted' && !changed.has('requestId')
+      ? shadowFocusTarget(this)
+      : null;
+    this.submittedFocusAnchor = active?.matches('button[part="action"]') ? active : null;
   }
+  private submittedFocusAnchor: Element | null = null;
   private announcements?: AnnouncementSink;
   private isMounting = true;
   override connectedCallback(): void {
@@ -166,10 +174,21 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (!this.isMounting && changed.has('status') && this.status === 'submitted') {
-      this.announcements?.announce(this.localize('agentQuestionSubmitted'));
-    }
+    const anchor = this.submittedFocusAnchor;
+    this.submittedFocusAnchor = null;
+    const mounted = !this.isMounting;
     this.isMounting = false;
+    if (!changed.has('status') || this.status !== 'submitted') return;
+    if (anchor && this.isConnected) {
+      const active = deepActiveElementIn(this.ownerDocument);
+      if (!active || active === this.ownerDocument.body || active === anchor) {
+        const status = this.renderRoot.querySelector<HTMLElement>('[part="status"]');
+        status?.focus();
+        // Moving focus to the message already presents the text to assistive technology.
+        if (status && shadowFocusTarget(this) === status) return;
+      }
+    }
+    if (mounted) this.announcements?.announce(this.localize('agentQuestionSubmitted'));
   }
   private get supportedSchema(): boolean {
     if (this.schemaInvalid || !this.schema || typeof this.schema !== 'object' || Array.isArray(this.schema)) return false;
@@ -233,7 +252,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
       <div part="actions">${(['accept', 'decline', 'cancel'] as const).map((action) => html`<button
         part="action" type="button" data-action=${action} data-agent-action=${action === 'accept' ? 'brand' : 'neutral'} ?disabled=${this.inactive || (action === 'accept' && !this.supportedSchema)}
         @click=${() => this.respond(action, requestId)}>${this.localize(action === 'accept' ? 'agentQuestionAccept' : action === 'decline' ? 'agentQuestionDecline' : 'cancel')}</button>`)}</div>
-      ${this.status === 'submitted' ? html`<p part="status">${this.localize('agentQuestionSubmitted')}</p>` : nothing}
+      ${this.status === 'submitted' ? html`<p part="status" tabindex="-1">${this.localize('agentQuestionSubmitted')}</p>` : nothing}
     </div>`;
   }
 }

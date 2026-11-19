@@ -23,7 +23,7 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 - `position: number = 50` (attribute `position`, reflected) — divider position from 0 to 100
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (attribute `orientation`, reflected)
 - `accessibleLabel: string | null` (attribute `aria-label`) — accessible name for the comparison
-  and its range handle
+  and its range handle. Blank labels use the localized default.
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
 **Events:** exactly one owner-realm, bubbling/composed native `input` (`Event`) after every live

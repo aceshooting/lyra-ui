@@ -208,3 +208,27 @@ export const NarrowLongPanes: Story = {
     </div>
   `,
 };
+
+export const HairlineDivider: Story = {
+  render: () => html`
+    <style>
+      @media (hover: hover) and (pointer: fine) {
+        .hairline-divider {
+          --lr-split-panel-divider-min-hit-area: var(--lr-space-l);
+          --lr-split-panel-divider-hit-area: var(--lr-space-l);
+        }
+      }
+    </style>
+    <lr-split-panel
+      class="hairline-divider"
+      style="
+        block-size: 12rem;
+        --lr-split-panel-divider-width: var(--lr-size-1px);
+        --lr-split-panel-divider-color: var(--lr-color-border-subtle);
+      "
+    >
+      <div slot="start" style=${paneStyle}>Files</div>
+      <div slot="end" style=${paneStyle}>Preview</div>
+    </lr-split-panel>
+  `,
+};

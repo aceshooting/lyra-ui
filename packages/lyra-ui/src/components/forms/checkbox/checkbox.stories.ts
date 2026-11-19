@@ -313,7 +313,7 @@ export const CompactLabels: Story = {
   render: () => html`
     <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-20rem)">
       ${['ltr', 'rtl'].map(direction => html`
-        <lr-checkbox dir=${direction} size="s" checked hint="Supporting text aligns with the label"
+        <lr-checkbox dir=${direction} size="2xs" checked hint="Supporting text aligns with the label"
           style="--lr-checkbox-box-size:var(--lr-size-1rem);--lr-checkbox-label-indent:calc(var(--lr-size-1rem) + var(--lr-space-s))">
           A longer compact option label that wraps onto another line
         </lr-checkbox>

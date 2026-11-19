@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 42 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -280,7 +280,10 @@ consumer property writes emit no committed event).
 builds with its own icon+label structure; clicking in this slot closes the mobile overlay if open,
 except on a group's or item's disclosure toggle, a group's `header-actions` and an item's `meta`/`end`
 content), `header` (logo/brand content, shown above the nav items in every mode), `footer` (a trailing
-user/settings trigger, shown below the nav items).
+user/settings trigger, shown below the nav items), `collapse-icon` (decorative glyph for the
+desktop collapse button) and `pin-icon` (decorative glyph for the auto-hide pin button). In
+icon-only mode, the brand stacks above the desktop collapse control. The default collapse
+chevron follows the rail state and reading direction. Custom glyphs keep their orientation.
 
 **CSS parts:** `base`, `header`, `nav`, `footer`, `toggle` (hidden via CSS outside `'mobile'` mode, or
 -- while it is not also serving as the panel's only in-panel dismiss control -- via `withoutToggle`;
@@ -298,9 +301,8 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
-`transform` under RTL), `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]`
-while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
+`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the decorative glyph wrapper),
+`pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
 while pinned and `"false"` otherwise, the name comes from the `appRailPin`/`appRailUnpin` keys, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
@@ -366,15 +368,21 @@ tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
 open only), `--lr-shadow-s` (the `frame="card"` default elevation), `--lr-icon-button-size`,
-`--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
-use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
-`'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
-mark and stays on `--lr-color-border`. `resizable`'s width is driven entirely by
+`--lr-focus-ring-*`, `--lr-transition-base`). The logical edge shorthands
+`--lr-app-rail-header-border`, `--lr-app-rail-footer-border`, and `--lr-app-rail-edge-border`
+control the header block-end, footer block-start, and docked rail inline-end borders respectively.
+Set a shorthand to `none` to hide its border. The default uses `--lr-color-border-subtle`.
+The docked resizable rail uses `--lr-color-border` for the visible separator in its default frame.
+The plain frame omits the edge by default and keeps a system-colored boundary in forced colors. `resizable`'s width is driven entirely by
 `railWidth`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
 `--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. `[part="collapse-toggle"]`
-has the matching set: `--lr-app-rail-collapse-toggle-hover-bg` (default
+takes `--lr-app-rail-collapse-toggle-size` (default `var(--lr-icon-button-size)`) for both axes,
+with a 24 CSS px minimum on hovering fine-pointer devices without touch input and the larger
+shared icon-button floor on other devices. Its resting glyph color uses
+`--lr-app-rail-collapse-toggle-color` (default `var(--lr-color-text)`). The matching
+interaction hooks are `--lr-app-rail-collapse-toggle-hover-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
 `var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
 `--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
@@ -725,9 +733,13 @@ Ordinary interaction states are independently inheritable through
 `--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
 brand/active-mix values as fallbacks.
-`--lr-app-rail-item-min-block-size` (default `var(--lr-icon-button-size)`, floor-clamped to that
-same token regardless of the override so the row's own hit target can never shrink below the WCAG
-2.5.8 minimum), `--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
+`--lr-app-rail-item-color` (default `var(--lr-color-text)`) sets the resting text and icon color.
+`--lr-app-rail-item-radius` (default `var(--lr-radius)`) applies to labeled rows and icon-only
+tiles. `--lr-app-rail-item-min-block-size` defaults to `var(--lr-icon-button-size)`. To make
+labeled rows more compact, set it to `2rem` and reduce block padding as needed. The minimum is
+24 CSS px on hovering fine-pointer devices without touch input. Other devices retain the
+shared icon-button floor. Other controls keep their own sizes.
+`--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
 `--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
 `[part="label"]`, and now also between the item's control and the `meta`/`end` adornments),
 `--lr-app-rail-item-meta-color` (default `var(--lr-color-text-quiet)`),
@@ -739,10 +751,10 @@ is retuned while family/weight/line-height stay inherited) retune the row's geom
 While `icon-only`, `[part="base"]` resolves to a square hit target matching the icon-button
 footprint used elsewhere in this library (`aspect-ratio: 1` against its already floor-clamped
 block size) instead of stretching across the rail's icon column. `--lr-app-rail-item-icon-only-size`
-(no default) sizes that square directly — both `inline-size` and `block-size`, and the row's own
-`min-block-size` floor — independent of `--lr-app-rail-item-min-block-size`, so a taller expanded
-row and an icon-only square pinned to `--lr-icon-button-size` can coexist. Unset, the square is
-still derived via `aspect-ratio: 1` against the row's block size exactly as before.
+(no default) sizes that square directly on both axes, with a 24 CSS px minimum. This size is
+independent of `--lr-app-rail-item-min-block-size`, so a taller expanded row can coexist with
+an icon-only square pinned to `--lr-icon-button-size`. When unset, the square derives its size
+from the row's block size and the shared icon-button floor.
 
 **`--lr-positioning-strategy`** (16.0.0) — the icon-only flyout tooltip reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -811,6 +823,8 @@ closes it). Collapsing a group that holds focus moves focus to the collapse cont
 `--lr-app-rail-group-padding-block` (default `var(--lr-space-xs)`),
 `--lr-app-rail-group-heading-color` (default `var(--lr-color-text-quiet)`),
 `--lr-app-rail-group-heading-font-size` (default `var(--lr-font-size-sm)`),
+`--lr-app-rail-group-heading-font-weight` (default `var(--lr-font-weight-semibold)`),
+`--lr-app-rail-group-heading-gap` (defaults to the item gap, `--lr-app-rail-group-gap`), and
 `--lr-app-rail-group-hover-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-app-rail-group-hover-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-group-active-bg` (no default), `--lr-app-rail-group-active-color` (default

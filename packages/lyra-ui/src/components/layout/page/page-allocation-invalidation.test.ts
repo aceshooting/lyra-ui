@@ -54,6 +54,17 @@ for (const unit of ['em', 'rem'] as const) {
   });
 }
 
+it('uses a zero em breakpoint when the page font size is zero', async () => {
+  const page = await fixture<LyraPage>(html`
+    <lr-page mobile-breakpoint="2em" style="inline-size:20px;font-size:16px">Content</lr-page>
+  `);
+  await settleAllocation();
+  expect(page.view).to.equal('mobile');
+  page.style.fontSize = '0px';
+  await settleAllocation();
+  expect(page.view).to.equal('desktop');
+});
+
 it('re-resolves a rem breakpoint when the root font changes at an unchanged page width', async () => {
   const root = document.documentElement;
   const previous = root.style.fontSize;

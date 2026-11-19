@@ -34,8 +34,8 @@ later text renders normally.
 - `trigger: string = 'hover focus'` — A _space-separated_ list of `hover`,
   `focus`, `click` and `manual`. `focus` means keyboard focus: the focused element must match
   `:focus-visible` and the last input must not have been a pointer press. Pointer, touch and
-  scripted focus that follows them do not open it, but any focus inside the trigger still wires its
-  description; use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
+  scripted focus that follows them do not open it. In description mode, any focus inside the
+  trigger still wires its description. Use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
   activation deliberately, following the WAI-ARIA tooltip pattern, and the check reads the control
   that actually holds focus, including one inside a shadow-root trigger. Migrating from
   `wa-tooltip`/`sl-tooltip`: focus activation is narrowed to keyboard focus. If you removed `focus`
@@ -57,7 +57,7 @@ later text renders normally.
 - `skidding: number = 0` — offset along the anchor's edge, in px.
 - `for: string = ''` (reflected) — id of an element in this tooltip's own root. It positions behind
   a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, it also owns
-  the configured interaction listeners and `aria-describedby`. A slotted trigger wins interaction
+  the configured interaction listeners and the ARIA relationship selected by `labelMode`. A slotted trigger wins interaction
   and ARIA ownership. Assigning `null` clears the attribute to the canonical `''` read value; the
   getter itself remains non-nullable
 - `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
@@ -84,7 +84,14 @@ later text renders normally.
   documents (`llms/components/lr-popover.md`).
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted. Whitespace-only
   text in the content slot (template indentation around a `slot="trigger"` element) counts as
-  nothing, so `content` still paints and describes the trigger.
+  nothing, so `content` still supplies the tooltip text.
+- `labelMode: LyraTooltipLabelMode = 'description'` (attribute `label-mode`) —
+  `'description' | 'label' | 'none'`. Description mode associates the tooltip text with
+  `aria-describedby` while the tooltip is open or the trigger contains focus and `focus` is an
+  active trigger. Use `label` to name an icon-only trigger through `aria-labelledby` even while
+  the bubble is closed. Use `none` for a visual tooltip on a trigger that already has its own
+  accessible name or description. Both linked modes preserve authored relationships on the trigger
+  and its first focusable descendant.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
   actionable popup with no property label uses the localized `popover` string.

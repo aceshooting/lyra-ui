@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   aTimeout,
   expect,
@@ -558,6 +559,32 @@ it("maintains one roving toolbar stop and moves it from the directly focused act
   expect(actions[3]!.shadowRoot!.activeElement?.getAttribute("part")).to.equal(
     "base button"
   );
+});
+
+it('preserves external focus moved by a later toolbar key listener', async () => {
+  const host = await fixture<HTMLDivElement>(html`
+    <div>
+      <button type="button">Outside</button>
+      <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+    </div>
+  `);
+  const toolbar = host.querySelector<LyraSelectionToolbar>('lr-selection-toolbar')!;
+  const outside = host.querySelector('button')!;
+  await toolbar.updateComplete;
+  const actions = [...toolbar.shadowRoot!.querySelectorAll<HTMLElement & {
+    updateComplete: Promise<unknown>;
+  }>('lr-button[data-action]')];
+  await Promise.all(actions.map(action => action.updateComplete));
+  const first = actions[0]!.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+  const next = actions[1]!.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+  await focusByKeyboard(first);
+  toolbar.addEventListener('keydown', () => outside.focus(), { once: true });
+  first.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowRight', bubbles: true, composed: true, cancelable: true,
+  }));
+  await waitUntil(() => next.tabIndex === 0, 'the navigation updated the roving stop');
+  await aTimeout(0);
+  expect(document.activeElement === outside).to.equal(true);
 });
 
 it("moves real focus to the nearest surviving action when the controlled action list shrinks", async () => {

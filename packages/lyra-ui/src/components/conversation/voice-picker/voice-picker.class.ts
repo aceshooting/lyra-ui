@@ -78,7 +78,8 @@ export interface LyraVoicePickerEventMap {
  * internal native `<audio>` (the URL passes `safeMediaSrc()` first); `preventDefault()` or no URL
  * leaves playback entirely to the host's own TTS. Requesting the same voice while it is already
  * playing internally stops it instead of re-requesting; requesting a different voice retires the
- * old resource (and publishes its terminal change) before the new request is dispatched.
+ * old resource (and publishes its terminal change) before the new request is dispatched. Removal
+ * during the request invalidates its playback, including when the picker immediately reconnects.
  * `lr-preview-change` reports internal playback start only after the current
  * `audio.play()` promise fulfills, and reports `voiceId: null` on stop/end/error. A rejected pending
  * play publishes neither a false start nor a false stop. Committed-value, active-option, and catalog
@@ -147,6 +148,10 @@ export interface LyraVoicePickerEventMap {
  *   minimum hit area even when the field chrome uses a smaller tier.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The complete label, control, hint, error, and listbox frame.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode).
  * @csspart combobox - The text-input container (free-text mode).
@@ -344,6 +349,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
    *  state; it exists solely to cancel/supersede stale async completions. */
   private pendingPreviewId: string | null = null;
   private previewGeneration = 0;
+  private previewRequestGeneration = 0;
   protected get catalogEditing(): CatalogPickerController<LyraVoiceCatalogEntry> {
     return this.catalogPicker;
   }
@@ -422,6 +428,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   }
 
   override disconnectedCallback(): void {
+    this.previewRequestGeneration++;
     super.disconnectedCallback();
     this.stopInternalPreview();
     this.clearModeFocus();
@@ -429,6 +436,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   }
 
   override adoptedCallback(): void {
+    this.previewRequestGeneration++;
     super.adoptedCallback();
     this.stopInternalPreview();
     this.clearModeFocus();
@@ -571,9 +579,12 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   }
 
   private requestPreview(voiceId: string): void {
-    if (!voiceId) return;
+    if (!voiceId || !this.isConnected) return;
+    // Both the previous preview stop and the new request can call back into the picker.
+    const generation = ++this.previewRequestGeneration;
     const currentTarget = this.internalPreviewTargetId;
     if (currentTarget !== null && currentTarget !== voiceId) this.stopInternalPreview();
+    if (generation !== this.previewRequestGeneration) return;
     const entry = this.catalogPicker.entryFor(voiceId);
     const previewUrl = entry?.previewUrl;
     const event = this.emit(
@@ -581,7 +592,9 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
       { voiceId, previewUrl },
       { cancelable: true },
     );
-    if (!event.defaultPrevented && previewUrl) this.playInternal(voiceId, previewUrl);
+    if (!event.defaultPrevented && previewUrl && generation === this.previewRequestGeneration) {
+      this.playInternal(voiceId, previewUrl);
+    }
   }
 
   private playInternal(voiceId: string, url: string): void {
@@ -868,7 +881,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-readonly=${this.readonly ? 'true' : 'false'}
-          aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+          aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
           ?disabled=${this.effectiveDisabled}
           @click=${this.onTriggerClick}
           @keydown=${this.onTriggerKeyDown}
@@ -914,7 +927,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-readonly=${this.readonly ? 'true' : 'false'}
-            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}

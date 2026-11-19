@@ -6733,11 +6733,19 @@
             "deprecated": null
           },
           {
+            "name": "collapse-icon",
+            "deprecated": null
+          },
+          {
             "name": "footer",
             "deprecated": null
           },
           {
             "name": "header",
+            "deprecated": null
+          },
+          {
+            "name": "pin-icon",
             "deprecated": null
           }
         ],
@@ -6852,6 +6860,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-app-rail-collapse-toggle-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-app-rail-collapse-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -6862,6 +6876,22 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-app-rail-collapse-toggle-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-app-rail-edge-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-app-rail-footer-border",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-app-rail-footer-padding",
@@ -6886,6 +6916,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-shadow-s)"
+          },
+          {
+            "name": "--lr-app-rail-header-border",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-app-rail-header-min-block-size",
@@ -7359,6 +7394,18 @@
             "default": "var(--lr-font-size-sm)"
           },
           {
+            "name": "--lr-app-rail-group-heading-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-app-rail-group-heading-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-app-rail-group-gap)"
+          },
+          {
             "name": "--lr-app-rail-group-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -7706,6 +7753,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-app-rail-item-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-app-rail-item-current-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -7815,6 +7868,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-app-rail-item-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-positioning-strategy",
@@ -16987,6 +17046,12 @@
             "default": "var(--lr-form-control-font-size)"
           },
           {
+            "name": "--lr-button-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-button-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -21461,7 +21526,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "label",
@@ -21499,7 +21565,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "scatter"
           }
         ],
         "properties": [
@@ -21528,7 +21595,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "hiddenCategories",
@@ -21575,7 +21643,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "scatter"
           },
           {
             "name": "xAxis",
@@ -22012,6 +22081,16 @@
             "default": false
           },
           {
+            "name": "toolbar-align",
+            "property": "toolbarAlign",
+            "type": "ChatComposerToolbarAlign",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "start"
+          },
+          {
             "name": "toolbar-placement",
             "property": "toolbarPlacement",
             "type": "ChatComposerToolbarPlacement",
@@ -22344,6 +22423,16 @@
             "default": false
           },
           {
+            "name": "toolbarAlign",
+            "attribute": "toolbar-align",
+            "type": "ChatComposerToolbarAlign",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "start"
+          },
+          {
             "name": "toolbarPlacement",
             "attribute": "toolbar-placement",
             "type": "ChatComposerToolbarPlacement",
@@ -22538,6 +22627,60 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-chat-composer-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chat-composer-action-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chat-composer-action-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-chat-composer-action-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
+          },
+          {
+            "name": "--lr-chat-composer-action-disabled-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chat-composer-action-disabled-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chat-composer-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chat-composer-action-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chat-composer-action-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-chat-composer-action-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-chat-composer-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -22554,6 +22697,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chat-composer-busy-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
           },
           {
             "name": "--lr-chat-composer-focus-shadow",
@@ -22578,6 +22727,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-chat-composer-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
           }
         ],
         "cssStates": [],
@@ -23241,6 +23396,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-chat-message-assistant-bubble-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-chat-message-bubble-padding, var(--lr-space-m))"
+          },
+          {
+            "name": "--lr-chat-message-assistant-bubble-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-chat-message-bubble-radius, var(--lr-radius))"
+          },
+          {
             "name": "--lr-chat-message-bubble-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -23343,6 +23510,18 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-chat-message-system-bubble-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-chat-message-bubble-padding, var(--lr-space-m))"
+          },
+          {
+            "name": "--lr-chat-message-system-bubble-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-chat-message-bubble-radius, var(--lr-radius))"
+          },
+          {
             "name": "--lr-chat-message-system-color",
             "deprecated": null,
             "hasDefault": true,
@@ -23365,6 +23544,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chat-message-user-bubble-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-chat-message-bubble-padding, var(--lr-space-m))"
+          },
+          {
+            "name": "--lr-chat-message-user-bubble-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-chat-message-bubble-radius, var(--lr-radius))"
           },
           {
             "name": "--lr-chat-message-user-footer-color",
@@ -23466,6 +23657,16 @@
             "default": true
           },
           {
+            "name": "jump-icon-only",
+            "property": "jumpIconOnly",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -23545,6 +23746,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "jumpIconOnly",
+            "attribute": "jump-icon-only",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "label",
@@ -23644,6 +23855,42 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-chat-viewport-jump-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-chat-viewport-jump-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-chat-viewport-jump-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chat-viewport-jump-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chat-viewport-jump-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-pill)"
+          },
+          {
+            "name": "--lr-chat-viewport-jump-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-m)"
           },
           {
             "name": "--lr-chat-viewport-padding",
@@ -24383,6 +24630,22 @@
             ]
           },
           {
+            "name": "formDisabledCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "disabled",
+                    "type": "boolean",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formResetCallback",
             "overloads": [
               {
@@ -24615,6 +24878,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -24762,6 +25035,16 @@
             "default": ""
           },
           {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "labels",
             "attribute": null,
             "type": "NodeList",
@@ -24891,6 +25174,10 @@
           {
             "name": "label",
             "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
           }
         ],
         "events": [
@@ -24955,6 +25242,10 @@
           {
             "name": "options",
             "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -24981,6 +25272,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-form-control-height) * 0.1)"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -28046,7 +28360,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "autofocus",
@@ -28175,7 +28490,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "minlength",
@@ -28184,7 +28500,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "name",
@@ -28243,7 +28560,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 4
           },
           {
             "name": "size",
@@ -28272,7 +28590,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 2
           },
           {
             "name": "title",
@@ -28311,7 +28630,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "off"
           }
         ],
         "properties": [
@@ -28352,7 +28672,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "autofocus",
@@ -28527,7 +28848,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "minlength",
@@ -28536,7 +28858,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "name",
@@ -28595,7 +28918,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 4
           },
           {
             "name": "selectionDirection",
@@ -28651,7 +28975,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 2
           },
           {
             "name": "title",
@@ -28716,7 +29041,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "off"
           }
         ],
         "slots": [
@@ -28877,6 +29203,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -30170,6 +30519,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -32022,6 +32394,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -37815,7 +38210,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -39103,7 +39517,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -43433,6 +43866,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -45458,6 +45914,12 @@
             "default": "var(--lr-details-spacing)"
           },
           {
+            "name": "--lr-details-summary-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-details-radius,var(--lr-radius-container))"
+          },
+          {
             "name": "--show-duration",
             "deprecated": null,
             "hasDefault": true,
@@ -47180,7 +47642,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "unified"
           },
           {
             "name": "language",
@@ -47189,7 +47652,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -47218,7 +47682,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "diff"
           },
           {
             "name": "without-sync-scroll",
@@ -47259,7 +47724,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "unified"
           },
           {
             "name": "language",
@@ -47268,7 +47734,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "languages",
@@ -47324,7 +47791,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "diff"
           },
           {
             "name": "withoutSyncScroll",
@@ -55136,6 +55604,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -57922,6 +58413,16 @@
             "default": "export"
           },
           {
+            "name": "icon-only",
+            "property": "iconOnly",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -58048,6 +58549,16 @@
             "hasDefault": false
           },
           {
+            "name": "iconOnly",
+            "attribute": "icon-only",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string | undefined",
@@ -58105,7 +58616,12 @@
             "hasDefault": false
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "icon",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-export-complete",
@@ -59518,6 +60034,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-file-input-font-size, var(--lr-form-control-font-size))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -64869,7 +65408,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "fit-to",
@@ -64928,7 +65468,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "force"
           },
           {
             "name": "locale",
@@ -65025,7 +65566,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "2d"
           },
           {
             "name": "width",
@@ -65145,7 +65687,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "fitTo",
@@ -65232,7 +65775,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "force"
           },
           {
             "name": "locale",
@@ -65388,7 +65932,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "2d"
           },
           {
             "name": "width",
@@ -66584,6 +67129,29 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
           {
             "name": "--lr-graph-query-builder-run-active-bg",
             "deprecated": null,
@@ -74170,6 +74738,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -78009,6 +78600,29 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -81823,6 +82437,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -90641,6 +91278,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -93822,6 +94482,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -97521,6 +98204,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -99113,6 +99819,29 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
           {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
@@ -103858,6 +104587,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -109636,6 +110388,16 @@
             "default": false
           },
           {
+            "name": "toolbar-align",
+            "property": "toolbarAlign",
+            "type": "ChatComposerToolbarAlign",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "start"
+          },
+          {
             "name": "toolbar-placement",
             "property": "toolbarPlacement",
             "type": "ChatComposerToolbarPlacement",
@@ -110015,6 +110777,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "toolbarAlign",
+            "attribute": "toolbar-align",
+            "type": "ChatComposerToolbarAlign",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "start"
           },
           {
             "name": "toolbarPlacement",
@@ -115193,6 +115965,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -115374,6 +116156,16 @@
             "default": ""
           },
           {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "labels",
             "attribute": null,
             "type": "NodeList",
@@ -115510,6 +116302,10 @@
           {
             "name": "label",
             "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
           }
         ],
         "events": [
@@ -115594,9 +116390,36 @@
           {
             "name": "radios",
             "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
           {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
@@ -121823,6 +122646,29 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -123802,6 +124648,29 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-scroll-fade-size",
             "deprecated": null,
             "hasDefault": true,
@@ -125104,6 +125973,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -126807,6 +127699,29 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -128232,6 +129147,29 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
           {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
@@ -130632,6 +131570,12 @@
             "default": "color-mix(in oklab, var(--lr-split-panel-divider-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
+            "name": "--lr-split-panel-divider-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-split-panel-divider-hit-area",
             "deprecated": null,
             "hasDefault": true,
@@ -130642,6 +131586,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-split-panel-divider-min-hit-area",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-split-panel-divider-width",
@@ -136223,6 +137173,16 @@
             "default": null
           },
           {
+            "name": "fill",
+            "property": "fill",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "fixed-scroll-controls",
             "property": "fixedScrollControls",
             "type": "boolean",
@@ -136312,6 +137272,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "fill",
+            "attribute": "fill",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "fixedScrollControls",
@@ -141599,6 +142569,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -144099,6 +145092,29 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -145883,7 +146899,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -148598,6 +149633,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -152189,6 +153247,26 @@
             "default": false
           },
           {
+            "name": "group-summary",
+            "property": "groupSummary",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "grouped",
+            "property": "grouped",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -152230,6 +153308,26 @@
             "hasDefault": false
           },
           {
+            "name": "grouped",
+            "attribute": "grouped",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "groupSummary",
+            "attribute": "group-summary",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -152249,7 +153347,12 @@
             "hasDefault": false
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "summary",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-tool-activate",
@@ -152333,6 +153436,14 @@
           },
           {
             "name": "entry-timestamp",
+            "deprecated": null
+          },
+          {
+            "name": "group",
+            "deprecated": null
+          },
+          {
+            "name": "group-summary",
             "deprecated": null
           },
           {
@@ -152599,6 +153710,16 @@
             "default": false
           },
           {
+            "name": "label-mode",
+            "property": "labelMode",
+            "type": "LyraTooltipLabelMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "description"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -152799,6 +153920,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "labelMode",
+            "attribute": "label-mode",
+            "type": "LyraTooltipLabelMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "description"
           },
           {
             "name": "locale",
@@ -155351,6 +156482,12 @@
             "default": 0
           },
           {
+            "name": "--lr-tree-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          },
+          {
             "name": "--lr-tree-row-height",
             "deprecated": null,
             "hasDefault": false
@@ -155366,6 +156503,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-tree-selected-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-tree-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
             "name": "--lr-tree-toggle-size",
@@ -156390,7 +157533,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -159334,6 +160496,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-form-control-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+          },
+          {
+            "name": "--lr-form-control-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-form-control-required-color",

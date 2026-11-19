@@ -68,7 +68,7 @@ export const Countdown: StoryObj = {
   render: () => html`
     <lr-alert open closable variant="warning" duration="10000" countdown="rtl">
       <span slot="icon" aria-hidden="true">!</span>
-      This alert restarts its ten-second countdown after hover or focus interaction.
+      This countdown pauses while the tab is hidden and picks up where it left off when you return.
     </lr-alert>
   `,
 };

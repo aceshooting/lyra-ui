@@ -20,10 +20,12 @@ export const Default: StoryObj = {
   render: () => html`
     <lr-signature-pad
       name="signature"
+      aria-describedby="signature-guidance"
       label="Signature"
       hint="Sign with a mouse, a finger, a stylus or the keyboard."
       required
     ></lr-signature-pad>
+    <p id="signature-guidance">Use the name shown on your application.</p>
   `,
 };
 

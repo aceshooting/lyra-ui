@@ -76,6 +76,43 @@ it('keeps a playing preview when the same catalog array is bound again', async (
   }
 });
 
+for (const reconnectDuringRequest of [false, true]) {
+  const timing = reconnectDuringRequest ? 'during the request' : 'after the request';
+  it(`invalidates preview when disconnected and reconnected ${timing}`, async () => {
+    const proto = HTMLMediaElement.prototype;
+    const play = proto.play;
+    let playCalls = 0;
+    proto.play = () => {
+      playCalls++;
+      return Promise.resolve();
+    };
+    try {
+      const catalog = [{ id: 'aria', label: 'Aria', previewUrl: 'data:audio/wav;base64,UklGRiQAAABXQVZF' }];
+      const host = await fixture(html`
+        <div><lr-voice-picker .catalog=${catalog} value="aria"></lr-voice-picker></div>
+      `);
+      const el = host.querySelector<LyraVoicePicker>('lr-voice-picker')!;
+      await el.updateComplete;
+      const button = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preview-button"]')!;
+      el.addEventListener('lr-preview-request', () => {
+        el.remove();
+        if (reconnectDuringRequest) host.append(el);
+      }, { once: true });
+      button().click();
+      expect(playCalls).to.equal(0);
+
+      if (!reconnectDuringRequest) host.append(el);
+      await el.updateComplete;
+      const started = oneEvent(el, 'lr-preview-change');
+      button().click();
+      expect((await started).detail).to.deep.equal({ voiceId: 'aria' });
+      expect(playCalls).to.equal(1);
+    } finally {
+      proto.play = play;
+    }
+  });
+}
+
 it('rebases an open free-text draft when the controlled value changes', async () => {
   const el = await fixture<LyraVoicePicker>(html`<lr-voice-picker
     allow-custom value="aria" .catalog=${[{ id: 'aria', label: 'Aria' }, { id: 'sage', label: 'Sage' }]}

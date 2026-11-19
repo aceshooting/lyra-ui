@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './scroller.styles.js';
@@ -74,7 +75,8 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ reflect: true }) orientation: LyraOrientation = 'horizontal';
+  @property({ reflect: true, converter: declaredDefaultConverter<LyraOrientation>('horizontal') })
+  orientation: LyraOrientation = 'horizontal';
   @property({ type: Boolean, reflect: true }) controls = false;
   /** Hides the native scrollbar while preserving scrolling. */
   @property({ type: Boolean, attribute: 'without-scrollbar', reflect: true })

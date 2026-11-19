@@ -62,8 +62,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   delayed image source finishes loading, so navigation and opening do not require consumer timers.
   Fit is the base zoom policy: an explicit user zoom remains until navigation or a reset, and
   changing the theme does not mutate the lightbox's zoom property.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
-  overriding the localized `lightboxLabel`.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — the dialog's accessible name.
+  Blank labels use the localized `lightboxLabel` default.
 
 **Methods:** promise-based `show()`, `hide()`, and `close(reason?)`, plus `next()`, `previous()`, and
 `goTo(index)`. `show()`/`hide()` resolve after the successful rendered transition; a veto resolves

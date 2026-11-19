@@ -1283,7 +1283,7 @@ describe('hover-rule specificity (::part() theming escape hatch)', () => {
 });
 
 describe('localization coverage', () => {
-  it('a .strings override actually reaches the rendered parse-error message', async () => {
+  it('relocalizes a visible parse error without emitting it again', async () => {
     const el = (await fixture(
       html`<lr-xml-viewer .strings=${{ xmlViewerParseError: 'Document XML invalide.' }}></lr-xml-viewer>`,
     )) as LyraXmlViewer;
@@ -1292,6 +1292,18 @@ describe('localization coverage', () => {
     await eventPromise;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document XML invalide.');
+
+    let repeatedErrors = 0;
+    el.addEventListener('lr-render-error', () => { repeatedErrors++; });
+    registerLyraLocale('fr-test-xml-error', {
+      ...LYRA_DEFAULT_STRINGS,
+      xmlViewerParseError: 'Impossible de lire le XML.',
+    });
+    el.strings = {};
+    el.locale = 'fr-test-xml-error';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Impossible de lire le XML.');
+    expect(repeatedErrors).to.equal(0);
   });
 
   it('a registered locale supplies xmlViewerLabel without an explicit .strings override', async () => {

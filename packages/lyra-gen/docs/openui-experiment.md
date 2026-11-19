@@ -2,7 +2,7 @@
 
 The current decision is **no-go for a runtime importer**. A pinned external parser can produce static trees that map to reviewed Lyra views, but the experiment does not establish equivalent behavior for expressions, actions, fields, queries, source edits, arbitrary component libraries, or adversarial parser workloads. No importer or external parser dependency was added to the runtime.
 
-The experiment uses the published [`@openuidev/lang-core@1.0.1` package](https://registry.npmjs.org/@openuidev%2Flang-core/1.0.1), its declared public [repository](https://github.com/thesysdev/openui), `zod@4.6.7`, and `ci-info@4.4.0`. All three published tarballs are pinned by SHA-512 integrity in the [fixture manifest](../scripts/fixtures/openui-experiment.json). The package license is MIT. The one public README fixture retains its [upstream license notice](../scripts/fixtures/openui-fixture-LICENSE.txt); the other fixtures are original MIT examples. The published core metadata does not provide a Git commit, so the package integrity, rather than an assumed source commit, identifies the inspected implementation.
+The experiment uses the published [`@openuidev/lang-core@1.0.1` package](https://registry.npmjs.org/@openuidev%2Flang-core/1.0.1), its declared public [repository](https://github.com/thesysdev/openui), `zod@4.6.7`, and `ci-info@4.4.0`. All three published tarballs are pinned by SHA-512 integrity in the [fixture manifest](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/scripts/fixtures/openui-experiment.json). The package license is MIT. The one public README fixture retains its [upstream license notice](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/scripts/fixtures/openui-fixture-LICENSE.txt); the other fixtures are original MIT examples. The published core metadata does not provide a Git commit, so the package integrity, rather than an assumed source commit, identifies the inspected implementation.
 
 Reproduce after building this package, with the workspace dependencies installed and Node selected from `.nvmrc`:
 
@@ -10,7 +10,7 @@ Reproduce after building this package, with the workspace dependencies installed
 node packages/lyra-gen/scripts/openui-experiment.mjs --write
 ```
 
-The script requires `tar` and uses the existing development dependency's esbuild. It downloads integrity-checked package tarballs into a task-owned temporary directory, invokes no package lifecycle scripts, and removes that directory on completion or failure. It writes a [compact report with actual parser outputs](../scripts/fixtures/openui-experiment-report.json). Registry downloads are required; model calls are not used.
+The script requires `tar` and uses the existing development dependency's esbuild. It downloads integrity-checked package tarballs into a task-owned temporary directory, invokes no package lifecycle scripts, and removes that directory on completion or failure. It writes a [compact report with actual parser outputs](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/scripts/fixtures/openui-experiment-report.json). Registry downloads are required; model calls are not used.
 
 The actual batch parser and one midpoint streaming split were exercised for ten fixtures. All ten sampled streaming roots matched their batch roots. This is a small equivalence sample, not exhaustive streaming or resource qualification.
 

@@ -10,11 +10,11 @@ import { resolveBoundedCanvasAllocation, type BoundedCanvasAllocation } from '..
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import {
   isAbortError,
-  isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
@@ -337,7 +337,7 @@ type PdfLoadState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'ready'; doc: PdfDocumentApi; pageCount: number }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 /** One entry of a PDF's table of contents, as returned by `getOutline()`. `page` is a 1-based page
  *  number; it's omitted when the entry's destination couldn't be resolved to a page. */
@@ -654,7 +654,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.announcements.transition(
       'load',
       this.loadState.kind,
-      this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
+      this.loadState.kind === 'error' ? this.loadState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) {
       this.scheduleAfterUpdate(() => {
@@ -830,47 +830,50 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   private async load(): Promise<void> {
+    const src = this.src;
     const generation = ++this.generation;
+    const current = () => this.isConnected && generation === this.generation && src === this.src;
     this.pendingTransportGeneration = undefined;
     this.firstVisiblePage = 1;
     this.retirePendingDocument();
     this.pageViewerState.advance();
     const signal = this.beginAbortableLoad();
     this.destroyLoadedDoc();
-    if (!this.src) {
+    if (!src) {
       this.loadState = { kind: 'idle' };
       this.publishPageViewerSnapshot('idle', 0);
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    const fetchTarget = resolveOwnerFetchTarget(this, src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.loadState = { kind: 'error', message: error.message };
+      this.loadState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
       return;
     }
     this.pendingTransportGeneration = generation;
     this.loadState = { kind: 'loading' };
-    this.publishPageViewerSnapshot('loading', 0);
     let acquiringDocument = true;
     try {
+      this.publishPageViewerSnapshot('loading', 0);
+      if (!current()) return;
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !current()) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const data = await readResponseArrayBuffer(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !current()) return;
       const pdfjsLib = await this.loadLibrary(this.workerSrc || null);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !current()) return;
       if (!pdfjsLib) {
         const error = new LyraUserFacingError(this.localize('pdfViewerMissingLibrary'));
-        this.loadState = { kind: 'error', message: error.message };
+        this.loadState = { kind: 'error', message: () => this.localize('pdfViewerMissingLibrary') };
         this.publishPageViewerSnapshot('error', 0);
-        this.emit('lr-render-error', { error });
+        if (current()) this.emit('lr-render-error', { error });
         return;
       }
       const pending = { task: pdfjsLib.getDocument({ data }), retired: false };
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) {
+      if (signal?.aborted || !current()) {
         pending.retired = true;
         this.destroyDocumentResource(pending.task);
       } else this.pendingDocument = pending;
@@ -885,29 +888,27 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         throw error;
       }
       if (this.pendingDocument === pending) this.pendingDocument = undefined;
-      if (pending.retired || !this.isConnected || generation !== this.generation) {
+      if (pending.retired || !current()) {
         if (!pending.retired || !pending.task.destroy) await doc.destroy?.();
         return;
       }
       const pageCount = finiteCount(doc.numPages, 0, MAX_PAGE_COUNT);
       if (pageCount < 1 || pageCount !== doc.numPages) {
         await doc.destroy?.();
-        throw new LyraUserFacingError(this.localize('documentPreviewResourceTooLarge'));
+        throw new LyraUserFacingError(this.localize('documentPreviewResourceTooLarge'), localize => localize('documentPreviewResourceTooLarge'));
       }
       this.page = 1;
       this.loadState = { kind: 'ready', doc, pageCount };
       this.publishPageViewerSnapshot('ready', pageCount);
-      this.emit('lr-load', { pageCount });
+      if (current()) this.emit('lr-load', { pageCount });
     } catch (error) {
-      if ((acquiringDocument && signal?.aborted) || !this.isConnected || generation !== this.generation) return;
+      if ((acquiringDocument && signal?.aborted) || !current()) return;
       this.loadState = {
         kind: 'error',
-        message: error instanceof LyraUserFacingError
-          ? error.message
-          : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
+        message: viewerFailureMessage(error, this.localize.bind(this)),
       };
       this.publishPageViewerSnapshot('error', 0);
-      this.emit('lr-render-error', { error });
+      if (current()) this.emit('lr-render-error', { error });
     } finally {
       if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
     }
@@ -2322,7 +2323,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-change=${this.onVisibleRangeChanged} @lr-virtual-scroll=${this.stopInternalEvent}></lr-virtual-list>`;
       }
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
-      case 'error': return html`<div part="error">${this.loadState.message}</div>`;
+      case 'error': return html`<div part="error">${this.loadState.message()}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
   }

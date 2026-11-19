@@ -740,7 +740,8 @@ itself, so without its own tab stop a keyboard user could never scroll it — th
 carries both affordances that go with a real tab stop: an inward `--lr-focus-ring-*` outline while
 `:focus-visible` (inward so the region's own `overflow` cannot clip it), and a subtler
 `--lr-color-border` outline on pointer hover, so a mouse user also sees that the transcript is a
-separately scrollable region.
+separately scrollable region. Collapsing the panel moves focus from the body or its slotted content
+to the disclosure header.
 
 **Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default
 `var(--lr-size-16rem)`, i.e. `16rem` — consumer-overridable cap on how tall `[part="body"]` grows
@@ -3023,7 +3024,8 @@ assigned array or record has no effect; create and reassign a new value after ch
 **Events:** `lr-run-cancel` (`detail: { runId }`, extending `CancelEventDetail` = `{ reason?: string }` from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
-this component's own retry counter, reset when `run.id` changes).
+this component's own retry counter, reset when `run.id` changes). A visible action belongs to
+the run that rendered it. Replacing the run before the click handler runs discards that action.
 
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
@@ -3598,6 +3600,13 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
+- `grouped: boolean = false` (reflected) — wraps the timeline in one initially closed disclosure.
+  The summary lists distinct tool display names in chronological order with a locale-aware
+  conjunction. The first status present in `error`, `denied`, `running`, `pending`, `incomplete`,
+  `success` order supplies the group glyph and accessible status text. Empty timelines still show
+  the empty state.
+- `groupSummary: string = ''` (attribute `group-summary`) — overrides the generated summary text
+  in grouped mode. The `summary` slot takes precedence over this property.
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
 - `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while
@@ -3660,11 +3669,15 @@ timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
 
 **Registration:** `lr-tool-result-view` registers when the first entry's details open, so a timeline that never opens one does not load it; it upgrades in place.
 
+**Slots:** `summary` supplies custom content for the grouped disclosure while retaining the
+group status.
+
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
 `entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit` (input-retention
-and rendered-window notices).
+and rendered-window notices), `group` (the grouped disclosure), and `group-summary` (its glyph and
+summary content, with the aggregate status in `data-status`).
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
 repeated bare "Details" label.
 
@@ -4129,7 +4142,8 @@ Empty/blank run ids are omitted and later duplicate ids are ignored before hiera
 counts, selection, and events.
 
 **Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), and
-`lr-run-retry` (`{ runId }`).
+`lr-run-retry` (`{ runId }`). Cancel and Retry check that the rendered run still exists and allows
+that action before emitting.
 
 **Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request. Unknown status kinds render title-cased.
 
@@ -4963,6 +4977,9 @@ replacement request.
 supplies `{ requestId, action: 'accept' | 'decline' | 'cancel', content? }`. Acceptance validates
 and returns only schema-declared fields. Decline/cancel omit content. A response immediately sets
 `status='submitted'` to prevent duplicates; set it back to `'pending'` after a failed send.
+If submission disables the focused response button, focus moves to the visible submitted message.
+The message is skipped during ordinary Tab navigation. A response handler can move focus to
+another control and retain it.
 Changing `requestId` resets draft and status, preserving explicit same-update property assignments.
 Stale rendered request actions are ignored. This request interaction is not outer-form-associated;
 the composed parameter form owns field validation. Collection values and emitted details are owned.

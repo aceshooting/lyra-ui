@@ -241,6 +241,36 @@ it("moves by one step on ArrowLeft/ArrowDown", async () => {
   expect(el.valueAsNumber).to.equal(10);
 });
 
+it('retires a pending keyboard edit when the form resets and commits the next edit normally', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-slider name="volume" min="0" max="10" value="3"></lr-slider></form>
+  `);
+  const slider = form.querySelector<LyraSlider>('lr-slider')!;
+  const thumb = slider.shadowRoot!.querySelector<HTMLElement>('[part="thumb"]')!;
+  const inputs: number[] = [];
+  const changes: number[] = [];
+  let nativeChanges = 0;
+  slider.addEventListener('lr-input', (event) => inputs.push(event.detail.value));
+  slider.addEventListener('lr-change', (event) => changes.push(event.detail.value));
+  slider.addEventListener('change', () => { nativeChanges++; });
+
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(inputs).to.deep.equal([4]);
+  form.reset();
+  expect(slider.value).to.equal(3);
+  expect(new FormData(form).get('volume')).to.equal('3');
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect(changes).to.deep.equal([]);
+  expect(nativeChanges).to.equal(0);
+
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(changes).to.deep.equal([]);
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect(inputs).to.deep.equal([4, 4]);
+  expect(changes).to.deep.equal([4]);
+  expect(nativeChanges).to.equal(1);
+});
+
 it("does not emit input or change when a keyboard step is clamped to the current value", async () => {
   const el = (await fixture(
     html`<lr-slider min="0" max="100" value="100" step="5"></lr-slider>`

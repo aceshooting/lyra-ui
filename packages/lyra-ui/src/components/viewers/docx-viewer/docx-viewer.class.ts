@@ -73,7 +73,7 @@ type FetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; content: DocumentFragment }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 /** One entry of `getHeadingTree()`'s document-ordered outline. Same shape as `<lr-markdown>`'s
  *  own `MarkdownHeadingItem` -- kept as a separate, structurally identical type rather than
@@ -362,7 +362,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('fetchState')) {
@@ -414,7 +414,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
-      this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
+      this.failWithLocalizedMessage(() => this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
 
@@ -452,11 +452,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       )
         return;
       if (!mammoth) {
-        this.failWithLocalizedMessage(this.localize('docxViewerMissingConverter'));
+        this.failWithLocalizedMessage(() => this.localize('docxViewerMissingConverter'));
         return;
       }
       if (!DOMPurify) {
-        this.failWithLocalizedMessage(this.localize('documentViewerMissingSanitizer'));
+        this.failWithLocalizedMessage(() => this.localize('documentViewerMissingSanitizer'));
         return;
       }
 
@@ -511,7 +511,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         return;
       this.fetchState = {
         kind: 'error',
-        message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
     } finally {
@@ -519,8 +521,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
   }
 
-  private failWithLocalizedMessage(message: string): void {
-    const error = new LyraUserFacingError(message);
+  private failWithLocalizedMessage(message: () => string): void {
+    const error = new LyraUserFacingError(message());
     this.fetchState = { kind: 'error', message };
     this.emit('lr-render-error', { error });
   }
@@ -961,7 +963,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       case 'loading':
         return renderViewerLoading(this.localize('loadingDocument'));
       case 'error':
-        return html`<div part="error">${this.fetchState.message}</div>`;
+        return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':
       default:
         return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;

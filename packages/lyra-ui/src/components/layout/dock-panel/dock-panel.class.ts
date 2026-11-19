@@ -1,3 +1,4 @@
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -177,7 +178,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   /** Which edge of its own container the panel is docked to. `'start'`/`'end'` are logical-inline
    *  (they mirror under RTL); `'top'`/`'bottom'` are block-direction. */
-  @property({ reflect: true }) placement: LyraDockPanelEdge = 'end';
+  @property({ reflect: true, converter: declaredDefaultConverter('end') })
+  placement: LyraDockPanelEdge = 'end';
 
   private _extent = '280px';
   /** The current docked extent along the resize axis, as a CSS length (e.g. `"320px"`).

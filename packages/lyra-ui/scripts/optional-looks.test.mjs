@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { validateLook, readStyleModel } from './style-axes-model.mjs';
+import { validateLook, readStyleModel, renderLook, modeResolverDeclarations } from './style-axes-model.mjs';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -41,3 +41,17 @@ for (const id of ['data', 'terminal', 'high-contrast']) {
     assert.ok(lyraLookCss(look).includes(`[data-lr-look='${id}']`));
   });
 }
+
+test('portable look CSS matches the static generator byte for byte, with and without mode aliases', async () => {
+  const { lyraLookCss } = await import('../dist/theme/look-css.js');
+  const model = readStyleModel(packageDir);
+  const inputs = await import('@aceshooting/lyra-ui/theme/look-inputs.js');
+  assert.deepEqual(inputs.LOOK_SLOTTED_INPUTS, model.slotted);
+  assert.equal(inputs.LOOK_STYLE_VERSION, model.version);
+  assert.equal(inputs.LOOK_MODE_RESOLVER, modeResolverDeclarations(model).map(([name, value]) => `    ${name}: ${value};`).join('\n'));
+  for (const look of model.looks) {
+    for (const modeAliases of [false, true]) {
+      assert.equal(lyraLookCss(look, { modeAliases }), renderLook(model, look, { modeAliases }), look.id);
+    }
+  }
+});

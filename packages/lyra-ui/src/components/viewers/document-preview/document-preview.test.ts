@@ -1324,6 +1324,9 @@ describe("localization", () => {
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal("Document URL is not allowed.");
+    el.strings = { documentPreviewUrlNotAllowed: 'Blocked document address' };
+    await el.updateComplete;
+    expect(error.textContent).to.equal('Blocked document address');
   });
 
   it("localizes the unsafe-URL error via .strings (documentPreviewUrlNotAllowed)", async () => {

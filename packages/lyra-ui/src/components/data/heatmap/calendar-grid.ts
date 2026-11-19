@@ -1,3 +1,4 @@
+import { utcDate } from '../../../internal/calendar-date.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
 import { minMax } from './heatmap-scale.js';
@@ -31,11 +32,10 @@ export const MAX_CALENDAR_WEEKS = 530;
 
 /** Parses a `yyyy-mm-dd` string as UTC midnight, avoiding local-timezone day-boundary drift. */
 export function parseIsoDate(iso: string): Date {
-  // A malformed `iso` yields fewer than three parts; defaulting the missing
-  // ones to NaN preserves today's Invalid Date result (an absent element read
-  // as `undefined` already coerces to NaN in Date.UTC / the `m - 1` below).
+  // A leading gap before year 0000 has a signed ISO year.
+  if (iso.startsWith('-')) return new Date(`${iso}T00:00:00Z`);
   const [y = NaN, m = NaN, d = NaN] = iso.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
+  return utcDate(y, m - 1, d);
 }
 
 /** Whether `iso` (already run through parseIsoDate) actually round-trips —
@@ -130,9 +130,7 @@ export function buildCalendarGrid(
   // it — with the default firstDayOfWeek of 0, this reduces to
   // `min.getUTCDay()` exactly, i.e. today's original Sunday anchor.
   const daysBackToAnchor = (min.getUTCDay() - firstDayOfWeek + 7) % 7;
-  const firstWeekStart = new Date(
-    Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - daysBackToAnchor),
-  );
+  const firstWeekStart = utcDate(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - daysBackToAnchor);
 
   const projectedCells: CalendarCell[] = parsed.map((d) => {
     // Relative to the anchor weekday (see `CalendarCell.weekday`'s doc

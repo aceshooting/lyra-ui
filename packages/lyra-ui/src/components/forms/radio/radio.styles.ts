@@ -32,17 +32,6 @@ export const styles = css`
         var(--lr-space-s)
     );
   }
-  /* A group projects its tier without rewriting the option's authored size: explicit inherit beats
-     sizes.styles.ts's local default and reads the group host's already-resolved ladder variables.
-     Removing or reparenting clears the private marker and restores the option's own tier. */
-  :host([data-lr-group-size]) {
-    --lr-form-control-height: inherit;
-    --lr-form-control-font-size: inherit;
-    --lr-form-control-padding-inline: inherit;
-    --lr-form-control-padding-block: inherit;
-    --lr-form-control-gap: inherit;
-    --lr-form-control-radius: inherit;
-  }
   [part~="base"] {
     display: inline-flex;
     align-items: center;

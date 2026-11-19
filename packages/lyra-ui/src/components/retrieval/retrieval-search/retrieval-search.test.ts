@@ -1,6 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './retrieval-search.js';
 import type { LyraRetrievalSearch } from './retrieval-search.js';
@@ -362,6 +363,61 @@ describe('loading / cancellation', () => {
       'superseded'
     );
     expect((searchEv.detail as RetrievalQuery).text).to.equal('second');
+  });
+
+  for (const lifecycle of ['removes', 'reconnects'] as const) {
+    it(`retires supersession when its cancel listener synchronously ${lifecycle} the search control`, async () => {
+      const host = await fixture(html`
+        <div><lr-retrieval-search loading query="replacement"></lr-retrieval-search></div>
+      `);
+      const el = host.querySelector<LyraRetrievalSearch>('lr-retrieval-search')!;
+      const searches: string[] = [];
+      el.addEventListener('lr-search', (event) => searches.push(event.detail.text));
+      el.addEventListener('lr-cancel', () => {
+        el.remove();
+        if (lifecycle === 'reconnects') host.append(el);
+      }, { once: true });
+
+      await focusByKeyboard(nativeQueryInputOf(el));
+      await sendKeys({ press: 'Enter' });
+      expect(el.isConnected).to.equal(lifecycle === 'reconnects');
+      expect(searches).to.deep.equal([]);
+
+      if (!el.isConnected) host.append(el);
+      el.loading = false;
+      await el.updateComplete;
+      submitButtonOf(el).click();
+      expect(searches).to.deep.equal(['replacement']);
+    });
+  }
+
+  it('emits only the newer search when the cancel listener submits synchronously', async () => {
+    const el = await fixture<LyraRetrievalSearch>(html`
+      <lr-retrieval-search loading query="first"></lr-retrieval-search>
+    `);
+    const searches: string[] = [];
+    el.addEventListener('lr-search', (event) => searches.push(event.detail.text));
+    el.addEventListener('lr-cancel', () => {
+      el.loading = false;
+      el.query = 'newer';
+      queryInputOf(el).dispatchEvent(enterKeydown());
+    }, { once: true });
+
+    queryInputOf(el).dispatchEvent(enterKeydown());
+    expect(searches).to.deep.equal(['newer']);
+  });
+
+  it('retires supersession when the cancel listener activates Cancel', async () => {
+    const el = await fixture<LyraRetrievalSearch>(html`
+      <lr-retrieval-search loading query="first"></lr-retrieval-search>
+    `);
+    const actions: string[] = [];
+    el.addEventListener('lr-cancel', (event) => actions.push(event.detail.reason ?? 'cancel'));
+    el.addEventListener('lr-search', () => actions.push('search'));
+    el.addEventListener('lr-cancel', () => submitButtonOf(el).click(), { once: true });
+
+    queryInputOf(el).dispatchEvent(enterKeydown());
+    expect(actions).to.deep.equal(['superseded', 'cancel']);
   });
 });
 

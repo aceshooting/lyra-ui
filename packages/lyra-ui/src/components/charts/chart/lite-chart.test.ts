@@ -404,6 +404,12 @@ it('emits lr-point-activate on Enter and Space while a bar is focused, not on ot
   let count = 0;
   el.addEventListener('lr-point-activate', () => count++);
 
+  for (const init of [{ key: 'ArrowRight', altKey: true }, { key: ' ', ctrlKey: true },
+    { key: 'Enter', metaKey: true }, { key: 'Enter', isComposing: true }, { key: 'End', keyCode: 229 }]) {
+    const key = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    bar.dispatchEvent(key);
+    expect(key.defaultPrevented).to.equal(false);
+  }
   bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
   expect(count).to.equal(0);
 

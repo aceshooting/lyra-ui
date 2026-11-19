@@ -40,6 +40,7 @@ function withFixture(files, run) {
 }
 
 const CLEAN_FORMS_TREE = {
+  'src/internal/form-control/appearance.styles.ts': '',
   'src/components/forms/input/input.styles.ts':
     "import { css } from 'lit';\nexport const styles = css`\n  [part='base'] { border: 1px solid var(--lr-color-border); }\n`;\n",
   'src/internal/form-control.styles.ts':
@@ -123,6 +124,7 @@ test('walks guarded directories recursively, keeps single-file roots, and skips 
           'src/components/forms/select/nested/option.styles.ts',
           'src/components/forms/select/select.class.ts',
           'src/internal/form-control.styles.ts',
+          'src/internal/form-control/appearance.styles.ts',
         ],
         missing: [],
       });
@@ -132,7 +134,7 @@ test('walks guarded directories recursively, keeps single-file roots, and skips 
 
 test('reports a guarded path that no longer exists instead of silently shrinking the gate', () => {
   withFixture({ 'src/components/forms/input/input.styles.ts': '' }, (root) => {
-    assert.deepEqual(listGuardedFiles(root).missing, ['src/internal/form-control.styles.ts']);
+    assert.deepEqual(listGuardedFiles(root).missing, ['src/internal/form-control.styles.ts', 'src/internal/form-control']);
   });
 });
 
@@ -142,7 +144,7 @@ test('passes a form tree that draws its boundaries with --lr-color-border', () =
   withFixture(CLEAN_FORMS_TREE, (root) => {
     const result = checkBorderSubtle(root);
     assert.deepEqual(result.findings, []);
-    assert.equal(result.files.length, 2);
+    assert.equal(result.files.length, 3);
     assert.equal(formatReport(result).ok, true);
   });
 });

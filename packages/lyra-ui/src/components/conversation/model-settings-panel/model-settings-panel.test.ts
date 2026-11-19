@@ -194,6 +194,24 @@ it('contains the internal slider lr-input while mirroring its live value', async
   expect(leakedInputs).to.equal(0);
 });
 
+it('restores the temperature defaults after removing setting attributes', async () => {
+  const el = await fixture<LyraModelSettingsPanel>(html`
+    <lr-model-settings-panel
+      temperature="0.5" temperature-min="0.5" temperature-max="1.5" temperature-step="0.25"
+    ></lr-model-settings-panel>
+  `);
+  const slider = el.shadowRoot!.querySelector('lr-slider')!;
+  await slider.updateComplete;
+  expect([slider.valueAsNumber, slider.min, slider.max, slider.step]).to.deep.equal([0.5, 0.5, 1.5, 0.25]);
+  for (const attribute of ['temperature', 'temperature-min', 'temperature-max', 'temperature-step']) {
+    el.removeAttribute(attribute);
+  }
+  await el.updateComplete;
+  await slider.updateComplete;
+  expect([slider.valueAsNumber, slider.min, slider.max, slider.step]).to.deep.equal([1, 0, 2, 0.1]);
+  expect([el.temperature, el.temperatureMin, el.temperatureMax, el.temperatureStep]).to.deep.equal([1, 0, 2, 0.1]);
+});
+
 it('re-clamps temperature (matching the slider’s own clamp math) when temperatureMax drops below the current temperature', async () => {
   const el = (await fixture(
     html`<lr-model-settings-panel temperature="1.5"></lr-model-settings-panel>`,

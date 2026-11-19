@@ -428,14 +428,17 @@ nesting depth), `--indent-guide-color` (default `var(--lr-color-border-subtle)`)
 properties are consumed directly by every `<lr-tree-item>` and may be set on an item or inherited
 from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for indentation;
 `--show-duration`/`--hide-duration` both default through `--lr-duration-base`;
-`--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
+`--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row.
+`--lr-tree-hover-bg` styles hovered unselected rows and defaults to a hover mix from
+`--lr-color-brand-quiet`. `--lr-tree-selected-hover-bg` styles hovered selected rows and defaults
+to a hover mix from the selected fill. The tree also exposes paired
 `--lr-tree-checkbox-checked-border-color`, `--lr-tree-checkbox-checked-bg`,
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
 fallbacks). Selected rows use brand text at rest and on-quiet text while hovered or pressed;
-`--lr-tree-selected-color` overrides all three states. The selected-row background is also the
-base its hover/press mixes from, and each
+`--lr-tree-selected-color` overrides all three states. Pressed rows mix from the selected fill
+when selected and from `--lr-color-brand-quiet` otherwise. Each
 checkbox border token also paints that state's border under the pointer; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each

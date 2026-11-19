@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
@@ -342,6 +343,27 @@ it('fills a bounded parent through the host, form-control, editor, and textarea 
     textarea.getBoundingClientRect().height,
     'the textarea fills the editor content box without covering its border',
   ).to.be.closeTo(editor.clientHeight, 1);
+});
+
+it('leaves composing Tab with the input method without replacing selected code', async () => {
+  const el = await fixture<LyraCodeEditor>(html`<lr-code-editor value="example"></lr-code-editor>`);
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  await focusByKeyboard(textarea);
+  textarea.setSelectionRange(1, 4);
+  let inputs = 0;
+  el.addEventListener('lr-input', () => { inputs++; });
+
+  for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+    const tab = new KeyboardEvent('keydown', {
+      key: 'Tab', bubbles: true, cancelable: true, ...composing,
+    });
+    textarea.dispatchEvent(tab);
+    expect(tab.defaultPrevented).to.equal(false);
+    expect(textarea.value).to.equal('example');
+    expect(el.value).to.equal('example');
+    expect([textarea.selectionStart, textarea.selectionEnd]).to.deep.equal([1, 4]);
+  }
+  expect(inputs).to.equal(0);
 });
 
 it('renders line numbers and inserts spaces for Tab', async () => {

@@ -174,7 +174,7 @@ class LyraCheckboxBase extends LyraElement<LyraCheckboxEventMap> {}
  * @csspart checkbox - The interactive `role="checkbox"` owner around the box. It is the same node
  *   as `base`, retains the shared `--lr-icon-button-size` minimum target at every size tier, and
  *   keeps the rich default label as a sibling so nested actions remain valid focus stops.
- * @csspart box - The small square that shows the checkmark/indeterminate dash.
+ * @csspart box - The small square that shows the checkmark/indeterminate dash and keyboard focus ring.
  * @csspart control - WA/Shoelace name for `box`.
  * @csspart control--checked - Shoelace state alias on the control while checked.
  * @csspart control--indeterminate - Shoelace state alias on the control while indeterminate.
@@ -357,6 +357,11 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
     this.requestUpdate('indeterminate', old);
   }
 
+  override formDisabledCallback(disabled: boolean): void {
+    super.formDisabledCallback(disabled);
+    if (this.checked) this.notifyOwningGroup();
+  }
+
   /** Keeps an owning aggregate's value/FormData/validity coherent in the same task as a direct
    * child property write. User events remain the group's separate public notification boundary. */
   private notifyOwningGroup(): void {
@@ -462,6 +467,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
         this.emit('lr-checkbox-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
+        if (this.liveDisabled) return;
         // Set inside the commit, not before the veto: a REFUSED first toggle must not start
         // matching `:state(user-invalid)` for a change that never happened. A listener that resolves
         // the request by writing `checked` itself suppresses the commit, so that write counts as

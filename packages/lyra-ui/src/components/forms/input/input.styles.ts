@@ -2,11 +2,11 @@ import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
   formControlTextWrap,
-  formControlChrome,
-  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
+import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 
 export const styles = css`
   :host {

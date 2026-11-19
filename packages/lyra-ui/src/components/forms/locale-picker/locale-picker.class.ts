@@ -257,6 +257,10 @@ export interface LyraLocalePickerEventMap {
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to
  *   the accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (positioning anchor).
@@ -1565,7 +1569,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
           aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.localize('localePickerLabel'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
-          aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+          aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
           ?disabled=${this.effectiveDisabled}
           @click=${this.onTriggerClick}
           @keydown=${this.onKeyDown}

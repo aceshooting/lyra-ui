@@ -160,6 +160,47 @@ function stubFetch(ok = true): () => void {
 }
 
 describe("lr-pptx-viewer", () => {
+  it('starts only the replacement transport after its loading notification changes src', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fakeModule().module;
+    const original = window.fetch;
+    const paths: string[] = [];
+    window.fetch = url => {
+      paths.push(new URL(String(url)).pathname);
+      return Promise.resolve(response());
+    };
+    try {
+      el.addEventListener('lr-page-viewer-state-change', event => {
+        if (event.detail.snapshot.status === 'loading' && el.src === '/first') el.src = '/second';
+      });
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = '/first';
+      await loaded;
+      expect(paths).to.deep.equal(['/second']);
+    } finally { window.fetch = original; }
+  });
+
+  for (const action of ['remove', 'replace']) {
+    it(`suppresses the retired load after a ready listener chooses to ${action} the viewer source`, async () => {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fakeModule().module;
+      const restore = stubFetch();
+      let ready = false, loaded = 0;
+      try {
+        el.addEventListener('lr-page-viewer-state-change', event => {
+          if (event.detail.snapshot.status !== 'ready') return;
+          ready = true;
+          if (action === 'remove') el.remove();
+          else el.src = '';
+        });
+        el.addEventListener('lr-load', () => { loaded++; });
+        el.src = '/presentation';
+        await waitUntil(() => ready);
+        expect(loaded).to.equal(0);
+      } finally { restore(); }
+    });
+  }
+
   it('blocks external media in the renderer options while retaining ZIP limits and windowing', async () => {
     const fake = fakeModule();
     const restore = stubFetch();
@@ -2268,6 +2309,60 @@ describe('lr-pptx-viewer load and search races', () => {
     } finally {
       restore();
     }
+  });
+
+  it('lets only the replacement search navigate after a search-change listener reenters', async () => {
+    const fake = fakeModule(2);
+    fake.viewer.searchText = query => [0, 1].map(slideIndex => ({
+      slideIndex, nodeId: String(slideIndex), text: query, matchStart: 0, matchEnd: query.length,
+    }));
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = '/deck.pptx';
+      await loaded;
+      await el.search('first');
+      const clears = fake.calls.clearSearchHighlights;
+      const navigations = fake.calls.goToSlide;
+      let replacement: Promise<number> | undefined;
+      el.addEventListener('lr-search-change', () => { replacement = el.search('second'); }, { once: true });
+      expect(await el.searchNext()).to.equal(false);
+      await replacement;
+      expect(fake.calls.goToSlide - navigations).to.equal(1);
+      expect(fake.calls.clearSearchHighlights - clears).to.equal(2);
+    } finally { restore(); }
+  });
+
+  it('replaces and disconnects a presentation even when renderer destruction throws', async () => {
+    const fake = fakeModule();
+    fake.viewer.destroy = () => { fake.calls.destroy++; throw new Error('destroy failed'); };
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      for (const src of ['/first.pptx', '/second.pptx']) {
+        const loaded = oneEvent(el, 'lr-load');
+        el.src = src;
+        await loaded;
+      }
+      expect(fake.calls.destroy).to.equal(1);
+      el.remove();
+      await Promise.resolve();
+      expect(fake.calls.destroy).to.equal(2);
+      expect(el.pageViewerSnapshot.status).to.equal('idle');
+    } finally { restore(); }
+  });
+
+  it('updates a persistent error when strings change', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    const failed = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:void(0)';
+    await failed;
+    el.strings = { documentPreviewUrlNotAllowed: 'Changed message' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Changed message');
   });
 
   it('skips highlighting a match whose search was replaced while its slide opened', async () => {

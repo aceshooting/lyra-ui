@@ -117,7 +117,7 @@ async function readBounded(response: Response, signal: AbortSignal): Promise<Uin
     try { reader.releaseLock(); }
     catch { /* Released by cancellation already. */ }
   }
-  return output.slice(0, total);
+  return total === output.byteLength ? output : output.slice(0, total);
 }
 
 /**

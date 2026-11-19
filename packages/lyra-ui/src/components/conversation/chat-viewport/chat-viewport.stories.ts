@@ -216,6 +216,24 @@ export const VirtualMode: Story = {
   `,
 };
 
+export const IconOnlyJump: Story = {
+  render: () => html`
+    <div style="block-size:200px;max-inline-size:28rem;border:var(--lr-border-width-thin) solid var(--lr-color-border);">
+      <lr-chat-viewport
+        follow="false"
+        jump-icon-only
+        style="
+          --lr-chat-viewport-jump-bg:var(--lr-color-surface-raised);
+          --lr-chat-viewport-jump-border:var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+          --lr-chat-viewport-jump-shadow:var(--lr-shadow-s);
+        "
+      >
+        ${Array.from({ length: 12 }, (_, index) => bubble(`Message ${index + 1}`))}
+      </lr-chat-viewport>
+    </div>
+  `,
+};
+
 export const Narrow320px: Story = {
   name: 'Narrow (320px)',
   render: () => html`

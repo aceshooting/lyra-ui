@@ -363,3 +363,18 @@ export const Sizes: Story = {
     </div>
   `,
 };
+
+export const CompactLabels: Story = {
+  render: () => html`
+    <lr-segmented
+      size="s"
+      label="Units"
+      style="--lr-segmented-segment-padding: 0; --lr-segmented-track-min-height: var(--lr-size-1-25rem)"
+      .items=${[
+        { value: 'celsius', label: '°C' },
+        { value: 'fahrenheit', label: '°F' },
+      ]}
+      value="celsius"
+    ></lr-segmented>
+  `,
+};

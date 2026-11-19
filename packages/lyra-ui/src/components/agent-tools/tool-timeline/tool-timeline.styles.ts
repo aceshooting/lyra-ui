@@ -11,6 +11,13 @@ export const styles = css`
     --_lr-tool-timeline-pending-approval-border-color: var(--lr-color-warning);
   }
 
+  [part="group-summary"] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    overflow-wrap: anywhere;
+  }
+
   [part="base"] {
     display: flex;
     flex-direction: column;

@@ -339,3 +339,28 @@ export const BottomToolbar: Story = {
     docs: { description: { story: 'With actions-layout="below", toolbar-placement="actions" places caller controls between attach and send, below the textarea. Attachments remain above it. The toolbar wraps or scrolls within its allocation; native Tab order follows the visible input and action row.' } },
   },
 };
+
+export const EndAlignedToolbar: Story = {
+  name: 'End-aligned toolbar and floating card',
+  render: () => html`
+    <lr-chat-composer
+      actions-layout="below"
+      toolbar-placement="actions"
+      toolbar-align="end"
+      placeholder="Message the assistant…"
+      style="
+        max-inline-size: 32rem;
+        --lr-chat-composer-shadow: 0 var(--lr-space-xs) var(--lr-space-l) var(--lr-color-border-subtle);
+        --lr-chat-composer-action-bg: var(--lr-color-text);
+        --lr-chat-composer-action-color: var(--lr-color-surface);
+        --lr-chat-composer-action-radius: 50%;
+        --lr-chat-composer-action-size: var(--lr-icon-button-size)"
+    >
+      <button slot="start" type="button">Tools</button>
+      <select slot="toolbar" aria-label="Model">
+        <option>Research model</option>
+        <option>Fast model</option>
+      </select>
+    </lr-chat-composer>
+  `,
+};

@@ -2,6 +2,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   FormAssociated,
@@ -98,6 +99,10 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * the native `invalid` event, suppressing the browser's own validation bubble and the focus/scroll
  * `reportValidity()` would otherwise perform.
  * @csspart form-control - Outer wrapper.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
  * @csspart label - Alias of `form-control-label`.
  * @csspart editor - Editor frame and the component's only scrollport.
@@ -149,7 +154,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   /** Language identifier exposed as a reflected host styling hook. */
   @property({ reflect: true, useDefault: true }) language = '';
   /** Omits the line-number gutter. */
@@ -166,7 +171,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  (e.g. a literal `tab-size="Infinity"` attribute, which `Number("Infinity")` happily converts
    *  to), and `Math.max(1, NaN)` is itself `NaN`, silently producing an empty, non-indenting insert
    *  for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at assignment time instead, so
-   *  both the `repeat()` call and the emitted tab-width style always see a safe value. */
+   *  both the `repeat()` call and the emitted tab-width style always see a safe value.
+   * @default 2 */
   @property({ type: Number, attribute: 'tab-size' })
   get tabSize(): number {
     return this._tabSize;
@@ -195,8 +201,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) readonly = false;
-  /** Visible native row count. */
   private _rows = 4;
+
+  /** Visible native row count.
+   * @default 4 */
   @property({ type: Number, useDefault: true })
   get rows(): number {
     return this._rows;
@@ -210,6 +218,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ type: Number, useDefault: true }) cols = 20;
   /** Native minimum and maximum code-unit length constraints. */
   private _minlength?: number;
+  /** @default undefined */
   @property({ converter: lengthLimitConverter })
   get minlength(): number | undefined {
     return this._minlength;
@@ -220,6 +229,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.requestUpdate('minlength', previous);
   }
   private _maxlength?: number;
+  /** @default undefined */
   @property({ converter: lengthLimitConverter })
   get maxlength(): number | undefined {
     return this._maxlength;
@@ -241,6 +251,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  size. */
   @property({ reflect: true }) size: LyraSize = 'm';
   private wrapValue: LyraCodeEditorWrap = 'off';
+  /** @default 'off' */
   @property({ attribute: 'wrap', useDefault: true })
   get wrap(): LyraCodeEditorWrap {
     return this.wrapValue;
@@ -266,6 +277,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   private autocorrectValue = false;
+  /** @default false */
   @property({ converter: autocorrectConverter, useDefault: true })
   override get autocorrect(): boolean {
     return this.autocorrectValue;
@@ -530,7 +542,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || event.isComposing || event.keyCode === 229) return;
     if (event.key === 'Escape') {
       this.tabBypassArmed = true;
       return;
@@ -659,7 +671,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (this.required && this.value === '') {
       this[SET_ANCHORED_VALIDITY](
         { valueMissing: true },
-        this.localize('fieldRequired'),
+        () => this.localize('fieldRequired'),
       );
       return;
     }

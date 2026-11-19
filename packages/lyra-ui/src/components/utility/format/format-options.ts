@@ -32,15 +32,15 @@ const NUMERIC_DATE_SOURCE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 
 /** Attribute converter shared by date-formatting elements. Numeric markup denotes epoch
  * milliseconds, while every other string remains an ISO/date string for the platform parser. */
-export const dateSourceConverter: ComplexAttributeConverter<string | number | Date> = {
-  fromAttribute(value): string | number {
-    const source = value ?? '';
-    const normalized = source.trim();
+export const dateSourceConverter: ComplexAttributeConverter<string | number | Date | undefined> = {
+  fromAttribute(value): string | number | undefined {
+    if (value === null) return undefined;
+    const normalized = value.trim();
     if (NUMERIC_DATE_SOURCE.test(normalized)) {
       const epoch = Number(normalized);
       if (Number.isFinite(epoch)) return epoch;
     }
-    return source;
+    return value;
   },
 };
 
@@ -139,6 +139,7 @@ export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFor
 }
 
 export interface ByteFormatResult {
+  index: number;
   amount: number;
   options: Intl.NumberFormatOptions;
 }
@@ -156,6 +157,7 @@ export function byteFormat(
   const safeStep = safeByteUnitStep(unitStep);
   const index = byteUnitIndex(value, unitStep, units.length);
   return {
+    index,
     amount: value / safeStep ** index,
     options: {
       style: 'unit',
@@ -187,9 +189,13 @@ export function safeByteUnitStep(unitStep: number): number {
  */
 export function byteUnitIndex(value: number, unitStep: number, unitCount: number = BYTE_SCALE_UNIT_COUNT): number {
   const safeStep = safeByteUnitStep(unitStep);
-  return value === 0
-    ? 0
-    : Math.max(0, Math.min(unitCount - 1, Math.floor(Math.log(Math.abs(value)) / Math.log(safeStep))));
+  const magnitude = Math.abs(value);
+  // Compare directly against the same divisors used for scaling. Logarithms can round
+  // both an exact boundary and its nearest neighbors to the wrong side of a rung.
+  for (let index = unitCount - 1; index > 0; index--) {
+    if (magnitude >= safeStep ** index) return index;
+  }
+  return 0;
 }
 
 /** Builds runtime-safe options for `Intl.RelativeTimeFormat`. */

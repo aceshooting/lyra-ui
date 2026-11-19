@@ -1403,3 +1403,20 @@ it('defers detached slot changes and collects the latest consumer menu on reconn
   expect((await selected as CustomEvent<{ item: HTMLElement }>).detail.item.getAttribute('value')).to.equal('replacement');
   await el.hide();
 });
+
+it('leaves modified, composing, and consumed trigger arrows to their owner', async () => {
+  const el = await basic();
+  const button = trigger(el);
+  for (const options of [
+    { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true },
+    { isComposing: true }, { keyCode: 229 },
+  ]) {
+    const arrow = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true, ...options });
+    button.dispatchEvent(arrow);
+    expect(arrow.defaultPrevented).to.be.false;
+    expect(el.open).to.be.false;
+  }
+  button.addEventListener('keydown', event => event.preventDefault(), { once: true });
+  button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  expect(el.open).to.be.false;
+});

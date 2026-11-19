@@ -16,6 +16,7 @@ export type { LyraFormatCurrencyDisplay, LyraFormatNumberNotation, LyraFormatNum
 const INTEGER_DIGIT_BOUNDS = { minimum: 1, maximum: 21 } as const;
 const FRACTION_DIGIT_BOUNDS = { minimum: 0, maximum: 100 } as const;
 const SIGNIFICANT_DIGIT_BOUNDS = { minimum: 1, maximum: 21 } as const;
+const optionalPrecision = (value: string | null): number | undefined => value === null ? undefined : Number(value);
 
 /**
  * `<lr-format-number>` — locale-aware `Intl.NumberFormat` output.
@@ -38,11 +39,11 @@ export class LyraFormatNumber extends LyraElement {
   /** Shoelace grouping alias; equivalent to `withoutGrouping`. */
   @property({ type: Boolean, attribute: 'no-grouping' }) noGrouping = false;
   @property() notation: LyraFormatNumberNotation = 'standard';
-  @property({ attribute: 'minimum-integer-digits', type: Number }) minimumIntegerDigits?: number;
-  @property({ attribute: 'minimum-fraction-digits', type: Number }) minimumFractionDigits?: number;
-  @property({ attribute: 'maximum-fraction-digits', type: Number }) maximumFractionDigits?: number;
-  @property({ attribute: 'minimum-significant-digits', type: Number }) minimumSignificantDigits?: number;
-  @property({ attribute: 'maximum-significant-digits', type: Number }) maximumSignificantDigits?: number;
+  @property({ attribute: 'minimum-integer-digits', type: Number, converter: optionalPrecision }) minimumIntegerDigits?: number;
+  @property({ attribute: 'minimum-fraction-digits', type: Number, converter: optionalPrecision }) minimumFractionDigits?: number;
+  @property({ attribute: 'maximum-fraction-digits', type: Number, converter: optionalPrecision }) maximumFractionDigits?: number;
+  @property({ attribute: 'minimum-significant-digits', type: Number, converter: optionalPrecision }) minimumSignificantDigits?: number;
+  @property({ attribute: 'maximum-significant-digits', type: Number, converter: optionalPrecision }) maximumSignificantDigits?: number;
 
   override render(): TemplateResult {
     const minimumIntegerDigits =

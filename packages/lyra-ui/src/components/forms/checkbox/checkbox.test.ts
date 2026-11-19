@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
@@ -2047,6 +2048,29 @@ it('keeps compact custom-box labels clear of the centered visual box in every si
       expect(owner.getBoundingClientRect().height).to.be.at.least(24);
       expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
     }
+  }
+});
+
+it('outlines the visible box clear of the label while retaining the compact hit area', async () => {
+  for (const direction of ['ltr', 'rtl']) {
+    const el = await fixture<LyraCheckbox>(html`<lr-checkbox size="2xs" dir=${direction}>Option</lr-checkbox>`);
+    const owner = el.shadowRoot!.querySelector<HTMLElement>('[role="checkbox"]')!;
+    const box = el.shadowRoot!.querySelector<HTMLElement>('[part~="box"]')!;
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+
+    await focusByKeyboard(owner);
+
+    expect(owner.matches(':focus-visible'), direction).to.be.true;
+    expect(owner.getBoundingClientRect().width, direction).to.be.at.least(24);
+    expect(owner.getBoundingClientRect().height, direction).to.be.at.least(24);
+    expect(getComputedStyle(owner).outlineStyle, direction).to.equal('none');
+    const ring = getComputedStyle(box);
+    expect(ring.outlineStyle, direction).to.equal('solid');
+    const extent = Number.parseFloat(ring.outlineWidth) + Number.parseFloat(ring.outlineOffset);
+    const visual = box.getBoundingClientRect();
+    const text = label.getBoundingClientRect();
+    const gap = direction === 'ltr' ? text.left - visual.right : visual.left - text.right;
+    expect(gap, direction).to.be.at.least(extent);
   }
 });
 

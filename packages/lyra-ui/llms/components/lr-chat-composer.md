@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,14 +30,16 @@ native `<form>` submission/validation/reset like any other text control.
 
 The inner textarea mirrors `required` through native `required`/`aria-required`. Its
 `aria-invalid` remains false until the textarea has been blurred, then follows the host's
-`ElementInternals` validity as `value` or `required` changes. A native validation attempt also
-reveals the invalid state, and `form.reset()` clears the touched presentation.
+`ElementInternals` validity as `value` or `required` changes. Calling `reportValidity()` or attempting submission also
+reveals the invalid state. A direct `checkValidity()` keeps the field pristine, and `form.reset()`
+clears the touched presentation.
 
 **Properties (own):**
 
 - `placeholder: string = ''`
 - `minRows: number = 1` (attribute `min-rows`) — floored to `1` at render time
-- `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
+- `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`.
+  An empty draft stays at `minRows` even when its placeholder wraps.
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
   built-in button's icon/label (send vs. stop) and whether Enter still submits. Invalid direct or
   attribute values normalize and reflect as `idle`.
@@ -68,6 +70,11 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   wrapping/scrolling region so start and send remain visible at narrow widths and in RTL. Live
   placement changes retain the textarea, draft, selection and focused caller controls. Invalid or
   removed placement values normalize and reflect as `'above'`.
+- `toolbarAlign: ChatComposerToolbarAlign = 'start'` (attribute `toolbar-align`, reflected) —
+  `'start' | 'end'` for the bottom toolbar. With `actions-layout="below"` and
+  `toolbar-placement="actions"`, `end` places the toolbar next to the end actions in either
+  writing direction. Wrapping, horizontal scrolling, and Tab order are preserved. Invalid or
+  removed values reset to `'start'`.
 - `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
   Enter always inserts a newline instead of submitting.
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -145,6 +152,18 @@ and `frame="plain"` still removes the border, radius and fill outright. Plus sha
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
 `--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
 `--lr-opacity-disabled`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
+
+`--lr-chat-composer-shadow` (default `none`) styles the card in both resting and focused states.
+The plain frame uses its separate focus underline. For the built-in action button,
+`--lr-chat-composer-action-bg` and `--lr-chat-composer-action-color` default to brand and on-brand
+colors for Send. `--lr-chat-composer-busy-color` (on-brand) pairs with `--lr-chat-composer-busy-bg`
+for Stop. `--lr-chat-composer-action-radius` defaults to `--lr-radius` and
+`--lr-chat-composer-action-size` defaults to automatic sizing with the shared icon-button minimum.
+Both apply to Send and Stop. `--lr-chat-composer-action-hover-bg` and
+`--lr-chat-composer-action-active-bg` default to a tint of the current action fill. The
+`--lr-chat-composer-action-hover-color`, `--lr-chat-composer-action-active-color`,
+`--lr-chat-composer-action-disabled-bg`, and `--lr-chat-composer-action-disabled-color` overrides
+default to the current action paint. Disabled buttons keep their opacity treatment.
 
 **Optional peer deps:** none.
 

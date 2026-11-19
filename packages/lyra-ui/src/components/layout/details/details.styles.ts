@@ -15,7 +15,7 @@ export const styles = css`
     /* The disclosure's density knobs, both on the shared size ladder so the tiers live in one
        place. Spacing reads the ladder's INLINE padding knob: a stacked panel's block rhythm is as
        generous as a control's inline padding, while the ladder's block padding exists to fit text
-       in a fixed control height and would collapse the summary row. The 'm' tier is the
+       in a fixed control height. The 'm' tier is the
        --lr-space-m this panel always used, so an un-sized disclosure is unchanged. */
     --_lr-details-font-size: var(--lr-form-control-font-size);
     --_lr-details-spacing: var(--lr-form-control-padding-inline);
@@ -73,6 +73,8 @@ export const styles = css`
   }
   [part='summary'] {
     display: flex;
+    box-sizing: border-box;
+    border-radius: var(--lr-details-summary-radius, var(--lr-details-radius, var(--lr-radius-container)));
     align-items: center;
     gap: var(--lr-details-gap, var(--lr-space-s));
     /* Yields to a smaller size tier's own control height instead of forcing every tier open to the
@@ -112,10 +114,10 @@ export const styles = css`
   [part='summary']::-webkit-details-marker {
     display: none;
   }
-  :host(:not([disabled])) [part='summary']:hover {
+  :host(:where(:not([disabled]))) [part='summary']:hover {
     background: var(--lr-details-summary-hover-bg, var(--lr-color-brand-quiet));
   }
-  :host(:not([disabled])) [part='summary']:active {
+  :host(:where(:not([disabled]))) [part='summary']:active {
     background: var(
       --lr-details-summary-active-bg,
       color-mix(

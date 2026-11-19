@@ -305,6 +305,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private submenuCloseTimer?: OwnedTimeout;
   private readonly listId = nextId('menu-list');
   private readonly owningMenu: MenuItemOwner = {
+    ownsItem: (item) => this.itemsSlot?.assignedElements({ flatten: true }).includes(item) ?? false,
     activate: (item) => this.onOwnedItemSelect(item),
     uncheckRadioGroup: (item, group) => this.uncheckRadioGroupSiblings(item, group),
   };
@@ -874,6 +875,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (displacedHadFocus) this.rehomeZeroSurvivorFocus();
       }
       return;
+    }
+    if (this.activeIndex === -1 && this.interactionOpen) {
+      this.activeIndex = navigable[0]?.index ?? -1;
     }
     this.applyRovingTabIndex();
   };

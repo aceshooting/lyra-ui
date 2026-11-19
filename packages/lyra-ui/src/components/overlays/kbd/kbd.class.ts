@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
@@ -112,7 +113,7 @@ export class LyraKbd extends LyraElement {
 
   /** Platform used for the platform-neutral `mod` and `alt` tokens. `auto` performs browser
    * detection; an explicit value is deterministic across browsers, SSR, screenshots, and tests. */
-  @property({ reflect: true }) platform: KbdPlatform = 'auto';
+  @property({ reflect: true, converter: declaredDefaultConverter('auto') }) platform: KbdPlatform = 'auto';
 
   // The browser-only default is snapshotted into rendered output. Hydration adopts that serialized
   // choice rather than re-sniffing in a different realm and replacing server-rendered key caps.

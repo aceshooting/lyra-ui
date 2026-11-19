@@ -1695,3 +1695,81 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     expect((group.querySelector("lr-radio") as LyraRadio).checked).to.be.false;
   });
 });
+
+it('synchronizes standalone same-name selection and validity before form APIs return', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form>
+    <lr-radio name="choice" value="a" required>A</lr-radio>
+    <lr-radio-button name="choice" value="b">B</lr-radio-button>
+    <lr-radio-group name="separate"><lr-radio name="choice" checked value="group">G</lr-radio></lr-radio-group>
+  </form>`);
+  const a = form.querySelector<LyraRadio>('lr-radio')!;
+  const b = form.querySelector<LyraRadio>('lr-radio-button')!;
+  const grouped = form.querySelector<LyraRadio>('lr-radio-group lr-radio')!;
+  expect(b.validity.valueMissing).to.equal(true);
+  b.click();
+  expect(form.checkValidity()).to.equal(true);
+  a.checked = true;
+  expect(b.checked).to.equal(false);
+  expect(new FormData(form).getAll('choice')).to.deep.equal(['a']);
+  b.formStateRestoreCallback('checked', 'restore');
+  expect(new FormData(form).getAll('choice')).to.deep.equal(['b']);
+  expect(grouped.checked).to.equal(true);
+  b.name = 'other';
+  expect(a.validity.valueMissing).to.equal(true);
+  b.name = 'choice';
+  expect(a.validity.valueMissing).to.equal(false);
+  b.remove();
+  expect(a.validity.valueMissing).to.equal(true);
+  form.append(b);
+  b.checked = false;
+  a.required = false;
+  expect(b.validity.valueMissing).to.equal(false);
+  a.required = true;
+  expect(b.validity.valueMissing).to.equal(true);
+  b.disabled = true;
+  expect(b.validity.valueMissing).to.equal(false);
+  a.defaultChecked = true;
+  form.reset();
+  expect(form.checkValidity()).to.equal(true);
+  expect(new FormData(form).getAll('choice')).to.deep.equal(['a']);
+});
+
+it('reconciles both sets when the checked standalone radio changes its form owner', async () => {
+  const root = await fixture<HTMLElement>(html`<div>
+    <form id="standalone-left"><lr-radio name="choice" required></lr-radio></form>
+    <form id="standalone-right"><lr-radio name="choice" checked value="old"></lr-radio></form>
+    <lr-radio-button name="choice" value="moved" form="standalone-left" checked></lr-radio-button>
+  </div>`);
+  const [left, right] = root.querySelectorAll('form');
+  const moved = root.querySelector<LyraRadio>('lr-radio-button')!;
+  expect(left!.checkValidity()).to.equal(true);
+  moved.setAttribute('form', 'standalone-right');
+  expect(left!.checkValidity()).to.equal(false);
+  expect(new FormData(right!).getAll('choice')).to.deep.equal(['moved']);
+});
+
+it('keeps a pristine standalone radio sensitive to its default after peer selection', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form>
+    <lr-radio name="choice" checked value="default"></lr-radio>
+    <lr-radio-button name="choice" value="other"></lr-radio-button>
+  </form>`);
+  const original = form.querySelector<LyraRadio>('lr-radio')!;
+  const other = form.querySelector<LyraRadio>('lr-radio-button')!;
+  other.checked = true;
+  expect(original.checked).to.equal(false);
+  original.defaultChecked = false;
+  original.defaultChecked = true;
+  expect(new FormData(form).getAll('choice')).to.deep.equal(['default']);
+});
+
+it('keeps form-less named sets separate across shadow roots', async () => {
+  const root = await fixture<HTMLElement>(html`<div><lr-radio name="elements" checked></lr-radio></div>`);
+  const outer = root.firstElementChild as LyraRadio;
+  const inner = root.attachShadow({ mode: 'open' });
+  inner.innerHTML = '<lr-radio name="elements" required></lr-radio><lr-radio-button name="elements"></lr-radio-button>';
+  const [a, b] = inner.querySelectorAll<LyraRadio>('[name="elements"]');
+  expect(a!.validity.valueMissing).to.equal(true);
+  b!.checked = true;
+  expect(a!.validity.valueMissing).to.equal(false);
+  expect(outer.checked).to.equal(true);
+});

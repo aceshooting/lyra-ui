@@ -10,7 +10,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { chartValueFractionDigits } from '../../charts/chart/chart-number-format.js';
+import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.class.js';
 import { styles } from './gauge.styles.js';

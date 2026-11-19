@@ -520,3 +520,22 @@ it('restores the committed label when a read-only picker input is edited, withou
   expect(emitted).to.equal(0);
   controller.setOpen(false);
 });
+
+it('leaves modified editable navigation to the native input', () => {
+  const { controller } = pickerController([{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }]);
+  controller.setOpen(true);
+  controller.setActiveIndex(0);
+  for (const init of [
+    { key: 'End', ctrlKey: true }, { key: 'Home', metaKey: true },
+    { key: 'ArrowDown', altKey: true }, { key: 'End', shiftKey: true },
+  ]) {
+    const event = new KeyboardEvent('keydown', { ...init, cancelable: true });
+    controller.handleInputKeyDown(event);
+    expect(event.defaultPrevented).to.equal(false);
+    expect(controller.activeIndex).to.equal(0);
+  }
+  const end = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
+  controller.handleInputKeyDown(end);
+  expect(end.defaultPrevented).to.equal(true);
+  expect(controller.activeIndex).to.equal(1);
+});

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -317,8 +317,8 @@ listbox along with the other floating surfaces.
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared
   `FormAssociated` mixin — mirrors `lr-combobox`/`lr-select`'s identical divergence.
-- `aria-invalid`/`data-invalid` only reflect once the control has been blurred (touched) at least once,
-  matching `lr-select`'s identical pattern — validity styling never flashes on first render.
+- A visible `error-text` or populated `error` slot sets `aria-invalid="true"` on the trigger or
+  free-text input immediately. Native constraint failures appear after interaction.
 - In free-text mode, the input's displayed text is `query` only while `open`; while closed it shows the
   committed value's label — so setting `.value` programmatically doesn't require also touching the live
   typed text.

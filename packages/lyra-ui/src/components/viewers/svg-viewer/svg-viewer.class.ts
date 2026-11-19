@@ -9,7 +9,8 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
@@ -62,7 +63,7 @@ type SvgFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; markup: string }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: () => string };
 
 type ResolvedRegionHighlight = LyraHighlight & {
   anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
@@ -219,7 +220,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -234,7 +235,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: error.message };
+      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -245,7 +246,12 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadSvgSanitizer();
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
+      if (!sanitizer) {
+        throw new LyraUserFacingError(
+          this.localize('documentViewerMissingSanitizer'),
+          (localize) => localize('documentViewerMissingSanitizer'),
+        );
+      }
       const raw = await readResponseText(response);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const markup = sanitizeInlineSvg(sanitizer, raw, this.ownerDocument);
@@ -254,10 +260,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       }
     } catch (error) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const message = error instanceof LyraUserFacingError
-        ? error.message
-        : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
-      this.fetchState = { kind: 'error', message };
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
     }
   }
@@ -272,7 +275,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       case 'loading':
         return renderViewerLoading(this.localize('loadingDocument'));
       case 'error':
-        return html`<div part="error">${this.fetchState.message}</div>`;
+        return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':
       default:
         return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;

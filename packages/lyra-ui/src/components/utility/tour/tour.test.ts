@@ -1809,6 +1809,26 @@ describe('lr-tour', () => {
     expect(tour.activeIndex).to.equal(1);
   });
 
+  it('leaves modified directional keys available while the tour is open', async () => {
+    const el = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
+        ${targetButtons(2)}
+      </div>
+    `);
+    const tour = el.querySelector('lr-tour')!;
+    const panel = tour.shadowRoot!.querySelector<HTMLElement>('[part="popover"]')!;
+    await waitUntil(() => tour.shadowRoot!.activeElement === panel, 'the opened tour focuses its panel');
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowRight', bubbles: true, composed: true, cancelable: true, [modifier]: true,
+      });
+      panel.dispatchEvent(event);
+      expect(event.defaultPrevented).to.equal(false);
+      expect(tour.activeIndex).to.equal(0);
+    }
+  });
+
   it('LTR: ArrowRight calls next(), ArrowLeft calls back()', async () => {
     const el = (await fixture(
       html`<div>

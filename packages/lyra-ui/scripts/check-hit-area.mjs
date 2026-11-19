@@ -72,11 +72,7 @@ export function targetHitAreaContract(target) {
     return { minimumPx: 24, kind: 'wcag' };
   }
 
-  if (
-    component === 'lr-segmented' &&
-    part === 'segment' &&
-    (target.size === '2xs' || target.size === 'xs')
-  ) {
+  if (component === 'lr-segmented' && part === 'segment') {
     return { minimumPx: 24, kind: 'wcag' };
   }
 

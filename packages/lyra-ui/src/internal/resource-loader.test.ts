@@ -45,20 +45,22 @@ it('rejects a response whose declared length exceeds the cap', async () => {
   expect(error).to.be.instanceOf(LyraResourceLimitError);
 });
 
-it('copies streamed bytes as they arrive instead of retaining mutable chunk objects', async () => {
-  const expected = Uint8Array.from({ length: 64 }, (_, index) => index);
-  let index = 0;
-  let previous: Uint8Array | undefined;
-  const response = responseWithReader(async () => {
-    if (previous) previous[0] = 255;
-    if (index >= expected.length) return { done: true, value: undefined };
-    previous = Uint8Array.of(expected[index++]!);
-    return { done: false, value: previous };
-  });
+for (const limit of [64, 128]) {
+  it(`returns only the streamed bytes and isolates mutable chunks with a ${limit}-byte capacity`, async () => {
+    const expected = Uint8Array.from({ length: 64 }, (_, index) => index);
+    let index = 0;
+    let previous: Uint8Array | undefined;
+    const response = responseWithReader(async () => {
+      if (previous) previous[0] = 255;
+      if (index >= expected.length) return { done: true, value: undefined };
+      previous = Uint8Array.of(expected[index++]!);
+      return { done: false, value: previous };
+    });
 
-  const actual = new Uint8Array(await readResponseArrayBuffer(response, expected.length));
-  expect([...actual]).to.deep.equal([...expected]);
-});
+    const actual = new Uint8Array(await readResponseArrayBuffer(response, limit));
+    expect([...actual]).to.deep.equal([...expected]);
+  });
+}
 
 it('rejects pathological tiny-chunk cardinality before exhausting the byte ceiling', async () => {
   let reads = 0;

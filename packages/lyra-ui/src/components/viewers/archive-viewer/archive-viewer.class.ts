@@ -35,7 +35,7 @@ import { LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_D
 
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
-type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: string };
+type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: () => string };
 export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 const MAX_ARCHIVE_ENTRIES = 10_000;
@@ -219,7 +219,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     this.announcements.transition(
       'load',
       this.fetchState.kind,
-      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+      this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     this.syncArchiveNestedRoot();
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
@@ -366,7 +366,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       const error = new LyraUserFacingError(
         this.localize('documentPreviewUrlNotAllowed')
       );
-      this.fetchState = { kind: 'error', message: error.message };
+      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
       return;
     }
@@ -396,7 +396,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       if (this.archiveSearchQuery) this.recomputeArchiveSearch();
     } catch (error) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = {
+        kind: 'error',
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
+      };
       this.emit('lr-render-error', { error });
     }
   }
@@ -519,7 +524,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     switch (this.fetchState.kind) {
       case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeItemId=${this.activeArchiveMatchKey()} @lr-visible-range-change=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
-      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
   }

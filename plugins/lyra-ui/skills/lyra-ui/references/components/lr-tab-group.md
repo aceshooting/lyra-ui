@@ -76,6 +76,9 @@ selection.
   edge the strip sits on. `start`/`end` are _logical_, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
   switches the navigation keys to Up/Down per the APG.
+- `fill: boolean = false` (reflected) — stretches the active panel to the body's available block
+  size in a height-bounded group. The panel's content can own scrolling in this mode. By default
+  the body scrolls while a top or bottom tab strip keeps its natural height.
 - `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
   moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
   expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the

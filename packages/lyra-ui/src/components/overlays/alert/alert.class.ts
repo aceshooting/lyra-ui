@@ -70,6 +70,12 @@ interface AlertTransitionRequest {
   settled: boolean;
 }
 
+interface AlertAutoHideTimer {
+  readonly owner: Window;
+  readonly deadline: number;
+  id?: number;
+}
+
 /**
  * `<lr-alert>` — a closed-by-default inline alert that can also move into the shared toast stack.
  * It mirrors the public `<sl-alert>` contract under the `lr-` prefix. `lr-show`/`lr-hide` are
@@ -226,8 +232,9 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     this.requestUpdate('countdown', old);
   }
 
-  /** Milliseconds before automatic dismissal; `Infinity` disables automatic dismissal. */
-  @property({ type: Number }) duration: number = Infinity;
+  /** Milliseconds before automatic dismissal; `Infinity` disables automatic dismissal.
+   * Removing the attribute restores persistence. A hidden document pauses the countdown. */
+  @property({ type: Number, useDefault: true }) duration: number = Infinity;
 
   /** Semantic alert tone. Unsupported values normalize to `primary`. */
   private _variant: AlertVariant = 'primary';
@@ -252,8 +259,9 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   private transitionPromise: Promise<void> = Promise.resolve();
   private openRequest?: AlertTransitionRequest;
   private transitionRequest?: AlertTransitionRequest;
-  private timer?: number;
-  private timerOwner?: Window;
+  private autoHideTimer?: AlertAutoHideTimer;
+  private autoHideRemaining?: number;
+  private visibilityDocument?: Document;
   private countdownAnimation?: Animation;
   private hovering = false;
   private focused = false;
@@ -278,8 +286,15 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     this.addEventListener('focusout', (event) => this.onFocusOut(event as FocusEvent));
   }
 
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'role' && value === null) this.setAttribute('role', 'alert');
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    this.visibilityDocument = this.ownerDocument;
+    this.visibilityDocument.addEventListener('visibilitychange', this.onVisibilityChange);
     this.toastConnectionGeneration += 1;
     if (!this.hasAttribute('role')) this.setAttribute('role', 'alert');
     if (this.toastPromise) {
@@ -323,6 +338,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.visibilityDocument?.removeEventListener('visibilitychange', this.onVisibilityChange);
+    this.visibilityDocument = undefined;
     const activeElement = deepActiveElement(this.ownerDocument);
     if (
       !this.pendingFocusRepair &&
@@ -653,10 +670,15 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     return this.duration === Infinity ? Infinity : finiteDuration(this.duration, 0, 0);
   }
 
+  private cancelAutoHideTimer(): void {
+    const timer = this.autoHideTimer;
+    if (timer?.id !== undefined) timer.owner.clearTimeout(timer.id);
+    this.autoHideTimer = undefined;
+  }
+
   private clearAutoHide(): void {
-    if (this.timer !== undefined) this.timerOwner?.clearTimeout(this.timer);
-    this.timer = undefined;
-    this.timerOwner = undefined;
+    this.cancelAutoHideTimer();
+    this.autoHideRemaining = undefined;
     this.countdownAnimation?.cancel();
     this.countdownAnimation = undefined;
   }
@@ -668,32 +690,60 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
     const duration = this.safeDuration;
     if (duration === Infinity) return;
-    if (duration <= 0) {
-      const ownerDocument = this.ownerDocument;
-      ownerDocument.defaultView?.queueMicrotask(() => {
-        if (
-          this.isConnected &&
-          this.ownerDocument === ownerDocument &&
-          this.open &&
-          !this.hovering &&
-          !this.focused
-        ) {
-          void this.hide();
-        }
-      });
+    this.autoHideRemaining = duration;
+    this.resumeAutoHide();
+  }
+
+  private resumeAutoHide(): void {
+    const duration = this.autoHideRemaining;
+    const ownerDocument = this.ownerDocument;
+    const owner = ownerDocument.defaultView;
+    if (
+      duration === undefined ||
+      this.autoHideTimer ||
+      !owner ||
+      !this.isConnected ||
+      !this.open ||
+      this.hovering ||
+      this.focused ||
+      ownerDocument.hidden
+    ) return;
+
+    const timer: AlertAutoHideTimer = {
+      owner,
+      deadline: owner.performance.now() + duration,
+    };
+    this.autoHideTimer = timer;
+    const finish = (): void => {
+      if (this.autoHideTimer !== timer) return;
+      if (ownerDocument.hidden) {
+        this.onVisibilityChange();
+        return;
+      }
+      this.autoHideTimer = undefined;
+      this.autoHideRemaining = undefined;
+      void this.hide();
+    };
+    if (duration === 0) {
+      owner.queueMicrotask(finish);
+    } else {
+      timer.id = owner.setTimeout(finish, duration);
+      if (this.countdownAnimation) this.countdownAnimation.play();
+      else this.startCountdown(duration);
+    }
+  }
+
+  private onVisibilityChange = (): void => {
+    if (!this.ownerDocument.hidden) {
+      this.resumeAutoHide();
       return;
     }
-
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
-    this.timerOwner = view;
-    this.timer = view.setTimeout(() => {
-      this.timer = undefined;
-      this.timerOwner = undefined;
-      void this.hide();
-    }, duration);
-    this.startCountdown(duration);
-  }
+    const timer = this.autoHideTimer;
+    if (!timer) return;
+    this.autoHideRemaining = Math.max(0, timer.deadline - timer.owner.performance.now());
+    this.cancelAutoHideTimer();
+    this.countdownAnimation?.pause();
+  };
 
   private startCountdown(duration: number): void {
     if (

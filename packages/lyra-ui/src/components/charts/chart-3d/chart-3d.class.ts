@@ -9,7 +9,7 @@ import {
   type Engine3dFallbackDetail,
   type Engine3dPreference,
 } from '../../../internal/engine-3d.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
@@ -235,7 +235,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
   /**
    * Preferred renderer. `builtin` (default) shows the accessible table; `webgl` lazily loads the
    * optional points renderer. Anything else normalizes to `builtin`.
-   */
+   * @default 'builtin' */
   @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
   get engine(): Engine3dPreference {
     return this._engine;
@@ -249,7 +249,8 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     this.requestUpdate('engine', previous);
   }
 
-  /** `scatter` draws uniform dots, `bubble` sizes dots by the `size` column, `line` joins adjacent rows in source order. */
+  /** `scatter` draws uniform dots, `bubble` sizes dots by the `size` column, `line` joins adjacent rows in source order.
+   * @default 'scatter' */
   @property({ converter: TYPE, noAccessor: true })
   get type(): Chart3dType {
     return this._type;
@@ -382,7 +383,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
 
   /** Locale-aware number text; negative zero reads as zero, never "-0". */
   private format(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 6 }).format(value === 0 ? 0 : value);
+    return formatChartValue(value === 0 ? 0 : value, this.effectiveLocale, undefined, 6);
   }
 
   /** The three axes with the localized default label where the caller gave none. */
@@ -484,7 +485,8 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
   }
 
   /** A user move: update the cursor and announce the row it now names. */
-  private moveCursor(index: number): void {
+  private moveCursor(index: number, rows = this.rows): void {
+    if (!this.isConnected || rows !== this.rows) return;
     this.setCursor(index);
     this.announcements.announcePolite(this.cursorLabel());
   }
@@ -499,8 +501,9 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     });
   }
 
-  private activate(index: number): void {
-    const row = this.rows?.row(index);
+  private activate(index: number, rows = this.rows): void {
+    if (!this.isConnected || rows !== this.rows) return;
+    const row = rows?.row(index);
     if (!row) return;
     this.setCursor(index);
     this.selectedId = row.id;
@@ -512,8 +515,9 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     if (this._camera) this.emit('lr-camera-change', Object.freeze({ camera: this._camera }));
   }
 
-  private onCursorKeydown(event: KeyboardEvent): void {
-    const count = this.rows?.count ?? 0;
+  private onCursorKeydown(event: KeyboardEvent, rows: Chart3dRows): void {
+    if (rows !== this.rows) return;
+    const count = rows.count;
     if (!count) return;
     let next = resolveListMove(event, {
       count,
@@ -529,7 +533,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     }
     if (next === null) return;
     event.preventDefault();
-    this.moveCursor(next);
+    this.moveCursor(next, rows);
   }
 
   private engineNotice(): TemplateResult | typeof nothing {
@@ -563,7 +567,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
             const index = page.start + offset;
             const row = rows.row(index)!;
             return html`<tr part="row">
-              <th scope="row"><button part="row-button" type="button" data-id=${row.id} aria-pressed=${this.selectedId === row.id ? 'true' : 'false'} @click=${() => this.activate(index)}>${row.label}</button></th>
+              <th scope="row"><button part="row-button" type="button" data-id=${row.id} aria-pressed=${this.selectedId === row.id ? 'true' : 'false'} @click=${() => this.activate(index, rows)}>${row.label}</button></th>
               <td>${this.format(row.x)}</td>
               <td>${this.format(row.y)}</td>
               <td>${this.format(row.z)}</td>
@@ -575,14 +579,15 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
       </table
     ></div>
     <div part="pagination" role="group" aria-label=${this.localize('paginationLabel')}>
-      <button part="page-button" type="button" ?disabled=${page.page === 0} @click=${() => this.moveCursor((page.page - 1) * LARGE_DATA_PAGE_SIZE)}>${this.localize('previous')}</button>
+      <button part="page-button" type="button" ?disabled=${page.page === 0} @click=${() => this.moveCursor((page.page - 1) * LARGE_DATA_PAGE_SIZE, rows)}>${this.localize('previous')}</button>
       <span>${this.localize('paginationApplied', undefined, { page: this.format(page.page + 1), totalPages: this.format(page.pageCount) })}</span>
-      <button part="page-button" type="button" ?disabled=${page.page + 1 === page.pageCount} @click=${() => this.moveCursor((page.page + 1) * LARGE_DATA_PAGE_SIZE)}>${this.localize('next')}</button>
+      <button part="page-button" type="button" ?disabled=${page.page + 1 === page.pageCount} @click=${() => this.moveCursor((page.page + 1) * LARGE_DATA_PAGE_SIZE, rows)}>${this.localize('next')}</button>
     </div>`;
   }
 
   protected override render(): TemplateResult {
     const rows = this.rows;
+    const cursor = this.cursor;
     const hidden = this.renderer.notice !== null;
     return html`<div
       part="base"
@@ -605,7 +610,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
           : html`
               ${this.engine === 'webgl' ? html`<div part="engine" aria-hidden="true" ?hidden=${hidden}></div>` : nothing}
               <div part="toolbar">
-                <button part="cursor" type="button" aria-describedby="instructions" @keydown=${this.onCursorKeydown} @click=${() => this.activate(this.cursor)}>${this.cursorLabel()}</button>
+                <button part="cursor" type="button" aria-describedby="instructions" @keydown=${(event: KeyboardEvent) => this.onCursorKeydown(event, rows)} @click=${() => this.activate(cursor, rows)}>${this.cursorLabel()}</button>
                 ${this.renderer.ready ? html`<button part="fit-button" type="button" @click=${this.userFit}>${this.localize('chart3dFit')}</button>` : nothing}
               </div>
               <p id="instructions" part="instructions">${this.localize('chart3dInstructions')}</p>

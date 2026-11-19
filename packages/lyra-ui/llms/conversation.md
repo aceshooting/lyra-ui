@@ -622,8 +622,9 @@ after the write fulfills.
 - `avatarPlacement: ChatMessageAvatarPlacement = 'top'` (`'top' | 'start' | 'end'`, attribute
   `avatar-placement`, reflected) — `'top'` keeps `[part="avatar"]` in the header row above the body;
   `'start'`/`'end'` move it into its own column of `[part="bubble"]` beside the body at the inline
-  start/end (mirrored under RTL), while badges and the collapse toggle stay in the header. Any
-  other value behaves as `'top'`.
+  start/end (mirrored under RTL). When the message has both an avatar and a visible header, the
+  badges and collapse toggle align to the avatar's block midpoint. Any other value behaves as
+  `'top'`.
 - `announceStatus: boolean = true` (attribute `announce-status`, reflected; `announce-status="false"`
   in markup turns it off) — whether status transitions are announced through the shared live region
   (see "Accessibility of `status`" below). Off, neither the failure nor the streaming-complete
@@ -708,6 +709,11 @@ Two matching geometry properties cover the bubble's box:
   Bubble-only by design: `[part='collapse-button']` and `[part='retry-button']` keep reading the
   shared `--lr-radius`, so a rounder bubble never desyncs those controls from the rest of the
   library.
+- `--lr-chat-message-user-bubble-padding` and `--lr-chat-message-user-bubble-radius` override those
+  values for user messages. `--lr-chat-message-assistant-bubble-padding` and
+  `--lr-chat-message-assistant-bubble-radius` apply to assistant messages.
+  `--lr-chat-message-system-bubble-padding` and `--lr-chat-message-system-bubble-radius` apply to
+  system messages. Each falls back to the matching shared bubble property.
 
 **Prefer these to a `::part(bubble)` padding/radius override.** A consumer `::part()` rule wins only
 for the CSS properties it actually declares; changing padding or radius does not erase unrelated
@@ -919,14 +925,16 @@ native `<form>` submission/validation/reset like any other text control.
 
 The inner textarea mirrors `required` through native `required`/`aria-required`. Its
 `aria-invalid` remains false until the textarea has been blurred, then follows the host's
-`ElementInternals` validity as `value` or `required` changes. A native validation attempt also
-reveals the invalid state, and `form.reset()` clears the touched presentation.
+`ElementInternals` validity as `value` or `required` changes. Calling `reportValidity()` or attempting submission also
+reveals the invalid state. A direct `checkValidity()` keeps the field pristine, and `form.reset()`
+clears the touched presentation.
 
 **Properties (own):**
 
 - `placeholder: string = ''`
 - `minRows: number = 1` (attribute `min-rows`) — floored to `1` at render time
-- `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
+- `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`.
+  An empty draft stays at `minRows` even when its placeholder wraps.
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
   built-in button's icon/label (send vs. stop) and whether Enter still submits. Invalid direct or
   attribute values normalize and reflect as `idle`.
@@ -957,6 +965,11 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   wrapping/scrolling region so start and send remain visible at narrow widths and in RTL. Live
   placement changes retain the textarea, draft, selection and focused caller controls. Invalid or
   removed placement values normalize and reflect as `'above'`.
+- `toolbarAlign: ChatComposerToolbarAlign = 'start'` (attribute `toolbar-align`, reflected) —
+  `'start' | 'end'` for the bottom toolbar. With `actions-layout="below"` and
+  `toolbar-placement="actions"`, `end` places the toolbar next to the end actions in either
+  writing direction. Wrapping, horizontal scrolling, and Tab order are preserved. Invalid or
+  removed values reset to `'start'`.
 - `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
   Enter always inserts a newline instead of submitting.
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -1034,6 +1047,18 @@ and `frame="plain"` still removes the border, radius and fill outright. Plus sha
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
 `--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
 `--lr-opacity-disabled`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
+
+`--lr-chat-composer-shadow` (default `none`) styles the card in both resting and focused states.
+The plain frame uses its separate focus underline. For the built-in action button,
+`--lr-chat-composer-action-bg` and `--lr-chat-composer-action-color` default to brand and on-brand
+colors for Send. `--lr-chat-composer-busy-color` (on-brand) pairs with `--lr-chat-composer-busy-bg`
+for Stop. `--lr-chat-composer-action-radius` defaults to `--lr-radius` and
+`--lr-chat-composer-action-size` defaults to automatic sizing with the shared icon-button minimum.
+Both apply to Send and Stop. `--lr-chat-composer-action-hover-bg` and
+`--lr-chat-composer-action-active-bg` default to a tint of the current action fill. The
+`--lr-chat-composer-action-hover-color`, `--lr-chat-composer-action-active-color`,
+`--lr-chat-composer-action-disabled-bg`, and `--lr-chat-composer-action-disabled-color` overrides
+default to the current action paint. Disabled buttons keep their opacity treatment.
 
 **Optional peer deps:** none.
 
@@ -1741,8 +1766,8 @@ listbox along with the other floating surfaces.
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared
   `FormAssociated` mixin — mirrors `lr-combobox`/`lr-select`'s identical divergence.
-- `aria-invalid`/`data-invalid` only reflect once the control has been blurred (touched) at least once,
-  matching `lr-select`'s identical pattern — validity styling never flashes on first render.
+- A visible `error-text` or populated `error` slot sets `aria-invalid="true"` on the trigger or
+  free-text input immediately. Native constraint failures appear after interaction.
 - In free-text mode, the input's displayed text is `query` only while `open`; while closed it shows the
   committed value's label — so setting `.value` programmatically doesn't require also touching the live
   typed text.
@@ -2714,7 +2739,8 @@ rendered chevron), `blur()` blurs both chevrons, `click()` activates that same e
 
 **Events:** `lr-branch-change` — a branch navigation was requested. `detail: { index }`, always a
 valid target (never past either bound); the consumer applies `index` after switching the displayed
-branch content. `lr-toolbar-actions-change` is the no-detail coordination event emitted when the
+branch content. When an applied index disables the focused chevron, the opposite chevron takes
+focus. `lr-toolbar-actions-change` is the no-detail coordination event emitted when the
 provider's logical toolbar actions change availability or order.
 
 **CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
@@ -3123,7 +3149,10 @@ slotted and virtual mode.
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
 counted as "at bottom," in both modes. While `follow` is released, the browser's native scroll
-anchoring keeps the reading position when content above it changes. `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
+anchoring keeps the reading position when content above it changes. `jumpIconOnly: boolean = false`
+(attribute `jump-icon-only`) renders a down chevron with a localized accessible name and, when
+there are unread messages, a localized unread count as its accessible description.
+`unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
@@ -3185,6 +3214,11 @@ messages. In slotted mode `[part="content"]` is a flex column, so adjacent messa
 rather than collapse. The unread divider is centred in the space above the first unread message.
 `--lr-chat-viewport-content-max-inline-size` (default `none`) — maximum inline size of the
 transcript column (`[part="content"]`), centred in the scroll container when narrower.
+
+`--lr-chat-viewport-jump-bg` (surface), `--lr-chat-viewport-jump-hover-bg` (brand quiet),
+`--lr-chat-viewport-jump-color` (text), `--lr-chat-viewport-jump-border` (thin solid border),
+`--lr-chat-viewport-jump-radius` (pill), and `--lr-chat-viewport-jump-shadow` (medium shadow)
+style the jump-to-latest button.
 
 ```html
 <lr-chat-viewport
@@ -4024,6 +4058,9 @@ consumer's control.
 
 ## `lr-voice-picker`
 
+Visible `error-text` or slotted error content sets `aria-invalid="true"` on the current trigger
+or free-text input while preserving the native validity of its value.
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 Override `--lr-voice-picker-trigger-padding`, `--lr-voice-picker-font-size`, and `--lr-voice-picker-expand-size` for trigger spacing, text size, and the expand control’s minimum target cap.
@@ -4664,6 +4701,8 @@ their corresponding data can be supplied. The default entry registers all childr
 (attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics.
 `toolbarPlacement: ChatComposerToolbarPlacement = 'above'` (attribute `toolbar-placement`) forwards
 `'above' | 'actions'` to that composer; `'actions'` takes effect with `actions-layout="below"`.
+`toolbarAlign: ChatComposerToolbarAlign = 'start'` (attribute `toolbar-align`) forwards
+`'start' | 'end'`; `'end'` places the bottom toolbar beside the composer's end actions.
 A slotted `toolbar` child is forwarded to the composer's `toolbar` slot. The separate data-driven
 model, voice and source controls remain above the composer regardless of toolbar placement;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
@@ -4792,7 +4831,9 @@ array does not update the view. Rows or attachments without valid direct data ar
 after validation, so the first valid item wins. `metadata` is opaque and retains identity in
 proposed queue/send-now payloads. Proposals contain the complete admitted queue in a frozen array;
 unchanged frozen exported rows and attachment arrays are reused, including after the host accepts
-a proposal. Send-now includes all retained attachments. Draft text survives page navigation.
+a proposal. Send-now includes all retained attachments and the currently visible editor draft, even
+while the host defers applying the edit proposal. In read-only mode it sends the displayed
+controlled value. Draft text survives page navigation.
 
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:

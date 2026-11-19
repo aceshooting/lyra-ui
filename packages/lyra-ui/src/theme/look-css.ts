@@ -1,5 +1,5 @@
 import { defineLyraLook, type LyraLook } from './theme.js';
-import { LOOK_MODE_RESOLVER, LOOK_SLOTTED_INPUTS, LOOK_STYLE_VERSION } from './look-inputs.js';
+import { lookModeResolver, LOOK_SLOTTED_INPUTS, LOOK_STYLE_VERSION } from '../internal/portable-look-inputs.js';
 
 /** Optional class aliases within the selected look's subtree. */
 export interface LyraLookCssOptions {
@@ -41,7 +41,7 @@ export function lyraLookCss(input: LyraLook, options: LyraLookCssOptions = {}): 
     const selector = (mode: 'light' | 'dark'): string => `:where([data-lr-look='${look.id}']).${mode}${explicit}, :where([data-lr-look='${look.id}']) .${mode}${explicit}`;
     const light = selector('light');
     const dark = selector('dark');
-    css += `@layer lr-theme {\n  ${light}, ${dark} {\n${LOOK_MODE_RESOLVER}\n  }\n}\n`;
+    css += `@layer lr-theme {\n  ${light}, ${dark} {\n${lookModeResolver()}\n  }\n}\n`;
     css += `@layer lr-theme-preset.mode {\n  ${light} {\n    color-scheme: light;\n    --_lr-dark-on: initial;\n    --_lr-light-on: ;\n  }\n  ${dark} {\n    color-scheme: dark;\n    --_lr-dark-on: ;\n    --_lr-light-on: initial;\n  }\n}\n`;
   }
   return css;

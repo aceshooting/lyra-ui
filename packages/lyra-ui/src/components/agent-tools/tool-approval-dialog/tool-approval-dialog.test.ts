@@ -1197,6 +1197,9 @@ describe('localization', () => {
 
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal('JSON invalide.');
+    el.strings = { invalidJson: 'Correct the JSON draft.' };
+    await el.updateComplete;
+    expect(error.textContent).to.equal('Correct the JSON draft.');
   });
 
   it('shows the default English localized invalid-JSON message (not a raw engine SyntaxError) when no locale is registered', async () => {

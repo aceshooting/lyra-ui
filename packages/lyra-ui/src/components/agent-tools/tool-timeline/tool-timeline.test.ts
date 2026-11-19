@@ -1180,3 +1180,55 @@ it('redacts a top-level error before rendering expanded details', async () => {
 
   expect(row.querySelector('[part="entry-error"]')!.textContent).to.equal('Value hidden');
 });
+
+describe('lr-tool-timeline grouped disclosure', () => {
+  it('keeps the default chronology and folds a group behind one named disclosure', async () => {
+    const entries = [
+      makeEntry({ id: 'a', displayName: 'Search' }),
+      makeEntry({ id: 'b', displayName: 'Search' }),
+      makeEntry({ id: 'c', name: 'Read', status: 'running' }),
+    ];
+    const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`);
+    expect(el.shadowRoot!.querySelector('[part="group"]') === null).to.equal(true);
+    el.grouped = true;
+    await el.updateComplete;
+    const group = el.shadowRoot!.querySelector<HTMLElementTagNameMap['lr-details']>('lr-details[part="group"]')!;
+    await group.updateComplete;
+    expect(group.open).to.equal(false);
+    const summary = group.querySelector('[slot="summary"]')!;
+    expect(summary.textContent).to.include('Used Search and Read');
+    expect(summary.textContent).to.include('Running');
+    const control = group.shadowRoot!.querySelector('summary')!;
+    control.click();
+    await group.updateComplete;
+    expect(control.getAttribute('aria-expanded')).to.equal('true');
+    expect(group.querySelectorAll('[part="entry"]').length).to.equal(3);
+    el.entries = [makeEntry({ status: 'error' }), ...entries];
+    el.strings = { toolCallBlockHeaderSuccess: 'Tools ({name})' };
+    await el.updateComplete;
+    expect(summary.textContent).to.include('Tools (');
+    expect(summary.getAttribute('data-status')).to.equal('error');
+    expect(group.open).to.equal(true);
+    el.groupSummary = 'Research';
+    await el.updateComplete;
+    expect(summary.textContent).to.include('Research');
+    await expect(el).to.be.accessible();
+  });
+
+  it('preserves a slotted summary and its status when entries change', async () => {
+    const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline grouped group-summary="Fallback"
+      .entries=${[makeEntry({ status: 'pending' })]}
+    ><span slot="summary">Research steps</span></lr-tool-timeline>`);
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="summary"]')!;
+    expect(slot.assignedElements()[0]?.textContent).to.equal('Research steps');
+    for (const status of ['denied', 'running', 'pending', 'incomplete', 'success'] as const) {
+      el.entries = [makeEntry({ status }), makeEntry({ id: 'other' })];
+      await el.updateComplete;
+      expect(slot.parentElement?.dataset['status']).to.equal(status);
+    }
+    el.entries = [];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="group"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="empty"]').length).to.equal(1);
+  });
+});

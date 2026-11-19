@@ -2,11 +2,11 @@ import { visuallyHidden } from '../../../internal/a11y.js';
 import { css } from 'lit';
 import {
   formControlTextWrap,
-  formControlChrome,
-  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
+import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 
 export const styles = css`
   :host {
@@ -101,12 +101,12 @@ export const styles = css`
     border-color: var(--lr-textarea-focus-border-color, var(--lr-color-brand));
     ${formControlFocusHalo}
   }
-  /* Pointer hover cue, gated on the host's own :disabled like lr-checkbox and lr-radio. */
+  /* The host's :disabled state blocks hover feedback, and the focused field keeps its own edge. */
   /* no-pressed-state: pressing inside a text surface places a caret, it actuates nothing. The
      mousedown matching :active is the same gesture that focuses the field, so a pressed treatment
      would flicker for one frame between the hover border and the focus ring; focus is this
      control's real acting-on-me state. */
-  :host(:not(:disabled)) [part="textarea"]:hover {
+  :host(:where(:not(:disabled))) [part="textarea"]:hover:where(:not(:focus)) {
     border-color: var(--lr-textarea-hover-border-color, var(--lr-color-brand));
   }
   [part="textarea"]:disabled {

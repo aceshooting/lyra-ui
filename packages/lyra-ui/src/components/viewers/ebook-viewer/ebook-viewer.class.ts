@@ -5,12 +5,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DEFAULT_CANVAS_COLOR } from '../../../internal/canvas-color.js';
 import {
-  isAbortError,
-  isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -49,11 +48,11 @@ import { boundedSelectionRects, boundedSelectionText } from '../../../internal/t
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerMissingLibrary, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerMissingLibrary, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-type EbookState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: string };
+type EbookState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: () => string };
 
 /** One flattened entry of an EPUB's own navigation document (`book.navigation.toc`). `level`
  *  starts at 1 for a top-level entry and increases with nesting depth. */
@@ -581,6 +580,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
@@ -655,7 +655,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.announcements.transition(
       'load',
       this.ebookState.kind,
-      this.ebookState.kind === 'error' ? this.ebookState.message : this.localize('loadingDocument'),
+      this.ebookState.kind === 'error' ? this.ebookState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('src') && this.pendingSearchResetEvent) {
@@ -770,10 +770,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       && this.rendition === rendition;
   }
 
-  private failCurrentLoad(error: unknown, message = this.localize('ebookViewerLoadError')): void {
+  private failCurrentLoad(error: unknown): void {
     if (this.failedGeneration === this.generation) return;
     this.failedGeneration = this.generation;
-    this.ebookState = { kind: 'error', message };
+    this.ebookState = {
+      kind: 'error',
+      message: viewerFailureMessage(error, this.localize.bind(this), () => this.localize('ebookViewerLoadError')),
+    };
     this.emit('lr-render-error', { error });
   }
 
@@ -803,38 +806,36 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
-      this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
+      this.failWithLocalizedMessage(() => this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
     this.ebookState = { kind: 'loading' };
-    let data: ArrayBuffer;
+    let data: ArrayBuffer | undefined;
     let factory: ((data: ArrayBuffer) => EpubBook) | null;
     try {
       [data, factory] = await Promise.all([
         fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined).then((response) => {
+          if (!this.isCurrentLoad(generation, fetchTarget.view) || signal?.aborted) return undefined;
           if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
           return readResponseArrayBuffer(response);
         }),
         getEpubJs(),
       ]);
-      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if (!data || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       await assertEpubArchiveWithinLimits(data, undefined, undefined, { signal });
       if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
     } catch (error) {
-      if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      this.failCurrentLoad(
-        error,
-        this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'ebookViewerLoadError'),
-      );
+      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      this.failCurrentLoad(error);
       return;
     }
     if (!factory) {
-      this.failWithLocalizedMessage(this.localize('ebookViewerMissingLibrary'));
+      this.failWithLocalizedMessage(() => this.localize('ebookViewerMissingLibrary'));
       return;
     }
     const mount = this.mountRef.value;
     if (!mount) {
-      this.failWithLocalizedMessage(this.localize('ebookViewerLoadError'));
+      this.failWithLocalizedMessage(() => this.localize('ebookViewerLoadError'));
       return;
     }
     let candidateBook: SafeEpubBook | undefined;
@@ -897,7 +898,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.repaintAnnotations();
     } catch (error) {
       this.destroyBook(candidateBook);
-      if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       this.failCurrentLoad(error);
     }
   }
@@ -921,9 +922,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     return typeof count === 'number' && count > 0 && getRangeAt ? getRangeAt(0) as Range : null;
   }
 
-  private failWithLocalizedMessage(message: string): void {
-    const error = new LyraUserFacingError(message);
-    this.failCurrentLoad(error, message);
+  private failWithLocalizedMessage(message: () => string): void {
+    const error = new LyraUserFacingError(message(), message);
+    this.failCurrentLoad(error);
   }
 
   private reportRenditionFailure(
@@ -1524,7 +1525,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   private renderStatus(): TemplateResult | typeof nothing {
     if (this.ebookState.kind === 'loading') return renderViewerLoading(this.localize('loadingDocument'));
-    if (this.ebookState.kind === 'error') return html`<div part="error">${this.ebookState.message}</div>`;
+    if (this.ebookState.kind === 'error') return html`<div part="error">${this.ebookState.message()}</div>`;
     if (this.ebookState.kind === 'idle') {
       return html`<p class="status-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }

@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
-    min-inline-size: var(--lr-icon-button-size);
+    min-inline-size: 0;
     max-inline-size: 100%;
     vertical-align: middle;
   }

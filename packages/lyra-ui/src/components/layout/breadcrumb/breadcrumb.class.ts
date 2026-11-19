@@ -75,8 +75,9 @@ function patchDecorativeSeparator(source: Element, clone: Element): void {
  *
  * @customElement lr-breadcrumb
  * @slot - `<lr-breadcrumb-item>` children.
- * @slot separator - Decorative visual separator copied into each item that does not provide its own
- *   separator. Generated copies are inert and aria-hidden, with identifiers, ID references, form
+ * @slot separator - Decorative visual separator copied into each assigned item that has no
+ *   item-level separator. Adding or removing an override updates the projection. Generated
+ *   copies are inert and aria-hidden, with identifiers, ID references, form
  *   associations, and submission attributes removed. Source mutations patch identity-compatible
  *   copies in place; do not use this slot for interactive content or form controls.
  * @csspart base - Compatibility name for the navigation wrapper; use `breadcrumb`.
@@ -165,11 +166,13 @@ export class LyraBreadcrumb extends LyraElement {
   }
 
   private syncSeparators = (): void => {
+    if (!this.isConnected) return;
     const separatorSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="separator"]');
     const sources = separatorSlot?.assignedElements({ flatten: true }) ?? [];
     this.observeSeparatorSources(sources);
-    const items = [...this.children].filter((item) => item.localName === tag('breadcrumb-item'));
-    this.setFirstItem(items[0]);
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    const items = slot?.assignedElements().filter((item) => item.localName === tag('breadcrumb-item')) ?? [];
+    this.setFirstItem(items.find((item) => !item.hasAttribute('hidden')));
     const owned = new Set(items);
 
     for (const [item, records] of this.generatedSeparators) {
@@ -202,6 +205,12 @@ export class LyraBreadcrumb extends LyraElement {
       });
       for (const record of existing.slice(sources.length)) record.clone.remove();
       this.generatedSeparators.set(item, next);
+    }
+    // Observe after distributing copies so the trail does not process its own writes again.
+    for (const item of items) {
+      this.separatorObserver?.observe(item, {
+        childList: true, subtree: true, attributeFilter: ['slot', 'hidden'],
+      });
     }
   };
 

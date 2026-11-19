@@ -25,7 +25,8 @@ space-separated values), `root: Element | string | null = null` (an element or m
 tree before the document),
 `intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
 boolean = false` (reflected; unobserves a target after its first intersection). A once-consumed
-target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
+target is omitted from subsequent entries, including entries in the same native batch. It
+stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
 setting `once` to false is the explicit reset boundary.
 
 The browser capability is optional. A missing or throwing owner-window lookup or unavailable

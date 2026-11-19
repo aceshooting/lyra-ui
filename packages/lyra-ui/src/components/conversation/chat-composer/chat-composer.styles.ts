@@ -18,6 +18,7 @@ export const styles = css`
       var(--lr-chat-composer-border-color, var(--lr-color-border));
     border-radius: var(--lr-chat-composer-radius, var(--lr-radius));
     background: var(--lr-chat-composer-bg, var(--lr-color-surface));
+    box-shadow: var(--lr-chat-composer-shadow, none);
     padding: var(--lr-chat-composer-padding, var(--lr-space-s));
     transition: border-color var(--lr-transition-fast);
   }
@@ -33,6 +34,7 @@ export const styles = css`
     border: 0;
     border-radius: 0;
     background: transparent;
+    box-shadow: none;
   }
   /* The border-color shift above is the only focus affordance, and plain leaves no border to shift
      -- focus would go invisible, an accessibility regression (the textarea sets outline: none, so
@@ -201,11 +203,17 @@ export const styles = css`
     max-inline-size: 100%;
     overflow: auto;
   }
+  :host([actions-layout='below'][toolbar-placement='actions'][toolbar-align='end']) [part='toolbar'] {
+    justify-content: safe flex-end;
+  }
   :host([actions-layout='below'][toolbar-placement='actions']) [part='end'] {
     grid-column: 3;
   }
 
   [part='action-button'] {
+    --_lr-composer-action-bg: var(--lr-chat-composer-action-bg, var(--lr-color-brand));
+    --_lr-composer-action-color: var(--lr-chat-composer-action-color, var(--lr-color-on-brand));
+
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -213,13 +221,15 @@ export const styles = css`
     box-sizing: border-box;
     ${iconHitTarget}
     border: none;
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    inline-size: var(--lr-chat-composer-action-size, auto);
+    block-size: var(--lr-chat-composer-action-size, auto);
+    border-radius: var(--lr-chat-composer-action-radius, var(--lr-radius));
+    background: var(--_lr-composer-action-bg);
+    color: var(--_lr-composer-action-color);
     font-size: var(--lr-font-size-lg);
     line-height: var(--lr-line-height-none);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* Hover/press are a background mix, never filter: brightness(). brightness() multiplies every
      channel, so it lightens a dark fill and darkens a light one only by accident, does nothing to a
@@ -227,15 +237,25 @@ export const styles = css`
      to the whole subtree. Mixing the resting fill toward --lr-color-mix-partner (which tracks the
      text color) always moves, always the way the surface needs, and leaves the icon alone. */
   :where([part='action-button']):hover:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(
+      --lr-chat-composer-action-hover-bg,
+      color-mix(in oklab, var(--_lr-composer-action-bg), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+    color: var(--lr-chat-composer-action-hover-color, var(--_lr-composer-action-color));
   }
   :where([part='action-button']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-chat-composer-action-active-bg,
+      color-mix(in oklab, var(--_lr-composer-action-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    color: var(--lr-chat-composer-action-active-color, var(--_lr-composer-action-color));
   }
   [part='action-button']:focus-visible {
     ${focusRing}
   }
   [part='action-button']:disabled {
+    background: var(--lr-chat-composer-action-disabled-bg, var(--_lr-composer-action-bg));
+    color: var(--lr-chat-composer-action-disabled-color, var(--_lr-composer-action-color));
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
@@ -252,25 +272,9 @@ export const styles = css`
      shared token also drives [part='textarea']::placeholder above: overriding it to recolor this
      busy fill would silently recolor the placeholder too. Same decoupling as lr-chat-message's
      user-bubble background. */
-  :host([status='sending']) [part='action-button'],
-  :host([status='streaming']) [part='action-button'] {
-    background: var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet));
-  }
-  :host([status='sending']) :where([part='action-button']):hover:where(:not(:disabled)),
-  :host([status='streaming']) :where([part='action-button']):hover:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-  }
-  :host([status='sending']) :where([part='action-button']):active:where(:not(:disabled)),
-  :host([status='streaming']) :where([part='action-button']):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+  :host(:where([status='sending'], [status='streaming'])) [part='action-button'] {
+    --_lr-composer-action-bg: var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet));
+    --_lr-composer-action-color: var(--lr-chat-composer-busy-color, var(--lr-color-on-brand));
   }
 
   @media (prefers-reduced-motion: reduce) {

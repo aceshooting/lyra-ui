@@ -30,8 +30,8 @@ Text-only host — no CSS parts, events, or own tokens; locale resolution and
 
 **Slots:** default — fallback content, rendered only when `value` is not finite.
 
-The selected ladder is `byte`/`kilobyte`… or `bit`/`kilobit`… through peta and saturates at the
-top; the index is `floor(log|value| / log(unitStep))`, and zero stays in the base unit. Magnitudes
-below one remain at index zero. `unitStep` is normalized to a finite number `> 1`, falling back to
-`1000`; `decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` still prints SI-named `kB`/`MB`
-units, not `KiB`/`MiB`, because `Intl` exposes no binary unit names.
+The selected ladder is `byte`/`kilobyte`… or `bit`/`kilobit`… through peta. Each unit starts at its
+corresponding power of `unitStep` in absolute magnitude. The base unit includes zero, and the peta
+unit covers all larger values. A non-finite `unitStep` or a step of `1` or less falls back to `1000`.
+`decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` prints SI-named units such as `kB` and
+`MB` through `Intl`.

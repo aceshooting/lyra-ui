@@ -4,9 +4,9 @@ import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js'
 import { fixture, expect, html, oneEvent, waitUntil, nextFrame } from "@open-wc/testing";
 import "./textarea.js";
 import type { LyraTextarea } from "./textarea.js";
-import { styles } from "./textarea.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { resolvedColorToken } from "../../../../test/color-contrast.js";
 
 it("emits one cancelable lr-invalid alias when a validity check fails", async () => {
@@ -93,11 +93,6 @@ it("reflects the pinned Web Awesome resize property", async () => {
   expect(el.getAttribute("resize")).to.equal("horizontal");
 });
 
-it("gives the textarea field hover feedback matching the keyboard focus-visible cue", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='textarea'\]:hover\s*\{[^}]*border-color:/);
-});
-
 it("declares a non-zero transition on the textarea border so hover/focus ease like lr-button", async () => {
   const el = await fixture<LyraTextarea>(
     html`<lr-textarea aria-label="Notes"></lr-textarea>`
@@ -145,11 +140,6 @@ it("themes the textarea hover border through a component hook", async () => {
   }
 });
 
-it("gives the textarea field a focus border-colour hook", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='textarea'\]:focus\s*\{[^}]*border-color:/);
-});
-
 it("turns the focused textarea border brand when the hook is unset, like every sibling field", async () => {
   const el = await fixture<LyraTextarea>(
     html`<lr-textarea data-lr-theme-scope
@@ -175,6 +165,30 @@ it("themes the textarea focus border through a component hook", async () => {
     el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
   textarea.focus();
   expect(getComputedStyle(textarea).borderTopColor).to.equal("rgb(1, 2, 3)");
+});
+
+it('keeps the configured focus border while the focused textarea is hovered', async () => {
+  const el = await fixture<LyraTextarea>(html`
+    <lr-textarea
+      data-lr-theme-scope
+      appearance="plain"
+      aria-label="Notes"
+      style="
+        --lr-transition-fast: 0s;
+        --lr-textarea-hover-border-color: transparent;
+        --lr-textarea-focus-border-color: rgb(23, 23, 23);
+      "
+    ></lr-textarea>
+  `);
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  await focusByKeyboard(textarea);
+  try {
+    await hoverUntilMatched(textarea, 'the pointer reached the focused textarea');
+    expect(textarea.matches(':focus:hover')).to.be.true;
+    expect(getComputedStyle(textarea).borderTopColor).to.equal('rgb(23, 23, 23)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("suppresses host click/focus in the same task that fieldset disablement starts", async () => {
@@ -755,6 +769,35 @@ describe('resize="auto"', () => {
     )) as LyraTextarea;
     const ta = el.shadowRoot!.querySelector("textarea") as HTMLTextAreaElement;
     expect(getComputedStyle(ta).resize).to.equal("none");
+  });
+
+  it('sizes an empty field from rows even when its placeholder wraps', async () => {
+    const example = await fixture(html`
+      <div style="inline-size: 8rem">
+        <lr-textarea resize="auto" rows="1" aria-label="Control"></lr-textarea>
+        <lr-textarea
+          resize="auto"
+          rows="1"
+          aria-label="Notes"
+          placeholder="Describe your experience and include any details that would help us follow up."
+        ></lr-textarea>
+      </div>
+    `);
+    const control = example.querySelector<LyraTextarea>('lr-textarea[aria-label="Control"]')!;
+    const field = example.querySelector<LyraTextarea>('lr-textarea[aria-label="Notes"]')!;
+    const controlTextarea = control.shadowRoot!.querySelector('textarea')!;
+    const textarea = field.shadowRoot!.querySelector('textarea')!;
+    const rowHeight = controlTextarea.getBoundingClientRect().height;
+    expect(textarea.getBoundingClientRect().height, 'empty with placeholder').to.be.closeTo(rowHeight, 1);
+
+    field.value = 'One\nTwo\nThree';
+    await field.updateComplete;
+    expect(textarea.getBoundingClientRect().height, 'value grows the field').to.be.greaterThan(rowHeight);
+
+    field.value = '';
+    await field.updateComplete;
+    expect(textarea.getBoundingClientRect().height, 'clearing restores the empty height').to.be.closeTo(rowHeight, 1);
+    expect(textarea.placeholder).to.equal(field.placeholder);
   });
 
   it("grows the textarea block-size to fit typed content that exceeds the initial rows", async () => {
@@ -1687,6 +1730,30 @@ describe("lr-textarea unset-regression for the 8.0 opt-ins", () => {
 });
 
 describe("lr-textarea debounce", () => {
+  for (const replacement of ['normalized', 'initial']) {
+    it(`reports the native edit alone when a controlled listener writes "${replacement}"`, async () => {
+      const el = await fixture<LyraTextarea>(html`
+        <lr-textarea debounce="40" value="initial" aria-label="Controlled"></lr-textarea>
+      `);
+      const native = el.shadowRoot!.querySelector('textarea')!;
+      const edit: string[] = [];
+      const settled: string[] = [];
+      el.addEventListener('input', () => { el.value = replacement; }, { once: true });
+      el.addEventListener('lr-input', (event) => edit.push(event.detail.value));
+      el.addEventListener('lr-input-settled', (event) => settled.push(event.detail.value));
+
+      native.value = 'edited';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+      expect(edit).to.deep.equal(['edited']);
+      expect(el.value).to.equal(replacement);
+      expect(native.value).to.equal(replacement);
+      // wait-reason: a cancelled settle must stay silent past the debounce window
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      expect(settled).to.deep.equal([]);
+    });
+  }
+
   it("debounces exactly one lr-input-settled 150ms after the last keystroke, while input/lr-input still fire per keystroke", async () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`

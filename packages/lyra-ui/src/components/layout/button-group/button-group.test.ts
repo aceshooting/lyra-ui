@@ -88,6 +88,25 @@ describe('<lr-button-group>', () => {
     expect(wideBaseWidth).to.be.lessThan(wideHostWidth - 20);
   });
 
+  it('shrinks the group to its allocation while keeping the child hit target', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="display: flex; inline-size: 24px; --lr-icon-button-size-scope: 44px;">
+        <lr-button-group label="Actions">
+          <lr-button circle size="small" aria-label="Add">+</lr-button>
+        </lr-button-group>
+      </div>
+    `);
+    const group = wrapper.querySelector<LyraButtonGroup>('lr-button-group')!;
+    const control = group.querySelector('lr-button')!.shadowRoot!.querySelector('button')!;
+    expect(group.getBoundingClientRect().width).to.equal(24);
+    expect(control.getBoundingClientRect().width).to.be.at.least(44);
+
+    wrapper.style.inlineSize = '120px';
+    group.style.inlineSize = '20px';
+    expect(group.getBoundingClientRect().width).to.equal(20);
+    expect(control.getBoundingClientRect().width).to.be.at.least(44);
+  });
+
   it('uses its content width inside a shrink-to-fit flex parent', async () => {
     // The group must derive its intrinsic width from its slotted actions.
     const wrap = await fixture(html`

@@ -2185,6 +2185,30 @@ describe('lr-input mapped Input parity surface', () => {
 
 describe('lr-input debounce', () => {
   // A 40ms debounce with waits of 2.5x it keeps the timing contract while the suite stays fast.
+  for (const replacement of ['normalized', 'initial']) {
+    it(`reports the native edit alone when a controlled listener writes "${replacement}"`, async () => {
+      const el = await fixture<LyraInput>(html`
+        <lr-input debounce="40" value="initial" aria-label="Controlled"></lr-input>
+      `);
+      const native = el.shadowRoot!.querySelector('input')!;
+      const edit: string[] = [];
+      const settled: string[] = [];
+      el.addEventListener('input', () => { el.value = replacement; }, { once: true });
+      el.addEventListener('lr-input', (event) => edit.push(event.detail.value));
+      el.addEventListener('lr-input-settled', (event) => settled.push(event.detail.value));
+
+      native.value = 'edited';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+      expect(edit).to.deep.equal(['edited']);
+      expect(el.value).to.equal(replacement);
+      expect(native.value).to.equal(replacement);
+      // wait-reason: a cancelled settle must stay silent past the debounce window
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      expect(settled).to.deep.equal([]);
+    });
+  }
+
   it('debounces exactly one lr-input-settled one debounce interval after the last keystroke, while input/lr-input still fire per keystroke', async () => {
     const el = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;

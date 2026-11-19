@@ -307,6 +307,35 @@ function stubFetch(body: unknown, ok = true): void {
 }
 
 describe('fetching and parsing', () => {
+  it('reports a current fetch AbortError and relocalizes the error without retrying', async () => {
+    const el = await fixture<LyraGeoJsonViewer>(html`<lr-geojson-viewer></lr-geojson-viewer>`);
+    const original = window.fetch;
+    const failure = new DOMException('Transport canceled the request.', 'AbortError');
+    let fetchCount = 0;
+    window.fetch = async (_input, init) => {
+      fetchCount++;
+      expect(init?.signal?.aborted).to.equal(false);
+      throw failure;
+    };
+    try {
+      const errors: unknown[] = [];
+      el.addEventListener('lr-render-error', (event) => errors.push(event.detail.error));
+      el.src = 'https://example.test/document';
+      const errorPart = () => el.shadowRoot!.querySelector('[part="error"]');
+      await waitUntil(() => errorPart() !== null);
+      expect(errors).to.deep.equal([failure]);
+      expect(el.shadowRoot!.querySelectorAll('[aria-busy="true"]').length).to.equal(0);
+
+      el.strings = { geojsonViewInvalid: 'Preview could not be opened.' };
+      await el.updateComplete;
+      expect(errorPart()?.textContent).to.equal('Preview could not be opened.');
+      expect(errors).to.have.length(1);
+      expect(fetchCount).to.equal(1);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('keeps the nested loading skeleton decorative while the shared sink owns announcements', async () => {
     const el = await fixture<LyraGeoJsonViewer>(
       html`<lr-geojson-viewer></lr-geojson-viewer>`

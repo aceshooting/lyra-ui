@@ -405,9 +405,10 @@ Top-layer reset CSS is adopted by `promoteToTopLayer()` into the surface's actua
 owner-document sheet. It is no longer part of `LyraElement.styles`; overlay consumers use the
 positioner/promoter rather than adding their own UA reset.
 
-For matching internal controls, reuse declaration fragments from `internal/interactive-control.styles.ts`
-and `internal/layout-fragments.styles.ts` inside the existing selector. Keep component geometry,
-state selectors, and public tokens local. `iconHitTarget` is recognized by the static hit-area
+Inside an existing selector, use `internal/interactive-control.styles.ts` for focus rings and hit
+targets, `internal/panel-frame.styles.ts` for fieldset frames, `internal/native-control-surface.styles.ts`
+for native field surfaces, and `internal/layout-fragments.styles.ts` for shared layout declarations.
+Keep component geometry, state selectors, and public tokens local. `iconHitTarget` is recognized by the static hit-area
 checker; a later undersized override still fails. Use `scrollOverflowFade()` for a conditional
 track selector and `scrollOverflowFadeStyles` for the standard controller attributes. Small native
 wrappers such as dataset search and research-progress keep lean imports; share their behavior and

@@ -20,7 +20,7 @@ import { LYRA_DEFAULT_resultFieldLabel } from '../../../internal/default-strings
  * @customElement lr-result-field
  * @slot - Rich value content (e.g. a `<lr-chip>` status badge, or a plain
  * text override), taking precedence over the `value` prop whenever it has
- * any assigned content.
+ * an element or non-whitespace text.
  * @csspart base - The row container.
  * @csspart label - The label text (including its trailing colon).
  * @csspart value - The wrapper around the value — either the slotted
@@ -52,15 +52,15 @@ export class LyraResultField extends LyraElement {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.seedFirstRenderState(() => {
-        this.hasValueSlot = hasRealContent(Array.from(this.childNodes));
+        this.hasValueSlot = hasRealContent(Array.from(this.childNodes).filter((node) =>
+          node.nodeType === Node.TEXT_NODE ||
+          (node.nodeType === Node.ELEMENT_NODE && !(node as Element).getAttribute('slot')),
+        ));
       });
     }
   }
 
   private onSlotChange = (e: Event): void => {
-    // Do not flatten here: when no light-DOM node is assigned, the flattened list contains this
-    // slot's own `value` fallback. Treating that fallback as assigned content would alternately
-    // remove and restore itself on every update.
     this.hasValueSlot = hasRealContent((e.target as HTMLSlotElement).assignedNodes());
   };
 
@@ -71,9 +71,8 @@ export class LyraResultField extends LyraElement {
         ${hasLabel
           ? html`<span part="label">${this.localize('resultFieldLabel', undefined, { label: this.label })}</span>`
           : nothing}
-        <span part="value"><slot @slotchange=${this.onSlotChange}
-          >${this.hasValueSlot ? nothing : this.value}</slot
-        ></span>
+        <span part="value"><slot ?hidden=${!this.hasValueSlot} @slotchange=${this.onSlotChange}></slot>${this
+          .hasValueSlot ? nothing : this.value}</span>
       </div>
     `;
   }

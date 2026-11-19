@@ -2316,6 +2316,32 @@ describe("editable tokens", () => {
     }
   });
 
+  it('keeps an inline draft and focus across unchanged bindings but accepts an in-place value edit', async () => {
+    const source = ['alpha'];
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input editable .value=${source}></lr-token-input>`);
+    tokenLabel(el, 0).click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    typeInto(field, 'uncommitted');
+    await el.updateComplete;
+
+    for (const binding of [source, [...source]]) {
+      el.value = binding;
+      await el.updateComplete;
+      expect(editor(el) === field).to.equal(true);
+      expect(el.shadowRoot!.activeElement === field).to.equal(true);
+      expect(field.value).to.equal('uncommitted');
+      expect(el.value).to.deep.equal(['alpha']);
+    }
+
+    source[0] = 'replacement';
+    el.value = source;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['replacement']);
+    expect(editor(el) === null).to.equal(true);
+    expect(el.shadowRoot!.activeElement === tokenLabel(el, 0)).to.equal(true);
+  });
+
   it("closes an open editor and discards its draft when a different token is removed out from under it", async () => {
     const el = (await fixture(
       html`<lr-token-input

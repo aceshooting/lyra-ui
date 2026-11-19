@@ -94,8 +94,8 @@ original `sourceIndex + 1`, not representative order.
 sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select` with frozen
 `LyraSpatialBinSelectDetail { revision, bounds, count }`, never an exact-point event. Source mode
 adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport
-count/domain with density and overlay counts distinguished. The cluster legend describes retained
-point overlays rather than certifying all global clusters.
+count/domain with density and overlay counts distinguished. Visible retained point overlays use
+a shared color per cluster, and the legend lists those cluster names with matching swatches.
 With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
 `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
 
@@ -140,6 +140,9 @@ or reassign/explicitly call `requestUpdate()` to restart inspection. Replacement
 cancel unfinished work, and reconnect resumes from the current source.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space (not on key repeat).
+
+When a focused Previous or Next button becomes disabled at a page boundary, focus moves to
+an available pager control.
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
 `limit` (the "showing N of M" sampling notice), `empty`.

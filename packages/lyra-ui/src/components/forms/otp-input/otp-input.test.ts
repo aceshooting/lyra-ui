@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { settleEnterSubmission } from '../../../../test/contracts/enter-submit.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -800,6 +801,23 @@ it('re-sanitizes an existing value when type narrows', async () => {
   el.type = 'numeric';
   await el.updateComplete;
   expect(el.value).to.equal('12');
+});
+
+it('leaves composing navigation with the OTP input method', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>`);
+  const native = controlOf(el);
+  await focusByKeyboard(native);
+  await el.updateComplete;
+  const active = activeIndexOf(el);
+  const selection = [native.selectionStart, native.selectionEnd];
+
+  for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+    expect(key(el, 'ArrowLeft', composing).defaultPrevented).to.equal(false);
+    await el.updateComplete;
+    expect(activeIndexOf(el)).to.equal(active);
+    expect([native.selectionStart, native.selectionEnd]).to.deep.equal(selection);
+    expect(native.value).to.equal('1234');
+  }
 });
 
 it('moves the active segment with clamped physical arrows in LTR and RTL', async () => {
@@ -2249,6 +2267,29 @@ describe('explicitly empty host aria-label', () => {
 });
 
 describe('value/length assignment order (regression)', () => {
+  it('keeps a native key edit when length grows and still honors later controlled changes', async () => {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input value="123"></lr-otp-input>`);
+    const control = controlOf(el);
+    await focusByKeyboard(control);
+    key(el, '4');
+    expect(control.value).to.equal('1234');
+
+    el.length = 7;
+    await el.updateComplete;
+    expect(el.value).to.equal('1234');
+    expect(control.value).to.equal('1234');
+    expect(segmentsOf(el)).to.have.lengthOf(7);
+
+    el.length = 2;
+    await el.updateComplete;
+    expect(control.value).to.equal('12');
+
+    el.value = '98765';
+    el.length = 5;
+    await el.updateComplete;
+    expect(control.value).to.equal('98765');
+  });
+
   it('does not permanently truncate a value assigned before a widening length in the same update', async () => {
     const el = (await fixture(html`<lr-otp-input></lr-otp-input>`)) as LyraOtpInput;
     await el.updateComplete;

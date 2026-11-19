@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -255,6 +256,10 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, base, error and hint.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label.
  * @csspart base - The wrapper around the search input and grid.
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).
@@ -382,7 +387,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   private _groups: readonly EmojiPickerGroup[] = Object.freeze([]);
   private readonly itemSnapshots = new WeakMap<object, EmojiPickerItem>();
@@ -1330,7 +1335,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
-    const invalid = this.touched && !this.internals.validity.valid;
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     const gridLabel = hostAriaLabel(this);
     const searchLabel = this.localize('emojiPickerSearchLabel');
     const placeholder = this.searchPlaceholder ?? this.localize('emojiPickerSearchPlaceholder');

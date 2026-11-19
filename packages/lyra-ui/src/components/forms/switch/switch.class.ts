@@ -344,6 +344,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
         this.emit('lr-switch-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
+        if (this.liveDisabled) return;
         // Set inside the commit, for `<lr-checkbox>`'s `toggle()` reason: `syncValidityStates()`
         // reads this flag, so marking it before the veto would let a
         // REFUSED first toggle start matching `:state(user-invalid)` for a change that never

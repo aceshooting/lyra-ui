@@ -266,7 +266,8 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  *
  * @customElement lr-prompt-queue
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
- * @event lr-send-now - Immediate send was requested. `detail: { item }`.
+ * @event lr-send-now - Immediate send was requested. `detail: { item }` includes the row's
+ *   visible draft while editable, without applying that draft to the controlled queue.
  * @csspart base - The queue wrapper.
  * @csspart heading - The queue heading; omitted when the visible label is empty.
  * @csspart list - The current page of at most 20 admitted queued prompts.
@@ -575,9 +576,21 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     this.emitChange(next.map((candidate) => toPromptQueueItem(candidate)), 'reorder', item.id);
   }
 
-  private sendNow(item: CanonicalPromptQueueItem): void {
-    if (this.disabled) return;
-    this.emit('lr-send-now', { item: toPromptQueueItem(item) });
+  private editableValue(item: CanonicalPromptQueueItem): string {
+    const draft = this.drafts.get(item.id);
+    return draft?.sourceValue === item.value ? draft.value : item.value;
+  }
+
+  private sendNow(item: CanonicalPromptQueueItem, renderedReadonly: boolean, event: Event): void {
+    if (this.disabled || this.readonly !== renderedReadonly || !(event.currentTarget as Element).isConnected) return;
+    const current = this.effectiveItems.find((candidate) => candidate.id === item.id);
+    if (!current) return;
+
+    const value = renderedReadonly ? item.value : this.editableValue(item);
+    // A controlled write may have landed before this button's row rerenders. The visible
+    // draft is still applicable if the host kept its base value or accepted that draft.
+    if (current.value !== item.value && current.value !== value) return;
+    this.emit('lr-send-now', { item: toPromptQueueItem(current, value) });
   }
 
   private containNativeEvent = (event: Event): void => {
@@ -585,6 +598,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   };
 
   private renderItem(item: CanonicalPromptQueueItem, index: number, itemCount: number): TemplateResult {
+    const readonly = this.readonly;
     const formattedIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
     const editorLabel = this.localize('promptQueueItemLabel', undefined, {
       index: formattedIndex,
@@ -592,10 +606,10 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const actionLabel = (action: string): string =>
       this.localize('promptQueueActionLabel', undefined, { action, index: formattedIndex });
     return html`<li part="item" data-id=${item.id} aria-posinset=${index + 1} aria-setsize=${itemCount}>
-      ${!this.readonly
+      ${!readonly
         ? html`<lr-textarea
             part="editor"
-            .value=${this.drafts.get(item.id)?.value ?? item.value}
+            .value=${this.editableValue(item)}
             .disabled=${this.disabled}
             .label=${editorLabel}
             resize="auto"
@@ -643,7 +657,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
           appearance="plain"
           aria-label=${actionLabel(this.localize('promptQueueSendNow'))}
           .disabled=${this.disabled}
-          @click=${() => this.sendNow(item)}
+          @click=${(event: Event) => this.sendNow(item, readonly, event)}
         >${this.localize('promptQueueSendNow')}</lr-button>
         <lr-button
           part="action"

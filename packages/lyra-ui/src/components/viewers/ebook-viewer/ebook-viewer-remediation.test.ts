@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './ebook-viewer.js';
 import { __setEpubJsForTesting, type EpubBook } from './ebook-loader.js';
 import type { LyraEbookViewer } from './ebook-viewer.js';
@@ -163,4 +163,44 @@ it('makes every epub.js chapter document network-silent before it reaches the ch
   contentHooks[0]!(chapter, {});
   expect(chapter.querySelector('link[rel~="dns-prefetch"]') === null).to.equal(true);
   expect(await requestedBeacons(new XMLSerializer().serializeToString(chapter), beacon)).to.deep.equal([]);
+});
+
+it('leaves a late response body unread after source removal', async () => {
+  let resolveFetch!: (response: Response) => void;
+  let signal: AbortSignal | null | undefined;
+  window.fetch = (_url, init) => {
+    signal = init?.signal;
+    return new Promise<Response>((resolve) => { resolveFetch = resolve; });
+  };
+  const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+  let failures = 0;
+  el.addEventListener('lr-render-error', () => { failures++; });
+  el.src = '/retired';
+  await waitUntil(() => Boolean(signal));
+  el.src = '';
+  await waitUntil(() => signal?.aborted === true);
+  const response = new Response('retired');
+  resolveFetch(response);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(response.bodyUsed).to.equal(false);
+  expect(failures).to.equal(0);
+});
+
+it('reports an independent transport abort on the current source', async () => {
+  const failure = new DOMException('Transport canceled', 'AbortError');
+  let requests = 0;
+  window.fetch = () => {
+    requests++;
+    return Promise.reject(failure);
+  };
+  const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+  const failed = oneEvent(el, 'lr-render-error');
+  el.src = '/current';
+  expect((await failed).detail.error).to.equal(failure);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Failed to load the ebook.');
+  el.strings = { ebookViewerLoadError: 'Book unavailable' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Book unavailable');
+  expect(requests).to.equal(1);
 });

@@ -595,8 +595,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     }
     if (page !== this.currentPage) {
       const focusOrigin = deepActiveElementIn(this.ownerDocument);
-      const detail = (): LyraPaginationChangeDetail =>
-        Object.freeze({ page, pageSize: this.normalizedPageSize });
+      const pageSize = this.normalizedPageSize;
+      const detail = (): LyraPaginationChangeDetail => Object.freeze({ page, pageSize });
       if (this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented) {
         this.draftPage = this.hasPages ? String(this.currentPage) : '';
         this.invalidDraft = false;

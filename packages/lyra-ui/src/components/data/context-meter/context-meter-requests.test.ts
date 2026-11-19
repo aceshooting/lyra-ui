@@ -85,3 +85,27 @@ describe('context meter activation requests', () => {
     });
   }
 });
+
+for (const control of ['bar', 'ring', 'legend'] as const) {
+  it(`drops a ${control} click if capture retires the rendered segment`, async () => {
+    const el = await meter();
+    el.shape = control === 'ring' ? 'ring' : 'bar';
+    el.withLegend = control === 'legend';
+    await el.updateComplete;
+    const labels: string[] = [];
+    el.addEventListener(REQUEST, (event) => labels.push(event.detail.label));
+    const part = control === 'legend' ? 'legend-item' : 'segment';
+    const target = () => el.shadowRoot!.querySelector(`[part~="${part}"]`)!;
+    el.addEventListener('click', () => {
+      el.segments = [{ label: 'Replacement', value: 10 }];
+    }, { capture: true, once: true });
+    const click = () => target().dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    click();
+    expect(labels).to.deep.equal([]);
+    expect(el.selectedIndices).to.deep.equal([]);
+    await el.updateComplete;
+    click();
+    expect(labels).to.deep.equal(['Replacement']);
+    expect(el.selectedIndices).to.deep.equal([0]);
+  });
+}

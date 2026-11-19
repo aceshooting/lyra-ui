@@ -196,6 +196,21 @@ describe('lr-document-compare', () => {
       expect(await el.searchNext()).to.equal(true);
       expect(await el.searchPrevious()).to.equal(true);
       el.clearSearch();
+      const retired = el.search('gamma');
+      el.clearSearch();
+      expect(await retired).to.equal(0);
+
+      const target = diff;
+      let finish!: (count: number) => void;
+      let begin!: () => void;
+      const started = new Promise<void>(resolve => { begin = resolve; });
+      target.search = () => new Promise<number>(resolve => { finish = resolve; begin(); });
+      const pending = el.search('pending');
+      await started;
+      el.clearSearch();
+      finish(5);
+      expect(await pending).to.equal(0);
+      expect(await el.searchNext()).to.equal(false);
       el.view = 'side-by-side';
       await el.updateComplete;
       expect(await el.search('gamma')).to.equal(0);

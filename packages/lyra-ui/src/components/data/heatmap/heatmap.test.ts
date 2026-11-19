@@ -2,6 +2,7 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { aTimeout, fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./heatmap.js";
 import '../../../translations/de/data.js';
+import '../../../translations/fr/data.js';
 import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from "./heatmap.js";
 import {
   MAX_BUCKET_COUNT,
@@ -3916,6 +3917,52 @@ describe("theme watching (via the shared ThemeWatcher controller)", () => {
 });
 
 describe("visibility-gated canvas redraws", () => {
+  it('repaints both calendar axes when the inherited locale changes', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div lang="en-US" style="inline-size: 180px; overflow: auto;">
+        <lr-heatmap .data=${{ kind: 'calendar', weekdayLabelWidth: 64, days: [
+          { date: '2026-01-01', value: 2 }, { date: '2026-02-01', value: 5 },
+          { date: '2026-02-22', value: 3 },
+        ] }}></lr-heatmap>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraHeatmap>('lr-heatmap')!;
+    await settleLayout();
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    const context = canvas.getContext('2d')!;
+    const original = context.fillText;
+    const labels: string[] = [];
+    context.fillText = (text, ...args) => {
+      labels.push(text);
+      original.call(context, text, ...args);
+    };
+    const axes = (locale: string): string[] => {
+      const months = new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' });
+      const weekdays = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+      return [
+        months.format(Date.UTC(2026, 0, 1)),
+        months.format(Date.UTC(2026, 1, 1)),
+        weekdays.format(Date.UTC(2026, 1, 2)),
+      ];
+    };
+    try {
+      el.cellSize = 24;
+      await el.updateComplete;
+      expect(labels).to.include.members(axes('en-US'));
+      wrapper.scrollLeft = 30;
+      expect(wrapper.scrollLeft).to.equal(30);
+      labels.length = 0;
+      const expected = axes('fr-FR');
+      wrapper.lang = 'fr-FR';
+      await waitUntil(() => expected.every(label => labels.includes(label)), 'both inherited-locale axes repaint');
+      expect(el.locale).to.equal('');
+      expect(el.shadowRoot!.querySelector('canvas') === canvas).to.equal(true);
+      expect(wrapper.scrollLeft).to.equal(30);
+    } finally {
+      context.fillText = original;
+    }
+  });
+
   it("redraws canvas-derived labels when the effective locale changes", async () => {
     const el = (await fixture(html`
       <lr-heatmap

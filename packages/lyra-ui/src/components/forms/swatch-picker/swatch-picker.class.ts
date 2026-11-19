@@ -16,7 +16,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { swatchKeyTarget } from './swatch-keys.js';
 
 export interface SwatchPickerItem {
@@ -297,7 +297,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   // not create multiple checked/tabbable radios or collapse repeat keys.
   private selectedOption?: SwatchPickerItem;
   private fallbackTabbableIndex = 0;
-  private pendingFocusIndex?: number;
+  private pendingFocus?: { index: number; origin: HTMLElement };
   private focusRevealFrame?: number;
 
   private resolveSelectedIndex(): number {
@@ -355,6 +355,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   override disconnectedCallback(): void {
     this.cancelFocusReveal();
+    this.pendingFocus = undefined;
     super.disconnectedCallback();
   }
 
@@ -362,6 +363,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     super.willUpdate(changed);
     setCustomState(this.stateInternals, 'selected', this.resolveSelectedIndex() >= 0);
     if (!changed.has('items')) return;
+    this.pendingFocus = undefined;
     const active = shadowFocusTarget(this) as HTMLElement | null;
     if (!active?.part?.contains('swatch')) return;
     const previousOptions = changed.get('items') as
@@ -377,22 +379,26 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
         ? identityIndex
         : Math.min(previousIndex, this.items.length - 1);
     if (nextIndex < 0) {
-      this.pendingFocusIndex = undefined;
       this.fallbackTabbableIndex = 0;
       return;
     }
-    this.pendingFocusIndex = nextIndex;
+    this.pendingFocus = { index: nextIndex, origin: active };
     this.fallbackTabbableIndex = nextIndex;
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (!changed.has('items') || this.pendingFocusIndex === undefined) return;
+    if (!changed.has('items') || !this.pendingFocus) return;
     this.scheduleAfterUpdate(() => {
-      const pendingIndex = this.pendingFocusIndex;
-      this.pendingFocusIndex = undefined;
-      if (pendingIndex === undefined || this.items.length === 0) return;
-      this.focusSwatch(Math.min(pendingIndex, this.items.length - 1));
+      const pending = this.pendingFocus;
+      this.pendingFocus = undefined;
+      if (!pending || this.items.length === 0) return;
+      const document = this.ownerDocument;
+      const active = deepActiveElementIn(document);
+      if (active && active !== document.body && active !== document.documentElement && active !== pending.origin) return;
+      const index = Math.min(pending.index, this.items.length - 1);
+      const target = this.items[index]?.disabled ? this.tabbableIndex() : index;
+      if (target >= 0) this.focusSwatch(target);
     }, 'restore-swatch-picker-focus');
   }
 

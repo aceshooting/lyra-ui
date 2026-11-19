@@ -97,6 +97,14 @@ describe('lr-map drawing keyboard boundaries', () => {
     element.addEventListener('lr-map-draw-change', event => { changes.push((event as CustomEvent<LyraMapDrawingSnapshot>).detail); });
     element.addEventListener('lr-map-draw-vertex-end', event => { ends.push((event as CustomEvent<{ index: number }>).detail.index); });
     await focusByKeyboard(handles(element)[0]!);
+    for (const init of [{ key: 'ArrowLeft', altKey: true }, { key: 'ArrowRight', ctrlKey: true },
+      { key: 'ArrowDown', isComposing: true }, { key: 'End', keyCode: 229 }, { key: 'End', shiftKey: true }]) {
+      const key = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+      handles(element)[0]!.dispatchEvent(key);
+      expect(key.defaultPrevented).to.equal(false);
+    }
+    expect(changes).to.have.length(0);
+    expect(ends).to.have.length(0);
     for (const [key, expected] of [
       ['ArrowRight', [0.8, 0]], ['Shift+ArrowLeft', [-2.4, 0]],
       ['Shift+ArrowUp', [-2.4, -3.2]], ['ArrowDown', [-2.4, -2.4]],
