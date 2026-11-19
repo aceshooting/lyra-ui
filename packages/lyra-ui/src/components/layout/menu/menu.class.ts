@@ -782,10 +782,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   /** `inert` counts alongside disabled/hidden because an inert element *refuses* focus: stepping
    *  onto one leaves `focus()` a silent no-op, so roving focus is stranded on whatever held it
-   *  (or on `<body>`) and every later key press dies. `closest` covers an inert ancestor, which
-   *  inerts the item just as completely as the attribute on the item itself. */
+   *  (or on `<body>`) and every later key press dies. An inert ancestor up to and including this
+   *  menu inerts the item just as completely as the attribute on the item itself. The walk stops
+   *  at this menu: an owning dropdown keeps its popup hidden/inert until it is positioned, and
+   *  re-focuses the roving stop chosen here once the popup is shown. */
   private isNavigable(item: LyraMenuItem): boolean {
-    return !item.interactionDisabled && isRovingTargetAvailable(item);
+    return !item.interactionDisabled && isRovingTargetAvailable(item, this);
   }
 
   private applyDropdownSize(): void {

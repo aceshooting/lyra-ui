@@ -489,7 +489,9 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const hiddenCount = overflowing ? this.eligibleChildren().length - (this.maxVisible as number) : 0;
     const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
-    const visible = this.expanded ? this.localize('showLess') : this.localize('showMoreCollapsed', undefined, { count: formattedHiddenCount });
+    // Resolved only for a rendered indicator, so a group that never overflows reads no overflow copy.
+    const visible = !overflowing ? '' : this.expanded
+      ? this.localize('showLess') : this.localize('showMoreCollapsed', undefined, { count: formattedHiddenCount });
 
     return html`
       <div

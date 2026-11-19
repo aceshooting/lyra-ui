@@ -78,18 +78,20 @@ export type CanvasRgba = readonly [number, number, number, number];
 
 const READBACK_BASES = ['#010203', '#040506'] as const;
 
-const readbackContexts = new WeakMap<Document, CanvasRenderingContext2D | null>();
+const readbackCanvases = new WeakMap<Document, HTMLCanvasElement>();
 
+/** Reuses one 1px canvas per document. The context is re-acquired on every read (a canvas hands
+ *  back the same context object), so a document that loses canvas support fails closed instead of
+ *  reading through a context cached while it still had one. */
 function readbackContext(doc: Document): CanvasRenderingContext2D | null {
-  let ctx = readbackContexts.get(doc);
-  if (ctx === undefined) {
-    const canvas = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
+  let canvas = readbackCanvases.get(doc);
+  if (!canvas) {
+    canvas = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
     canvas.width = 1;
     canvas.height = 1;
-    ctx = canvas.getContext('2d', { willReadFrequently: true });
-    readbackContexts.set(doc, ctx);
+    readbackCanvases.set(doc, canvas);
   }
-  return ctx;
+  return canvas.getContext('2d', { willReadFrequently: true });
 }
 
 /**

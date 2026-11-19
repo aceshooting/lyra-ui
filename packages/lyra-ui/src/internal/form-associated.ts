@@ -277,9 +277,11 @@ export function isBarredFromValidation(
  * Reads the component's own `effectiveDisabled` AND the UA's synchronous `:disabled` fieldset
  * cascade, which leads `formDisabledCallback()` by a tick. Replaces the per-class `liveDisabled`
  * getter without adding a member that would collide with subclasses that still declare their own.
+ * Server rendering runs lifecycle hooks against a DOM shim without `matches()`, where only the
+ * component's own state can answer.
  */
 export function isLiveDisabled(host: Element & { readonly effectiveDisabled: boolean }): boolean {
-  return host.effectiveDisabled || host.matches(':disabled');
+  return host.effectiveDisabled || (typeof host.matches === 'function' && host.matches(':disabled'));
 }
 
 /** Reads the branded platform value while rejecting {@linkcode createFallbackInternals}'s stand-in. */

@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { bdi } from '../../../internal/bidi.js';
@@ -195,7 +196,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, this.name.trim() || this.localize('calendarViewerLabel'))
+      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('calendarViewerLabel'))
       : undefined;
   }
 

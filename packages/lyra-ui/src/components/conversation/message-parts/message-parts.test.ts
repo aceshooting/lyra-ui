@@ -1128,7 +1128,7 @@ describe('tool-display', () => {
     el.addEventListener('lr-tool-call-chip-select', () => chipSelects++);
     const toggled = oneEvent(el, 'lr-toggle');
     blocks(el)[0]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!.click();
-    expect(((await toggled) as CustomEvent).detail).to.deep.equal({ expanded: true, callId: 'call-1' });
+    expect(((await toggled) as CustomEvent).detail).to.deep.equal({ expanded: true, callId: 'call-1', invocationId: 'call-1' });
     expect(chipSelects).to.equal(0);
   });
 

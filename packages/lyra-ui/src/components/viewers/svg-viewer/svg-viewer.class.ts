@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -195,7 +196,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, this.name.trim() || this.localize('svgViewerLabel'))
+      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('svgViewerLabel'))
       : undefined;
   }
 

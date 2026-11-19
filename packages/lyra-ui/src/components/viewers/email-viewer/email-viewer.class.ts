@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { splitLines } from '../../../internal/text-lines.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { discardBody } from '../../../internal/viewer-source-controller.js';
@@ -538,7 +539,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, this.name.trim() || this.localize('emailViewerLabel'))
+      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('emailViewerLabel'))
       : undefined;
   }
 
