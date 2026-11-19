@@ -422,7 +422,7 @@ describe("shiki highlighting (real peer)", () => {
       html`<lr-code-block
         collapsible
         language="javascript"
-        .strings=${{ collapseCode: 'Réduire le code' }}
+        .strings=${{ codeBlockToggle: 'Afficher ou masquer le code' }}
         .code=${jsSample}
       ></lr-code-block>`
     )) as LyraCodeBlock;
@@ -689,7 +689,7 @@ describe("fallback matrix (reaching into private state to exercise both paths de
       html`<lr-code-block
         collapsible
         language="javascript"
-        .strings=${{ collapseCode: 'Réduire le code' }}
+        .strings=${{ codeBlockToggle: 'Afficher ou masquer le code' }}
         .code=${jsSample}
       ></lr-code-block>`
     )) as LyraCodeBlock;
@@ -711,7 +711,7 @@ describe("fallback matrix (reaching into private state to exercise both paths de
     );
     expect(
       el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')
-    ).to.equal('Réduire le code');
+    ).to.equal('Afficher ou masquer le code');
   });
 
   it("falls back to plain text for an unrecognized language even though the highlighter loaded fine", async () => {
@@ -1186,8 +1186,7 @@ describe("localization", () => {
         collapsible
         .code=${jsSample}
         .strings=${{
-          expandCode: "Développer le code",
-          collapseCode: "Réduire le code",
+          codeBlockToggle: "Afficher ou masquer le code",
           copyCode: "Copier le code",
           copiedToClipboard: "Copié dans le presse-papiers",
         }}
@@ -1199,11 +1198,11 @@ describe("localization", () => {
     const copyButton = el.shadowRoot!.querySelector(
       '[part~="copy-button"]'
     ) as HTMLButtonElement;
-    expect(toggle.getAttribute("aria-label")).to.equal("Réduire le code");
+    expect(toggle.getAttribute("aria-label")).to.equal("Afficher ou masquer le code");
     expect(copyButton.getAttribute("aria-label")).to.equal("Copier le code");
     toggle.click();
     await el.updateComplete;
-    expect(toggle.getAttribute("aria-label")).to.equal("Développer le code");
+    expect(toggle.getAttribute("aria-label")).to.equal("Afficher ou masquer le code");
   });
 
   it("localizes the code-region aria-label, with and without a language", async () => {

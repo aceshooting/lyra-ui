@@ -12,6 +12,8 @@ import { formControlChrome } from '../../../internal/form-control/chrome.styles.
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
+  anchoredPopupOpen,
+  anchoredPopupReveal,
 } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
@@ -186,12 +188,12 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
-    max-block-size: var(--lr-size-18rem);
+    max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
     overflow-x: hidden;
     inline-size: max-content;
-    min-inline-size: min(var(--lr-size-12rem), var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
+    min-inline-size: min(var(--lr-size-12rem), var(--lr-popover-viewport-clamp), var(--lr-positioner-available-inline-size, var(--lr-size-28rem)), var(--lr-size-28rem));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-positioner-available-inline-size, var(--lr-size-28rem)), var(--lr-size-28rem));
     padding: var(--lr-space-xs);
     /* Fill and edge from the shared overlay-surface family
        (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
@@ -205,18 +207,10 @@ export const styles = css`
     );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(var(--lr-size-neg-0-25rem));
-    transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+    ${anchoredPopupReveal}
   }
   :host([open]) [part='listbox'] {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
+    ${anchoredPopupOpen}
   }
   @media (prefers-reduced-motion: reduce) {
     [part='listbox'] {

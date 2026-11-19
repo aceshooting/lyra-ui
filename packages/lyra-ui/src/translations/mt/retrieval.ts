@@ -135,6 +135,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Memorji għal żmien twil',
   memoryPanelAdd: 'Żid mal-memorja għal żmien twil',
   memoryPanelAddWithContext: 'Żid "{label}" mal-memorja għal żmien twil',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Insa kollox',
   memoryPanelConfirmAddHeading: 'Iżżid dan mal-memorja għal żmien twil?',
   memoryPanelConfirmRemoveHeading: 'Tneħħi dan l-element?',
@@ -193,6 +194,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Segmenti tal-evalwazzjoni',
   ragEvalDashboardAllSlices: 'Kollha',
   ragEvalDashboardSliceUnavailable: 'M’hemm l-ebda eżekuzzjoni tal-evalwazzjoni disponibbli għal {slice}.',
+  ragEvalDashboardMetricUnavailable: 'M’hemm l-ebda metrika tal-evalwazzjoni disponibbli għal {metric}.',
   knowledgeBaseSyncIdle: 'Inattiv',
   knowledgeBaseSyncSyncing: 'Qed jissinkronizza',
   knowledgeBaseSyncPaused: 'Imwaqqaf temporanjament',
@@ -272,6 +274,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Riżultat {index} minn {total}',
   ragAnswerEmpty: 'Għad m’hemm l-ebda tweġiba',
   retrievalTraceEmpty: 'L-ebda stadju tal-irkupru',
+  retrievalTraceLabel: 'Traċċa tal-irkupru',
   sourcePickerMatches: {
     few: '{count} sorsi jaqblu',
     many: '{count} sors jaqblu',

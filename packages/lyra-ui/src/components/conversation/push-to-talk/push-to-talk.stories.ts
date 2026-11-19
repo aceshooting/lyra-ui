@@ -90,6 +90,8 @@ export const ThemedRecording: Story = {
   render: () => html`
     <div
       style="display: flex; gap: var(--lr-space-l);
+        --lr-push-to-talk-trigger-hover-bg: var(--lr-color-brand-quiet);
+        --lr-push-to-talk-trigger-active-bg: var(--lr-color-brand-border-normal);
         --lr-push-to-talk-trigger-recording-border-color: ${storyColor('brand')};
         --lr-push-to-talk-trigger-recording-color: ${storyColor('success')};
         --lr-push-to-talk-pulse-recording-border-color: ${storyColor('warning')};"
@@ -98,4 +100,8 @@ export const ThemedRecording: Story = {
       <lr-push-to-talk mode="toggle"></lr-push-to-talk>
     </div>
   `,
+};
+
+export const StreamOnly: Story = {
+  render: () => html`<lr-push-to-talk mode="toggle" stream-only></lr-push-to-talk>`,
 };

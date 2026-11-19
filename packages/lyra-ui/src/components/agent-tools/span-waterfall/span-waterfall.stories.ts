@@ -160,3 +160,7 @@ export const MillionSource: Story = {
     return html`<lr-span-waterfall label="Million-span timeline" .treeSource=${source}></lr-span-waterfall>`;
   },
 };
+
+export const CompactFrame: Story = {
+  render: () => html`<lr-span-waterfall frame="card" size="s" max-nodes="3" .spans=${spans}></lr-span-waterfall>`,
+};

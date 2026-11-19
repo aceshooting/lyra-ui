@@ -263,10 +263,10 @@ export interface LyraTerminalEventMap {
  *   `danger`-tone highlighted line.
  * @cssprop [--lr-terminal-highlight-neutral-bg=var(--lr-color-surface)] - Background of a
  *   `neutral`-tone highlighted line.
- * @cssprop [--lr-terminal-search-outline-color=var(--lr-color-warning)] - Outline color for a
- *   line containing a non-active search match.
- * @cssprop [--lr-terminal-search-active-outline-color=var(--lr-color-brand)] - Outline color for
- *   the active search match's line.
+ * @cssprop [--lr-terminal-search-outline-color=var(--lr-color-warning)] - Inset ring color for a
+ *   line containing a non-active search match; the outline stays reserved for focus.
+ * @cssprop [--lr-terminal-search-active-outline-color=var(--lr-color-brand)] - Inset ring color
+ *   for the active search match's line.
  * @cssprop [--lr-terminal-compact-toolbar-padding=var(--lr-space-2xs) var(--lr-space-xs)] -
  *   `[part="toolbar"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-terminal-compact-toolbar-gap=var(--lr-space-2xs)] - Gap between
@@ -1020,26 +1020,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   // --- Render ------------------------------------------------------------
 
-  /** Per-line state styling (cursor, search-match outline, highlight-tone background). Applied
-   *  inline rather than through `data-match`/`data-highlight-tone` stylesheet selectors, since those
-   *  attributes live on the same element `part="line"` names -- and a `::part()` selector (needed to
-   *  reach across `<lr-virtual-list>`'s shadow boundary, see `terminal.styles.ts`) cannot be
-   *  combined with a trailing attribute selector the way a same-shadow-root rule could. */
+  /** Per-line state styling (cursor, highlight-tone background) applied inline: a `::part()`
+   *  selector cannot take the trailing attribute selector these per-line values would need. */
   private lineStateStyle(
     highlight: LyraHighlight | undefined,
     interactive: boolean,
-    isMatchLine: boolean,
-    isActiveMatchLine: boolean,
   ): Record<string, string> {
     return {
       cursor: interactive ? 'pointer' : '',
-      outline: isMatchLine
-        ? `var(--lr-size-2px) solid ${
-            isActiveMatchLine
-              ? 'var(--lr-terminal-search-active-outline-color, var(--lr-color-brand))'
-              : 'var(--lr-terminal-search-outline-color, var(--lr-color-warning))'
-          }`
-        : '',
       background: highlight?.tone ? TONE_BACKGROUND_VAR[highlight.tone] : '',
     };
   }
@@ -1085,7 +1073,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       <div
         part=${stateParts}
         dir="ltr"
-        style=${styleMap(this.lineStateStyle(highlight, highlightOwner !== undefined, isMatchLine, isActiveMatchLine))}
+        style=${styleMap(this.lineStateStyle(highlight, highlightOwner !== undefined))}
         data-line-number=${line.number}
         data-match=${!isMatchLine ? nothing : isActiveMatchLine ? 'active' : ''}
         data-highlight-tone=${tone ?? nothing}

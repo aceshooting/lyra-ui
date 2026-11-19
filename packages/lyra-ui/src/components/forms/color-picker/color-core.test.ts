@@ -384,3 +384,22 @@ describe('color-core hsl() parsing matches the browser', () => {
     expect(failures).to.deep.equal([]);
   });
 });
+
+describe('parseColor document scoping', () => {
+  it('resolves names through the supplied document and fails closed without a view', () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    try {
+      const doc = iframe.contentDocument!;
+      const parsed = parseColor('mediumseagreen', doc);
+      expect(parsed === null).to.equal(false);
+      expect(formatColor(parsed!, 'hex')).to.equal('#3cb371');
+      expect(doc.body.childElementCount).to.equal(0);
+    } finally {
+      iframe.remove();
+    }
+    const detached = document.implementation.createHTMLDocument('');
+    expect(parseColor('palevioletred', detached)).to.equal(null);
+    expect(parseColor('palevioletred') === null).to.equal(false);
+  });
+});

@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Atsaukties',
   promptInputLabel: 'MI uzvedne',
   promptInputControls: 'Uzvednes opcijas',
+  promptInputCollectionLimit: 'Daļa uzvednes ievades tika izlaista, jo tika sasniegts ievades ierobežojums.',
   promptInputSources: 'Avoti',
   promptInputAttachments: 'Pielikumi',
   handoffLabel: 'Nodošana aģentam',
@@ -157,6 +158,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Nav pieejamu balsu',
   voicePickerRequired: 'Lūdzu, izvēlieties balsi.',
   voicePickerPreview: 'Priekšskatīt {name}',
+  voicePickerPreviewFailed: 'Balss priekšskatījums nav pieejams.',
   voicePickerStopPreview: 'Apturēt priekšskatījumu',
   realtimeSessionLabel: 'Reāllaika sesija',
   realtimeSessionDisconnected: 'Atvienots',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Garš kods tiek rādīts bez sintakses izcelšanas.',
   codeBlockHighlightedLine: 'Izcelta rinda',
   codeBlockActiveLine: 'Aktīva izcelta rinda',
+  codeBlockToggle: 'Rādīt vai paslēpt kodu',
 };
 
 registerLyraLocale('lv', strings);

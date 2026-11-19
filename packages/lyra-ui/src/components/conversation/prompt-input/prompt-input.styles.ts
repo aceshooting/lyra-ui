@@ -44,6 +44,8 @@ export const styles = css`
   [part='sources-summary'] {
     display: flex;
     align-items: center;
+    gap: var(--lr-space-xs);
+    list-style: none;
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
     text-align: start;
@@ -51,12 +53,32 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
 
-  [part='sources-summary']:hover {
+  [part='sources-summary']::-webkit-details-marker {
+    display: none;
+  }
+  .sources-marker {
+    display: inline-flex;
+    flex: none;
+  }
+  :host(:dir(rtl)) details:not([open]) .sources-marker {
+    transform: scaleX(-1);
+  }
+  details[open] .sources-marker {
+    transform: rotate(90deg);
+  }
+
+  [part='sources']:where([inert]) {
+    opacity: var(--lr-opacity-disabled);
+  }
+  [part='sources']:where([inert]) summary {
+    cursor: not-allowed;
+  }
+  [part='sources']:where(:not([inert])) [part='sources-summary']:hover {
     color: var(--lr-color-brand);
   }
   /* A disclosure control, so the press adds a fill on top of the hover recolor, mixed from
      [part='sources']'s surface -- what shows through the summary at rest. */
-  [part='sources-summary']:active {
+  [part='sources']:where(:not([inert])) [part='sources-summary']:active {
     color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -68,6 +90,11 @@ export const styles = css`
   [part='source-picker'] {
     padding: var(--lr-space-s);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+  }
+
+  :host([readonly]) [part='queue']::part(actions),
+  :host([readonly]) [part='chips'] ::part(retry-button) {
+    display: none;
   }
 
   [part='chips'] {

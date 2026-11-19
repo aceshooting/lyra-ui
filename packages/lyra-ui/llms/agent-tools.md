@@ -709,6 +709,8 @@ equivalent). Same collapsible header-button-plus-region shape as `<lr-source-lis
 slot is entirely free-form (a consumer-composed `<lr-streaming-text>`, `<lr-markdown>`, or
 plain text) — this component has no dependency on either.
 
+A host `aria-label` names the scrollable transcript. The visible header continues to use `label`.
+
 **Properties:**
 
 - `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
@@ -864,6 +866,11 @@ cause"/"During handling" separators) into separate groups. Frames matching `inte
 behind a count-labeled toggle. A malformed or non-safe-integer location remains visible as raw,
 non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
 (no Web Awesome equivalent).
+
+The internal-frame disclosure keeps the same count-based name while `aria-expanded` reports
+its state. Customize that name with `stackTraceInternalFrames` and its `{count}` placeholder.
+Existing per-instance `stackTraceShowFrames` and `stackTraceHideFrames` overrides take effect
+when a stable per-instance label is absent.
 
 Direction: function names (`::part(frame-function)`) and locations (`::part(frame-location)`) carry `dir="ltr"`, so `Object.<anonymous>` and file paths read left-to-right inside a right-to-left document; the frame button itself follows the page direction.
 
@@ -1595,7 +1602,9 @@ output), and `prompt` (optional shared-input header above both panes).
 
 **Events:** `lr-vote-request` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
 This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
-the prior vote.
+the prior vote. `lr-vote-change` (`detail: { vote, itemId }`) follows once an accepted user vote is
+committed; it never fires for a vetoed request or a host assignment. Each pane is a tab stop only
+while its response overflows the height cap.
 
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the
@@ -1619,6 +1628,10 @@ and `lr-test-results` (and likewise `lr-task-list` and `lr-eval-dataset`), assig
 refreshes the rendered projection. Item objects keep their identity, but assigning the same array
 again, even after mutating an item or the array itself, is ignored: create a new array to publish
 a change. Unrelated property updates reuse the current projection where possible.
+
+Use `maxNodes` (attribute `max-nodes`) to set the array projection limit from 1 to 5000.
+It defaults to 500. The default `frame="plain"` has no outer border. Use `frame="card"`
+for a bordered timeline. Small sizes reduce row height from the default `size="m"`.
 
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal
@@ -1698,13 +1711,13 @@ explicitly unrecognized `status` values render the localized neutral `'unknown'`
 absent status renders `'pending'`. Raw provider status text is never shown. Assignment retains the
 first 10,000 source entries in a bounded readonly outer snapshot; admitted row identities feed a
 descriptor-safe copy of the closed span display schema, so opaque provider fields do not consume
-the shared deep-copy budget. Reassign the collection after record changes. At most 500 unique valid
+the shared deep-copy budget. Reassign the collection after record changes. By default, at most 500 unique valid
 spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
 controlled active state remains visible. A localized `[part="limit"]` note reports the actual
 number shown and the assigned source count when either ceiling omits entries. Counts use the
 effective locale; initial truncation stays silent and a later transition into truncation is
-announced politely. The time axis scales to the full admitted trace, measured before the 500-span
+announced politely. The time axis scales to the full admitted trace, measured before the row
 cap is applied, so spans omitted only by that render cap cannot shrink the axis and stretch the
 surviving bars across the track. Active changes within the ordinary window reuse the existing
 projection and sort; reserving an outside active path can change the projection.
@@ -1774,6 +1787,9 @@ component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no
 several steps may be `running` at once. By default it is a status report; with `treeSource` unset,
 `reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
 Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
+
+In a reorderable array, one row is in the tab sequence. Up, Down, Home and End move focus
+through visible tasks and subtasks. Ctrl/Cmd with Up or Down requests a sibling reorder.
 
 **Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
@@ -2045,7 +2061,7 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control the copy and d
 `--lr-terminal-line-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-terminal-line-active-bg` (default `color-mix(in oklab, var(--lr-terminal-line-hover-bg,
 var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control
-ordinary rendered lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+activatable highlighted lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-terminal-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
 `--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
@@ -2099,8 +2115,10 @@ than token-driven, and carry no contrast guarantee.
 
 **Additional API surface:**
 
-- `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
-- `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.
+- `--lr-terminal-search-outline-color` — Inset ring color for a line containing a non-active search match; the outline stays reserved for focus. Default: `var(--lr-color-warning)`.
+- `--lr-terminal-search-active-outline-color` — Inset ring color for the active search match's line. Default: `var(--lr-color-brand)`.
+
+Only a highlight-owning (`line-interactive`) line previews hover and press tints.
 
 While a search query is active, writes, scrollback trimming, `content` replacement, and `clear()`
 recompute the exact match count and emit `lr-search-change` only when that public search snapshot
@@ -2116,6 +2134,13 @@ number for an empty line), avoiding duplicate tab stops for one logical highligh
 A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style): kind icon,
 name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
 columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
+
+The host `aria-label` names the inner trace tree. The default `frame="plain"` leaves the
+outer border off. Set `frame="card"` to draw it. The default density is `size="m"`, and small
+sizes use tighter spacing.
+
+`--lr-trace-tree-row-hover-bg` and `--lr-trace-tree-row-pressed-bg`
+set the row's pointer feedback.
 
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
@@ -2295,6 +2320,9 @@ the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that
 left alone — appending a live entry never steals focus from an unrelated, still-present control.
 Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
+
+`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-pressed-bg`
+set the header's pointer feedback.
 
 `entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries
 through `activityFeedInputLimit`, with `count` and `total` placeholders. The existing follow and
@@ -2571,7 +2599,10 @@ and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }
 detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
 globally unique. Manual expansion state is keyed by that same suite+test pair.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
-repeated row controls remain distinguishable.
+repeated row controls remain distinguishable. The name follows the action (`testResultsExpandTest`
+/ `testResultsCollapseTest`) while `aria-expanded` carries the state, and the visible label reads
+`expand`/`collapse`; override the visible action and its contextual name together so the visible
+words stay inside the accessible name. Provider rows of one suite share a single named list.
 
 Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
 adjacent localized status word carries the meaning. Running rows use the decorative spinner.
@@ -2859,7 +2890,9 @@ string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating
 Unknown values normalize and reflect as `'agent'`.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering.
+letterboxing-aware). After dropping blank ids and later duplicates, only the last 500 markers in
+input order render. `part="limit"` shows the localized overflow notice. Entering overflow after
+mount also announces the notice politely.
 `withoutControls: boolean = false` (attribute `without-controls`, reflected) — hides the built-in
 take-over/stop buttons, for a read-only viewer; the `actions` slot still renders.
 
@@ -2943,7 +2976,8 @@ slot has assigned content. Assigning `view='code'` without assigned code content
 `preview`, including after mount. `actions` — extra header controls, rendered between the version
 navigation and the built-in copy/download buttons.
 
-**Events:** `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
+**Events:** cancelable `lr-view-change-request` (`detail: { view, previousView }`, before a toggle
+press changes `view`; `preventDefault()` keeps the current view), `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
 fired when the previous/next navigation moves to a different version; not fired when a `versions`
 reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
 since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
@@ -3096,6 +3130,13 @@ three outright.
 
 Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick-jumps, and a
 hierarchical trace tree from one shared `spans` array.
+
+The host `aria-label` names the inner trace tree. The default `frame="plain"` leaves the
+outer border off. Set `frame="card"` to draw it. The default density is `size="m"`, and small
+sizes use tighter spacing.
+
+`--lr-agent-trace-handoff-hover-bg` and `--lr-agent-trace-handoff-pressed-bg`
+set the handoff's pointer feedback.
 
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
@@ -3323,7 +3364,8 @@ The source is retained by identity. Reassign it, including the same object, or c
 disconnect and adoption revoke obsolete responses; unrelated named presentation updates reuse
 the current data. No million-row snapshot or whole-source filter/index is created by this route.
 
-**Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
+**Events:** cancelable `lr-example-select-request` (`detail: { exampleId, previousExampleId }`,
+before a row activation selects it; `preventDefault()` keeps the selection), `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: null` — no payload; `emit()`
 normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
@@ -3534,7 +3576,8 @@ localized name or its `label`; `idle` is silent.
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
-with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide-request`
+with the example it came from, so a host needn't walk the DOM), `lr-example-citation-open` (same
+detail, for a citation's full-preview request), `lr-example-tool-approval-decide-request`
 (`detail: EvalToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
 `{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
 }`). The approval
@@ -3551,7 +3594,10 @@ example's nested timeline after the host persisted it, and `revertPendingApprova
 void` releases it for a retry; both are no-ops while the example is collapsed or gone.
 
 **Registration:** the Markdown, code, grounding and tool-timeline children register when the first
-example expands, so a collapsed batch loads none of them; they upgrade in place.
+example expands, so a collapsed batch loads none of them; they upgrade in place. If that download
+fails, each expanded example shows `part="load-error"` (`evaluationRunDetailsLoadError`), the
+failure is announced, and expanding an example again retries. The render-limit notice is a
+`role="note"` and is announced when it first appears.
 
 
 **CSS parts:** `base`, `header`,
@@ -3759,7 +3805,9 @@ AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id,
 AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
-`metricId: string | null = null`; `label?: string` — omission localizes the heading while an
+`metricId: string | null = null` — `null` and `''` select the first metric. A non-empty unmatched
+id leaves the selection empty and shows the localized `metric-unavailable` note until the id
+matches. Clear `metricId` to use the first available metric as a fallback. `label?: string` — omission localizes the heading while an
 explicit empty string renders no heading/name; `withoutChart: boolean = false` (attribute
 `without-chart`, reflected) suppresses the metric trend chart; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
@@ -3775,7 +3823,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
-`run-label`, `run-meta`, `run-status`, `run-status-message`, `limit` (shown when run history exceeds
+`run-label`, `run-meta`, `run-status`, `run-status-message`, `metric-unavailable`, `limit` (shown when run history exceeds
 `maxRenderedRuns`), `empty`.
 
 **Additional API surface:**
@@ -4074,7 +4122,10 @@ studio emits a `blur` and then a `focus`.
 
 **Headings and malformed rows:** `heading-level` defaults to `none`; `heading` is used verbatim including `''` (omission localizes “Prompt studio”), and the Variables and Preview titles sit one level below `heading-level` (no heading semantics under `none`). A `null` variable row, or one without a string `name`/`value`, is skipped instead of blanking the studio.
 
-**CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
+When messages, variables and versions total more than 500 rows, `size-notice` shows a localized
+performance advisory. Every row remains available and save and run events still carry the full workspace.
+
+**CSS parts:** `base`, `toolbar`, `editor`, `size-notice`, `messages`, `message`, `message-role`,
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
 `add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
 
@@ -4159,6 +4210,7 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
 - `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-selected-bg` — Selected trigger fill and base color for its hover and press states. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
 - `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
@@ -4169,6 +4221,9 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 Controlled nested-agent hierarchy with lifecycle badges, task/model context, guarded progress,
 selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cycles and orphan
 parents remain renderable instead of recursing forever.
+
+Arrow keys navigate the tree from a row or its main trigger. Cancel and Retry keep native
+button keyboard behavior. The displayed truncation notice has the `note` role.
 
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
 `selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
@@ -4994,6 +5049,9 @@ remain readable in both states. Optional `label` overrides the localized heading
 
 
 **Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), reports a keep/discard action; the host applies it by replacing `files`.
+**Custom properties:** `--lr-change-review-file-border-color` (default `var(--lr-color-border)`),
+`--lr-change-review-file-radius` (default `var(--lr-radius-container)`) and
+`--lr-change-review-header-hover-bg` (default `var(--lr-color-surface-raised)`; the pressed fill mixes from it).
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');
@@ -5013,6 +5071,9 @@ Import `@aceshooting/lyra-ui/components/lr-agent-question.js`. Experimental stru
 and MCP form-elicitation actions. Set `request-id`, `requester` (server/agent provenance), `message`,
 `.schema: FlatToolParamSchema`, and optional `.value: ToolParamFormValue`. `label` overrides the
 localized heading; `disabled` defaults false and `status` defaults `'pending'`.
+
+Without a schema, the action buttons can submit an empty response. Supplying a supported
+schema loads the field controls before the question's `updateComplete` resolves.
 
 The component composes `lr-tool-param-form` with the flat MCP 2025-11-25 schema subset: strings,
 numbers/integers, booleans, titled or untitled single/multiple string-enum choices, defaults,
@@ -5231,6 +5292,10 @@ request cancellation. The component does not poll, schedule timers, start runs, 
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
 
+Tab enters the current row's actions. Up, Down, Home and End move between rows and keep the
+same action when available. A narrow layout stacks status and actions below the run label.
+A polite announcement accompanies the first transition past the 100-row display limit.
+
 **Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
 `completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
@@ -5279,6 +5344,12 @@ shows an unavailable state; usage above the limit shows an exceeded state. The c
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
 values are not plain attribute strings. A host `aria-label` names the group and its meter. Hiding the heading with `label=""` preserves
 the localized meter name. Percentages near zero or full capacity retain fractional precision.
+
+The default `frame="card"` draws an outer border. Use `frame="plain"` inside an existing
+card. Small sizes reduce padding from the default `size="m"`. The custom properties
+`--lr-budget-meter-border-color`, `--lr-budget-meter-radius` and `--lr-budget-meter-track-bg`
+style the card and track. `--lr-budget-meter-fill` colors usage up to the limit and
+`--lr-budget-meter-exceeded-fill` colors usage above it.
 
 **Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 

@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'நீண்டகால நினைவுகள்',
   memoryPanelAdd: 'நீண்டகால நினைவகத்தில் சேர்',
   memoryPanelAddWithContext: '"{label}"-ஐ நீண்டகால நினைவகத்தில் சேர்',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'அனைத்தையும் மறந்துவிடு',
   memoryPanelConfirmAddHeading: 'இதை நீண்டகால நினைவகத்தில் சேர்க்கவா?',
   memoryPanelConfirmRemoveHeading: 'இந்த உருப்படியை நீக்கவா?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'மதிப்பீட்டுப் பகுதிகள்',
   ragEvalDashboardAllSlices: 'அனைத்தும்',
   ragEvalDashboardSliceUnavailable: '{slice}-க்கு மதிப்பீட்டு இயக்கங்கள் இல்லை.',
+  ragEvalDashboardMetricUnavailable: '{metric}-க்கு மதிப்பீட்டு அளவீடு எதுவும் கிடைக்கவில்லை.',
   knowledgeBaseSyncIdle: 'செயலற்றது',
   knowledgeBaseSyncSyncing: 'ஒத்திசைக்கிறது',
   knowledgeBaseSyncPaused: 'இடைநிறுத்தப்பட்டது',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'முடிவு {index} / {total}',
   ragAnswerEmpty: 'இன்னும் பதில் இல்லை',
   retrievalTraceEmpty: 'மீட்டெடுப்பு நிலைகள் இல்லை',
+  retrievalTraceLabel: 'மீட்டெடுப்புத் தடம்',
   sourcePickerMatches: {
     one: '{count} மூலப் பொருத்தம்',
     other: '{count} ஆதாரங்கள் பொருந்துகின்றன',

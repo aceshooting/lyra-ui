@@ -36,7 +36,16 @@ function invokeDrawFrame(el: LyraAudioVisualizer, nowMs: number): void {
 function ambientAmplitudes(el: LyraAudioVisualizer, nowMs: number, reduced: boolean): number[] {
   return (
     el as unknown as { ambientAmplitudes: (nowMs: number, reduced: boolean) => number[] }
-  ).ambientAmplitudes(nowMs, reduced);
+  ).ambientAmplitudes(nowMs, reduced).slice();
+}
+
+function visibilityOf(el: LyraAudioVisualizer): { readonly visible: boolean; readonly known: boolean } {
+  return (el as unknown as { visibility: { visible: boolean; known: boolean } }).visibility;
+}
+
+async function setDisplayed(el: LyraAudioVisualizer, displayed: boolean): Promise<void> {
+  el.style.display = displayed ? '' : 'none';
+  await waitUntil(() => visibilityOf(el).visible === displayed);
 }
 
 function waitFrame(): Promise<void> {
@@ -464,7 +473,7 @@ describe('draw-loop scheduling', () => {
     await settle(el);
     expect(rafId(el)).to.be.undefined;
 
-    (el as unknown as { visible: boolean }).visible = false;
+    await setDisplayed(el, false);
     el.state = 'thinking';
     await el.updateComplete;
     expect(rafId(el)).to.be.undefined; // scheduleDraw() no-ops while off-screen
@@ -473,7 +482,6 @@ describe('draw-loop scheduling', () => {
   it('cancels an in-flight time-driven loop as soon as drawFrame observes visible=false, instead of re-arming itself', async () => {
     const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settle(el);
-    const priv = el as unknown as { visible: boolean };
     // Force the time-driven branch deterministically -- state='thinking' alone depends on the test
     // environment's prefers-reduced-motion, which this test isn't about.
     Object.defineProperty(el, 'isTimeDriven', { configurable: true, get: () => true });
@@ -482,7 +490,7 @@ describe('draw-loop scheduling', () => {
       expect(frameHandle(el)).to.not.be.undefined; // still looping while visible and time-driven
 
       cancelCurrentFrame(el);
-      priv.visible = false;
+      await setDisplayed(el, false);
       invokeDrawFrame(el, 16);
       expect(frameHandle(el)).to.be.undefined; // stops re-arming once off-screen, despite isTimeDriven
     } finally {
@@ -493,12 +501,12 @@ describe('draw-loop scheduling', () => {
   it('resumes the loop once scheduleDraw() is called again after visible flips back to true', async () => {
     const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settle(el);
-    const priv = el as unknown as { visible: boolean; scheduleDraw: () => void };
-    priv.visible = false;
+    const priv = el as unknown as { scheduleDraw: () => void };
+    await setDisplayed(el, false);
     priv.scheduleDraw();
     expect(frameHandle(el)).to.be.undefined;
 
-    priv.visible = true;
+    await setDisplayed(el, true);
     priv.scheduleDraw();
     expect(frameHandle(el)).to.not.be.undefined;
   });
@@ -539,11 +547,11 @@ describe('IntersectionObserver visibility state machine', () => {
     let el: LyraAudioVisualizer | undefined;
     try {
       el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-      const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+      const state = visibilityOf(el);
       expect(records).to.have.length(1);
       expect(records[0]!.target === el).to.be.true;
       expect(state.visible).to.be.false;
-      expect(state.visibilityKnown).to.be.false;
+      expect(state.known).to.be.false;
       expect(frameHandle(el)).to.be.undefined;
 
       const observer = records[0]!;
@@ -567,14 +575,14 @@ describe('IntersectionObserver visibility state machine', () => {
       });
       observer.callback(throwingEntries as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
       expect(state.visible).to.be.false;
-      expect(state.visibilityKnown).to.be.false;
+      expect(state.known).to.be.false;
 
       observer.callback(
         [{ target: el, isIntersecting: false } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
       expect(state.visible).to.be.false;
-      expect(state.visibilityKnown).to.be.true;
+      expect(state.known).to.be.true;
 
       el.state = 'thinking';
       await el.updateComplete;
@@ -586,6 +594,13 @@ describe('IntersectionObserver visibility state machine', () => {
       );
       expect(state.visible).to.be.true;
       expect(frameHandle(el)).to.not.be.undefined;
+
+      cancelCurrentFrame(el);
+      observer.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(frameHandle(el)).to.be.undefined;
     } finally {
       el?.remove();
       restoreOwnProperty(window, 'IntersectionObserver', descriptor);
@@ -631,9 +646,9 @@ describe('IntersectionObserver visibility state machine', () => {
       let el: LyraAudioVisualizer | undefined;
       try {
         el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-        const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+        const state = visibilityOf(el);
         expect(state.visible).to.be.true;
-        expect(state.visibilityKnown).to.be.true;
+        expect(state.known).to.be.true;
         await waitFrame();
         const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
         expect(canvas.width).to.be.greaterThan(0);
@@ -782,16 +797,23 @@ it('localizes the auto-generated aria-label via this.localize()', async () => {
 
 describe('media-query change handlers', () => {
   it('onDprChange rebuilds the DPR MediaQueryList and reschedules a draw', async () => {
-    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-    await settleRaf(el);
-    const priv = el as unknown as { dprQuery?: MediaQueryList };
-    expect(frameHandle(el)).to.be.undefined;
-    const before = priv.dprQuery;
-    expect(before).to.exist;
-    before!.dispatchEvent(new Event('change'));
-    expect(priv.dprQuery).to.exist;
-    expect(priv.dprQuery).to.not.equal(before); // watchDpr() rebuilt the MediaQueryList
-    expect(frameHandle(el)).to.not.be.undefined; // scheduleDraw() re-entered the loop
+    const original = window.matchMedia;
+    const resolutions: MediaQueryList[] = [];
+    window.matchMedia = query => {
+      const result = original.call(window, query);
+      if (query.startsWith('(resolution:')) resolutions.push(result);
+      return result;
+    };
+    try {
+      const el = await fixture<LyraAudioVisualizer>(html`<lr-audio-visualizer></lr-audio-visualizer>`);
+      await settleRaf(el);
+      expect(frameHandle(el)).to.be.undefined;
+      expect(resolutions).to.have.length(1);
+      resolutions[0]!.dispatchEvent(new Event('change'));
+      expect(resolutions).to.have.length(2);
+      expect(resolutions[1] === resolutions[0]).to.equal(false);
+      expect(frameHandle(el)).to.not.be.undefined;
+    } finally { window.matchMedia = original; }
   });
 
   it('onMotionPreferenceChange reschedules a draw when the reduced-motion preference flips', async () => {
@@ -1102,14 +1124,19 @@ describe('live analyser draw loop', () => {
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       const track = { readyState: 'live' as MediaStreamTrackState };
-      el.stream = { getAudioTracks: () => [track] } as unknown as MediaStream;
+      let trackReads = 0;
+      el.stream = { getAudioTracks: () => { trackReads++; return [track]; } } as unknown as MediaStream;
       await el.updateComplete;
       await waitFrame();
       await waitFrame();
       expect(frameHandle(el)).to.not.be.undefined;
+      const now = performance.now() + 1000;
+      invokeDrawFrame(el, now);
+      const readsBeforeBurst = trackReads;
+      for (let i = 1; i <= 5; i++) invokeDrawFrame(el, now + i * 16);
+      expect(trackReads).to.equal(readsBeforeBurst);
       track.readyState = 'ended';
-      await waitFrame();
-      await waitFrame();
+      invokeDrawFrame(el, now + 600);
       expect(frameHandle(el)).to.be.undefined;
       expect((el as unknown as { audioCtx?: { state: string } }).audioCtx?.state).to.equal('suspended');
     } finally {
@@ -1129,7 +1156,11 @@ describe('live analyser draw loop', () => {
       expect(analyser?.fftSize).to.equal(2048); // waveform mode requests a finer FFT
       const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
       expect(amps).to.have.length(128); // frequencyBinCount from the fake analyser
+      expect((el as unknown as { currentAmplitudes(time: number): number[] }).currentAmplitudes(16) === amps).to.equal(true);
       expect(amps.some((a) => a !== 0)).to.be.true;
+      const endpoints = [amps[0], amps[amps.length - 1]];
+      const limited = (el as unknown as { currentAmplitudes(time: number, maxPoints: number): number[] }).currentAmplitudes(32, 2);
+      expect(limited).to.deep.equal(endpoints);
     } finally {
       restoreAudioContext();
     }
@@ -1142,13 +1173,10 @@ describe('reduced-motion ambient throttling in drawFrame', () => {
       const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       const priv = el as unknown as {
         lastAmbientDrawMs: number;
-        visible: boolean;
-        visibilityKnown: boolean;
       };
       // Drive drawFrame by hand with controlled timestamps so the 500ms throttle window is deterministic.
+      await waitUntil(() => visibilityOf(el).visible);
       cancelCurrentFrame(el);
-      priv.visible = true;
-      priv.visibilityKnown = true;
       priv.lastAmbientDrawMs = 1000;
 
       invokeDrawFrame(el, 1200); // 200ms later: still inside the throttle window
@@ -1414,14 +1442,16 @@ describe('owner-window runtime after adoption', () => {
       expect(frameRequest(el) === undefined).to.be.true;
       const priv = el as unknown as {
         hostSize?: { width: number; height: number };
-        visible: boolean;
-        visibilityKnown: boolean;
         resolvedColors?: { active: string; quiet: string };
         draw: (nowMs: number) => void;
       };
       priv.hostSize = undefined;
-      priv.visible = true;
-      priv.visibilityKnown = true;
+      const activeIntersection = intersectionRecords[1]!;
+      activeIntersection.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      cancelCurrentFrame(el);
       staleResize.callback(
         [{ contentRect: { width: 999, height: 999 } } as unknown as ResizeObserverEntry],
         {} as ResizeObserver,
@@ -1431,21 +1461,20 @@ describe('owner-window runtime after adoption', () => {
         {} as IntersectionObserver,
       );
       expect(priv.hostSize).to.be.undefined;
-      expect(priv.visible).to.be.true;
+      expect(visibilityOf(el).visible).to.be.true;
       expect(frameRequest(el) === undefined).to.be.true;
 
-      const activeIntersection = intersectionRecords[1]!;
       activeIntersection.callback(
         [{ target: el, isIntersecting: false } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
-      expect(priv.visible).to.be.false;
+      expect(visibilityOf(el).visible).to.be.false;
       expect(frameRequest(el) === undefined).to.be.true;
       activeIntersection.callback(
         [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
-      expect(priv.visible).to.be.true;
+      expect(visibilityOf(el).visible).to.be.true;
       expect(frameRequest(el)?.owner === frameWindow).to.equal(true);
       cancelCurrentFrame(el);
 
@@ -1877,4 +1906,46 @@ it('reads the reduced-motion preference once, not per drawn frame', async () => 
     window.matchMedia = original;
   }
   expect(reads, 'cached preference, refreshed only by the media listener').to.equal(0);
+});
+
+it('falls back to a localized name for whitespace-only overrides', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-audio-visualizer']>(html`<lr-audio-visualizer
+    aria-label="  " label="   " .strings=${{ audioVisualizerLabel: 'Localized name' }}></lr-audio-visualizer>`);
+  expect(el.getAttribute('aria-label')).to.equal('Localized name');
+  el.setAttribute('aria-label', '  Named control  ');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')?.trim()).to.equal('Named control');
+});
+
+it('continues painting if a resolution media query cannot be created', async () => {
+  const original = window.matchMedia;
+  window.matchMedia = query => {
+    if (query.startsWith('(resolution:')) throw new Error('Resolution queries unavailable');
+    return original.call(window, query);
+  };
+  try {
+    const el = await fixture<LyraAudioVisualizer>(html`<lr-audio-visualizer style="width:120px" level="1"></lr-audio-visualizer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('canvas')!.style.width === '120px');
+  } finally { window.matchMedia = original; }
+});
+
+it('restores its default for blank level and honors explicit numbers', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-audio-visualizer']>(html`<lr-audio-visualizer level=" "></lr-audio-visualizer>`);
+  expect(el.level).to.equal(null);
+  el.setAttribute('level', '0');
+  await el.updateComplete;
+  expect(el.level).to.equal(0);
+  el.removeAttribute('level');
+  await el.updateComplete;
+  expect(el.level).to.equal(null);
+});
+
+it('reuses amplitude storage across successive samples', async () => {
+  const el = await fixture<LyraAudioVisualizer>(html`<lr-audio-visualizer state="thinking"></lr-audio-visualizer>`);
+  const samples = el as unknown as { currentAmplitudes(time: number): number[] };
+  const first = samples.currentAmplitudes(0);
+  expect(samples.currentAmplitudes(100) === first).to.equal(true);
+  el.level = 0.7;
+  expect(samples.currentAmplitudes(200) === first).to.equal(true);
+  expect(first.every(value => value === 0.7)).to.equal(true);
 });

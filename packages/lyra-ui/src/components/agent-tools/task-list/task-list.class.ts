@@ -1,3 +1,4 @@
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTaskSourceSummary } from '../../../data-sources.js';
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
@@ -17,7 +18,7 @@ import {
   type PropertyValues,
 } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
@@ -387,15 +388,16 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private sourceWrapper?: LyraHierarchySource<TaskItem, LyraHierarchyQuery>;
   private readonly sourceSummaries = new WeakMap<object, Readonly<LyraTaskSourceSummary> & { readonly current: () => boolean }>();
   private sourceAnnouncement?: string;
-  private readonly sourceControl = new HierarchySourceController<TaskItem>(this, {
-    normalize: (value, key) => this.normalizeSourceTask(value, key),
-    payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
-      unitsOf: item => item.id.length + item.label.length + (item.detail?.length ?? 0) },
-    onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
-    accepted: () => {},
-
-  });
-
+  private provider?: HierarchySourceController<TaskItem>;
+  private get sourceControl(): HierarchySourceController<TaskItem> {
+    return this.provider ??= new HierarchySourceController(this, {
+      normalize: (value, key) => this.normalizeSourceTask(value, key),
+      payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
+        unitsOf: item => item.id.length + item.label.length + (item.detail?.length ?? 0) },
+      onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
+      accepted: () => {},
+    });
+  }
   /** Immutable provider preorder; defined sources win over items, even when invalid.
    * Four 100-row pages and one focused row are retained; at most 301 rows mount.
    * Provider metadata owns topology and selection, and summary counts all top-level tasks. Source mode disables legacy reorder.
@@ -420,7 +422,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   private syncSource(force = false): void {
-    this.sourceControl?.update(this.sourceWrapper, this.effectiveLocale, force,
+    const control = this.sourceWrapper === undefined ? this.provider : this.sourceControl;
+    control?.update(this.sourceWrapper, this.effectiveLocale, force,
       SOURCE_QUERY);
   }
 
@@ -625,8 +628,17 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
       const body = this.renderRoot.querySelector('[part="body"]');
       if (body) repairComposedFocus(body, () => [this.renderRoot.querySelector<HTMLElement>('button[part="header"]')]);
     }
-    this.syncSource();
-    if (this.treeSource !== undefined) { this.clearPendingReorder(); return; }
+    if (this.treeSource !== undefined) {
+      this.syncSource();
+      this.clearPendingReorder();
+      return;
+    }
+    if (this.reorderable && (changed.has('items') || changed.has('maxNodes') || changed.has('reorderable') || changed.has('treeSource'))) {
+      const items = this.visibleTaskItems();
+      if (!items.some(item => item.id === this.rovingItemId || item.children?.some(child => child.id === this.rovingItemId))) {
+        this.rovingItemId = items[0]?.id;
+      }
+    }
     if (changed.has('reorderable') && !this.reorderable) this.clearPendingReorder();
     if (changed.has('items')) {
       if (this.taskModel().deep) devWarnOnce(DEEP_NESTING_WARNING_KEY, DEEP_NESTING_WARNING);
@@ -673,7 +685,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     this.limitAnnouncements.adopted();
     this.sourceVersion++;
     this.sourceAnnouncement = undefined;
-    this.sourceControl.adopted();
+    this.provider?.adopted();
     this.syncSource(true);
   }
 
@@ -791,8 +803,16 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    * controls (and a nested row bubbling through its parent row) to the focused control itself. */
   private onItemKeyDown(event: KeyboardEvent, item: TaskItem, parentId: string | null): void {
     if (this.treeSource !== undefined || !(event.currentTarget as Element)?.isConnected || event.composedPath()[0] !== event.currentTarget) return;
-    if (!this.canReorderItems() || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey ||
-        event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
+    if (!this.canReorderItems() || event.defaultPrevented || event.shiftKey) return;
+    const rows = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="item"]'));
+    const next = resolveListMove(event, { current: rows.indexOf(event.currentTarget as HTMLElement),
+      count: rows.length, orientation: 'vertical', wrap: false, clamp: true });
+    if (next !== null) {
+      event.preventDefault();
+      rows[next]!.focus();
+      return;
+    }
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing || event.keyCode === 229) return;
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     // ArrowUp/ArrowDown describe sibling order and do not swap under RTL.
     event.preventDefault();
@@ -862,6 +882,13 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     this.pendingFocusId = null;
   }
 
+  @state() private rovingItemId?: string;
+
+  private onItemFocus(event: FocusEvent): void {
+    const item = event.currentTarget as HTMLElement;
+    this.rovingItemId = item.dataset['id'];
+  }
+
   private renderItem(
     item: TaskItem,
     depth: 0 | 1,
@@ -878,7 +905,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
         data-status=${status}
         data-id=${item.id}
         data-depth=${depth}
-        tabindex=${canReorder ? '0' : nothing}
+        tabindex=${canReorder ? (item.id === this.rovingItemId ? '0' : '-1') : nothing}
+        @focus=${this.onItemFocus}
         @keydown=${(event: Event) => this.onItemKeyDown(event as KeyboardEvent, item, parentId)}
       >
         <span part="status-icon" aria-hidden="true">${STATUS_ICON[status]()}</span>
@@ -906,7 +934,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const ariaLabel = hostAriaLabel(this) ?? label;
     const sourceMode = this.treeSource !== undefined;
     const model = sourceMode ? undefined : this.taskModel();
-    const projection = this.sourceControl.projection;
+    const projection = this.provider?.projection;
     const sourceSummary = sourceMode && projection ? this.sourceSummaries.get(projection.rows) : undefined;
     const total = sourceMode ? sourceSummary?.total : model!.items.length;
     const completed = sourceMode ? sourceSummary?.completed : model!.completed;

@@ -194,6 +194,10 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
+ * @cssprop [--lr-markdown-content-min-size=var(--lr-icon-button-size)] - Minimum content size on both axes.
+ * @cssprop [--lr-markdown-code-copy-bg=transparent] - Fenced copy control background at rest.
+ * @cssprop [--lr-markdown-code-copy-bg-hover=var(--lr-color-brand-quiet)] - Fenced copy control hover background.
+ * @cssprop --lr-markdown-code-copy-bg-active - Fenced copy control pressed background.
  * @cssprop [--lr-markdown-max-height=none] - Cap on `[part="content"]`'s block size, past which
  *   the document scrolls internally. The `maxHeight` property sets this token inline on
  *   `[part="content"]`.
@@ -216,7 +220,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
  * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.
  * @cssprop [--lr-markdown-highlight-danger-bg=var(--lr-color-danger-quiet)] - Danger highlight fill.
- * @cssprop [--lr-markdown-highlight-neutral-bg=var(--lr-color-surface)] - Neutral highlight fill.
+ * @cssprop [--lr-markdown-highlight-neutral-bg=var(--lr-color-surface-raised)] - Neutral highlight fill.
  * @cssprop [--lr-markdown-highlight-active-bg=var(--lr-color-brand-quiet)] - Active highlight fill.
  * @cssprop [--lr-markdown-highlight-active-outline-color=var(--lr-color-brand)] - Active
  *   highlight outline.

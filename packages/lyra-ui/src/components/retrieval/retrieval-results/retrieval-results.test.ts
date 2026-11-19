@@ -2335,7 +2335,7 @@ it('keeps focus inside the component when the focused Load more button is replac
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="load-more"]') as HTMLButtonElement;
   await focusByKeyboard(button);
-  expect(el.shadowRoot!.activeElement).to.equal(button);
+  expect(el.shadowRoot!.activeElement === button).to.equal(true);
   el.loading = true;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="load-more"]') == null).to.equal(true);

@@ -116,6 +116,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Kwuo ebe o si',
   promptInputLabel: 'Arịrịọ AI',
   promptInputControls: 'Nhọrọ arịrịọ',
+  promptInputCollectionLimit: 'A hapụrụ ụfọdụ ihe e tinyere n’arịrịọ n’ihi na e ruru oke ntinye.',
   promptInputSources: 'Isi mmalite',
   promptInputAttachments: 'Ihe agbakwunyere',
   handoffLabel: 'Nyefee onye nnọchiteanya',
@@ -154,6 +155,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Enweghị olu dị',
   voicePickerRequired: 'Biko họrọ olu.',
   voicePickerPreview: 'Gee {name} ntị',
+  voicePickerPreviewFailed: 'Nlele olu adịghị.',
   voicePickerStopPreview: 'Kwụsị nlele',
   realtimeSessionLabel: 'Oge njikọ ozugbo',
   realtimeSessionDisconnected: 'Ekewapụrụ njikọ',
@@ -179,6 +181,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'A na-egosi koodu dị ogologo na-enweghị iji agba mee ka sintaksị ya pụta ìhè.',
   codeBlockHighlightedLine: 'Ahịrị egosipụtara',
   codeBlockActiveLine: 'Ahịrị egosipụtara na-arụ ọrụ',
+  codeBlockToggle: 'Gosi ma ọ bụ zoo koodu',
 };
 
 registerLyraLocale('ig', strings);

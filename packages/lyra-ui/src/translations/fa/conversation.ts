@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'استناد',
   promptInputLabel: 'درخواست هوش مصنوعی',
   promptInputControls: 'گزینه‌های درخواست',
+  promptInputCollectionLimit: 'بخشی از ورودی درخواست به‌دلیل رسیدن به محدودیت ورودی حذف شد.',
   promptInputSources: 'منابع',
   promptInputAttachments: 'پیوست‌ها',
   handoffLabel: 'واگذاری عامل',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'هیچ صدایی در دسترس نیست',
   voicePickerRequired: 'لطفاً یک صدا را انتخاب کنید.',
   voicePickerPreview: 'پیش‌نمایش {name}',
+  voicePickerPreviewFailed: 'پیش‌نمایش صدا در دسترس نیست.',
   voicePickerStopPreview: 'توقف پیش‌نمایش',
   realtimeSessionLabel: 'جلسهٔ بلادرنگ',
   realtimeSessionDisconnected: 'قطع‌شده',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نمایش داده می‌شود.',
   codeBlockHighlightedLine: 'خط برجسته',
   codeBlockActiveLine: 'خط برجستهٔ فعال',
+  codeBlockToggle: 'نمایش یا پنهان کردن کد',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

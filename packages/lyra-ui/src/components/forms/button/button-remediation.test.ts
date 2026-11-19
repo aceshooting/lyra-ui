@@ -1,3 +1,6 @@
+import { setForcedColors } from '../../../../test/wtr-media.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import '../color-picker/color-picker.js';
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import './button.js';
 import '../icon-button/icon-button.js';
@@ -279,3 +282,20 @@ describe('lr-button as the default submit button for native fields', () => {
     expect(submissions).to.have.length(0);
   });
 });
+
+for (const tag of ['lr-button', 'lr-icon-button', 'lr-color-picker'] as const) {
+  it(`distinguishes ${tag} hover and press under forced colors`, async () => {
+    const host = await fixture<HTMLElement>(`<${tag} aria-label="Choose">Choose</${tag}>`);
+    const control = host.shadowRoot!.querySelector<HTMLElement>(tag === 'lr-color-picker' ? '[part~="trigger"]' : '[part~="button"]')!;
+    try {
+      await setForcedColors('active');
+      await hoverUntilMatched(control, 'button receives the pointer');
+      expect(getComputedStyle(control).outlineStyle).to.equal('solid');
+      await sendMouse({ type: 'down', button: 'left' });
+      await waitUntil(() => getComputedStyle(control).outlineStyle === 'double');
+    } finally {
+      await resetMouse();
+      await setForcedColors('none');
+    }
+  });
+}

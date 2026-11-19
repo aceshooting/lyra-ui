@@ -14,6 +14,8 @@ import { styles } from './artifact-panel.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { firstByIdentity } from '../../../internal/collection-identity.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -30,6 +32,7 @@ export interface ArtifactVersion {
 export type ArtifactPanelView = 'preview' | 'code';
 
 export interface LyraArtifactPanelEventMap {
+  'lr-view-change-request': CustomEvent<{ view: ArtifactPanelView; previousView: ArtifactPanelView }>;
   'lr-view-change': CustomEvent<{ view: ArtifactPanelView }>;
   'lr-version-change': CustomEvent<{ versionId: string }>;
   'lr-restore': CustomEvent<{ versionId: string }>;
@@ -51,6 +54,9 @@ export interface LyraArtifactPanelEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-artifact-panel
+ * @event lr-view-change-request - `detail: { view, previousView }`. Cancelable; fired before a
+ *   preview/code toggle press changes `view`. Preventing it keeps the current view; a listener
+ *   that assigns a different `view` keeps its own assignment.
  * @event lr-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
  * @event lr-version-change - `detail: { versionId }`. Fired when the previous/next
  *   navigation moves to a different version. Not fired when a `versions` reassignment drops the
@@ -189,7 +195,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     this.seedFirstRenderState(() => {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
     });
-    if (!this.hasCodeSlot && this.view === 'code') {
+    if (!this.renderSlotPresence(this.hasCodeSlot) && this.view === 'code') {
       this.view = 'preview';
       this.viewCoerced = this.hasUpdated;
     }
@@ -209,7 +215,10 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   // even though the assigned child's own `slot` attribute never changed.
   private onCodeSlotChange = (): void => {
     this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
-    if (!this.hasCodeSlot && this.view === 'code') this.setView('preview');
+    if (!this.hasCodeSlot && this.view === 'code') {
+      this.view = 'preview';
+      this.emit('lr-view-change', { view: 'preview' });
+    }
   };
 
   protected override updated(changed: PropertyValues): void {
@@ -224,10 +233,18 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     return this.label == null ? this.localize('artifactPanelLabel') : this.label;
   }
 
-  private setView(view: ArtifactPanelView): void {
-    if (view === this.view) return;
-    this.view = view;
-    this.emit('lr-view-change', { view });
+  private requestView(view: ArtifactPanelView): void {
+    const previousView = this.view;
+    if (view === previousView) return;
+    requestThenCommit({
+      requestDetail: { view, previousView },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-view-change-request', detail, init),
+      commit: () => {
+        if (this.view !== previousView) return;
+        this.view = view;
+        this.emit('lr-view-change', { view });
+      },
+    });
   }
 
   private get currentIndex(): number {
@@ -290,7 +307,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
         <div part="header">
           ${this.label ? html`<span part="label">${this.label}</span>` : nothing}
           ${this.kind ? html`<span part="kind">${this.kind}</span>` : nothing}
-          ${this.hasCodeSlot
+          ${this.renderSlotPresence(this.hasCodeSlot)
             ? html`
                 <div part="view-toggle" role="group" aria-label=${this.accessibleLabel}>
                   <button
@@ -298,7 +315,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     type="button"
                     data-view="preview"
                     aria-pressed=${this.view === 'preview' ? 'true' : 'false'}
-                    @click=${() => this.setView('preview')}
+                    @click=${() => this.requestView('preview')}
                   >
                     ${this.localize('artifactPanelPreview')}
                   </button>
@@ -307,7 +324,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     type="button"
                     data-view="code"
                     aria-pressed=${this.view === 'code' ? 'true' : 'false'}
-                    @click=${() => this.setView('code')}
+                    @click=${() => this.requestView('code')}
                   >
                     ${this.localize('artifactPanelCode')}
                   </button>
@@ -324,7 +341,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     ?disabled=${index <= 0}
                     @click=${() => this.goToVersion(index - 1, 'version-next')}
                   >
-                    <span part="version-previous-glyph" aria-hidden="true">‹</span>
+                    <span part="version-previous-glyph" aria-hidden="true">${chevronIcon()}</span>
                   </button>
                   <span part="version-position"
                     >${this.localize('artifactPanelVersionPosition', undefined, {
@@ -342,7 +359,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     ?disabled=${index >= versions.length - 1}
                     @click=${() => this.goToVersion(index + 1, 'version-previous')}
                   >
-                    <span part="version-next-glyph" aria-hidden="true">›</span>
+                    <span part="version-next-glyph" aria-hidden="true">${chevronIcon()}</span>
                   </button>
                   ${!isLatest && !this.hideRestore
                     ? html`<button

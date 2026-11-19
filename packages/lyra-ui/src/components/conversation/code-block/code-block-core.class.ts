@@ -22,7 +22,7 @@ import type {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -126,6 +126,12 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  * @cssprop [--lr-code-block-radius=var(--lr-radius)] - Frame corner radius.
  * @cssprop [--lr-code-block-header-bg=var(--lr-color-surface)] - Header background.
  * @cssprop [--lr-code-block-header-color=var(--lr-color-text)] - Filename color.
+ * @cssprop [--lr-code-block-toggle-bg=transparent] - Disclosure control background at rest.
+ * @cssprop [--lr-code-block-toggle-bg-hover=var(--lr-color-brand-quiet)] - Disclosure control hover background.
+ * @cssprop --lr-code-block-toggle-bg-active - Disclosure control pressed background.
+ * @cssprop [--lr-code-block-gutter-bg=transparent] - Line button background at rest.
+ * @cssprop [--lr-code-block-gutter-bg-hover=var(--lr-color-brand-quiet)] - Line button hover background.
+ * @cssprop --lr-code-block-gutter-bg-active - Line button pressed background.
  * @cssprop [--lr-code-block-line-number-color=var(--lr-color-text-quiet)] - Line number color.
  * @cssprop [--lr-code-block-max-height=none] - Scroll cap applied to `body`. The `max-height`
  *   attribute, when set, writes this same property inline on `body` and therefore wins.
@@ -163,13 +169,11 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
     codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
-    collapseCode: LYRA_DEFAULT_collapseCode,
     copied: LYRA_DEFAULT_copied,
     copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copy: LYRA_DEFAULT_copy,
     copyCode: LYRA_DEFAULT_copyCode,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    expandCode: LYRA_DEFAULT_expandCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -207,10 +211,6 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
 
   /** Whether the code region can be collapsed via a header toggle. */
   @property({ type: Boolean, reflect: true }) override collapsible = false;
-
-  /** Whether the code region is currently hidden. Only has a visible effect
-   *  while `collapsible` is also true. */
-  @property({ type: Boolean, reflect: true }) override collapsed = false;
 
   /** Hides the copy-to-clipboard button in the header. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true })

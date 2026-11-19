@@ -1924,3 +1924,91 @@ it("resolves a host aria-describedby onto its toolbar owner", async () => {
   host.removeAttribute("aria-describedby");
   await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
 });
+
+it('announces the latest copy and ignores an earlier rejection', async () => {
+  const original = navigator.clipboard.writeText;
+  let rejectFirst!: (reason: Error) => void;
+  let writes = 0;
+  navigator.clipboard.writeText = () => ++writes === 1
+    ? new Promise<void>((_, reject) => { rejectFirst = reject; }) : Promise.resolve();
+  try {
+    const el = await fixture<LyraSelectionToolbar>(html`<lr-selection-toolbar open text="selected"
+      .strings=${{ copied: 'Selection copied' }}></lr-selection-toolbar>`);
+    const outcomes: string[] = [];
+    for (const name of ['lr-copy', 'lr-copy-error', 'lr-selection-action']) el.addEventListener(name, () => outcomes.push(name));
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[data-action="copy"]')!;
+    button.click();
+    const completed = oneEvent(el, 'lr-selection-action');
+    button.click();
+    await completed;
+    rejectFirst(new Error('denied'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(outcomes).to.deep.equal(['lr-copy', 'lr-selection-action']);
+    const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+    expect(sink?.textContent).to.contain('Selection copied');
+  } finally { navigator.clipboard.writeText = original; }
+});
+
+it('announces a successful copy in the polite live region', async () => {
+  const original = navigator.clipboard.writeText;
+  navigator.clipboard.writeText = () => Promise.resolve();
+  try {
+    const el = await fixture<LyraSelectionToolbar>(html`<lr-selection-toolbar open text="excerpt"></lr-selection-toolbar>`);
+    const copied = oneEvent(el, 'lr-copy');
+    el.shadowRoot!.querySelector<HTMLElement>('[data-action="copy"]')!.click();
+    await copied;
+    expect(document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent).to.contain('Copied!');
+  } finally { navigator.clipboard.writeText = original; }
+});
+
+it('falls back to a localized name for whitespace-only overrides', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-selection-toolbar']>(html`<lr-selection-toolbar open text="sample"
+    aria-label="  " label="   " .strings=${{ selectionToolbarLabel: 'Localized name' }}></lr-selection-toolbar>`);
+  expect(el.shadowRoot!.querySelector('[role="toolbar"]')!.getAttribute('aria-label')).to.equal('Localized name');
+  el.setAttribute('aria-label', '  Named control  ');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[role="toolbar"]')!.getAttribute('aria-label')?.trim()).to.equal('Named control');
+});
+
+it('does not emit a selection action if a copy listener removes the toolbar', async () => {
+  const original = navigator.clipboard.writeText;
+  navigator.clipboard.writeText = () => Promise.resolve();
+  try {
+    const el = await fixture<LyraSelectionToolbar>(html`<lr-selection-toolbar open text="excerpt"></lr-selection-toolbar>`);
+    const actions: string[] = [];
+    el.addEventListener('lr-selection-action', event => actions.push(event.detail.action));
+    el.addEventListener('lr-copy', () => el.remove());
+    const copied = oneEvent(el, 'lr-copy');
+    el.shadowRoot!.querySelector<HTMLElement>('[data-action="copy"]')!.click();
+    await copied;
+    expect(actions).to.deep.equal([]);
+  } finally { navigator.clipboard.writeText = original; }
+});
+
+it('coalesces viewport changes into one placement per frame', async () => {
+  const el = await fixture<LyraSelectionToolbar>(html`<lr-selection-toolbar open text="select"></lr-selection-toolbar>`);
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  let placements = 0;
+  const host = el as unknown as { updateToolbarPosition(): void };
+  const place = host.updateToolbarPosition;
+  host.updateToolbarPosition = () => { placements++; place(); };
+  toolbar.removeAttribute('data-positioned');
+  window.dispatchEvent(new Event('resize'));
+  window.visualViewport?.dispatchEvent(new Event('scroll'));
+  window.visualViewport?.dispatchEvent(new Event('resize'));
+  expect(placements).to.equal(0);
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  expect(placements).to.equal(1);
+  expect(toolbar.hasAttribute('data-positioned')).to.equal(true);
+});
+
+it('leaves the keyboard focus ring on the native action', async () => {
+  const el = await fixture<LyraSelectionToolbar>(html`<lr-selection-toolbar open text="select"></lr-selection-toolbar>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part~="action"]')!;
+  const base = button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  await focusByKeyboard(base);
+  expect(base.matches(':focus-visible')).to.equal(true);
+  expect(getComputedStyle(base).outlineStyle).to.not.equal('none');
+  expect(getComputedStyle(button).outlineStyle).to.equal('none');
+});

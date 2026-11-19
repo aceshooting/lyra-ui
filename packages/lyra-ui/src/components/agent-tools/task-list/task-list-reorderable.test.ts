@@ -105,7 +105,18 @@ describe('reorderable', () => {
 
     expect(el.hasAttribute('reorderable')).to.be.true;
     expect(itemRow(el, 'prepare').getAttribute('tabindex')).to.equal('0');
-    expect(itemRow(el, 'prepare-b').getAttribute('tabindex')).to.equal('0');
+    expect(itemRow(el, 'prepare-b').getAttribute('tabindex')).to.equal('-1');
+    const first = itemRow(el, 'prepare');
+    await focusByKeyboard(first);
+    const press = (key: string) => el.shadowRoot!.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    press('ArrowDown');
+    expect(focusedItemId(el)).to.equal('prepare-a');
+    press('End');
+    expect(focusedItemId(el)).to.equal('review');
+    press('Home');
+    expect(focusedItemId(el)).to.equal('prepare');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="item"][tabindex="0"]').length).to.equal(1);
   });
 
   it('Ctrl+ArrowDown requests a top-level sibling swap without mutating items', async () => {
@@ -501,4 +512,15 @@ it('leaves composing, additional modifiers and claimed reorder shortcuts alone',
   claimed.preventDefault();
   row.dispatchEvent(claimed);
   expect(requests).to.equal(0);
+});
+
+it('restores the first row tab stop when the focused task is removed', async () => {
+  const el = await fixture<LyraTaskList>(html`<lr-task-list reorderable .items=${clone()}></lr-task-list>`);
+  await focusByKeyboard(itemRow(el, 'write'));
+  await el.updateComplete;
+  expect(itemRow(el, 'write').tabIndex).to.equal(0);
+  el.items = clone().filter(item => item.id !== 'write');
+  await el.updateComplete;
+  expect(itemRow(el, 'prepare').tabIndex).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="item"][tabindex="0"]').length).to.equal(1);
 });

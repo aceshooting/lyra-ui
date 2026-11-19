@@ -27,8 +27,8 @@ it('refuses an already revoked source before inspecting its run or review', () =
   const value = new Proxy({ id: 'run', label: 'Run' }, {
     getOwnPropertyDescriptor(target, key) { probes++; return Reflect.getOwnPropertyDescriptor(target, key); },
   });
-  expect(() => projectEvalSourceRun({ key: 'run', order: 0, value }, () => false)).to.throw('Source record revoked');
-  expect(() => projectEvalSourceReview(value, keys, () => false)).to.throw('Source record revoked');
+  expect(() => projectEvalSourceRun({ key: 'run', order: 0, value }, () => false)).to.throw(TypeError, 'Obsolete source record');
+  expect(() => projectEvalSourceReview(value, keys, () => false)).to.throw(TypeError, 'Obsolete source record');
   expect(probes).to.equal(0);
 });
 
@@ -91,6 +91,6 @@ it('stops review projection when an array descriptor revokes the current source'
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
   });
-  expect(() => projectEvalSourceReview({ choices }, keys, () => current)).to.throw('Source record revoked');
+  expect(() => projectEvalSourceReview({ choices }, keys, () => current)).to.throw(TypeError, 'Obsolete source record');
   expect(visited).to.deep.equal(['length', '0']);
 });

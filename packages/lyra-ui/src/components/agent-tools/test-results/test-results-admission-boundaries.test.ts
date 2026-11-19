@@ -19,7 +19,7 @@ describe('test-results legacy admission boundaries', () => {
         { id: 'named', name: 'Duplicate', status: 'passed' }],
     }]);
     await el.updateComplete;
-    expect(names(el)).to.deep.equal(['', 'Valid failure']);
+    expect(names(el)).to.deep.equal(['Unnamed test', 'Valid failure']);
     expect(el.shadowRoot!.querySelector('[part="suite-header"]')!.textContent).to.equal('');
     expect(el.shadowRoot!.querySelectorAll('[part="test-duration"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="failure-message"]').length).to.equal(1);

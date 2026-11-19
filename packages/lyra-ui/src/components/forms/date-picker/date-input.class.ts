@@ -1,5 +1,8 @@
+import { formatIsoDate, isValidIsoDate } from '../../../internal/calendar-date.js';
+import { observeValidatorAttributes, runFormValidators } from '../../../internal/form-validator-runtime.js';
+import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
-import { nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeInputModeAliases, installNativeSelectionAccessors, nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
@@ -80,7 +83,6 @@ import './date-picker.class.js';
 import {
   autocorrectConverter,
   literalSetConverter,
-  normalizeAutocorrect,
   spellcheckFromAttributeConverter as spellcheckConverter,
 } from '../../../internal/converters.js';
 import {
@@ -181,11 +183,7 @@ function localeDatePatterns(locale: string) {
 function dateFromFields({ day, month, year }: DateFields): Date | null {
   if (!day || !month || !year) return null;
   const fullYear = year.length <= 2 ? 2000 + Number(year) : Number(year);
-  return parseISO(
-    `${String(fullYear).padStart(4, '0')}-${String(Number(month)).padStart(2, '0')}-${String(
-      Number(day)
-    ).padStart(2, '0')}`
-  );
+  return parseISO(formatIsoDate(fullYear, Number(month), Number(day)));
 }
 
 function matchDatePattern(pattern: DatePattern | null, text: string): [Date, Date] | null {
@@ -302,25 +300,6 @@ export interface LyraDateInputObjectValidator {
   message?: string | ((input: never) => string);
 }
 
-const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<
-  keyof ValidityStateFlags
->([
-  'badInput',
-  'customError',
-  'patternMismatch',
-  'rangeOverflow',
-  'rangeUnderflow',
-  'stepMismatch',
-  'tooLong',
-  'tooShort',
-  'typeMismatch',
-  'valueMissing',
-]);
-
-function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
-  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
-}
-
 export type LyraDateInputValidator =
   | ((value: string, input: LyraDateInput) => LyraDateInputValidatorResult)
   | {
@@ -337,8 +316,8 @@ export interface LyraDateInputEventMap {
   'lr-hide': CustomEvent<null>;
   'lr-after-hide': CustomEvent<null>;
   'lr-clear': CustomEvent<null>;
-  'lr-input': CustomEvent<{ value: string }>;
-  'lr-change': CustomEvent<{ value: string }>;
+  'lr-input': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -350,6 +329,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * `<lr-date-input>` — a date field with an attached calendar popover.
  * Mirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601
  * (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.
+ * Its `strings` reach the nested calendar, so `previousMonth`/`nextMonth` (and the other
+ * calendar keys) relabel the popup's navigation; the popup's `view` and `focused-date` stay
+ * internal to each opening.
  * The ISO model is explicitly proleptic Gregorian for every locale. Display uses locale digits
  * and `Intl.DateTimeFormat.formatRange()`; parsing normalizes those digits and bidi marks so the
  * component's own Arabic/Persian presentation always round-trips to the same ISO value.
@@ -373,8 +355,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * its local error and hint guidance, and follow target replacement, reconnect, and adoption.
  *
  * @customElement lr-date-input
- * @event lr-input - Typed value edit notification; detail includes `value`.
- * @event lr-change - Typed value commit notification; detail includes `value`.
+ * @event lr-input - Date edit with `value` and `previousValue` in ISO form.
+ * @event lr-change - Date commit with `value` and `previousValue` in ISO form.
  * @event {InputEvent} input - Fired on edits as a bubbling, composed, non-cancelable native event.
  * @event {Event} change - Fired on committed date transitions as a bubbling, composed,
  *   non-cancelable native event.
@@ -550,17 +532,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return this._open;
   }
   set open(next: boolean) {
-    const old = this._open;
-    const liveDisabled =
-      this.effectiveDisabled ||
-      (typeof this.matches === 'function' && this.matches(':disabled'));
-    this._open = Boolean(next) && !this.readonly && !liveDisabled;
-    if (this._open === old) {
-      if (next && !this._open && this.hasAttribute('open'))
-        this.removeAttribute('open');
-      return;
-    }
-    this.requestUpdate('open', old);
+    void this.changeOpen(Boolean(next));
   }
   /** Shows the clear action while there is a value; same as `withClear`. */
   @property({ type: Boolean, reflect: true }) clearable = false;
@@ -598,35 +570,24 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
    *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
   /** Forwarded to the internal date text input. Empty strings preserve the browser default. */
   @property() autocomplete = '';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Lowercase alias of {@link inputMode}. */
-  get inputmode(): string {
-    return this.inputMode;
-  }
-  set inputmode(next: string) {
-    this.inputMode = next ?? '';
-  }
+  declare inputmode: string;
   /** Lowercase alias of {@link enterKeyHint}. */
-  get enterkeyhint(): string {
-    return this.enterKeyHint;
-  }
-  set enterkeyhint(next: string) {
-    this.enterKeyHint = next ?? '';
-  }
+  declare enterkeyhint: string;
   /** Overrides the internal `<input>`'s computed accessible name. Wins over
    *  `label`/`placeholder`/the localized `date` fallback in that order --
    *  see the `aria-label` binding in `render()`. Attribute-reflects from a
@@ -740,12 +701,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private enterCommittedText: string | null = null;
   /** Set while the field's own text commits; that text is already on screen. */
   private committingTypedText = false;
+  private requestingOpen = false;
   private forcingClose = false;
   /** Whether the internal text field already relayed the native input event for the edit that is
    *  about to commit. Synthetic test/integration changes can arrive without a preceding input;
    *  those receive one generated InputEvent so every committed transition keeps the same public
    *  input/change sequence without duplicating real browser input events. */
   private inputRelayedSinceCommit = false;
+  private previousCalendarValue?: string;
 
   private cleanupFn?: DeferredOperationHandle;
   private readonly popupController = new PopupController({
@@ -772,10 +735,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private daySlotObserver?: MutationObserver;
   private disabledDateKeysCache?: [unknown, ReadonlySet<string>];
   private renderedDaySlots = '';
-  private validatorAttributeObserver?: {
-    observer: MutationObserver;
-    owner: Window;
-  };
+  private disposeValidatorObserver?: () => void;
   private localDescriptionIds = '';
   private externalDescription?: NativeControlDescriptionLease;
   private inputId = nextId('date-input');
@@ -932,39 +892,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return this.inputElement;
   }
 
-  get selectionStart(): number | null {
-    return this.inputElement?.selectionStart ?? null;
-  }
-
-  set selectionStart(value: number | null) {
-    if (this.inputElement) this.inputElement.selectionStart = value ?? 0;
-  }
-
-  get selectionEnd(): number | null {
-    return this.inputElement?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.inputElement) this.inputElement.selectionEnd = value ?? 0;
-  }
-
-  get selectionDirection(): LyraDateInputSelectionDirection | null {
-    return (
-      (this.inputElement
-        ?.selectionDirection as LyraDateInputSelectionDirection | null) ?? null
-    );
-  }
-
-  set selectionDirection(value: LyraDateInputSelectionDirection | null) {
-    if (this.inputElement)
-      this.inputElement.selectionDirection = value ?? 'none';
-  }
+  declare selectionStart: number | null;
+  declare selectionEnd: number | null;
+  declare selectionDirection: LyraDateInputSelectionDirection | null;
 
   override get value(): string {
     return super.value;
   }
 
   override set value(next: string) {
+    this.previousCalendarValue = undefined;
     this.setTypedBadInput(false);
     const old = super.value;
     const normalized = this.normalizeCommittedValue(next ?? '');
@@ -1072,8 +1009,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private parseStrictISO(value: string): Date | null {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-    return parseISO(value);
+    return isValidIsoDate(value) ? parseISO(value) : null;
   }
 
   private normalizeCommittedValue(value: string): string {
@@ -1110,67 +1046,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       this.disabledDateKeysCache = [source, new Set(projectDisabledDateKeys(source))];
     }
     return this.disabledDateKeysCache[1];
-  }
-
-  private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
-    for (const validator of Array.isArray(this.validators)
-      ? this.validators
-      : []) {
-      let result: LyraDateInputValidatorResult;
-      try {
-        if (
-          typeof validator === 'object' &&
-          validator !== null &&
-          'checkValidity' in validator
-        ) {
-          const checked = validator.checkValidity(this as never);
-          if (checked?.isValid === true) continue;
-          const flags: ValidityStateFlags = {};
-          for (const key of Array.isArray(checked?.invalidKeys)
-            ? checked.invalidKeys
-            : []) {
-            if (isValidityFlagKey(key)) flags[key] = true;
-          }
-          if (!Object.values(flags).some(Boolean)) flags.customError = true;
-          let message =
-            typeof checked?.message === 'string' ? checked.message : '';
-          if (!message && typeof validator.message === 'string')
-            message = validator.message;
-          if (!message && typeof validator.message === 'function') {
-            message = validator.message(this as never);
-          }
-          return {
-            flags,
-            message: message || this.localize('dateInputInvalid'),
-          };
-        }
-        result =
-          typeof validator === 'function'
-            ? validator(this.value, this)
-            : validator?.validate(this.value, this);
-      } catch {
-        return {
-          flags: { customError: true },
-          message: this.localize('dateInputInvalid'),
-        };
-      }
-      if (result === undefined || result === true) continue;
-      if (typeof result === 'string')
-        return { flags: { customError: true }, message: result };
-      if (result === false)
-        return {
-          flags: { customError: true },
-          message: this.localize('dateInputInvalid'),
-        };
-      if (
-        result &&
-        typeof result === 'object' &&
-        Object.values(result).some(Boolean)
-      ) {
-        return { flags: result, message: this.localize('dateInputInvalid') };
-      }
-    }
-    return {};
   }
 
   protected updateValidity(): void {
@@ -1258,7 +1133,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       }
     }
 
-    const configured = this.validatorResult();
+    const configured = runFormValidators(this.validators, this.value, this, () => this.localize('dateInputInvalid'));
     if (configured.flags) Object.assign(flags, configured.flags);
 
     let message: IntrinsicValidityMessage = '';
@@ -1367,32 +1242,51 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   /** Synchronous disabled truth for public actions, including an ancestor fieldset cascade that
    * can precede `formDisabledCallback()` and the next rendered native `disabled` attribute. */
+
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
+    return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
   }
 
   /** Open the calendar popover, unless the cancelable `lr-show` request is vetoed. */
   show(): Promise<void> {
-    if (this.open || this.liveDisabled || this.readonly)
-      return Promise.resolve();
-    const request = this.emit('lr-show', null, { cancelable: true });
-    if (request.defaultPrevented) return Promise.resolve();
-    const settled = this.popupController.wait(true);
-    this.open = true;
-    void this.settleTransition('lr-after-show');
-    return settled;
+    return this.changeOpen(true);
   }
   /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
-  hide(restoreFocus: boolean = false): Promise<void> {
-    if (!this.open) return Promise.resolve();
-    const request = this.emit('lr-hide', null, { cancelable: !this.forcingClose });
-    if (request.defaultPrevented) return Promise.resolve();
-    const settled = this.popupController.wait(false);
+  hide(restoreFocus = false): Promise<void> {
+    return this.changeOpen(false, restoreFocus);
+  }
+
+  private changeOpen(next: boolean, restoreFocus = false): Promise<void> {
+    const old = this._open;
+    const opening = next && !this.readonly && !this.liveDisabled;
+    if (opening === old || this.requestingOpen) {
+      if (next !== old) this.toggleAttribute('open', old);
+      return Promise.resolve();
+    }
+    const announce = this.hasUpdated && this.isConnected;
+    if (announce) {
+      this.requestingOpen = true;
+      try {
+        const request = opening
+          ? this.emit('lr-show', null, { cancelable: true })
+          : this.emit('lr-hide', null, { cancelable: !this.forcingClose });
+        const blocked = this.readonly || this.liveDisabled;
+        if (!this.isConnected || (opening ? blocked || request.defaultPrevented : !blocked && request.defaultPrevented)) {
+          this.toggleAttribute('open', this._open);
+          return Promise.resolve();
+        }
+      } finally {
+        this.requestingOpen = false;
+      }
+    }
+    const settled = announce ? this.popupController.wait(opening) : Promise.resolve();
     this.restorePopupFocusOnClose ||= restoreFocus;
-    this.open = false;
-    void this.settleTransition('lr-after-hide');
+    this._open = opening;
+    this.requestUpdate('open', old);
+    if (announce) void this.settleTransition(opening ? 'lr-after-show' : 'lr-after-hide');
     return settled;
   }
+
   /** Closes with a non-cancelable `lr-hide`: a disabled or readonly field cannot stay open. */
   private forceClose(): void {
     this.forcingClose = true;
@@ -1441,7 +1335,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       this.popupPositioned = positioned;
       if (!positioned) {
         this.popupController.release('lr-after-show');
-        this.open = false;
+        this.forceClose();
         this.popupHidden = true;
       }
     });
@@ -1507,12 +1401,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // Nothing is selected any more, so no preset describes the value -- set before the events
     // below, which a consumer reads `appliedPreset` from.
     this._appliedPreset = undefined;
+    const detail = { value: '', previousValue: this.value };
     this.value = '';
     this.inputRelayedSinceCommit = false;
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
-    this.emit('lr-input', { value: '' });
+    this.emit('lr-input', detail);
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: '' });
+    this.emit('lr-change', detail);
     this.emit('lr-clear');
   }
 
@@ -1542,67 +1437,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private syncValidatorAttributeObserver(): void {
-    this.disconnectValidatorAttributeObserver();
-    const owner = this.ownerDocument.defaultView;
-    const MutationObserverCtor = owner?.MutationObserver;
-    if (
-      !this.isConnected ||
-      !owner ||
-      typeof MutationObserverCtor !== 'function'
-    )
-      return;
-
-    const attributes = new Set<string>();
-    for (const validator of Array.isArray(this.validators)
-      ? this.validators
-      : []) {
-      if (
-        typeof validator !== 'object' ||
-        validator === null ||
-        !('checkValidity' in validator)
-      )
-        continue;
-      let observed: unknown;
-      try {
-        observed = validator.observedAttributes;
-      } catch {
-        continue;
-      }
-      if (!Array.isArray(observed)) continue;
-      for (const name of observed) {
-        if (typeof name === 'string' && name.length > 0) attributes.add(name);
-      }
-    }
-    if (attributes.size === 0) return;
-
-    const binding = {} as { observer: MutationObserver; owner: Window };
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.validatorAttributeObserver !== binding ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner
-      )
-        return;
+    this.disposeValidatorObserver?.();
+    this.disposeValidatorObserver = observeValidatorAttributes(this, this.validators, () => {
       this.updateValidity();
       this.validityRevision++;
     });
-    binding.observer = observer;
-    binding.owner = owner;
-    try {
-      observer.observe(this, {
-        attributes: true,
-        attributeFilter: [...attributes],
-      });
-      this.validatorAttributeObserver = binding;
-    } catch {
-      observer.disconnect();
-    }
-  }
-
-  private disconnectValidatorAttributeObserver(): void {
-    const binding = this.validatorAttributeObserver;
-    this.validatorAttributeObserver = undefined;
-    binding?.observer.disconnect();
   }
 
   private syncCustomStates(): void {
@@ -1625,7 +1464,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.overlayHandle = undefined;
     this.unbindVisibilityListener();
     this.popupController.unbindPointer();
-    this.disconnectValidatorAttributeObserver();
+    this.disposeValidatorObserver?.();
+    this.disposeValidatorObserver = undefined;
     this.restorePopupFocusOnClose = false;
     for (const [name, listener] of this.interactionListeners)
       this.removeEventListener(name, listener);
@@ -1639,7 +1479,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // stuck `true` across the disconnect, `updated()` never sees it
     // *change*, and `place()` never gets called again to re-bind
     // positioning to the (possibly relocated) anchor.
-    this.open = false;
+    const wasOpen = this._open;
+    this._open = false;
+    this.requestUpdate('open', wasOpen);
     super.disconnectedCallback();
   }
 
@@ -1654,7 +1496,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.overlayHandle = undefined;
     this.unbindVisibilityListener();
     this.popupController.unbindPointer();
-    this.disconnectValidatorAttributeObserver();
+    this.disposeValidatorObserver?.();
+    this.disposeValidatorObserver = undefined;
   }
 
   private syncExternalDescription(): void {
@@ -1850,17 +1693,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       return;
     }
     this.enterCommittedText = null;
+    const previousValue = this.value;
     const committed = this.applyTypedText(raw);
     if (committed) {
       const value = this.value;
       if (!this.inputRelayedSinceCommit) {
         dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
-        this.emit('lr-input', { value });
+        this.emit('lr-input', { value, previousValue });
       }
       this.inputRelayedSinceCommit = false;
       if (source) relayNativeEvent(this, source);
       else dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value });
+      this.emit('lr-change', { value, previousValue });
     } else {
       this.inputRelayedSinceCommit = false;
     }
@@ -1873,7 +1717,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.inputRelayedSinceCommit = true;
     const value = this.value;
     relayNativeEvent(this, event);
-    this.emit('lr-input', { value });
+    this.emit('lr-input', { value, previousValue: value });
   };
 
   /** Three digit groups in the locale's day/month/year order; a 4-digit first group is the year. */
@@ -1998,17 +1842,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const input = this.inputElement;
     if (input && input.value !== this.displayText) {
       const raw = input.value;
+      const previousValue = this.value;
       if (this.applyTypedText(raw)) {
         const value = this.value;
         if (!this.inputRelayedSinceCommit) {
           dispatchNativeInputEvent(this, {
             inputType: 'insertReplacementText',
           });
-          this.emit('lr-input', { value });
+          this.emit('lr-input', { value, previousValue });
         }
         this.inputRelayedSinceCommit = false;
         dispatchNativeEvent(this, 'change');
-        this.emit('lr-change', { value });
+        this.emit('lr-change', { value, previousValue });
       } else {
         this.inputRelayedSinceCommit = false;
       }
@@ -2057,18 +1902,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   /** Select all editable date text. */
-  select(): void {
-    this.inputElement?.select();
-  }
+  declare select: () => void;
 
   /** Set the selection range in the editable date text. */
-  setSelectionRange(
+  declare setSelectionRange: (
     start: number | null,
     end: number | null,
     direction?: LyraDateInputSelectionDirection
-  ): void {
-    this.inputElement?.setSelectionRange(start, end, direction);
-  }
+  ) => void;
 
   setRangeText(replacement: string): void;
   setRangeText(
@@ -2123,7 +1964,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     e.stopPropagation();
     if (this.liveDisabled) return;
     const picker = e.target as LyraDatePicker;
+    const previousValue = this.value;
     this.value = picker.value;
+    this.previousCalendarValue = previousValue;
     // Mirrored BEFORE the relay below, so a consumer reading `appliedPreset` inside the handler
     // this very event runs sees the preset that caused it -- the picker sets its own copy before
     // committing, and clears it on a hand-pick, so both halves of the contract carry across.
@@ -2131,18 +1974,20 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.inputRelayedSinceCommit = false;
     const value = this.value;
     relayNativeEvent(this, e);
-    this.emit('lr-input', { value });
+    this.emit('lr-input', { value, previousValue });
   };
 
   private onPickerChange = (e: Event): void => {
     e.stopPropagation();
     if (this.liveDisabled) return;
     const picker = e.target as LyraDatePicker;
+    const previousValue = this.previousCalendarValue ?? this.value;
+    this.previousCalendarValue = undefined;
     this.value = picker.value;
     this._appliedPreset = picker.appliedPreset;
     const value = this.value;
     relayNativeEvent(this, e);
-    this.emit('lr-change', { value });
+    this.emit('lr-change', { value, previousValue });
     // The picker only fires `change` once a selection is finalized (a single
     // pick, or the second click of a range), so this is always the right
     // moment to close, in either mode.
@@ -2276,6 +2121,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .months=${normalizeCalendarMonths(this.months)}
                 .size=${this.size}
                 .locale=${this.effectiveMessageLocale}
+                .strings=${this.strings}
                 .disabled=${this.effectiveDisabled}
                 .readonly=${this.readonly}
                 .disabledDates=${this.disabledDates}
@@ -2311,22 +2157,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 )}
               </lr-date-picker>`}
             </div>
-            <div id="date-input-error" part="error" ?hidden=${!hasError}>
-              ${this.errorText}<slot
-                name="error"
-              ></slot>
-            </div>
-            <div id="date-input-hint" part="hint" ?hidden=${!hasHint}>
-              ${this.hint}<slot
-                name="hint"
-              ></slot>
-            </div>
+            ${renderFormControlHintError({ idPrefix: 'date-input', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
           </div>
         </div>
       </div>
     `;
   }
 }
+
+installNativeSelectionAccessors(LyraDateInput.prototype, host => host.input);
+installNativeInputModeAliases(LyraDateInput.prototype);
 
 declare global {
   interface HTMLElementTagNameMap {

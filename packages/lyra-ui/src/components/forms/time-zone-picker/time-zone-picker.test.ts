@@ -123,3 +123,16 @@ describe('<lr-time-zone-picker>', () => {
     expect(el.timeZones).to.deep.equal([{ code: 'UTC' }]);
   });
 });
+
+it('revalidates the selected value synchronously when replacing the catalog', async () => {
+  const el = await fixture<LyraTimeZonePicker>(html`<lr-time-zone-picker value="UTC"></lr-time-zone-picker>`);
+  el.timeZones = [];
+  expect(el.validity.customError).to.equal(true);
+  const codes = ['UTC'];
+  el.timeZones = codes;
+  codes.length = 0;
+  expect(el.validity.valid).to.equal(true);
+  expect(el.timeZones?.length).to.equal(1);
+  el.timeZones = undefined;
+  expect(el.validity.valid).to.equal(true);
+});

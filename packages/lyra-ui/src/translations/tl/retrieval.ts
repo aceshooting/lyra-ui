@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Pangmatagalang memory',
   memoryPanelAdd: 'Idagdag sa pangmatagalang memory',
   memoryPanelAddWithContext: 'Idagdag ang "{label}" sa pangmatagalang memory',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Kalimutan lahat',
   memoryPanelConfirmAddHeading: 'Idagdag ito sa pangmatagalang memory?',
   memoryPanelConfirmRemoveHeading: 'Alisin ang item na ito?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Mga slice ng pagsusuri',
   ragEvalDashboardAllSlices: 'Lahat',
   ragEvalDashboardSliceUnavailable: 'Walang available na run ng pagsusuri para sa {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Walang available na sukatan ng pagsusuri para sa {metric}.',
   knowledgeBaseSyncIdle: 'Walang ginagawa',
   knowledgeBaseSyncSyncing: 'Sini-sync',
   knowledgeBaseSyncPaused: 'Naka-pause',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Resulta {index} ng {total}',
   ragAnswerEmpty: 'Wala pang sagot',
   retrievalTraceEmpty: 'Walang mga retrieval stages',
+  retrievalTraceLabel: 'Trace ng retrieval',
   sourcePickerMatches: {
     one: '{count} pinagmulang tugma',
     other: '{count} mga mapagkukunan ang tumutugma',

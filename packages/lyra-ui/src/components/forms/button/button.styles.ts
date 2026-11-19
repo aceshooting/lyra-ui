@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -508,6 +509,13 @@ export const styles = css`
     [part="spinner"] {
       animation-duration: var(--_lr-motion-duration, 0.001ms);
       animation-iteration-count: 1;
+    }
+  }
+
+  ${forcedColorsPart('[part~="base"]:not(:disabled, [aria-disabled="true"]):hover:not(:focus-visible)')}
+  @media (forced-colors: active) {
+    [part~="base"]:not(:disabled, [aria-disabled="true"]):active:not(:focus-visible) {
+      outline: var(--lr-border-width-medium) double Highlight;
     }
   }
 `;

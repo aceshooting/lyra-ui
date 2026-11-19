@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Uzoq muddatli xotiralar',
   memoryPanelAdd: 'Uzoq muddatli xotiraga qoʻshish',
   memoryPanelAddWithContext: '“{label}”ni uzoq muddatli xotiraga qoʻshish',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Hammasini unutish',
   memoryPanelConfirmAddHeading: 'Buni uzoq muddatli xotiraga qoʻshilsinmi?',
   memoryPanelConfirmRemoveHeading: 'Bu element olib tashlansinmi?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Baholash qismlari',
   ragEvalDashboardAllSlices: 'Barchasi',
   ragEvalDashboardSliceUnavailable: '{slice} uchun baholash ishlari mavjud emas.',
+  ragEvalDashboardMetricUnavailable: '{metric} uchun baholash metrikasi mavjud emas.',
   knowledgeBaseSyncIdle: 'Faol emas',
   knowledgeBaseSyncSyncing: 'Sinxronlanmoqda',
   knowledgeBaseSyncPaused: 'Toʻxtatib turilgan',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Natija: {index} / {total}',
   ragAnswerEmpty: 'Hozircha javob yo\'q',
   retrievalTraceEmpty: 'Qidiruv bosqichlari yo\'q',
+  retrievalTraceLabel: 'Qidiruv izi',
   sourcePickerMatches: {
     one: '{count} manba mosligi',
     other: '{count} ta manba mos keladi',

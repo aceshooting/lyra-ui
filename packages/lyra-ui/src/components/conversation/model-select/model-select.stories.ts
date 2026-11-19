@@ -198,6 +198,8 @@ export const ThemeableGeometryAndStates: Story = {
         max-inline-size: var(--lr-size-24rem);
         --lr-model-select-gap: var(--lr-space-s);
         --lr-model-select-radius: var(--lr-radius-pill);
+        --lr-model-select-trigger-hover-bg: var(--lr-color-brand-quiet);
+        --lr-model-select-trigger-active-bg: var(--lr-color-brand-border-normal);
         --lr-model-select-trigger-border-color: var(--lr-color-warning);
         --lr-model-select-open-border-color: var(--lr-color-success);
         --lr-model-select-option-synthetic-border-style: dotted;
@@ -354,4 +356,13 @@ export const FormLifecycle: Story = {
 
 export const InputLimit: Story = {
   render: () => html`<lr-model-select label="Bounded catalog" .catalog=${Array.from({length:1025}, (_, i) => ({id:`row-${i}`,label:`Row ${i}`}))}></lr-model-select>`,
+};
+
+export const DraftQuery: Story = {
+  render: () => html`<div><lr-model-select allow-custom label="Model" .catalog=${OPENAI_CATALOG}
+    @lr-input=${(event: CustomEvent<{ value: string; query?: string }>) => {
+      const field = event.currentTarget as HTMLElement;
+      const output = field.parentElement!.querySelector('output')!;
+      output.value = event.detail.query ?? event.detail.value;
+    }}></lr-model-select><output aria-label="Model draft"></output></div>`,
 };

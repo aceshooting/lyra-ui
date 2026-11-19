@@ -6,11 +6,10 @@ import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import '../../overlays/badge/badge.class.js';
-import '../../overlays/empty/empty.class.js';
-import { isolateText } from '../../../internal/bidi.js';
+import { isolateText, ltrIsolate } from '../../../internal/bidi.js';
 import { styles } from './schema-viewer.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -174,6 +173,7 @@ function snapshotSchema(value: unknown): JsonSchemaNode | null {
  * @csspart issue-limit - Resource-ceiling status shown when additional validation issues are omitted.
  * @csspart empty - The empty state.
  * @cssprop [--lr-json-schema-viewer-selected-border=var(--lr-color-brand)] - Selected node branch.
+ * @cssprop [--lr-json-schema-viewer-selected-bg=var(--lr-color-brand-quiet)] - Selected node trigger background and the base for its hover and press colors.
  * @cssprop [--lr-json-schema-viewer-max-indent=var(--lr-size-12rem)] - Maximum visual indentation;
  *   complete JSON Pointer paths and selection semantics remain unchanged at deeper levels.
  * @cssprop [--lr-json-schema-viewer-error-border=var(--lr-color-danger)] - Error issue border.
@@ -310,17 +310,13 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
   };
 
   private onTreeKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.defaultPrevented) return;
     const triggers = this.nodeTriggers();
     const current = (event.target as Element | null)?.closest<HTMLElement>('[part~="node-trigger"]');
     const index = current ? triggers.indexOf(current) : -1;
     if (index < 0) return;
-    const target =
-      event.key === 'ArrowDown' ? triggers[Math.min(triggers.length - 1, index + 1)]
-        : event.key === 'ArrowUp' ? triggers[Math.max(0, index - 1)]
-          : event.key === 'Home' ? triggers[0]
-            : event.key === 'End' ? triggers[triggers.length - 1]
-              : undefined;
+    const next = resolveListMove(event, { count: triggers.length, current: index, orientation: 'vertical', wrap: false, clamp: true });
+    const target = next === null ? undefined : triggers[next];
     if (!target) return;
     event.preventDefault();
     target.focus();
@@ -367,7 +363,9 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
       if (kind === 'properties') {
         const keySegment = segments[index + 1];
         if (keySegment !== undefined) {
-          const candidate = node.properties?.[this.decodePointerSegment(keySegment)];
+          const key = this.decodePointerSegment(keySegment);
+          const properties = node.properties;
+          const candidate = properties && typeof properties === 'object' && Object.hasOwn(properties, key) ? properties[key] : undefined;
           if (candidate) {
             next = candidate;
             nextPath = `${path}/properties/${keySegment}`;
@@ -429,7 +427,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     const rows = keys.flatMap((key) =>
       schema[key] == null ? [] : [`${key}: ${constraintValue(schema[key])}`]
     );
-    if (schema.enum) {
+    if (Array.isArray(schema.enum)) {
       const values = schema.enum
         .slice(0, MAX_CONSTRAINT_VALUES)
         .map(constraintValue);
@@ -443,7 +441,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
       rows.push(`const: ${constraintValue(schema.const)}`);
     if (Object.prototype.hasOwnProperty.call(schema, 'default'))
       rows.push(`default: ${constraintValue(schema.default)}`);
-    if (schema.examples) {
+    if (Array.isArray(schema.examples)) {
       const examples = schema.examples
         .slice(0, MAX_CONSTRAINT_VALUES)
         .map(constraintValue);
@@ -453,7 +451,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
         }]`
       );
     }
-    if (schema.$ref)
+    if (typeof schema.$ref === 'string' && schema.$ref)
       rows.push(
         `$ref: ${schema.$ref.slice(0, MAX_CONSTRAINT_VALUE_CHARACTERS)}`
       );
@@ -490,8 +488,10 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     }
     const nextAncestors = new Set(ancestors).add(schema);
     const type = isReadonlyArray(schema.type)
-      ? schema.type.join(' | ')
-      : schema.type ?? (schema.properties ? 'object' : '');
+      ? schema.type.filter((entry) => typeof entry === 'string').join(' | ')
+      : typeof schema.type === 'string'
+        ? schema.type
+        : schema.properties ? 'object' : '';
     const constraints = this.constraints(schema);
     const issues = issuesByPath.get(path) ?? [];
     const children: Array<{
@@ -605,7 +605,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
           ${type
             ? html`<lr-badge part="type" variant="neutral"
                 >${this.localize('schemaViewerType', undefined, {
-                  type,
+                  type: ltrIsolate(type),
                 })}</lr-badge
               >`
             : nothing}
@@ -615,7 +615,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
               >`
             : nothing}
         </button>
-        ${schema.description
+        ${typeof schema.description === 'string' && schema.description
           ? html`<p part="description">${schema.description}</p>`
           : nothing}
         ${constraints.length
@@ -688,7 +688,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
       issuesByPath.set(issue.path, pathIssues);
     }
     const tree = this.renderNode(
-      this.schema.title || '$',
+      (typeof this.schema.title === 'string' && this.schema.title) || '$',
       this.schema,
       '',
       false,
@@ -701,12 +701,12 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
       <section part="base" aria-label=${label ?? nothing}>
         <ul part="tree" @focusin=${this.onTreeFocusIn} @keydown=${this.onTreeKeyDown}>${tree}</ul>
         ${budget.truncated
-          ? html`<p part="limit">${this.localize('schemaViewerLimit', undefined, {
+          ? html`<p part="limit" role="note">${this.localize('schemaViewerLimit', undefined, {
                 count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_NODES),
               })}</p>`
           : nothing}
         ${this.issues.length > MAX_RENDERED_SCHEMA_ISSUES
-          ? html`<p part="issue-limit">${this.localize('schemaViewerIssueLimit', undefined, {
+          ? html`<p part="issue-limit" role="note">${this.localize('schemaViewerIssueLimit', undefined, {
                 count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_ISSUES),
               })}</p>`
           : nothing}

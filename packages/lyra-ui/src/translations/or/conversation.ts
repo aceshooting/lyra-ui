@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ସନ୍ଦର୍ଭ ଦିଅନ୍ତୁ',
   promptInputLabel: 'AI ପ୍ରମ୍ପ୍ଟ',
   promptInputControls: 'ପ୍ରମ୍ପ୍ଟ ବିକଳ୍ପ',
+  promptInputCollectionLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିବାରୁ ପ୍ରମ୍ପ୍ଟ ଇନପୁଟ୍‌ର କିଛି ଅଂଶ ବାଦ ଦିଆଯାଇଛି।',
   promptInputSources: 'ଉତ୍ସ',
   promptInputAttachments: 'ସଂଲଗ୍ନକ',
   handoffLabel: 'ଏଜେଣ୍ଟକୁ ହସ୍ତାନ୍ତର',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'କୌଣସି ସ୍ୱର ଉପଲବ୍ଧ ନାହିଁ',
   voicePickerRequired: 'ଦୟାକରି ଏକ ସ୍ୱର ଚୟନ କରନ୍ତୁ।',
   voicePickerPreview: '{name}ର ପୂର୍ବାବଲୋକନ',
+  voicePickerPreviewFailed: 'ସ୍ୱରର ପୂର୍ବାବଲୋକନ ଉପଲବ୍ଧ ନାହିଁ।',
   voicePickerStopPreview: 'ପୂର୍ବାବଲୋକନ ବନ୍ଦ କରନ୍ତୁ',
   realtimeSessionLabel: 'ରିଅଲ୍‌ଟାଇମ୍ ଅଧିବେଶନ',
   realtimeSessionDisconnected: 'ସଂଯୋଗ ବିଚ୍ଛିନ୍ନ',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'ଲମ୍ବା କୋଡ୍ ସିଣ୍ଟାକ୍ସ ହାଇଲାଇଟିଂ ବିନା ଦେଖାଯାଏ।',
   codeBlockHighlightedLine: 'ହାଇଲାଇଟ୍ କରାଯାଇଥିବା ଧାଡ଼ି',
   codeBlockActiveLine: 'ସକ୍ରିୟ ହାଇଲାଇଟ୍ କରାଯାଇଥିବା ଧାଡ଼ି',
+  codeBlockToggle: 'କୋଡ୍ ଦେଖାନ୍ତୁ କିମ୍ବା ଲୁଚାନ୍ତୁ',
 };
 
 registerLyraLocale('or', strings);

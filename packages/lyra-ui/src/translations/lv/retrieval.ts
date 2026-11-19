@@ -131,6 +131,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Ilgtermiņa atmiņas',
   memoryPanelAdd: 'Pievienot ilgtermiņa atmiņai',
   memoryPanelAddWithContext: 'Pievienot “{label}” ilgtermiņa atmiņai',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Aizmirst visu',
   memoryPanelConfirmAddHeading: 'Vai pievienot šo ilgtermiņa atmiņai?',
   memoryPanelConfirmRemoveHeading: 'Vai noņemt šo vienumu?',
@@ -189,6 +190,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Novērtēšanas šķēles',
   ragEvalDashboardAllSlices: 'Visas',
   ragEvalDashboardSliceUnavailable: 'Šķēlei {slice} nav pieejamu novērtēšanas izpilžu.',
+  ragEvalDashboardMetricUnavailable: 'Parametram {metric} nav pieejams neviens novērtēšanas rādītājs.',
   knowledgeBaseSyncIdle: 'Dīkstāvē',
   knowledgeBaseSyncSyncing: 'Sinhronizē',
   knowledgeBaseSyncPaused: 'Pauzēts',
@@ -266,6 +268,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Rezultāts {index} no {total}',
   ragAnswerEmpty: 'Vēl nav atbildes',
   retrievalTraceEmpty: 'Nav izguves posmu',
+  retrievalTraceLabel: 'Izguves gaita',
   sourcePickerMatches: {
     one: 'Atbilst {count} avots',
     other: 'Atbilst {count} avoti',

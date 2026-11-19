@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Henvis',
   promptInputLabel: 'AI-prompt',
   promptInputControls: 'Promptindstillinger',
+  promptInputCollectionLimit: 'Noget af promptens input blev udeladt, fordi en grænse for input blev nået.',
   promptInputSources: 'Kilder',
   promptInputAttachments: 'Vedhæftede filer',
   handoffLabel: 'Overdragelse mellem agenter',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Ingen tilgængelige stemmer',
   voicePickerRequired: 'Vælg en stemme.',
   voicePickerPreview: 'Afspil prøve af {name}',
+  voicePickerPreviewFailed: 'Stemmeprøven er ikke tilgængelig.',
   voicePickerStopPreview: 'Stop prøve',
   realtimeSessionLabel: 'Realtidssession',
   realtimeSessionDisconnected: 'Afbrudt',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Lang kode vises uden syntaksfremhævning.',
   codeBlockHighlightedLine: 'Fremhævet linje',
   codeBlockActiveLine: 'Aktiv fremhævet linje',
+  codeBlockToggle: 'Vis eller skjul kode',
 };
 
 registerLyraLocale('da', strings);

@@ -127,6 +127,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Memorii pe termen lung',
   memoryPanelAdd: 'Adaugă la memoria pe termen lung',
   memoryPanelAddWithContext: 'Adaugă „{label}” la memoria pe termen lung',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Uită tot',
   memoryPanelConfirmAddHeading: 'Adaugi acest element la memoria pe termen lung?',
   memoryPanelConfirmRemoveHeading: 'Elimini acest element?',
@@ -185,6 +186,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Subseturi de evaluare',
   ragEvalDashboardAllSlices: 'Toate',
   ragEvalDashboardSliceUnavailable: 'Nu există execuții de evaluare disponibile pentru {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Nu este disponibilă nicio metrică de evaluare pentru {metric}.',
   knowledgeBaseSyncIdle: 'Inactiv',
   knowledgeBaseSyncSyncing: 'Se sincronizează',
   knowledgeBaseSyncPaused: 'Suspendat',
@@ -262,6 +264,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Rezultatul {index} din {total}',
   ragAnswerEmpty: 'Niciun răspuns încă',
   retrievalTraceEmpty: 'Fără etape de recuperare',
+  retrievalTraceLabel: 'Traseu de recuperare',
   sourcePickerMatches: {
     one: '{count} sursă potrivită',
     few: '{count} surse potrivite',

@@ -33,6 +33,7 @@ export interface LyraAgentQuestionEventMap {
   'lr-question-response': CustomEvent<LyraEventDetailSnapshot<AgentQuestionResponse>>;
 }
 const QUESTION_STATUS = literalSetConverter<AgentQuestionStatus>(['pending', 'submitted'], 'pending');
+const EMPTY_SCHEMA: FlatToolParamSchema = Object.freeze({ type: 'object', properties: Object.freeze({}) });
 const SCHEMA_KEYS = new Set(['type', 'properties', 'required', '$schema']);
 const PROPERTY_KEYS = new Set(['type', 'enum', 'description', 'title', 'default', 'const', 'autocomplete', 'spellcheck', 'autocapitalize', 'autoCorrect', 'inputMode', 'enterKeyHint', 'minLength', 'maxLength', 'format', 'minimum', 'maximum', 'minItems', 'maxItems', 'oneOf', 'enumNames', 'items']);
 
@@ -109,7 +110,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     this._schema = snapshot.value as unknown as FlatToolParamSchema;
     this.requestUpdate('schema', previous);
   }
-  private _schema: FlatToolParamSchema = Object.freeze({ type: 'object', properties: Object.freeze({}) });
+  private _schema = EMPTY_SCHEMA;
   // The last host-assigned objects: re-binding the same reference must not discard the typed draft.
   private assignedSchema: unknown = this._schema;
   private schemaInvalid = false;
@@ -148,6 +149,13 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     const previous = this._status;
     this._status = value;
     this.requestUpdate('status', previous);
+  }
+
+  protected override async scheduleUpdate(): Promise<void> {
+    if (this.schema !== EMPTY_SCHEMA && this.supportedSchema && !customElements.get(tag('tool-param-form'))) {
+      await import('../tool-param-form/tool-param-form.js');
+    }
+    await super.scheduleUpdate();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -231,20 +239,24 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
       let content: ToolParamFormValue | undefined;
       if (action === 'accept') {
         if (!this.supportedSchema || this.valueInvalid) return;
-        const form = this.renderRoot.querySelector<LyraToolParamForm>(tag('tool-param-form'));
-        if (!form) return;
-        // Synchronize synchronous host assignments before validation, even before Lit's next render.
-        const schema = this.schema;
-        const value = this.value;
-        form.schema = schema;
-        form.value = value;
-        if (!form.reportValidity()) return;
-        // Validation events can synchronously replace the host request or its draft.
-        if (this.inactive || requestId !== this.requestId || this.schema !== schema || this.value !== value) return;
-        const effective = form.effectiveValue;
-        content = Object.fromEntries(Object.keys(schema.properties)
-          .filter((key) => Object.prototype.hasOwnProperty.call(effective, key) && effective[key] !== undefined)
-          .map((key) => [key, effective[key]]));
+        if (this.schema === EMPTY_SCHEMA) {
+          content = {};
+        } else {
+          const form = this.renderRoot.querySelector<LyraToolParamForm>(tag('tool-param-form'));
+          if (!form) return;
+          // Synchronize synchronous host assignments before validation, even before Lit's next render.
+          const schema = this.schema;
+          const value = this.value;
+          form.schema = schema;
+          form.value = value;
+          if (!form.reportValidity()) return;
+          // Validation events can synchronously replace the host request or its draft.
+          if (this.inactive || requestId !== this.requestId || this.schema !== schema || this.value !== value) return;
+          const effective = form.effectiveValue;
+          content = Object.fromEntries(Object.keys(schema.properties)
+            .filter((key) => Object.prototype.hasOwnProperty.call(effective, key) && effective[key] !== undefined)
+            .map((key) => [key, effective[key]]));
+        }
       }
       this.setStatus('submitted');
       this.emit('lr-question-response', action === 'accept'
@@ -263,7 +275,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${this.requester ? html`<p part="requester">${this.requester}</p>` : nothing}
       ${this.message ? html`<p part="message">${this.message}</p>` : nothing}
-      ${this.supportedSchema ? html`<lr-tool-param-form .schema=${this.schema} .value=${this.value}
+      ${this.schema === EMPTY_SCHEMA ? nothing : this.supportedSchema ? html`<lr-tool-param-form .schema=${this.schema} .value=${this.value}
         .disabled=${this.inactive} @lr-input=${(event: CustomEvent<{ value: ToolParamFormValue }>) => this.input(event, requestId)}></lr-tool-param-form>`
         : html`<p part="error">${this.localize('agentQuestionUnsupported')}</p>`}
       <div part="actions">${(['accept', 'decline', 'cancel'] as const).map((action) => html`<button

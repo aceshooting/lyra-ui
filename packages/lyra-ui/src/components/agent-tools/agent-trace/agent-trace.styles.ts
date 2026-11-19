@@ -8,6 +8,13 @@ export const styles = css`
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
+  :host([frame='card']) [part='base'] {
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+  }
+
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] { gap: var(--lr-space-xs); }
+
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -59,10 +66,10 @@ export const styles = css`
      dark one. Not the former hand-rolled 8% mix against --lr-color-text -- a literal no consumer
      could retune, at a strength no other control in the library shared. */
   [part='handoff']:hover {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-agent-trace-handoff-hover-bg, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   [part='handoff']:active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-agent-trace-handoff-pressed-bg, color-mix(in oklab, var(--lr-agent-trace-handoff-hover-bg, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='handoff']:focus-visible {
     ${focusRing}

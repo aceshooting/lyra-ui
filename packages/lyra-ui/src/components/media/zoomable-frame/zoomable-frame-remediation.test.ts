@@ -96,13 +96,19 @@ it('distinguishes zoom control focus from iframe entry, exit, public blur and re
 
 it('emits lr-zoom-change for zoomIn()/zoomOut() but not for zoom assignments', async () => {
   const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame zoom-levels="50% 100% 150%"></lr-zoomable-frame>`);
-  const zooms: unknown[] = [];
-  el.addEventListener('lr-zoom-change', (event) => zooms.push((event as CustomEvent).detail));
+  const zooms: string[] = [];
+  el.addEventListener('lr-zoom-change', event => zooms.push(`${event.detail.zoom}/${el.getAttribute('zoom')}`));
   el.zoom = 0.5;
   await el.updateComplete;
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in-button"]')!.click();
+  await el.updateComplete;
   el.zoomOut();
-  expect(zooms).to.deep.equal([{ zoom: 1 }, { zoom: 0.5 }]);
+  await el.updateComplete;
+  expect(zooms).to.deep.equal(['1/1', '0.5/0.5']);
+  el.zoomIn();
+  el.zoom = 1.5;
+  await el.updateComplete;
+  expect(zooms).to.deep.equal(['1/1', '0.5/0.5']);
 });
 
 it('observes no theme while theme sync is off', async () => {

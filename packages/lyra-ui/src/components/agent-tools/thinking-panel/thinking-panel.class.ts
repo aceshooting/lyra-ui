@@ -1,3 +1,5 @@
+import { FollowTailController } from '../../../internal/follow-tail-controller.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -38,11 +40,6 @@ export interface LyraThinkingPanelEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
 }
 
-/** "Close enough to the body's own max scroll position to count as anchored
- *  there" -- comfortably larger than one line of streamed text, so a user
- *  who has barely nudged the scrollbar while reading the latest line isn't
- *  mistaken for having deliberately scrolled away to read earlier content. */
-const NEAR_BOTTOM_PX = 48;
 
 /**
  * `<lr-thinking-panel>` — a collapsible panel for an AI agent's
@@ -85,7 +82,7 @@ const NEAR_BOTTOM_PX = 48;
  * listener on `[part="body"]` (not recomputed from the mutation itself,
  * which necessarily observes the DOM only *after* it has already changed):
  * every user-driven scroll updates the public `follow` state to record whether the body was left within
- * `NEAR_BOTTOM_PX` of its own max scroll position, and only a mutation that
+ * 48 CSS pixels of its own max scroll position, and only a mutation that
  * arrives while that's still true triggers a follow-up scroll-to-bottom.
  * Opening an already-`'live'` panel (or one that later becomes `'live'`)
  * always resets this to "anchored" and jumps to the latest content, the same
@@ -234,8 +231,10 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private readonly bodyId = nextId('thinking-panel-body');
 
   private readonly contentObserver = new OwnedMutationObserver(this, () => this.onContentMutated());
-  private scrollRafId?: number;
-  private scrollRafOwner?: Window;
+  private readonly tail = new FollowTailController(this, {
+    scroller: () => this.shadowRoot?.querySelector<HTMLElement>('[part="body"]') ?? null,
+    shouldFollow: () => this.mode === 'live' && this.expanded && this.follow,
+  });
   private realmGeneration = 0;
 
   override connectedCallback(): void {
@@ -283,9 +282,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private resetOwnerRealmWork(): void {
     this.realmGeneration += 1;
     this.contentObserver.clear();
-    if (this.scrollRafId !== undefined) this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
-    this.scrollRafId = undefined;
-    this.scrollRafOwner = undefined;
+    this.tail.cancel();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -308,14 +305,11 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  from a host that wants to force a jump-to-latest action of its own. */
   scrollToBottom(): void {
     this.follow = true;
-    const body = this.renderRoot?.querySelector<HTMLElement>('[part="body"]');
-    if (!body) return;
-    body.scrollTop = body.scrollHeight;
+    this.tail.scrollToTail();
   }
 
-  private onScroll = (e: Event): void => {
-    const body = e.currentTarget as HTMLElement;
-    const following = body.scrollHeight - body.scrollTop - body.clientHeight <= NEAR_BOTTOM_PX;
+  private onScroll = (): void => {
+    const following = this.tail.atTail;
     if (following === this.follow) return;
     this.follow = following;
     this.emit('lr-follow-change', { following });
@@ -323,36 +317,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   private onContentMutated = (): void => {
     if (this.mode !== 'live' || !this.expanded || !this.follow) return;
-    // Coalesce to at most one scroll-to-bottom per animation frame -- a fast
-    // token stream can otherwise fire many mutation records in quick
-    // succession, each individually cheap to react to but wasteful (and
-    // visually janky) to lay out for separately.
-    if (this.scrollRafId !== undefined) return;
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow || !this.isConnected) return;
-    const generation = this.realmGeneration;
-    const handle = ownerWindow.requestAnimationFrame(() => {
-      if (
-        this.scrollRafId !== handle ||
-        this.scrollRafOwner !== ownerWindow ||
-        this.realmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.scrollRafId = undefined;
-      this.scrollRafOwner = undefined;
-      // Re-check the same guard here, not just in the caller: mode/expanded/
-      // follow can all change in the ~1-frame window between this
-      // mutation being observed and this callback actually firing (e.g. the
-      // reader scrolling away mid-frame), and this is the only place that
-      // reflects state as of the moment the scroll would actually happen.
-      if (this.mode === 'live' && this.expanded && this.follow) this.scrollToBottom();
-    });
-    this.scrollRafId = handle;
-    this.scrollRafOwner = ownerWindow;
+    this.tail.scheduleScrollToTail();
   };
 
   private toggle = (): void => {
@@ -423,7 +388,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
           part="body"
           id=${this.bodyId}
           role="group"
-          aria-label=${label}
+          aria-label=${hostAriaLabel(this) ?? label}
           tabindex="0"
           ?hidden=${!this.expanded}
           @scroll=${this.onScroll}

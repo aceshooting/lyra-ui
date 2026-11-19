@@ -33,6 +33,15 @@ export const Compact: Story = {
   render: () => html`<lr-chunk-inspector .chunks=${chunks} size="s"></lr-chunk-inspector>`,
 };
 
+export const Virtualized: Story = {
+  parameters: {
+    docs: { description: { story: 'Tab to a row action, then use Up, Down, Home or End to move between chunks. Inline arrows switch between row actions.' } },
+  },
+  render: () => html`<lr-chunk-inspector
+    .chunks=${Array.from({ length: 60 }, (_, index) => ({ ...chunks[index % chunks.length]!, id: `chunk-${index}` }))}
+  ></lr-chunk-inspector>`,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-chunk-inspector></lr-chunk-inspector>`,
 };

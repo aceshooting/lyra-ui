@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Uzun süreli bellekler',
   memoryPanelAdd: 'Uzun süreli belleğe ekle',
   memoryPanelAddWithContext: '"{label}" öğesini uzun süreli belleğe ekle',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Tümünü unut',
   memoryPanelConfirmAddHeading: 'Bu, uzun süreli belleğe eklensin mi?',
   memoryPanelConfirmRemoveHeading: 'Bu öğe kaldırılsın mı?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Değerlendirme dilimleri',
   ragEvalDashboardAllSlices: 'Tümü',
   ragEvalDashboardSliceUnavailable: '{slice} için kullanılabilir değerlendirme çalıştırması yok.',
+  ragEvalDashboardMetricUnavailable: '{metric} için kullanılabilir değerlendirme metriği yok.',
   knowledgeBaseSyncIdle: 'Boşta',
   knowledgeBaseSyncSyncing: 'Eşitleniyor',
   knowledgeBaseSyncPaused: 'Duraklatıldı',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Sonuç {index} / {total}',
   ragAnswerEmpty: 'Henüz cevap yok',
   retrievalTraceEmpty: 'Geri alma aşaması yok',
+  retrievalTraceLabel: 'Bilgi getirme izi',
   sourcePickerMatches: {
     one: '{count} kaynak eşleşmesi',
     other: '{count} kaynak eşleşiyor',

@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Memories for long time',
   memoryPanelAdd: 'Add am to long-term memory',
   memoryPanelAddWithContext: 'Add "{label}" join long-term memory',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Forget all of dem',
   memoryPanelConfirmAddHeading: 'Add dis one to long-term memory?',
   memoryPanelConfirmRemoveHeading: 'Comot dis item?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Slices for evaluation',
   ragEvalDashboardAllSlices: 'All of dem',
   ragEvalDashboardSliceUnavailable: 'No evaluation run dey for {slice}.',
+  ragEvalDashboardMetricUnavailable: 'No evaluation metric dey for {metric}.',
   knowledgeBaseSyncIdle: 'E no dey work',
   knowledgeBaseSyncSyncing: 'E dey sync',
   knowledgeBaseSyncPaused: 'E don pause',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Result {index} out of {total}',
   ragAnswerEmpty: 'Answer never dey yet',
   retrievalTraceEmpty: 'No step for retrieval dey',
+  retrievalTraceLabel: 'Trace for retrieval',
   sourcePickerMatches: {
     one: '{count} source wey match',
     other: '{count} source dem wey match',

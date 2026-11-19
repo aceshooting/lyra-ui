@@ -1,3 +1,4 @@
+import type { LyraSize } from '../../../internal/variants.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -58,6 +59,7 @@ const DEFAULT_TEMPERATURE = 1;
  * child control's own prop of the same/similar name; see the child
  * components themselves for the exact semantics of `catalog`/`allowCustom`
  * and `temperatureMin`/`temperatureMax`/`temperatureStep`.
+ * The panel owns the localized field labels and placeholder. Use the standalone controls for custom field labels or validation text.
  * Array-valued catalogs are clone-owned, bounded readonly snapshots. Create and reassign a new
  * catalog array after changing its rows.
  *
@@ -74,6 +76,10 @@ const DEFAULT_TEMPERATURE = 1;
  *
  * @customElement lr-model-settings-panel
  * @event lr-change - Either child control changed. `detail: { model: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
+ * @cssprop [--lr-model-settings-panel-radius] - Corner radius of the base surface.
+ * @cssprop [--lr-model-settings-panel-bg] - Background color of the base surface.
+ * @cssprop [--lr-model-settings-panel-border-color] - Border color of the base surface.
+ * @cssprop [--lr-model-settings-panel-padding] - Inner padding of the base surface.
  * @csspart base - The outermost wrapping container.
  * @csspart limit - Catalog loss at this wrapper's input boundary.
  * @csspart model-row - The row wrapping the internal `lr-model-select`.
@@ -105,6 +111,11 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Locks the model and temperature controls while leaving their values readable. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+  /** Shared size of the model picker and temperature slider. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
   /** Informational provider badge, passed straight through to the internal `lr-model-select`. */
   @property() provider = '';
   /** The clone-owned model list, normalized to unique nonempty first-wins ids by the internal
@@ -118,7 +129,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** The current sampling temperature. */
   @property({ type: Number, useDefault: true }) temperature = DEFAULT_TEMPERATURE;
   @property({ type: Number, attribute: 'temperature-min', useDefault: true }) temperatureMin = DEFAULT_TEMPERATURE_MIN;
-  @property({ type: Number, attribute: 'temperature-max', useDefault: true }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
+  @property({ converter: (value: string | null) => Number(value?.trim() || DEFAULT_TEMPERATURE_MAX), attribute: 'temperature-max', useDefault: true }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
   @property({ type: Number, attribute: 'temperature-step', useDefault: true }) temperatureStep = DEFAULT_TEMPERATURE_STEP;
   /** `vertical` stacks full-width rows with visible labels; `compact` runs
    *  the same two rows side by side with a smaller temperature caption, for
@@ -191,14 +202,14 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
 
   private onModelChange = (e: CustomEvent<{ value: string; inCatalog: boolean }>): void => {
     e.stopPropagation();
-    if (this.disabled) return;
+    if (this.disabled || this.readonly) return;
     this.model = e.detail.value;
     this.emitChange();
   };
 
   private onTemperatureChange = (e: CustomEvent<{ value: number }>): void => {
     e.stopPropagation();
-    if (this.disabled) return;
+    if (this.disabled || this.readonly) return;
     this.temperature = this.clampTemperature(e.detail.value);
     this.emitChange();
   };
@@ -210,7 +221,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  once the interaction commits. */
   private onTemperatureInput = (e: CustomEvent<{ value: number }>): void => {
     e.stopPropagation();
-    if (this.disabled) return;
+    if (this.disabled || this.readonly) return;
     this.temperature = this.clampTemperature(e.detail.value);
   };
 
@@ -227,7 +238,10 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
       changed.has('temperatureStep')
     ) {
       const clamped = this.clampTemperature(this.temperature);
-      if (clamped !== this.temperature) this.temperature = clamped;
+      if (clamped !== this.temperature) {
+        this.temperature = clamped;
+        if (this.hasUpdated) this.scheduleAfterUpdate(() => this.emitChange(), 'temperature-clamp');
+      }
     }
   }
 
@@ -269,6 +283,8 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .label=${modelLabel}
             .allowCustom=${this.allowCustom}
             .disabled=${this.disabled}
+            .readonly=${this.readonly}
+            .size=${this.size}
             placeholder=${this.localize('selectModel')}
             @focus=${this.containNativeEvent}
             @blur=${this.containNativeEvent}
@@ -287,6 +303,8 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .valueFormatter=${this.formatTemperature}
             .withValue=${false}
             .disabled=${this.disabled}
+            .readonly=${this.readonly}
+            .size=${this.size}
             @focus=${this.containNativeEvent}
             @blur=${this.containNativeEvent}
             @lr-input=${this.onTemperatureInput}

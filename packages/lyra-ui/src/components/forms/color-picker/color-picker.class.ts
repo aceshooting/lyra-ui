@@ -1,11 +1,19 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
+import { capturePointer } from '../../../internal/pointer-capture.js';
+import { DocumentPointerListener, listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { live } from 'lit/directives/live.js';
+import { guard } from 'lit/directives/guard.js';
+import { isElementNode } from '../../../internal/dom-guards.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
@@ -14,9 +22,9 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
-import { declaredDefaultConverter, literalSetConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter, literalSetConverter } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
-import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { PositioningStrategyState, positioningStrategyConverter, resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -31,11 +39,12 @@ import { swatchKeyTarget } from '../swatch-picker/swatch-keys.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import {
   getOwnDataDescriptor,
+  readOwnArrayLength,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { eyeIcon } from '../../../internal/icons.js';
-import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
+import { checkIcon, eyeIcon } from '../../../internal/icons.js';
+import { dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import {
   cssColor,
   formatColor,
@@ -68,13 +77,6 @@ const COLOR_FORMAT = literalSetConverter<LyraColorPickerFormat>(['hex', 'rgb', '
 /** Case-insensitive; the `*a` spellings (`rgba`) name the base format, with alpha from `opacity`. */
 const normalizeColorFormat = (value: unknown): LyraColorPickerFormat =>
   COLOR_FORMAT.normalize(typeof value === 'string' ? value.toLowerCase().replace(/a$/, '') : value);
-
-/** Unsupported values resolve to *absent* so this control's own mirrored default stays the
- *  fallback, rather than a member baked into the converter. */
-const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
-  'absolute',
-  'fixed',
-]);
 
 /** A predefined palette entry. `label` becomes the swatch's accessible name; without one the
  *  raw colour string is announced instead. */
@@ -135,17 +137,10 @@ function projectColorPickerSwatches(value: unknown): readonly ProjectedSwatch[] 
       );
     }
     if (!Array.isArray(value)) return EMPTY_COLOR_PICKER_SWATCHES;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return EMPTY_COLOR_PICKER_SWATCHES;
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return EMPTY_COLOR_PICKER_SWATCHES;
     const swatches: ProjectedSwatch[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_COLOR_PICKER_SWATCHES); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_COLOR_PICKER_SWATCHES); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
       if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
       if (typeof entry.value === 'string') {
@@ -232,12 +227,12 @@ function isElementValue(value: unknown): value is Element {
 
 export interface LyraColorPickerEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<{ value: string }>;
+  'lr-input': CustomEvent<{ value: string; previousValue: string }>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-change': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;
@@ -289,8 +284,8 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @event {Event} change - Native-style composed event, fired once an interaction commits (pointer release,
  *   key release, swatch click, text entry, eyedropper result).
  * @event lr-change - Shoelace-compatible commit alias carrying the newly serialized value;
- *   emitted alongside the native `change` event.
- * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event with `detail: { value }`.
+ *   emitted alongside native `change`. `previousValue` is the value before the gesture.
+ * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event with `detail: { value, previousValue }`.
  * @event lr-show - The colour panel is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed. Initial markup, disconnect cleanup, and a close forced
  *   by disablement apply without emitting this request event.
@@ -361,6 +356,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart swatch - A single palette swatch. The active one is `[part~='swatch-selected']`. Renders
  *   a genuine `disabled` `<button>` while that swatch's own entry sets `disabled`.
  * @csspart swatch-selected - Token added to the swatch matching the current value.
+ * @csspart swatch-check - The check-mark icon rendered inside the selected swatch.
  * @csspart hint - Supporting text.
  * @csspart error - The validation message.
  * @cssprop [--lr-color-picker-swatch-size=var(--lr-form-control-height,var(--lr-size-2-5rem))] -
@@ -386,7 +382,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   hue/opacity ramp. The slider's own pointer target stays floored at 24px regardless.
  * @cssprop [--lr-color-picker-slider-handle-size=var(--lr-size-1-25rem)] - Diameter of a slider handle.
  * @cssprop [--lr-color-picker-palette-swatch-size=var(--lr-size-1-5rem)] - Size of a palette swatch.
- * @cssprop [--lr-color-picker-swatch-disabled-opacity=0.5] - Opacity of a palette swatch whose own entry sets `disabled`.
+ * @cssprop [--lr-color-picker-swatch-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a palette swatch whose own entry sets `disabled`.
  * @cssprop --grid-width - Upstream alias for `--lr-color-picker-grid-inline-size`.
  * @cssprop --grid-height - Upstream alias for `--lr-color-picker-grid-block-size`.
  * @cssprop --grid-handle-size - Upstream alias for `--lr-color-picker-grid-handle-size`.
@@ -515,7 +511,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   @property({ type: Boolean, attribute: 'no-format-toggle', reflect: true }) noFormatToggle = false;
   /** Renders the full picker panel in normal flow instead of behind a popup trigger. */
   @property({ type: Boolean, reflect: true }) inline = false;
-  private _positioningStrategy?: PlaceStrategy;
+  private readonly strategy = new PositioningStrategyState(this);
   /**
    * CSS positioning scheme the popup panel is laid out with -- the same property, spelled the same
    * way, as on `<lr-popover>`, `<lr-dropdown>` and `<lr-select>`. `absolute` (this control's
@@ -533,26 +529,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   @property({
     attribute: 'positioning-strategy',
     reflect: true,
-    converter: POSITIONING_STRATEGY,
+    converter: positioningStrategyConverter,
   })
   get positioningStrategy(): PlaceStrategy {
-    return this._positioningStrategy ?? 'absolute';
+    return this.strategy.value;
   }
   set positioningStrategy(next: PlaceStrategy) {
-    const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
-    const old = this.positioningStrategy;
-    // Recorded even when it matches the already-resolved value: an author who explicitly writes
-    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
-    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
-    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
-    this._positioningStrategy = normalized;
-    if (normalized === old) return;
-    this.requestUpdate('positioningStrategy', old);
-    // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
-    // value without going through its own setter.
-    if ((old === 'fixed') !== (normalized === 'fixed')) {
-      this.requestUpdate('hoist', old === 'fixed');
-    }
+    this.strategy.set(next);
   }
   /**
    * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
@@ -564,10 +547,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    */
   @property({ type: Boolean, reflect: true })
   get hoist(): boolean {
-    return this.positioningStrategy === 'fixed';
+    return this.strategy.hoist;
   }
   set hoist(next: boolean) {
-    this.positioningStrategy = next ? 'fixed' : 'absolute';
+    this.strategy.setHoist(next);
   }
 
   /** Preferred panel placement; the resolved side still flips to stay in the viewport. */
@@ -582,7 +565,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
   set open(next: boolean) {
     const normalized = Boolean(next) && !this.effectiveDisabled && !this.readonly;
-    if (normalized === this._open) return;
+    if (normalized === this._open) {
+      if (next && !normalized) this.removeAttribute('open');
+      return;
+    }
     // The veto point sits in the setter because the setter is the one funnel every path uses --
     // `show()`/`hide()`, the trigger toggle, a direct `el.open = true`, and the reflected
     // attribute all land here, and here the transition has not happened yet. Three paths are
@@ -608,9 +594,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.requestUpdate('open', old);
   }
 
-  @state() private hasLabel = false;
-  @state() private hasHint = false;
-  @state() private hasError = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   @state() private hasEyeDropper = false;
   @state() private color: LyraColorHsva = hsva(0, 0, 0, 1);
   /** Set by the `value` setter; consumed once per update cycle by `willUpdate()`. Parsing is
@@ -621,9 +605,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private localDescriptionIds = '';
   private externalDescriptionLease?: NativeControlDescriptionLease;
 
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
-  }
 
   private syncExternalDescription(): void {
     const target = this.isConnected ? this.triggerEl() : null;
@@ -640,8 +621,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.externalDescriptionLease = undefined;
   }
 
-  private hintId = nextId('color-picker-hint');
-  private errorId = nextId('color-picker-error');
   private labelId = nextId('color-picker-label');
   private valueTextId = nextId('color-picker-value');
   private triggerId = nextId('color-picker-trigger');
@@ -650,13 +629,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   /** Which control a pointer drag is currently steering, plus the box it maps onto. */
   private drag?: ColorPickerDrag;
   /** Exact realm carrying the active drag listeners, retained across adoption for symmetric cleanup. */
-  private dragWindow?: Window;
+  private releaseDragListeners?: () => void;
   private dragChanged = false;
-  private keyboardChanged = false;
+  private keyboardStartValue?: string;
   private cleanupPositioner?: DeferredOperationHandle;
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
-  private lightDismissDocument?: Document;
+  private readonly lightDismiss = new DocumentPointerListener(this, (event) => this.onDocumentPointerDown(event));
   private eyeDropperAbort?: AbortController;
   private eyeDropperGeneration = 0;
   private suppressDisconnectedClose = false;
@@ -677,19 +656,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
-    // Seed from the light-DOM children directly, before the first render -- the slots'
-    // @slotchange handler (onSlotChange below) only fires once the shadow DOM has committed its
-    // first <slot> elements, so relying on it alone rendered label/hint/error chrome `hidden` on
-    // the very first paint for a color picker mounted with declarative slotted content, only
-    // revealing it on the following render. Mirrors lr-checkbox-group's identical fix.
     const seedEnvironmentState = (): void => {
-      const hasSlot = (name: string): boolean =>
-        Array.from(this.children).some((el) => el.getAttribute('slot') === name);
-      this.hasLabel = hasSlot('label');
-      this.hasHint = hasSlot('hint');
-      this.hasError = hasSlot('error');
-      // A server renderer has neither those children nor an `EyeDropper` constructor, so on a
-      // hydrating mount this runs one update after the render it would otherwise contradict.
       this.hasEyeDropper = !!eyeDropperConstructor(this.ownerDocument.defaultView);
     };
     if (this.hasUpdated) seedEnvironmentState();
@@ -707,7 +674,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.teardownOverlay(false);
     this.cancelEyeDropper();
     this.interactionGeneration += 1;
-    this.keyboardChanged = false;
+    this.keyboardStartValue = undefined;
     this.cancelDrag();
     super.disconnectedCallback();
   }
@@ -758,17 +725,17 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (formatChanged) this.cancelDrag();
     // `disabled`/`readonly` can flip (directly, or through an ancestor fieldset) while the panel
     // is already showing; the open-guard in the setter only covers the opening direction.
-    if (this.liveDisabled || this.readonly) {
+    if (isLiveDisabled(this) || this.readonly) {
       if (this.open) this.applyOpenState(false);
       this.pendingInput = undefined;
-      this.keyboardChanged = false;
+      this.keyboardStartValue = undefined;
       this.cancelDrag();
     }
     if (!this.valueNeedsParse && !formatChanged) return;
     const shouldReserialize = formatChanged;
     if (this.valueNeedsParse) {
       this.valueNeedsParse = false;
-      const parsed = parseColor(super.value);
+      const parsed = parseColor(super.value, this.ownerDocument);
       if (parsed) {
         this.color = parsed;
         this.writeSerializedValue();
@@ -777,7 +744,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     }
     // A value that is not a colour keeps whatever string the consumer supplied; only a format
     // change on an already-understood colour re-serializes.
-    if (shouldReserialize && parseColor(super.value) !== null) this.writeSerializedValue();
+    if (shouldReserialize && parseColor(super.value, this.ownerDocument) !== null) this.writeSerializedValue();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -951,24 +918,26 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       next.v === this.color.v &&
       next.a === this.color.a;
     if (!unchanged) this.color = next;
+    const previousValue = this.value;
     const changed = this.writeSerializedValue();
     if (changed) {
+      const detail = { value: this.value, previousValue };
       dispatchNativeInputEvent(this);
-      this.emit('lr-input', { value: this.value });
+      this.emit('lr-input', detail);
     }
     return changed;
   }
 
   /** Emits the native and migrated commit pair for a completed value-changing interaction. */
-  private emitCommit(): void {
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: this.value });
+  private emitCommit(previousValue: string): void {
+    emitValueEvents(this, 'change', { value: this.value, previousValue }, detail => this.emit('lr-change', detail));
   }
 
   /** `applyColor()` plus the commit pair a discrete interaction ends with. */
   private commitColor(next: LyraColorHsva): boolean {
+    const previousValue = this.value;
     const changed = this.applyColor(next);
-    if (changed) this.emitCommit();
+    if (changed) this.emitCommit(previousValue);
     return changed;
   }
 
@@ -1004,7 +973,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (!anchor || !panel) return;
     const handle = place(anchor, panel, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+      strategy: resolveEffectivePositioningStrategy(this, this.strategy.authored, 'absolute'),
     });
     this.cleanupPositioner = handle;
     void handle.ready.then((positioned) => {
@@ -1038,8 +1007,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       },
       restoreFocusTo: this.triggerEl(),
     });
-    this.lightDismissDocument = this.ownerDocument;
-    this.lightDismissDocument.addEventListener('pointerdown', this.onDocumentPointerDown, true);
+    this.lightDismiss.bind();
   }
 
   private teardownOverlay(restoreFocus = true): void {
@@ -1047,8 +1015,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.cleanupPositioner = undefined;
     this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
-    this.lightDismissDocument?.removeEventListener('pointerdown', this.onDocumentPointerDown, true);
-    this.lightDismissDocument = undefined;
+    this.lightDismiss.unbind();
     this.restoreFocusOnClose = true;
   }
 
@@ -1092,17 +1059,12 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       startValue: this.captureLiveValueCheckpoint(),
     };
     this.dragChanged = false;
-    try {
-      box.setPointerCapture(event.pointerId);
-    } catch {
-      // A synthetic or already-released pointer has no capture to take; the window-level
-      // listeners below still track the gesture, so this is not worth failing the interaction over.
-    }
-    this.dragWindow = dragWindow;
-    dragWindow.addEventListener('pointermove', this.onPointerMove);
-    dragWindow.addEventListener('pointerup', this.onPointerUp);
-    dragWindow.addEventListener('pointercancel', this.onPointerCancel);
-    dragWindow.addEventListener('lostpointercapture', this.onPointerCancel);
+    capturePointer(box, event.pointerId);
+    this.releaseDragListeners = listenUntilPointerEnd(
+      dragWindow,
+      (end) => (end.type === 'pointerup' ? this.onPointerUp(end) : this.onPointerCancel(end)),
+      { lostCapture: true, extra: { pointermove: (move) => this.onPointerMove(move as PointerEvent) } },
+    );
     this.applyPointer(event);
   }
 
@@ -1143,10 +1105,11 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       this.cancelDrag();
       return;
     }
+    const previousValue = this.drag.startValue.value;
     this.applyPointer(event);
     const changed = this.dragChanged;
     this.endDrag();
-    if (changed) this.emitCommit();
+    if (changed) this.emitCommit(previousValue);
   };
 
   // A gesture can end without a pointerup: touch-scroll takeover and palm rejection fire
@@ -1168,12 +1131,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private endDrag(): void {
     this.drag = undefined;
     this.dragChanged = false;
-    const dragWindow = this.dragWindow;
-    this.dragWindow = undefined;
-    dragWindow?.removeEventListener('pointermove', this.onPointerMove);
-    dragWindow?.removeEventListener('pointerup', this.onPointerUp);
-    dragWindow?.removeEventListener('pointercancel', this.onPointerCancel);
-    dragWindow?.removeEventListener('lostpointercapture', this.onPointerCancel);
+    this.releaseDragListeners?.();
+    this.releaseDragListeners = undefined;
   }
 
   // -------------------------------------------------------------------------
@@ -1192,7 +1151,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   private onGridKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (this.effectiveDisabled || this.readonly || shouldIgnoreNavigationKey(event)) return;
     const key = PAGE_KEYS[event.key] ?? event.key;
     const step = SMALL_STEP * (event.shiftKey || key !== event.key ? LARGE_STEP_MULTIPLIER : 1);
     const inline = this.inlineStep(event);
@@ -1208,7 +1167,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
 
   private onHueKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (this.effectiveDisabled || this.readonly || shouldIgnoreNavigationKey(event)) return;
     const key = PAGE_KEYS[event.key] ?? event.key;
     const step = SMALL_STEP * (event.shiftKey || key !== event.key ? LARGE_STEP_MULTIPLIER : 1);
     const inline = this.inlineStep(event);
@@ -1226,7 +1185,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
 
   private onAlphaKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (this.effectiveDisabled || this.readonly || shouldIgnoreNavigationKey(event)) return;
     const key = PAGE_KEYS[event.key] ?? event.key;
     const step = (SMALL_STEP * (event.shiftKey || key !== event.key ? LARGE_STEP_MULTIPLIER : 1)) / 100;
     const inline = this.inlineStep(event);
@@ -1243,19 +1202,21 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   private applyKeyboardColor(next: LyraColorHsva): void {
     const generation = this.interactionGeneration;
+    const previousValue = this.value;
     const changed = this.applyColor(next);
     // An `input` listener can synchronously reparent the picker while applyColor() dispatches.
     // Disconnection cancels that interrupted gesture, so do not re-arm its later keyup commit.
     if (generation !== this.interactionGeneration) return;
-    this.keyboardChanged = changed || this.keyboardChanged;
+    if (changed) this.keyboardStartValue ??= previousValue;
   }
 
   /** One discrete press pairs a keydown (`input`) with a keyup (`change`); OS key repeat re-fires
    *  keydown but still commits only once, matching a pointer drag's shape. */
   private onControlKeyUp = (): void => {
-    if (!this.keyboardChanged) return;
-    this.keyboardChanged = false;
-    this.emitCommit();
+    const previousValue = this.keyboardStartValue;
+    if (previousValue === undefined) return;
+    this.keyboardStartValue = undefined;
+    this.emitCommit(previousValue);
   };
 
   // -------------------------------------------------------------------------
@@ -1267,7 +1228,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // color-picker's serialized public value changed; commitColor() emits the one public input
     // after parsing succeeds.
     event.stopPropagation();
-    if (this.liveDisabled || this.readonly) {
+    if (isLiveDisabled(this) || this.readonly) {
       this.pendingInput = undefined;
       this.requestUpdate();
       return;
@@ -1278,33 +1239,33 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private onFieldChange = (event: Event): void => {
     event.stopPropagation();
     const field = event.target as HTMLInputElement;
-    if (this.liveDisabled || this.readonly) {
+    if (isLiveDisabled(this) || this.readonly) {
       this.pendingInput = undefined;
       this.requestUpdate();
       return;
     }
-    const parsed = parseColor(field.value);
+    const parsed = parseColor(field.value, this.ownerDocument);
     if (parsed) this.commitColor(parsed);
     this.pendingInput = undefined;
     this.requestUpdate();
   };
 
   private onFieldKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly || shouldIgnoreNavigationKey(event)) return;
     if (event.key !== 'Enter') return;
     event.preventDefault();
     this.onFieldChange(event);
   };
 
   private onSwatchClick(swatch: ProjectedSwatch): void {
-    if (this.liveDisabled || this.readonly || swatch.disabled) return;
+    if (isLiveDisabled(this) || this.readonly || swatch.disabled) return;
     const parsed = swatch.parsed;
     if (!parsed) return;
     this.commitColor(this.opacity ? parsed : hsva(parsed.h, parsed.s, parsed.v, 1));
   }
 
   private onFormatClick = (): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const index = FORMAT_CYCLE.indexOf(this.format);
     this.format = FORMAT_CYCLE[(index + 1) % FORMAT_CYCLE.length]!;
   };
@@ -1329,7 +1290,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           this.effectiveDisabled ||
           this.readonly
         ) return;
-        const parsed = parseColor(result?.sRGBHex ?? '');
+        const parsed = parseColor(result?.sRGBHex ?? '', this.ownerDocument);
         if (parsed) this.commitColor(this.opacity ? hsva(parsed.h, parsed.s, parsed.v, this.color.a) : parsed);
       })
       // Dismissing the eyedropper rejects; that is a cancellation, not an error worth surfacing.
@@ -1372,19 +1333,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     handleEvent: (event: FocusEvent): void => this.onControlBlur(event),
   };
 
-  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
-  // fix), even though the assigned child's own `slot` attribute never changed. Mirrors the
-  // light-DOM check `connectedCallback()`'s `seedEnvironmentState` above already uses.
-  private onSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
-    const assigned = Array.from(this.children).some((el) => el.getAttribute('slot') === slot.name);
-    if (slot.name === 'label') this.hasLabel = assigned;
-    if (slot.name === 'hint') this.hasHint = assigned;
-    if (slot.name === 'error') this.hasError = assigned;
-  };
-
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
@@ -1416,6 +1364,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           saturation: this.formatNumber(saturation),
           brightness: this.formatNumber(brightness),
         })}
+        aria-readonly=${this.readonly ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         style=${styleMap({
           insetInlineStart: `${saturation}%`,
@@ -1444,6 +1393,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         aria-valuemax="360"
         aria-valuenow=${hue}
         aria-valuetext=${this.localize('colorPickerHueValue', undefined, { hue: this.formatNumber(hue) })}
+        aria-readonly=${this.readonly ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         style=${styleMap({
           insetInlineStart: `${(hue / 360) * 100}%`,
@@ -1479,6 +1429,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         aria-valuetext=${this.localize('colorPickerOpacityValue', undefined, {
           opacity: this.formatNumber(percent),
         })}
+        aria-readonly=${this.readonly ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         style=${styleMap({
           insetInlineStart: `${percent}%`,
@@ -1491,7 +1442,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   private onSwatchKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly || shouldIgnoreNavigationKey(event)) return;
     const entries = this.normalizedSwatches();
     const origin = Number((event.target as HTMLElement).dataset['index']);
     if (!Number.isInteger(origin)) return;
@@ -1519,10 +1470,12 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       role="radiogroup"
       aria-label=${this.localize('colorPickerSwatches')}
       @keydown=${this.onSwatchKeyDown}
+      @click=${this.onSwatchesClick}
     >
-      ${entries.map((entry, index) => {
-        const name = entry.label ?? this.localize('colorPickerSwatch', undefined, { color: entry.color });
-        return html`
+      ${guard([entries, selected, tabbable, this.effectiveDisabled, this.effectiveLocale, this.strings], () =>
+        entries.map((entry, index) => {
+          const name = entry.label ?? this.localize('colorPickerSwatch', undefined, { color: entry.color });
+          return html`
           <!-- hit-area-exempt: palette swatches are 24px targets separated by at least 4px, so
                adjacent centres stay 28px apart -- WCAG 2.5.8's target-spacing exception. -->
           <button
@@ -1535,12 +1488,21 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
             tabindex=${index === tabbable ? '0' : '-1'}
             ?disabled=${this.effectiveDisabled || entry.disabled === true}
             style=${styleMap(entry.parsed ? { '--lr-color-picker-swatch-color': entry.css } : {})}
-            @click=${() => this.onSwatchClick(entry)}
-          >${entry.icon == null ? nothing : renderInertPresentation(entry.icon, { part: 'swatch-icon' })}</button>
+          >${entry.icon == null ? nothing : renderInertPresentation(entry.icon, { part: 'swatch-icon' })}${
+            index === selected ? html`<span part="swatch-check" aria-hidden="true">${checkIcon()}</span>` : nothing
+          }</button>
         `;
-      })}
+        }))}
     </div>`;
   }
+
+  private onSwatchesClick = (event: Event): void => {
+    const swatch = event
+      .composedPath()
+      .find((node): node is Element => isElementNode(node) && node.matches('[part~="swatch"]'));
+    const entry = swatch ? this.normalizedSwatches()[Number(swatch.getAttribute('data-index'))] : undefined;
+    if (entry) this.onSwatchClick(entry);
+  };
 
   private renderPanel(
     name: string,
@@ -1548,8 +1510,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     describedBy: string,
     invalid: boolean,
   ): TemplateResult {
-    const entries = this.normalizedSwatches();
-    const fieldValue = this.pendingInput ?? this.getFormattedValue(this.activeFormat());
     return html`<div
       id=${this.panelId}
       part="panel"
@@ -1558,7 +1518,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       aria-labelledby=${labelledBy || nothing}
       aria-describedby=${describedBy || nothing}
       ?hidden=${!this.inline && !this.open}
-    >
+    >${this.renderPanelBody(invalid)}</div>`;
+  }
+
+  private renderPanelBody(invalid: boolean): TemplateResult {
+    const entries = this.normalizedSwatches();
+    const fieldValue = this.pendingInput ?? this.getFormattedValue(this.activeFormat());
+    return html`
       <span class="glass-scroll-layer" aria-hidden="true"></span>
       ${this.renderGrid()}
       <div class="row">
@@ -1613,13 +1579,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           : nothing}
       </div>
       ${entries.length > 0 ? this.renderSwatches(entries) : nothing}
-    </div>`;
+    `;
   }
 
   override render(): TemplateResult {
-    const hasLabel = this.withLabel || this.hasLabel || Boolean(this.label);
-    const hasHint = this.withHint || this.hasHint || Boolean(this.hint);
-    const hasError = this.hasError || Boolean(this.errorText);
+    const hasLabel = this.withLabel || this.slotPresence.has('label') || Boolean(this.label);
+    const hasHint = this.withHint || this.slotPresence.has('hint') || Boolean(this.hint);
+    const hasError = this.slotPresence.has('error') || Boolean(this.errorText);
     // Presence-based (`hostAriaLabel`), not truthiness-based: `accessibleLabel` defaults to `''`,
     // so reading the property alone cannot tell an absent `aria-label` from an explicitly empty
     // one, and the localized fallback quietly reinstated a name the author had suppressed.
@@ -1631,8 +1597,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const userInvalid = hasCustomState(this.internals, 'user-invalid');
     const invalid = hasError || userInvalid;
     const describedBy = [
-      hasError ? this.errorId : '',
-      hasHint ? this.hintId : '',
+      hasError ? 'color-picker-error' : '',
+      hasHint ? 'color-picker-hint' : '',
       this.valueTextId,
     ]
       .filter(Boolean)
@@ -1648,7 +1614,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       @blur=${this.controlBlurListener}
     >
       <label id=${this.labelId} part="label form-control-label" for=${this.inline ? nothing : this.triggerId} ?hidden=${!hasLabel}
-        >${this.hasLabel ? nothing : this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot
+        >${this.slotPresence.has('label') ? nothing : this.label}<slot name="label"></slot
       ></label>
       ${this.inline ? nothing : html`<div part="trigger-container">
         <button
@@ -1676,12 +1642,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         })}</span
       >
       ${this.renderPanel(name, labelledBy, describedBy, invalid)}
-      <div id=${this.errorId} part="error" ?hidden=${!hasError}
-        >${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot
-      ></div>
-      <div id=${this.hintId} part="hint" ?hidden=${!hasHint}
-        >${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot
-      ></div>
+      ${renderFormControlHintError({ idPrefix: 'color-picker', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
     </div>`;
   }
 }

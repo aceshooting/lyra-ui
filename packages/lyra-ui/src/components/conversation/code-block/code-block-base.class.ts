@@ -3,11 +3,13 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { PropertyValues, TemplateResult } from 'lit';
-import { state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraHighlight, LyraAnchor, TextSelectRect } from '../../viewers/document-viewer/anchors.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighter } from './shiki-types.js';
 import {
@@ -29,7 +31,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import type { LyraCodeBlockCopyAppearance, LyraCodeBlockToggleDetail } from './code-block-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockActiveLine, LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockHighlightedLine, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockActiveLine, LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockHighlightedLine, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeBlockToggle, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -58,18 +60,17 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     codeBlockActiveLine: LYRA_DEFAULT_codeBlockActiveLine,
-    codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
     codeBlockHighlightedLine: LYRA_DEFAULT_codeBlockHighlightedLine,
+    codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
     codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
+    codeBlockToggle: LYRA_DEFAULT_codeBlockToggle,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
-    collapseCode: LYRA_DEFAULT_collapseCode,
     copied: LYRA_DEFAULT_copied,
     copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copy: LYRA_DEFAULT_copy,
     copyCode: LYRA_DEFAULT_copyCode,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    expandCode: LYRA_DEFAULT_expandCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -81,7 +82,6 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   abstract filename: string;
   abstract accessibleLabel: string | null;
   abstract collapsible: boolean;
-  abstract collapsed: boolean;
   abstract withoutCopyButton: boolean;
   abstract copyAppearance: LyraCodeBlockCopyAppearance;
   abstract maxHeight: string;
@@ -91,6 +91,19 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   abstract get highlights(): readonly LyraHighlight[];
   abstract set highlights(value: readonly LyraHighlight[]);
   abstract activeHighlightId: string | null;
+
+  private readonly collapseWrites = new VetoWriteGuard();
+  private collapsedValue = false;
+
+  /** Whether the code region is currently hidden. Only has a visible effect
+   *  while `collapsible` is also true.
+   *  @default false */
+  @property({ type: Boolean, reflect: true })
+  get collapsed(): boolean { return this.collapsedValue; }
+  set collapsed(value: boolean) {
+    this.collapsedValue = value;
+    markVetoGuardWrite(this.collapseWrites);
+  }
 
   @state() protected hasHeaderActions = false;
   protected focusedLine = 1;
@@ -132,14 +145,10 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       emit: (name, detail) => this.emit(name, detail ?? null),
       announce: ok => this.announcements.announcePolite(ok ? this.localize('copiedToClipboard') : this.localize('copyFailed')),
     }, outcome, () => this.isConnected && (this.code ?? '') === outcome.text),
-    requestToggle: (collapsed) =>
-      !this.emit('lr-toggle-request', { expanded: !collapsed }, { cancelable: true })
-        .defaultPrevented,
-    emitToggle: (collapsed) => this.emit('lr-toggle', { expanded: !collapsed }),
     emitTextSelect: (selection) => this.emit('lr-text-select', selection),
   });
 
-  protected readonly headerActions = new CodeBlockHeaderActionsController({
+  private readonly headerActions = new CodeBlockHeaderActionsController({
     host: this,
     setHasHeaderActions: (value) => { this.hasHeaderActions = value; },
   });
@@ -174,6 +183,21 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     this.announcements.adopted();
     this.interactions.disconnect();
   }
+
+  private readonly toggleCollapsed = (): void => {
+    if (!this.isConnected || !this.collapsible) return;
+    const expanded = this.collapsed;
+    requestThenCommit({
+      guard: this.collapseWrites,
+      requestDetail: { expanded },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-toggle-request', detail, init),
+      commit: () => {
+        if (!this.isConnected || !this.collapsible) return;
+        this.collapsed = !expanded;
+        this.emit('lr-toggle', { expanded });
+      },
+    });
+  };
 
   /** Resolves a `line-range` anchor (or a highlights id resolving to one) by scrolling the code
    *  body. */
@@ -351,7 +375,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       lineNumbers: this.lineNumbers,
       localize: this.localize.bind(this),
       renderPlainCode: () => this.cachedPlainCode(),
-      onToggle: this.interactions.toggleCollapsed,
+      onToggle: this.toggleCollapsed,
       onCopy: () => void this.interactions.copy(),
       onBodyMouseUp: this.interactions.onBodyMouseUp,
       onBodyClick: this.interactions.onBodyClick,

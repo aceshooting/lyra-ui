@@ -1,18 +1,17 @@
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
-import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
-import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { createHaystackMemo } from '../../../internal/search-haystack.js';
 import { indexByKey } from '../../../internal/keyed-index.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import '../../forms/input/input.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getCollator, getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { getCollator, getListFormat, getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
@@ -61,6 +60,7 @@ export interface EvalDatasetSourceQuery {
 export type EvalDatasetSource = LyraPageSource<EvalExample, EvalDatasetSourceQuery>;
 
 export interface LyraEvalDatasetEventMap {
+  'lr-example-select-request': CustomEvent<{ exampleId: string; previousExampleId: string | null }>;
   'lr-example-select': CustomEvent<{ exampleId: string | null }>;
   'lr-example-add-request': CustomEvent<null>;
   'lr-example-remove-request': CustomEvent<{ exampleId: string }>;
@@ -126,6 +126,8 @@ export interface LyraEvalDatasetEventMap {
  * Reassign dataSource or call requestUpdate() to refresh; named paints keep source caches stable.
  *
  * @customElement lr-eval-dataset
+ * @event lr-example-select-request - Cancelable proposal before a row activation selects it.
+ *   `detail: { exampleId, previousExampleId }`; preventing it keeps the current selection.
  * @event lr-example-select - A row was activated. `detail: { exampleId }` -- `exampleId` is `null` once the
  *   previously-selected row no longer exists in `examples` or falls outside the active filters
  *   (see `examples`' own doc).
@@ -268,36 +270,25 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   private get sourceBlocked(): boolean { return this.sourceMode && (this.sourcePages.state.pending || !!this.sourcePages.state.error || !!this.sourceFailure); }
 
   private projectSourceExample(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<EvalExample> {
-    const assertCurrent = (): void => { if (!isCurrent()) throw new TypeError('Obsolete source record'); };
-    const descriptorOf = (target: object, key: PropertyKey) => {
-      assertCurrent();
-      const descriptor = getOwnDataDescriptor(target, key);
-      assertCurrent();
-      return descriptor;
-    };
-    assertCurrent();
     if (record.value === null || typeof record.value !== 'object') throw new TypeError('Invalid source example');
-    const candidate = record.value;
-    const read = (key: string, optional = false): unknown => {
-      const descriptor = descriptorOf(candidate, key);
-      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || (!optional && descriptor === MISSING_OWN_DATA_DESCRIPTOR)) throw new TypeError('Invalid source example');
-      return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
-    };
-    const id = read('id'); const input = read('input'); const expectedOutput = read('expectedOutput', true); const rawTags = read('tags', true);
+    const id = readOwnSourceField(record.value, 'id', isCurrent, true);
+    const input = readOwnSourceField(record.value, 'input', isCurrent, true);
+    const expectedOutput = readOwnSourceField(record.value, 'expectedOutput', isCurrent);
+    const rawTags = readOwnSourceField(record.value, 'tags', isCurrent);
     if (typeof id !== 'string' || !id.trim() || id !== record.key || typeof input !== 'string' || (expectedOutput !== undefined && typeof expectedOutput !== 'string')) throw new TypeError('Invalid source example');
     let units = id.length + input.length + (expectedOutput?.length ?? 0);
     const tags: string[] = [];
     if (rawTags !== undefined) {
       if (!Array.isArray(rawTags)) throw new TypeError('Invalid source tags');
-      const length = descriptorOf(rawTags, 'length');
-      if (length === MISSING_OWN_DATA_DESCRIPTOR || length === UNSAFE_OWN_DATA_DESCRIPTOR || typeof length.value !== 'number' || length.value > MAX_TAG_FACETS) throw new RangeError('Invalid source tags');
-      for (let i = 0; i < length.value; i++) {
-        const tag = descriptorOf(rawTags, String(i));
-        if (tag === MISSING_OWN_DATA_DESCRIPTOR || tag === UNSAFE_OWN_DATA_DESCRIPTOR || typeof tag.value !== 'string') throw new TypeError('Invalid source tag');
-        units += tag.value.length; tags.push(tag.value);
+      const length = readOwnSourceField(rawTags, 'length', isCurrent, true);
+      if (typeof length !== 'number' || length > MAX_TAG_FACETS) throw new RangeError('Invalid source tags');
+      for (let i = 0; i < length; i++) {
+        const tag = readOwnSourceField(rawTags, String(i), isCurrent, true);
+        if (typeof tag !== 'string') throw new TypeError('Invalid source tag');
+        units += tag.length; tags.push(tag);
       }
     }
-    if (units > 65_536) throw new RangeError('Source example too large');
+    if (units > SOURCE_TEXT_UNIT_LIMIT) throw new RangeError('Source example too large');
     return { key: record.key, order: record.order, value: Object.freeze({ id, input, ...(expectedOutput === undefined ? {} : { expectedOutput }), tags: Object.freeze(tags) }) };
   }
 
@@ -557,10 +548,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         key: 'tags',
         label: tagsLabel,
         sortable: true,
-        sortValue: (row) => (row.tags ?? []).join(', '),
-        cell: (row) => (row.tags ?? []).join(', '),
+        sortValue: (row) => this.formatTags(row.tags),
+        cell: (row) => this.formatTags(row.tags),
       },
     ];
+  }
+
+  private formatTags(tags: readonly string[] | undefined): string {
+    return Array.isArray(tags) && tags.length ? getListFormat(this.effectiveLocale, { type: 'unit', style: 'short' }).format(tags) : '';
   }
 
   private onAddClick = (): void => {
@@ -578,8 +573,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     if (this.disabled) return;
     if (this.sourceBlocked || (this.sourceMode && !this.sourceRows.includes(e.detail.row))) return;
     const id = e.detail.row.id;
-    this.selectedId = id;
-    this.emit('lr-example-select', { exampleId: id });
+    requestThenCommit({
+      requestDetail: { exampleId: id, previousExampleId: this.selectedId },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-example-select-request', detail, init),
+      commit: () => {
+        this.selectedId = id;
+        this.emit('lr-example-select', { exampleId: id });
+      },
+    });
   };
 
   private onFiles = (e: LyraFileInputEventMap['lr-files']): void => {
@@ -740,7 +741,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     if (this.tagTemplateMemo && inputs.every((input, index) => input === this.tagTemplateMemo!.inputs[index])) return this.tagTemplateMemo.template;
     const template = html`
       <div part="tag-filter" role="group" aria-label=${label}>
-        <lr-chip-group>
+        <lr-chip-group @lr-overflow-toggle=${this.stopOwnedEvent}>
           ${(this.sourceMode ? tags : this.visibleTagFacets(tags)).map(
             (tag) => html`<lr-chip
               toggleable
@@ -749,6 +750,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
               .disabled=${this.disabled}
               @lr-chip-toggle-request=${(e: CustomEvent<ChipSelectDetail>) => this.onTagChipToggle(tag, e)}
               @lr-chip-select=${this.stopOwnedEvent}
+              @lr-chip-change=${this.stopOwnedEvent}
+              @lr-remove=${this.stopOwnedEvent}
               >${this.sourceMode ? this.sourceFacetLabels.get(tag) ?? tag : tag}</lr-chip
             >`,
           )}
@@ -819,6 +822,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @lr-cell-edit=${this.stopOwnedEvent}
           @lr-column-resize=${this.stopOwnedEvent}
           @lr-row-activate=${this.onGridRowActivate}
+          @lr-row-expand-request=${this.stopOwnedEvent}
+          @lr-page-request=${this.stopOwnedEvent}
+          @lr-column-resize-request=${this.stopOwnedEvent}
           @lr-row-click=${this.stopOwnedEvent}
         ></lr-table>
         ${truncation

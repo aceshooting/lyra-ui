@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Referencia',
   promptInputLabel: 'Indicació per a la IA',
   promptInputControls: 'Opcions de la indicació',
+  promptInputCollectionLimit: 'S’ha omès part del que s’ha introduït a la indicació perquè s’ha arribat a un límit d’entrada.',
   promptInputSources: 'Fonts',
   promptInputAttachments: 'Fitxers adjunts',
   handoffLabel: 'Traspàs entre agents',
@@ -157,6 +158,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'No hi ha veus disponibles',
   voicePickerRequired: 'Trieu una veu.',
   voicePickerPreview: 'Previsualitza {name}',
+  voicePickerPreviewFailed: 'La previsualització de la veu no està disponible.',
   voicePickerStopPreview: 'Atura la previsualització',
   realtimeSessionLabel: 'Sessió en temps real',
   realtimeSessionDisconnected: 'Desconnectat',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'El codi llarg es mostra sense ressaltat de sintaxi.',
   codeBlockHighlightedLine: 'Línia destacada',
   codeBlockActiveLine: 'Línia destacada activa',
+  codeBlockToggle: 'Mostra o amaga el codi',
 };
 
 registerLyraLocale('ca', strings);

@@ -20,9 +20,10 @@ import {
 } from '../retrieval-identity.js';
 import { hasRetrievalMetadata, renderRetrievalMetadata } from '../retrieval-metadata.js';
 import { styles } from './retrieval-trace.styles.js';
+import { retrievalSemanticLabel, retrievalSemanticRole } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageKindUnknown, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEmpty, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageKindUnknown, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEmpty, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_retrievalTraceLabel, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -115,7 +116,10 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
 
 export interface LyraRetrievalTraceEventMap {
   'lr-stage-select': CustomEvent<{ stageId: string }>;
-  'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string; stageId?: string }>;
+  'lr-toggle': CustomEvent<
+    | { kind: 'stage'; expanded: boolean; itemId: string; stageId?: undefined }
+    | { kind: 'chunk'; expanded: boolean; itemId: string; stageId: string }
+  >;
   'lr-stage-chunk-action': CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
 }
 
@@ -143,8 +147,8 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @customElement lr-retrieval-trace
  * @event lr-stage-select - A stage's bar was activated in the timeline (click, Enter, Space). `detail: { stageId }`.
  * @event lr-toggle - A stage's evidence panel was expanded or collapsed (via its own toggle, or
- *   implicitly by selecting that stage in the timeline for the first time) (`{ expanded, itemId }`),
- *   or a nested chunk changed (`{ expanded, itemId, stageId }`).
+ *   implicitly by selecting that stage in the timeline for the first time) (`{ kind: 'stage', expanded, itemId }`),
+ *   or a nested chunk changed (`{ kind: 'chunk', expanded, itemId, stageId }`).
  * @event lr-stage-chunk-action - A chunk inside a stage was opened or expanded. The discriminated
  *   detail always includes `stageId` and `action`, so consumers never infer ownership from DOM ancestry.
  * @csspart base - The root wrapper.
@@ -194,6 +198,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     retrievalStageRerank: LYRA_DEFAULT_retrievalStageRerank,
     retrievalStageRetrieve: LYRA_DEFAULT_retrievalStageRetrieve,
     retrievalTraceEmpty: LYRA_DEFAULT_retrievalTraceEmpty,
+    retrievalTraceLabel: LYRA_DEFAULT_retrievalTraceLabel,
     retrievalTraceEvidenceToggle: LYRA_DEFAULT_retrievalTraceEvidenceToggle,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -304,7 +309,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     if (expanded) next.add(stageId);
     else next.delete(stageId);
     this.expandedStageIds = next;
-    this.emit('lr-toggle', { itemId: stageId, expanded });
+    this.emit('lr-toggle', { kind: 'stage', itemId: stageId, expanded });
   }
 
   private onStageSelect = (e: CustomEvent<{ spanId: string }>): void => {
@@ -324,7 +329,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       const next = new Set(this.expandedStageIds);
       next.add(stageId);
       this.expandedStageIds = next;
-      this.emit('lr-toggle', { itemId: stageId, expanded: true });
+      this.emit('lr-toggle', { kind: 'stage', itemId: stageId, expanded: true });
     }
   };
 
@@ -357,7 +362,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             .chunks=${chunks}
             @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId: string }>) => {
               event.stopPropagation();
-              this.emit('lr-toggle', { ...event.detail, stageId: stage.id });
+              this.emit('lr-toggle', { ...event.detail, kind: 'chunk', stageId: stage.id });
               this.emit('lr-stage-chunk-action', {
                 stageId: stage.id,
                 action: 'expand',
@@ -429,11 +434,12 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     const stages = this.normalizedStages;
     const names = stages.map((stage) => this.stageLabel(stage));
     const hasAnyEvidence = stages.some((s) => this.hasEvidence(s.evidence));
-    // A host aria-label names this composed trace. Forward only the distinct timeline label; the
-    // nested waterfall supplies its own localized purpose when it is omitted.
+    // Forward only the distinct timeline label; the nested waterfall supplies its own localized
+    // purpose when it is omitted.
     const label = this.label;
+    const groupLabel = retrievalSemanticLabel(this, this.localize('retrievalTraceLabel'));
     return html`
-      <div part="base">
+      <div part="base" role=${retrievalSemanticRole(this, 'group') ?? nothing} aria-label=${groupLabel ?? nothing}>
         ${stages.length === 0 ? html`<lr-empty part="empty" heading=${this.localize('retrievalTraceEmpty')}></lr-empty>` : nothing}
         <lr-span-waterfall
           part="timeline"

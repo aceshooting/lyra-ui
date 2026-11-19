@@ -8,6 +8,15 @@ interface ObserverLike {
 type OwnerWindow = Window & typeof globalThis;
 type OwnedHost = ReactiveControllerHost & HTMLElement;
 
+/** A delivered list, or `[]` for a non-array or a revoked proxy whose brand check throws. */
+function deliveredList<T>(value: T[]): T[] {
+  try {
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Realm-owned observer base. The native observer is constructed from the host's current owner
  * window (never the module realm), every callback is checked against the generation, document and
@@ -146,7 +155,7 @@ export class OwnedMutationObserver extends OwnedObserver<MutationObserver, [Muta
   }
 
   protected dispatch([records]: [MutationRecord[]]): void {
-    this.callback(Array.isArray(records) ? records : []);
+    this.callback(deliveredList(records));
   }
 }
 
@@ -166,7 +175,7 @@ export class OwnedResizeObserver extends OwnedObserver<ResizeObserver, [ResizeOb
   }
 
   protected dispatch([entries]: [ResizeObserverEntry[]]): void {
-    this.callback(Array.isArray(entries) ? entries : []);
+    this.callback(deliveredList(entries));
   }
 }
 
@@ -192,7 +201,7 @@ export class OwnedIntersectionObserver extends OwnedObserver<IntersectionObserve
   }
 
   protected dispatch([entries]: [IntersectionObserverEntry[]]): void {
-    this.callback(Array.isArray(entries) ? entries : []);
+    this.callback(deliveredList(entries));
   }
 }
 

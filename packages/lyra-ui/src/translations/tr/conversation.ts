@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Kaynak göster',
   promptInputLabel: 'Yapay zekâ istemi',
   promptInputControls: 'İstem seçenekleri',
+  promptInputCollectionLimit: 'Girdi sınırına ulaşıldığı için istem girdisinin bir bölümü atlandı.',
   promptInputSources: 'Kaynaklar',
   promptInputAttachments: 'Ekler',
   handoffLabel: 'Aracıyı devret',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Kullanılabilir ses yok',
   voicePickerRequired: 'Bir ses seçin.',
   voicePickerPreview: '{name} önizlemesi',
+  voicePickerPreviewFailed: 'Ses önizlemesi kullanılamıyor.',
   voicePickerStopPreview: 'Önizlemeyi durdur',
   realtimeSessionLabel: 'Gerçek zamanlı oturum',
   realtimeSessionDisconnected: 'Bağlantı kesildi',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Uzun kod, sözdizimi vurgulaması olmadan gösterilir.',
   codeBlockHighlightedLine: 'Vurgulu satır',
   codeBlockActiveLine: 'Etkin vurgulu satır',
+  codeBlockToggle: 'Kodu göster veya gizle',
 };
 
 registerLyraLocale('tr', strings);

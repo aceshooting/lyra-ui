@@ -133,6 +133,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Dlhodobé spomienky',
   memoryPanelAdd: 'Pridať do dlhodobej pamäte',
   memoryPanelAddWithContext: 'Pridať „{label}“ do dlhodobej pamäte',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Zabudnúť všetko',
   memoryPanelConfirmAddHeading: 'Pridať toto do dlhodobej pamäte?',
   memoryPanelConfirmRemoveHeading: 'Odstrániť túto položku?',
@@ -191,6 +192,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Segmenty hodnotenia',
   ragEvalDashboardAllSlices: 'Všetko',
   ragEvalDashboardSliceUnavailable: 'Pre {slice} nie sú k dispozícii žiadne behy hodnotenia.',
+  ragEvalDashboardMetricUnavailable: 'Pre {metric} nie je k dispozícii žiadna metrika hodnotenia.',
   knowledgeBaseSyncIdle: 'Nečinné',
   knowledgeBaseSyncSyncing: 'Synchronizuje sa',
   knowledgeBaseSyncPaused: 'Pozastavené',
@@ -269,6 +271,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Výsledok {index} z {total}',
   ragAnswerEmpty: 'Zatiaľ žiadna odpoveď',
   retrievalTraceEmpty: 'Žiadne fázy vyhľadávania',
+  retrievalTraceLabel: 'Priebeh vyhľadávania',
   sourcePickerMatches: {
     few: '{count} zodpovedajúce zdroje',
     many: '{count} zodpovedajúceho zdroja',

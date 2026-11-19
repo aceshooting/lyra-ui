@@ -1,6 +1,7 @@
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
+import { getListFormat } from '../../../internal/intl-cache.js';
+import { writeCatalogProperty, snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
 import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCatalogPickerEventMap } from '../catalog-picker-base.js';
 import { styles } from './currency-picker.styles.js';
 import { DEFAULT_CURRENCY_ENTRIES, normalizeCurrencyValue } from './currency-catalog.js';
@@ -84,17 +85,18 @@ export class LyraCurrencyPicker extends LyraCatalogPickerBase {
   @property({ attribute: false })
   get currencies(): LyraCurrencyCatalog | undefined { return this._currencies; }
   set currencies(next: LyraCurrencyCatalog | undefined) {
-    const previous = this._currencies;
-    this._currencies = snapshotSelectionCatalog(next, normalizeCurrencyValue, (code) => /^[A-Z]{3}$/.test(code));
-    this.updateValidity();
-    this.requestUpdate('currencies', previous);
+    writeCatalogProperty(this, 'currencies', this._currencies,
+      () => snapshotSelectionCatalog(next, normalizeCurrencyValue, (code) => /^[A-Z]{3}$/.test(code)),
+      catalog => { this._currencies = catalog; },
+      () => this.updateValidity());
   }
   protected override get entries(): readonly LyraCurrencyEntry[] { return this._currencies ?? DEFAULT_CURRENCY_ENTRIES; }
   protected override get pickerLabel(): string { return this.localize('currencyPickerLabel'); }
   protected override normalizeValue(value: unknown): string { return normalizeCurrencyValue(value); }
   protected override resolveRows(): readonly SelectionCatalogRow[] { return resolveCurrencyPresentation(this.entries, this.effectiveLocale); }
   protected override optionDisplay(row: SelectionCatalogRow): { label: string; sub: string } {
-    return { label: row.code, sub: [row.label, row.symbol].filter((text) => Boolean(text)).join(' · ') };
+    const parts = [row.label, row.symbol].filter((text): text is string => Boolean(text));
+    return { label: row.code, sub: getListFormat(this.effectiveLocale, { type: 'unit', style: 'narrow' }).format(parts) };
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-currency-picker': LyraCurrencyPicker; } }

@@ -30,7 +30,6 @@ import {
   renderMarkdownContent,
   renderMarkdownDocument,
   tokenizeMarkdownHighlight,
-  watchMarkdownDarkTheme,
   setCachedHighlight,
   type PendingHighlight,
 } from './markdown-shared.js';
@@ -38,20 +37,6 @@ import type { MarkdownCodeBlockRecord } from './markdown-code-header.js';
 
 // Shared fallback tests run without the optional DOMPurify peer and assert the rendered fallback.
 expectDevWarning('lyra-markdown-dompurify-unavailable');
-
-it('applies the resolved palette immediately when starting the shared theme watch', () => {
-  const host = document.body.appendChild(document.createElement('div'));
-  host.style.color = 'rgb(255, 255, 255)';
-  host.style.backgroundColor = 'rgb(0, 0, 0)';
-  const applied: boolean[] = [];
-  const cleanup = watchMarkdownDarkTheme(host, (dark) => applied.push(dark));
-  try {
-    expect(applied).to.deep.equal([true]);
-  } finally {
-    cleanup();
-    host.remove();
-  }
-});
 
 describe('Markdown parser admission', () => {
   it('rejects absent and malformed optional-peer module shapes', () => {
@@ -891,6 +876,8 @@ describe('MarkdownOwnedAnimationFrameController', () => {
     const cancelled: number[] = [];
     let next = 1;
     const owner = {
+      setTimeout: window.setTimeout.bind(window),
+      clearTimeout: window.clearTimeout.bind(window),
       requestAnimationFrame: (callback: FrameRequestCallback): number => {
         const handle = next++;
         callbacks.set(handle, callback);
@@ -932,6 +919,31 @@ describe('MarkdownOwnedAnimationFrameController', () => {
     expect(cancelled).to.deep.equal([handle]);
     expect(runs).to.equal(0);
     expect(controller.cancel()).to.equal(false);
+  });
+
+  it('does not run stale callbacks after a frame or timeout has settled the request', () => {
+    const controller = new MarkdownOwnedAnimationFrameController();
+    const { owner, callbacks } = frameOwner();
+    let fallback: (() => void) | undefined;
+    owner.setTimeout = ((callback: () => void) => { fallback = callback; return 1; }) as typeof owner.setTimeout;
+    owner.clearTimeout = () => {};
+    let runs = 0;
+
+    const first = controller.request(owner, () => runs++)!;
+    fallback!();
+    callbacks.get(first)!(0);
+    expect(runs).to.equal(1);
+
+    const second = controller.request(owner, () => runs++)!;
+    callbacks.get(second)!(0);
+    fallback!();
+    expect(runs).to.equal(2);
+
+    owner.requestAnimationFrame = callback => { callback(0); return 3; };
+    fallback = undefined;
+    controller.request(owner, () => runs++);
+    expect(runs).to.equal(3);
+    expect(fallback).to.equal(undefined);
   });
 });
 

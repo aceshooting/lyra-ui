@@ -22,7 +22,7 @@ import type {
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { capturePointer } from '../../../internal/pointer-capture.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { normalizeImageZoom } from '../../../internal/image-zoom.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
@@ -233,8 +233,10 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   and pressed states are colour mixes taken from this value, so setting it directly retints all
  *   three at once for one highlight; retint a whole tone through the `-bg` knob instead.
  * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
- * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
- * @cssprop [--lr-icon-button-bg-hover=var(--lr-color-brand-quiet)] - Control background in the hover state.
+ * @cssprop [--lr-image-viewer-control-hover-bg=var(--lr-color-brand-quiet)] - Toolbar control hover
+ *   background; its active background derives from the same value.
+ * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
+ * @cssprop [--lr-icon-button-bg-hover=var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))] - Control background in the hover state.
  * @cssprop [--lr-icon-button-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Control border in the resting state.
  * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
  * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
@@ -488,15 +490,22 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   /** Increases the embedded pan/zoom scale by one configured step. */
   zoomIn(): void {
-    this.frameEl?.zoomIn();
+    this.changeFrameZoom('zoomIn');
   }
   /** Decreases the embedded pan/zoom scale by one configured step. */
   zoomOut(): void {
-    this.frameEl?.zoomOut();
+    this.changeFrameZoom('zoomOut');
   }
   /** Restores the embedded pan/zoom scale to `1`, keeping the pan position. */
   resetZoom(): void {
-    this.frameEl?.resetZoom();
+    this.changeFrameZoom('resetZoom');
+  }
+
+  private changeFrameZoom(action: 'zoomIn' | 'zoomOut' | 'resetZoom'): void {
+    const frame = this.frameEl;
+    if (!frame) return;
+    frame[action]();
+    this.zoom = frame.zoom;
   }
 
   rotate(): void {
@@ -724,13 +733,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this.pointerDraftId = null;
     this.pointerOrigin = null;
     this.draft = null;
-    if (releaseCapture && wrapper && capturedPointerId != null) {
-      try {
-        wrapper.releasePointerCapture(capturedPointerId);
-      } catch {
-        // Synthetic pointers and already-lost captures can throw; state is still safely cleared.
-      }
-    }
+    if (releaseCapture && wrapper && capturedPointerId != null) releasePointer(wrapper, capturedPointerId);
   }
 
   private onWrapperPointerDown = (event: PointerEvent): void => {

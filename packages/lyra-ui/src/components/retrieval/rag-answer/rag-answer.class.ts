@@ -1,8 +1,9 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { HostChildrenObserver } from '../../../internal/owned-observer.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import type {
@@ -165,19 +166,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   /** @internal */
-  protected readonly slotObserver = new HostChildrenObserver(this, {
-    subtree: true,
-    attributeFilter: ['slot'],
-    onChange: (records) => {
-      if (
-        records.some((record) =>
-          record.type === 'childList' ? record.target === this : record.target.parentNode === this
-        )
-      ) {
-        this.requestUpdate();
-      }
-    },
-  });
+  protected readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
 
 
   override connectedCallback(): void {
@@ -233,9 +222,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   }
 
   private hasSlot(name: string): boolean {
-    return Array.from(this.children).some(
-      (element) => element.getAttribute('slot') === name
-    );
+    return this.slotPresence.has(name);
   }
 
   private citationsCache?: { source: unknown; value: Citation[] };
@@ -284,12 +271,14 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     return this.assessmentCache.value;
   }
 
+  /** The badge's citation is captured at render, so a pending reassignment cannot retarget it. */
+  private readonly renderedCitations = new WeakMap<EventTarget, Citation>();
+
   private answerCitationHandler(action: CitationAction) {
-    return (event: CustomEvent<{ index: number }>): void => {
+    return (event: Event): void => {
       event.stopPropagation();
-      const citation = this.normalizedCitations[event.detail.index - 1];
-      if (citation)
-        this.emit('lr-citation-select', { citation, section: 'answer', action });
+      const citation = this.renderedCitations.get(event.currentTarget!)!;
+      this.emit('lr-citation-select', { citation, section: 'answer', action });
     };
   }
   private onAnswerCitationActivate = this.answerCitationHandler('activate');
@@ -407,10 +396,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
           ></lr-grounding-summary>`
         : nothing}
       ${citations.length && !groundingOwnsCitations
-        ? html`<section
-            part="citations"
-            aria-label=${this.localize('ragAnswerCitations')}
-          >
+        ? html`<section part="citations">
             <div part="section-heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>
               ${this.localize('ragAnswerCitations')}
             </div>
@@ -421,6 +407,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
                     .index=${index + 1}
                     .sourceId=${citation.sourceId ?? ''}
                     .label=${citation.label ?? ''}
+                    ${ref((badge) => { if (badge) this.renderedCitations.set(badge, citation); })}
                     @lr-citation-activate=${this.onAnswerCitationActivate}
                     @lr-citation-open=${this.onAnswerCitationOpen}
                   ></lr-citation-badge>`
@@ -429,10 +416,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
           </section>`
         : nothing}
       ${!this.withoutSources && (sources.length > 0 || this.hasSlot('sources'))
-        ? html`<section
-            part="sources"
-            aria-label=${this.localize('ragAnswerSources')}
-          >
+        ? html`<section part="sources">
             <div part="section-heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${this.localize('ragAnswerSources')}</div>
             <lr-source-list
               part="source-list"

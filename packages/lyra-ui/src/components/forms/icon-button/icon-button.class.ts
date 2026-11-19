@@ -241,7 +241,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   private _disabled = false;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private externalLabelLease?: ResolvedAriaRelationshipLease;
-  private readonly toolbarAction = this.createToolbarAction();
+  private toolbarActionCache?: LyraToolbarAction;
 
   get disabled(): boolean {
     return this._disabled;
@@ -281,6 +281,11 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  /** Toggle state on the internal native button, like `<lr-button>`'s. `null` leaves it unset, or
+   *  uses a host `aria-pressed` attribute for compatibility. It does not reflect to the host, and
+   *  link mode omits it.
+   * @default null */
+  @property({ attribute: false }) pressed: boolean | 'mixed' | null = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
   @property() label = '';
   /** Safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative). When valid, the
@@ -398,13 +403,13 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.toolbarAction.releaseTabIndex?.();
+    this.toolbarActionCache?.releaseTabIndex?.();
     this.releaseExternalDescription();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
-    this.toolbarAction.releaseTabIndex?.();
+    this.toolbarActionCache?.releaseTabIndex?.();
     super.adoptedCallback();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncDescribedByElements();
@@ -460,7 +465,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    * and restores an authored value when the toolbar releases it.
    */
   getToolbarActions(): readonly LyraToolbarAction[] {
-    return [this.toolbarAction];
+    return [(this.toolbarActionCache ??= this.createToolbarAction())];
   }
 
   private createToolbarAction(): LyraToolbarAction {
@@ -536,8 +541,12 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
 
   override render(): TemplateResult {
-    const pressed = ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
-      ? this.triggerPressed : nothing;
+    const pressed = this.pressed === 'mixed'
+      ? 'mixed'
+      : typeof this.pressed === 'boolean'
+        ? String(this.pressed)
+        : ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+          ? this.triggerPressed : nothing;
     const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
       ? this.triggerCurrent : nothing;
     const label = hostAriaLabel(this) ?? (this.label || (this.contentNamed ? nothing : this.localize('iconButtonLabel')));

@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraCountryPicker } from './country-picker.class.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import type { LyraSelect } from '../select/select.class.js';
@@ -10,8 +10,12 @@ describe('<lr-country-picker>', () => {
     const el = await fixture<LyraCountryPicker>(html`<lr-country-picker label="Country" value="LU"></lr-country-picker>`);
     expect(customElements.get('lr-combobox') === undefined, 'a plain picker never pays for the combobox').to.equal(true);
     el.searchable = true;
-    await waitUntil(() => customElements.get('lr-combobox') !== undefined && el.shadowRoot!.querySelector('lr-combobox') !== null);
-    await waitUntil(() => el.input !== null);
+    await el.updateComplete;
+    expect(customElements.get('lr-combobox') !== undefined).to.equal(true);
+    const combo = el.shadowRoot!.querySelector<LyraCombobox>('lr-combobox')!;
+    expect(combo !== null).to.equal(true);
+    await combo.updateComplete;
+    expect(el.input !== null).to.equal(true);
   });
 
   it('offers the pinned countries, names and decorative flags without a search field by default', async () => {
@@ -31,6 +35,31 @@ describe('<lr-country-picker>', () => {
   });
 
   for (const searchable of [false, true]) {
+    it(`exposes popup requests, settled transitions, activation and clear in ${searchable ? 'search' : 'compact'} mode`, async () => {
+      const el = await fixture<LyraCountryPicker>(html`<lr-country-picker clearable .searchable=${searchable}
+        .countries=${['LU', 'FR']}></lr-country-picker>`);
+      const child = el.shadowRoot!.querySelector<LyraSelect | LyraCombobox>('lr-select, lr-combobox')!;
+      const events: string[] = [];
+      for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+        el.addEventListener(name, () => events.push(name));
+      }
+      el.addEventListener('lr-show', event => event.preventDefault(), { once: true });
+      await child.show();
+      expect(child.open).to.equal(false);
+      await child.show();
+      const option = child.shadowRoot!.querySelector<HTMLElement>('[part~="option"]')!;
+      const activated = oneEvent(el, 'lr-activate');
+      const closed = oneEvent(el, 'lr-after-hide');
+      option.click();
+      expect((await activated).detail.value).to.equal('LU');
+      await closed;
+      expect(events).to.deep.equal(['lr-show', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+      const cleared = oneEvent(el, 'lr-clear');
+      child.shadowRoot!.querySelector<HTMLElement>('[part~="clear-button"]')!.click();
+      await cleared;
+      expect(el.value).to.equal('');
+    });
+
     it(`styles visible trigger and popup flags, then hides them in ${searchable ? 'search' : 'compact'} mode`, async () => {
       const host = await fixture<HTMLDivElement>(html`<div>
         <style>lr-country-picker::part(flag) { font-size: 31px; }
@@ -142,4 +171,17 @@ describe('<lr-country-picker>', () => {
       await waitUntil(() => getComputedStyle(listbox).position === 'absolute', 'the default strategy never applied');
     });
   }
+});
+
+it('revalidates the selected value synchronously when replacing the catalog', async () => {
+  const el = await fixture<LyraCountryPicker>(html`<lr-country-picker value="FR"></lr-country-picker>`);
+  el.countries = [];
+  expect(el.validity.customError).to.equal(true);
+  const codes = ['FR'];
+  el.countries = codes;
+  codes.length = 0;
+  expect(el.validity.valid).to.equal(true);
+  expect(el.countries?.length).to.equal(1);
+  el.countries = undefined;
+  expect(el.validity.valid).to.equal(true);
 });

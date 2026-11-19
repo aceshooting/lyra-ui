@@ -112,6 +112,7 @@ export const ThemedPressedState: Story = {
         gap: var(--lr-space-s);
         --lr-media-card-active-border-color: var(--lr-color-success);
         --lr-media-card-active-bg: var(--lr-color-success-quiet);
+        --lr-media-card-hover-border-color: var(--lr-color-success);
       "
     >
       <lr-media-card
@@ -356,4 +357,8 @@ export const SelectableAttachments: Story = {
       <lr-media-card src=${SAMPLE_IMAGE} .kind=${IMAGE_KIND} alt="Inverter bay" aria-pressed="false"></lr-media-card>
     </div>
   `,
+};
+
+export const UnreadableImage: Story = {
+  render: () => html`<lr-media-card kind="image" src="data:image/png;base64,AA=="></lr-media-card>`,
 };

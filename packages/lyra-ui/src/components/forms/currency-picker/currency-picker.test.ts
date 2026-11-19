@@ -442,6 +442,16 @@ describe('lr-currency-picker composed field ownership', () => {
     expect(picker.value).to.equal('');
   });
 
+  it('joins the currency name and symbol with a locale list pattern', async () => {
+    const picker = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker locale="en"
+      .currencies=${[{ code: 'EUR', label: 'Euro', symbol: '€' }]}></lr-currency-picker>`);
+    await settled(picker);
+    await mountOptions(picker);
+    const row = select(picker).querySelector('lr-option') as HTMLElement & { sub: string };
+    expect(row.sub).to.equal(new Intl.ListFormat('en', { type: 'unit', style: 'narrow' }).format(['Euro', '€']));
+    expect(row.sub.includes('·')).to.equal(false);
+  });
+
   it('reuses the per-instance presentation projection until its catalog or effective locale changes', async () => {
     const original = Intl.NumberFormat.prototype.formatToParts;
     let calls = 0;
@@ -508,4 +518,17 @@ describe('lr-currency-picker composed field ownership', () => {
       Intl.NumberFormat = original;
     }
   });
+});
+
+it('revalidates the selected value synchronously when replacing the catalog', async () => {
+  const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker value="EUR"></lr-currency-picker>`);
+  el.currencies = [];
+  expect(el.validity.customError).to.equal(true);
+  const codes = ['EUR'];
+  el.currencies = codes;
+  codes.length = 0;
+  expect(el.validity.valid).to.equal(true);
+  expect(el.currencies?.length).to.equal(1);
+  el.currencies = undefined;
+  expect(el.validity.valid).to.equal(true);
 });

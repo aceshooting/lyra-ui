@@ -152,3 +152,16 @@ describe('<lr-unit-picker>', () => {
     expect(el.units).to.deep.equal([{ code: 'meter' }]);
   });
 });
+
+it('revalidates the selected value synchronously when replacing the catalog', async () => {
+  const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker value="meter"></lr-unit-picker>`);
+  el.units = [];
+  expect(el.validity.customError).to.equal(true);
+  const codes = ['meter'];
+  el.units = codes;
+  codes.length = 0;
+  expect(el.validity.valid).to.equal(true);
+  expect(el.units?.length).to.equal(1);
+  el.units = undefined;
+  expect(el.validity.valid).to.equal(true);
+});

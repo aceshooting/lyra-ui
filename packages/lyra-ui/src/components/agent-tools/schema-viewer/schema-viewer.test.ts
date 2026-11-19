@@ -505,10 +505,10 @@ it('retains tuple indexes while leaving malformed tuple entries as owned-snapsho
   expect(paths).to.not.include('/items/1');
   expect(
     el.shadowRoot!.querySelector('[data-path="/items/0"]')!.textContent
-  ).to.contain('Type: string');
+  ).to.contain('Type: \u2066string\u2069');
   expect(
     el.shadowRoot!.querySelector('[data-path="/items/2"]')!.textContent
-  ).to.contain('Type: integer');
+  ).to.contain('Type: \u2066integer\u2069');
 });
 
 it('formats const/default/examples constraint values, including nested objects and bounded truncation', async () => {
@@ -656,14 +656,14 @@ it('infers an implicit object type badge from properties, joins a multi-type arr
     '[data-path=""]'
   ) as HTMLButtonElement;
   expect(rootButton.querySelector('[part="type"]')!.textContent).to.equal(
-    'Type: object'
+    'Type: \u2066object\u2069'
   );
 
   const idButton = el.shadowRoot!.querySelector(
     '[data-path="/properties/id"]'
   ) as HTMLButtonElement;
   expect(idButton.querySelector('[part="type"]')!.textContent).to.equal(
-    'Type: string | null'
+    'Type: \u2066string | null\u2069'
   );
 
   const freeformButton = el.shadowRoot!.querySelector(
@@ -717,7 +717,7 @@ it('bounds broad schemas and exposes a localized truncation status', async () =>
   );
   expect(
     el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')
-  ).to.equal(null);
+  ).to.equal('note');
   expect(
     sinkTexts(),
     'a schema that mounts already truncated is not a live change'
@@ -806,7 +806,7 @@ it('indexes validation issues once and bounds their rendered work independently 
   ).to.equal('Only the first 500 validation issues are shown.');
   expect(
     el.shadowRoot!.querySelector('[part="issue-limit"]')?.getAttribute('role')
-  ).to.equal(null);
+  ).to.equal('note');
 });
 
 it('announces newly reached node and issue ceilings through the shared light-DOM sink', async () => {

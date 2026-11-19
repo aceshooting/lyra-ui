@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'حوالو ڏيو',
   promptInputLabel: 'AI پرامپٽ',
   promptInputControls: 'پرامپٽ جا اختيار',
+  promptInputCollectionLimit: 'ان پٽ جي حد پوري ٿيڻ سبب پرامپٽ جي ان پٽ جو ڪجهه حصو ڇڏيو ويو آهي.',
   promptInputSources: 'ذريعا',
   promptInputAttachments: 'منسلڪ',
   handoffLabel: 'ايجنٽ حوالي ڪرڻ',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'ڪو آواز موجود ناهي',
   voicePickerRequired: 'مهرباني ڪري آواز چونڊيو.',
   voicePickerPreview: '{name} جو جائزو',
+  voicePickerPreviewFailed: 'آواز جو جائزو دستياب ناهي.',
   voicePickerStopPreview: 'جائزو روڪيو',
   realtimeSessionLabel: 'حقيقي وقت جو سيشن',
   realtimeSessionDisconnected: 'ڪنيڪشن ٽٽل',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'ڊگهو ڪوڊ سنٽيڪس هاءِ لائٽنگ کان سواءِ ڏيکاريو وڃي ٿو.',
   codeBlockHighlightedLine: 'نمايان لڪير',
   codeBlockActiveLine: 'فعال نمايان لڪير',
+  codeBlockToggle: 'ڪوڊ ڏيکاريو يا لڪايو',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

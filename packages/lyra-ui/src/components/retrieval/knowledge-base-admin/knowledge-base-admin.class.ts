@@ -335,6 +335,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
           role="tab"
           aria-controls=${this.panelId('sources')}
           aria-selected=${tab === 'sources' ? 'true' : 'false'}
+          data-label=${this.localize('knowledgeBaseAdminSourcesTab')}
           tabindex=${tab === 'sources' ? '0' : '-1'}
           @click=${() => this.setTab('sources')}
           @keydown=${(event: KeyboardEvent) =>
@@ -351,6 +352,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
               role="tab"
               aria-controls=${this.panelId('ingestion')}
               aria-selected=${tab === 'ingestion' ? 'true' : 'false'}
+          data-label=${this.localize('knowledgeBaseAdminIngestionTab')}
               tabindex=${tab === 'ingestion' ? '0' : '-1'}
               @click=${() => this.setTab('ingestion')}
               @keydown=${(event: KeyboardEvent) =>

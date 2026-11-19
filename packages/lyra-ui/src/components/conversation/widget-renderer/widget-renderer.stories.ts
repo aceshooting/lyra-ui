@@ -14,7 +14,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Mapped elements are keyed across streamed documents. Unchanged resolved nodes also retain their mapped template and ref callback, so unrelated renderer updates do not reassign props or churn action and binding listeners.',
+          'Mapped elements are keyed across streamed documents. Changing one binding preserves unrelated properties and event subscriptions.',
       },
     },
   },

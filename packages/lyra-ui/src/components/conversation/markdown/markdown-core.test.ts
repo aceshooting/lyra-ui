@@ -16,7 +16,6 @@ import { loadMarkdownDeps } from "./markdown-loader.js";
 import { loadShikiHighlighterCore, type ShikiLanguageInput } from '../code-block/shiki-types.js';
 import { assertMarkdownTemplateWhitespace } from '../../../../test/contracts/markdown-template-whitespace.js';
 import { assertMarkdownSanitizerDiagnostics } from '../../../../test/contracts/markdown-diagnostics.js';
-import { assertMarkdownHighlightActivation } from '../../../../test/contracts/markdown-highlight-activation.js';
 import { assertMarkdownTextSelection } from '../../../../test/contracts/markdown-text-selection.js';
 import { supportsCustomHighlights } from "../../../internal/text-highlights.js";
 import type { LyraAnchor } from "../../viewers/document-viewer/anchors.js";
@@ -2052,7 +2051,6 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     expect(highlightPainted(el)).to.be.false;
   });
 
-  assertMarkdownHighlightActivation('lr-markdown-core');
 
   it('keeps keyboard highlight activation on a later native anchor after hostile and forged composed-path entries', async () => {
     const el = (await fixture(

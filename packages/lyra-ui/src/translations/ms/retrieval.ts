@@ -127,6 +127,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Memori jangka panjang',
   memoryPanelAdd: 'Tambah pada memori jangka panjang',
   memoryPanelAddWithContext: 'Tambah "{label}" pada memori jangka panjang',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Lupakan semua',
   memoryPanelConfirmAddHeading: 'Tambah ini pada memori jangka panjang?',
   memoryPanelConfirmRemoveHeading: 'Buang item ini?',
@@ -185,6 +186,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Bahagian penilaian',
   ragEvalDashboardAllSlices: 'Semua',
   ragEvalDashboardSliceUnavailable: 'Tiada larian penilaian tersedia untuk {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Tiada metrik penilaian tersedia untuk {metric}.',
   knowledgeBaseSyncIdle: 'Tidak aktif',
   knowledgeBaseSyncSyncing: 'Menyegerakkan',
   knowledgeBaseSyncPaused: 'Dijeda',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Keputusan {index} daripada {total}',
   ragAnswerEmpty: 'Tiada jawapan lagi',
   retrievalTraceEmpty: 'Tiada peringkat mendapatkan semula',
+  retrievalTraceLabel: 'Jejak dapatan semula',
   sourcePickerMatches: {
     other: '{count} sumber sepadan',
   },

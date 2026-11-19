@@ -123,6 +123,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Iċċita',
   promptInputLabel: 'Prompt tal-IA',
   promptInputControls: 'Għażliet tal-prompt',
+  promptInputCollectionLimit: 'Parti mill-input tal-prompt tħalliet barra għax intlaħaq limitu tal-input.',
   promptInputSources: 'Sorsi',
   promptInputAttachments: 'Annessi',
   handoffLabel: 'Trasferiment tal-aġent',
@@ -161,6 +162,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'M’hemm l-ebda vuċi disponibbli',
   voicePickerRequired: 'Jekk jogħġbok agħżel vuċi.',
   voicePickerPreview: 'Isma’ kampjun ta’ {name}',
+  voicePickerPreviewFailed: 'Il-kampjun tal-vuċi mhuwiex disponibbli.',
   voicePickerStopPreview: 'Waqqaf il-kampjun',
   realtimeSessionLabel: 'Sessjoni f’ħin reali',
   realtimeSessionDisconnected: 'Skonnettjat',
@@ -190,6 +192,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Il-kodiċi twil jintwera mingħajr enfasi tas-sintassi.',
   codeBlockHighlightedLine: 'Linja enfasizzata',
   codeBlockActiveLine: 'Linja enfasizzata attiva',
+  codeBlockToggle: 'Uri jew aħbi l-kodiċi',
 };
 
 registerLyraLocale('mt', strings);

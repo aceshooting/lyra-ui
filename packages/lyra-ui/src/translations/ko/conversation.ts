@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: '인용',
   promptInputLabel: 'AI 프롬프트',
   promptInputControls: '프롬프트 옵션',
+  promptInputCollectionLimit: '입력 한도에 도달하여 프롬프트 입력의 일부가 생략되었습니다.',
   promptInputSources: '출처',
   promptInputAttachments: '첨부 문서',
   handoffLabel: '에이전트 인계',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: '사용 가능한 음성 없음',
   voicePickerRequired: '음성을 선택하세요.',
   voicePickerPreview: '{name} 미리보기',
+  voicePickerPreviewFailed: '음성 미리보기를 사용할 수 없습니다.',
   voicePickerStopPreview: '미리보기 중지',
   realtimeSessionLabel: '실시간 세션',
   realtimeSessionDisconnected: '연결이 끊어짐',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: '긴 코드는 구문 강조 없이 표시됩니다.',
   codeBlockHighlightedLine: '강조 표시된 줄',
   codeBlockActiveLine: '활성 강조 표시 줄',
+  codeBlockToggle: '코드 표시 또는 숨기기',
 };
 
 registerLyraLocale('ko', strings);

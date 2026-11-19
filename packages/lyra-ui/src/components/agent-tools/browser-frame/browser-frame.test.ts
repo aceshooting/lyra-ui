@@ -518,7 +518,7 @@ describe('lr-browser-frame', () => {
 
   it('paints rendered hover feedback on take-over and stop buttons', async () => {
     const el = await fixture<LyraBrowserFrame>(html`
-      <lr-browser-frame style="--lr-color-brand-quiet: rgb(1, 2, 3)"></lr-browser-frame>
+      <lr-browser-frame style="--lr-button-hover-bg: rgb(1, 2, 3)"></lr-browser-frame>
     `);
     try {
       for (const part of ['take-over-button', 'stop-button']) {

@@ -93,6 +93,8 @@ export interface LyraAvatarGroupEventMap {
  * @cssprop [--lr-avatar-group-ring-width=var(--lr-border-width-medium)] - Ring thickness.
  * @cssprop [--lr-avatar-group-badge-bg=var(--lr-color-neutral-fill-quiet)] - Overflow badge background.
  * Its private default follows `variant`; the public value remains authoritative.
+ * @cssprop [--lr-avatar-group-badge-hover-ring-color=var(--lr-color-brand)] - Ring color of the
+ * overflow badge while hovered or pressed.
  * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
  * Its private default follows `variant`; the public value remains authoritative.
  * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-m)] - Font size of the "+N"

@@ -1,6 +1,6 @@
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { normalizeSelectionValue, snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
+import { writeCatalogProperty, normalizeSelectionValue, snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
 import { UNIT_CODES, resolveUnitNames, type LyraUnitCatalog, type LyraUnitEntry } from '../../../units.js';
 import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCatalogPickerEventMap } from '../catalog-picker-base.js';
 import { styles } from './unit-picker.styles.js';
@@ -75,10 +75,10 @@ export class LyraUnitPicker extends LyraCatalogPickerBase {
   @property({ attribute: false })
   get units(): LyraUnitCatalog | undefined { return this._units; }
   set units(value: LyraUnitCatalog | null | undefined) {
-    const previous = this._units;
-    this._units = snapshotSelectionCatalog(value, normalizeSelectionValue);
-    this.updateValidity();
-    this.requestUpdate('units', previous);
+    writeCatalogProperty(this, 'units', this._units,
+      () => snapshotSelectionCatalog(value, normalizeSelectionValue),
+      catalog => { this._units = catalog; },
+      () => this.updateValidity());
   }
 
   protected override get entries(): readonly LyraUnitEntry[] { return this._units ?? defaultEntries; }

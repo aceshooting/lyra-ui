@@ -36,9 +36,10 @@ export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_showMore } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddAccessibleName, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_showMore } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+import { labelWithVisibleText } from '../../../internal/accessible-name.js';
 
 export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 /**
@@ -190,7 +191,10 @@ export interface LyraMemoryPanelEventMap
   'lr-add': CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>;
   'lr-remove': CustomEvent<LyraMemoryRemoveDetail>;
   'lr-forget': CustomEvent<null>;
-  'lr-toggle': CustomEvent<{ expanded: boolean; itemId?: string; memoryId?: string; scope?: MemoryScope; section?: 'entities' | 'relationships' | 'communities' | 'chunks' }>;
+  'lr-toggle': CustomEvent<
+    | { kind: 'memory'; expanded: boolean; itemId: string; memoryId: string; scope: MemoryScope; section?: undefined }
+    | (LyraProvenancePanelEventMap['lr-toggle']['detail'] & { memoryId: string; scope: MemoryScope })
+  >;
 }
 
 type Tier = 'high' | 'medium' | 'low';
@@ -269,8 +273,8 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @event lr-remove - A pending "remove" action was approved. `detail: { memoryId, scope }`.
  * @event lr-forget - The pending "forget all long-term memories" action was approved. No detail.
  * @event lr-toggle - A memory item or one of its nested provenance disclosures changed.
- *   Item changes carry `{ expanded, itemId, memoryId, scope }`; nested changes retain
- *   their `section` and carry the owning `memoryId` and `scope`.
+ *   Item changes carry `{ kind: 'memory', expanded, itemId, memoryId, scope }`; nested changes
+ *   retain their `kind` and `section` and carry the owning `memoryId` and `scope`.
  * @event lr-entity-select - Surfaced unchanged from an expanded item's provenance panel.
  * `detail: { entityId, occurrenceIndex? }`.
  * @event lr-entity-open - Surfaced unchanged from the provenance panel. `detail: { entityId }`.
@@ -298,7 +302,7 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @csspart item-body - The disclosure wrapper, `hidden` while collapsed; its
  * `lr-provenance-panel` is mounted only while expanded. Omitted when `provenance` is unset.
  * @csspart item-actions - The wrapper around an item's action row (or its pending `lr-confirm-bar`).
- * @csspart add-button - The "Add to long-term memory" action. Only rendered on short-term items.
+ * @csspart add-button - The short-term item's promotion action, named with its visible label and memory text.
  * @csspart remove-button - The "Remove" action. Rendered on every item.
  * @csspart forget-all-button - The long-term section's bulk "Forget all" action. Only rendered
  * while `longTerm` is non-empty.
@@ -330,7 +334,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     memoryPanelAdd: LYRA_DEFAULT_memoryPanelAdd,
-    memoryPanelAddWithContext: LYRA_DEFAULT_memoryPanelAddWithContext,
+    memoryPanelAddAccessibleName: LYRA_DEFAULT_memoryPanelAddAccessibleName,
     memoryPanelConfirmAddHeading: LYRA_DEFAULT_memoryPanelConfirmAddHeading,
     memoryPanelConfirmForgetBody: LYRA_DEFAULT_memoryPanelConfirmForgetBody,
     memoryPanelConfirmForgetHeading: LYRA_DEFAULT_memoryPanelConfirmForgetHeading,
@@ -360,10 +364,26 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   private readonly rovingActionByScope = new Map<MemoryScope, string>();
 
+  private readonly rovingRemoveByScope = new Set<MemoryScope>();
+
   private onPrimaryKeyDown(event: KeyboardEvent): void {
-    const list = (event.currentTarget as HTMLElement).closest('[part="list"]');
-    const buttons = [...(list?.querySelectorAll<HTMLButtonElement>('[data-roving-primary]') ?? [])];
-    const current = buttons.indexOf(event.currentTarget as HTMLButtonElement);
+    const target = event.currentTarget as HTMLButtonElement;
+    const column = target.dataset['rovingColumn'];
+    if (column && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+      const row = [...target.parentElement!.querySelectorAll<HTMLButtonElement>('[data-roving-column]')];
+      const next = resolveListMove(event, {
+        count: row.length, current: row.indexOf(target), orientation: 'horizontal',
+        direction: this.effectiveDirection, wrap: false,
+        isAvailable: (candidate) => Boolean(row[candidate] && isRovingTargetAvailable(row[candidate]!)),
+      });
+      if (next === null) return;
+      event.preventDefault();
+      row[next]?.focus();
+      return;
+    }
+    const selector = column ? `[data-roving-column="${column}"]` : '[data-roving-primary]';
+    const buttons = [...target.closest('[part="list"]')!.querySelectorAll<HTMLButtonElement>(selector)];
+    const current = buttons.indexOf(target);
     const next = resolveListMove(event, {
       count: buttons.length, current, orientation: 'vertical',
       isAvailable: (candidate) => Boolean(buttons[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
@@ -371,6 +391,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (next === null) return;
     event.preventDefault();
     buttons[next]?.focus();
+  }
+
+  private rememberRovingAction(scope: MemoryScope, itemKey: string, remove: boolean): void {
+    this.rovingActionByScope.set(scope, itemKey);
+    if (remove) this.rovingRemoveByScope.add(scope);
+    else this.rovingRemoveByScope.delete(scope);
+    this.requestUpdate();
   }
   protected static override collectionSupport = collectionSupport;
 
@@ -600,6 +627,12 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     return 'low';
   }
 
+  private addActionLabel(label: string): string {
+    const action = this.localize('memoryPanelAdd').trim();
+    const name = this.localize('memoryPanelAddAccessibleName', undefined, { action, label }).trim();
+    return name.startsWith(action) ? name : labelWithVisibleText(action, name);
+  }
+
   private toggleExpand(item: CanonicalMemoryItem, scope: MemoryScope): void {
     const key = this.itemKey(item, scope);
     const next = new Set(this.expandedIds);
@@ -607,7 +640,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (expanded) next.add(key);
     else next.delete(key);
     this.expandedIds = next;
-    this.emit('lr-toggle', { itemId: item.id, memoryId: item.id, scope, expanded });
+    this.emit('lr-toggle', { kind: 'memory', itemId: item.id, memoryId: item.id, scope, expanded });
   }
 
   private startItemPending(
@@ -802,14 +835,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                         part="add-button"
                         type="button"
                         data-roving-primary
-                        tabindex=${itemKey === rovingActionKey ? '0' : '-1'}
-                        @focus=${() => { this.rovingActionByScope.set(scope, itemKey); this.requestUpdate(); }}
+                        data-roving-column="add"
+                        tabindex=${itemKey === rovingActionKey && !this.rovingRemoveByScope.has(scope) ? '0' : '-1'}
+                        @focus=${() => this.rememberRovingAction(scope, itemKey, false)}
                         @keydown=${this.onPrimaryKeyDown}
-                        aria-description=${this.localize(
-                          'memoryPanelAddWithContext',
-                          undefined,
-                          { label: item.text }
-                        )}
+                        aria-label=${this.addActionLabel(item.text)}
                         @click=${() =>
                           this.startItemPending('add', item, scope)}
                       >
@@ -821,9 +851,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                   part="remove-button"
                   type="button"
                   ?data-roving-primary=${scope === 'long-term'}
-                  tabindex=${scope === 'long-term' ? itemKey === rovingActionKey ? '0' : '-1' : '0'}
-                  @focus=${scope === 'long-term' ? () => { this.rovingActionByScope.set(scope, itemKey); this.requestUpdate(); } : nothing}
-                  @keydown=${scope === 'long-term' ? this.onPrimaryKeyDown : nothing}
+                  data-roving-column=${scope === 'short-term' ? 'remove' : nothing}
+                  tabindex=${itemKey === rovingActionKey && (scope === 'long-term' || this.rovingRemoveByScope.has(scope)) ? '0' : '-1'}
+                  @focus=${() => this.rememberRovingAction(scope, itemKey, scope === 'short-term')}
+                  @keydown=${this.onPrimaryKeyDown}
                   aria-label=${this.localize('removeWithContext', undefined, {
                     label: item.text,
                   })}
@@ -845,7 +876,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                         event.stopPropagation();
                         this.emit('lr-chunk-open', { memoryId: item.id, scope, ...event.detail });
                       }}
-                      @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId?: string; section: 'entities' | 'relationships' | 'communities' | 'chunks' }>) => {
+                      @lr-toggle=${(event: LyraProvenancePanelEventMap['lr-toggle']) => {
                         event.stopPropagation();
                         this.emit('lr-toggle', { ...event.detail, memoryId: item.id, scope });
                       }}

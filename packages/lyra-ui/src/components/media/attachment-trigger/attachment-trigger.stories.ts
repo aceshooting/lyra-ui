@@ -209,3 +209,21 @@ export const MultipleFiles: Story = {
   render: () => html`<lr-attachment-trigger multiple @lr-files=${logPick('multiple-log')}></lr-attachment-trigger>
     <output id="multiple-log"></output>`,
 };
+
+export const LimitedImagePicker: Story = {
+  render: () => html`
+    <lr-attachment-trigger
+      multiple
+      .capabilities=${['image']}
+      .allowedMimeTypes=${['image/png', 'image/jpeg']}
+      max-files="3"
+      held-file-count="1"
+      max-file-size="2000000"
+      @lr-files=${(event: CustomEvent<LyraAttachmentFilesDetail>) => {
+        const output = (event.currentTarget as HTMLElement).nextElementSibling;
+        if (output) output.textContent = `${event.detail.files.length} accepted, ${event.detail.rejected.length} rejected`;
+      }}
+    ></lr-attachment-trigger>
+    <p role="status">Choose up to two PNG or JPEG files, each at most 2 MB.</p>
+  `,
+};

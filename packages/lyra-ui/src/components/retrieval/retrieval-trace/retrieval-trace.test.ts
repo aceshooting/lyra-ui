@@ -63,6 +63,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'retrievalStageRerank',
   'retrievalStageFilter',
   'retrievalTraceEvidenceToggle',
+  'retrievalTraceLabel',
   'spanWaterfall',
   'durationMilliseconds',
   'spanKindLlm',
@@ -443,7 +444,7 @@ describe("lr-retrieval-trace", () => {
     const listener = oneEvent(el, "lr-toggle");
     bar.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ itemId: "retrieve", expanded: true });
+    expect(ev.detail).to.deep.equal({ kind: "stage", itemId: "retrieve", expanded: true });
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector(
       '[data-id="retrieve"] [part="evidence-toggle"]'
@@ -489,7 +490,7 @@ describe("lr-retrieval-trace", () => {
     let listener = oneEvent(el, "lr-toggle");
     toggle.click();
     let ev = await listener;
-    expect(ev.detail).to.deep.equal({ itemId: "rewrite", expanded: true });
+    expect(ev.detail).to.deep.equal({ kind: "stage", itemId: "rewrite", expanded: true });
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
     expect(body.hidden).to.be.false;
@@ -497,7 +498,7 @@ describe("lr-retrieval-trace", () => {
     listener = oneEvent(el, "lr-toggle");
     toggle.click();
     ev = await listener;
-    expect(ev.detail).to.deep.equal({ itemId: "rewrite", expanded: false });
+    expect(ev.detail).to.deep.equal({ kind: "stage", itemId: "rewrite", expanded: false });
     expect(removed).to.equal(0);
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
@@ -1020,7 +1021,7 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
     },
   ]);
   expect(leaked).to.equal(0);
-  expect(toggles).to.deep.equal([{ itemId: 'c2', expanded: true, stageId: 'retrieve' }]);
+  expect(toggles).to.deep.equal([{ kind: 'chunk', itemId: 'c2', expanded: true, stageId: 'retrieve' }]);
 });
 
 it('falls back to string conversion for non-JSON metadata scalars', async () => {
@@ -1215,4 +1216,36 @@ it('keeps a visible outline on the active evidence row when frame is plain', asy
   const row = el.shadowRoot!.querySelector('[part="evidence-row"][data-active]') as HTMLElement;
   expect(getComputedStyle(row).outlineStyle).to.equal('solid');
   expect(getComputedStyle(row).borderTopWidth).to.equal('0px');
+});
+
+describe('lr-retrieval-trace owner and wrapping', () => {
+  it('names its own group unless a non-empty host label owns the trace', async () => {
+    const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`);
+    const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base().getAttribute('role')).to.equal('group');
+    expect(base().getAttribute('aria-label')).to.equal('Retrieval trace');
+    el.strings = { retrievalTraceLabel: 'Trace de recherche' };
+    await el.updateComplete;
+    expect(base().getAttribute('aria-label')).to.equal('Trace de recherche');
+    el.setAttribute('aria-label', 'Run 42');
+    await el.updateComplete;
+    expect(base().hasAttribute('role')).to.equal(false);
+    expect(base().hasAttribute('aria-label')).to.equal(false);
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(base().getAttribute('role')).to.equal('group');
+    expect(base().getAttribute('aria-label')).to.equal('');
+  });
+
+  it('wraps long unbroken evidence text inside a narrow trace', async () => {
+    const stages: RetrievalStage[] = [{ id: 'rewrite', kind: 'query-rewrite', startMs: 0, endMs: 10, status: 'success', evidence: { text: 'q'.repeat(300) } }];
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 200px"><lr-retrieval-trace .stages=${stages}></lr-retrieval-trace></div>`);
+    const el = wrapper.querySelector('lr-retrieval-trace') as LyraRetrievalTrace;
+    await el.updateComplete;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="evidence-toggle"]')!.click();
+    await el.updateComplete;
+    const text = el.shadowRoot!.querySelector<HTMLElement>('[part="evidence-text"]')!;
+    expect(text.getBoundingClientRect().width <= 201).to.equal(true);
+    expect(text.scrollWidth <= text.clientWidth + 1).to.equal(true);
+  });
 });

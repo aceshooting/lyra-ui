@@ -1,6 +1,5 @@
 import { relativeLuminance } from '../../../internal/color-math.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
-import { flattenedThemeParent, THEME_ATTRIBUTES } from '../../../internal/theme-observation.js';
 
 function parseRgbTriplet(value: string): [number, number, number] | null {
   const match = value.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
@@ -75,61 +74,4 @@ export function resolveIsDarkTheme(host: Element): boolean {
   } finally {
     probe.remove();
   }
-}
-
-/** Re-invokes `onChange` whenever the resolved theme might have changed: an OS-level
- *  prefers-color-scheme flip, or a theme attribute change anywhere in `host`'s flattened ancestor
- *  chain, including slots and shadow hosts. A consumer re-theming via `--lr-theme-*` custom properties
- *  fires no DOM event on its own -- this mirrors qr-code.class.ts's/heatmap.class.ts's/
- *  chart.class.ts's own theme-reactive canvases, the established pattern in this codebase for a
- *  component that can't just let CSS repaint itself. Returns a cleanup function. */
-export function watchDarkTheme(
-  host: HTMLElement,
-  onChange: () => void
-): () => void {
-  const view = host.ownerDocument.defaultView;
-  if (!view || !host.isConnected) return () => {};
-  let active = true;
-  const update = (): void => {
-    if (!active || !host.isConnected || host.ownerDocument.defaultView !== view)
-      return;
-    onChange();
-  };
-  let colorSchemeQuery: MediaQueryList | undefined;
-  try {
-    colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
-    colorSchemeQuery?.addEventListener('change', update);
-  } catch {
-    colorSchemeQuery = undefined;
-  }
-
-  let observer: MutationObserver | undefined;
-  const Observer = view.MutationObserver;
-  if (typeof Observer === 'function') {
-    const targets: Element[] = [host];
-    let parent = flattenedThemeParent(host);
-    while (parent && !targets.includes(parent)) {
-      targets.push(parent);
-      parent = flattenedThemeParent(parent);
-    }
-    try {
-      observer = new Observer(update);
-      for (const target of targets) {
-        observer.observe(target, {
-          attributes: true,
-          attributeFilter: [...THEME_ATTRIBUTES],
-        });
-      }
-    } catch {
-      observer?.disconnect();
-      observer = undefined;
-    }
-  }
-
-  return () => {
-    if (!active) return;
-    active = false;
-    colorSchemeQuery?.removeEventListener('change', update);
-    observer?.disconnect();
-  };
 }

@@ -1,3 +1,4 @@
+import { splitLines } from '../../../internal/text-lines.js';
 export interface StackFrame {
   functionName?: string;
   file?: string;
@@ -323,7 +324,7 @@ function utf8Prefix(value: string, byteLimit: number): { source: string; truncat
 
 function boundedLines(trace: string): { source: string; lines: string[]; truncated: boolean } {
   const byteBound = utf8Prefix(trace, STACK_TRACE_LIMITS.bytes);
-  const split = byteBound.source.split(/\r\n|\r|\n/, STACK_TRACE_LIMITS.lines + 1);
+  const split = splitLines(byteBound.source, STACK_TRACE_LIMITS.lines + 1);
   let truncated = byteBound.truncated || split.length > STACK_TRACE_LIMITS.lines;
   const lines = split.slice(0, STACK_TRACE_LIMITS.lines).map((line) => {
     if (line.length <= STACK_TRACE_LIMITS.lineCharacters) return line;

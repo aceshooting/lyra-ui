@@ -1,10 +1,12 @@
-import { panelListItem } from '../../../internal/layout-fragments.styles.js';
+import { containerHost, panelListItem } from '../../../internal/layout-fragments.styles.js';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { panelFrame } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
   :host {
-    display: block;
+    ${containerHost}
+
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -74,5 +76,11 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
+  }
+
+  @container ${compactContainerQuery} {
+    [part='run'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 `;

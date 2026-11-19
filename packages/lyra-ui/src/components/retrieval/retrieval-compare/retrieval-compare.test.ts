@@ -477,7 +477,7 @@ it('draws the focused chunk ring inside the scrolling sets container', async () 
   const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
   const chunkEl = el.shadowRoot!.querySelector('[part~="chunk"][tabindex="0"]') as HTMLElement;
   await focusByKeyboard(chunkEl);
-  expect(el.shadowRoot!.activeElement).to.equal(chunkEl);
+  expect(el.shadowRoot!.activeElement === chunkEl).to.equal(true);
   expect(parseFloat(getComputedStyle(chunkEl).outlineOffset)).to.be.lessThan(0);
 });
 
@@ -491,4 +491,23 @@ it('animates pagination button paint with the shared interactive transition', as
   const button = el.shadowRoot!.querySelector('[part="page-button"]') as HTMLElement;
   expect(getComputedStyle(button).transitionProperty).to.not.equal('all');
   expect(getComputedStyle(button).transitionDuration).to.not.equal('0s');
+});
+
+it('clamps the page while preparing an update, without scheduling another update', async () => {
+  const many: RetrievalComparisonSet[] = Array.from({ length: 12 }, (_unused, index) => ({ id: `set-${index}`, label: `Set ${index}`, chunks: [chunk(`x${index}`, 0.5)] }));
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${many}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-page-action="last"]')!.click();
+  await el.updateComplete;
+  let updates = 0;
+  const original = (el as unknown as { updated(changed: Map<PropertyKey, unknown>): void }).updated;
+  (el as unknown as { updated(changed: Map<PropertyKey, unknown>): void }).updated = function (changed) { updates += 1; original.call(this, changed); };
+  try {
+    el.sets = many.slice(0, 3);
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(updates).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="set"]').length).to.equal(3);
+  } finally {
+    delete (el as unknown as { updated?: unknown }).updated;
+  }
 });

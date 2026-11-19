@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Hivatkozás',
   promptInputLabel: 'AI-prompt',
   promptInputControls: 'Promptbeállítások',
+  promptInputCollectionLimit: 'A bemeneti korlát elérése miatt az AI-prompt bemenetének egy része kimaradt.',
   promptInputSources: 'Források',
   promptInputAttachments: 'Mellékletek',
   handoffLabel: 'Ügynökök közötti átadás',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Nincsenek elérhető hangok',
   voicePickerRequired: 'Válasszon hangot.',
   voicePickerPreview: 'Előnézet: {name}',
+  voicePickerPreviewFailed: 'A hangminta nem érhető el.',
   voicePickerStopPreview: 'Előnézet leállítása',
   realtimeSessionLabel: 'Valós idejű munkamenet',
   realtimeSessionDisconnected: 'Nincs kapcsolat',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'A hosszú kód szintaxiskiemelés nélkül jelenik meg.',
   codeBlockHighlightedLine: 'Kiemelt sor',
   codeBlockActiveLine: 'Aktív kiemelt sor',
+  codeBlockToggle: 'Kód megjelenítése vagy elrejtése',
 };
 
 registerLyraLocale('hu', strings);

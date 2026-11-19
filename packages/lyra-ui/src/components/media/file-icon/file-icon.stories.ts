@@ -48,7 +48,7 @@ export const ThemedBadge: Story = {
       },
     },
   },
-  render: () => html`<div style="display:flex; flex-wrap:wrap; gap:var(--lr-space-m); --lr-file-icon-bg: var(--lr-color-success-quiet); --lr-file-icon-color: var(--lr-color-success);"><lr-file-icon mime-type="application/pdf" mode="label"></lr-file-icon><lr-file-icon mime-type="image/png" mode="label"></lr-file-icon></div>`,
+  render: () => html`<div style="display:flex; flex-wrap:wrap; gap:var(--lr-space-m); --lr-file-icon-radius: var(--lr-radius-pill); --lr-file-icon-border-color: var(--lr-color-success); --lr-file-icon-bg: var(--lr-color-success-quiet); --lr-file-icon-color: var(--lr-color-success);"><lr-file-icon mime-type="application/pdf" mode="label"></lr-file-icon><lr-file-icon mime-type="image/png" mode="label"></lr-file-icon></div>`,
 };
 
 const narrowContentRegistry = createFileTypeMetadataRegistry([{

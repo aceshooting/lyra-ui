@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ใส่แหล่งอ้างอิง',
   promptInputLabel: 'พรอมป์ AI',
   promptInputControls: 'ตัวเลือกพรอมป์',
+  promptInputCollectionLimit: 'ข้อมูลที่ป้อนในพรอมป์บางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดการป้อนข้อมูล',
   promptInputSources: 'แหล่งที่มา',
   promptInputAttachments: 'ไฟล์แนบ',
   handoffLabel: 'ส่งต่องานให้เอเจนต์',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'ไม่มีเสียงให้เลือก',
   voicePickerRequired: 'โปรดเลือกเสียง',
   voicePickerPreview: 'ดูตัวอย่าง {name}',
+  voicePickerPreviewFailed: 'ไม่สามารถฟังตัวอย่างเสียงได้',
   voicePickerStopPreview: 'หยุดตัวอย่างเสียง',
   realtimeSessionLabel: 'เซสชันเรียลไทม์',
   realtimeSessionDisconnected: 'ตัดการเชื่อมต่อแล้ว',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'โค้ดที่ยาวจะแสดงโดยไม่มีการเน้นสีไวยากรณ์',
   codeBlockHighlightedLine: 'บรรทัดที่ไฮไลต์',
   codeBlockActiveLine: 'บรรทัดที่ไฮไลต์ที่ใช้งานอยู่',
+  codeBlockToggle: 'แสดงหรือซ่อนโค้ด',
 };
 
 registerLyraLocale('th', strings);

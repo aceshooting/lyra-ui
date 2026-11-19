@@ -228,3 +228,34 @@ it('treats unset held totals and non-finite retained sizes as zero', () => {
   expect(result.files.length).to.equal(1);
   expect(result.remainingTotalSize === null || Number.isFinite(result.remainingTotalSize)).to.equal(true);
 });
+
+it('paints the pressed dropzone from its public tokens', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input style="--lr-transition-interactive: none; --lr-transition-fast: 0s; --lr-file-input-dropzone-active-border-color: rgb(1, 2, 3); --lr-file-input-dropzone-active-bg: rgb(4, 5, 6)"></lr-file-input>`);
+  const zone = el.shadowRoot!.querySelector<HTMLElement>('[part~="file-input"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(zone, 'dropzone hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => zone.matches(':active'), 'pressed state');
+    await waitUntil(() => getComputedStyle(zone).borderTopColor === 'rgb(1, 2, 3)', 'pressed border token');
+    expect(getComputedStyle(zone).backgroundColor).to.equal('rgb(4, 5, 6)');
+  } finally {
+    await sendMouse({ type: 'move', position: [0, 0] });
+    await resetMouse();
+  }
+});
+
+it('puts the rejection list on the size ladder and sizes file rows from public tokens', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input size="xs" multiple accept="image/png" style="--lr-file-input-file-radius: 5px; --lr-file-input-thumbnail-size: 29px; --lr-file-input-thumbnail-radius: 3px"></lr-file-input>`);
+  dropFiles(el.shadowRoot!.querySelector<HTMLElement>('[part~="dropzone"]')!, [new File(['x'], 'b.txt', { type: 'text/plain' })]);
+  await el.updateComplete;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+  const rejection = el.shadowRoot!.querySelector<HTMLElement>('[part="rejection"]')!;
+  expect(getComputedStyle(rejection).fontSize).to.equal(getComputedStyle(hint).fontSize);
+  el.files = [new File(['x'], 'a.png', { type: 'image/png' })];
+  await el.updateComplete;
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="file"]')!).borderTopLeftRadius).to.equal('5px');
+  const thumbnail = el.shadowRoot!.querySelector<HTMLElement>('[part="file-thumbnail"]')!;
+  expect(getComputedStyle(thumbnail).inlineSize).to.equal('29px');
+  expect(getComputedStyle(thumbnail).borderTopLeftRadius).to.equal('3px');
+});

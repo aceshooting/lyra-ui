@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.js';
@@ -78,7 +79,7 @@ describe('rubric aggregate external descriptions', () => {
     const hint = field.shadowRoot!.querySelector<HTMLElement>('[part~="aggregate-hint"]')!;
     const error = field.shadowRoot!.querySelector<HTMLElement>('[part~="aggregate-error"]')!;
     await waitUntil(() => refs()[0] === source);
-    expect(refs().map((node) => node.id)).to.deep.equal([source.id, hint.id, error.id]);
+    expect(refs().map((node) => node.id)).to.deep.equal([source.id, error.id, hint.id]);
     const group = field.shadowRoot!.querySelector<LyraCheckboxGroup>('lr-checkbox-group')!;
     expect(group.getAttribute('aria-describedby')).to.equal(null);
     expect(group.hint).to.equal('');
@@ -141,5 +142,25 @@ describe('rubric same-object rebinds', () => {
     expect(field.value).to.deep.equal({ tags: ['a', 'b'] });
     field.value = { tags: ['a'] };
     expect(field.value).to.deep.equal({ tags: ['a'] });
+  });
+});
+
+describe('rubric submit pointer paint', () => {
+  it('mixes hover from the resting accent fill it paints', async () => {
+    const comment: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Comment' }];
+    const hoverBg = async (style: string): Promise<string> => {
+      const el = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${comment} style=${style}></lr-rubric-form>`);
+      const submit = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="submit"]')!;
+      try {
+        await hoverUntilMatched(submit, 'the pointer never hovered submit');
+        return getComputedStyle(submit).backgroundColor;
+      } finally {
+        await resetMouse();
+        el.remove();
+      }
+    };
+    const viaAccent = await hoverBg('--lr-transition-fast: 0s; --lr-color-brand: rgb(0, 0, 200); --lr-button-accent-fill: rgb(10, 120, 30)');
+    const viaOwn = await hoverBg('--lr-transition-fast: 0s; --lr-color-brand: rgb(0, 0, 200); --lr-rubric-form-submit-bg: rgb(10, 120, 30)');
+    expect(viaAccent).to.equal(viaOwn);
   });
 });

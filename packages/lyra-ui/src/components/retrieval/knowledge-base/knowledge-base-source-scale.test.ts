@@ -42,15 +42,17 @@ it('keeps million-source middle and final pages, global summaries and actions bo
   recordScaleMeasurement('lr-knowledge-base', 'n=1000003 allocated sources first middle final pages', { sources: total, queries, lookups, peak, fieldReads, pageRows: grid.rows.length }, { elapsedMs: Math.round(performance.now() - started) });
 });
 
-it('lets a legacy table page change bubble without touching the source page', async () => {
+it('keeps legacy table page and sort events inside without touching the source page', async () => {
   const sources: KnowledgeSource[] = [{ id: 'a', name: 'Alpha', syncStatus: 'synced' }, { id: 'b', name: 'Beta', syncStatus: 'synced' }];
   const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`);
   await waitUntil(() => el.shadowRoot?.querySelector<LyraTable<KnowledgeSource>>('lr-table')?.rows.length === 2);
   const grid = el.shadowRoot!.querySelector<LyraTable<KnowledgeSource>>('lr-table')!;
-  const pages: number[] = [];
-  el.addEventListener('lr-page-change', event => pages.push(event.detail.page));
+  const escaped: string[] = [];
+  for (const type of ['lr-page-change', 'lr-sort-request', 'lr-sort']) el.addEventListener(type, () => escaped.push(type));
   grid.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 2 }, bubbles: true, composed: true }));
+  grid.dispatchEvent(new CustomEvent('lr-sort-request', { detail: { sortKey: 'name', sortDir: 'desc' }, bubbles: true, composed: true, cancelable: true }));
+  grid.dispatchEvent(new CustomEvent('lr-sort', { detail: { sortKey: 'name', sortDir: 'desc' }, bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(pages).to.deep.equal([2]);
+  expect(escaped).to.deep.equal([]);
   expect(el.sourcePage).to.equal(0);
 });

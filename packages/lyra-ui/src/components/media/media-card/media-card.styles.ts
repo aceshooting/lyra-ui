@@ -46,7 +46,7 @@ export const styles = css`
   }
   button[part="base"]:not(:disabled):hover,
   a[part="base"]:not([aria-disabled="true"]):hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-media-card-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed deepens both the border the hover rule tints and the card's own fill; frame="plain"
      opts out of card chrome, pressed included. */

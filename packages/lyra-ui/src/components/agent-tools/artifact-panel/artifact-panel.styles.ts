@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, hoverFill, activeFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -78,6 +78,12 @@ export const styles = css`
   [part='view-button']:active:not([aria-pressed='true']) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
+  [part='view-button']:where([aria-pressed='true']):hover {
+    background: ${hoverFill('var(--lr-artifact-panel-view-active-bg, var(--lr-color-brand-quiet))')};
+  }
+  [part='view-button']:where([aria-pressed='true']):active {
+    background: ${activeFill('var(--lr-artifact-panel-view-active-bg, var(--lr-color-brand-quiet))')};
+  }
   [part='view-button']:focus-visible {
     ${focusRing}
   }
@@ -125,6 +131,13 @@ export const styles = css`
   [part='version-next']:disabled {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
+  }
+  [part='version-previous-glyph'],
+  [part='version-next-glyph'] {
+    display: inline-flex;
+  }
+  [part='version-previous-glyph'] svg {
+    transform: scaleX(-1);
   }
   :host(:dir(rtl)) [part='version-previous-glyph'],
   :host(:dir(rtl)) [part='version-next-glyph'] {

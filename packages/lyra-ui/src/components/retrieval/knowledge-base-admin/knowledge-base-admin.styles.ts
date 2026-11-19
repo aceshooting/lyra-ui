@@ -2,7 +2,7 @@ import { iconHitTarget, focusRing } from '../../../internal/interactive-control.
 import { css } from 'lit';
 
 export const styles = css`
-  [part='input-limit'], [part='slices-limit'] {
+  [part='input-limit'] {
     margin: 0;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
@@ -42,9 +42,23 @@ export const styles = css`
     border-block-end: var(--lr-border-width-medium) solid transparent;
     background: transparent;
     color: var(--lr-color-text-quiet);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     font: inherit;
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+
+  /* Reserves the selected weight's width so switching tabs never shifts the neighbours. */
+  [part='tab']::after {
+    content: attr(data-label);
+    content: attr(data-label) / '';
+    block-size: 0;
+    overflow: hidden;
+    visibility: hidden;
+    font-weight: var(--lr-font-weight-semibold);
   }
 
   [part='tab']:hover {

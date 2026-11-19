@@ -871,23 +871,38 @@ describe('hit area', () => {
 });
 
 describe('attachment identity resolution', () => {
-  it('derives a stable attachmentId from file name+size+lastModified when no attachment-id is set', async () => {
+  it('assigns distinct stable action ids to two occurrences of the same File', async () => {
     const file = makeFile('a.png', 'image/png', 10);
-    const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
-    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
-    setTimeout(() => btn.click());
-    const ev = await oneEvent(el, 'lr-remove');
-    expect(ev.detail.attachmentId).to.equal(`a.png:10:${file.lastModified}`);
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <lr-attachment-chip .file=${file}></lr-attachment-chip>
+      <lr-attachment-chip attachment-id="   " .file=${file}></lr-attachment-chip>
+    </div>`);
+    const ids: string[] = [];
+    for (const chip of wrapper.querySelectorAll('lr-attachment-chip')) {
+      await chip.updateComplete;
+      chip.addEventListener('lr-remove', event => ids.push(event.detail.attachmentId));
+      const remove = chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+      remove.click();
+      remove.click();
+    }
+    expect(ids).to.have.length(4);
+    expect(ids.every(id => id.trim().length > 0)).to.equal(true);
+    expect(ids[0]).to.equal(ids[1]);
+    expect(ids[2]).to.equal(ids[3]);
+    expect(ids[0]).not.to.equal(ids[2]);
   });
 
-  it('treats a whitespace-only attachment-id as missing before action events', async () => {
-    const file = new File(['contents'], 'a.png', { type: 'image/png', lastModified: 123 });
-    const el = await fixture<LyraAttachmentChip>(html`
-      <lr-attachment-chip attachment-id="   " .file=${file}></lr-attachment-chip>
-    `);
-    const pending = oneEvent(el, 'lr-remove');
-    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.click();
-    expect((await pending).detail.attachmentId).to.equal(`a.png:${file.size}:123`);
+  it('uses the same generated id for whitespace-only and omitted attachment-id', async () => {
+    const el = await fixture<LyraAttachmentChip>(html`<lr-attachment-chip attachment-id="   " .file=${makeFile('a.png', 'image/png', 10)}></lr-attachment-chip>`);
+    const ids: string[] = [];
+    el.addEventListener('lr-remove', event => ids.push(event.detail.attachmentId));
+    const remove = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+    remove.click();
+    el.removeAttribute('attachment-id');
+    remove.click();
+    expect(ids).to.have.length(2);
+    expect(ids[0]!.trim().length).to.be.greaterThan(0);
+    expect(ids[0]).to.equal(ids[1]);
   });
 
   it('falls back to a generated attachmentId when neither attachment-id nor file is set', async () => {

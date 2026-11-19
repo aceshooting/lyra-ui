@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Citare',
   promptInputLabel: 'Prompt AI',
   promptInputControls: 'Opțiuni pentru prompt',
+  promptInputCollectionLimit: 'O parte din datele promptului a fost omisă deoarece s-a atins o limită de intrare.',
   promptInputSources: 'Surse',
   promptInputAttachments: 'Fișiere atașate',
   handoffLabel: 'Transfer de agent',
@@ -157,6 +158,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Nicio voce disponibilă',
   voicePickerRequired: 'Alege o voce.',
   voicePickerPreview: 'Previzualizează {name}',
+  voicePickerPreviewFailed: 'Previzualizarea vocii nu este disponibilă.',
   voicePickerStopPreview: 'Oprește previzualizarea',
   realtimeSessionLabel: 'Sesiune în timp real',
   realtimeSessionDisconnected: 'Deconectat',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Codul lung este afișat fără evidențierea sintaxei.',
   codeBlockHighlightedLine: 'Linie evidențiată',
   codeBlockActiveLine: 'Linie evidențiată activă',
+  codeBlockToggle: 'Afișează sau ascunde codul',
 };
 
 registerLyraLocale('ro', strings);

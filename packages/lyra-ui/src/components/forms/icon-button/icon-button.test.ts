@@ -1034,3 +1034,21 @@ it('keeps an explicitly empty host aria-label rather than replacing it with the 
   const el = await fixture<LyraIconButton>(html`<lr-icon-button aria-label="" label="Close"><span>Close dialog</span></lr-icon-button>`);
   expect(el.control!.getAttribute('aria-label')).to.equal('');
 });
+
+it('renders the pressed property on the internal button, over a host aria-pressed attribute', async () => {
+  const el = await fixture<LyraIconButton>(html`<lr-icon-button icon="star" aria-label="Favorite" aria-pressed="false"></lr-icon-button>`);
+  const control = () => el.shadowRoot!.querySelector('button')!;
+  expect(el.pressed).to.equal(null);
+  expect(control().getAttribute('aria-pressed')).to.equal('false');
+  el.pressed = true;
+  await el.updateComplete;
+  expect(control().getAttribute('aria-pressed')).to.equal('true');
+  expect(el.getAttribute('aria-pressed')).to.equal('false');
+  el.pressed = 'mixed';
+  await el.updateComplete;
+  expect(control().getAttribute('aria-pressed')).to.equal('mixed');
+  el.pressed = null;
+  el.removeAttribute('aria-pressed');
+  await el.updateComplete;
+  expect(control().hasAttribute('aria-pressed')).to.equal(false);
+});

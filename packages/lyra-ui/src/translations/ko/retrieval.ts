@@ -127,6 +127,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: '장기 기억',
   memoryPanelAdd: '장기 기억에 추가',
   memoryPanelAddWithContext: '장기 기억에 "{label}" 추가',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: '모두 잊기',
   memoryPanelConfirmAddHeading: '장기 기억에 추가하시겠습니까?',
   memoryPanelConfirmRemoveHeading: '이 항목을 삭제할까요?',
@@ -185,6 +186,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: '평가 슬라이스',
   ragEvalDashboardAllSlices: '모두',
   ragEvalDashboardSliceUnavailable: '{slice}에 사용할 수 있는 평가 실행이 없습니다.',
+  ragEvalDashboardMetricUnavailable: '{metric}에 사용할 수 있는 평가 지표가 없습니다.',
   knowledgeBaseSyncIdle: '대기 중',
   knowledgeBaseSyncSyncing: '동기화 중...',
   knowledgeBaseSyncPaused: '일시정지됨',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total}개 중 {index}개의 결과',
   ragAnswerEmpty: '아직 답변이 없습니다',
   retrievalTraceEmpty: '검색 단계 없음',
+  retrievalTraceLabel: '검색 추적',
   sourcePickerMatches: {
     other: '{count}개의 소스가 일치합니다.',
   },

@@ -1,3 +1,5 @@
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -48,7 +50,7 @@ const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
 );
 
 export interface LyraSwatchPickerEventMap {
-  'lr-change': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue: string | null }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
 
@@ -92,7 +94,7 @@ export interface LyraSwatchPickerEventMap {
  *
  * @customElement lr-swatch-picker
  * @event lr-change - Fired when the selected value changes via click or keyboard.
- *   `detail: { value }`.
+ *   `detail: { value, previousValue }`.
  * @event lr-activate - Fired on every activation of a swatch -- a click, or an Arrow/Home/End key
  *   that lands on one -- whether or not the selection actually moved. `detail: { value }` carries
  *   the activated swatch's own value. Bubbling and composed, so a host outside the shadow tree
@@ -299,6 +301,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   private fallbackTabbableIndex = 0;
   private pendingFocus?: { index: number; origin: HTMLElement };
   private focusRevealFrame?: number;
+  private focusRevealView?: Window;
 
   private resolveSelectedIndex(): number {
     if (this.value === null) {
@@ -323,7 +326,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       this.selectedOption = option;
       this.value = option.value;
       if (previousValue === option.value) this.requestUpdate();
-      this.emit('lr-change', { value: option.value });
+      this.emit('lr-change', { value: option.value, previousValue });
     }
     // Every activation of an enabled swatch reports, including the re-pick of the current value
     // that `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
@@ -336,11 +339,13 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       `[part~="swatch"][data-index="${index}"]`
     ) as HTMLElement | null;
     this.cancelFocusReveal();
-    this.focusRevealFrame = requestAnimationFrame(() => {
+    const view = this.ownerDocument.defaultView;
+    this.focusRevealView = view ?? undefined;
+    this.focusRevealFrame = view?.requestAnimationFrame(() => {
       this.focusRevealFrame = undefined;
       if (!this.isConnected || this.disabled) return;
       const focused = shadowFocusTarget(this);
-      if (!(focused instanceof HTMLElement) || !focused.part.contains('swatch')) return;
+      if (!isElementNode(focused) || !focused.part.contains('swatch')) return;
       // Native focus can leave a partially visible radio clipped when its center already fits.
       // Resolve the current node after consumer updates and focus restoration have settled.
       focused.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
@@ -349,8 +354,9 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   }
 
   private cancelFocusReveal(): void {
-    if (this.focusRevealFrame !== undefined) cancelAnimationFrame(this.focusRevealFrame);
+    if (this.focusRevealFrame !== undefined) this.focusRevealView?.cancelAnimationFrame(this.focusRevealFrame);
     this.focusRevealFrame = undefined;
+    this.focusRevealView = undefined;
   }
 
   override disconnectedCallback(): void {
@@ -474,7 +480,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     // A swatch that already held focus when `disabled` flipped can still deliver key events even
     // though every button is now `disabled` and unfocusable, so the guard lives here too rather
     // than relying on the buttons alone.
-    if (this.disabled) return;
+    if (this.disabled || shouldIgnoreNavigationKey(e)) return;
     const navigable = this.items;
     if (navigable.length === 0) return;
     const targetIndex = swatchKeyTarget(

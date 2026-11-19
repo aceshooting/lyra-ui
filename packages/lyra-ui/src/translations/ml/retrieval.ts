@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'ദീർഘകാല ഓർമ്മകൾ',
   memoryPanelAdd: 'ദീർഘകാല ഓർമ്മയിലേക്ക് ചേർക്കുക',
   memoryPanelAddWithContext: '"{label}" ദീർഘകാല ഓർമ്മയിലേക്ക് ചേർക്കുക',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'എല്ലാം മറക്കുക',
   memoryPanelConfirmAddHeading: 'ഇത് ദീർഘകാല ഓർമ്മയിലേക്ക് ചേർക്കണോ?',
   memoryPanelConfirmRemoveHeading: 'ഈ ഇനം നീക്കണോ?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'മൂല്യനിർണ്ണയ സ്ലൈസുകൾ',
   ragEvalDashboardAllSlices: 'എല്ലാം',
   ragEvalDashboardSliceUnavailable: '{slice}ന് മൂല്യനിർണ്ണയ റണ്ണുകളൊന്നും ലഭ്യമല്ല.',
+  ragEvalDashboardMetricUnavailable: '{metric}ന് മൂല്യനിർണ്ണയ അളവുകോലൊന്നും ലഭ്യമല്ല.',
   knowledgeBaseSyncIdle: 'നിഷ്ക്രിയം',
   knowledgeBaseSyncSyncing: 'സമന്വയിപ്പിക്കുന്നു',
   knowledgeBaseSyncPaused: 'താൽക്കാലികമായി നിർത്തി',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'ഫലം {index} / {total}',
   ragAnswerEmpty: 'ഇതുവരെ ഉത്തരമില്ല',
   retrievalTraceEmpty: 'വീണ്ടെടുക്കൽ ഘട്ടങ്ങളൊന്നുമില്ല',
+  retrievalTraceLabel: 'വീണ്ടെടുക്കൽ ട്രേസ്',
   sourcePickerMatches: {
     one: '{count} ഉറവിട പൊരുത്തം',
     other: '{count} ഉറവിടങ്ങൾ പൊരുത്തപ്പെടുന്നു',

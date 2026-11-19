@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'حواله ورکول',
   promptInputLabel: 'د AI غوښتنه',
   promptInputControls: 'د غوښتنې غوراوي',
+  promptInputCollectionLimit: 'د ننوتلو حد ته د رسېدو له امله د غوښتنې د ننوتنې یوه برخه پرېښودل شوې ده.',
   promptInputSources: 'سرچینې',
   promptInputAttachments: 'ضمیمې',
   handoffLabel: 'ایجنټ ته سپارل',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'غږونه نشته',
   voicePickerRequired: 'یو غږ وټاکئ.',
   voicePickerPreview: '{name} اورېدل',
+  voicePickerPreviewFailed: 'د غږ بېلګه د اورېدو لپاره نشته.',
   voicePickerStopPreview: 'مخکتنه درول',
   realtimeSessionLabel: 'د وخت‌پرمهال ناسته',
   realtimeSessionDisconnected: 'اړیکه پرې شوې',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'اوږد کوډ د نحوي جوړښت له رنګین ښودلو پرته ښودل کېږي.',
   codeBlockHighlightedLine: 'روښانه شوې کرښه',
   codeBlockActiveLine: 'فعاله روښانه شوې کرښه',
+  codeBlockToggle: 'کوډ ښکاره کول یا پټول',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

@@ -701,7 +701,7 @@ describe('string localization', () => {
       html`<lr-media-card src="https://example.test/report.pdf" kind="file"></lr-media-card>`,
     )) as LyraMediaCard;
     expect(genericOpen.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Open file attachment',
+      'Untitled file Open file attachment',
     );
 
     const image = (await fixture(
@@ -746,7 +746,7 @@ describe('string localization', () => {
       html`<lr-media-card src="https://example.test/report.pdf" kind="file" .strings=${overrides}></lr-media-card>`,
     )) as LyraMediaCard;
     expect(openFallback.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Ouvrir la pièce jointe fichier',
+      'Fichier sans titre Ouvrir la pièce jointe fichier',
     );
 
     const openNamed = (await fixture(
@@ -812,7 +812,7 @@ describe('accessibility', () => {
 
     file.accessibleLabel = 'Save quarterly report';
     await file.updateComplete;
-    expect(link.getAttribute('aria-label')).to.equal('Save quarterly report');
+    expect(link.getAttribute('aria-label')).to.equal('report.pdf Save quarterly report');
 
     file.accessibleLabel = '';
     await file.updateComplete;

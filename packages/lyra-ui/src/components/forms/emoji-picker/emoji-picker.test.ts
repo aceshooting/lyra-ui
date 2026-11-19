@@ -5,7 +5,8 @@ import './emoji-picker.js';
 import type { LyraEmojiPicker, EmojiPickerGroup, EmojiPickerItem } from './emoji-picker.js';
 import { styles } from './emoji-picker.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 
@@ -943,16 +944,21 @@ describe('keyboard navigation', () => {
     expect(input.getAttribute('aria-expanded')).to.equal('true');
     expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
 
-    input.focus();
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-1$/);
-    // Combobox idiom: focus stays in the input while the active option moves.
-    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('search');
+    await focusByKeyboard(input);
+    for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End', ' ']) {
+      const keydown = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      input.dispatchEvent(keydown);
+      expect(keydown.defaultPrevented, key).to.equal(false);
+      expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
+    }
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-2$/);
+    expect(el.shadowRoot!.activeElement === input).to.equal(true);
 
     const eventPromise = oneEvent(el, 'lr-change');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ value: '😂', previousValue: '' });
+    expect(event.detail).to.deep.equal({ value: '🐶', previousValue: '' });
   });
 
   it('keeps exactly one emoji tabbable (roving tabindex) and supports ArrowDown/ArrowUp/Home/End', async () => {
@@ -1345,8 +1351,10 @@ describe('label/hint/error chrome', () => {
     const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
     expect(label.hidden).to.be.false;
     expect(label.textContent).to.include('Reactions');
-    expect(grid.getAttribute('aria-describedby')).to.include('emoji-picker-error');
-    expect(grid.getAttribute('aria-describedby')).to.include('emoji-picker-hint');
+    const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
+    const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+    expect(grid.getAttribute('aria-describedby')).to.equal(`${error.id} ${hint.id}`);
+    expect(error.nextElementSibling === hint).to.equal(true);
   });
 
   it('switches the grid\'s accessible name to aria-labelledby once a visible label is set, unless aria-label overrides it', async () => {
@@ -1584,13 +1592,27 @@ describe('emoji interaction-state cssprops', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('gives forced-color hover, active, selected, and pressed states distinct non-color outlines', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('@media (forced-colors: active)');
-    expect(css).to.match(/:hover:not\(:disabled\)[^{]*\{[^}]*dashed Highlight/);
-    expect(css).to.match(/\[data-active\][^{]*\{[^}]*dotted Highlight/);
-    expect(css).to.match(/\[aria-selected='true'\][^{]*\{[^}]*solid Highlight/);
-    expect(css).to.match(/:active:not\(:disabled\)[^{]*\{[^}]*double Highlight/);
+  it('gives forced-color hover, active, selected, and pressed states distinct non-color outlines', async () => {
+    const el = await themedPicker('');
+    const buttons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]');
+    const selected = buttons[0]!;
+    selected.click();
+    const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const hovered = buttons[2]!;
+    try {
+      await setForcedColors('active');
+      await hoverUntilMatched(hovered, 'third emoji receives the pointer');
+      expect(getComputedStyle(hovered).outlineStyle).to.equal('dashed');
+      expect(getComputedStyle(buttons[1]!).outlineStyle).to.equal('dotted');
+      expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+      await sendMouse({ type: 'down', button: 'left' });
+      await waitUntil(() => getComputedStyle(hovered).outlineStyle === 'double');
+    } finally {
+      await resetMouse();
+      await setForcedColors('none');
+    }
   });
 });
 
@@ -2129,8 +2151,7 @@ it('clamps the active index to 0 without stealing focus from the search input wh
   input.focus();
   // Combobox idiom: moves the active index without moving real DOM focus off the input, so the
   // groups setter below sees the input (not an emoji button) as the focused element.
-  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   expect(el.shadowRoot!.activeElement === input).to.be.true;
   expect(input.getAttribute('aria-activedescendant')).to.match(/-item-2$/);
 
@@ -2465,4 +2486,91 @@ describe('optional-peer load failure: missing vs. failed', () => {
     expect(errorText(el)).to.equal(null);
     expect(hasRetry(el)).to.be.false;
   });
+});
+
+it('keeps modified navigation and held activation out of the emoji selection', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+  const event = new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true });
+  grid.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(grid.querySelector('[tabindex="0"]')?.getAttribute('data-index')).to.equal('0');
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true }));
+  expect(el.value).to.equal('');
+});
+
+it('emits value edits only for a new emoji selection', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!;
+  const events: string[] = [];
+  for (const name of ['input', 'lr-input', 'change', 'lr-change']) el.addEventListener(name, () => events.push(name));
+  const activations: string[] = [];
+  el.addEventListener('lr-activate', event => activations.push((event as CustomEvent<{ value: string }>).detail.value));
+  button.click();
+  button.click();
+  expect(activations).to.deep.equal(['😀', '😀']);
+  expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(el.value).to.equal('😀');
+});
+
+it('renders searchable virtual options when geometry observation fails', async () => {
+  const Original = window.ResizeObserver;
+  class UnsupportedTargetObserver extends Original {
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      if (target.hasAttribute('data-probe') || target.part.contains('grid')) throw new Error('Unsupported target');
+      super.observe(target, options);
+    }
+  }
+  window.ResizeObserver = UnsupportedTargetObserver;
+  try {
+    const el = await connectEmojiPicker();
+    el.groups = manyEmojis();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="virtual-spacer"]').length).to.equal(1);
+    const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+    input.value = 'no-matching-emoji';
+    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="empty"]').length).to.equal(1);
+  } finally {
+    window.ResizeObserver = Original;
+  }
+});
+
+it('mixes hover over a selected cell from its selected fill and caps the grid with a token', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  el.style.setProperty('--lr-emoji-picker-selected-bg', 'rgb(200, 0, 0)');
+  el.style.setProperty('--lr-color-brand-quiet', 'rgb(0, 0, 200)');
+  el.style.setProperty('--lr-emoji-picker-grid-max-height', '120px');
+  el.style.setProperty('--lr-transition-fast', '0s');
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+  expect(getComputedStyle(grid).maxBlockSize).to.equal('120px');
+  const first = requiredItem([...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')], 0, 'first emoji');
+  first.click();
+  await el.updateComplete;
+  first.removeAttribute('data-active');
+  try {
+    await hoverUntilMatched(first, 'the pointer never hovered the selected emoji');
+    const hovered = getComputedStyle(first).backgroundColor;
+    expect(hovered).to.not.equal('rgb(0, 0, 200)');
+    expect(hovered).to.not.equal('rgb(200, 0, 0)');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('falls back to a localized group name and the glyph content for blank caller labels', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = [{ key: 'custom', label: '   ', emojis: [{ emoji: '🦊', name: '  ' }, { emoji: '🐼', name: ' Panda ' }] }];
+  await el.updateComplete;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  expect(buttons.map((button) => button.getAttribute('aria-label'))).to.deep.equal([null, 'Panda']);
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((node) => node.textContent?.trim());
+  expect(labels).to.deep.equal(['Group custom']);
 });

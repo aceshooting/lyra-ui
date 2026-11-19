@@ -50,6 +50,49 @@ describe('lr-locale-picker optional text filtering', () => {
     await resetMouse();
   });
 
+  it('preserves browser shortcuts on the trigger and search input', async () => {
+    const el = await create();
+    const key = () => new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, bubbles: true, cancelable: true });
+    const triggerKey = key();
+    trigger(el).dispatchEvent(triggerKey);
+    expect(triggerKey.defaultPrevented).to.equal(false);
+    expect(el.open).to.equal(false);
+    el.open = true;
+    await el.updateComplete;
+    const field = input(el);
+    const before = activeTag(el);
+    const searchKey = key();
+    field.dispatchEvent(searchKey);
+    await el.updateComplete;
+    expect(searchKey.defaultPrevented).to.equal(false);
+    expect(activeTag(el)).to.equal(before);
+  });
+
+  it('clamps the listbox to the space available on both axes', async () => {
+    const el = await create();
+    await openSearch(el);
+    const list = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    list.style.setProperty('--lr-positioner-available-block-size', '48px');
+    list.style.setProperty('--lr-positioner-available-inline-size', '88px');
+    expect(list.offsetHeight).to.be.at.most(48);
+    expect(list.offsetWidth).to.be.at.most(88);
+    expect(list.scrollHeight).to.be.greaterThan(list.clientHeight);
+  });
+
+  it('isolates caller locale names and identifiers within right-to-left controls', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags dir="rtl" value="en"
+      .locales=${[{ tag: 'en', label: 'English 42' }]}></lr-locale-picker>`);
+    el.open = true;
+    await el.updateComplete;
+    for (const selector of ['[part="trigger-label"]', '[part="option-label"]']) {
+      const name = el.shadowRoot!.querySelector<HTMLElement>(`${selector} bdi`)!;
+      expect(name?.textContent).to.equal('English 42');
+      expect(getComputedStyle(name).direction).to.equal('ltr');
+      expect(getComputedStyle(name).unicodeBidi).to.equal('isolate');
+    }
+    expect(el.shadowRoot!.querySelector('[part="option-tag"]')?.getAttribute('dir')).to.equal('ltr');
+  });
+
   it('leaves the unset flag trigger, direct listbox and closed type-ahead unchanged', async () => {
     const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker locale="en" value="en"
       trigger-display="flag" option-display="label" .locales=${CATALOG}></lr-locale-picker>`);

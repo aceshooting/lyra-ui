@@ -49,17 +49,20 @@ export const styles = css`
 
   }
   [part="header"]:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-activity-feed-header-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-brand);
+  }
+  [part="header"]:is(:hover, :active) [part="summary"] {
+    color: inherit;
   }
   /* The hovered tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner (which
      follows the text colour), so the press reads deeper than hover in light and dark alike. */
   [part="header"]:active {
-    background: color-mix(
+    background: var(--lr-activity-feed-header-pressed-bg, color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-activity-feed-header-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
   }
   [part="header"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

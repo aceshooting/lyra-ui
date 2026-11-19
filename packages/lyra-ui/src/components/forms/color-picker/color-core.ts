@@ -1,3 +1,4 @@
+import { readCanvasRgba } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 
 /**
@@ -295,11 +296,11 @@ function parseFunctional(text: string): LyraColorHsva | null {
  * keywords are rejected first: CSSOM accepts them, but they would resolve against
  * whatever happens to be inherited rather than naming a colour at all.
  */
-function parseViaCssom(text: string): LyraColorHsva | null {
-  if (typeof document === 'undefined' || CSS_WIDE_KEYWORDS.test(text)) return null;
+function parseViaCssom(text: string, doc: Document | undefined): LyraColorHsva | null {
+  if (!doc?.defaultView || CSS_WIDE_KEYWORDS.test(text)) return null;
   const cached = cssomCache.get(text);
   if (cached !== undefined) return cached;
-  const resolved = resolveViaCssom(text);
+  const resolved = resolveViaCssom(text, doc);
   // Bounded so a component fed a long stream of distinct colour names cannot grow this without
   // limit; the eviction order does not matter for correctness, only for hit rate.
   if (cssomCache.size >= CSSOM_CACHE_LIMIT) cssomCache.clear();
@@ -310,41 +311,47 @@ function parseViaCssom(text: string): LyraColorHsva | null {
 const CSSOM_CACHE_LIMIT = 64;
 const cssomCache = new Map<string, LyraColorHsva | null>();
 
-function resolveViaCssom(text: string): LyraColorHsva | null {
-  const probe = document.createElement('span');
+function resolveViaCssom(text: string, doc: Document): LyraColorHsva | null {
+  const probe = doc.createElement('span');
   probe.style.color = text;
   if (probe.style.color === '') return null;
+  const parent = doc.body ?? doc.documentElement;
+  const view = doc.defaultView;
+  if (!parent || !view) return null;
   probe.style.position = 'absolute';
   probe.style.visibility = 'hidden';
   probe.style.pointerEvents = 'none';
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  const serialized = computed.trim();
+  let serialized: string;
+  try {
+    parent.append(probe);
+    serialized = view.getComputedStyle(probe).color.trim();
+  } finally {
+    probe.remove();
+  }
   const functional = parseFunctional(serialized);
   if (functional) return functional;
 
   // Modern computed colors may remain in lab()/oklch()/color() form. Canvas converts every
   // browser-supported computed color into the picker's sRGB working space without duplicating
   // the browser's color-science implementation.
-  const canvas = document.createElement('canvas');
-  canvas.width = 1;
-  canvas.height = 1;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) return null;
-  context.clearRect(0, 0, 1, 1);
-  context.fillStyle = serialized;
-  context.fillRect(0, 0, 1, 1);
-  const [red = 0, green = 0, blue = 0, alpha = 0] = context.getImageData(0, 0, 1, 1).data;
+  const rgba = readCanvasRgba(doc, serialized);
+  if (!rgba) return null;
+  const [red, green, blue, alpha] = rgba;
   const converted = rgbToHsv(red, green, blue);
-  return hsva(converted.h, converted.s, converted.v, alpha / 255);
+  return hsva(converted.h, converted.s, converted.v, alpha);
 }
 
-/** Parses any colour this component accepts, or returns `null` when the input is not a colour. */
-export function parseColor(input: string): LyraColorHsva | null {
+/**
+ * Parses any colour this component accepts, or returns `null` when the input is not a colour.
+ * Names and newer colour functions resolve through `doc` (default: the global document).
+ */
+export function parseColor(
+  input: string,
+  doc: Document | undefined = typeof document === 'undefined' ? undefined : document,
+): LyraColorHsva | null {
   const text = (input ?? '').trim();
   if (text === '') return null;
-  return parseHex(text) ?? parseFunctional(text) ?? parseViaCssom(text);
+  return parseHex(text) ?? parseFunctional(text) ?? parseViaCssom(text, doc);
 }
 
 const hexByte = (channel: number): string =>

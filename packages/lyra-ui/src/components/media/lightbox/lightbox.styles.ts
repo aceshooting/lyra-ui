@@ -92,6 +92,8 @@ export const styles = css`
     ${iconHitTarget}
     border: none;
     border-radius: var(--lr-radius-pill);
+    --_lr-lightbox-control-hover-bg: var(--lr-lightbox-control-hover-bg, var(--lr-color-brand-quiet));
+    --_lr-lightbox-control-hover-color: var(--lr-lightbox-control-hover-color, var(--lr-color-brand));
     background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
     color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
     cursor: pointer;
@@ -107,8 +109,8 @@ export const styles = css`
   :where([part="close-button"]):hover,
   :where([part="previous-button"]):hover:where(:not(:disabled)),
   :where([part="next-button"]):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--_lr-lightbox-control-hover-bg);
+    color: var(--_lr-lightbox-control-hover-color);
   }
   /* Pressed carries the hover fill further toward --lr-color-mix-partner: these controls float
      over arbitrary photography, so the press must be legible on its own rather than relying on the
@@ -117,12 +119,11 @@ export const styles = css`
   :where([part="close-button"]):active,
   :where([part="previous-button"]):active:where(:not(:disabled)),
   :where([part="next-button"]):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-lightbox-control-active-bg,
+      color-mix(in oklab, var(--_lr-lightbox-control-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-lightbox-control-active-color, var(--_lr-lightbox-control-hover-color));
   }
   [part="source-retry"]:focus-visible,
   [part="close-button"]:focus-visible,

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'संदर्भ दीं',
   promptInputLabel: 'AI प्रॉम्प्ट',
   promptInputControls: 'प्रॉम्प्ट विकल्प',
+  promptInputCollectionLimit: 'इनपुट के सीमा पूरा हो गइल, एह से प्रॉम्प्ट इनपुट के कुछ हिस्सा छोड़ दिहल गइल बा।',
   promptInputSources: 'स्रोत',
   promptInputAttachments: 'संलग्न फाइल',
   handoffLabel: 'एजेंट के सौंपल',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'कवनो आवाज नइखे',
   voicePickerRequired: 'कृपया आवाज चुनीं।',
   voicePickerPreview: '{name} के प्रीव्यू',
+  voicePickerPreviewFailed: 'आवाज के प्रीव्यू उपलब्ध नइखे।',
   voicePickerStopPreview: 'प्रीव्यू रोकीं',
   realtimeSessionLabel: 'रीयलटाइम सत्र',
   realtimeSessionDisconnected: 'कनेक्शन टूटल बा',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'लमहर कोड बिना सिंटैक्स हाइलाइटिंग के देखावल जात बा।',
   codeBlockHighlightedLine: 'हाइलाइट कइल गइल पंक्ति',
   codeBlockActiveLine: 'सक्रिय हाइलाइट पंक्ति',
+  codeBlockToggle: 'कोड देखाईं भा लुकाईं',
 };
 
 registerLyraLocale('bho', strings);

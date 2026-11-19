@@ -133,12 +133,8 @@ export interface LyraAttachmentChipEventMap {
  *
  * Identifying *which* attachment a `lr-remove`/`lr-retry`/`lr-preview-request` event is about:
  * set `attachment-id="..."` when you have a stable server-side attachment identity. The platform
- * `id` remains available exclusively for DOM identity and idrefs. When `attachmentId` is unset and
- * `file` is set, a stable attachment identity is
- * derived from `` `${file.name}:${file.size}:${file.lastModified}` `` — stable
- * across re-renders of the *same* `File` object without requiring the
- * consumer to invent one. When neither is available, a generated internal id
- * is used as a last resort so the event always has *some* id.
+ * `id` remains available for DOM identity and idrefs. With no nonblank attachment id,
+ * each chip reports its own stable id, including when several chips display the same file.
  *
  * i18n/locale: complete contextual messages (including filename/percentage
  * placement and punctuation) route through the shared localization registry.
@@ -178,6 +174,13 @@ export interface LyraAttachmentChipEventMap {
  * default changes per `status` to that status's `-quiet` tint; the public value still wins.
  * @cssprop [--lr-attachment-chip-border=var(--lr-color-border-subtle)] - Chip border color. Every
  * non-`pending` `status` changes its private default to `transparent`.
+ * @cssprop [--lr-attachment-chip-thumbnail-size=var(--lr-icon-button-size)] - Thumbnail size at the
+ * default density, rethemeable independently of the action buttons' hit area.
+ * @cssprop [--lr-attachment-chip-thumbnail-radius=calc(var(--lr-radius) * 0.6)] - Thumbnail corner radius.
+ * @cssprop [--lr-attachment-chip-action-hover-bg=color-mix(in srgb, var(--lr-color-text) 8%, transparent)] -
+ * Hovered retry, preview, and remove button background.
+ * @cssprop [--lr-attachment-chip-action-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ * Pressed retry, preview, and remove button background.
  * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
  * at the compact density (`size="s"` and below), rethemeable independently of
  * `--lr-icon-button-size`. Retry, preview, and remove actions retain that shared token's minimum
@@ -257,8 +260,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     this.requestUpdate('bytes', old);
   }
 
-  /** Stable domain identity carried by attachment action events. */
-  /** Stable action identity. Empty or whitespace-only values use the documented fallback. */
+  /** Domain id for attachment actions. Empty or whitespace-only values use a stable per-chip id. */
   @property({ attribute: 'attachment-id', useDefault: true }) attachmentId = '';
 
   /** MIME type, used only while `file` is unset. */
@@ -361,8 +363,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** Owns the shared assertive light-DOM region used for upload failures. */
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
 
-  // Last-resort id, generated once per instance -- see the class doc's
-  // "Identifying which attachment..." section.
   private readonly fallbackId = nextId('attachment-chip');
 
   private get effectiveName(): string {
@@ -402,8 +402,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   private get resolvedId(): string {
     if (this.attachmentId.trim().length > 0) return this.attachmentId;
-    if (this.file)
-      return `${this.file.name}:${this.file.size}:${this.file.lastModified}`;
     return this.fallbackId;
   }
 

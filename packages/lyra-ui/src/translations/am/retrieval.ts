@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'የረጅም ጊዜ ትውስታዎች',
   memoryPanelAdd: 'ወደ የረጅም ጊዜ ትውስታ ጨምር',
   memoryPanelAddWithContext: '"{label}"ን ወደ የረጅም ጊዜ ትውስታ ጨምር',
+  memoryPanelAddAccessibleName: '{action}፦ {label}',
   memoryPanelForgetAll: 'ሁሉንም እርሳ',
   memoryPanelConfirmAddHeading: 'ይህን ወደ የረጅም ጊዜ ትውስታ ማከል?',
   memoryPanelConfirmRemoveHeading: 'ይህን ንጥል ማስወገድ?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'የግምገማ ክፍሎች',
   ragEvalDashboardAllSlices: 'ሁሉም',
   ragEvalDashboardSliceUnavailable: 'ለ{slice} ምንም የግምገማ አሂዶች አይገኙም።',
+  ragEvalDashboardMetricUnavailable: 'ለ{metric} ምንም የግምገማ መለኪያ አይገኝም።',
   knowledgeBaseSyncIdle: 'ሥራ ፈት',
   knowledgeBaseSyncSyncing: 'በማመሳሰል ላይ',
   knowledgeBaseSyncPaused: 'ቆሟል',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'ውጤት {index} ከ{total}',
   ragAnswerEmpty: 'እስካሁን መልስ የለም።',
   retrievalTraceEmpty: 'ምንም የመልሶ ማግኛ ደረጃዎች የሉም',
+  retrievalTraceLabel: 'የመልሶ ማግኛ ክትትል',
   sourcePickerMatches: {
     one: '{count} ምንጭ ተዛማጅ',
     other: '{count} ምንጮች ይዛመዳሉ',

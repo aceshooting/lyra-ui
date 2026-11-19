@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ရင်းမြစ်ညွှန်းရန်',
   promptInputLabel: 'AI အမှာစာ',
   promptInputControls: 'Prompt ရွေးချယ်စရာများ',
+  promptInputCollectionLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက် ပြည့်သွားသဖြင့် ရိုက်ထည့်ထားသော အမှာစာ၏ တစ်စိတ်တစ်ပိုင်းကို ချန်လှပ်ထားသည်။',
   promptInputSources: 'အရင်းအမြစ်များ',
   promptInputAttachments: 'တွဲဖက်ဖိုင်များ',
   handoffLabel: 'အေးဂျင့်ထံ လွှဲပေးခြင်း',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'အသံများ မရနိုင်ပါ',
   voicePickerRequired: 'အသံတစ်ခု ရွေးပါ။',
   voicePickerPreview: '{name} ကို အစမ်းကြည့်ရန်',
+  voicePickerPreviewFailed: 'အသံကို အစမ်းနားထောင်၍ မရပါ။',
   voicePickerStopPreview: 'အစမ်းကြည့်မှု ရပ်ရန်',
   realtimeSessionLabel: 'အချိန်နှင့်တပြေးညီ စက်ရှင်',
   realtimeSessionDisconnected: 'ချိတ်ဆက်မှု ပြတ်တောက်သွားသည်',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'ရှည်လျားသော ကုဒ်ကို ကုဒ်ဖွဲ့စည်းပုံအလိုက် အရောင်ခွဲခြားဖော်ပြခြင်းမရှိဘဲ ပြထားသည်။',
   codeBlockHighlightedLine: 'အလေးပေးထားသော လိုင်း',
   codeBlockActiveLine: 'လက်ရှိ အလေးပေးထားသော လိုင်း',
+  codeBlockToggle: 'ကုဒ်ကို ပြရန် သို့မဟုတ် ဖျောက်ရန်',
 };
 
 registerLyraLocale('my', strings);

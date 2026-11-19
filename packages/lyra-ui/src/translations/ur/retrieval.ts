@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'طویل مدتی یادداشتیں',
   memoryPanelAdd: 'طویل مدتی یادداشت میں شامل کریں',
   memoryPanelAddWithContext: '"{label}" کو طویل مدتی یادداشت میں شامل کریں',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'سب بھلا دیں',
   memoryPanelConfirmAddHeading: 'اسے طویل مدتی یادداشت میں شامل کریں؟',
   memoryPanelConfirmRemoveHeading: 'یہ شے ہٹائیں؟',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'جانچ کے حصے',
   ragEvalDashboardAllSlices: 'سب',
   ragEvalDashboardSliceUnavailable: '{slice} کے لیے جانچ کا کوئی اجرا دستیاب نہیں۔',
+  ragEvalDashboardMetricUnavailable: '{metric} کے لیے جانچ کا کوئی پیمانہ دستیاب نہیں ہے۔',
   knowledgeBaseSyncIdle: 'غیرفعال',
   knowledgeBaseSyncSyncing: 'ہم وقت ہو رہا ہے',
   knowledgeBaseSyncPaused: 'روکا گیا',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'نتیجہ {index} از {total}',
   ragAnswerEmpty: 'ابھی تک کوئی جواب نہیں۔',
   retrievalTraceEmpty: 'بازیافت کے مراحل نہیں ہیں۔',
+  retrievalTraceLabel: 'بازیافت کا ٹریس',
   sourcePickerMatches: {
     one: '{count} ماخذ مماثلت',
     other: '{count} ذرائع مماثل ہیں۔',

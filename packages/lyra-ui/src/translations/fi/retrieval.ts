@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Pitkäaikaiset muistot',
   memoryPanelAdd: 'Lisää pitkäaikaiseen muistiin',
   memoryPanelAddWithContext: 'Lisää pitkäaikaiseen muistiin: ”{label}”',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Unohda kaikki',
   memoryPanelConfirmAddHeading: 'Lisätäänkö tämä pitkäaikaiseen muistiin?',
   memoryPanelConfirmRemoveHeading: 'Poistetaanko tämä kohde?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Arviointiosajoukot',
   ragEvalDashboardAllSlices: 'Kaikki',
   ragEvalDashboardSliceUnavailable: 'Arviointiajoja ei ole saatavilla osajoukolle: {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Arviointimittaria ei ole saatavilla kohteelle {metric}.',
   knowledgeBaseSyncIdle: 'Toimeton',
   knowledgeBaseSyncSyncing: 'Synkronoidaan',
   knowledgeBaseSyncPaused: 'Keskeytetty',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Tulos {index}/{total}',
   ragAnswerEmpty: 'Ei vastausta vielä',
   retrievalTraceEmpty: 'Ei hakuvaiheita',
+  retrievalTraceLabel: 'Haun jäljitys',
   sourcePickerMatches: {
     one: '{count} lähdehaku',
     other: '{count} lähdettä vastaa',

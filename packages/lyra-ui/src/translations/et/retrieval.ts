@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Pikaajalised mälestused',
   memoryPanelAdd: 'Lisa pikaajalisse mällu',
   memoryPanelAddWithContext: 'Lisa „{label}” pikaajalisse mällu',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Unusta kõik',
   memoryPanelConfirmAddHeading: 'Kas lisada see pikaajalisse mällu?',
   memoryPanelConfirmRemoveHeading: 'Kas eemaldada see üksus?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Hindamislõiked',
   ragEvalDashboardAllSlices: 'Kõik',
   ragEvalDashboardSliceUnavailable: 'Lõike {slice} jaoks pole hindamiskäivitusi saadaval.',
+  ragEvalDashboardMetricUnavailable: 'Üksuse {metric} jaoks pole hindamismõõdikut saadaval.',
   knowledgeBaseSyncIdle: 'Jõude',
   knowledgeBaseSyncSyncing: 'Sünkroonimine',
   knowledgeBaseSyncPaused: 'Peatatud',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Tulemus {index}/{total}',
   ragAnswerEmpty: 'Vastust veel pole',
   retrievalTraceEmpty: 'Hanke etappe pole',
+  retrievalTraceLabel: 'Hanke jälg',
   sourcePickerMatches: {
     one: '{count} sobiv allikas',
     other: '{count} sobivat allikat',

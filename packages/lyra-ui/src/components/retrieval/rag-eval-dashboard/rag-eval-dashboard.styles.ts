@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -73,9 +74,6 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     overflow-wrap: anywhere;
   }
-  [part~='slice-selected'] {
-    ${iconHitTarget}
-  }
   [part~='slice']:hover,
   [part~='metric']:hover,
   [part='run']:hover {
@@ -116,6 +114,9 @@ export const styles = css`
     inline-size: 100%;
     padding: var(--lr-space-s);
     text-align: start;
+  }
+  [part='run'] > span {
+    ${wrapGuard}
   }
   @container ${compactContainerQuery} {
     [part='metrics'] {

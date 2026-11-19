@@ -127,6 +127,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: '長期メモリ',
   memoryPanelAdd: '長期メモリに追加',
   memoryPanelAddWithContext: '「{label}」を長期メモリに追加',
+  memoryPanelAddAccessibleName: '{action}：{label}',
   memoryPanelForgetAll: 'すべて削除',
   memoryPanelConfirmAddHeading: 'これを長期メモリに追加しますか？',
   memoryPanelConfirmRemoveHeading: 'この項目を削除しますか？',
@@ -185,6 +186,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: '評価スライス',
   ragEvalDashboardAllSlices: 'すべて',
   ragEvalDashboardSliceUnavailable: '{slice} で利用できる評価の実行はありません。',
+  ragEvalDashboardMetricUnavailable: '{metric} で利用できる評価指標はありません。',
   knowledgeBaseSyncIdle: '待機中',
   knowledgeBaseSyncSyncing: '同期中',
   knowledgeBaseSyncPaused: '一時停止中',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '結果 {index}/{total}',
   ragAnswerEmpty: 'まだ答えはありません',
   retrievalTraceEmpty: '取得ステージなし',
+  retrievalTraceLabel: '取得トレース',
   sourcePickerMatches: {
     other: '{count} 個のソースが一致します',
   },

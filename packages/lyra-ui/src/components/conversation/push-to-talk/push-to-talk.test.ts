@@ -12,7 +12,7 @@ import "./push-to-talk.js";
 import "../../utility/live-region/live-region.js";
 import type { LyraPushToTalk } from "./push-to-talk.js";
 import { MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -2824,4 +2824,168 @@ it("projects a host aria-describedby onto the trigger", async () => {
   await el.updateComplete;
   const described = (trigger(el) as HTMLElement & { ariaDescribedByElements: Element[] | null }).ariaDescribedByElements;
   expect(described?.map((node) => node.id)).to.deep.equal(["ptt-help"]);
+});
+
+it('yields modified shortcuts and rejects secondary pointer buttons in hold mode', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const button = trigger(el);
+    for (const modifier of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true }]) {
+      const key = new KeyboardEvent('keydown', { key: ' ', cancelable: true, ...modifier });
+      button.dispatchEvent(key);
+      expect(key.defaultPrevented).to.equal(false);
+      expect(el.state).to.equal('idle');
+    }
+    for (const mouseButton of [1, 2]) {
+      const event = new PointerEvent('pointerdown', { button: mouseButton, pointerId: 7, cancelable: true });
+      button.dispatchEvent(event);
+      expect(event.defaultPrevented).to.equal(false);
+      expect(el.state).to.equal('idle');
+    }
+  } finally { restore(); }
+});
+
+it('ends an uncaptured hold when the owning pointer releases outside the trigger', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const started = oneEvent(el, 'lr-record-start');
+    trigger(el).dispatchEvent(new PointerEvent('pointerdown', { pointerId: 33 }));
+    await started;
+    document.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 34 }));
+    expect(el.state).to.equal('recording');
+    document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 33 }));
+    await waitUntil(() => el.state === 'idle');
+  } finally { restore(); }
+});
+
+it('accepts click-only hold activation and centers the recording glyph', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const button = trigger(el);
+    button.click();
+    await waitUntil(() => el.state === 'recording');
+    await el.updateComplete;
+    const pulse = el.shadowRoot!.querySelector('[part="pulse"]')!;
+    const glyph = pulse.querySelector('svg')!;
+    const center = (rect: DOMRect) => [rect.x + rect.width / 2, rect.y + rect.height / 2];
+    const [x, y] = center(pulse.getBoundingClientRect());
+    const [gx, gy] = center(glyph.getBoundingClientRect());
+    expect(gx!).to.be.closeTo(x!, 1);
+    expect(gy!).to.be.closeTo(y!, 1);
+    button.click();
+    await waitUntil(() => el.state === 'idle');
+  } finally { restore(); }
+});
+
+it('centers a slotted recording icon within the pulse', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk>
+      <span slot="recording-icon" style="width: 9px; height: 7px"></span></lr-push-to-talk>`);
+    await el.start();
+    await el.updateComplete;
+    const pulse = el.shadowRoot!.querySelector('[part="pulse"]')!.getBoundingClientRect();
+    const icon = el.querySelector('[slot="recording-icon"]')!.getBoundingClientRect();
+    expect(icon.x + icon.width / 2).to.be.closeTo(pulse.x + pulse.width / 2, 1);
+    expect(icon.y + icon.height / 2).to.be.closeTo(pulse.y + pulse.height / 2, 1);
+    el.stop();
+  } finally { restore(); }
+});
+
+it('releases a captured hold on loss of capture and ignores the following pointer click', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const button = trigger(el);
+    let captured = false;
+    button.setPointerCapture = () => { captured = true; };
+    button.hasPointerCapture = () => captured;
+    button.releasePointerCapture = () => { captured = false; };
+    const started = oneEvent(el, 'lr-record-start');
+    button.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 82 }));
+    await started;
+    button.click();
+    expect(el.state).to.equal('recording');
+    const stopped = oneEvent(el, 'lr-record-stop');
+    button.dispatchEvent(new PointerEvent('lostpointercapture', { pointerId: 82 }));
+    await stopped;
+    expect(captured).to.equal(false);
+    button.dispatchEvent(new MouseEvent('click', { detail: 1 }));
+    button.dispatchEvent(new MouseEvent('click', { ctrlKey: true }));
+    expect(el.state).to.equal('idle');
+  } finally { restore(); }
+});
+
+it('supports click-only recording from the realtime session capture control', async () => {
+  await import('../realtime-session/realtime-session.js');
+  const restore = stubSuccessfulCapture();
+  try {
+    const session = await fixture<HTMLElementTagNameMap['lr-realtime-session']>(html`<lr-realtime-session state="connected"></lr-realtime-session>`);
+    const capture = session.shadowRoot!.querySelector('lr-push-to-talk')!;
+    await capture.updateComplete;
+    trigger(capture).click();
+    await waitUntil(() => capture.state === 'recording');
+    trigger(capture).click();
+    await waitUntil(() => capture.state === 'idle');
+  } finally { restore(); }
+});
+
+it('leaves the first toggle activation to the button and consumes repeated Enter', async () => {
+  const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`);
+  const button = trigger(el);
+  const first = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+  const repeat = new KeyboardEvent('keydown', { key: 'Enter', repeat: true, cancelable: true });
+  button.dispatchEvent(first);
+  button.dispatchEvent(repeat);
+  expect(first.defaultPrevented).to.equal(false);
+  expect(repeat.defaultPrevented).to.equal(true);
+});
+
+it('themes the hover and pressed backgrounds independently', async () => {
+  const restore = stubSuccessfulCapture();
+  const el = await fixture<HTMLElementTagNameMap['lr-push-to-talk']>(html`<lr-push-to-talk mode="toggle"
+    style="--lr-transition-fast:0s; --lr-push-to-talk-trigger-hover-bg:rgb(11, 22, 33); --lr-push-to-talk-trigger-active-bg:rgb(33, 22, 11)"></lr-push-to-talk>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+  try {
+    await hoverUntilMatched(button, 'the trigger receives hover');
+    await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(11, 22, 33)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(33, 22, 11)');
+  } finally {
+    el.remove();
+    await resetMouse();
+    restore();
+  }
+});
+
+it('streams chunks without retaining the take when stream-only is enabled', async () => {
+  const restore = stubSuccessfulCapture();
+  let recorder: FakeMediaRecorder | undefined;
+  const intervals: (number | undefined)[] = [];
+  window.MediaRecorder = class extends FakeMediaRecorder {
+    constructor(stream: FakeStream, options?: { mimeType?: string }) { super(stream, options); recorder = this; }
+    override start(timeslice?: number): void { intervals.push(timeslice); super.start(timeslice); }
+  } as unknown as typeof MediaRecorder;
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk stream-only></lr-push-to-talk>`);
+    const chunks: Blob[] = [];
+    el.addEventListener('lr-record-chunk', event => chunks.push(event.detail.blob));
+    expect(await el.start()).to.equal(true);
+    el.removeAttribute('stream-only');
+    recorder!.ondataavailable!({ data: new Blob(['first']) });
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.stop();
+    const blob = (await stopped).detail.blob as Blob;
+    expect(await Promise.all(chunks.map(chunk => chunk.text()))).to.deep.equal(['first', 'x']);
+    expect(blob.size).to.equal(0);
+    el.timesliceMs = 100;
+    expect(await el.start()).to.equal(true);
+    const secondStop = oneEvent(el, 'lr-record-stop');
+    el.stop();
+    expect(await ((await secondStop).detail.blob as Blob).text()).to.equal('x');
+    expect(intervals).to.deep.equal([1000, 100]);
+  } finally { restore(); }
 });

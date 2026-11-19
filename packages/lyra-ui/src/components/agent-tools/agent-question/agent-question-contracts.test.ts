@@ -63,3 +63,15 @@ it('returns focus from the submitted message to an enabled action when the host 
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.matches('button[part="action"]:enabled')).to.equal(true);
 });
+
+it('requires the new schema form before accepting an earlier schema-free question', async () => {
+  const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q"></lr-agent-question>`);
+  let responses = 0;
+  el.addEventListener('lr-question-response', () => responses++);
+  el.schema = schema;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="accept"]')!.click();
+  expect(responses).to.equal(0);
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="accept"]')!.click();
+  expect(responses).to.equal(1);
+});

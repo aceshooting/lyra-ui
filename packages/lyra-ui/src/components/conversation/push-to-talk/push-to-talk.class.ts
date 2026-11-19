@@ -1,3 +1,6 @@
+import { shouldIgnoreNavigationKey, isRepeatedActivationKey } from '../../../internal/list-navigation.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
+import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -135,7 +138,7 @@ export interface LyraPushToTalkEventMap {
  * @slot recording-icon - Replaces the default recording-state pulse glyph. Decorative and inert.
  * @event lr-record-start - Capture began. `detail: { stream: MediaStream }` — the same object the
  *   `stream` getter then returns for the duration of the take.
- * @event lr-record-chunk - A `timeslice-ms` slice was produced (only fires when `timeslice-ms > 0`,
+ * @event lr-record-chunk - A `timeslice-ms` slice was produced (fires with `stream-only` or `timeslice-ms > 0`,
  *   in order). `detail: { blob: Blob }` — a container fragment, decodable only once concatenated from
  *   the first chunk of the take.
  * @event lr-record-stop - The take finished normally. `detail: { blob: Blob; durationMs: number }`
@@ -156,6 +159,8 @@ export interface LyraPushToTalkEventMap {
  * @csspart timer - The localized `M:SS` elapsed-time readout, rendered only while recording and
  *   `without-timer` is unset.
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
+ * @cssprop [--lr-push-to-talk-trigger-hover-bg=var(--lr-color-brand-quiet)] - Hovered trigger background.
+ * @cssprop --lr-push-to-talk-trigger-active-bg - Pressed trigger background. Defaults to a mix from the hover fill.
  * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Preferred inline and block size of the
  *   circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.
  * @cssprop [--lr-push-to-talk-recording-color=var(--lr-color-danger)] - Established aggregate
@@ -200,10 +205,13 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.requestUpdate('mode', old);
   }
   /** `> 0` requests periodic `lr-record-chunk` slices from `MediaRecorder` every this-many
-   *  milliseconds; `0` (the default) requests one slice at stop. Clamped to
+   *  milliseconds; `0` requests one slice at stop, or one-second slices in stream-only mode. Clamped to
    *  `[1, MAX_TIMEOUT_MS]` at the point it's handed to `MediaRecorder.start()` -- see `start()` --
    *  so a non-finite/oversized value can't reach that native API unsanitized. */
   @property({ type: Number, attribute: 'timeslice-ms' }) timesliceMs = 0;
+  /** Emit chunks without retaining a final recording. The stop event carries an empty Blob.
+   * A stream-only take requests one-second chunks unless timeslice-ms specifies a positive interval. */
+  @property({ type: Boolean, attribute: 'stream-only' }) streamOnly = false;
   @property({ attribute: 'mime-type' }) mimeType = '';
   @property({ attribute: 'device-id' }) deviceId = '';
   /** Additional audio constraints (`echoCancellation`, …). `deviceId` has one authority: the
@@ -265,6 +273,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private recorderStopRequested = false;
   private recorderFailed = false;
   private holdGesture?: CaptureIntent;
+  private endPointerHold?: () => void;
   private readonly tickTimer = new OwnedInterval(this);
   private readonly maxDurationTimer = new OwnedTimeout(this);
   private audioCtx?: AudioContext;
@@ -328,9 +337,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     );
   }
 
+  private clearHoldGesture(): void {
+    this.holdGesture = undefined;
+    this.endPointerHold?.();
+    this.endPointerHold = undefined;
+  }
+
   private clearIntent(intent: CaptureIntent): void {
     if (this.captureIntent === intent) this.captureIntent = undefined;
-    if (this.holdGesture === intent) this.holdGesture = undefined;
+    if (this.holdGesture === intent) this.clearHoldGesture();
     if (this.queuedIntent === intent) this.queuedIntent = undefined;
   }
 
@@ -359,7 +374,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (this.holdGesture && retainCurrentRealmIntents && this.isCurrentRealm(this.holdGesture.owner)) {
       this.rebaseCurrentRealmOwner(this.holdGesture.owner);
     } else {
-      this.holdGesture = undefined;
+      this.clearHoldGesture();
     }
     if (this.queuedIntent && retainCurrentRealmIntents && this.isCurrentRealm(this.queuedIntent.owner)) {
       this.rebaseCurrentRealmOwner(this.queuedIntent.owner);
@@ -641,13 +656,14 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       const mimeType = this.resolveMimeType(owner);
       const recorder = new owner.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       this.recorder = recorder;
-      const timeslice =
-        this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
+      const streamOnly = this.streamOnly;
+      const interval = this.timesliceMs > 0 ? this.timesliceMs : streamOnly ? 1000 : 0;
+      const timeslice = interval > 0 ? finiteDuration(interval, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
       const emitChunksForTake = timeslice !== undefined;
       recorder.ondataavailable = (event: BlobEvent) => {
         if (this.recorder !== recorder || this.activeCapture !== active) return;
         if (!event.data || event.data.size === 0) return;
-        this.chunks.push(event.data);
+        if (!streamOnly) this.chunks.push(event.data);
         if (emitChunksForTake) this.emit('lr-record-chunk', { blob: event.data });
       };
       recorder.onstop = () => this.finalizeStop(recorder, active);
@@ -911,31 +927,25 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   // -- Pointer (hold mode) ----------------------------------------------
   private onPointerDown = (e: PointerEvent): void => {
-    if (this.mode !== 'hold' || this.disabled) return;
+    if (this.mode !== 'hold' || this.disabled || e.button !== 0 || this.holdGesture) return;
     e.preventDefault();
-    // Firefox throws NotFoundError when a synthetic pointerdown carries an id that is not in its
-    // active-pointer registry; a real pointer can also disappear between dispatch and capture.
-    // Capture improves release delivery but is not a prerequisite for requesting the microphone,
-    // so that platform race must not abort the gesture.
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // Continue with the hold gesture; pointerup/blur/cancel still share the same release path.
-    }
-    if (this.holdGesture) return;
     const intent = this.createIntent('hold', {
       source: 'pointer',
       pointerId: e.pointerId,
     });
     if (!intent) return;
+    const button = e.currentTarget as HTMLElement;
+    const id = e.pointerId;
+    const captured = capturePointer(button, id);
+    const unbind = captured ? undefined : listenUntilPointerEnd(this.ownerDocument, this.onPointerUp, { capture: true });
+    this.endPointerHold = () => {
+      unbind?.();
+      releasePointer(button, id);
+    };
     this.holdGesture = intent;
     void this.startForIntent(intent);
   };
   private onPointerUp = (event: PointerEvent): void => {
-    if (this.holdGesture?.source !== 'pointer' || this.holdGesture.pointerId !== event.pointerId) return;
-    this.releaseHoldGesture();
-  };
-  private onPointerCancel = (event: PointerEvent): void => {
     if (this.holdGesture?.source !== 'pointer' || this.holdGesture.pointerId !== event.pointerId) return;
     this.releaseHoldGesture();
   };
@@ -944,7 +954,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private releaseHoldGesture(retirePending = false): void {
     const intent = this.holdGesture;
     if (!intent) return;
-    this.holdGesture = undefined;
+    this.clearHoldGesture();
     if (this.captureIntent === intent) this.captureIntent = undefined;
     if (this.queuedIntent === intent) this.queuedIntent = undefined;
     const pending = this.pendingRequest;
@@ -957,7 +967,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   // -- Keyboard -----------------------------------------------------------
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.disabled) return;
+    if (this.disabled || shouldIgnoreNavigationKey(e)) return;
     if (e.key === 'Escape') {
       if (this._state !== 'requesting' && this._state !== 'recording') return;
       e.preventDefault();
@@ -965,13 +975,11 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       return;
     }
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    if (this.mode !== 'hold') return; // toggle mode: native click activation (onClick) handles it
-    // Key auto-repeat must not restart the take -- only the initiating (non-repeat) keydown starts
-    // it. Calling preventDefault() here also suppresses the browser's own synthetic click
-    // activation for both Enter (queued on keydown) and Space (queued on keyup, but suppressed by
-    // an uncanceled corresponding keydown per the HTML activation-behavior spec), so hold mode's
-    // pointerup-driven stop() never races a spurious toggle-mode-style click.
-    if (e.repeat) return;
+    if (isRepeatedActivationKey(e)) {
+      e.preventDefault();
+      return;
+    }
+    if (this.mode !== 'hold') return;
     e.preventDefault();
     if (this.holdGesture) return;
     const intent = this.createIntent('hold', {
@@ -992,8 +1000,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   };
 
   // -- Toggle mode ----------------------------------------------------------
-  private onClick = (): void => {
-    if (this.mode !== 'toggle' || this.disabled) return;
+  private onClick = (event: MouseEvent): void => {
+    if (this.disabled || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (this.mode === 'hold' && (event.detail !== 0 || this.holdGesture)) return;
     if (this._state === 'recording') this.stop();
     else void this.start();
   };
@@ -1036,7 +1045,8 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         ?disabled=${this.disabled || !supported}
         @pointerdown=${this.onPointerDown}
         @pointerup=${this.onPointerUp}
-        @pointercancel=${this.onPointerCancel}
+        @pointercancel=${this.onPointerUp}
+        @lostpointercapture=${this.onPointerUp}
         @keydown=${this.onKeyDown}
         @keyup=${this.onKeyUp}
         @blur=${this.onBlur}

@@ -236,7 +236,23 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     this.sourceReviewMemo = undefined; this.sourceColumnsMemo = undefined; this.sourcePages.bind(undefined);
   }
   protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed); this.syncSource(); this.syncPair();
+    super.willUpdate(changed); this.syncSource(); this.syncPair(); this.projectSourceReview();
+  }
+
+  /** Projects the selected source record's review before render, so a failure lands in this update. */
+  private projectSourceReview(): void {
+    if (!this.sourceMode || this.pairFailure || this.sourcePages.state.selectionPending) return;
+    const selected = this.selectedRun;
+    const keys = this.normalizedRubricKeys;
+    if (!selected || (this.sourceReviewMemo?.run === selected && this.sourceReviewMemo.keys === keys)) return;
+    const epoch = this.sourceEpoch; const version = this.pairVersion;
+    const current = () => this.isConnected && this.sourceMode && this.sourceEpoch === epoch && this.pairVersion === version && this.selectedRun === selected;
+    try {
+      const projected = projectEvalSourceReview(selected.review, keys, current);
+      if (current()) this.sourceReviewMemo = { run: selected, keys, value: projected };
+    } catch (error) {
+      if (current()) this.pairFailure = error;
+    }
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -441,15 +457,9 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     const current = () => (!source && !this.sourceMode) || (source && this.isConnected && this.sourceMode && this.sourceEpoch === epoch && this.pairVersion === version && this.selectedRun === selected && !this.pairFailure);
     let value: RubricValue;
     if (source) {
-      try {
-        const keys = this.normalizedRubricKeys;
-        if (this.sourceReviewMemo?.run !== selected || this.sourceReviewMemo.keys !== keys) {
-          const projected = projectEvalSourceReview(selected.review, keys, current);
-          if (!current()) return nothing;
-          this.sourceReviewMemo = { run: selected, keys, value: projected };
-        }
-        value = this.sourceReviewMemo.value;
-      } catch (error) { if (current()) { this.pairFailure = error; this.sourceStateVersion++; } return nothing; }
+      const memo = this.sourceReviewMemo;
+      if (memo?.run !== selected || memo.keys !== this.normalizedRubricKeys) return nothing;
+      value = memo.value;
     } else value = this.reviewValue(selected);
     return html`<lr-rubric-form
       part="review"
@@ -463,6 +473,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
       @focus=${this.stopOwnedEvent}
       @blur=${this.stopOwnedEvent}
       @lr-invalid=${this.stopOwnedEvent}
+      @lr-change=${this.stopOwnedEvent}
       @lr-input=${(e: CustomEvent<{ value: RubricValue }>) => {
         e.stopPropagation();
         if (!current() || (source && this.disabled)) return;
@@ -505,6 +516,9 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
         @lr-copy=${this.stopOwnedEvent}
         @lr-error=${this.stopOwnedEvent}
         @lr-copy-error=${this.stopOwnedEvent}
+        @lr-anchor-result=${this.stopOwnedEvent}
+        @lr-highlight-activate=${this.stopOwnedEvent}
+        @lr-search-change=${this.stopOwnedEvent}
       ></lr-diff-view>
     </div>`;
   }
@@ -580,6 +594,9 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
             } else if (!this.sourceMode) this.emit('lr-run-activate', snapshotEventDetail({ runId: run.id, run }, this.ownerDocument.defaultView) as LyraEventDetailSnapshot<AgentRunActivateDetail<EvalRunResult>>);
           }}
           @lr-row-click=${this.stopOwnedEvent}
+          @lr-row-expand-request=${this.stopOwnedEvent}
+          @lr-page-request=${this.stopOwnedEvent}
+          @lr-column-resize-request=${this.stopOwnedEvent}
         ></lr-table>
         ${selectionLoading || selectionFailed ? html`<div part="selection-status">${this.localize(selectionFailed ? 'sourceSelectionFailed' : 'sourceSelectionLoading')}${selectionFailed ? html`<button part="selection-retry" data-agent-action type="button" @click=${() => { if (current() && this.pairVersion === pairVersion) this.syncPair(true); }}>${this.localize('retry')}</button>` : nothing}</div>` : nothing}
         ${review}

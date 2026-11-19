@@ -2,6 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './avatar-group.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import '../avatar/avatar.js';
 import type { LyraAvatarGroup } from './avatar-group.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -1121,4 +1122,20 @@ it('does not rescan the group after its own avatar attribute writes', async () =
   first.hidden = true;
   await waitUntil(() => passes > 0);
   expect(first.hidden).to.equal(true);
+});
+
+it('paints the hovered overflow badge ring from its public token', async () => {
+  const el = await fixture<LyraAvatarGroup>(html`<lr-avatar-group max="1" style="--lr-transition-interactive: none; --lr-avatar-group-badge-hover-ring-color: rgb(1, 2, 3)">
+    <lr-avatar initials="A"></lr-avatar><lr-avatar initials="B"></lr-avatar>
+  </lr-avatar-group>`);
+  await el.updateComplete;
+  const badge = el.shadowRoot!.querySelector<HTMLElement>('[part="overflow-badge"]')!;
+  const visual = el.shadowRoot!.querySelector<HTMLElement>('[part="overflow-badge-visual"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(badge, 'badge hover');
+    await waitUntil(() => getComputedStyle(visual).boxShadow.includes('rgb(1, 2, 3)'), 'hover ring token');
+  } finally {
+    await resetMouse();
+  }
 });

@@ -81,7 +81,7 @@ export interface LyraEntityDossierEventMap
  * `lr-toggle`, `lr-tab-show`, plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
  * `lr-relation-activate`) bubbles through unmodified (`composed: true` crosses this component's own
  * shadow boundary with no re-dispatch needed), except direct chunk-inspector `lr-toggle` events,
- * which gain `section: 'chunks'`, and tab changes, which expose the dossier's `tabId`.
+ * which gain `kind: 'chunk'` and `section: 'chunks'`, and tab changes, which expose the dossier's `tabId`.
  *
  * `chunks`/`thresholds` (the "supporting chunks" tab) and `provenance` (the "Provenance" tab) are
  * deliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks
@@ -112,8 +112,8 @@ export interface LyraEntityDossierEventMap
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
  *   `detail: { chunkId, sourceId, anchor? }`.
  * @event lr-toggle - A section or chunk disclosure changed. Direct supporting-chunk toggles
- *   gain `section: 'chunks'`; provenance-panel toggles pass through unchanged.
- *   `detail: { section, expanded, itemId? }`.
+ *   carry `{ kind: 'chunk', section: 'chunks', expanded, itemId }`.
+ *   Provenance-panel section and chunk toggles pass through unchanged.
  * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
  *   panel. `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from a community card inside the embedded provenance panel.
@@ -241,6 +241,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     if (event.composedPath()[0] !== event.currentTarget) return;
     event.stopPropagation();
     this.emit('lr-toggle', {
+      kind: 'chunk',
       section: 'chunks',
       expanded: event.detail.expanded,
       itemId: event.detail.itemId,
@@ -248,11 +249,12 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   };
 
   override render(): TemplateResult {
-    const label = this.hasAttribute('aria-label')
-      ? this.getAttribute('aria-label')!
-      : this.label ?? this.localize('details');
+    const authored = this.getAttribute('aria-label');
+    const hostOwnsName = authored !== null && authored !== '';
+    const role = hostOwnsName ? nothing : 'group';
+    const label = hostOwnsName ? nothing : authored ?? this.label ?? this.localize('details');
     if (!this.entity) {
-      return html`<div part="base" role="group" aria-label=${label}>
+      return html`<div part="base" role=${role} aria-label=${label}>
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
@@ -268,7 +270,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
       : this.accessibleLabel ?? nothing;
 
     return html`
-      <div part="base" role="group" aria-label=${label}>
+      <div part="base" role=${role} aria-label=${label}>
         <div part="header">
           <lr-entity-card
             part="entity-card"
@@ -296,6 +298,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
           .active=${this.activeTab}
           @lr-tab-show=${this.onTabsChange}
           @lr-activate=${this.containTabsEvent}
+          @lr-tab-hide=${this.containTabsEvent}
         >
           <lr-tab panel="relationships"
             >${this.localize('neighborListLabel')}</lr-tab

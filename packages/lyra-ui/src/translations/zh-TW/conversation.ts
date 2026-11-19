@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: '引用',
   promptInputLabel: 'AI 提示詞',
   promptInputControls: '提示詞選項',
+  promptInputCollectionLimit: '已達輸入上限，部分提示詞輸入內容已省略。',
   promptInputSources: '來源',
   promptInputAttachments: '附件',
   handoffLabel: '智慧體交接',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: '沒有可用的語音',
   voicePickerRequired: '請選擇一種語音。',
   voicePickerPreview: '試聽{name}',
+  voicePickerPreviewFailed: '無法試聽語音。',
   voicePickerStopPreview: '停止試聽',
   realtimeSessionLabel: '即時會話',
   realtimeSessionDisconnected: '已斷開',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: '較長的程式碼會以不含語法醒目提示的方式顯示。',
   codeBlockHighlightedLine: '醒目提示的行',
   codeBlockActiveLine: '作用中的醒目提示行',
+  codeBlockToggle: '顯示或隱藏程式碼',
 };
 
 registerLyraLocale('zh-TW', strings);

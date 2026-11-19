@@ -43,7 +43,7 @@ export interface LyraPanZoomEventMap {
  *
  * @customElement lr-pan-zoom
  * @slot - Content to inspect; when `src` is set, an image is rendered instead.
- * @event lr-zoom-change - Zoom changed. `detail: { zoom }`.
+ * @event lr-zoom-change - A zoom action reached its rendered scale. `detail: { zoom }`.
  * @event lr-render-error - The `src` image failed to load. `detail: { error }`.
  * @event {FocusEvent} focus - Relayed once from the scrollable viewport as a bubbling, composed
  *   native event.
@@ -60,8 +60,10 @@ export interface LyraPanZoomEventMap {
  * @cssprop [--lr-pan-zoom-min-block-size=var(--lr-size-10rem)] - Minimum viewport block size.
  * @cssprop [--lr-pan-zoom-zoom=1] - Read-only scale written from `zoom`; set the property instead.
  * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
- * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
- * @cssprop [--lr-icon-button-bg-hover=var(--lr-color-brand-quiet)] - Control background in the hover state.
+ * @cssprop [--lr-pan-zoom-control-hover-bg=var(--lr-color-brand-quiet)] - Zoom and reset control
+ *   hover background; its active background derives from the same value.
+ * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
+ * @cssprop [--lr-icon-button-bg-hover=var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))] - Control background in the hover state.
  * @cssprop [--lr-icon-button-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Control border in the resting state.
  * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
  * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
@@ -101,6 +103,13 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this.announcements.adopted();
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const zoom = this.pendingZoomChange;
+    this.pendingZoomChange = undefined;
+    if (zoom !== undefined && zoom === this.zoom) this.emit('lr-zoom-change', { zoom });
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('src')) this.failedSrc = null;
@@ -115,6 +124,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
 
   @property({ type: Number, reflect: true }) zoom = 1;
+  private pendingZoomChange?: number;
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
@@ -157,8 +167,8 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     const stepped = quantize ? Math.round(value / step) * step : value;
     const next = Math.min(max, Math.max(min, Math.round(stepped * 100) / 100));
     if (next === this.zoom) return;
+    this.pendingZoomChange = next;
     this.zoom = next;
-    this.emit('lr-zoom-change', { zoom: next });
   }
 
   zoomIn(): void {

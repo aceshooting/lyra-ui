@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Àwọn ìrántí àkókò gígùn',
   memoryPanelAdd: 'Fi kún ìrántí àkókò gígùn',
   memoryPanelAddWithContext: 'Fi "{label}" kún ìrántí àkókò gígùn',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Gbàgbé gbogbo rẹ̀',
   memoryPanelConfirmAddHeading: 'Ṣé kí a fi èyí kún ìrántí àkókò gígùn?',
   memoryPanelConfirmRemoveHeading: 'Ṣé kí a yọ ohun yìí kúrò?',
@@ -183,6 +184,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Àwọn apá àyẹ̀wò',
   ragEvalDashboardAllSlices: 'Gbogbo rẹ̀',
   ragEvalDashboardSliceUnavailable: 'Kò sí ìṣiṣẹ́ àyẹ̀wò fún {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Kò sí ìwọ̀n àyẹ̀wò fún {metric}.',
   knowledgeBaseSyncIdle: 'Kò ṣiṣẹ́',
   knowledgeBaseSyncSyncing: 'Ń mú bá ara wọn mu',
   knowledgeBaseSyncPaused: 'Ó dúró',
@@ -258,6 +260,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Esi {index} ti {total}',
   ragAnswerEmpty: 'Ko si idahun sibẹsibẹ',
   retrievalTraceEmpty: 'Ko si awọn ipele igbapada',
+  retrievalTraceLabel: 'Ìtọpinpin ìgbàpadà',
   sourcePickerMatches: {
     other: '{count} orisun ibaamu',
   },

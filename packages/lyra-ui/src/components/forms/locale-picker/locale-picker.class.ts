@@ -1,3 +1,5 @@
+import { foldSearchText } from '../../../internal/search-haystack.js';
+import { bdi } from '../../../internal/bidi.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { guard } from 'lit/directives/guard.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
@@ -7,7 +9,7 @@ import { FormControlController, reflectFormName } from '../../../internal/form-c
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLocaleLoader } from '../../../internal/locale-loader.js';
-import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -25,8 +27,8 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
-import { getDisplayNames, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   activateNonmodalOverlay,
@@ -50,6 +52,7 @@ import {
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
@@ -488,9 +491,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   get open(): boolean { return this._open; }
   set open(next: boolean) {
     const old = this._open;
-    const liveDisabled = this.effectiveDisabled ||
-      (typeof this.matches === 'function' && this.matches(':disabled'));
-    this._open = Boolean(next) && !liveDisabled;
+    this._open = Boolean(next) && !isLiveDisabled(this);
     if (this._open === old) {
       if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
       return;
@@ -577,13 +578,10 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   }
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
-  }
 
   /** Focus the internal trigger unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    if (!this.liveDisabled) this.triggerElement?.focus(options);
+    if (!isLiveDisabled(this)) this.triggerElement?.focus(options);
   }
   /** Blur the internal trigger or the optional focused search input. */
   override blur(): void {
@@ -594,7 +592,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
    *  no native click semantics is otherwise a silent no-op. Mirrors `<lr-select>`'s identical
    *  `click()`. */
   override click(): void {
-    if (!this.liveDisabled) this.triggerElement?.click();
+    if (!isLiveDisabled(this)) this.triggerElement?.click();
   }
 
   /** Native filter input when searchable, otherwise null. After editing its value directly,
@@ -616,25 +614,10 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     return this.renderRoot?.querySelector('[part="trigger"]') ?? null;
   }
 
-  private localDescriptionIds = '';
-  private externalDescriptionLease?: NativeControlDescriptionLease;
-
-  private syncExternalDescription(): void {
-    if (!this.isConnected) return;
-    const target = this.triggerElement ?? null;
-    if (!target) return;
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => this.localDescriptionIds);
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
+  private readonly description = new HostDescriptionController(this, () => this.triggerElement ?? null);
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
     this.syncLocaleAttributeForLocalization();
     this.updateValidity();
     this.stopRegistrySubscription = subscribeLyraLocaleRegistry(() => {
@@ -652,7 +635,6 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.loadAnnouncements?.release();
     this.loadAnnouncements = undefined;
     this.listboxHidden = true;
-    this.releaseExternalDescription();
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -676,8 +658,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.loadAnnouncements?.release();
     this.loadAnnouncements = undefined;
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    if (this.hasUpdated) this.syncExternalDescription();
+    this.description.adopted();
     this.cleanup?.();
     this.cleanup = undefined;
     this.popupController.unbindPointer();
@@ -967,8 +948,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   private visibleCache?: { rows: NormalizedLocaleEntry[]; query: string; locale: string; result: NormalizedLocaleEntry[] };
 
   private normalizeSearch(text: string, locale: string): string {
-    return text.toLocaleLowerCase(resolveIntlLocale(locale))
-      .normalize('NFKD').replace(/\p{M}/gu, '').trim();
+    return foldSearchText(text, locale).trim();
   }
 
   private get visibleEntries(): NormalizedLocaleEntry[] {
@@ -1012,14 +992,14 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   }
 
   private queueSearchFocus(): void {
-    if (!this.searchable || !this.open || this.liveDisabled) return;
+    if (!this.searchable || !this.open || isLiveDisabled(this)) return;
     const generation = ++this.searchFocusGeneration;
     const ownerDocument = this.ownerDocument;
     const outerFocus = activeElementIn(ownerDocument);
     const innerFocus = shadowFocusTarget(this);
     void this.updateComplete.then(() => {
       if (generation !== this.searchFocusGeneration || !this.isConnected || !this.open ||
-          !this.searchable || this.liveDisabled || this.ownerDocument !== ownerDocument ||
+          !this.searchable || isLiveDisabled(this) || this.ownerDocument !== ownerDocument ||
           activeElementIn(ownerDocument) !== outerFocus || shadowFocusTarget(this) !== innerFocus) return;
       this.searchElement?.focus();
     });
@@ -1062,7 +1042,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   }
 
   private show(): void {
-    if (this.open || this.liveDisabled) return;
+    if (this.open || isLiveDisabled(this)) return;
     this.open = true;
     this.queueSearchFocus();
   }
@@ -1156,12 +1136,12 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     const generation = this.openGeneration;
     this.announcingHide = !opening;
     try {
-      if (!opening && (this.liveDisabled || this.forcedCloseGeneration === generation)) {
+      if (!opening && (isLiveDisabled(this) || this.forcedCloseGeneration === generation)) {
         emitPopupEvent(this, 'lr-hide', false);
       } else {
         this.openVetoed = this.popupController.announce(opening, () => {
           // Newer writes, disablement and removal own the result even if the request is vetoed.
-          if (this.isConnected && this.openGeneration === generation && (opening || !this.liveDisabled)) this._open = !opening;
+          if (this.isConnected && this.openGeneration === generation && (opening || !isLiveDisabled(this))) this._open = !opening;
         });
       }
     } finally {
@@ -1172,7 +1152,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       return;
     }
     // A listener can disable the control while cancelling a close; the platform close still wins.
-    if (this.openVetoed && this.liveDisabled && !this.open) this.openVetoed = false;
+    if (this.openVetoed && isLiveDisabled(this) && !this.open) this.openVetoed = false;
     if (!this.openVetoed) {
       this.popupController.cancel();
       this.openTransition = opening;
@@ -1186,7 +1166,6 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     super.updated(changed);
     if (this.limitMounted && changed.has('inputLimited') && this.inputLimited) this.limitAnnouncements.announcePolite(this.localize('localePickerInputLimit'));
     this.limitMounted = true;
-    this.syncExternalDescription();
     const activeId = this.open && this.activeIndex >= 0 ? `${this.listId}-opt-${this.activeIndex}` : '';
     const previous = this.renderRoot.querySelector('[part="option"][data-active]');
     if (previous?.id !== activeId) previous?.removeAttribute('data-active');
@@ -1249,7 +1228,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
 
   /** Requests a selection before loading or updating the control and the global locale. */
   private commit(tag: string): void {
-    if (this.commitDispatching || this.liveDisabled || !this.entryFor(tag)) return;
+    if (this.commitDispatching || isLiveDisabled(this) || !this.entryFor(tag)) return;
     if (tag === this._value && tag === getLyraLocale()) {
       this.hide();
       return;
@@ -1262,7 +1241,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       const generation = this.loadGeneration;
       const detail = Object.freeze({ value: tag, previousValue, direction: getLyraLocaleDirection(tag) });
       const request = this.emit('lr-change-request', detail, { cancelable: true });
-      if (request.defaultPrevented || this.liveDisabled || this.valueWriteVersion !== version ||
+      if (request.defaultPrevented || isLiveDisabled(this) || this.valueWriteVersion !== version ||
           this.loadGeneration !== generation || this.localeLoader !== loader || !this.entryFor(tag)) return;
       const commitValue = () => {
         const searchFocus = this.searchElement && shadowFocusTarget(this) === this.searchElement
@@ -1286,7 +1265,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       this.announceLoad('loading');
       const ownsSelection = () => this.isConnected && this.ownerDocument === ownerDocument &&
         this.loadGeneration === operation && this.valueWriteVersion === version &&
-        this.localeLoader === loader && !this.liveDisabled && this.entryFor(tag) !== undefined;
+        this.localeLoader === loader && !isLiveDisabled(this) && this.entryFor(tag) !== undefined;
       void Promise.resolve().then(() => {
         if (!ownsSelection()) return;
         return loader(tag);
@@ -1311,7 +1290,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   };
 
   private onTriggerClick = (): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (event: FocusEvent): void => {
@@ -1327,7 +1306,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     // for it was, depending on timing, capable of reentering that same in-flight update for a
     // state flip nothing observable needed -- a disabled control is barred from validation
     // regardless.
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.
     this.syncCustomStates();
@@ -1339,7 +1318,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       event.stopPropagation();
       return;
     }
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -1354,7 +1333,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
 
   private onSearchInput = (event: Event): void => {
     event.stopPropagation();
-    if (!this.searchable || !this.open || this.liveDisabled) return;
+    if (!this.searchable || !this.open || isLiveDisabled(this)) return;
     this.searchQuery = (event.currentTarget as HTMLInputElement).value;
     this.setActiveIndex(this.visibleEntries.length ? 0 : -1);
   };
@@ -1362,7 +1341,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   private onSearchChange = (event: Event): void => { event.stopPropagation(); };
 
   private onSearchKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled || !this.open || event.isComposing || event.keyCode === 229) return;
+    if (isLiveDisabled(this) || !this.open || shouldIgnoreNavigationKey(event)) return;
     const rows = this.visibleEntries;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -1424,7 +1403,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.liveDisabled || e.isComposing || e.keyCode === 229) return;
+    if (isLiveDisabled(this) || shouldIgnoreNavigationKey(e)) return;
     const rows = this.visibleEntries;
     const move = (): number | null => resolveListMove(e, {
       count: rows.length,
@@ -1503,7 +1482,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     if (e.composedPath()[0] !== this.searchElement) e.preventDefault();
   };
   private onListboxClick = (e: MouseEvent): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
     const tag = optionEl?.dataset['value'];
     if (tag === undefined) return;
@@ -1528,10 +1507,10 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
             : html`<lr-flag part="option-flag" language=${entry.tag} fidelity="compact" aria-hidden="true" inert></lr-flag>`
           : ''}
         <span part="option-label">
-          <span>${entry.label}</span>
+          <span>${bdi(entry.label)}</span>
           ${this.optionDisplay === 'label'
             ? nothing
-            : html`<span part="option-tag">${entry.tag}</span>`}
+            : html`<span part="option-tag" dir="ltr">${entry.tag}</span>`}
         </span>
       </div>`;
     });
@@ -1546,7 +1525,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = this.localDescriptionIds = [flagOnly ? 'locale-picker-value' : '', hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '', this.loadingTag || this.loadFailureTag ? 'locale-picker-load-status' : '']
+    const describedBy = [flagOnly ? 'locale-picker-value' : '', hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '', this.loadingTag || this.loadFailureTag ? 'locale-picker-load-status' : '']
       .filter(Boolean)
       .join(' ');
     return html`
@@ -1581,7 +1560,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
               ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} fidelity="compact" aria-hidden="true" inert></lr-flag>`
               : html`<lr-flag part="trigger-flag" language=${previewTag} fidelity="compact" aria-hidden="true" inert></lr-flag>`
             : ''}
-          <span id="locale-picker-value" part="trigger-label" class=${flagOnly ? 'trigger-label sr-only' : 'trigger-label'}>${this.labelFor(previewTag)}</span>
+          <span id="locale-picker-value" part="trigger-label" class=${flagOnly ? 'trigger-label sr-only' : 'trigger-label'}>${bdi(this.labelFor(previewTag))}</span>
           ${flagOnly ? nothing : html`<span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>`}
         </button>
         <div

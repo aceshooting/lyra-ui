@@ -121,6 +121,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Navedi vir',
   promptInputLabel: 'Poziv za UI',
   promptInputControls: 'Možnosti poziva',
+  promptInputCollectionLimit: 'Del vnesenega poziva je bil izpuščen, ker je bila dosežena omejitev vnosa.',
   promptInputSources: 'Viri',
   promptInputAttachments: 'Priloge',
   handoffLabel: 'Predaja agentu',
@@ -159,6 +160,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Na voljo ni nobenega glasu',
   voicePickerRequired: 'Izberite glas.',
   voicePickerPreview: 'Predogled: {name}',
+  voicePickerPreviewFailed: 'Predogled glasu ni na voljo.',
   voicePickerStopPreview: 'Ustavi predogled',
   realtimeSessionLabel: 'Seja v realnem času',
   realtimeSessionDisconnected: 'Prekinjeno',
@@ -187,6 +189,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Dolga koda je prikazana brez označevanja skladnje.',
   codeBlockHighlightedLine: 'Poudarjena vrstica',
   codeBlockActiveLine: 'Aktivna poudarjena vrstica',
+  codeBlockToggle: 'Pokaži ali skrij kodo',
 };
 
 registerLyraLocale('sl', strings);

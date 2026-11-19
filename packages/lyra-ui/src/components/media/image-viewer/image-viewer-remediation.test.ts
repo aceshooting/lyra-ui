@@ -226,6 +226,14 @@ describe('caller labels', () => {
 });
 
 describe('public actions and events', () => {
+  it('keeps zoom actions idle before a frame exists', () => {
+    const el = document.createElement('lr-image-viewer');
+    el.zoomIn();
+    el.zoomOut();
+    el.resetZoom();
+    expect(el.zoom).to.equal(1);
+  });
+
   it('declares zoomIn/zoomOut/resetZoom as methods', () => {
     for (const name of ['zoomIn', 'zoomOut', 'resetZoom']) {
       expect(typeof (LyraImageViewer.prototype as unknown as Record<string, unknown>)[name]).to.equal('function');
@@ -365,4 +373,19 @@ it('keeps modified arrows and repeated Enter from acting on annotations', async 
   const enter = new KeyboardEvent('keydown', { key: 'Enter', repeat: true, cancelable: true });
   wrapper.dispatchEvent(enter);
   expect(enter.defaultPrevented).to.equal(false);
+});
+
+it('paints hovered toolbar controls from the component hover token', async () => {
+  const el = await loadedViewer();
+  el.style.setProperty('--lr-image-viewer-control-hover-bg', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-transition-interactive', 'none');
+  const rotate = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="rotate-button"]')!;
+  await waitUntil(() => !rotate.disabled, 'rotate enabled');
+  await resetMouse();
+  try {
+    await hoverUntilMatched(rotate, 'rotate hover');
+    await waitUntil(() => getComputedStyle(rotate).backgroundColor === 'rgb(1, 2, 3)', 'hover token paints the control');
+  } finally {
+    await resetMouse();
+  }
 });

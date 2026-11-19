@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type {
   LyraPathElement,
@@ -93,7 +94,10 @@ export interface LyraProvenancePanelEventMap
     entityId: string;
     occurrenceIndex?: number;
   }>;
-  'lr-toggle': CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>;
+  'lr-toggle': CustomEvent<
+    | { kind: 'section'; section: Section; expanded: boolean; itemId?: undefined }
+    | { kind: 'chunk'; section: 'chunks'; expanded: boolean; itemId: string }
+  >;
 }
 
 /**
@@ -106,8 +110,8 @@ export interface LyraProvenancePanelEventMap
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-provenance-panel
- * @event lr-toggle - A section header changed (`{ section, expanded }`) or a chunk
- *   inside it changed (`{ section: 'chunks', expanded, itemId }`).
+ * @event lr-toggle - A section header changed (`{ kind: 'section', section, expanded }`) or a chunk
+ *   inside it changed (`{ kind: 'chunk', section: 'chunks', expanded, itemId }`).
  * @csspart limit - Localized notice when a section contains more than 500 rows.
  * @event lr-entity-select - Surfaced unchanged from an embedded entity chip, community card or
  *   relationship path strip. `detail: { entityId, occurrenceIndex? }`; only the path strip sets
@@ -123,6 +127,7 @@ export interface LyraProvenancePanelEventMap
  * @csspart base - The root wrapper.
  * @csspart section - One section's wrapper.
  * @csspart header - A section's disclosure `<button>`.
+ * @csspart toggle - The chevron inside a section header; rotates while expanded, mirrored under RTL.
  * @csspart count - A section's item-count badge.
  * @csspart body - A section's content wrapper, `hidden` while collapsed.
  * @csspart entity-row - The wrapping row of entity chips inside the entities section. Style this to
@@ -202,7 +207,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   private toggleSection(section: Section): void {
     const expanded = !this.expandedSections[section];
     this.expandedSections = { ...this.expandedSections, [section]: expanded };
-    this.emit('lr-toggle', { section, expanded });
+    this.emit('lr-toggle', { kind: 'section', section, expanded });
   }
 
   private renderSection(
@@ -223,6 +228,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           aria-controls=${bodyId}
           @click=${() => this.toggleSection(section)}
         >
+          <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
           <span>${this.localize(titleKey)}</span>
           <span part="count"
             >${getNumberFormat(this.effectiveLocale).format(count)}</span
@@ -303,7 +309,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'relationships',
           'provenanceRelationships',
           relationships.length,
-          () => html`<div>
+          () => html`<div class="stack">
             ${relationships.slice(0, MAX_SECTION_ROWS).map(
               (r) => html`<lr-path-strip .path=${r.path}></lr-path-strip>`
             )}
@@ -313,7 +319,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'communities',
           'provenanceCommunities',
           communities.length,
-          () => html`<div>
+          () => html`<div class="stack">
             ${communities.slice(0, MAX_SECTION_ROWS).map(
               (c) =>
                 html`<lr-community-card
@@ -333,7 +339,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
             .thresholds=${this.thresholds}
             @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId: string }>) => {
               event.stopPropagation();
-              this.emit('lr-toggle', { section: 'chunks', ...event.detail });
+              this.emit('lr-toggle', { ...event.detail, kind: 'chunk', section: 'chunks' });
             }}
           ></lr-chunk-inspector>`
         )}

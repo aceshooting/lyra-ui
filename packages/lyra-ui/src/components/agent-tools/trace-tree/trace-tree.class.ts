@@ -1,10 +1,11 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, svg, nothing, type TemplateResult, type PropertyValues, type SVGTemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatShortDuration } from '../../../internal/duration.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -126,6 +127,8 @@ export interface LyraTraceTreeEventMap {
  * Provider mode uses treeSource's full preorder and global summary. Topology comes from provider
  * row metadata, never parentId. expandAll/collapseAll are legacy-only; providers own expansion.
  *
+ * @cssprop [--lr-trace-tree-row-hover-bg] - Hover fill of the row.
+ * @cssprop [--lr-trace-tree-row-pressed-bg] - Pressed fill of the row.
  * @csspart source-list - Bounded provider virtual viewport.
  * @csspart source-row - Provider tree item and focus owner.
  * @csspart source-label - Provider row content.
@@ -225,6 +228,11 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  /** Outer frame. Defaults to `plain`. */
+  @property({ reflect: true }) frame: LyraFrame = 'plain';
+  /** Layout density. Small sizes use compact spacing. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
@@ -241,18 +249,19 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   private sourceAnnouncement?: string;
   private sourceReveal?: readonly [number, string];
   private wasSource = false;
-  private readonly sourceControl = new HierarchySourceController<LyraSpan>(this, {
-    normalize: (value, key) => this.normalizeSourceSpan(value, key),
-    payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
-      unitsOf: span => span.id.length + span.name.length + (span.detail?.length ?? 0) + (span.costText?.length ?? 0) },
-    onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
-    accepted: (action, _row, _state, current) => {
-      if (!current() || this.treeSource === undefined) return;
-      if (action.type === 'toggle') this.emit('lr-span-toggle', { spanId: action.key, expanded: action.expanded });
-      else if (action.type === 'select') this.emit('lr-span-select', { spanId: action.key });
-    },
-  });
-
+  private provider?: HierarchySourceController<LyraSpan>;
+  private get sourceControl(): HierarchySourceController<LyraSpan> {
+    return this.provider ??= new HierarchySourceController(this, {
+      normalize: (value, key) => this.normalizeSourceSpan(value, key),
+      payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
+        unitsOf: span => span.id.length + span.name.length + span.detail!.length + span.costText!.length },
+      onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
+      accepted: (action) => {
+        if (action.type === 'toggle') this.emit('lr-span-toggle', { spanId: action.key, expanded: action.expanded });
+        else if (action.type === 'select') this.emit('lr-span-select', { spanId: action.key });
+      },
+    });
+  }
   /** Immutable provider preorder; defined sources win over spans, even when invalid.
    * Four 100-row pages and one focused row are retained; at most 301 rows mount.
    * Provider metadata owns topology and selection, and summary owns the complete timing extent.
@@ -276,7 +285,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private syncSource(force = false): void {
-    this.sourceControl?.update(this.sourceWrapper, this.effectiveLocale, force,
+    const control = this.sourceWrapper === undefined ? this.provider : this.sourceControl;
+    control?.update(this.sourceWrapper, this.effectiveLocale, force,
       { search: '', hiddenKinds: this.hiddenKinds ?? [] });
   }
 
@@ -345,8 +355,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   private sourceSummary(): string {
     const projection = this.sourceControl.projection;
     return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
+      visible: this.formatLocaleNumber(projection.rows.count),
+      total: this.formatLocaleNumber(projection.total),
     }) : '';
   }
 
@@ -389,9 +399,9 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       this.formatDuration(span.endMs === undefined ? undefined : span.endMs - span.startMs)];
     if (this.withTokens) {
       if (this.validTokenMetric(span.tokensIn)) fragments.push(this.localize('traceTreeMetricLabel', undefined,
-        { label: this.localize('tokensIn'), value: this.formatNumber(span.tokensIn) }));
+        { label: this.localize('tokensIn'), value: this.formatLocaleNumber(finiteCount(span.tokensIn)) }));
       if (this.validTokenMetric(span.tokensOut)) fragments.push(this.localize('traceTreeMetricLabel', undefined,
-        { label: this.localize('tokensOut'), value: this.formatNumber(span.tokensOut) }));
+        { label: this.localize('tokensOut'), value: this.formatLocaleNumber(finiteCount(span.tokensOut)) }));
     }
     if (this.withCost && span.costText) fragments.push(this.localize('traceTreeMetricLabel', undefined,
       { label: this.localize('cost'), value: span.costText }));
@@ -413,8 +423,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       ${!this.withoutBars ? html`<span part="bar-track"><span part="bar" data-status=${span.status}
         style=${`inset-inline-start:${start}%;inline-size:${width}%`}></span></span>` : nothing}
       <span part="duration">${this.formatDuration(span.endMs === undefined ? undefined : span.endMs - span.startMs)}</span>
-      ${this.withTokens ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatNumber(span.tokensIn) : ''}</span>
-        <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatNumber(span.tokensOut) : ''}</span>` : nothing}
+      ${this.withTokens ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatLocaleNumber(finiteCount(span.tokensIn)) : ''}</span>
+        <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatLocaleNumber(finiteCount(span.tokensOut)) : ''}</span>` : nothing}
       ${this.withCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
     </span>`;
   }
@@ -444,9 +454,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @property({ attribute: false }) hiddenKinds: readonly LyraSpan['kind'][] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
-  /** Optional accessible-name override for the `role="tree"` element. Omission localizes the
-   *  default; any supplied string, including `''`, is rendered verbatim. A host `aria-label`
-   *  names the host itself and is not cloned onto the independently interactive tree. */
+  /** Accessible name of the tree when the host has no aria-label. Omission localizes the default. */
   @property() label?: string;
   /** Adds tokens-in/tokens-out columns. */
   @property({ type: Boolean, attribute: 'with-tokens', reflect: true }) withTokens = false;
@@ -479,7 +487,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     this.sourceVersion++;
     this.sourceReveal = undefined;
     this.sourceAnnouncement = undefined;
-    this.sourceControl.adopted();
+    this.provider?.adopted();
     this.syncSource(true);
   }
 
@@ -587,10 +595,6 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     return ms == null ? '' : formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
-  private formatNumber(n: number): string {
-    return getNumberFormat(this.effectiveLocale).format(finiteCount(n));
-  }
-
   private validTokenMetric(value: number | undefined): value is number {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0;
   }
@@ -670,23 +674,15 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     const expandKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const collapseKey = rtl ? 'ArrowRight' : 'ArrowLeft';
 
+    const next = resolveListMove(e.key, {
+      count: rows.length, current: currentIndex, orientation: 'vertical', wrap: false, clamp: true, backwardFromMissing: 'first',
+    });
+    if (next !== null) {
+      e.preventDefault();
+      this.focusRow(rows[next]);
+      return;
+    }
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.focusRow(rows[Math.min(rows.length - 1, currentIndex + 1)]);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.focusRow(rows[Math.max(0, currentIndex - 1)]);
-        break;
-      case 'Home':
-        e.preventDefault();
-        this.focusRow(rows[0]);
-        break;
-      case 'End':
-        e.preventDefault();
-        this.focusRow(rows[rows.length - 1]);
-        break;
       case expandKey:
         e.preventDefault();
         if (!current.hasChildren) break;
@@ -723,7 +719,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.syncSource();
+    if (this.treeSource !== undefined) this.syncSource();
     if (this.treeSource !== undefined) {
       this.wasSource = true;
       this.pendingAnnouncements = [];
@@ -836,7 +832,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }
     if (this.limitAnnouncementInitialized && this.renderedProjectionTruncated && !this.previouslyTruncated) {
       this.announcements.announcePolite(this.localize('spanProjectionLimit', undefined, {
-        count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxNodes),
+        count: this.formatLocaleNumber(this.effectiveMaxNodes),
       }));
     }
     this.limitAnnouncementInitialized = true;
@@ -883,13 +879,13 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       this.withTokens && this.validTokenMetric(span.tokensIn)
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('tokensIn'),
-            value: this.formatNumber(span.tokensIn),
+            value: this.formatLocaleNumber(finiteCount(span.tokensIn)),
           })
         : '',
       this.withTokens && this.validTokenMetric(span.tokensOut)
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('tokensOut'),
-            value: this.formatNumber(span.tokensOut),
+            value: this.formatLocaleNumber(finiteCount(span.tokensOut)),
           })
         : '',
       this.withCost && span.costText
@@ -944,8 +940,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
           : nothing}
         <span part="duration">${durationLabel}</span>
         ${this.withTokens
-          ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatNumber(span.tokensIn) : ''}</span>
-              <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatNumber(span.tokensOut) : ''}</span>`
+          ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatLocaleNumber(finiteCount(span.tokensIn)) : ''}</span>
+              <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatLocaleNumber(finiteCount(span.tokensOut)) : ''}</span>`
           : nothing}
         ${this.withCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
       </div>
@@ -954,7 +950,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   override render(): TemplateResult {
     if (this.treeSource !== undefined) return hierarchySourceView(this.sourceControl, {
-      label: this.label ?? this.localize('traceTree'), rtl: this.effectiveDirection === 'rtl', multiple: false,
+      label: hostAriaLabel(this) ?? this.label ?? this.localize('traceTree'), rtl: this.effectiveDirection === 'rtl', multiple: false,
       loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
       retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'),
       summary: this.sourceSummary(), content: span => this.renderSourceSpan(span), name: span => this.sourceSpanLabel(span),
@@ -969,7 +965,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       <div
         part="base"
         role="tree"
-        aria-label=${this.label == null ? this.localize('traceTree') : this.label}
+        aria-label=${hostAriaLabel(this) ?? this.label ?? this.localize('traceTree')}
         @keydown=${this.onKeyDown}
       >
         ${rows.length === 0
@@ -977,7 +973,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
           : html`${this.withTokens || this.withCost ? this.renderHeader() : nothing}${repeat(rows, (row) => row.span.id, (row) => this.renderRow(row, firstId, extent))}`}
         ${this.renderedProjectionTruncated
           ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
-              count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxNodes),
+              count: this.formatLocaleNumber(this.effectiveMaxNodes),
             })}</p>`
           : nothing}
       </div>

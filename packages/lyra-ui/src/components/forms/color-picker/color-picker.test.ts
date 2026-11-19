@@ -2035,12 +2035,13 @@ it("keeps every slider pointer target at the WCAG 2.5.8 floor while the ramp sta
 });
 
 it("gives the full slider target distinct rendered hover and pressed feedback without tinting its ramp", async () => {
-  const el = await opened();
+  const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#2266aa"></lr-color-picker>`);
   const slider = part(el, "hue-slider");
   await new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
   );
   const resting = getComputedStyle(slider).outlineWidth;
+  const ramp = getComputedStyle(slider, '::before').backgroundImage;
   try {
     await hoverUntilMatched(slider, "hue-slider never received the pointer hover state");
     await waitUntil(
@@ -2056,6 +2057,7 @@ it("gives the full slider target distinct rendered hover and pressed feedback wi
     const pressed = getComputedStyle(slider).outlineWidth;
     expect(hovered).to.not.equal(resting);
     expect(pressed).to.not.equal(hovered);
+    expect(getComputedStyle(slider, '::before').backgroundImage).to.equal(ramp);
   } finally {
     await sendMouse({ type: "up" });
     await resetMouse();
@@ -2072,10 +2074,8 @@ it("marks the selected swatch with a check mark, not colour alone", async () => 
   );
   const selected = parts(el, "swatch")[1]!;
   expect(selected.getAttribute("part")).to.contain("swatch-selected");
-  expect(getComputedStyle(selected, "::before").content).to.contain("✓");
-  expect(
-    getComputedStyle(parts(el, "swatch")[0]!, "::before").content
-  ).to.not.contain("✓");
+  expect(selected.querySelectorAll('[part~="swatch-check"] svg').length).to.equal(1);
+  expect(parts(el, "swatch")[0]!.querySelectorAll('[part~="swatch-check"]').length).to.equal(0);
 });
 
 it("lets a consumer retint selected-swatch border and check paint independently", async () => {
@@ -2089,7 +2089,7 @@ it("lets a consumer retint selected-swatch border and check paint independently"
   `);
   const selected = parts(el, "swatch")[1]!;
   expect(getComputedStyle(selected).borderTopColor).to.equal("rgb(1, 2, 3)");
-  expect(getComputedStyle(selected, "::before").color).to.equal("rgb(4, 5, 6)");
+  expect(getComputedStyle(selected.querySelector('[part~="swatch-check"]')!).color).to.equal("rgb(4, 5, 6)");
 });
 
 it("reflects placement and defaults to bottom-start", async () => {
@@ -3181,4 +3181,102 @@ it('names the format action from its visible format and describes its localized 
   expect(button.textContent!.trim()).to.equal('RGB');
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
   expect(accessibleName(button)).to.equal('RGB');
+});
+
+it('leaves browser shortcuts and composition on every color editing surface', async () => {
+  const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline opacity value="#112233ff"
+    swatches="#112233;#aabbcc"></lr-color-picker>`);
+  const before = el.value;
+  for (const name of ['grid-handle', 'hue-slider-handle', 'opacity-slider-handle', 'swatch', 'input']) {
+    const target = part(el, name);
+    for (const modifier of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }, { keyCode: 229 }]) {
+      const key = name === 'input' ? 'Enter' : 'ArrowRight';
+      const event = new KeyboardEvent('keydown', { key, ...modifier, bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
+      expect(event.defaultPrevented, name).to.equal(false);
+      expect(el.value).to.equal(before);
+    }
+  }
+});
+
+it('keeps a constrained color panel scrollable within both placement limits', async () => {
+  const el = await opened();
+  const panel = part(el, 'panel');
+  panel.style.setProperty('--lr-positioner-available-block-size', '50px');
+  panel.style.setProperty('--lr-positioner-available-inline-size', '90px');
+  expect(getComputedStyle(panel).maxBlockSize).to.equal('50px');
+  expect(getComputedStyle(panel).maxInlineSize).to.equal('90px');
+});
+
+it('discards a palette with an unreadable length', async () => {
+  const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline></lr-color-picker>`);
+  el.swatches = new Proxy(['#123456'], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'length') throw new Error('unreadable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  await el.updateComplete;
+  expect(count(el, 'swatch')).to.equal(0);
+});
+
+it('reports each edit baseline and the initial value of a held-key commit', async () => {
+  const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#336699"></lr-color-picker>`);
+  const edits: { value: string; previousValue?: string }[] = [];
+  const commits: unknown[] = [];
+  el.addEventListener('lr-input', event => edits.push(event.detail));
+  el.addEventListener('lr-change', event => commits.push(event.detail));
+  const hue = part(el, 'hue-slider-handle');
+  for (const repeat of [false, true]) hue.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', repeat }));
+  hue.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }));
+  expect(edits.length).to.equal(2);
+  expect(edits[0]!.previousValue).to.equal('#336699');
+  expect(edits[1]!.previousValue).to.equal(edits[0]!.value);
+  expect(commits).to.deep.equal([{ previousValue: '#336699', value: el.value }]);
+});
+
+for (const blocked of ['disabled', 'readonly'] as const) {
+  it(`removes a rejected open attribute from a ${blocked} picker`, async () => {
+    const el = await fixture<LyraColorPicker>(html`<lr-color-picker></lr-color-picker>`);
+    el[blocked] = true;
+    el.setAttribute('open', '');
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+    el[blocked] = false;
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+  });
+}
+
+it('exposes readonly on each inline color slider', async () => {
+  const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline opacity></lr-color-picker>`);
+  for (const readonly of [false, true, false]) {
+    el.readonly = readonly;
+    await el.updateComplete;
+    const sliders = Array.from(el.shadowRoot!.querySelectorAll('[role="slider"]'));
+    expect(sliders.map(slider => slider.getAttribute('aria-readonly'))).to.deep.equal(Array(3).fill(String(readonly)));
+  }
+});
+
+it('leaves swatch navigation inert when editing is disabled or readonly', async () => {
+  const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#112233"
+    swatches="#112233;#aabbcc"></lr-color-picker>`);
+  for (const blocked of ['disabled', 'readonly'] as const) {
+    el[blocked] = true;
+    await el.updateComplete;
+    for (const target of ['swatch', 'swatches']) {
+      const arrow = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+      part(el, target).dispatchEvent(arrow);
+      expect(el.value).to.equal('#112233');
+      expect(arrow.defaultPrevented).to.equal(false);
+    }
+    el[blocked] = false;
+  }
+  await el.updateComplete;
+  const next = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+  part(el, 'swatch').dispatchEvent(next);
+  await el.updateComplete;
+  expect(next.defaultPrevented).to.equal(true);
+  expect(el.value).to.equal('#aabbcc');
+  expect(parts(el, 'swatch')[1]!.getAttribute('aria-checked')).to.equal('true');
 });

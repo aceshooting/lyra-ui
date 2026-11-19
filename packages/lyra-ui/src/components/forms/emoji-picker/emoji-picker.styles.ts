@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
   formControlLabelTypography,
@@ -197,7 +197,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-emoji-picker-gap, var(--_lr-emoji-picker-gap-default));
-    max-block-size: var(--lr-size-16rem);
+    max-block-size: var(--lr-emoji-picker-grid-max-height, var(--lr-size-16rem));
     overflow-block: auto;
     overflow-inline: hidden;
   }
@@ -293,17 +293,19 @@ export const styles = css`
     );
   }
   [part='emoji'][aria-selected='true'] {
-    background: var(--lr-emoji-picker-selected-bg, var(--lr-color-brand-quiet));
+    --_lr-emoji-picker-state-fill: var(--lr-emoji-picker-selected-bg, var(--lr-color-brand-quiet));
+    background: var(--_lr-emoji-picker-state-fill);
     color: var(--lr-emoji-picker-selected-color, var(--lr-color-text));
     outline: var(--lr-border-width-thin) solid
       var(--lr-emoji-picker-selected-outline-color, var(--lr-color-brand));
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part='emoji'][data-active] {
-    background: var(
+    --_lr-emoji-picker-state-fill: var(
       --lr-emoji-picker-keyboard-active-bg,
       var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))
     );
+    background: var(--_lr-emoji-picker-state-fill);
     outline: var(--lr-border-width-thin) dotted
       var(--lr-emoji-picker-keyboard-active-outline-color, var(--lr-color-brand));
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -319,6 +321,13 @@ export const styles = css`
     );
     outline-color: var(--lr-emoji-picker-pressed-outline-color, var(--lr-color-brand));
     outline-style: double;
+  }
+  /* A selected or keyboard-active cell mixes hover and press from its own state fill. */
+  [part='emoji']:is([aria-selected='true'], [data-active]):hover:not(:disabled) {
+    background: var(--lr-emoji-picker-hover-bg, ${hoverFill('var(--_lr-emoji-picker-state-fill)')});
+  }
+  [part='emoji']:is([aria-selected='true'], [data-active]):active:not(:disabled) {
+    background: var(--lr-emoji-picker-pressed-bg, ${activeFill('var(--_lr-emoji-picker-state-fill)')});
   }
   /* Negative offset, matching [part='textarea']:focus-visible in code-editor.styles.ts: the grid's
      --lr-emoji-picker-gap-default (2px) equals --lr-focus-ring-offset, so a positive offset would

@@ -480,4 +480,33 @@ it('pluralizes the member count and falls back to level 3 for an invalid aria-le
   );
   expect(el.shadowRoot!.querySelector('[part="member-count"]')!.textContent!.trim()).to.equal('1 member');
   expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
+  el.setAttribute('aria-level', '4');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('4');
+  el.setAttribute('aria-level', 'none');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
+});
+
+describe('lr-community-card layout guards', () => {
+  it('paints the member hover wash on the pill shape', async () => {
+    const el = await fixture<LyraCommunityCard>(html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`);
+    const member = el.shadowRoot!.querySelector<HTMLElement>('[part="member"]')!;
+    const probe = document.createElement('div');
+    probe.style.borderRadius = 'var(--lr-radius-pill)';
+    el.shadowRoot!.append(probe);
+    const pill = getComputedStyle(probe).borderStartStartRadius;
+    probe.remove();
+    expect(getComputedStyle(member).borderStartStartRadius).to.equal(pill);
+    expect(getComputedStyle(member).alignItems).to.equal('center');
+  });
+
+  it('wraps a long unbroken title inside a narrow card instead of widening it', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 160px"><lr-community-card .community=${{ ...community, label: 'x'.repeat(200) }}></lr-community-card></div>`);
+    const el = wrapper.querySelector('lr-community-card') as LyraCommunityCard;
+    await el.updateComplete;
+    const title = el.shadowRoot!.querySelector<HTMLElement>('[part="title"] button')!;
+    expect(title.getBoundingClientRect().width <= 161).to.equal(true);
+    expect(title.scrollWidth <= title.clientWidth + 1).to.equal(true);
+  });
 });

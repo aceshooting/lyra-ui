@@ -12,6 +12,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  [part='text'],
   .widget-text {
     min-inline-size: 0;
     max-inline-size: 100%;

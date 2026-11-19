@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { ref } from 'lit/directives/ref.js';
+import { directive, type ElementPart } from 'lit/directive.js';
+import { AsyncDirective } from 'lit/async-directive.js';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -61,15 +62,69 @@ function sanitizeAlignValue(value: string): string | undefined {
   return ALIGN_VALUE[value.trim().toLowerCase()];
 }
 
-interface ActionHandlerState {
-  event: string;
-  handler: EventListener;
+type WidgetEventHandler = (event: Event, node: ResolvedElement, current: () => boolean) => void;
+
+function mappedEvents(node: ResolvedElement): Set<string> {
+  const events = new Set<string>();
+  if (node.actionEvent) events.add(node.actionEvent);
+  for (const binding of node.bindings) if (binding.event) events.add(binding.event);
+  return events;
 }
 
-interface BindingHandlerState {
-  event: string;
-  handler: EventListener;
+class MappedWidget extends AsyncDirective {
+  private element!: HTMLElement;
+  private node!: ResolvedElement;
+  private synced?: ResolvedElement;
+  private handle!: WidgetEventHandler;
+  private current!: () => boolean;
+  private events = new Set<string>();
+  private readonly defaults = new Map<string, unknown>();
+
+  override render(_node: ResolvedElement, _handle: WidgetEventHandler, _current: () => boolean): typeof nothing {
+    return nothing;
+  }
+
+  override update(part: ElementPart, [node, handle, current]: Parameters<MappedWidget['render']>): typeof nothing {
+    this.element = part.element as HTMLElement;
+    this.node = node;
+    this.handle = handle;
+    this.current = current;
+    if (this.isConnected) this.syncElement();
+    return nothing;
+  }
+
+  private syncElement(): void {
+    const { element, node } = this;
+    if (node === this.synced) return;
+    const target = element as unknown as Record<string, unknown>;
+    const previous = this.synced?.props;
+    this.synced = node;
+    for (const key of Object.keys(previous ?? {})) {
+      if (!Object.hasOwn(node.props, key)) target[key] = this.defaults.get(key);
+    }
+    for (const [key, value] of Object.entries(node.props)) {
+      if (!this.defaults.has(key)) this.defaults.set(key, target[key]);
+      if (!previous || !Object.hasOwn(previous, key) || !Object.is(previous[key], value)) target[key] = value;
+    }
+    const next = mappedEvents(node);
+    for (const event of this.events) if (!next.has(event)) element.removeEventListener(event, this.onEvent);
+    for (const event of next) if (!this.events.has(event)) element.addEventListener(event, this.onEvent);
+    this.events = next;
+  }
+
+  private readonly onEvent = (event: Event): void => this.handle(event, this.node, this.current);
+
+  protected override disconnected(): void {
+    for (const event of this.events) this.element.removeEventListener(event, this.onEvent);
+  }
+
+  protected override reconnected(): void {
+    for (const event of this.events) this.element.addEventListener(event, this.onEvent);
+    this.syncElement();
+  }
 }
+
+const mappedWidget = directive(MappedWidget);
 
 const DOCUMENT_RESOLUTION_FAILED_MESSAGE =
   'lr-widget-renderer: document resolution failed';
@@ -133,9 +188,7 @@ export interface LyraWidgetRendererEventMap {
  * hydration. Primitive mapped props remain property-only by contract: the server emits the stable
  * element/child shell, then hydration assigns props without converting them into attributes. Lit's
  * keyed reconciliation reuses the mapped element so focus, scroll position, and internal state
- * survive a streamed document update. Each unchanged resolved mapped node also reuses its template
- * and ref callback, avoiding redundant property assignments and listener detach/attach cycles on
- * unrelated renderer updates.
+ * survive a streamed document update. Unchanged properties and event subscriptions are retained across binding updates.
  *
  * The version-two `document` is the sole tree source. An allowlisted prop value shaped as
  * `{ $bind: '/json/pointer', fallback?: primitive }` reads from the explicit `bindingState`
@@ -192,23 +245,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     root: LyraWidgetNode | null;
     registry: LyraWidgetTypeRegistry;
   };
-  private readonly actionHandlers = new WeakMap<
-    HTMLElement,
-    ActionHandlerState
-  >();
-  private readonly bindingHandlers = new WeakMap<
-    HTMLElement,
-    BindingHandlerState[]
-  >();
-  private readonly assignedProps = new WeakMap<HTMLElement, Set<string>>();
-  private readonly initialProps = new WeakMap<
-    HTMLElement,
-    Map<string, unknown>
-  >();
-  private readonly mappedElementRefs = new WeakMap<
-    ResolvedElement,
-    (element?: Element) => void
-  >();
+  private failedDocument?: LyraWidgetDocument | null;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -257,11 +294,14 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
           );
         }
         this.resolved = next;
+        this.failedDocument = undefined;
       } catch (error) {
         this.resolved = null;
-        this.emit('lr-render-error', {
-          error: normalizedRenderError(error),
-        });
+        if (this.failedDocument !== this.document) {
+          this.failedDocument = this.document;
+          const detail = { error: normalizedRenderError(error) };
+          this.scheduleAfterUpdate(() => this.emit('lr-render-error', detail), 'render-error');
+        }
       }
     }
   }
@@ -290,130 +330,43 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     };
   }
 
-  private syncActionHandler(el: HTMLElement, node: ResolvedElement): void {
-    const existing = this.actionHandlers.get(el);
-    if (existing) {
-      el.removeEventListener(existing.event, existing.handler);
-      this.actionHandlers.delete(el);
+  private readonly handleMappedEvent: WidgetEventHandler = (event, node, current) => {
+    event.stopPropagation();
+    if (!current()) return;
+    if (event.type === node.actionEvent && node.actionId !== undefined) {
+      this.emit('lr-widget-action', {
+        actionId: node.actionId,
+        payload: node.payload,
+        nodeId: node.nodeId!,
+        nodeKey: node.nodeKey,
+        nodePath: node.nodePath,
+      });
     }
-    if (node.actionEvent) {
-      const current = this.ownsInteractions;
-      const handler: EventListener = (e) => {
-        e.stopPropagation();
-        if (node.actionId !== undefined && current()) {
-          this.emit('lr-widget-action', {
-            actionId: node.actionId,
-            payload: node.payload,
-            nodeId: node.nodeId!,
-            nodeKey: node.nodeKey,
-            nodePath: node.nodePath,
-          });
-        }
-      };
-      el.addEventListener(node.actionEvent, handler);
-      this.actionHandlers.set(el, { event: node.actionEvent, handler });
-    }
-  }
-
-  private syncBindingHandlers(el: HTMLElement, node: ResolvedElement): void {
-    for (const existing of this.bindingHandlers.get(el) ?? []) {
-      el.removeEventListener(existing.event, existing.handler);
-    }
-    const states: BindingHandlerState[] = [];
-    const current = this.ownsInteractions;
     for (const binding of node.bindings) {
-      if (!binding.event) continue;
-      const handler: EventListener = (event) => {
-        event.stopPropagation();
-        if (!current()) return;
-        const detail = (event as CustomEvent<unknown>).detail;
-        const hasDetailValue =
-          detail !== null &&
-          typeof detail === 'object' &&
-          Object.hasOwn(detail, 'value');
-        const value = hasDetailValue
-          ? (detail as { value: unknown }).value
-          : (el as unknown as Record<string, unknown>)[binding.prop];
-        if (!current()) return;
-        this.emit('lr-widget-state-change', {
-          path: binding.path,
-          value,
-          nodeId: node.nodeId!,
-          nodeKey: node.nodeKey,
-          nodePath: node.nodePath,
-          prop: binding.prop,
-        });
-      };
-      el.addEventListener(binding.event, handler);
-      states.push({ event: binding.event, handler });
+      if (binding.event !== event.type || !current()) continue;
+      const detail = (event as CustomEvent<unknown>).detail;
+      const value = detail !== null && typeof detail === 'object' && Object.hasOwn(detail, 'value')
+        ? (detail as { value: unknown }).value
+        : (event.currentTarget as unknown as Record<string, unknown>)[binding.prop];
+      if (!current()) return;
+      this.emit('lr-widget-state-change', {
+        path: binding.path,
+        value,
+        nodeId: node.nodeId!,
+        nodeKey: node.nodeKey,
+        nodePath: node.nodePath,
+        prop: binding.prop,
+      });
     }
-    this.bindingHandlers.set(el, states);
-  }
+  };
 
-  private syncMappedElement(el: HTMLElement, node: ResolvedElement): void {
-    const previousKeys = this.assignedProps.get(el) ?? new Set<string>();
-    const initialValues =
-      this.initialProps.get(el) ?? new Map<string, unknown>();
-    const nextKeys = new Set(Object.keys(node.props));
-    for (const key of previousKeys) {
-      if (!nextKeys.has(key)) {
-        (el as unknown as Record<string, unknown>)[key] =
-          initialValues.get(key);
-      }
-    }
-    for (const [k, v] of Object.entries(node.props)) {
-      if (!initialValues.has(k)) {
-        initialValues.set(k, (el as unknown as Record<string, unknown>)[k]);
-      }
-      (el as unknown as Record<string, unknown>)[k] = v;
-    }
-    this.assignedProps.set(el, nextKeys);
-    this.initialProps.set(el, initialValues);
-    this.syncActionHandler(el, node);
-    this.syncBindingHandlers(el, node);
-  }
-
-  private cleanupMappedElement(el: HTMLElement): void {
-    const action = this.actionHandlers.get(el);
-    if (action) el.removeEventListener(action.event, action.handler);
-    this.actionHandlers.delete(el);
-    for (const binding of this.bindingHandlers.get(el) ?? []) {
-      el.removeEventListener(binding.event, binding.handler);
-    }
-    this.bindingHandlers.delete(el);
-  }
-
-  /** Ref callbacks are ignored by Lit SSR and attach only during browser render/hydration. */
-  private mappedElementRef(node: ResolvedElement): (element?: Element) => void {
-    let attached: HTMLElement | undefined;
-    return (element?: Element): void => {
-      if (!element) {
-        if (attached) this.cleanupMappedElement(attached);
-        attached = undefined;
-        return;
-      }
-      attached = element as HTMLElement;
-      this.syncMappedElement(attached, node);
-    };
-  }
-
-  /** Declarative dynamic tag path: serializable on the server, stable under hydration and keyed
-   * by the same identity as client-only property/listener attachment. The ref callback is keyed
-   * by the resolved node object so it stays stable until that node is actually re-resolved; the
-   * template itself is never cached across renders -- reusing one `TemplateResult` instance
-   * across Lit's own re-render cycles is unsafe with `unsafeStatic`'s dynamic-tag interpolation. */
   private renderMapped(node: ResolvedElement): TemplateResult {
-    let onRef = this.mappedElementRefs.get(node);
-    if (!onRef) {
-      onRef = this.mappedElementRef(node);
-      this.mappedElementRefs.set(node, onRef);
-    }
     const mappedTag = cachedMappedTag(node.tag!);
     return staticHtml`<${mappedTag}
       data-widget-node-key=${node.nodeKey}
       data-widget-node-path=${node.nodePath}
       slot=${node.slot ?? nothing}
-      ${ref(onRef)}
+      ${mappedWidget(node, this.handleMappedEvent, this.ownsInteractions)}
     >${repeat(
       node.children,
       (child) => this.renderIdentity(child),

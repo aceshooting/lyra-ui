@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Cite am',
   promptInputLabel: 'AI prompt',
   promptInputControls: 'Options for prompt',
+  promptInputCollectionLimit: 'Dem leave out some of wetin you enter for di prompt because di input don reach di limit.',
   promptInputSources: 'Where di information come from',
   promptInputAttachments: 'Files wey you attach',
   handoffLabel: 'Hand am over to agent',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'No voice dey available',
   voicePickerRequired: 'Abeg choose voice.',
   voicePickerPreview: 'Hear {name} first',
+  voicePickerPreviewFailed: 'You no fit hear di voice preview.',
   voicePickerStopPreview: 'Stop di preview',
   realtimeSessionLabel: 'Live session',
   realtimeSessionDisconnected: 'Connection don cut',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Long code dey show without syntax highlighting.',
   codeBlockHighlightedLine: 'Line wey dem highlight',
   codeBlockActiveLine: 'Line wey dem highlight (e dey active)',
+  codeBlockToggle: 'Show di code or hide am',
 };
 
 registerLyraLocale('pcm', strings);

@@ -1,4 +1,8 @@
-import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { AutocorrectState, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport, publicCollectionTruncation, type CollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -9,7 +13,6 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import {
   autocorrectConverter,
-  normalizeAutocorrect,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import {
@@ -31,7 +34,6 @@ import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picke
 export type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
 import {
   canonicalIdentityList,
-  firstByRetrievalIdentity as firstByPromptIdentity,
 } from '../../retrieval/retrieval-identity.js';
 import {
   acquireResolvedAriaRelationship,
@@ -42,7 +44,7 @@ import type {
   LyraMentionPopover,
   LyraMentionSelectDetail,
 } from '../../utility/mention-popover/mention-popover.class.js';
-import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
+import { normalizeChatComposerStatus } from '../chat-composer/chat-composer-status.js';
 import type {
   ChatComposerActionsLayout,
   ChatComposerToolbarAlign,
@@ -70,9 +72,11 @@ export type { LyraVoiceCatalogEntry } from '../voice-picker/voice-picker.class.j
 import { styles } from './prompt-input.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputInputLimit, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputCollectionLimit, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputInputLimit, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const promptItemId = (item: { id: string }): string => item.id;
 
 export interface LyraPromptSuggestion extends LyraMentionItem {
   /** Inserted after the trigger. Defaults to `label`. */
@@ -203,6 +207,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
+    promptInputCollectionLimit: LYRA_DEFAULT_promptInputCollectionLimit,
     promptInputControls: LYRA_DEFAULT_promptInputControls,
     promptInputInputLimit: LYRA_DEFAULT_promptInputInputLimit,
     promptInputLabel: LYRA_DEFAULT_promptInputLabel,
@@ -240,9 +245,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   });
   private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
   private get inputLosses(): readonly (CollectionTruncation | undefined)[] {
-    return ['modelCatalog', 'voiceCatalog', 'mentionItems', 'commandItems'].map((name) => publicCollectionTruncation(this, name));
+    return LyraPromptInput.ownedCollectionProperties.map((name) => publicCollectionTruncation(this, name));
   }
   private get inputLimitMessage(): string {
+    if (['attachments', 'attachmentCapabilities', 'queue', 'sources', 'selectedSourceIds'].some(name => publicCollectionTruncation(this, name))) {
+      return this.localize('promptInputCollectionLimit');
+    }
     return this.inputLosses.some(Boolean) ? this.localize('promptInputInputLimit') : '';
   }
   private syncInputLimitAnnouncement(): void {
@@ -296,7 +304,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
-  @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
+  @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'max-rows' }) maxRows = 8;
 
   /** Forwarded to the composed native textarea. `spellcheck="false"` parses as `false`, matching
    * the textarea's true default while remaining usable from plain HTML. */
@@ -305,16 +313,15 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** Forwarded to the composed native textarea's own `autocapitalize`. Empty string omits the
    * attribute and preserves the browser default. */
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native autocorrect state forwarded through the composer. Reads are boolean; writes accept
    * boolean or the legacy `'off'`/`'false'` strings. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
   /** Native wrapping behavior forwarded to the composed textarea. */
   @property() wrap: ChatComposerWrap = 'soft';
@@ -562,6 +569,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   private onKeyDown(event: KeyboardEvent): void {
     if (event.defaultPrevented) return;
+    if (shouldIgnoreNavigationKey(event)) return;
     const popover = this.suggestionPopover;
     if (
       this.disabled ||
@@ -716,7 +724,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       return;
     const item = occurrence as LyraPromptSuggestion;
     const composer = this.composer;
-    const caret = composer?.selectionStart ?? this.value.length;
+    const caret = active.start + active.query.length + 1;
+    if (composer?.selectionStart !== caret || composer.selectionEnd !== caret ||
+        this.value.slice(active.start, caret) !== active.trigger + active.query) {
+      this.closeSuggestions();
+      return;
+    }
     const inserted = `${active.trigger}${
       item?.insertText ?? event.detail.label
     } `;
@@ -745,7 +758,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   private onFiles(event: CustomEvent<LyraAttachmentFilesDetail>): void {
     event.stopPropagation();
-    if (this.disabled) return;
+    if (this.disabled || this.readOnly) return;
     this.emit('lr-attachments-add', event.detail);
   }
 
@@ -759,17 +772,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     });
   }
 
-  private readonly firstByIdentity = new WeakMap<object, readonly unknown[]>();
-
-  /** First-wins rows per assigned snapshot, so children keep one stable collection. */
-  private firstById<T>(values: readonly T[], identity: (value: T) => unknown): readonly T[] {
-    let retained = this.firstByIdentity.get(values) as readonly T[] | undefined;
-    if (!retained) this.firstByIdentity.set(values, (retained = firstByPromptIdentity(values, identity)));
-    return retained;
-  }
-
   private get effectiveSources(): readonly LyraSourceEntry[] {
-    return this.firstById(this.sources, (source) => source.id);
+    return firstByIdentityMemo(this.sources, promptItemId);
   }
 
   private get effectiveSelectedSourceIds(): readonly string[] {
@@ -777,13 +781,13 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   private get effectiveQueue(): readonly PromptQueueItem[] {
-    return this.firstById(this.queue, (item) => item.id);
+    return firstByIdentityMemo(this.queue, promptItemId);
   }
 
   private renderDefaultAttachmentTrigger(): TemplateResult {
     return html`<lr-attachment-trigger multiple
       .capabilities=${this.attachmentCapabilities}
-      .disabled=${this.disabled}
+      .disabled=${this.disabled || this.readOnly}
       @lr-files=${this.onFiles}
       @lr-camera-request=${(event: CustomEvent<null>) =>
         this.reemit(event, 'lr-camera-request')}
@@ -797,7 +801,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     name: K
   ): void {
     event.stopPropagation();
-    if (this.disabled) return;
+    if (this.disabled || this.readOnly) return;
     // `event` and `name` are tied to the same `K`, so `event.detail` is by construction the detail
     // this event map declares for `name` -- but `LyraEmitArgs<…, K>` stays an unresolved
     // conditional while `K` is a type parameter, so the tie has to be asserted rather than proved.
@@ -819,12 +823,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       .previewSrc=${attachment.uri ?? ''}
       .status=${attachment.status ?? 'pending'}
       .progress=${attachment.progress ?? 0}
-      .withoutRemoveButton=${this.disabled}
+      .withoutRemoveButton=${this.disabled || this.readOnly}
       .inert=${this.disabled}
       size="s"
       @lr-remove=${(event: Event) => {
         event.stopPropagation();
-        if (this.disabled) return;
+        if (this.disabled || this.readOnly) return;
         this.emit('lr-attachment-remove', {
           attachmentId: attachment.attachmentId,
         });
@@ -866,6 +870,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     >
       ${modelCatalog.length
         ? html`<lr-model-select
+            .readonly=${this.readOnly}
             .catalog=${this.modelCatalog}
             .value=${this.model}
             .disabled=${this.disabled}
@@ -876,6 +881,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         : nothing}
       ${voiceCatalog.length
         ? html`<lr-voice-picker
+            .readonly=${this.readOnly}
             .catalog=${this.voiceCatalog}
             .value=${this.voice}
             .disabled=${this.disabled}
@@ -891,10 +897,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             aria-disabled=${String(this.disabled)}
           >
             <summary part="sources-summary">
+              <span class="sources-marker">${chevronIcon()}</span>
               ${this.localize('promptInputSources')}
             </summary>
             <lr-source-picker
               part="source-picker"
+              .inert=${this.readOnly}
               .sources=${sources}
               .selectedSourceIds=${this.effectiveSelectedSourceIds}
               @lr-selection-change=${(
@@ -907,9 +915,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   override render(): TemplateResult {
-    const label =
-      this.accessibleLabel ??
-      (this.label == null ? this.localize('promptInputLabel') : this.label);
+    const hostLabel = this.accessibleLabel;
+    const label = hostLabel === '' ? '' : normalizeLabel(hostLabel) ??
+      (this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('promptInputLabel'));
     const attachments = this.effectiveAttachments;
     const queue = this.effectiveQueue;
     const hasChips = attachments.length > 0 || this.slotPresence.has('chips');
@@ -925,6 +933,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       ${queue.length
         ? html`<lr-prompt-queue
             part="queue"
+            .readonly=${this.readOnly}
             .items=${queue}
             .disabled=${this.disabled}
             @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) =>

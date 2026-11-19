@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Ba mémoire ya ntango molai',
   memoryPanelAdd: 'Bakisa na mémoire ya ntango molai',
   memoryPanelAddWithContext: 'Bakisa "{label}" na mémoire ya ntango molai',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Bosana nyonso',
   memoryPanelConfirmAddHeading: 'Bakisa oyo na mémoire ya ntango molai?',
   memoryPanelConfirmRemoveHeading: 'Longola eloko oyo?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Ba eteni ya évaluation',
   ragEvalDashboardAllSlices: 'Nyonso',
   ragEvalDashboardSliceUnavailable: 'Ba exécution ya évaluation ezali te mpo na {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Métrique ya évaluation ezali te mpo na {metric}.',
   knowledgeBaseSyncIdle: 'Ezali kosala te',
   knowledgeBaseSyncSyncing: 'Ezali kosynchroniser',
   knowledgeBaseSyncPaused: 'Etelemi',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Résultat {index} ya {total}',
   ragAnswerEmpty: 'Eyano moko te naino',
   retrievalTraceEmpty: 'Etape moko te ya kozongisa ba résultats',
+  retrievalTraceLabel: 'Trace ya kozongisa ba résultats',
   sourcePickerMatches: {
     one: '{count} liziba ekokani',
     other: '{count} maziba ekokani',

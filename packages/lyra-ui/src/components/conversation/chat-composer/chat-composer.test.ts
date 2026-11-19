@@ -1045,6 +1045,9 @@ it("rebinds textarea observation and coalesced resize frames to the adopted owne
       {} as ResizeObserver
     );
     const staleFrame = frames.get(52);
+    resizeCallback!([], {} as ResizeObserver);
+    resizeCallback!([{ contentRect: { width: 246 } } as ResizeObserverEntry], {} as ResizeObserver);
+    expect(frames.get(52) === staleFrame).to.equal(true);
     expect(
       staleFrame,
       "the observer schedules through the destination window"

@@ -8,7 +8,7 @@ import { bdi } from '../../../internal/bidi.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { firstByIdentity } from '../../../internal/collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { styles } from './change-review.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -32,6 +32,9 @@ export interface ChangeReviewFile {
   previousPath?: string;
   hunks: readonly ChangeReviewHunk[];
 }
+
+const fileIdentity = (file: ChangeReviewFile): string => file.id;
+const hunkIdentity = (hunk: ChangeReviewHunk): string => hunk.id;
 export interface LyraChangeReviewEventMap {
   'lr-change-decision-request': CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>;
 }
@@ -58,6 +61,10 @@ const MAX_CHANGES = 200;
  * @csspart status - The localized current decision.
  * @csspart actions - Hunk decision actions.
  * @csspart decision - A keep/discard button.
+ * @cssprop [--lr-change-review-file-border-color=var(--lr-color-border)] - Border of each file disclosure.
+ * @cssprop [--lr-change-review-file-radius=var(--lr-radius-container)] - Corner radius of each file disclosure.
+ * @cssprop [--lr-change-review-header-hover-bg=var(--lr-color-surface-raised)] - File header hover fill; the
+ *   pressed fill mixes from it.
  * @csspart empty - Empty review copy.
  * @csspart limit - Render-limit notice.
  * @status experimental
@@ -98,10 +105,10 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   @property() label?: string;
 
   private get normalizedFiles(): ChangeReviewFile[] {
-    return firstByIdentity(Array.isArray(this.files) ? this.files : [], (file) => file.id);
+    return firstByIdentityMemo(this.files, fileIdentity);
   }
   private hunks(file: ChangeReviewFile): ChangeReviewHunk[] {
-    return firstByIdentity(Array.isArray(file.hunks) ? file.hunks : [], (hunk) => hunk.id);
+    return firstByIdentityMemo(file.hunks, hunkIdentity);
   }
   private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
 

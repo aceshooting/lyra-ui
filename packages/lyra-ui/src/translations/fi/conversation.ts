@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Viittaa',
   promptInputLabel: 'Tekoälykehote',
   promptInputControls: 'Kehotteen asetukset',
+  promptInputCollectionLimit: 'Osa kehotteen syötteestä jätettiin pois, koska syöteraja täyttyi.',
   promptInputSources: 'Lähteet',
   promptInputAttachments: 'Liitteet',
   handoffLabel: 'Agentin vaihto',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Ääniä ei ole käytettävissä',
   voicePickerRequired: 'Valitse ääni.',
   voicePickerPreview: 'Esikuuntele: {name}',
+  voicePickerPreviewFailed: 'Ääninäyte ei ole käytettävissä.',
   voicePickerStopPreview: 'Lopeta esikuuntelu',
   realtimeSessionLabel: 'Reaaliaikainen istunto',
   realtimeSessionDisconnected: 'Yhteys katkaistu',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Pitkä koodi näytetään ilman syntaksin korostusta.',
   codeBlockHighlightedLine: 'Korostettu rivi',
   codeBlockActiveLine: 'Aktiivinen korostettu rivi',
+  codeBlockToggle: 'Näytä tai piilota koodi',
 };
 
 registerLyraLocale('fi', strings);

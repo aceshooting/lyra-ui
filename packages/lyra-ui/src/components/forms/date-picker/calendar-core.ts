@@ -1,5 +1,5 @@
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
-import { localDate } from '../../../internal/calendar-date.js';
+import { formatIsoDate, localDate, parseIsoDate } from '../../../internal/calendar-date.js';
 
 export { localDate, utcDate } from '../../../internal/calendar-date.js';
 
@@ -43,30 +43,18 @@ export function dateTimeFormat(
   }
 }
 
-/** Parse `YYYY-MM-DD` into a local Date, or null if invalid. */
+/** Parse `YYYY-MM-DD` (surrounding whitespace ignored) into a local Date, or null if invalid. */
 export function parseISO(s: string): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
-  if (!m) return null;
-  const year = Number(m[1]);
-  const month = Number(m[2]);
-  const day = Number(m[3]);
-  const d = localDate(year, month - 1, day);
-  if (!Number.isFinite(d.getTime())) return null;
-  // The Date constructor silently rolls invalid components over into the
-  // next month/year (e.g. month 13 or Feb 30) instead of producing an
-  // invalid date, so a calendar-invalid input must be caught by comparing
-  // the constructed date back against what was actually typed.
-  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
-  return d;
+  const parts = s ? parseIsoDate(s.trim()) : undefined;
+  if (!parts) return null;
+  const d = localDate(parts.y, parts.m - 1, parts.d);
+  return Number.isFinite(d.getTime()) ? d : null;
 }
 
 /** Format a supported Date as local `YYYY-MM-DD`, or an empty string outside years 0000–9999. */
 export function formatISO(d: Date): string {
   if (!Number.isFinite(d.getTime()) || d.getFullYear() < 0 || d.getFullYear() > 9999) return '';
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${String(d.getFullYear()).padStart(4, '0')}-${mm}-${dd}`;
+  return formatIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
 export function isSameDay(a: Date, b: Date): boolean {

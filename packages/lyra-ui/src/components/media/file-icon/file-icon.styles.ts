@@ -26,8 +26,8 @@ export const styles = css`
     block-size: var(--_lr-file-icon-size);
     box-sizing: border-box;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border: var(--lr-border-width-thin) solid var(--lr-file-icon-border-color, var(--lr-color-border-subtle));
+    border-radius: var(--lr-file-icon-radius, var(--lr-radius));
     background: var(--lr-file-icon-bg, var(--lr-color-brand-quiet));
     color: var(--lr-file-icon-color, var(--lr-color-brand));
     flex: 0 0 auto;

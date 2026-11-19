@@ -1,4 +1,3 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -38,6 +37,12 @@ export const styles = css`
   [part='status'] {
     font-size: var(--lr-font-size-xs);
   }
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
   [part='controller-badge'] {
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
@@ -52,32 +57,7 @@ export const styles = css`
   }
   [part='take-over-button'],
   [part='stop-button'] {
-    font: inherit;
     font-size: var(--lr-font-size-xs);
-    background: none;
-    border: var(--lr-border-width-thin) solid var(--lr-button-outlined-border, var(--lr-color-border));
-    border-radius: var(--lr-button-radius, var(--lr-radius-xs));
-    padding: var(--lr-space-2xs) var(--lr-button-padding-inline, var(--lr-space-s));
-    cursor: pointer;
-    min-inline-size: 0;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
-  }
-  [part='take-over-button']:hover,
-  [part='stop-button']:hover {
-    background: var(--lr-button-hover-bg, var(--lr-color-brand-quiet));
-  }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), a distinctly deeper step than hover in
-     light and dark themes alike rather than a repeat of it. */
-  [part='take-over-button']:active,
-  [part='stop-button']:active {
-    background: var(--lr-button-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
-  }
-  [part='take-over-button']:focus-visible,
-  [part='stop-button']:focus-visible {
-    ${focusRing}
   }
   [part='viewport'] {
     position: relative;

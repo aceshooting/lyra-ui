@@ -1,6 +1,6 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { overlaySurface, overlaySurfaceControlEdge } from '../../../internal/overlay-surface.styles.js';
+import { anchoredPopupOpen, anchoredPopupReveal, overlaySurface, overlaySurfaceControlEdge } from '../../../internal/overlay-surface.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
@@ -212,6 +212,14 @@ export const styles = css`
   [part="expand-button"]:focus-visible {
     ${focusRing}
   }
+  [part="clear-button"]:disabled,
+  [part="expand-button"]:disabled {
+    cursor: not-allowed;
+  }
+  :host([readonly]:not(:disabled)) [part="clear-button"],
+  :host([readonly]:not(:disabled)) [part="expand-button"] {
+    cursor: default;
+  }
   [part="popup"][hidden] {
     display: none;
   }
@@ -225,15 +233,13 @@ export const styles = css`
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
+      var(--lr-positioner-available-inline-size, var(--lr-size-28rem)),
       var(--lr-size-28rem)
     );
     /* Retain layout during the outgoing transition. Once it settles, [hidden] removes the
        closed popup from layout so its stale fixed-position box cannot enlarge an ancestor's
        scrollable overflow. */
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(var(--lr-size-neg-0-25rem));
-    transition-property: opacity, transform, visibility;
+    ${anchoredPopupReveal}
     transition-duration: var(--_lr-motion-duration, var(--hide-duration, var(--lr-transition-fast)));
   }
   [part="date-picker"]::part(base) {
@@ -242,9 +248,7 @@ export const styles = css`
     border-radius: inherit;
   }
   :host([open]) [part="popup"][data-positioned] {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
+    ${anchoredPopupOpen}
     transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-transition-fast)));
   }
   @media (prefers-reduced-motion: reduce) {

@@ -1,3 +1,5 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -102,6 +104,8 @@ export interface LyraAgentTraceEventMap {
  * @event lr-span-select - `detail: { spanId }` — a span was activated, from the tree or the handoff list.
  * @event lr-span-toggle - `detail: { spanId, expanded }` — a tree row was expanded or collapsed.
  * @event lr-span-visibility-change - `detail: { hiddenKinds }` — the span-kind filter changed.
+ * @cssprop [--lr-agent-trace-handoff-hover-bg] - Hover fill of the handoff.
+ * @cssprop [--lr-agent-trace-handoff-pressed-bg] - Pressed fill of the handoff.
  * @csspart base - The root wrapper.
  * @csspart filter - The composed `<lr-graph-legend>` filter row; all six kinds in provider mode, otherwise the kinds present in `spans`.
  * @csspart handoffs - The handoff quick-jump list wrapper, only rendered while at least one visible span has `kind: 'agent'`.
@@ -141,6 +145,11 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     tokensOut: LYRA_DEFAULT_tokensOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  /** Outer frame. Defaults to `plain`. */
+  @property({ reflect: true }) frame: LyraFrame = 'plain';
+  /** Layout density. Small sizes use compact spacing. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
@@ -473,7 +482,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
           .maxNodes=${this.effectiveMaxNodes}
           .spans=${sourceMode ? EMPTY_SPANS : this.spans}
           .activeSpanId=${this.activeSpanId}
-          .label=${this.label}
+          .label=${hostAriaLabel(this) ?? this.label}
+          .size=${this.size}
           .strings=${this.strings}
           ?with-tokens=${this.withTokens}
           ?with-cost=${this.withCost}

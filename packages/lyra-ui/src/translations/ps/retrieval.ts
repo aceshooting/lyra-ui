@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'اوږدمهاله یادونه',
   memoryPanelAdd: 'اوږدمهاله حافظې ته ورزیاتول',
   memoryPanelAddWithContext: '"{label}" اوږدمهاله حافظې ته ورزیاتول',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'ټول هېرول',
   memoryPanelConfirmAddHeading: 'دا اوږدمهاله حافظې ته ورزیات کړئ؟',
   memoryPanelConfirmRemoveHeading: 'دا توکی لرې کړئ؟',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'د ارزونې برخې',
   ragEvalDashboardAllSlices: 'ټول',
   ragEvalDashboardSliceUnavailable: 'د {slice} لپاره د ارزونې بهیرونه نشته.',
+  ragEvalDashboardMetricUnavailable: 'د {metric} لپاره د ارزونې کوم معیار نشته.',
   knowledgeBaseSyncIdle: 'غیرفعال',
   knowledgeBaseSyncSyncing: 'همغږي کېږي',
   knowledgeBaseSyncPaused: 'ځنډول شوی',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'پایله {index} له {total}',
   ragAnswerEmpty: 'تر اوسه ځواب نشته',
   retrievalTraceEmpty: 'د بیرته اخیستلو مرحلې نشته',
+  retrievalTraceLabel: 'د بېرته اخیستلو څارنه',
   sourcePickerMatches: {
     one: '{count} سرچینه میچ',
     other: '{count} سرچینې سره سمون لري',

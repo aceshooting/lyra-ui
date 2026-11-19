@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -50,10 +51,9 @@ export const styles = css`
   }
   [part='title'] {
     flex: 1 1 auto;
-    min-inline-size: 0;
+    ${wrapGuard}
     font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
-    overflow-wrap: anywhere;
   }
   [part='description'] {
     margin: 0;

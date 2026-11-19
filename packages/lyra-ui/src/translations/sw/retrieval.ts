@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Kumbukumbu za muda mrefu',
   memoryPanelAdd: 'Ongeza kwenye kumbukumbu ya muda mrefu',
   memoryPanelAddWithContext: 'Ongeza "{label}" kwenye kumbukumbu ya muda mrefu',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Sahau yote',
   memoryPanelConfirmAddHeading: 'Unataka kuongeza hiki kwenye kumbukumbu ya muda mrefu?',
   memoryPanelConfirmRemoveHeading: 'Unataka kuondoa kipengee hiki?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Sehemu za tathmini',
   ragEvalDashboardAllSlices: 'Zote',
   ragEvalDashboardSliceUnavailable: 'Hakuna uendeshaji wa tathmini unaopatikana kwa {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Hakuna kipimo cha tathmini kinachopatikana kwa {metric}.',
   knowledgeBaseSyncIdle: 'Tulia',
   knowledgeBaseSyncSyncing: 'Inasawazisha',
   knowledgeBaseSyncPaused: 'Imesitishwa',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Matokeo {index} kati ya {total}',
   ragAnswerEmpty: 'Hakuna jibu bado',
   retrievalTraceEmpty: 'Hakuna hatua za kurejesha',
+  retrievalTraceLabel: 'Ufuatiliaji wa hatua za kurejesha',
   sourcePickerMatches: {
     one: '{count} chanzo kinacholingana',
     other: '{count} vyanzo vinalingana',

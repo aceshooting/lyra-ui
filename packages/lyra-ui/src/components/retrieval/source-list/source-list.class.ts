@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isElement } from '../../../internal/rendered-tree-traversal.js';
@@ -116,9 +117,10 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private readonly listId = nextId('source-list-region');
   private readonly previousRoles = new Map<Element, string | null>();
-  private roleObserver?: MutationObserver;
-  private roleObserverDocument?: Document;
-  private roleObserverGeneration = 0;
+  private readonly roleObserver = new OwnedMutationObserver(this, (records) =>
+    this.onRoleMutations(records)
+  );
+  private connectionGeneration = 0;
 
   private isCompatibleListItem(element: Element): boolean {
     const existingRole = element.getAttribute('role')?.trim();
@@ -157,26 +159,6 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private observeRoleChanges(): void {
     if (!this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    if (!this.roleObserver || this.roleObserverDocument !== ownerDocument) {
-      this.resetRoleObserver();
-      const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-      if (!MutationObserverCtor) return;
-      const generation = this.roleObserverGeneration;
-      const observer = new MutationObserverCtor((records) => {
-        if (
-          this.roleObserver !== observer ||
-          this.roleObserverGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) {
-          return;
-        }
-        this.onRoleMutations(records);
-      });
-      this.roleObserver = observer;
-      this.roleObserverDocument = ownerDocument;
-    }
     this.roleObserver.observe(this, {
       attributes: true,
       attributeFilter: ['role', 'tabindex', 'contenteditable'],
@@ -185,7 +167,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   }
 
   private syncItemRoles(elements: Element[]): void {
-    this.roleObserver?.disconnect();
+    this.roleObserver.disconnect();
     const assigned = new Set(elements);
     const hasListSemantics = elements.every((element) =>
       this.isCompatibleListItem(element)
@@ -232,12 +214,12 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     this.observeRoleChanges();
     if (this.hasUpdated) {
       const ownerDocument = this.ownerDocument;
-      const generation = this.roleObserverGeneration;
+      const generation = this.connectionGeneration;
       void this.updateComplete.then(() => {
         if (
           !this.isConnected ||
           this.ownerDocument !== ownerDocument ||
-          this.roleObserverGeneration !== generation
+          this.connectionGeneration !== generation
         ) {
           return;
         }
@@ -247,22 +229,16 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.roleObserver?.disconnect();
     this.syncItemRoles([]);
-    this.resetRoleObserver();
+    this.roleObserver.disconnect();
+    this.connectionGeneration += 1;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.resetRoleObserver();
-  }
-
-  private resetRoleObserver(): void {
-    this.roleObserverGeneration += 1;
-    this.roleObserver?.disconnect();
-    this.roleObserver = undefined;
-    this.roleObserverDocument = undefined;
+    this.connectionGeneration += 1;
+    this.roleObserver.resume();
   }
 
   protected override willUpdate(changed: PropertyValues): void {

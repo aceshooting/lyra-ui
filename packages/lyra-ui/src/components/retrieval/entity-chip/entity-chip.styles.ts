@@ -19,6 +19,8 @@ export const styles = css`
     justify-content: center;
     box-sizing: border-box;
     ${iconHitTarget}
+    /* The target keeps its full size but contributes only one line to the surrounding prose. */
+    margin-block: min(0px, calc((1lh - var(--lr-icon-button-size)) / 2));
     padding: 0 var(--lr-size-6px);
     border: var(--lr-border-width-thin) solid var(--lr-entity-chip-border, transparent);
     border-radius: var(--lr-radius-pill);

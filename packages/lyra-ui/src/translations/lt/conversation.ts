@@ -121,6 +121,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Nurodyti šaltinį',
   promptInputLabel: 'DI raginimas',
   promptInputControls: 'Raginimo parinktys',
+  promptInputCollectionLimit: 'Dalis įvesto raginimo praleista, nes pasiekta įvesties riba.',
   promptInputSources: 'Šaltiniai',
   promptInputAttachments: 'Priedai',
   handoffLabel: 'Perdavimas agentui',
@@ -159,6 +160,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Balsų nėra',
   voicePickerRequired: 'Pasirinkite balsą.',
   voicePickerPreview: 'Išklausyti {name}',
+  voicePickerPreviewFailed: 'Balso pavyzdžio perklausyti negalima.',
   voicePickerStopPreview: 'Stabdyti peržiūrą',
   realtimeSessionLabel: 'Realiojo laiko seansas',
   realtimeSessionDisconnected: 'Atjungta',
@@ -187,6 +189,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Ilgas kodas rodomas be sintaksės paryškinimo.',
   codeBlockHighlightedLine: 'Paryškinta eilutė',
   codeBlockActiveLine: 'Aktyvi paryškinta eilutė',
+  codeBlockToggle: 'Rodyti arba slėpti kodą',
 };
 
 registerLyraLocale('lt', strings);

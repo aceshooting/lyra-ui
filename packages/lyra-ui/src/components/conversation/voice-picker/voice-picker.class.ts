@@ -1,7 +1,7 @@
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { guard } from 'lit/directives/guard.js';
-import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { AutocorrectState, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -15,7 +15,7 @@ import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
-import { autocorrectConverter, normalizeAutocorrect, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -26,7 +26,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { publicCollectionTruncation, collectionSupport } from '../../../internal/collection-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerPreviewFailed, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -148,6 +148,8 @@ export interface LyraVoicePickerEventMap {
  *   minimum hit area even when the field chrome uses a smaller tier.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The complete label, control, hint, error, and listbox frame.
+ * @cssprop [--lr-voice-picker-trigger-hover-bg=var(--lr-color-brand-quiet)] - Hovered trigger background.
+ * @cssprop --lr-voice-picker-trigger-active-bg - Pressed trigger background. Defaults to a mix from the hover fill.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for trigger and combobox text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -212,7 +214,7 @@ export interface LyraVoicePickerEventMap {
  *   of a synthetic stale-value option row.
  * @cssprop [--lr-voice-picker-option-synthetic-font-style=italic] - Font style of a synthetic
  *   stale-value option label.
- * @cssprop [--lr-voice-picker-option-disabled-opacity=0.5] - Opacity of an option row whose catalog
+ * @cssprop [--lr-voice-picker-option-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of an option row whose catalog
  *   entry sets `disabled`.
  * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Shared hover/press
  *   fill for the standalone and row preview actions.
@@ -250,6 +252,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     voice: LYRA_DEFAULT_voice,
     voicePickerNoVoices: LYRA_DEFAULT_voicePickerNoVoices,
     voicePickerPreview: LYRA_DEFAULT_voicePickerPreview,
+    voicePickerPreviewFailed: LYRA_DEFAULT_voicePickerPreviewFailed,
     voicePickerRequired: LYRA_DEFAULT_voicePickerRequired,
     voicePickerStopPreview: LYRA_DEFAULT_voicePickerStopPreview,
   };
@@ -309,16 +312,15 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   @property() placeholder = '';
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
    *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
@@ -507,14 +509,14 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     this.catalogPicker.hide();
   }
 
-  private readonly limitAnnouncements = new AnnouncementSinkController(this);
+  private readonly announcements = new AnnouncementSinkController(this);
   private limitMounted = false;
   private previousInputLimit = false;
   private get inputLimited(): boolean { return publicCollectionTruncation(this, 'catalog') !== undefined; }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const limited = this.inputLimited;
-    if (this.limitMounted && limited && !this.previousInputLimit) this.limitAnnouncements.announcePolite(this.localize('catalogPickerInputLimit'));
+    if (this.limitMounted && limited && !this.previousInputLimit) this.announcements.announcePolite(this.localize('catalogPickerInputLimit'));
     this.previousInputLimit = limited;
     this.limitMounted = true;
     this.syncCatalogDescription(this.controlId);
@@ -599,9 +601,13 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
 
   private playInternal(voiceId: string, url: string): void {
     const safe = safeMediaSrc(url);
-    if (!safe) return;
+    if (!safe) {
+      this.announcements.announcePolite(this.localize('voicePickerPreviewFailed'));
+      return;
+    }
     this.stopInternalPreview();
     const audio = this.ownerDocument.createElement('audio');
+    audio.preload = 'none';
     audio.src = safe;
     audio.addEventListener('ended', this.onAudioEnded);
     audio.addEventListener('error', this.onAudioLoadFailure);
@@ -637,45 +643,15 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     this.stopInternalPreview();
   };
 
-  /**
-   * Releases exactly the resource that failed. A superseded resource cannot mutate the newer
-   * generation.
-   *
-   * Two distinct callers reach this, and they publish differently:
-   *  - A rejected `play()` (or a synchronous throw from calling it) means the browser never
-   *    genuinely attempted playback -- silent, because no public start was ever published for the
-   *    still-pending candidate.
-   *  - A genuine `error` event on `<audio>` means the browser *did* attempt to fetch/decode the
-   *    resource and that attempt failed -- distinct from `play()` merely rejecting (autoplay
-   *    policy, an interrupted request). If that arrives before the `play()` promise itself has
-   *    settled (a real race: `play()` resolving is not ordered against the element's own `error`
-   *    event), the still-pending candidate is published as started and immediately as stopped, so a
-   *    consumer never observes a bare stop with no matching start. Once already `previewingId`, the
-   *    existing publish stands and only the terminal stop is new.
-   */
+  // A native error can arrive before play() resolves. Keep the start/stop events paired.
   private onAudioLoadFailure = (eventOrAudio: Event | HTMLAudioElement): void => {
-    const direct = eventOrAudio as unknown as { localName?: string };
-    const isDomErrorEvent = direct.localName !== 'audio';
-    const candidate =
-      direct.localName === 'audio' ? eventOrAudio : (eventOrAudio as Event).currentTarget;
-    const audioLike = candidate as
-      | (EventTarget & {
-          localName?: string;
-          pause?: () => void;
-          removeEventListener?: typeof EventTarget.prototype.removeEventListener;
-        })
-      | null;
-    const failedAudio =
-      audioLike?.localName === 'audio' &&
-      typeof audioLike.pause === 'function' &&
-      typeof audioLike.removeEventListener === 'function'
-        ? (audioLike as HTMLAudioElement)
-        : undefined;
-    if (!failedAudio) return;
-    failedAudio.removeEventListener('ended', this.onAudioEnded);
-    failedAudio.removeEventListener('error', this.onAudioLoadFailure);
-    failedAudio.pause();
-    if (failedAudio !== this.audioEl) return;
+    const audio = this.audioEl;
+    if (!audio) return;
+    const isDomErrorEvent = 'currentTarget' in eventOrAudio;
+    const failed = isDomErrorEvent ? eventOrAudio.currentTarget : eventOrAudio;
+    if (failed !== audio) return;
+    this.releasePreviewAudio(audio);
+    this.announcements.announcePolite(this.localize('voicePickerPreviewFailed'));
     const pendingVoiceId = this.pendingPreviewId;
     this.previewGeneration++;
     this.audioEl = undefined;
@@ -690,12 +666,18 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     }
   };
 
+  private releasePreviewAudio(audio: HTMLAudioElement): void {
+    audio.removeEventListener('ended', this.onAudioEnded);
+    audio.removeEventListener('error', this.onAudioLoadFailure);
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+  }
+
   private stopInternalPreview(): void {
     const hadTarget = this.internalPreviewTargetId !== null || this.audioEl !== undefined;
     if (this.audioEl) {
-      this.audioEl.removeEventListener('ended', this.onAudioEnded);
-      this.audioEl.removeEventListener('error', this.onAudioLoadFailure);
-      this.audioEl.pause();
+      this.releasePreviewAudio(this.audioEl);
       this.audioEl = undefined;
     }
     if (hadTarget) this.previewGeneration++;
@@ -726,46 +708,22 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     return playing ? this.localize('voicePickerStopPreview') : this.localize('voicePickerPreview', undefined, { name });
   }
 
-  // -- Closed-dropdown mode (trigger button) --------------------------------
-
   private onTriggerClick = (): void => {
     if (this.effectiveDisabled) return;
     this.open ? this.hide() : this.show();
   };
-  private onControlBlur = (event: FocusEvent): void => {
-    this.catalogPicker.handleControlBlur(event);
-  };
-  private onControlFocus = (event: FocusEvent): void => {
-    this.catalogPicker.handleControlFocus(event);
-  };
+  private readonly onControlBlur = this.catalogPicker.handleControlBlur.bind(this.catalogPicker);
+  private readonly onControlFocus = this.catalogPicker.handleControlFocus.bind(this.catalogPicker);
 
-  private onTriggerKeyDown = (e: KeyboardEvent): void => {
-    this.catalogPicker.handleTriggerKeyDown(e);
-  };
+  private readonly onTriggerKeyDown = this.catalogPicker.handleTriggerKeyDown.bind(this.catalogPicker);
 
-  // -- Free-text mode (text input) -------------------------------------------
+  private readonly onComboMouseDown = this.catalogPicker.handleComboMouseDown.bind(this.catalogPicker);
+  private readonly onInputFocus = this.catalogPicker.handleInputFocus.bind(this.catalogPicker);
+  private readonly onInput = this.catalogPicker.handleInput.bind(this.catalogPicker);
+  private readonly onInputKeyDown = this.catalogPicker.handleInputKeyDown.bind(this.catalogPicker);
 
-  private onComboMouseDown = (e: MouseEvent): void => {
-    this.catalogPicker.handleComboMouseDown(e);
-  };
-  private onInputFocus = (event: FocusEvent): void => {
-    this.catalogPicker.handleInputFocus(event);
-  };
-  private onInput = (e: Event): void => {
-    this.catalogPicker.handleInput(e);
-  };
-  private onInputKeyDown = (e: KeyboardEvent): void => {
-    this.catalogPicker.handleInputKeyDown(e);
-  };
-
-  // -- Shared listbox ---------------------------------------------------
-
-  private onListboxMouseDown = (e: MouseEvent): void => {
-    this.catalogPicker.handleListboxMouseDown(e);
-  };
-  private onListboxClick = (e: MouseEvent): void => {
-    this.catalogPicker.handleListboxClick(e);
-  };
+  private readonly onListboxMouseDown = this.catalogPicker.handleListboxMouseDown.bind(this.catalogPicker);
+  private readonly onListboxClick = this.catalogPicker.handleListboxClick.bind(this.catalogPicker);
 
   private renderRows(rows: DisplayEntry[], activeId: string): TemplateResult[] {
     return rows.map((entry, i) => {
@@ -819,6 +777,16 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     `;
   }
 
+  private get supportingState() {
+    return formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'voice-picker',
+      hint: this.hint,
+      errorText: this.errorText,
+      extraDescribedBy: [this.getAttribute('aria-describedby')],
+    });
+  }
+
   private get hasVisibleLabel(): boolean {
     return (this.label ?? '').length > 0 || this.slotPresence.has('label');
   }
@@ -860,11 +828,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this.value.length > 0;
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
-      .filter(Boolean)
-      .join(' ');
+    const { hasHint, hasError, describedBy } = this.supportingState;
     return html`
       ${this.renderLabel()}
       <div class="control-row">
@@ -905,11 +869,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
-      .filter(Boolean)
-      .join(' ');
+    const { hasHint, hasError, describedBy } = this.supportingState;
     return html`
       ${this.renderLabel()}
       <div class="control-row">

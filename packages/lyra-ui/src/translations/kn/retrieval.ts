@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'ದೀರ್ಘಾವಧಿಯ ನೆನಪುಗಳು',
   memoryPanelAdd: 'ದೀರ್ಘಾವಧಿಯ ಮೆಮೊರಿಗೆ ಸೇರಿಸಿ',
   memoryPanelAddWithContext: '"{label}" ಅನ್ನು ದೀರ್ಘಾವಧಿಯ ಮೆಮೊರಿಗೆ ಸೇರಿಸಿ',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'ಎಲ್ಲವನ್ನೂ ಮರೆತುಬಿಡಿ',
   memoryPanelConfirmAddHeading: 'ಇದನ್ನು ದೀರ್ಘಾವಧಿಯ ಮೆಮೊರಿಗೆ ಸೇರಿಸಬೇಕೇ?',
   memoryPanelConfirmRemoveHeading: 'ಈ ಐಟಂ ತೆಗೆದುಹಾಕಬೇಕೇ?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'ಮೌಲ್ಯಮಾಪನ ವಿಭಾಗಗಳು',
   ragEvalDashboardAllSlices: 'ಎಲ್ಲಾ',
   ragEvalDashboardSliceUnavailable: '{slice}ಗಾಗಿ ಮೌಲ್ಯಮಾಪನ ರನ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ.',
+  ragEvalDashboardMetricUnavailable: '{metric}ಗಾಗಿ ಯಾವುದೇ ಮೌಲ್ಯಮಾಪನ ಮಾಪಕ ಲಭ್ಯವಿಲ್ಲ.',
   knowledgeBaseSyncIdle: 'ನಿಷ್ಕ್ರಿಯ',
   knowledgeBaseSyncSyncing: 'ಸಿಂಕ್ ಆಗುತ್ತಿದೆ',
   knowledgeBaseSyncPaused: 'ವಿರಾಮದಲ್ಲಿದೆ',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total} ರಲ್ಲಿ {index} ಫಲಿತಾಂಶ',
   ragAnswerEmpty: 'ಇನ್ನೂ ಉತ್ತರವಿಲ್ಲ',
   retrievalTraceEmpty: 'ಮರುಪಡೆಯುವಿಕೆ ಹಂತಗಳಿಲ್ಲ',
+  retrievalTraceLabel: 'ಮರುಪಡೆಯುವಿಕೆಯ ಟ್ರೇಸ್',
   sourcePickerMatches: {
     one: '{count} ಮೂಲ ಹೊಂದಾಣಿಕೆ',
     other: '{count} ಮೂಲಗಳು ಹೊಂದಾಣಿಕೆಯಾಗುತ್ತವೆ',

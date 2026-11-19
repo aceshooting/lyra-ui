@@ -38,7 +38,6 @@ import { safeLinkHref, safeLinkHrefWithin, safeMediaSrc } from '../../../interna
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
-import { resolveIsDarkTheme, watchDarkTheme } from '../code-block/shiki-dark-theme.js';
 import type { ShikiTransformer } from '../code-block/shiki-types.js';
 import {
   loadMarkdownDeps,
@@ -98,6 +97,7 @@ export function normalizeMarkdownLeadingTabs(content: string, tabSize: number): 
 interface MarkdownOwnedAnimationFrame {
   owner: Window;
   handle?: number;
+  fallback?: number;
   settled: Promise<void>;
   resolve(): void;
 }
@@ -130,9 +130,18 @@ export class MarkdownOwnedAnimationFrameController {
       pending.handle = owner.requestAnimationFrame(() => {
         if (this.pending !== pending) return;
         this.pending = undefined;
+        owner.clearTimeout(pending.fallback);
         pending.resolve();
         callback();
       });
+      if (this.pending === pending) {
+        // Background documents can stop receiving animation frames.
+        pending.fallback = owner.setTimeout(() => {
+          if (this.pending !== pending) return;
+          this.cancel();
+          callback();
+        }, 100);
+      }
     } catch {
       if (this.pending === pending) this.pending = undefined;
       pending.resolve();
@@ -146,6 +155,7 @@ export class MarkdownOwnedAnimationFrameController {
     if (!pending) return false;
     this.pending = undefined;
     try {
+      pending.owner.clearTimeout(pending.fallback);
       if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
     } catch {
       // The owner browsing context may already be gone; clearing `pending` above keeps any late
@@ -1136,7 +1146,7 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
 /** Whether the *highlighting* configuration changed, invalidating in-flight work and the
  *  permanently-failed key set. */
 export function markdownHighlightConfigChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('withoutSyntaxHighlighting') || changed.has('languages') || changed.has('languageLoaders') || changed.has('codeBlockHeader');
+  return changed.has('withoutSyntaxHighlighting') || markdownLanguageSetChanged(changed) || changed.has('codeBlockHeader');
 }
 
 /** Whether the *grammar set* changed, additionally invalidating already-highlighted output. */
@@ -1651,23 +1661,4 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
         : isFallback ? options.fallbackSegments?.map((segment) => segment.kind === 'prose' ? streamingTailText(segment.text)
           : segment.kind === 'block' ? html`<span class="fallback-code">${streamingTailText(segment.text)}</span>`
           : html`<span class="fallback-inline-code">${streamingTailText(segment.text)}</span>`) ?? streamingTailText(options.content) : unsafeHTML(options.renderedHtml)}</div>${options.liveRegion}`;
-}
-
-/**
- * Starts (and immediately applies) the resolved-theme watch both markdown variants need so
- * Shiki's dual-theme output can be switched to its dark half. Returns the teardown; call it from
- * `disconnectedCallback()`/`adoptedCallback()`.
- *
- * Keyed on the component's own resolved `--lr-color-text`/`--lr-color-surface` rather than the
- * OS-level `prefers-color-scheme` query directly, so a consumer who sets `--lr-theme-color-*`
- * explicitly gets the dark palette too -- identical to `<lr-code-block>`'s own handling.
- */
-export function watchMarkdownDarkTheme(host: HTMLElement, apply: (isDarkTheme: boolean) => void): () => void {
-  apply(resolveIsDarkTheme(host));
-  return watchDarkTheme(host, () => apply(resolveIsDarkTheme(host)));
-}
-
-/** Resolves the current Shiki palette half for shared ThemeWatcher callbacks and explicit refresh. */
-export function resolveMarkdownDarkTheme(host: Element): boolean {
-  return resolveIsDarkTheme(host);
 }

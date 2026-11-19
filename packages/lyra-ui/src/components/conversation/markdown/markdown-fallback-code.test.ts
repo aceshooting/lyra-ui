@@ -1,7 +1,12 @@
+import { matchMarkdownFenceLine } from './markdown-fence.js';
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { marked } from 'marked';
-import { MarkdownFallbackCodeScanner, segmentMarkdownFallback, matchMarkdownFenceLine } from './markdown-fallback-code.js';
+import { MarkdownFallbackCodeScanner } from './markdown-fallback-code.js';
+
+function segmentMarkdownFallback(source: string) {
+  return new MarkdownFallbackCodeScanner().segments(source);
+}
 
 describe('Markdown fallback source segmentation', () => {
   const cases = [
@@ -255,4 +260,11 @@ describe('Markdown fallback scanner vs marked', () => {
       JSON.stringify([scannerBlocks(source), inline.length]) !== JSON.stringify([markedBlocks(source), codespans.length]),
     ).to.equal(true);
   });
+});
+
+it('leaves a fence open when a marker is followed by non-ASCII whitespace', () => {
+  const source = '~~~\nsource\n~~~\u00a0\nfollowing text\n~~~~ \t\n';
+  expect(new MarkdownFallbackCodeScanner().segments(source)).to.deep.equal([
+    { kind: 'block', text: source },
+  ]);
 });

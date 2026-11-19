@@ -128,6 +128,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Долговременная память',
   memoryPanelAdd: 'Добавить в долговременную память',
   memoryPanelAddWithContext: 'Добавить «{label}» в долговременную память',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Забыть всё',
   memoryPanelConfirmAddHeading: 'Добавить это в долговременную память?',
   memoryPanelConfirmRemoveHeading: 'Удалить этот элемент?',
@@ -186,6 +187,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Срезы оценки',
   ragEvalDashboardAllSlices: 'Все',
   ragEvalDashboardSliceUnavailable: 'Для среза «{slice}» нет запусков оценки.',
+  ragEvalDashboardMetricUnavailable: 'Для {metric} нет доступной метрики оценки.',
   knowledgeBaseSyncIdle: 'Ожидание',
   knowledgeBaseSyncSyncing: 'Синхронизация',
   knowledgeBaseSyncPaused: 'Приостановлено',
@@ -264,6 +266,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Результат {index} из {total}',
   ragAnswerEmpty: 'Пока нет ответа',
   retrievalTraceEmpty: 'Нет этапов поиска',
+  retrievalTraceLabel: 'Трассировка поиска',
   sourcePickerMatches: {
     one: '{count} подходящий источник',
     few: '{count} подходящих источника',

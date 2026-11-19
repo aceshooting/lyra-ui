@@ -202,11 +202,11 @@ describe('lr-rag-answer', () => {
     expect(
       el.shadowRoot!.querySelector('[part="retry"]')?.textContent?.trim()
     ).to.equal('Réessayer la réponse');
-    expect(citations?.getAttribute('aria-label')).to.equal('Références');
+    expect(citations?.hasAttribute('aria-label')).to.equal(false);
     expect(
       citations?.querySelector('[part="section-heading"]')?.textContent?.trim()
     ).to.equal('Références');
-    expect(sources?.getAttribute('aria-label')).to.equal('Documents');
+    expect(sources?.hasAttribute('aria-label')).to.equal(false);
     expect(
       sources?.querySelector('[part="section-heading"]')?.textContent?.trim()
     ).to.equal('Documents');
@@ -699,15 +699,15 @@ describe('lr-rag-answer', () => {
     expect(leaked).to.equal(0);
   });
 
-  it('ignores an activation whose index falls outside the citation list', async () => {
+  it('resolves the activated badge to the citation it rendered, not the event index', async () => {
     const el = (await fixture(html`<lr-rag-answer
       answer="Answer"
       .citations=${[{ id: 'c1', sourceId: 'd1' }]}
       .sources=${[{ id: 'd1', name: 'guide.md' }]}
     ></lr-rag-answer>`)) as LyraRagAnswer;
     await el.updateComplete;
-    let selected = 0;
-    el.addEventListener('lr-citation-select', () => selected++);
+    const selected: string[] = [];
+    el.addEventListener('lr-citation-select', (event) => selected.push((event as CustomEvent<{ citation: { id: string } }>).detail.citation.id));
     el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
       new CustomEvent('lr-citation-activate', {
         detail: { index: 99 },
@@ -716,7 +716,22 @@ describe('lr-rag-answer', () => {
       })
     );
     await el.updateComplete;
-    expect(selected).to.equal(0);
+    expect(selected).to.deep.equal(['c1']);
+  });
+
+  it('keeps a rendered badge bound to its citation while a reorder is still pending', async () => {
+    const first = { id: 'c1', sourceId: 'd1' };
+    const second = { id: 'c2', sourceId: 'd2' };
+    const el = (await fixture(html`<lr-rag-answer answer="Answer" .citations=${[first, second]}></lr-rag-answer>`)) as LyraRagAnswer;
+    const selected: string[] = [];
+    el.addEventListener('lr-citation-select', (event) => selected.push((event as CustomEvent<{ citation: { id: string } }>).detail.citation.id));
+    const badge = el.shadowRoot!.querySelector('lr-citation-badge')!;
+    el.citations = [second, first];
+    badge.dispatchEvent(new CustomEvent('lr-citation-activate', { detail: { index: 1 }, bubbles: true, composed: true }));
+    expect(selected).to.deep.equal(['c1']);
+    await el.updateComplete;
+    el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(new CustomEvent('lr-citation-open', { detail: { index: 1 }, bubbles: true, composed: true }));
+    expect(selected).to.deep.equal(['c1', 'c2']);
   });
 
   it('keeps one article owner across states and correlates grounding citation actions by section', async () => {

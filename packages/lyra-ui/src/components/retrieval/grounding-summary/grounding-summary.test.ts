@@ -940,3 +940,12 @@ it("includes a citation's visible label in its badge's accessible name", async (
   const badge = el.shadowRoot!.querySelector('[part="evidence-list"] lr-citation-badge') as HTMLElement & { label: string };
   expect(badge.label).to.equal('[1]');
 });
+
+it('wraps a long unbroken warning inside a narrow summary', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 200px"><lr-grounding-summary .assessment=${{ ...ASSESSMENT, warnings: ['w'.repeat(200)] }} .citations=${CITATIONS}></lr-grounding-summary></div>`);
+  const el = wrapper.querySelector('lr-grounding-summary') as LyraGroundingSummary;
+  await el.updateComplete;
+  const warning = el.shadowRoot!.querySelector<HTMLElement>('[part="warning"]')!;
+  expect(warning.getBoundingClientRect().width <= 201).to.equal(true);
+  expect(warning.scrollWidth <= warning.clientWidth + 1).to.equal(true);
+});

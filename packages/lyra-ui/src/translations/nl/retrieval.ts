@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Langetermijngeheugen',
   memoryPanelAdd: 'Aan langetermijngeheugen toevoegen',
   memoryPanelAddWithContext: '"{label}" aan langetermijngeheugen toevoegen',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Alles vergeten',
   memoryPanelConfirmAddHeading: 'Dit aan langetermijngeheugen toevoegen?',
   memoryPanelConfirmRemoveHeading: 'Dit item verwijderen?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Evaluatiesegmenten',
   ragEvalDashboardAllSlices: 'Alle',
   ragEvalDashboardSliceUnavailable: 'Geen evaluatieruns beschikbaar voor {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Er is geen evaluatiemaatstaf beschikbaar voor {metric}.',
   knowledgeBaseSyncIdle: 'Inactief',
   knowledgeBaseSyncSyncing: 'Synchroniseren',
   knowledgeBaseSyncPaused: 'Gepauzeerd',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Resultaat {index} van {total}',
   ragAnswerEmpty: 'Nog geen antwoord',
   retrievalTraceEmpty: 'Geen ophaalfasen',
+  retrievalTraceLabel: 'Tracering van het ophaalproces',
   sourcePickerMatches: {
     one: '{count} bronovereenkomst',
     other: '{count} bronnen komen overeen',

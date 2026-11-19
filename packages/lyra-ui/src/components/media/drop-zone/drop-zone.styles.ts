@@ -78,15 +78,25 @@ export const styles = css`
   }
   [part="overlay"][data-drag-state="accept"] {
     border-color: var(--lr-drop-zone-accept-border-color, var(--lr-color-success));
-    background: var(--lr-drop-zone-accept-bg, color-mix(in srgb, var(--lr-color-success) 12%, transparent));
+    background: var(--lr-drop-zone-accept-bg, color-mix(in srgb, var(--lr-color-success) 8%, transparent));
   }
   [part="overlay"][data-drag-state="reject"] {
     border-color: var(--lr-drop-zone-reject-border-color, var(--lr-color-danger));
-    background: var(--lr-drop-zone-reject-bg, color-mix(in srgb, var(--lr-color-danger) 12%, transparent));
+    background: var(--lr-drop-zone-reject-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
   }
   @media (forced-colors: active) {
-    [part="overlay"][data-drag-state="accept"] { border-style: double; }
-    [part="overlay"][data-drag-state="reject"] { border-style: dotted; }
+    [part="overlay"][data-drag-state="accept"] {
+      border-color: Highlight;
+      border-style: double;
+      outline: var(--lr-border-width-thin) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+    [part="overlay"][data-drag-state="reject"] {
+      border-color: CanvasText;
+      border-style: dotted;
+      outline: var(--lr-border-width-medium) double CanvasText;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
   }
   [part="rejection"] {
     margin-block-start: var(--lr-space-xs);

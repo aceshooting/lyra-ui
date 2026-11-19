@@ -86,7 +86,7 @@ export const FromRealFile: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:40rem;">
-      <lr-attachment-chip .file=${samplePngFile('site-photo.png')} status="success"></lr-attachment-chip>
+      <lr-attachment-chip .file=${samplePngFile('site-photo.png')} status="success" style="--lr-attachment-chip-thumbnail-size: var(--lr-size-3rem); --lr-attachment-chip-thumbnail-radius: var(--lr-radius-pill); --lr-attachment-chip-action-hover-bg: var(--lr-color-brand-quiet); --lr-attachment-chip-action-active-bg: var(--lr-color-success-quiet)"></lr-attachment-chip>
       <lr-attachment-chip .file=${sampleTextFile('export.csv', 15360)} status="pending"></lr-attachment-chip>
     </div>
   `,
@@ -98,7 +98,7 @@ export const ClickToPreview: Story = {
     docs: {
       description: {
         story:
-          'A real `File` supplies its existing MIME type in the cancelable `lr-preview-request` detail. The chip stays presentation/event-only; the host composes whichever viewer or overlay it wants.',
+          'A real `File` supplies its existing MIME type in the `lr-preview-request` notification. The chip stays presentation/event-only; the host composes whichever viewer or overlay it wants.',
       },
     },
   },

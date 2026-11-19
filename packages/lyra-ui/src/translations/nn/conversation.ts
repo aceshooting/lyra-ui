@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Vis til kjelde',
   promptInputLabel: 'KI-ledetekst',
   promptInputControls: 'Alternativ for ledetekst',
+  promptInputCollectionLimit: 'Noko av inndataa til ledeteksten vart utelate fordi ei inndatagrense vart nådd.',
   promptInputSources: 'Kjelder',
   promptInputAttachments: 'Vedlegg',
   handoffLabel: 'Overføring mellom agentar',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Ingen stemmer er tilgjengelege',
   voicePickerRequired: 'Vel ei stemme.',
   voicePickerPreview: 'Førehandslytt {name}',
+  voicePickerPreviewFailed: 'Førehandslytting er ikkje tilgjengeleg.',
   voicePickerStopPreview: 'Stopp førehandslyttinga',
   realtimeSessionLabel: 'Sanntidsøkt',
   realtimeSessionDisconnected: 'Fråkopla',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Lang kode blir vist utan syntaksutheving.',
   codeBlockHighlightedLine: 'Utheva linje',
   codeBlockActiveLine: 'Aktiv utheva linje',
+  codeBlockToggle: 'Vis eller skjul koden',
 };
 
 registerLyraLocale('nn', strings);

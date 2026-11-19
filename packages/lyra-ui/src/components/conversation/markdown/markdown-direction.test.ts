@@ -4,7 +4,7 @@ import './markdown-core.js';
 import type { LyraMarkdown } from './markdown.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 import { renderedTemplateWhitespace, inMarkdownCodeBlock } from '../../../../test/rendered-whitespace.js';
-import { MarkdownFallbackCodeScanner, segmentMarkdownFallback } from './markdown-fallback-code.js';
+import { MarkdownFallbackCodeScanner } from './markdown-fallback-code.js';
 import { parseMarkdownDocument, renderMarkdownDocument, tokenizeMarkdownHighlight } from './markdown-shared.js';
 
 describe('Markdown code direction', () => {
@@ -452,7 +452,7 @@ describe('Markdown code direction: streaming anchors and lifecycle', () => {
       await waitUntil(() => contentOf(el).textContent === el.content, 'adopted element never re-rendered');
       // One rescan of the whole source, plus at most one fence probe (64 code units).
       expect(scanner.scannedCodeUnits - Math.min(before, scanner.scannedCodeUnits)).to.be.at.most(el.content.length + 64);
-      const expected = segmentMarkdownFallback(el.content)!;
+      const expected = new MarkdownFallbackCodeScanner().segments(el.content)!;
       const rendered = [...contentOf(el).querySelectorAll('.fallback-code, .fallback-inline-code')].map((node) => node.textContent);
       expect(rendered).to.deep.equal(expected.filter((segment) => segment.kind !== 'prose').map((segment) => segment.text));
       const block = contentOf(el).querySelector('.fallback-code')!;

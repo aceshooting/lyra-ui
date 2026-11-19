@@ -7,6 +7,8 @@ import { glassIndependentRootStyles } from '../../../internal/glass-independent-
 import { formControlFocusHalo, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import {
+  anchoredPopupOpen,
+  anchoredPopupReveal,
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
 } from '../../../internal/overlay-surface.styles.js';
@@ -104,11 +106,12 @@ export const styles = css`
     cursor: text;
   }
   :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-voice-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-voice-picker-trigger-border-color, var(--lr-color-border)));
   }
   :where([part='trigger']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-voice-picker-trigger-active-bg,
+      color-mix(in oklab, var(--lr-voice-picker-trigger-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='trigger']:focus-visible,
   [part='combobox']:focus-within {
@@ -247,21 +250,10 @@ export const styles = css`
     );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
-    /* Retain layout during the outgoing transition. Once it settles, the paired [hidden] rule
-       above removes the closed popup from layout so its stale placed position cannot enlarge an
-       ancestor's scrollable overflow (see voice-picker.class.ts's catalogPicker.listboxHidden). */
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(var(--lr-size-neg-0-25rem));
-    transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+    ${anchoredPopupReveal}
   }
   :host([open]) [part='listbox'] {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
+    ${anchoredPopupOpen}
   }
   @media (prefers-reduced-motion: reduce) {
     [part='listbox'] {
@@ -318,7 +310,7 @@ export const styles = css`
      affordance from selecting it. */
   [part='option'][aria-disabled='true'] {
     cursor: default;
-    opacity: var(--lr-voice-picker-option-disabled-opacity, 0.5);
+    opacity: var(--lr-voice-picker-option-disabled-opacity, var(--lr-opacity-disabled));
   }
   [part='option-label'] {
     flex: 1 1 auto;

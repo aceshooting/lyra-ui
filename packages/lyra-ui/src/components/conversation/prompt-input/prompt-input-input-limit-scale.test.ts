@@ -61,3 +61,20 @@ it('renders the unregistered English outer-input notice', async () => {
   await fixture(host);
   expect(host.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal('Some suggestions or catalog entries were omitted because an input limit was reached.');
 });
+
+for (const property of ['attachments', 'attachmentCapabilities', 'queue', 'sources', 'selectedSourceIds'] as const) {
+  expectDevWarning(collectionTruncationWarningKey('lr-prompt-input', property));
+  it(`discloses omitted ${property} on the prompt`, async () => {
+    const host = document.createElement('lr-prompt-input');
+    host.strings = { promptInputCollectionLimit: 'Input omitted' };
+    const source = Array.from({ length: 10_001 }, (_, i) => {
+      if (property === 'attachmentCapabilities') return 'files';
+      if (property === 'selectedSourceIds') return String(i);
+      return { id: String(i), attachmentId: String(i), value: 'draft', label: 'item', name: 'file' };
+    });
+    Reflect.set(host, property, source);
+    await fixture(host);
+    expect(publicCollectionTruncation(host, property) !== undefined).to.equal(true);
+    expect(host.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Input omitted');
+  });
+}

@@ -28,6 +28,13 @@ export const styles = css`
     --_lr-span-waterfall-name-width: var(--lr-size-8rem);
   }
 
+  :host([frame='card']) :is([part='base'], .source-waterfall) {
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+  }
+
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='row'] { min-block-size: var(--lr-size-1-25rem); padding-block: 0; }
+
   [part="base"] {
     display: flex;
     flex-direction: column;

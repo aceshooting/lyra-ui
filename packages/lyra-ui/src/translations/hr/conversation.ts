@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Navedi izvor',
   promptInputLabel: 'AI upit',
   promptInputControls: 'Mogućnosti upita',
+  promptInputCollectionLimit: 'Dio unesenog upita izostavljen je jer je dosegnuto ograničenje ulaza.',
   promptInputSources: 'Izvori',
   promptInputAttachments: 'Privici',
   handoffLabel: 'Prijenos agentu',
@@ -157,6 +158,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Nema dostupnih glasova',
   voicePickerRequired: 'Odaberite glas.',
   voicePickerPreview: 'Poslušaj: {name}',
+  voicePickerPreviewFailed: 'Pretpregled glasa nije dostupan.',
   voicePickerStopPreview: 'Zaustavi pretpregled',
   realtimeSessionLabel: 'Sesija u stvarnom vremenu',
   realtimeSessionDisconnected: 'Veza prekinuta',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Dugačak kôd prikazuje se bez isticanja sintakse.',
   codeBlockHighlightedLine: 'Istaknuti redak',
   codeBlockActiveLine: 'Aktivni istaknuti redak',
+  codeBlockToggle: 'Prikaži ili sakrij kod',
 };
 
 registerLyraLocale('hr', strings);

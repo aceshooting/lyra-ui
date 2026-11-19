@@ -302,3 +302,35 @@ for (const attribute of ['disabled', 'readonly']) {
     }
   });
 }
+
+describe('color picker panel rendering and palette paint', () => {
+  const palette = [
+    { color: '#ff0000', label: 'Red' },
+    { color: '#00ff00', label: 'Green', disabled: true },
+  ];
+
+  it('commits a clicked swatch through the delegated palette listener and marks it with a check icon', async () => {
+    const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#0000ff" .swatches=${palette}></lr-color-picker>`);
+    const events = changes(picker);
+    expect(picker.shadowRoot!.querySelectorAll('[part~="swatch-check"]').length).to.equal(0);
+    const red = picker.shadowRoot!.querySelector<HTMLButtonElement>('[part~="swatch"][data-index="0"]')!;
+    red.click();
+    await picker.updateComplete;
+    expect(picker.value).to.equal('#ff0000');
+    expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    const check = red.querySelector('[part~="swatch-check"]');
+    expect(check?.getAttribute('aria-hidden')).to.equal('true');
+    expect(check?.querySelector('svg') != null).to.equal(true);
+    part(picker, 'swatches').click();
+    picker.shadowRoot!.querySelector<HTMLButtonElement>('[part~="swatch"][data-index="1"]')!.click();
+    expect(picker.value).to.equal('#ff0000');
+  });
+
+  it('dims a disabled swatch with the shared disabled opacity token', async () => {
+    const picker = await fixture<LyraColorPicker>(
+      html`<lr-color-picker inline style="--lr-opacity-disabled: 0.3" .swatches=${palette}></lr-color-picker>`,
+    );
+    const green = picker.shadowRoot!.querySelector<HTMLButtonElement>('[part~="swatch"][data-index="1"]')!;
+    expect(getComputedStyle(green).opacity).to.equal('0.3');
+  });
+});

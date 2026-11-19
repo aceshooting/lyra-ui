@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Citeren',
   promptInputLabel: 'AI-prompt',
   promptInputControls: 'Promptopties',
+  promptInputCollectionLimit: 'Een deel van de promptinvoer is weggelaten omdat de invoerlimiet is bereikt.',
   promptInputSources: 'Bronnen',
   promptInputAttachments: 'Bijlagen',
   handoffLabel: 'Overdracht aan agent',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Geen stemmen beschikbaar',
   voicePickerRequired: 'Kies een stem.',
   voicePickerPreview: '{name} beluisteren',
+  voicePickerPreviewFailed: 'Er is geen stemvoorbeeld beschikbaar.',
   voicePickerStopPreview: 'Voorbeeld stoppen',
   realtimeSessionLabel: 'Realtime-sessie',
   realtimeSessionDisconnected: 'Niet verbonden',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Lange code wordt zonder syntaxiskleuring getoond.',
   codeBlockHighlightedLine: 'Gemarkeerde regel',
   codeBlockActiveLine: 'Actieve gemarkeerde regel',
+  codeBlockToggle: 'Code tonen of verbergen',
 };
 
 registerLyraLocale('nl', strings);

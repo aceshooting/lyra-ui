@@ -86,8 +86,10 @@ export const styles = css`
     --_lr-agent-action-padding-inline: var(--lr-space-m);
   }
   button[part='submit'] {
-    background: var(--lr-rubric-form-submit-bg, var(--lr-button-accent-fill, var(--lr-color-brand)));
-    border-color: var(--lr-rubric-form-submit-border-color, var(--lr-button-accent-fill, var(--lr-color-brand)));
+    --_lr-rubric-form-submit-fill: var(--lr-rubric-form-submit-bg, var(--lr-button-accent-fill, var(--lr-color-brand)));
+    --_lr-rubric-form-submit-edge: var(--lr-rubric-form-submit-border-color, var(--lr-button-accent-fill, var(--lr-color-brand)));
+    background: var(--_lr-rubric-form-submit-fill);
+    border-color: var(--_lr-rubric-form-submit-edge);
     color: var(--lr-rubric-form-submit-color, var(--lr-button-accent-on-fill, var(--lr-color-on-brand)));
     /* Hover/active below repaint both background and border-color, so both channels need to
        ease; without this this button's paint snaps while lr-button/lr-icon-button ease. */
@@ -107,12 +109,12 @@ export const styles = css`
      --lr-color-mix-partner, which follows the text colour, always moves in the direction the
      surface needs and leaves the label alone. */
   [part='submit']:not(:disabled):hover {
-    background: var(--lr-rubric-form-submit-hover-bg, color-mix(in oklab, var(--lr-rubric-form-submit-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
-    border-color: var(--lr-rubric-form-submit-hover-border-color, color-mix(in oklab, var(--lr-rubric-form-submit-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-rubric-form-submit-hover-bg, color-mix(in oklab, var(--_lr-rubric-form-submit-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    border-color: var(--lr-rubric-form-submit-hover-border-color, color-mix(in oklab, var(--_lr-rubric-form-submit-edge), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   [part='submit']:not(:disabled):active {
-    background: var(--lr-rubric-form-submit-active-bg, color-mix(in oklab, var(--lr-rubric-form-submit-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
-    border-color: var(--lr-rubric-form-submit-active-border-color, color-mix(in oklab, var(--lr-rubric-form-submit-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-rubric-form-submit-active-bg, color-mix(in oklab, var(--_lr-rubric-form-submit-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    border-color: var(--lr-rubric-form-submit-active-border-color, color-mix(in oklab, var(--_lr-rubric-form-submit-edge), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='skip']:not(:disabled):hover {
     background: var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet));

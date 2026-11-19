@@ -4,6 +4,7 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatAdaptiveShare } from '../../../internal/locale-number.js';
 import { formatShortDuration } from '../../../internal/duration.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { styles } from './agent-eval-dashboard.styles.js';
@@ -23,7 +24,7 @@ import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardMetricUnavailable, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -31,6 +32,14 @@ export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'cu
 export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
 export interface AgentEvaluationDashboardRun { readonly id: string; readonly label: string; readonly status: AgentStatusValue; readonly metrics?: Readonly<Record<string, number>>; }
 export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
+
+/** A run's own finite value for `metricId`; inherited names such as `constructor` never match. */
+function ownMetricValue(run: AgentEvaluationDashboardRun, metricId: string): number | undefined {
+  const metrics = run.metrics;
+  if (metrics === null || typeof metrics !== 'object' || !Object.hasOwn(metrics, metricId)) return undefined;
+  const value = metrics[metricId];
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
 /**
  * `<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,
  * and run-status history. It never launches or scores evaluations. Duplicate metric or run ids
@@ -48,6 +57,7 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': Cu
  * @csspart metrics - The metric-card grid.
  * @csspart metric - One metric card.
  * @csspart chart - The trend chart.
+ * @csspart metric-unavailable - The notice when a non-empty `metricId` matches no metric.
  * @csspart runs - The run history.
  * @csspart runs-heading - The run history heading.
  * @csspart run - One run row.
@@ -83,6 +93,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     evaluationDashboardLabel: LYRA_DEFAULT_evaluationDashboardLabel,
+    evaluationDashboardMetricUnavailable: LYRA_DEFAULT_evaluationDashboardMetricUnavailable,
     evaluationDashboardNoRuns: LYRA_DEFAULT_evaluationDashboardNoRuns,
     evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
     loading: LYRA_DEFAULT_loading,
@@ -129,7 +140,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   /** Run history used by both the chart and list. Empty ids are omitted; duplicates normalize
    *  first-wins. */
   @property({ attribute: false }) runs: readonly AgentEvaluationDashboardRun[] = [];
-  /** Controlled metric selection. `null` or an unmatched identity selects the first valid metric. */
+  /** Controlled metric selection. `null` or `''` selects the first metric. A non-empty unmatched id leaves the selection empty. */
   @property({ attribute: 'metric-id' }) metricId: string | null = null;
   /** ISO 4217 currency code used by metrics whose format is `currency`. Invalid codes use USD. */
   @property() currency = 'USD';
@@ -166,18 +177,14 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   }
   private slicedFor?: { source: AgentEvaluationDashboardRun[]; limit: number; runs: AgentEvaluationDashboardRun[] };
   /** Chart labels/datasets, rebuilt only when the rendered runs or the active metric change. */
-  private chartFor?: { runs: AgentEvaluationDashboardRun[]; active: AgentEvaluationMetric | undefined };
+  private chartFor?: { runs: AgentEvaluationDashboardRun[]; active: AgentEvaluationMetric };
   private chartCache: { labels: string[]; datasets: { label: string; data: (number | null)[] }[] } = { labels: [], datasets: [] };
-  private chartInputs(runs: AgentEvaluationDashboardRun[], active: AgentEvaluationMetric | undefined): typeof this.chartCache {
+  private chartInputs(runs: AgentEvaluationDashboardRun[], active: AgentEvaluationMetric): typeof this.chartCache {
     if (this.chartFor?.runs !== runs || this.chartFor.active !== active) {
       this.chartFor = { runs, active };
-      const values = runs.map((run) => {
-        const value = active ? run.metrics?.[active.id] : undefined;
-        return value != null && Number.isFinite(value) ? value : null;
-      });
       this.chartCache = {
         labels: runs.map((run) => run.label),
-        datasets: active ? [{ label: active.label, data: values }] : [],
+        datasets: [{ label: active.label, data: runs.map((run) => ownMetricValue(run, active.id) ?? null) }],
       };
     }
     return this.chartCache;
@@ -185,17 +192,20 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
 
   private get activeMetric(): AgentEvaluationMetric | undefined {
     const metrics = this.normalizedMetrics;
-    return this.metricId === null
-      ? metrics[0]
-      : metrics.find((metric) => metric.id === this.metricId) ?? metrics[0];
+    return this.metricId ? metrics.find((metric) => metric.id === this.metricId) : metrics[0];
   }
   private statusLabel(status: AgentStatusValue): string {
     return agentStatusLabel(status) ?? agentStatusText(this.localize.bind(this), agentStatusKind(status));
   }
   private formatMetric(metric: AgentEvaluationMetric, value = metric.value): string {
     const safe = Number.isFinite(value) ? value : 0;
+    // A small nonzero value keeps two significant digits instead of rounding to zero.
+    const tiny = safe !== 0 && Math.abs(safe) < 0.01;
+    const digits = (fractionDigits: number): Intl.NumberFormatOptions =>
+      tiny ? { maximumSignificantDigits: 2 } : { maximumFractionDigits: fractionDigits };
     switch (metric.format) {
       case 'percent':
+        if (safe !== 0 && Math.abs(safe) < 0.001) return formatAdaptiveShare(this.effectiveLocale, safe);
         return getNumberFormat(this.effectiveLocale, {
           style: 'percent',
           maximumFractionDigits: 1,
@@ -207,18 +217,18 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
           return getNumberFormat(this.effectiveLocale, {
             style: 'currency',
             currency: this.currency,
-            maximumFractionDigits: 2,
+            ...digits(2),
           }).format(safe);
         } catch {
           return getNumberFormat(this.effectiveLocale, {
             style: 'currency',
             currency: 'USD',
-            maximumFractionDigits: 2,
+            ...digits(2),
           }).format(safe);
         }
       }
       default:
-        return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(safe);
+        return getNumberFormat(this.effectiveLocale, digits(2)).format(safe);
     }
   }
   private renderRuns(runs: AgentEvaluationDashboardRun[]): TemplateResult {
@@ -229,7 +239,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')}><div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('evaluationDashboardRunsLabel')}</div>${repeat(runs, (run) => run.id, (run) => {
       const kind = agentStatusKind(run.status);
       const message = agentStatusMessage(run.status);
-      return html`<button part="run" type="button" @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${agentStatusVariant(run.status, ((Object.prototype.hasOwnProperty.call(AGENT_STATUS_VARIANTS, kind) ? AGENT_STATUS_VARIANTS[kind] : undefined) ?? 'neutral'))}>${this.statusLabel(run.status)}</lr-badge>${message !== undefined ? html`<span part="run-status-message">${message}</span>` : nothing}${active && run.metrics?.[active.id] != null ? html`<span>${this.formatMetric(active, run.metrics[active.id])}</span>` : nothing}</span></button>`;
+      return html`<button part="run" type="button" @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${agentStatusVariant(run.status, ((Object.prototype.hasOwnProperty.call(AGENT_STATUS_VARIANTS, kind) ? AGENT_STATUS_VARIANTS[kind] : undefined) ?? 'neutral'))}>${this.statusLabel(run.status)}</lr-badge>${message !== undefined ? html`<span part="run-status-message">${message}</span>` : nothing}${active && ownMetricValue(run, active.id) !== undefined ? html`<span>${this.formatMetric(active, ownMetricValue(run, active.id))}</span>` : nothing}</span></button>`;
     })}</section>`;
   }
   override render(): TemplateResult {
@@ -260,6 +270,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
             ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
         : nothing}
+      ${this.metricId && !active ? html`<p part="metric-unavailable" role="note">${this.localize('evaluationDashboardMetricUnavailable', undefined, { metric: this.metricId })}</p>` : nothing}
       ${!this.withoutChart && active && runs.length
         ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${this.chartInputs(runs, active).labels} .datasets=${this.chartInputs(runs, active).datasets} with-legend aria-label=${active.label}></lr-lite-chart></div>`
         : nothing}

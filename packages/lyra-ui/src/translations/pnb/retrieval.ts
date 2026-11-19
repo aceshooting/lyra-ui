@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'لمبے سمے دیاں یاداں',
   memoryPanelAdd: 'لمبے سمے دی یاد وچ شامل کرو',
   memoryPanelAddWithContext: '"{label}" نوں لمبے سمے دی یاد وچ شامل کرو',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'ساریاں بھلا دیو',
   memoryPanelConfirmAddHeading: 'ایہہ لمبے سمے دی یاد وچ شامل کرنا اے؟',
   memoryPanelConfirmRemoveHeading: 'ایہہ شے ہٹانی اے؟',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'جانچ دے حصے',
   ragEvalDashboardAllSlices: 'سارے',
   ragEvalDashboardSliceUnavailable: '{slice} لئی جانچ دا کوئی رن دستیاب نئیں۔',
+  ragEvalDashboardMetricUnavailable: '{metric} لئی جانچ دا کوئی پیمانہ دستیاب نئیں۔',
   knowledgeBaseSyncIdle: 'غیر فعال',
   knowledgeBaseSyncSyncing: 'ہم وقت ہو ریا اے',
   knowledgeBaseSyncPaused: 'روکیا گیا',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'نتیجہ {index} / {total}',
   ragAnswerEmpty: 'ہن تک کوئی جواب نئیں',
   retrievalTraceEmpty: 'حاصل کرنے دا کوئی مرحلہ نئیں',
+  retrievalTraceLabel: 'بازیافت دا ٹریس',
   sourcePickerMatches: {
     one: '{count} ماخذ میل کھاندا اے',
     other: '{count} ماخذ میل کھاندے نیں',

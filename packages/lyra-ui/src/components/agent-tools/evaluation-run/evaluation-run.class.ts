@@ -35,7 +35,7 @@ import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js'
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_taskListStepIncompleteAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunDetailsLoadError, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_taskListStepIncompleteAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -118,6 +118,7 @@ export interface EvalClaimSelectDetail {
 export interface LyraEvalRunEventMap {
   'lr-example-toggle': CustomEvent<EvalExampleToggleDetail>;
   'lr-example-citation-select': CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>;
+  'lr-example-citation-open': CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>;
   'lr-example-claim-select': CustomEvent<LyraEventDetailSnapshot<EvalClaimSelectDetail>>;
   'lr-example-tool-approval-decide-request': CustomEvent<EvalToolApprovalDetail>;
   'lr-example-tool-activate': CustomEvent<EvalToolActivateDetail>;
@@ -135,7 +136,12 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  *  only the example row DOM is capped. */
 const MAX_RENDERED_EXAMPLES = 500;
 
-let expandedRegistration: Promise<unknown> | undefined;
+const loadExpandedModules = (): Promise<unknown> => Promise.all([
+  import('../../conversation/markdown/markdown.js'),
+  import('../../conversation/code-block/code-block.js'),
+  import('../../retrieval/grounding-summary/grounding-summary.js'),
+  import('../tool-timeline/tool-timeline.js'),
+]);
 const exampleId = (example: EvalExampleResult): unknown => example.id;
 
 /**
@@ -169,6 +175,8 @@ const exampleId = (example: EvalExampleResult): unknown => example.id;
  *   expanded }`.
  * @event lr-example-citation-select - An evidence citation in a nested `<lr-grounding-summary>`
  *   was activated. `detail: { exampleId, citation }`.
+ * @event lr-example-citation-open - A nested evidence citation's full-preview affordance was
+ *   triggered. `detail: { exampleId, citation }`.
  * @event lr-example-tool-approval-decide-request - A pending tool call in a nested `<lr-tool-timeline>`
  *   was approved or denied. `detail: { exampleId, invocationId, approved, args? }`. Cancelable:
  *   preventing this correlated event vetoes the nested decision and preserves its pending dialog.
@@ -206,6 +214,7 @@ const exampleId = (example: EvalExampleResult): unknown => example.id;
  * @csspart tool-trace - The nested `<lr-tool-timeline>` for an example's tool calls.
  * @csspart empty - The empty-state message shown when `examples` is empty.
  * @csspart limit - Localized notice shown when `examples` exceeds the 500-row render ceiling.
+ * @csspart load-error - Localized notice in an expanded example whose detail views failed to load.
  * @csspart live-region - The internal status-announcement live region.
  * @status stable
  * @since 9.0.0
@@ -226,6 +235,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
+    evaluationRunDetailsLoadError: LYRA_DEFAULT_evaluationRunDetailsLoadError,
     evaluationRunExampleCancelledAnnounce: LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce,
     evaluationRunExampleCompletedAnnounce: LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce,
     evaluationRunExampleFailedAnnounce: LYRA_DEFAULT_evaluationRunExampleFailedAnnounce,
@@ -268,6 +278,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-example-citation-select',
+    'lr-example-citation-open',
     'lr-example-claim-select',
   ]);
 
@@ -294,6 +305,28 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '4';
 
   @state() private expandedIds = new Set<string>();
+  /** Set when the expanded-content modules failed to load; cleared when an example is expanded again. */
+  @state() private detailsLoadFailed = false;
+  private detailsRegistration?: Promise<unknown>;
+
+  /** @internal Loads the expanded-content element modules once per page; a rejection is not cached. */
+  static expandedContentLoader = loadExpandedModules;
+  /** @internal */
+  static expandedContentRegistration: Promise<unknown> | undefined;
+
+  private loadExpandedContent(): void {
+    const owner = LyraEvalRun;
+    const request = (this.detailsRegistration = owner.expandedContentRegistration ??= owner.expandedContentLoader());
+    request.then(
+      () => undefined,
+      () => {
+        if (owner.expandedContentRegistration === request) owner.expandedContentRegistration = undefined;
+        this.detailsRegistration = undefined;
+        this.detailsLoadFailed = true;
+        this.liveRegion?.announce(this.localize('evaluationRunDetailsLoadError'), { force: true });
+      },
+    );
+  }
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -313,13 +346,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // Registered on first expand, so a collapsed batch never loads the content, grounding and tool-trace UI.
-    if (this.expandedIds.size > 0)
-      expandedRegistration ??= Promise.all([
-        import('../../conversation/markdown/markdown.js'),
-        import('../../conversation/code-block/code-block.js'),
-        import('../../retrieval/grounding-summary/grounding-summary.js'),
-        import('../tool-timeline/tool-timeline.js'),
-      ]).catch(() => (expandedRegistration = undefined));
+    if (this.expandedIds.size > 0 && !this.detailsLoadFailed && !this.detailsRegistration) this.loadExpandedContent();
     if (!changed.has('examples')) return;
     const ids = new Set(this.normalizedExamples.map((example) => example.id));
     let pruned: Set<string> | undefined;
@@ -337,6 +364,19 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('examples')) this.diffAndAnnounce(wasMounting);
+    const truncated = this.normalizedExamples.length > MAX_RENDERED_EXAMPLES;
+    if (!wasMounting && truncated && !this.previouslyTruncated) {
+      this.liveRegion?.announce(this.limitText(), { force: true });
+    }
+    this.previouslyTruncated = truncated;
+  }
+
+  private previouslyTruncated = false;
+
+  private limitText(): string {
+    return this.localize('evaluationRunExampleLimit', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_EXAMPLES),
+    });
   }
 
   private statusCounts(): Partial<Record<AgentStatusKind, number>> {
@@ -434,6 +474,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   private onExampleToggle(id: string, event: CustomEvent<LyraDetailsEventMap['lr-toggle']['detail']>): void {
     event.stopPropagation();
     const { expanded } = event.detail;
+    if (expanded && !this.expandedIds.has(id)) this.detailsLoadFailed = false;
     const next = new Set(this.expandedIds);
     if (expanded) next.add(id);
     else next.delete(id);
@@ -444,6 +485,11 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   private onCitationSelect(exampleId: string, event: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-select']['detail']>): void {
     event.stopPropagation();
     this.emit('lr-example-citation-select', { exampleId, citation: event.detail.citation });
+  }
+
+  private onCitationOpen(exampleId: string, event: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-open']['detail']>): void {
+    event.stopPropagation();
+    this.emit('lr-example-citation-open', { exampleId, citation: event.detail.citation });
   }
 
   private onClaimSelect(exampleId: string, event: CustomEvent<LyraGroundingSummaryEventMap['lr-claim-select']['detail']>): void {
@@ -506,6 +552,11 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
       @lr-highlight-activate=${this.stopOwnedEvent}
       @lr-text-select=${this.stopOwnedEvent}
       @lr-anchor-result=${this.stopOwnedEvent}
+      @lr-copy=${this.stopOwnedEvent}
+      @lr-error=${this.stopOwnedEvent}
+      @lr-copy-error=${this.stopOwnedEvent}
+      @lr-link-activate=${this.stopOwnedEvent}
+      @lr-content-settled=${this.stopOwnedEvent}
     ></lr-markdown>`;
   }
 
@@ -517,7 +568,8 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
           part="grounding-summary"
           .assessment=${grounding}
           .citations=${example.citations ?? []}
-          @lr-citation-activate=${this.stopOwnedEvent}
+          @lr-citation-open=${(e: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-open']['detail']>) =>
+            this.onCitationOpen(example.id, e)}
           @lr-citation-select=${(e: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-select']['detail']>) =>
             this.onCitationSelect(example.id, e)}
           @lr-claim-select=${(e: CustomEvent<LyraGroundingSummaryEventMap['lr-claim-select']['detail']>) =>
@@ -543,6 +595,8 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
           @lr-tool-activate=${(e: CustomEvent<ToolTimelineActivateDetail>) => this.onToolActivate(example.id, e)}
           @lr-tool-render-error=${(e: CustomEvent<ToolTimelineRenderErrorDetail>) =>
             this.onToolRenderError(example.id, e)}
+          @lr-tool-approval-open=${this.stopOwnedEvent}
+          @lr-tool-approval-close=${this.stopOwnedEvent}
         ></lr-tool-timeline>
       </section>
     `;
@@ -568,6 +622,9 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
           <lr-badge part="example-status" variant=${agentStatusVariant(example.status, ((Object.prototype.hasOwnProperty.call(AGENT_STATUS_VARIANTS, kind) ? AGENT_STATUS_VARIANTS[kind] : undefined) ?? 'neutral'))}>${this.statusText(example.status)}</lr-badge>
           ${message !== undefined ? html`<span part="example-status-message">${message}</span>` : nothing}
         </span>
+        ${expanded && this.detailsLoadFailed
+          ? html`<p part="load-error">${this.localize('evaluationRunDetailsLoadError')}</p>`
+          : nothing}
         ${expanded
           ? html`
               <section part="input-section">
@@ -642,9 +699,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
               (example, index) => this.renderExample(example, index),
             )}</div>`}
         ${truncated
-          ? html`<p part="limit">${this.localize('evaluationRunExampleLimit', undefined, {
-                count: number.format(MAX_RENDERED_EXAMPLES),
-              })}</p>`
+          ? html`<p part="limit" role="note">${this.limitText()}</p>`
           : nothing}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>

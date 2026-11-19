@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ਸਰੋਤ ਦਿਓ',
   promptInputLabel: 'AI ਪ੍ਰੌੰਪਟ',
   promptInputControls: 'ਪ੍ਰੌੰਪਟ ਵਿਕਲਪ',
+  promptInputCollectionLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਪ੍ਰੌੰਪਟ ਇਨਪੁੱਟ ਦਾ ਕੁਝ ਹਿੱਸਾ ਛੱਡ ਦਿੱਤਾ ਗਿਆ ਹੈ।',
   promptInputSources: 'ਸਰੋਤ',
   promptInputAttachments: 'ਅਟੈਚਮੈਂਟ',
   handoffLabel: 'ਏਜੰਟ ਨੂੰ ਸੌਂਪਣਾ',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'ਕੋਈ ਆਵਾਜ਼ ਉਪਲਬਧ ਨਹੀਂ',
   voicePickerRequired: 'ਕਿਰਪਾ ਕਰਕੇ ਆਵਾਜ਼ ਚੁਣੋ।',
   voicePickerPreview: '{name} ਦੀ ਝਲਕ',
+  voicePickerPreviewFailed: 'ਆਵਾਜ਼ ਦੀ ਝਲਕ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
   voicePickerStopPreview: 'ਝਲਕ ਰੋਕੋ',
   realtimeSessionLabel: 'ਰੀਅਲ-ਟਾਈਮ ਸੈਸ਼ਨ',
   realtimeSessionDisconnected: 'ਡਿਸਕਨੈਕਟ ਕੀਤਾ',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'ਲੰਮਾ ਕੋਡ ਸਿੰਟੈਕਸ ਹਾਈਲਾਈਟਿੰਗ ਤੋਂ ਬਿਨਾਂ ਦਿਖਾਇਆ ਜਾਂਦਾ ਹੈ।',
   codeBlockHighlightedLine: 'ਹਾਈਲਾਈਟ ਕੀਤੀ ਲਾਈਨ',
   codeBlockActiveLine: 'ਸਰਗਰਮ ਹਾਈਲਾਈਟ ਕੀਤੀ ਲਾਈਨ',
+  codeBlockToggle: 'ਕੋਡ ਦਿਖਾਓ ਜਾਂ ਲੁਕਾਓ',
 };
 
 registerLyraLocale('pa', strings);

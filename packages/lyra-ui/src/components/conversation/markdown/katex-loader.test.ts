@@ -1,3 +1,4 @@
+import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { expect } from '@open-wc/testing';
 import { loadKatex, getKatex } from './katex-loader.js';
 import { createMarkdownKatexState } from './markdown-shared.js';
@@ -73,4 +74,16 @@ describe('loadKatex', () => {
     await Promise.resolve();
     expect(notified).to.deep.equal(['first', 'second']);
   });
+});
+
+it('distinguishes missing KaTeX from an import that failed', async () => {
+  for (const missing of [true, false]) {
+    const failure = Object.assign(new Error('private import failure'), { code: missing ? 'ERR_MODULE_NOT_FOUND' : 'NETWORK' });
+    const warnings = await captureDevWarnings(async () => {
+      expect(await loadKatex(() => Promise.reject(failure))).to.equal(null);
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(warnings[0]).to.include(missing ? 'could not be resolved' : 'could not load');
+    expect(warnings[0]).not.to.include(failure.message);
+  }
 });

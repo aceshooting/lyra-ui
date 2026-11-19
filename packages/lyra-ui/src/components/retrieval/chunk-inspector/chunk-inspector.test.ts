@@ -113,6 +113,135 @@ it('preserves given order when sort="none"', async () => {
   expect(titles[1]).to.include('curie-bio.pdf');
 });
 
+it('uses one Tab stop for chunk actions and moves between rows and RTL actions', async () => {
+  const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector
+    dir="rtl" .chunks=${chunks}
+  ></lr-chunk-inspector>`);
+  const root = el.shadowRoot!;
+  const actions = [...root.querySelectorAll<HTMLButtonElement>('[part="open-button"], [part="toggle"]')];
+  expect(actions.map((action) => action.tabIndex)).to.deep.equal([0, -1, -1, -1, -1, -1]);
+
+  await focusByKeyboard(actions[0]!);
+  await sendKeys({ press: 'ArrowDown' });
+  await waitUntil(() => root.activeElement === actions[2], 'ArrowDown focuses the second open action');
+  await sendKeys({ press: 'ArrowLeft' });
+  await waitUntil(() => root.activeElement === actions[3], 'ArrowLeft focuses the RTL disclosure');
+  await sendKeys({ press: 'End' });
+  await waitUntil(() => root.activeElement === actions[5], 'End reaches the final row in the same column');
+  await sendKeys({ press: 'ArrowRight' });
+  await waitUntil(() => root.activeElement === actions[4], 'ArrowRight returns to the open action');
+  await sendKeys({ press: 'ArrowLeft' });
+  await waitUntil(() => root.activeElement === actions[5], 'ArrowLeft returns to the disclosure');
+  const shortcut = new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, cancelable: true });
+  actions[5]!.dispatchEvent(shortcut);
+  expect(shortcut.defaultPrevented).to.equal(false);
+  const handled = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+  handled.preventDefault();
+  actions[5]!.dispatchEvent(handled);
+  expect(root.activeElement === actions[5]).to.equal(true);
+  expect(actions.map((action) => action.tabIndex)).to.deep.equal([-1, -1, -1, -1, -1, 0]);
+
+  el.size = 's';
+  await el.updateComplete;
+  expect([...root.querySelectorAll<HTMLButtonElement>('[part="open-button"]')].map((action) => action.tabIndex))
+    .to.deep.equal([-1, -1, 0]);
+  const denseAction = root.querySelectorAll<HTMLButtonElement>('[part="open-button"]')[2]!;
+  await focusByKeyboard(denseAction);
+  const inline = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+  denseAction.dispatchEvent(inline);
+  expect(inline.defaultPrevented).to.equal(false);
+
+  el.chunks = [chunks[0]!];
+  el.size = 'm';
+  await el.updateComplete;
+  const single = [...root.querySelectorAll<HTMLButtonElement>('[part="open-button"], [part="toggle"]')];
+  expect(single.map((action) => action.tabIndex)).to.deep.equal([0, 0]);
+  const down = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+  single[0]!.dispatchEvent(down);
+  expect(down.defaultPrevented).to.equal(false);
+});
+
+it('moves keyboard focus across the virtual render window', async () => {
+  const many = Array.from({ length: 120 }, (_, index) => ({ ...chunks[0]!, id: String(index) }));
+  const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector .chunks=${many}></lr-chunk-inspector>`);
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await list.updateComplete;
+  const root = list.shadowRoot!;
+  const action = (index: number) => root.querySelector<HTMLButtonElement>(`[data-row-index="${index}"] [part="open-button"]`);
+  expect(action(many.length - 1) === null).to.equal(true);
+  await focusByKeyboard(action(0)!);
+  await sendKeys({ press: 'End' });
+  await waitUntil(() => action(many.length - 1) !== null && root.activeElement === action(many.length - 1),
+    'End reaches the last chunk outside the initial window');
+  expect(root.querySelectorAll('button[tabindex="0"]').length).to.equal(1);
+  await sendKeys({ press: 'Home' });
+  await waitUntil(() => action(0) !== null && root.activeElement === action(0), 'Home returns to the first chunk');
+});
+
+it('moves the virtual row Tab stop into the viewport after the focused row loses focus', async () => {
+  const many = Array.from({ length: 120 }, (_, index) => ({ ...chunks[0]!, id: String(index) }));
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-chunk-inspector .chunks=${many}></lr-chunk-inspector>
+    <button type="button">After chunks</button>
+  </div>`);
+  const el = wrapper.querySelector('lr-chunk-inspector')!;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await list.updateComplete;
+  const root = list.shadowRoot!;
+  const first = root.querySelector<HTMLButtonElement>('[part="open-button"]')!;
+  await focusByKeyboard(first);
+  list.scrollToIndex(65, { align: 'start', behavior: 'auto' });
+  await waitUntil(() => root.querySelector('[data-row-index="65"]') !== null, 'a later window is rendered');
+  expect(root.activeElement === first).to.equal(true);
+  expect(first.tabIndex).to.equal(0);
+  const after = wrapper.querySelector('button')!;
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(() => document.activeElement === after, 'Tab leaves the virtual list');
+  await waitUntil(() => {
+    const current = root.querySelector('button[tabindex="0"]');
+    return current !== null && current !== first;
+  }, 'a visible row becomes the action Tab stop');
+});
+
+it('does not reclaim focus when a virtual jump is superseded by leaving the inspector', async () => {
+  const many = Array.from({ length: 120 }, (_, index) => ({ ...chunks[0]!, id: String(index) }));
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-chunk-inspector .chunks=${many}></lr-chunk-inspector>
+    <button type="button">After chunks</button>
+  </div>`);
+  const el = wrapper.querySelector('lr-chunk-inspector')!;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await list.updateComplete;
+  const first = list.shadowRoot!.querySelector<HTMLButtonElement>('[part="open-button"]')!;
+  const after = wrapper.querySelector('button')!;
+  await focusByKeyboard(first);
+  const scrollToIndex = list.scrollToIndex;
+  list.scrollToIndex = () => scrollToIndex.call(list, 65, { behavior: 'auto' });
+  try {
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', cancelable: true }));
+    await waitUntil(() => list.shadowRoot!.querySelector('[data-row-index="65"]') !== null, 'an intermediate row is mounted');
+    expect(list.shadowRoot!.activeElement === first).to.equal(true);
+  } finally {
+    list.scrollToIndex = scrollToIndex;
+  }
+  list.scrollToIndex(119, { behavior: 'auto' });
+  await focusByKeyboard(after);
+  await waitUntil(() => list.shadowRoot!.querySelector('[data-row-index="119"]') !== null, 'the last row is mounted');
+  expect(document.activeElement === after).to.equal(true);
+});
+
+it('keeps both actions tabbable for a single virtualized chunk', async () => {
+  const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector
+    virtualize-at="0" .chunks=${[chunks[0]!]}
+  ></lr-chunk-inspector>`);
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await list.updateComplete;
+  const actions = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('button')];
+  expect(actions.map((action) => action.tabIndex)).to.deep.equal([0, 0]);
+});
+
 it('renders score as visible percent text and a tone-mapped fill', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = [chunks[0]!];

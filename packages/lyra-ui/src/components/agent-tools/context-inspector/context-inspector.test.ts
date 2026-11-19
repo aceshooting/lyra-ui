@@ -17,6 +17,31 @@ const segments: ContextInspectorSegment[] = [
   },
 ];
 
+it('reuses rendered redaction ranges until the segments snapshot changes', async () => {
+  const el = await fixture<LyraContextInspector>(html`<lr-context-inspector .segments=${[
+    { id: 'redacted', label: 'Context', tokens: 3, text: 'a secret', redactions: [{ start: 2, end: 8 }] },
+  ]}></lr-context-inspector>`);
+  const redactions = el.segments[0]!.redactions;
+  const previousFilter = Array.prototype.filter;
+  let reads = 0;
+  Array.prototype.filter = function (this: unknown[], predicate: (value: unknown, index: number, array: unknown[]) => unknown, thisArg?: unknown): unknown[] {
+    if (Object.is(this, redactions)) reads++;
+    return previousFilter.call(this, predicate, thisArg);
+  };
+  const markText = () => el.shadowRoot!.querySelector('[part="redaction"]')?.textContent;
+  try {
+    el.total = 7;
+    await el.updateComplete;
+    expect(reads).to.equal(0);
+    expect(markText()).to.equal('secret');
+  } finally {
+    Array.prototype.filter = previousFilter;
+  }
+  el.segments = [{ ...el.segments[0]!, redactions: [{ start: 0, end: 1 }] }];
+  await el.updateComplete;
+  expect(markText()).to.equal('a');
+});
+
 it('renders the empty state when segments is empty (the default), with no meter/toolbar/segments', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   expect(el.segments).to.deep.equal([]);

@@ -68,8 +68,10 @@ it('distinguishes accepted and rejected drags by stroke in forced colors', async
     overlay.hidden = false;
     overlay.dataset['dragState'] = 'accept';
     expect(getComputedStyle(overlay).borderTopStyle).to.equal('double');
+    expect(getComputedStyle(overlay).outlineStyle).to.equal('solid');
     overlay.dataset['dragState'] = 'reject';
     expect(getComputedStyle(overlay).borderTopStyle).to.equal('dotted');
+    expect(getComputedStyle(overlay).outlineStyle).to.equal('double');
   } finally {
     await setForcedColors('none');
   }
@@ -87,4 +89,26 @@ it('keeps announcing after moving to another document', async () => {
   } finally {
     frame.remove();
   }
+});
+
+it('tints accepted and rejected drags like lr-file-input', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-drop-zone style="--lr-transition-fast: 0s"></lr-drop-zone>
+    <span id="accept" style="background: color-mix(in srgb, var(--lr-color-success) 8%, transparent)"></span>
+    <span id="reject" style="background: color-mix(in srgb, var(--lr-color-danger) 8%, transparent)"></span>
+  </div>`);
+  const el = wrapper.querySelector<LyraDropZone>('lr-drop-zone')!;
+  await el.updateComplete;
+  const overlay = el.shadowRoot!.querySelector<HTMLElement>('[part="overlay"]')!;
+  overlay.hidden = false;
+  for (const state of ['accept', 'reject']) {
+    overlay.dataset['dragState'] = state;
+    expect(getComputedStyle(overlay).backgroundColor).to.equal(getComputedStyle(wrapper.querySelector(`#${state}`)!).backgroundColor);
+  }
+});
+
+it('ignores assignment to the readonly dragging property', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone></lr-drop-zone>`);
+  expect(() => { (el as unknown as { dragging: boolean }).dragging = true; }).not.to.throw();
+  expect(el.dragging).to.equal(false);
 });

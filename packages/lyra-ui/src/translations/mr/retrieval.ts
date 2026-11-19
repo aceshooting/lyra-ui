@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'दीर्घकालीन स्मृती',
   memoryPanelAdd: 'दीर्घकालीन स्मृतीत जोडा',
   memoryPanelAddWithContext: '"{label}" दीर्घकालीन स्मृतीत जोडा',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'सर्व विसरा',
   memoryPanelConfirmAddHeading: 'हे दीर्घकालीन स्मृतीत जोडायचे?',
   memoryPanelConfirmRemoveHeading: 'हा घटक काढून टाकायचा?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'मूल्यांकन भाग',
   ragEvalDashboardAllSlices: 'सर्व',
   ragEvalDashboardSliceUnavailable: '{slice} साठी मूल्यांकन रन उपलब्ध नाहीत.',
+  ragEvalDashboardMetricUnavailable: '{metric} साठी कोणतेही मूल्यांकन माप उपलब्ध नाही.',
   knowledgeBaseSyncIdle: 'निष्क्रिय',
   knowledgeBaseSyncSyncing: 'सिंक होत आहे',
   knowledgeBaseSyncPaused: 'थांबवले आहे',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total} पैकी {index} निकाल',
   ragAnswerEmpty: 'अजून उत्तर नाही',
   retrievalTraceEmpty: 'कोणतेही पुनर्प्राप्ती टप्पे नाहीत',
+  retrievalTraceLabel: 'पुनर्प्राप्ती ट्रेस',
   sourcePickerMatches: {
     one: '{count} स्त्रोत जुळणी',
     other: '{count} स्रोत जुळतात',

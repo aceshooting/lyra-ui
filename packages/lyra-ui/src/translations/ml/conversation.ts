@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ഉദ്ധരണി നൽകുക',
   promptInputLabel: 'AI പ്രോംപ്റ്റ്',
   promptInputControls: 'പ്രോംപ്റ്റ് ഓപ്ഷനുകൾ',
+  promptInputCollectionLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ പ്രോംപ്റ്റ് ഇൻപുട്ടിന്റെ ഒരു ഭാഗം ഒഴിവാക്കി.',
   promptInputSources: 'ഉറവിടങ്ങൾ',
   promptInputAttachments: 'അറ്റാച്ച്മെന്റുകൾ',
   handoffLabel: 'ഏജന്റ് കൈമാറ്റം',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'ശബ്ദങ്ങളൊന്നും ലഭ്യമല്ല',
   voicePickerRequired: 'ഒരു ശബ്ദം തിരഞ്ഞെടുക്കുക.',
   voicePickerPreview: '{name} പ്രിവ്യൂ ചെയ്യുക',
+  voicePickerPreviewFailed: 'ശബ്ദത്തിന്റെ പ്രിവ്യൂ ലഭ്യമല്ല.',
   voicePickerStopPreview: 'പ്രിവ്യൂ നിർത്തുക',
   realtimeSessionLabel: 'തത്സമയ സെഷൻ',
   realtimeSessionDisconnected: 'വിച്ഛേദിച്ചു',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'നീളമുള്ള കോഡ് സിന്റാക്സ് ഹൈലൈറ്റിംഗ് ഇല്ലാതെ കാണിക്കുന്നു.',
   codeBlockHighlightedLine: 'ഹൈലൈറ്റ് ചെയ്ത വരി',
   codeBlockActiveLine: 'സജീവമായ ഹൈലൈറ്റ് ചെയ്ത വരി',
+  codeBlockToggle: 'കോഡ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക',
 };
 
 registerLyraLocale('ml', strings);

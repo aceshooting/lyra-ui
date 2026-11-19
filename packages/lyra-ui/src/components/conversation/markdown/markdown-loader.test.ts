@@ -1,3 +1,4 @@
+import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { expect } from '@open-wc/testing';
 import { loadMarkdownDeps, loadMarkdownAndSanitizer, getMarkdownDepsIfLoaded } from './markdown-loader.js';
 import { preloadMarkdown } from './markdown.js';
@@ -263,4 +264,17 @@ describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', ()
       console.warn = originalWarn;
     }
   });
+});
+
+it('distinguishes missing marked from an import that failed', async () => {
+  for (const missing of [true, false]) {
+    const failure = Object.assign(new Error('private import failure'), { code: missing ? 'ERR_MODULE_NOT_FOUND' : 'NETWORK' });
+    const warnings = await captureDevWarnings(async () => {
+        const deps = await loadMarkdownAndSanitizer(() => Promise.reject(failure), async () => ({ sanitize: (value: string) => value }));
+      expect(deps.marked).to.equal(undefined);
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(warnings[0]).to.include(missing ? 'could not be resolved' : 'could not load');
+    expect(warnings[0]).not.to.include(failure.message);
+  }
 });

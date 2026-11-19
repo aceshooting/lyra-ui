@@ -58,7 +58,7 @@ export const TargetingAnExistingRegion: Story = {
       >
         <p style="margin-block-start:0;">Server-rendered chat area. Drop files anywhere in it.</p>
       </section>
-      <lr-drop-zone for="drop-zone-story-region" multiple @lr-files=${logFiles('target-log')}></lr-drop-zone>
+      <lr-drop-zone for="drop-zone-story-region" style="--lr-drop-zone-overlay-z-index: var(--lr-layer-dropdown);" multiple @lr-files=${logFiles('target-log')}></lr-drop-zone>
       <p id="target-log" style="font: 0.8125rem monospace;">(no drop yet)</p>
     </div>
   `,

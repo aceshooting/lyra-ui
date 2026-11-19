@@ -31,6 +31,12 @@ export const Default: Story = {
   ></lr-prompt-studio>`,
 };
 
+export const LargeWorkspace: Story = {
+  render: () => html`<lr-prompt-studio .versions=${Array.from({ length: 501 }, (_, index) => ({
+    id: `version-${index}`, label: `Version ${index + 1}`, messages: [],
+  }))}></lr-prompt-studio>`,
+};
+
 export const PreviewLimit: Story = {
   render: () => html`
     <p>Preview expansion stops at its resource limits. Messages and variables remain editable and save/run keep the original values.</p>

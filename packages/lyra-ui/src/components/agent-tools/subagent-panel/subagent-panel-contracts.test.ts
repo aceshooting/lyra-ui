@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import './subagent-panel.js';
-import type { LyraSubagentPanel } from './subagent-panel.js';
+import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const RUNS = [
@@ -98,4 +98,34 @@ it('keeps focus on the remaining content when the final action disappears', asyn
   el.runs = [];
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('empty');
+});
+
+it('reads structured and inherited-name statuses without trusting prototype members', async () => {
+  const runs = [
+    { id: 's', label: 'Structured', status: { kind: 'error' } },
+    { id: 'p', label: 'Prototype', status: 'constructor' },
+    { id: 'm', label: 'Missing' },
+  ] as unknown as SubagentRun[];
+  const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`);
+  const row = (id: string) => el.shadowRoot!.querySelector<HTMLElement>(`[data-run-id="${id}"]`)!;
+  const badge = (id: string) => row(id).querySelector('[part="status"]')!;
+  expect(badge('s').getAttribute('variant')).to.equal('danger');
+  expect(row('s').querySelector('[part="retry"]') !== null).to.equal(true);
+  expect(badge('p').getAttribute('variant')).to.equal('neutral');
+  expect(badge('p').textContent?.trim()).to.equal('Constructor');
+  expect(badge('m').getAttribute('variant')).to.equal('neutral');
+  let retried = '';
+  el.addEventListener('lr-run-retry', (event) => { retried = event.detail.runId; });
+  row('s').querySelector<HTMLButtonElement>('[part="retry"]')!.click();
+  expect(retried).to.equal('s');
+});
+
+it('leaves navigation keys on a nested run action to the button', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${RUNS}></lr-subagent-panel>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="cancel"]')!;
+  await focusByKeyboard(button);
+  const event = new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown', cancelable: true });
+  button.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(el.shadowRoot!.activeElement === button).to.equal(true);
 });

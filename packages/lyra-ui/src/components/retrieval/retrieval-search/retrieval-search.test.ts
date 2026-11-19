@@ -130,6 +130,7 @@ function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
 
 // Locale/numbering fixtures intentionally use English fallback text.
 expectLocaleFallback('ar-u-nu-arab', [
+  'showMoreCollapsed',
   'retrievalSearchLabel',
   'search',
   'retrievalModeVector',

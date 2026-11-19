@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
@@ -35,4 +36,11 @@ export const styles = css`
   /* Mirrors lr-icon's own default box so the bare-geometry SVG fallback sizes like a named glyph.
      Mounted only when there is fallback content (see icon-button.class.ts's hasBareGeometry). */
   [part='fallback'] { display: block; inline-size: var(--lr-icon-size, var(--lr-size-1-25rem)); block-size: var(--lr-icon-size, var(--lr-size-1-25rem)); color: inherit; }
+
+  ${forcedColorsPart('[part~="button"]:not(:disabled, [aria-disabled="true"]):hover:not(:focus-visible)')}
+  @media (forced-colors: active) {
+    [part~="button"]:not(:disabled, [aria-disabled="true"]):active:not(:focus-visible) {
+      outline: var(--lr-border-width-medium) double Highlight;
+    }
+  }
 `;

@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Sertakan rujukan',
   promptInputLabel: 'Prompt AI',
   promptInputControls: 'Pilihan prompt',
+  promptInputCollectionLimit: 'Sebahagian input prompt telah digugurkan kerana had input dicapai.',
   promptInputSources: 'Sumber',
   promptInputAttachments: 'Lampiran',
   handoffLabel: 'Serahan kepada ejen',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Tiada suara tersedia',
   voicePickerRequired: 'Sila pilih suara.',
   voicePickerPreview: 'Pratonton {name}',
+  voicePickerPreviewFailed: 'Pratonton suara tidak tersedia.',
   voicePickerStopPreview: 'Hentikan pratonton',
   realtimeSessionLabel: 'Sesi masa nyata',
   realtimeSessionDisconnected: 'Terputus',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Kod panjang dipaparkan tanpa penyerlahan sintaks.',
   codeBlockHighlightedLine: 'Baris diserlahkan',
   codeBlockActiveLine: 'Baris serlahan aktif',
+  codeBlockToggle: 'Papar atau sembunyikan kod',
 };
 
 registerLyraLocale('ms', strings);

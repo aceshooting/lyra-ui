@@ -3,7 +3,7 @@ import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './agent-trace.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAgentTrace } from './agent-trace.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraTraceTree } from '../trace-tree/trace-tree.class.js';
@@ -757,4 +757,38 @@ describe('active-handoff pointer feedback', () => {
       'the released active handoff entry never returned to its active fill',
     );
   });
+});
+
+it('forwards the host accessible name to its inner trace tree', async () => {
+  const el = await fixture(html`<lr-agent-trace aria-label="Execution" label="Steps"></lr-agent-trace>`);
+  const tree = el.shadowRoot!.querySelector('lr-trace-tree')!;
+  await tree.updateComplete;
+  expect(tree.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('Execution');
+});
+
+it('applies card and plain frames and reflects compact density', async () => {
+  const el = await fixture<HTMLElement & { updateComplete: Promise<boolean>; frame: string; size: string }>(html`<lr-agent-trace></lr-agent-trace>`);
+  el.frame = 'card';
+  el.size = 's';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(getComputedStyle(base).borderTopStyle).to.equal('solid');
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(base).borderTopWidth).to.equal('0px');
+});
+
+it('uses the themed hover and pressed colors on an unselected handoff', async () => {
+  const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} style="--lr-transition-fast: 0s; --lr-agent-trace-handoff-hover-bg: rgb(5, 10, 15); --lr-agent-trace-handoff-pressed-bg: rgb(10, 20, 30)"></lr-agent-trace>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="handoff"]')!;
+  try {
+    await hoverUntilMatched(button, 'handoff hover');
+    await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(5, 10, 15)');
+    await sendMouse({ type: 'down', button: 'left' });
+    await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(10, 20, 30)');
+  } finally {
+    await sendMouse({ type: 'up', button: 'left' });
+    await resetMouse();
+  }
 });

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Viita',
   promptInputLabel: 'Tehisintellekti viip',
   promptInputControls: 'Viiba valikud',
+  promptInputCollectionLimit: 'Osa viiba sisendist jäeti välja, kuna sisendipiir sai täis.',
   promptInputSources: 'Allikad',
   promptInputAttachments: 'Manused',
   handoffLabel: 'Agendi üleandmine',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Hääli pole saadaval',
   voicePickerRequired: 'Valige hääl.',
   voicePickerPreview: 'Kuula näidist: {name}',
+  voicePickerPreviewFailed: 'Häälenäidis pole saadaval.',
   voicePickerStopPreview: 'Peata näidis',
   realtimeSessionLabel: 'Reaalajaseanss',
   realtimeSessionDisconnected: 'Ühendus katkestatud',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Pikk kood kuvatakse ilma süntaksi esiletõstuta.',
   codeBlockHighlightedLine: 'Esile tõstetud rida',
   codeBlockActiveLine: 'Aktiivne esile tõstetud rida',
+  codeBlockToggle: 'Näita või peida kood',
 };
 
 registerLyraLocale('et', strings);

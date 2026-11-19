@@ -32,10 +32,11 @@ export const styles = css`
     min-block-size: 0;
     block-size: 100%;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-agent-workspace-border-color, var(--lr-color-border-subtle));
+    border-radius: var(--lr-agent-workspace-radius, var(--lr-radius));
+    background: var(--lr-agent-workspace-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
+    padding: var(--lr-agent-workspace-padding, 0);
   }
   [part='header'] {
     display: flex;

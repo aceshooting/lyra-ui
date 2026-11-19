@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Mémori jangka panjang',
   memoryPanelAdd: 'Tambahkeun kana mémori jangka panjang',
   memoryPanelAddWithContext: 'Tambahkeun "{label}" kana mémori jangka panjang',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Poho kabéh',
   memoryPanelConfirmAddHeading: 'Tambahkeun ieu kana mémori jangka panjang?',
   memoryPanelConfirmRemoveHeading: 'Cabut item ieu?',
@@ -183,6 +184,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Bagéan évaluasi',
   ragEvalDashboardAllSlices: 'Kabéh',
   ragEvalDashboardSliceUnavailable: 'Teu aya prosés évaluasi pikeun {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Teu aya métrik évaluasi pikeun {metric}.',
   knowledgeBaseSyncIdle: 'Teu aktip',
   knowledgeBaseSyncSyncing: 'Nyingkronkeun',
   knowledgeBaseSyncPaused: 'Direureuhkeun',
@@ -258,6 +260,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Hasil {index} tina {total}',
   ragAnswerEmpty: 'Tacan aya jawaban',
   retrievalTraceEmpty: 'Henteu aya tahapan pamulihan',
+  retrievalTraceLabel: 'Tapak pamulihan',
   sourcePickerMatches: {
     other: '{count} sumber cocog',
   },

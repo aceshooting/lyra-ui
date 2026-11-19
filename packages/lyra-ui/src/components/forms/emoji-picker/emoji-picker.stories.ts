@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Emoji picks emit owner-realm native input/change followed by lr-input/lr-change aliases with detail.value; search focus/blur are owner-realm native FocusEvent relays.',
+          'Listen to lr-activate for every pick. A changed emoji emits input, lr-input, change and lr-change in order, with the old and new values on the aliases. Search focus and blur are native FocusEvent relays.',
       },
     },
   },

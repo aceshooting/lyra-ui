@@ -21,3 +21,12 @@ Markdown reads initial script content through its first render and preserves exp
 Collapsed code blocks paint a single lower border, and short language labels remain legible beside long filenames.
 Markdown applies link-target protections to authored forms.
 Markdown limits explicit math sizes to 20 em and macro expansion to 1,000.
+Code block disclosures keep a stable accessible name and expose state through `aria-expanded`. Replace `expandCode` and `collapseCode` string overrides with `codeBlockToggle`.
+Code block disclosure requests respect synchronous writes to `collapsed` and stop if the listener removes the disclosure.
+Code block headers track slotted controls in the code block's current document.
+Style Markdown's minimum content size and the resting, hovered, and pressed backgrounds of fenced copy buttons, code block disclosures, and line buttons.
+Markdown paints neutral highlights on the raised surface color so they remain visible against the document background.
+Plain Markdown streaming updates without animation frames. Progressive streaming continues when the browser pauses those frames.
+Fenced Markdown copy feedback stays independent for each fence, and a later click supersedes an earlier write for that fence.
+Markdown and code blocks distinguish unresolved optional peers from import failures in development.
+Markdown requires spaces or tabs after closing fence markers.

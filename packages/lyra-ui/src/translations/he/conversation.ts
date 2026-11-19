@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'הוסף ציטוט',
   promptInputLabel: 'הנחיה של AI',
   promptInputControls: 'אפשרויות הנחיה',
+  promptInputCollectionLimit: 'חלק מהקלט לבקשה הושמט משום שהקלט הגיע למגבלה.',
   promptInputSources: 'מקורות',
   promptInputAttachments: 'קבצים מצורפים',
   handoffLabel: 'העברה לסוכן',
@@ -157,6 +158,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'אין קולות זמינים',
   voicePickerRequired: 'אנא בחר קול.',
   voicePickerPreview: 'תצוגה מקדימה {name}',
+  voicePickerPreviewFailed: 'תצוגה מקדימה של הקול אינה זמינה.',
   voicePickerStopPreview: 'עצור את התצוגה המקדימה',
   realtimeSessionLabel: 'הפעלה בזמן אמת',
   realtimeSessionDisconnected: 'מנותק',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'קוד ארוך מוצג ללא הדגשת תחביר.',
   codeBlockHighlightedLine: 'שורה מודגשת',
   codeBlockActiveLine: 'שורה מודגשת פעילה',
+  codeBlockToggle: 'הצג או הסתר את הקוד',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

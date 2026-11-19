@@ -135,6 +135,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Cuimhní fadtéarmacha',
   memoryPanelAdd: 'Cuir leis an gcuimhne fhadtéarmach',
   memoryPanelAddWithContext: 'Cuir "{label}" leis an gcuimhne fhadtéarmach',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Déan dearmad ar gach rud',
   memoryPanelConfirmAddHeading: 'Cuir é seo leis an gcuimhne fhadtéarmach?',
   memoryPanelConfirmRemoveHeading: 'Bain an mhír seo?',
@@ -193,6 +194,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Slisní meastóireachta',
   ragEvalDashboardAllSlices: 'Gach ceann',
   ragEvalDashboardSliceUnavailable: 'Níl aon rití meastóireachta ar fáil do {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Níl aon mhéadracht meastóireachta ar fáil do {metric}.',
   knowledgeBaseSyncIdle: 'Díomhaoin',
   knowledgeBaseSyncSyncing: 'Á shioncronú',
   knowledgeBaseSyncPaused: 'Ar sos',
@@ -272,6 +274,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Toradh {index} as {total}',
   ragAnswerEmpty: 'Níl aon fhreagra fós',
   retrievalTraceEmpty: 'Gan céimeanna aisghabhála',
+  retrievalTraceLabel: 'Rian aisghabhála',
   sourcePickerMatches: {
     few: 'Foinsí comhoiriúnacha: {count}',
     many: 'Foinsí comhoiriúnacha: {count}',

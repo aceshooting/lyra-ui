@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -636,7 +637,7 @@ export const styles = css`
      this dims only the one swatch. */
   [part~="swatch"]:disabled {
     cursor: not-allowed;
-    opacity: var(--lr-color-picker-swatch-disabled-opacity, 0.5);
+    opacity: var(--lr-color-picker-swatch-disabled-opacity, var(--lr-opacity-disabled));
   }
   /* Ring AND check mark, so selection never rides on colour alone. Encoded in the part name -- an
      attribute selector after ::part() never matches -- so consumers can restyle it. */
@@ -644,17 +645,21 @@ export const styles = css`
     border-color: var(--lr-color-picker-selected-border, var(--lr-color-brand));
     border-width: var(--lr-border-width-medium);
   }
-  [part~="swatch-selected"]::before {
-    content: "✓";
+  [part~="swatch-check"] {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--lr-color-picker-selected-check-color, var(--lr-color-surface));
-    font-size: var(--lr-font-size-xs);
-    text-shadow: 0 0 var(--lr-size-2px) var(--lr-color-shadow);
+    font-size: var(--lr-font-size-m);
+    filter: drop-shadow(0 0 var(--lr-size-2px) var(--lr-color-shadow));
+    pointer-events: none;
     z-index: var(--lr-layer-content);
+  }
+  [part~="swatch-check"] svg {
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
   }
 
   :host([readonly]) [part~="trigger"],
@@ -710,4 +715,11 @@ export const styles = css`
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface(':host(:not([inline])) [part~="panel"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
+
+  ${forcedColorsPart(':host(:not(:disabled):not([readonly])) [part~="trigger"]:hover:not(:focus-visible)')}
+  @media (forced-colors: active) {
+    :host(:not(:disabled):not([readonly])) [part~="trigger"]:active:not(:focus-visible) {
+      outline: var(--lr-border-width-medium) double Highlight;
+    }
+  }
 `;

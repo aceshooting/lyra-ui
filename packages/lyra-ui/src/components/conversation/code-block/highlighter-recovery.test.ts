@@ -1,7 +1,7 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
-import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { captureDevWarnings, expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { __setShikiModuleLoaderForTesting, loadShikiHighlighter, loadShikiLanguage } from './code-loader.js';
 import { __resetShikiCoreEngineForTesting, __setShikiHighlighterCoreLoaderForTesting, ensureShikiLanguageLoaded,
   loadShikiHighlighterCore, setShikiCoreEngine, type ShikiHighlighter } from './shiki-types.js';
@@ -155,3 +155,16 @@ for (const empty of [undefined, null]) {
     await waitUntil(() => Boolean(el.shadowRoot!.querySelector('pre.shiki')));
   });
 }
+
+it('distinguishes missing Shiki from an import that failed', async () => {
+  for (const missing of [true, false]) {
+    const failure = Object.assign(new Error('private import failure'), { code: missing ? 'ERR_MODULE_NOT_FOUND' : 'NETWORK' });
+    const warnings = await captureDevWarnings(async () => {
+        __setShikiModuleLoaderForTesting(async () => { throw failure; });
+      expect(await loadShikiHighlighter()).to.equal(null);
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(warnings[0]).to.include(missing ? 'could not be resolved' : 'could not load');
+    expect(warnings[0]).not.to.include(failure.message);
+  }
+});

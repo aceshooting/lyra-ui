@@ -2,6 +2,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
+  readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
 import { formatISO, parseISO, utcDate } from './calendar-core.js';
 
@@ -41,18 +42,11 @@ export function projectDisabledDateKeys(value: unknown): readonly string[] {
     );
   }
   if (!isSafeArray(value)) return Object.freeze([]);
-  const length = getOwnDataDescriptor(value, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR ||
-    length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-    typeof length.value !== 'number' ||
-    !Number.isSafeInteger(length.value) ||
-    length.value < 0
-  )
-    return Object.freeze([]);
+  const length = readOwnArrayLength(value);
+  if (length === undefined) return Object.freeze([]);
 
   const dates: string[] = [];
-  for (let index = 0; index < Math.min(length.value, MAX_DISABLED_DATE_ENTRIES); index += 1) {
+  for (let index = 0; index < Math.min(length, MAX_DISABLED_DATE_ENTRIES); index += 1) {
     const entry = getOwnDataDescriptor(value, String(index));
     if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
     const date = typeof entry.value === 'string' ? parseISO(entry.value) : copyNativeDate(entry.value);

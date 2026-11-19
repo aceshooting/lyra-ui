@@ -133,6 +133,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Ilgalaikiai prisiminimai',
   memoryPanelAdd: 'Įtraukti į ilgalaikę atmintį',
   memoryPanelAddWithContext: 'Įtraukti „{label}“ į ilgalaikę atmintį',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Pamiršti viską',
   memoryPanelConfirmAddHeading: 'Įtraukti tai į ilgalaikę atmintį?',
   memoryPanelConfirmRemoveHeading: 'Pašalinti šį elementą?',
@@ -191,6 +192,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Vertinimo pjūviai',
   ragEvalDashboardAllSlices: 'Visi',
   ragEvalDashboardSliceUnavailable: 'Pjūviui {slice} vertinimo paleidimų nėra.',
+  ragEvalDashboardMetricUnavailable: 'Nėra {metric} vertinimo metrikos.',
   knowledgeBaseSyncIdle: 'Neveikia',
   knowledgeBaseSyncSyncing: 'Sinchronizuojama',
   knowledgeBaseSyncPaused: 'Pristabdyta',
@@ -269,6 +271,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Rezultatas {index} iš {total}',
   ragAnswerEmpty: 'Atsakymo dar nėra',
   retrievalTraceEmpty: 'Gavimo etapų nėra',
+  retrievalTraceLabel: 'Gavimo eiga',
   sourcePickerMatches: {
     few: 'Atitinka {count} šaltiniai',
     many: 'Atitinka {count} šaltinio',

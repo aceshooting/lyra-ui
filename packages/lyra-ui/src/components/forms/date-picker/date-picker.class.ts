@@ -1,3 +1,7 @@
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import {
@@ -15,7 +19,8 @@ import { isRtl } from '../../../internal/rtl.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
@@ -24,10 +29,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
 } from '../../../internal/data-descriptors.js';
-import {
-  dispatchNativeEvent,
-  dispatchNativeInputEvent,
-} from '../../../internal/native-event-relay.js';
+import { dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
@@ -127,8 +129,8 @@ const viewConverter: ComplexAttributeConverter<LyraDatePickerView> = {
 };
 
 export interface LyraDatePickerEventMap {
-  'lr-input': CustomEvent<{ value: string }>;
-  'lr-change': CustomEvent<{ value: string }>;
+  'lr-input': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
   input: InputEvent;
   change: Event;
   'lr-focus-day': CustomEvent<{ date: Date }>;
@@ -173,15 +175,6 @@ const canonicalPresetSnapshots = new WeakMap<
   readonly CanonicalDateRangePreset[]
 >();
 
-function isSafeNonArrayObject(value: unknown): value is object {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    return !Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Reads the fields this component renders exactly once from own data descriptors. The original
  * preset remains opaque after this boundary because `appliedPreset` is intentionally the caller's
@@ -211,7 +204,7 @@ function projectDateRangePreset(value: unknown): CanonicalDateRangePreset | unde
   )
     return undefined;
   return Object.freeze({
-    source: value as LyraDateRangePreset,
+    source: value as unknown as LyraDateRangePreset,
     label: label.value,
     start: start === MISSING_OWN_DATA_DESCRIPTOR ? undefined : start.value as string | undefined,
     end: end === MISSING_OWN_DATA_DESCRIPTOR ? undefined : end.value as string | undefined,
@@ -258,8 +251,8 @@ function canonicalDateRangePresets(
  * navigation stay within the supported ISO years 0000–9999.
  *
  * @customElement lr-date-picker
- * @event lr-input - Typed value edit notification; detail includes `value`.
- * @event lr-change - Typed value commit notification; detail includes `value`.
+ * @event lr-input - Calendar selection edit with `value` and `previousValue`.
+ * @event lr-change - Calendar selection commit with `value` and `previousValue`.
  * @event {Event} change - The user committed a value. Bubbling, composed, and non-cancelable.
  * @event {InputEvent} input - The value changed during interaction (range: after the first
  *   click). Bubbling, composed, and non-cancelable.
@@ -931,13 +924,13 @@ const active = shadowFocusTarget(this);
     // Only arm the suppression when `value` is actually about to change --
     // that's the only case `willUpdate` will see `changed.has('value')` and
     // get a chance to consume (and clear) the flag.
+    const detail = { value: next, previousValue: this.value };
     if (next !== this.value) this.committedValue = next;
     this.value = next;
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', { value: next });
+    this.emit('lr-input', { ...detail });
     if (fire) {
-      dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value: next });
+      emitValueEvents(this, 'change', detail, value => this.emit('lr-change', value));
     }
   }
 
@@ -1004,7 +997,11 @@ const active = shadowFocusTarget(this);
     return clampDate(date, localDate(0), localDate(9999, 12 - this.visibleMonths, 1));
   }
 
+  private readonly pageAnnouncements = new AnnouncementSinkController(this);
+  private announcePage = false;
+
   private nav(delta: number): void {
+    this.announcePage = true;
     const page = this.pageBy === 'single' ? 1 : this.visibleMonths;
     this.viewDate = this.clampViewAnchor(addMonths(this.viewDate, delta * page));
   }
@@ -1162,6 +1159,7 @@ const active = shadowFocusTarget(this);
   }
 
   private onViewGridKey = (event: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(event)) return;
     const view = this.effectiveView;
     if (view === 'days') return;
 
@@ -1169,8 +1167,7 @@ const active = shadowFocusTarget(this);
     const source = event
       .composedPath()
       .find(
-        (node): node is HTMLElement =>
-          node instanceof HTMLElement && node.hasAttribute('data-view-start')
+        (node): node is Element => isElementNode(node) && node.hasAttribute('data-view-start')
       );
     const currentSource =
       parseISO(source?.getAttribute('data-view-start') ?? '') ??
@@ -1213,7 +1210,7 @@ const active = shadowFocusTarget(this);
       case 'Enter':
       case ' ':
         event.preventDefault();
-        this.pickViewItem(current);
+        if (!isRepeatedActivationKey(event)) this.pickViewItem(current);
         return;
       default:
         return;
@@ -1256,6 +1253,7 @@ const active = shadowFocusTarget(this);
   }
 
   private onGridKey = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     const min = parseISO(this.min);
     const max = parseISO(this.max);
     const today = this.resolvedToday();
@@ -1327,7 +1325,7 @@ const active = shadowFocusTarget(this);
       case 'Enter':
       case ' ':
         e.preventDefault();
-        this.selectDate(current);
+        if (!isRepeatedActivationKey(e)) this.selectDate(current);
         return;
       default:
         return;
@@ -1362,6 +1360,11 @@ const active = shadowFocusTarget(this);
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
+    if (this.announcePage) {
+      this.announcePage = false;
+      const titles = Array.from(this.renderRoot.querySelectorAll('[part="month-label"]'), label => label.textContent.trim());
+      this.pageAnnouncements.announcePolite(getListFormat(this.effectiveLocale).format(titles));
+    }
     const focusedDate = this.focusedDateValue;
     const repairOwner = this.constraintFocusOwner;
     this.constraintFocusOwner = undefined;
@@ -1496,6 +1499,7 @@ const active = shadowFocusTarget(this);
       part=${parts.join(' ')}
       role="gridcell"
       data-date=${iso}
+      aria-current=${isToday && !outsideDuplicate ? 'date' : nothing}
       aria-selected=${selected ? 'true' : 'false'}
       aria-label=${dayLabelFmt.format(date)}
       tabindex=${focused ? '0' : '-1'}
@@ -1706,6 +1710,7 @@ const active = shadowFocusTarget(this);
         part=${parts.join(' ')}
         type="button"
         data-view-start=${formatISO(start)}
+        aria-current=${isToday ? 'date' : nothing}
         tabindex=${focused && !disabled ? '0' : '-1'}
         ?disabled=${disabled}
         @click=${() => this.pickViewItem(start)}
@@ -1742,6 +1747,7 @@ const active = shadowFocusTarget(this);
   }
 
   private navView(delta: number): void {
+    this.announcePage = true;
     const months =
       this.effectiveView === 'months'
         ? 12

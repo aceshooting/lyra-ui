@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'ความจำระยะยาว',
   memoryPanelAdd: 'เพิ่มลงในความจำระยะยาว',
   memoryPanelAddWithContext: 'เพิ่ม "{label}" ลงในความจำระยะยาว',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'ลืมทั้งหมด',
   memoryPanelConfirmAddHeading: 'เพิ่มรายการนี้ลงในความจำระยะยาวไหม',
   memoryPanelConfirmRemoveHeading: 'นำรายการนี้ออกไหม',
@@ -183,6 +184,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'ชุดย่อยการประเมิน',
   ragEvalDashboardAllSlices: 'ทั้งหมด',
   ragEvalDashboardSliceUnavailable: 'ไม่มีรอบการประเมินสำหรับ {slice}',
+  ragEvalDashboardMetricUnavailable: 'ไม่มีตัวชี้วัดการประเมินสำหรับ {metric}',
   knowledgeBaseSyncIdle: 'ว่าง',
   knowledgeBaseSyncSyncing: 'กำลังซิงค์',
   knowledgeBaseSyncPaused: 'หยุดชั่วคราวแล้ว',
@@ -258,6 +260,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'ผลลัพธ์ {index} จาก {total}',
   ragAnswerEmpty: 'ยังไม่มีคำตอบ',
   retrievalTraceEmpty: 'ไม่มีขั้นตอนการดึงข้อมูล',
+  retrievalTraceLabel: 'ร่องรอยการดึงข้อมูล',
   sourcePickerMatches: {
     other: 'แหล่งที่มาของ {count} ตรงกัน',
   },

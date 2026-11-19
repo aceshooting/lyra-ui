@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Ange källa',
   promptInputLabel: 'AI-prompt',
   promptInputControls: 'Promptalternativ',
+  promptInputCollectionLimit: 'En del av promptens indata utelämnades eftersom indatagränsen nåddes.',
   promptInputSources: 'Källor',
   promptInputAttachments: 'Bilagor',
   handoffLabel: 'Överlämning mellan agenter',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Inga röster tillgängliga',
   voicePickerRequired: 'Välj en röst.',
   voicePickerPreview: 'Förhandslyssna på {name}',
+  voicePickerPreviewFailed: 'Förhandslyssning är inte tillgänglig.',
   voicePickerStopPreview: 'Stoppa förhandslyssning',
   realtimeSessionLabel: 'Realtidssession',
   realtimeSessionDisconnected: 'Frånkopplad',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Lång kod visas utan syntaxmarkering.',
   codeBlockHighlightedLine: 'Markerad rad',
   codeBlockActiveLine: 'Aktiv markerad rad',
+  codeBlockToggle: 'Visa eller dölj koden',
 };
 
 registerLyraLocale('sv', strings);

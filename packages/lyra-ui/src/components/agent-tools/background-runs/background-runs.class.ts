@@ -1,6 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -8,6 +8,8 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { styles } from './background-runs.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
@@ -117,16 +119,51 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
 
   private dispatchingRequest = false;
   private focusedRow?: Element | null;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  /** The one row whose actions are in the tab sequence; the others are reached with arrow keys. */
+  @state() private activeRunId?: string;
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('runs')) {
+      const rows = this.normalizedRuns.slice(0, MAX_RENDERED_RUNS);
+      if (!rows.some(run => run.id === this.activeRunId)) this.activeRunId = rows[0]?.id;
+    }
     this.focusedRow = captureComposedFocusRepair(this, this)?.activeElement.closest('[data-run-id]');
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.focusedRow) restoreComposedFocus(this, true, this.focusedRow.querySelector<HTMLElement>('[part="open"]'));
+    const limited = this.normalizedRuns.length > MAX_RENDERED_RUNS;
+    this.announcements.transition('limit', limited ? 'limited' : 'complete', limited ? this.limitText() : '', 'polite');
   }
+
+  private limitText(): string {
+    return this.localize('backgroundRunsLimit', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),
+    });
+  }
+
+  private onListKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || event.shiftKey) return;
+    const target = event.target as HTMLElement;
+    const rows = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="run"]'));
+    const current = rows.findIndex((row) => row.contains(target));
+    const next = rows[resolveListMove(event, { count: rows.length, current, orientation: 'vertical', wrap: false, clamp: true }) ?? -1];
+    if (!next) return;
+    event.preventDefault();
+    (next.querySelector<HTMLElement>(`[part="${target.getAttribute('part')}"]`) ?? next.querySelector<HTMLElement>('[part="open"]'))?.focus();
+  };
+
+  private onListFocusIn = (event: FocusEvent): void => {
+    this.activeRunId = (event.target as HTMLElement).closest<HTMLElement>('[data-run-id]')?.dataset['runId'];
+  };
 
   private normalizedFor?: readonly BackgroundRun[];
   private normalizedCache: NormalizedRun[] = [];
@@ -172,8 +209,9 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
     }
   }
 
-  private renderRun(run: NormalizedRun): TemplateResult {
+  private renderRun(run: NormalizedRun, tabbable: boolean): TemplateResult {
     const cancellable = CANCELLABLE_STATUSES.has(run.status);
+    const tabindex = tabbable ? nothing : '-1';
     const actionLabel = normalizeLabel(run.label) ?? run.id;
     return html`
       <div part="run" role="listitem" data-run-id=${run.id}>
@@ -187,6 +225,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
             part="open"
             data-agent-action="neutral"
             type="button"
+            tabindex=${tabindex}
             aria-label=${this.localize('backgroundRunsOpenFor', undefined, { label: actionLabel })}
             ?disabled=${this.disabled}
             @click=${() => this.requestOpen(run.id)}
@@ -196,6 +235,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
                 part="cancel"
                 data-agent-action="neutral"
                 type="button"
+                tabindex=${tabindex}
                 aria-label=${this.localize('backgroundRunsCancelFor', undefined, { label: actionLabel })}
                 ?disabled=${this.disabled}
                 @click=${() => this.requestCancel(run.id)}
@@ -208,6 +248,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
 
   override render(): TemplateResult {
     const runs = this.normalizedRuns;
+    const rendered = runs.slice(0, MAX_RENDERED_RUNS);
     const visibleLabel = this.label == null ? this.localize('backgroundRunsLabel') : this.label;
     const hostLabel = hostAriaLabel(this);
     return html`
@@ -215,13 +256,11 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
         <legend part="legend">${visibleLabel}</legend>
         ${runs.length === 0
           ? html`<p part="empty" tabindex="-1">${this.localize('backgroundRunsEmpty')}</p>`
-          : html`<div part="list" role="list">
-              ${repeat(runs.slice(0, MAX_RENDERED_RUNS), (run) => run.id, (run) => this.renderRun(run))}
+          : html`<div part="list" role="list" @keydown=${this.onListKeyDown} @focusin=${this.onListFocusIn}>
+              ${repeat(rendered, (run) => run.id, (run) => this.renderRun(run, run.id === this.activeRunId))}
             </div>`}
         ${runs.length > MAX_RENDERED_RUNS
-          ? html`<p part="limit">${this.localize('backgroundRunsLimit', undefined, {
-              count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),
-            })}</p>`
+          ? html`<p part="limit" role="note">${this.limitText()}</p>`
           : nothing}
       </fieldset>
     `;

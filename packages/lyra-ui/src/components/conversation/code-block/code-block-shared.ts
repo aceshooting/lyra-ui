@@ -2,6 +2,7 @@ import { countLines, splitLines } from '../../../internal/text-lines.js';
 import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { RecordCopyFeedback, type CopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS } from './shiki-types.js';
 /**
  * Everything `<lr-code-block>` and `<lr-code-block-core>` render and compute identically:
@@ -58,14 +59,6 @@ type LyraLocalizeFn = (
   fallback?: string,
   values?: Record<string, string | number>
 ) => string;
-
-/** The collapse/expand header toggle button's `aria-label`. */
-function codeBlockToggleLabel(
-  localize: LyraLocalizeFn,
-  collapsed: boolean
-): string {
-  return collapsed ? localize('expandCode') : localize('collapseCode');
-}
 
 /** The copy-to-clipboard header button's `aria-label`. */
 function codeBlockCopyLabel(
@@ -747,7 +740,7 @@ function renderCodeBlockHeader(
                 type="button"
                 aria-expanded=${options.collapsed ? 'false' : 'true'}
                 aria-controls=${options.bodyId}
-                aria-label=${codeBlockToggleLabel(options.localize, options.collapsed)}
+                aria-label=${options.localize('codeBlockToggle')}
                 @click=${options.onToggle}
               >
                 <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
@@ -900,7 +893,6 @@ interface CodeBlockInteractionHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly updateComplete: Promise<boolean>;
   readonly code: string;
-  collapsed: boolean;
 }
 
 /** Reactive writes and typed events supplied by the code-block host. */
@@ -912,8 +904,6 @@ export interface CodeBlockInteractionOptions {
   setDarkTheme: (value: boolean) => void;
   emitLineActivate: (line: number) => void;
   reportCopy: (outcome: CopyOutcome) => void;
-  requestToggle: (collapsed: boolean) => boolean;
-  emitToggle: (collapsed: boolean) => void;
   emitTextSelect: (selection: CodeBlockSelection) => void;
 }
 
@@ -1056,13 +1046,6 @@ export class CodeBlockInteractionController {
     if (selection) this.options.emitTextSelect(selection);
   };
 
-  toggleCollapsed = (): void => {
-    const { host } = this.options;
-    const collapsed = !host.collapsed;
-    if (!this.options.requestToggle(collapsed)) return;
-    host.collapsed = collapsed;
-    this.options.emitToggle(host.collapsed);
-  };
 }
 
 /** The reactive write {@linkcode CodeBlockHeaderActionsController} cannot perform itself: each
@@ -1084,40 +1067,23 @@ function codeBlockHasHeaderActions(host: HTMLElement): boolean {
   );
 }
 
-/**
- * Watches a code-block host's own light DOM so appending (or removing) a `slot="header-actions"`
- * child brings the header into existence -- or retires it -- without the consumer touching a
- * property.
- *
- * `<lr-code-block>` and `<lr-code-block-core>` previously each defined their own byte-identical
- * `syncHeaderActions()`/`observeHeaderActions()` private methods plus the backing
- * `headerActionsObserver` field -- exactly the drift class this module exists to prevent, and
- * already caught once before for `renderPlainCode()`. Both components now instantiate this
- * single controller instead.
- */
+/** Tracks slot claims before the header and its slot exist. */
 export class CodeBlockHeaderActionsController {
-  private observer?: MutationObserver;
+  private readonly observer: OwnedMutationObserver;
+  private observing = false;
 
-  constructor(private readonly options: CodeBlockHeaderActionsOptions) {}
+  constructor(private readonly options: CodeBlockHeaderActionsOptions) {
+    this.observer = new OwnedMutationObserver(options.host, () => this.sync());
+  }
 
-  /** Re-reads the host's light DOM and reports the result through `setHasHeaderActions`. Safe to
-   *  call on every update pass -- it does its own light-DOM read, not a diff against `observe()`'s
-   *  MutationObserver state. */
   sync(): void {
     this.options.setHasHeaderActions(codeBlockHasHeaderActions(this.options.host));
   }
 
-  /** Starts (once) watching the host's light DOM for a `header-actions` slot claim, syncing
-   *  immediately so a child already present at call time is picked up. A no-op on a second call
-   *  or when `MutationObserver` is unavailable. */
   observe(): void {
-    if (this.observer || typeof MutationObserver === 'undefined') return;
+    if (this.observing) return;
+    this.observing = true;
     this.sync();
-    // childList covers append/remove. The slot-attribute filter covers a child that is already
-    // here and only later claims the slot, and needs subtree to see the CHILD's attribute rather
-    // than the host's -- cheap here, because `header-actions` is this component's only slot, so
-    // the light DOM carries nothing else (the code itself arrives on the `code` property).
-    this.observer = new MutationObserver(() => this.sync());
     this.observer.observe(this.options.host, {
       childList: true,
       attributes: true,
@@ -1126,9 +1092,8 @@ export class CodeBlockHeaderActionsController {
     });
   }
 
-  /** Retires the observer, e.g. on host disconnect. */
   disconnect(): void {
-    this.observer?.disconnect();
-    this.observer = undefined;
+    this.observer.clear();
+    this.observing = false;
   }
 }

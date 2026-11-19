@@ -1,6 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
 import './ingestion-queue.js';
@@ -1192,4 +1193,36 @@ it('omits blank and later duplicate item ids before counts, virtualization, rend
     '[part="cancel-button"]'
   )!.click();
   expect((await cancelled).detail).to.deep.equal({ itemId: 'same' });
+});
+
+it('skips the rendered-action scan on updates while focus is outside its actions', async () => {
+  const el = (await fixture(html`<lr-ingestion-queue .items=${[item({ id: '1', stage: 'failed' }), item({ id: '2', stage: 'failed' })]}></lr-ingestion-queue>`)) as LyraIngestionQueue;
+  const root = el.shadowRoot!;
+  const original = root.querySelectorAll;
+  let scans = 0;
+  root.querySelectorAll = function (this: ShadowRoot, selectors: string) {
+    if (selectors.includes('data-ingestion-action')) scans += 1;
+    return original.call(this, selectors);
+  } as typeof root.querySelectorAll;
+  try {
+    el.items = [item({ id: '1', stage: 'failed' }), item({ id: '3', stage: 'failed' })];
+    await el.updateComplete;
+    expect(scans).to.equal(0);
+  } finally {
+    delete (root as { querySelectorAll?: unknown }).querySelectorAll;
+  }
+});
+
+it('leaves a sibling queue focused action alone when only this queue updates', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-ingestion-queue data-a .items=${[item({ id: '1', stage: 'failed' })]}></lr-ingestion-queue>
+    <lr-ingestion-queue data-b .items=${[item({ id: '1', stage: 'failed' })]}></lr-ingestion-queue>
+  </div>`);
+  const a = wrapper.querySelector('[data-a]') as LyraIngestionQueue;
+  const b = wrapper.querySelector('[data-b]') as LyraIngestionQueue;
+  const action = a.shadowRoot!.querySelector<HTMLButtonElement>('button[data-ingestion-action]')!;
+  await focusByKeyboard(action);
+  b.items = [];
+  await b.updateComplete;
+  expect(a.shadowRoot!.activeElement === action).to.equal(true);
 });

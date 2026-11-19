@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'ڊگهي وقت جون يادون',
   memoryPanelAdd: 'ڊگهي وقت جي ياد ۾ شامل ڪريو',
   memoryPanelAddWithContext: '"{label}" کي ڊگهي وقت جي ياد ۾ شامل ڪريو',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'سڀ وساريو',
   memoryPanelConfirmAddHeading: 'هن کي ڊگهي وقت جي ياد ۾ شامل ڪجي؟',
   memoryPanelConfirmRemoveHeading: 'هي شيءِ هٽائجي؟',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'جائزي جا حصا',
   ragEvalDashboardAllSlices: 'سڀ',
   ragEvalDashboardSliceUnavailable: '{slice} لاءِ جائزي جا عمل موجود ناهن.',
+  ragEvalDashboardMetricUnavailable: '{metric} لاءِ جائزي جو ڪو به ماپو دستياب ناهي.',
   knowledgeBaseSyncIdle: 'غيرفعال',
   knowledgeBaseSyncSyncing: 'هم وقت سازي جاري',
   knowledgeBaseSyncPaused: 'روڪيل',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'نتيجا {index} مان {total}',
   ragAnswerEmpty: 'اڃان تائين ڪو جواب ناهي',
   retrievalTraceEmpty: 'نه وري حاصل ڪرڻ جا مرحلا',
+  retrievalTraceLabel: 'ٻيهر حاصل ڪرڻ جو ٽريس',
   sourcePickerMatches: {
     one: '{count} ماخذ ملائڻ',
     other: '{count} ذريعا ملن ٿا',

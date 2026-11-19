@@ -579,3 +579,16 @@ describe('modified Space keydown', () => {
     expect(opened).to.equal(0);
   });
 });
+
+it('keeps the surrounding line box at the prose line height while the target stays full size', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="font-size: 16px; line-height: 24px">
+    <p data-plain style="margin: 0">Plain line of text</p>
+    <p data-cited style="margin: 0">Cited line <lr-citation-badge .index=${1}></lr-citation-badge> of text</p>
+  </div>`);
+  const badge = wrapper.querySelector('lr-citation-badge') as LyraCitationBadge;
+  await badge.updateComplete;
+  const plain = wrapper.querySelector<HTMLElement>('[data-plain]')!.getBoundingClientRect().height;
+  const cited = wrapper.querySelector<HTMLElement>('[data-cited]')!.getBoundingClientRect().height;
+  expect(Math.abs(cited - plain) <= 1).to.equal(true);
+  expect(badge.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getBoundingClientRect().height >= 36).to.equal(true);
+});

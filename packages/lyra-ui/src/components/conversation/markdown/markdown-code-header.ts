@@ -1,15 +1,11 @@
 import { deepActiveElementIn } from '../../../internal/active-element.js';
-import { reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { render, svg } from 'lit';
 import { checkIcon, copyIcon } from '../../../internal/icons.js';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
-import { writeClipboardText } from '../../../internal/clipboard.js';
 import { acquireAnnouncementSink } from '../../../internal/announcer.js';
 
 export const MARKDOWN_CODE_HEADER_MAX = 200;
-// Matches the standalone code block's confirmation window.
-const MARKDOWN_CODE_COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 export interface MarkdownCodeBlockRecord { language: string; source: string; ordinal: number }
 type Status = 'rest' | 'success' | 'error';
 type HeaderHost = HTMLElement & ReactiveControllerHost;
@@ -78,10 +74,7 @@ export function renderMarkdownCodeHeader(frame: HTMLElement, language: string): 
 export class MarkdownCodeHeaderController implements ReactiveController {
   private nonceValue?: string;
   private records: MarkdownCodeBlockRecord[] = [];
-  private generation = 0;
-  private tokens: number[] = [];
-  private statuses: Status[] = [];
-  private readonly timers = new Map<number, { owner: Window; handle: number }>();
+  private readonly feedback = new Map<number, RecordCopyFeedback>();
   private readonly buttons = new WeakMap<Element, number>();
   private readonly frames = new WeakMap<Element, HTMLButtonElement>();
   private readonly painted = new WeakMap<Element, Status>();
@@ -117,16 +110,15 @@ export class MarkdownCodeHeaderController implements ReactiveController {
   }
 
   private resetIndex(index: number): void {
-    this.tokens[index] = (this.tokens[index] ?? 0) + 1;
-    this.statuses[index] = 'rest';
-    const timer = this.timers.get(index);
-    if (timer) timer.owner.clearTimeout(timer.handle);
-    this.timers.delete(index);
+    const feedback = this.feedback.get(index);
+    if (!feedback) return;
+    this.feedback.delete(index);
+    feedback.reset();
+    this.host.removeController(feedback);
   }
 
   private release(): void {
-    this.generation++;
-    for (let i = 0; i < this.records.length; i++) this.resetIndex(i);
+    for (const index of this.feedback.keys()) this.resetIndex(index);
     this.sink?.release();
     this.sink = undefined;
     this.remembered = undefined;
@@ -192,7 +184,7 @@ export class MarkdownCodeHeaderController implements ReactiveController {
       const { localize } = this.options;
       const group = record.language ? localize('codeRegionWithLanguage', undefined, { language: record.language }) : localize('codeRegion');
       if (frame.getAttribute('aria-label') !== group) frame.setAttribute('aria-label', group);
-      const status = this.statuses[index] ?? 'rest';
+      const status = this.feedback.get(index)?.status ?? 'rest';
       const label = status === 'success' ? localize('copiedToClipboard') : status === 'error' ? localize('copyFailed') : localize('copyCode');
       for (const name of ['aria-label', 'title']) if (button.getAttribute(name) !== label) button.setAttribute(name, label);
       const part = status === 'success' ? 'code-block-copy code-block-copy-success'
@@ -221,29 +213,17 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     return false;
   }
 
-  private async copy(index: number): Promise<void> {
+  private copy(index: number): Promise<void> | undefined {
     const record = this.records[index];
     if (!record || !this.host.isConnected || !this.options.isEnabled()) return;
     this.resetIndex(index);
-    const token = this.tokens[index];
-    const generation = this.generation;
-    const owner = this.host.ownerDocument.defaultView;
-    const current = () => this.host.isConnected && owner === this.host.ownerDocument.defaultView &&
-      generation === this.generation && token === this.tokens[index] && this.options.isEnabled();
-    const outcome = await writeClipboardText(owner, record.source);
-    if (!current()) return;
-    this.statuses[index] = outcome.ok ? 'success' : 'error';
-    reportCopyOutcome({
-      emit: this.options.emit,
-      announce: ok => this.sink?.announce(ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed')),
-    }, outcome, current);
-    if (!current()) return;
-    this.host.requestUpdate();
-    if (owner) this.timers.set(index, { owner, handle: owner.setTimeout(() => {
-      if (!current()) return;
-      this.timers.delete(index);
-      this.statuses[index] = 'rest';
-      this.host.requestUpdate();
-    }, MARKDOWN_CODE_COPY_CONFIRM_MS) });
+    const feedback = new RecordCopyFeedback(this.host, () => record.source, outcome => {
+      reportCopyOutcome({
+        emit: this.options.emit,
+        announce: ok => this.sink?.announce(ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed')),
+      }, outcome, () => this.feedback.get(index) === feedback && this.options.isEnabled());
+    });
+    this.feedback.set(index, feedback);
+    return feedback.write(record.source);
   }
 }

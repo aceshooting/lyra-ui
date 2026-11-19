@@ -185,7 +185,7 @@ it("preserves explicitly empty label and composer-placeholder overrides", async 
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const composer = el.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement;
   const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-  expect(heading.textContent).to.equal("");
+  expect(heading === null).to.equal(true);
   expect(base.getAttribute("aria-label")).to.equal("");
   expect(textarea.getAttribute("placeholder")).to.equal("");
 });
@@ -1299,4 +1299,15 @@ it("does not re-feed unchanged detail data on an unrelated re-render", async () 
   await el.updateComplete;
   expect(results.chunks === chunks).to.be.false;
   expect(results.chunks.map((entry) => entry.id)).to.deep.equal(['replacement']);
+});
+
+it('grows with slotted content inside an auto-height parent', async () => {
+  const shell = await fixture<HTMLElement>(html`<div><lr-agent-workspace>
+    <div slot="composer" style="height:180px">Compose</div>
+  </lr-agent-workspace></div>`);
+  const host = shell.querySelector('lr-agent-workspace')!;
+  await host.updateComplete;
+  const bottom = host.querySelector('[slot="composer"]')!.getBoundingClientRect().bottom;
+  expect(host.getBoundingClientRect().height).to.be.greaterThan(180);
+  expect(bottom).to.be.at.most(shell.getBoundingClientRect().bottom + 1);
 });

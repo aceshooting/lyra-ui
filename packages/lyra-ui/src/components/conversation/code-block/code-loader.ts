@@ -73,7 +73,8 @@ const highlighter = /* @__PURE__ */ createOptionalPeerLoader<ShikiHighlighter>({
   },
   isCapability: isShikiHighlighter,
   warningKey: FULL_HIGHLIGHTER_WARNING_KEY,
-  warning: FULL_HIGHLIGHTER_WARNING,
+  warning: '<lr-code-block>: Shiki could not be resolved to a usable peer for syntax highlighting. Code is rendered as plain text.',
+  failedWarning: FULL_HIGHLIGHTER_WARNING,
 });
 
 /** Shares the full highlighter and retries a rejected import or construction on the next request. */

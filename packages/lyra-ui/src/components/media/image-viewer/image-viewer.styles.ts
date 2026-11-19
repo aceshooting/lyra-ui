@@ -59,7 +59,7 @@ export const styles = css`
     --_lr-icon-button-color-default: var(--lr-color-text);
     --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
     --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
-    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    --_lr-icon-button-background-hover-default: var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet));
     --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     ${iconAction}
     ${iconHitTarget}

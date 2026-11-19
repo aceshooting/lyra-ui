@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Ambato',
   promptInputLabel: 'Umarnin AI',
   promptInputControls: 'Zaɓuɓɓukan umarni',
+  promptInputCollectionLimit: 'An tsallake wani ɓangare na saƙon umarni saboda an kai iyakar shigarwa.',
   promptInputSources: 'Madogara',
   promptInputAttachments: 'Haɗe-haɗe',
   handoffLabel: 'Miƙa wa wakili',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Babu muryoyin da ake da su',
   voicePickerRequired: 'Da fatan zaɓi murya.',
   voicePickerPreview: 'Saurari samfurin {name}',
+  voicePickerPreviewFailed: 'Babu samfurin murya da za a saurara.',
   voicePickerStopPreview: 'Dakatar da samfurin',
   realtimeSessionLabel: 'Zaman kai tsaye',
   realtimeSessionDisconnected: 'An katse haɗin',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Ana nuna doguwar lambar tushe ba tare da bambanta sassan tsarinta da launi ba.',
   codeBlockHighlightedLine: 'Layin da aka haskaka',
   codeBlockActiveLine: 'Layin da aka haskaka mai aiki',
+  codeBlockToggle: 'Nuna ko ɓoye lambar kwamfuta',
 };
 
 registerLyraLocale('ha', strings);

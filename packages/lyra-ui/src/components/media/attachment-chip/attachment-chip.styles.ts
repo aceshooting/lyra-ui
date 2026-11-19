@@ -116,12 +116,10 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    /* Reuses the shared icon-button box size as a ready-made "small square glyph/image slot"
-       token rather than a new one-off dimension. */
-    inline-size: var(--lr-icon-button-size);
-    block-size: var(--lr-icon-button-size);
+    inline-size: var(--lr-attachment-chip-thumbnail-size, var(--lr-icon-button-size));
+    block-size: var(--lr-attachment-chip-thumbnail-size, var(--lr-icon-button-size));
     overflow: hidden;
-    border-radius: calc(var(--lr-radius) * 0.6);
+    border-radius: var(--lr-attachment-chip-thumbnail-radius, calc(var(--lr-radius) * 0.6));
     background: var(--lr-color-surface);
     color: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
   }
@@ -220,7 +218,7 @@ export const styles = css`
   :where([part='retry-button']):hover,
   :where([part='preview-button']):hover,
   :where([part='remove-button']):hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: var(--lr-attachment-chip-action-hover-bg, color-mix(in srgb, var(--lr-color-text) 8%, transparent));
   }
   /* Pressed carries the same tint further: --lr-color-mix-active (22%) against the hover rule's
      8%, mixed from the buttons' own transparent fill, so the step is plainly visible while one
@@ -228,7 +226,10 @@ export const styles = css`
   :where([part='retry-button']):active,
   :where([part='preview-button']):active,
   :where([part='remove-button']):active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-attachment-chip-action-active-bg,
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='retry-button']:focus-visible,
   [part='preview-button']:focus-visible,

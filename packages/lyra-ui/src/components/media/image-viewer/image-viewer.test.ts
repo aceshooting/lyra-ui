@@ -1083,6 +1083,7 @@ describe("pointer-driven annotation", () => {
     await stubImageLoad(el);
     const wrapper = stubWrapperRect(el);
     const released: number[] = [];
+    wrapper.hasPointerCapture = (pointerId) => pointerId === 12 && released.length === 0;
     wrapper.releasePointerCapture = (pointerId) => released.push(pointerId);
     wrapper.dispatchEvent(
       primaryPointerEvent("pointerdown", {

@@ -650,3 +650,21 @@ describe('child event containment', () => {
     expect(seen).to.deep.equal([]);
   });
 });
+
+describe('tab width stability', () => {
+  it('keeps each tab the same width whether or not it is selected', async () => {
+    const el = (await fixture(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`)) as LyraKnowledgeBaseAdmin;
+    const tabs = () => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="tab"]')];
+    const widths = () => tabs().map((tab) => tab.getBoundingClientRect().width);
+    const before = widths();
+    tabs()[1]!.click();
+    await el.updateComplete;
+    expect(tabs()[1]!.getAttribute('aria-selected')).to.equal('true');
+    expect(widths()).to.deep.equal(before);
+    expect(tabs().map((tab) => tab.textContent!.trim())).to.deep.equal(['Sources', 'Ingestion']);
+    const reserve = getComputedStyle(tabs()[0]!, '::after');
+    expect(reserve.fontWeight).to.equal(getComputedStyle(tabs()[1]!).fontWeight);
+    expect(reserve.visibility).to.equal('hidden');
+    expect(reserve.blockSize).to.equal('0px');
+  });
+});

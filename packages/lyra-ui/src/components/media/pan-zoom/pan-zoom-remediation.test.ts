@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './pan-zoom.js';
 import type { LyraPanZoom } from './pan-zoom.js';
 
@@ -139,4 +140,33 @@ it('applies shared icon action tokens to the native toolbar control', async () =
   expect(style.borderTopWidth).to.equal('3px');
   expect(style.backgroundColor).to.equal('rgb(21, 31, 41)');
   expect(style.borderTopLeftRadius).to.equal('9px');
+});
+
+it('paints hovered zoom controls from the component hover token', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom style="--lr-transition-interactive: none; --lr-pan-zoom-control-hover-bg: rgb(1, 2, 3)"></lr-pan-zoom>`);
+  const zoomIn = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(zoomIn, 'zoom-in hover');
+    await waitUntil(() => getComputedStyle(zoomIn).backgroundColor === 'rgb(1, 2, 3)', 'hover token paints the control');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('reports the rendered zoom and discards a superseded zoom action', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom></lr-pan-zoom>`);
+  const changes: string[] = [];
+  el.addEventListener('lr-zoom-change', event => {
+    const content = el.shadowRoot!.querySelector('[part="content"]')!;
+    changes.push(`${event.detail.zoom}/${content.getAttribute('data-zoom')}`);
+  });
+  el.zoomIn();
+  el.zoomIn();
+  await el.updateComplete;
+  expect(changes).to.deep.equal(['1.5/1.5']);
+  el.zoomOut();
+  el.zoom = 2;
+  await el.updateComplete;
+  expect(changes).to.deep.equal(['1.5/1.5']);
 });

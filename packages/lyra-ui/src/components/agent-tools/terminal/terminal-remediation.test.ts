@@ -4,6 +4,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 it('clears rendered match markers when a later query has no matches', async () => {
   const el = await fixture<LyraTerminal>(html`<lr-terminal content="error: first&#10;info: next"></lr-terminal>`);
@@ -222,4 +223,25 @@ it('ignores an unrelated page selection released over the terminal viewport', as
   el.addEventListener('lr-text-select', () => selections++);
   el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup'));
   expect(selections).to.equal(0);
+});
+
+it('keeps the focus ring on a focused match line and tints only interactive lines under the pointer', async () => {
+  const el = await fixture<LyraTerminal>(html`<lr-terminal content="error: first&#10;plain line"></lr-terminal>`);
+  el.highlights = [{ id: 'h', anchor: { kind: 'line-range', start: 1, end: 1 } }];
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  expect(await el.search('error')).to.equal(1);
+  await waitUntil(() => list.shadowRoot!.querySelectorAll('[data-match="active"]').length === 1);
+  const line = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
+  expect(getComputedStyle(line).boxShadow).to.contain('inset');
+  await focusByKeyboard(line);
+  const style = getComputedStyle(line);
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.boxShadow).to.contain('inset');
+  const plain = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="2"]')!;
+  const resting = getComputedStyle(plain).backgroundColor;
+  await hoverUntilMatched(plain, 'plain line hover');
+  await settlePointer();
+  expect(getComputedStyle(plain).backgroundColor).to.equal(resting);
+  await resetMouse();
 });

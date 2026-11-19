@@ -1,3 +1,4 @@
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { normalizeLyraSpans, type LyraSpan, type LyraTraceTree } from './trace-tree.js';
 import '../span-waterfall/span-waterfall.js';
@@ -85,4 +86,51 @@ it('draws the row toggle focus ring inside the scrolling base', async () => {
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]:not([hidden])') as HTMLElement;
   await focusByKeyboard(toggle);
   expect(insetFocusRing(toggle)).to.equal(true);
+});
+
+it('keeps a near-zero span visible and drops metric tracks that are switched off', async () => {
+  const data: LyraSpan[] = [
+    { id: 'long', name: 'Long', kind: 'llm', startMs: 0, endMs: 10_000, status: 'success' },
+    { id: 'blip', name: 'Blip', kind: 'tool', startMs: 5_000, endMs: 5_000, status: 'success' },
+  ];
+  const el = await fixture<LyraTraceTree>(html`<lr-trace-tree style="inline-size: 900px" .spans=${data}></lr-trace-tree>`);
+  const bar = el.shadowRoot!.querySelector<HTMLElement>('[part="row"][data-id="blip"] [part="bar"]')!;
+  expect(bar.getBoundingClientRect().width >= 1.5).to.equal(true);
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+  const tracks = () => getComputedStyle(row).gridTemplateColumns.split(' ').length;
+  expect(tracks()).to.equal(7);
+  const duration = row.querySelector<HTMLElement>('[part="duration"]')!.getBoundingClientRect();
+  const rowEnd = row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight);
+  expect(Math.abs(rowEnd - duration.right) < 1).to.equal(true);
+  el.withTokens = true;
+  el.withCost = true;
+  await el.updateComplete;
+  expect(tracks()).to.equal(10);
+});
+
+it('uses the host accessible name on its inner region', async () => {
+  const el = await fixture(html`<lr-trace-tree aria-label="Run history" label="Visible"></lr-trace-tree>`);
+  expect(el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('Run history');
+});
+
+it('applies card and plain frames and reflects compact density', async () => {
+  const el = await fixture<HTMLElement & { updateComplete: Promise<boolean>; frame: string; size: string }>(html`<lr-trace-tree></lr-trace-tree>`);
+  el.frame = 'card';
+  el.size = 's';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(getComputedStyle(base).borderTopStyle).to.equal('solid');
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(base).borderTopWidth).to.equal('0px');
+});
+
+it('uses the themed row hover color', async () => {
+  const el = await fixture(html`<lr-trace-tree .spans=${spans} style="--lr-trace-tree-row-hover-bg: rgb(5, 10, 15)"></lr-trace-tree>`);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+  try {
+    await hoverUntilMatched(target, 'row hover');
+    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(5, 10, 15)');
+  } finally { await resetMouse(); }
 });

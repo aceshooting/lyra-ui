@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'یادهای بلندمدت',
   memoryPanelAdd: 'افزودن به حافظهٔ بلندمدت',
   memoryPanelAddWithContext: 'افزودن "{label}" به حافظهٔ بلندمدت',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'فراموش‌کردن همه',
   memoryPanelConfirmAddHeading: 'این مورد به حافظهٔ بلندمدت افزوده شود؟',
   memoryPanelConfirmRemoveHeading: 'این مورد حذف شود؟',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'بخش‌های ارزیابی',
   ragEvalDashboardAllSlices: 'همه',
   ragEvalDashboardSliceUnavailable: 'اجرای ارزیابی برای {slice} در دسترس نیست.',
+  ragEvalDashboardMetricUnavailable: 'هیچ معیار ارزیابی برای {metric} در دسترس نیست.',
   knowledgeBaseSyncIdle: 'بی‌کار',
   knowledgeBaseSyncSyncing: 'در حال همگام‌سازی',
   knowledgeBaseSyncPaused: 'متوقف‌شده',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'نتیجه {index} از {total}',
   ragAnswerEmpty: 'هنوز جواب داده نشده',
   retrievalTraceEmpty: 'هیچ مرحلهٔ بازیابی وجود ندارد',
+  retrievalTraceLabel: 'ردگیری بازیابی',
   sourcePickerMatches: {
     one: '{count} منبع مطابقت',
     other: '{count} منابع مطابقت دارند',

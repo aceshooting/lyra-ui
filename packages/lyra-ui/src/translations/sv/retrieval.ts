@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Långtidsminnen',
   memoryPanelAdd: 'Lägg till i långtidsminnet',
   memoryPanelAddWithContext: 'Lägg till ”{label}” i långtidsminnet',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Glöm allt',
   memoryPanelConfirmAddHeading: 'Vill du lägga till detta i långtidsminnet?',
   memoryPanelConfirmRemoveHeading: 'Vill du ta bort det här objektet?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Utvärderingsurval',
   ragEvalDashboardAllSlices: 'Alla',
   ragEvalDashboardSliceUnavailable: 'Inga utvärderingskörningar finns för {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Inget utvärderingsmått är tillgängligt för {metric}.',
   knowledgeBaseSyncIdle: 'Inaktiv',
   knowledgeBaseSyncSyncing: 'Synkroniserar',
   knowledgeBaseSyncPaused: 'Pausad',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Resultat {index} av {total}',
   ragAnswerEmpty: 'Inget svar än',
   retrievalTraceEmpty: 'Inga hämtningssteg',
+  retrievalTraceLabel: 'Hämtningsspår',
   sourcePickerMatches: {
     one: '{count} källmatchning',
     other: '{count} källor matchar',

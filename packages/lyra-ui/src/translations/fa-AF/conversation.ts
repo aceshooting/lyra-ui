@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ارجاع',
   promptInputLabel: 'درخواست هوش مصنوعی',
   promptInputControls: 'گزینه‌های درخواست',
+  promptInputCollectionLimit: 'بخشی از ورودی درخواست به‌دلیل رسیدن به حد ورودی حذف شد.',
   promptInputSources: 'منابع',
   promptInputAttachments: 'پیوست‌ها',
   handoffLabel: 'سپردن به ایجنت',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'صدایی در دسترس نیست',
   voicePickerRequired: 'لطفاً یک صدا انتخاب کنید.',
   voicePickerPreview: 'پیش‌نمایش {name}',
+  voicePickerPreviewFailed: 'پیش‌نمایش صدا در دسترس نیست.',
   voicePickerStopPreview: 'توقف پیش‌نمایش',
   realtimeSessionLabel: 'نشست بلادرنگ',
   realtimeSessionDisconnected: 'قطع‌شده',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نشان داده می‌شود.',
   codeBlockHighlightedLine: 'خط برجسته',
   codeBlockActiveLine: 'خط برجستهٔ فعال',
+  codeBlockToggle: 'نمایش یا پنهان‌کردن کد',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

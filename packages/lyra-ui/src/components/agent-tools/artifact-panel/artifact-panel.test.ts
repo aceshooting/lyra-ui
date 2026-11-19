@@ -545,7 +545,7 @@ describe('lr-artifact-panel', () => {
       expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
     });
 
-    it('preserves the selected-view cssprops while the selected button is physically pressed', async () => {
+    it('steps the selected-view fill under hover and press while keeping its text color', async () => {
       const el = await pressedFixture();
       el.style.setProperty('--lr-artifact-panel-view-active-bg', 'rgb(10, 20, 30)');
       el.style.setProperty('--lr-artifact-panel-view-active-color', 'rgb(40, 50, 60)');
@@ -556,13 +556,14 @@ describe('lr-artifact-panel', () => {
           type: 'move',
           position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
         });
-        expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+        await waitUntil(() => pressed.matches(':hover') && getComputedStyle(pressed).backgroundColor !== 'rgb(10, 20, 30)', 'selected hover step never painted');
+        const hovered = getComputedStyle(pressed).backgroundColor;
         expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
         await sendMouse({
           type: 'down',
         });
         await waitUntil(() => pressed.matches(':active'));
-        await waitUntil(() => getComputedStyle(pressed).backgroundColor === 'rgb(10, 20, 30)', 'pressed background color never reached rgb(10, 20, 30)');
+        await waitUntil(() => ![hovered, 'rgb(10, 20, 30)'].includes(getComputedStyle(pressed).backgroundColor), 'selected press step never painted');
         expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
       } finally {
         await resetMouse();
@@ -622,7 +623,7 @@ describe('lr-artifact-panel', () => {
     try {
       for (const part of ['restore-button', 'copy-button', 'download-button', 'view-button']) {
         const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
-        const expected = part === 'view-button' ? 'rgb(1, 2, 3)' : actionHover;
+        const expected = actionHover;
         await hoverUntilMatched(button, `${part} never received the pointer hover state`);
         await waitUntil(() => getComputedStyle(button).backgroundColor === expected, `${part} hover paint never settled`);
         expect(getComputedStyle(button).backgroundColor, `${part} hover`).to.equal(expected);

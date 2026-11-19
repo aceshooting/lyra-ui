@@ -137,6 +137,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'الذكريات طويلة المدى',
   memoryPanelAdd: 'إضافة إلى الذاكرة طويلة المدى',
   memoryPanelAddWithContext: 'إضافة "{label}" إلى الذاكرة طويلة المدى',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'نسيان الكل',
   memoryPanelConfirmAddHeading: 'هل تريد إضافة هذا إلى الذاكرة طويلة المدى؟',
   memoryPanelConfirmRemoveHeading: 'هل تريد إزالة هذا العنصر؟',
@@ -195,6 +196,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'شرائح التقييم',
   ragEvalDashboardAllSlices: 'الكل',
   ragEvalDashboardSliceUnavailable: 'لا تتوفر عمليات تقييم للشريحة {slice}.',
+  ragEvalDashboardMetricUnavailable: 'لا يتوفر مقياس تقييم لـ{metric}.',
   knowledgeBaseSyncIdle: 'خامل',
   knowledgeBaseSyncSyncing: 'جارٍ المزامنة',
   knowledgeBaseSyncPaused: 'متوقف مؤقتًا',
@@ -275,6 +277,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'النتيجة {index} من {total}',
   ragAnswerEmpty: 'لا توجد إجابة حتى الآن',
   retrievalTraceEmpty: 'لا توجد مراحل الاسترجاع',
+  retrievalTraceLabel: 'تتبّع الاسترجاع',
   sourcePickerMatches: {
     zero: '{count} مصادر مطابقة',
     one: '{count} مصدر مطابق',

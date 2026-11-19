@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Madda eeri',
   promptInputLabel: 'Ajaja AI',
   promptInputControls: 'Filannoowwan ajajaa',
+  promptInputCollectionLimit: 'Daangaan galchaa waan ga’eef, galchaan ajajaa tokko tokko dhiifameera.',
   promptInputSources: 'Maddoota',
   promptInputAttachments: 'Faayilota maxxanfaman',
   handoffLabel: 'Itti dabarsuu ejentii',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Sagaleen hin jiru',
   voicePickerRequired: 'Maaloo sagalee filadhu.',
   voicePickerPreview: '{name} dursee dhaggeeffadhu',
+  voicePickerPreviewFailed: 'Sagalee dursee dhaggeeffachuun hin danda’amu.',
   voicePickerStopPreview: 'Dursee dhaggeeffachuu dhaabi',
   realtimeSessionLabel: 'Yeroo ammaa walga\'ii',
   realtimeSessionDisconnected: 'Walqunnamtiin citeera',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Koodiin dheeraan sintaksii isaa halluudhaan adda baasuu malee agarsiifama.',
   codeBlockHighlightedLine: 'Sarara calaqqisiifame',
   codeBlockActiveLine: 'Sarara calaqqisiifame hojii irra jiru',
+  codeBlockToggle: 'Koodii agarsiisi yookaan dhoksi',
 };
 
 registerLyraLocale('om', strings);

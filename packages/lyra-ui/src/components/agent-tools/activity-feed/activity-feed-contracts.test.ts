@@ -77,3 +77,26 @@ it('ignores a detached header without dispatching a toggle request', async () =>
   expect(requests).to.equal(0);
   expect(el.expanded).to.equal(false);
 });
+
+it('keeps the summary on the hovered header colour instead of the quiet resting tone', async () => {
+  try {
+    const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed .entries=${[{ id: 'a', text: 'Read file' }]}></lr-activity-feed>`);
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    const resting = getComputedStyle(summary).color;
+    await hoverUntilMatched(header, 'header hover');
+    expect(getComputedStyle(summary).color).to.equal(getComputedStyle(header).color);
+    expect(getComputedStyle(summary).color).not.to.equal(resting);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('uses the themed header hover color', async () => {
+  const el = await fixture(html`<lr-activity-feed  style="--lr-activity-feed-header-hover-bg: rgb(5, 10, 15)"></lr-activity-feed>`);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  try {
+    await hoverUntilMatched(target, 'header hover');
+    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(5, 10, 15)');
+  } finally { await resetMouse(); }
+});

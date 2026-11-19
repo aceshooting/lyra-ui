@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Μακροπρόθεσμες μνήμες',
   memoryPanelAdd: 'Προσθήκη στη μακροπρόθεσμη μνήμη',
   memoryPanelAddWithContext: 'Προσθήκη του "{label}" στη μακροπρόθεσμη μνήμη',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Διαγραφή όλων',
   memoryPanelConfirmAddHeading: 'Να προστεθεί στη μακροπρόθεσμη μνήμη;',
   memoryPanelConfirmRemoveHeading: 'Να αφαιρεθεί αυτό το στοιχείο;',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Τμήματα αξιολόγησης',
   ragEvalDashboardAllSlices: 'Όλα',
   ragEvalDashboardSliceUnavailable: 'Δεν υπάρχουν διαθέσιμες εκτελέσεις αξιολόγησης για το {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Δεν υπάρχει διαθέσιμη μετρική αξιολόγησης για το {metric}.',
   knowledgeBaseSyncIdle: 'Αδρανής',
   knowledgeBaseSyncSyncing: 'Συγχρονισμός',
   knowledgeBaseSyncPaused: 'Σε παύση',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Αποτέλεσμα {index} από {total}',
   ragAnswerEmpty: 'Καμία απάντηση ακόμα',
   retrievalTraceEmpty: 'Χωρίς στάδια ανάκτησης',
+  retrievalTraceLabel: 'Ιχνηλάτηση ανάκτησης',
   sourcePickerMatches: {
     one: '{count} αντιστοίχιση πηγής',
     other: '{count} πηγές αντιστοιχούν',

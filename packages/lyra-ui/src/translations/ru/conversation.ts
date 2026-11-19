@@ -121,6 +121,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Сослаться',
   promptInputLabel: 'Запрос к ИИ',
   promptInputControls: 'Параметры запроса',
+  promptInputCollectionLimit: 'Часть введённого запроса пропущена из-за достижения ограничения на входные данные.',
   promptInputSources: 'Источники',
   promptInputAttachments: 'Вложения',
   handoffLabel: 'Передача между агентами',
@@ -159,6 +160,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Нет доступных голосов',
   voicePickerRequired: 'Выберите голос.',
   voicePickerPreview: 'Прослушать {name}',
+  voicePickerPreviewFailed: 'Прослушивание образца голоса недоступно.',
   voicePickerStopPreview: 'Остановить прослушивание',
   realtimeSessionLabel: 'Сеанс в реальном времени',
   realtimeSessionDisconnected: 'Отключено',
@@ -187,6 +189,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Длинный код отображается без подсветки синтаксиса.',
   codeBlockHighlightedLine: 'Выделенная строка',
   codeBlockActiveLine: 'Активная выделенная строка',
+  codeBlockToggle: 'Показать или скрыть код',
 };
 
 registerLyraLocale('ru', strings);

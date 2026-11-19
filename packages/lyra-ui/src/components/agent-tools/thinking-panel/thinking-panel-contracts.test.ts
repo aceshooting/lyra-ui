@@ -77,3 +77,16 @@ it('ignores a detached header without dispatching a toggle request', async () =>
   expect(requests).to.equal(0);
   expect(el.expanded).to.equal(false);
 });
+
+it('scrolls a long transcript vertically and clips it horizontally in every engine', async () => {
+  const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded style="--lr-thinking-panel-max-block-size: 4rem">${'Reasoning line. '.repeat(200)}</lr-thinking-panel>`);
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  expect(getComputedStyle(body).overflowY).to.equal('auto');
+  expect(getComputedStyle(body).overflowX).to.equal('hidden');
+  expect(body.scrollHeight > body.clientHeight).to.equal(true);
+});
+
+it('uses the host accessible name on its inner region', async () => {
+  const el = await fixture(html`<lr-thinking-panel aria-label="Run history" label="Visible" expanded></lr-thinking-panel>`);
+  expect(el.shadowRoot!.querySelector('[part="body"]')!.getAttribute('aria-label')).to.equal('Run history');
+});

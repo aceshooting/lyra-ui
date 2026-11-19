@@ -231,24 +231,12 @@ export const styles = css`
       filter: brightness(1.4);
     }
   }
-  /* An icon option renders its own shape, so the box-shadow ring above (drawn around
-     [part='swatch-fill']'s shape) does not apply -- render() mounts only one of
-     [part='swatch-fill'] and [part='swatch-icon'] per swatch, so the two selectors never both
-     match. Use a drop-shadow, which follows the icon's real rendered shape. The shine needs its OWN
-     keyframe: both effects land on filter for an icon, and a running animation outranks an
-     author-normal declaration, so a brightness-only keyframe would blank this glow for the whole
-     animation -- every mode="gemstone" swatch, where the shine is on by default. The keyframe
-     therefore re-states drop-shadow alongside brightness; the static declaration below covers the
-     not-running case (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion).
-     Excludes [data-lr-gemstone-selected]: that attribute marks the checked swatch's AUTOMATIC
-     gemstone glyph (render() sets it only for that case, never for a consumer-supplied icon
-     option), which paints through the imported gemstoneSelectedGlyphStyles export's own
-     [data-lr-gemstone-selected] rule instead so the picker and a glyph rendered anywhere else
-     share one definition. Without this exclusion both rules would match the same element and,
-     since this selector's 3 attribute selectors always outrank that rule's 1, this rule would
-     silently win every time, making the import above dead weight. */
+  /* Custom icons keep a crisp selection edge even when the glow has no blur.
+     The automatic gemstone glyph supplies its own selection treatment. */
   [part~="swatch"][aria-checked="true"]
     [part="swatch-icon"]:not([data-lr-gemstone-selected]) {
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-swatch-picker-selected-color, var(--_lr-swatch-picker-selected-color));
     filter: drop-shadow(
       0 0
         var(

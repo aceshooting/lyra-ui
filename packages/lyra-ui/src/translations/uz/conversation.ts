@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Manba koʻrsatish',
   promptInputLabel: 'AI prompti',
   promptInputControls: 'Prompt parametrlari',
+  promptInputCollectionLimit: 'Kiritish chegarasiga yetilgani sababli promptning bir qismi tushirib qoldirildi.',
   promptInputSources: 'Manbalar',
   promptInputAttachments: 'Ilovalar',
   handoffLabel: 'Agentga topshirish',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Ovozlar mavjud emas',
   voicePickerRequired: 'Ovozni tanlang.',
   voicePickerPreview: '{name}ni tinglash',
+  voicePickerPreviewFailed: 'Ovoz namunasini tinglab boʻlmaydi.',
   voicePickerStopPreview: 'Tinglashni toʻxtatish',
   realtimeSessionLabel: 'Real vaqt seansi',
   realtimeSessionDisconnected: 'Uzilgan',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Uzun kod sintaksisni ajratib koʻrsatishsiz koʻrsatiladi.',
   codeBlockHighlightedLine: 'Ajratib ko‘rsatilgan qator',
   codeBlockActiveLine: 'Faol ajratilgan qator',
+  codeBlockToggle: 'Kodni koʻrsatish yoki yashirish',
 };
 
 registerLyraLocale('uz', strings);

@@ -120,6 +120,8 @@ const markedLoader = /* @__PURE__ */ createOptionalPeerLoader<MarkedModule>({
   isCapability: isMarkedModule,
   warningKey: 'lyra-markdown-marked-unavailable',
   warning:
+    '<lr-markdown>/<lr-markdown-core>: The optional marked peer could not be resolved to a parser. Content is rendered as plain text.',
+  failedWarning:
     '<lr-markdown>/<lr-markdown-core>: Markdown parsing is unavailable because the optional marked peer could not load. Content is rendered as plain text.',
 });
 

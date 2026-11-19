@@ -70,3 +70,8 @@ export const InputLimit: Story = {
     attachments: Array.from({ length: 10_001 }, (_, index) => ({ id: `d${index}`, name: `Document ${index + 1}` })),
   }]}></lr-prompt-queue>`,
 };
+
+export const CompactItems: Story = {
+  render: () => html`<lr-prompt-queue .items=${items}
+    style="--lr-prompt-queue-padding: var(--lr-space-2xs); --lr-prompt-queue-radius: 0"></lr-prompt-queue>`,
+};

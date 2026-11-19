@@ -16,7 +16,7 @@ import {
 } from '../../../internal/drop-session-controller.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
-  type FileIntakeResult,
+  type FileIntakeDetail, type FileIntakeRejected, type FileIntakeResult,
 } from '../file-input/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
@@ -26,13 +26,9 @@ import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, L
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export interface LyraDropZoneRejectedFile {
-  readonly file: File;
-  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
-}
+export interface LyraDropZoneRejectedFile extends FileIntakeRejected {}
 
-export interface LyraDropZoneFilesDetail {
-  readonly files: readonly File[];
+export interface LyraDropZoneFilesDetail extends FileIntakeDetail {
   readonly rejected: readonly LyraDropZoneRejectedFile[];
   /** Remaining allowance under `maxFiles` after this drop, at the control's running count
    *  (`heldFileCount`, since this component retains nothing of its own between drops) -- `null`
@@ -116,11 +112,11 @@ export interface LyraDropZoneEventMap {
  * @cssprop [--lr-drop-zone-overlay-gap=var(--lr-space-xs)] - Gap between the overlay icon and text.
  * @cssprop [--lr-drop-zone-accept-border-color=var(--lr-color-success)] - Border color of
  * `[part="overlay"][data-drag-state="accept"]`.
- * @cssprop [--lr-drop-zone-accept-bg=color-mix(in srgb, var(--lr-color-success) 12%, transparent)] -
+ * @cssprop [--lr-drop-zone-accept-bg=color-mix(in srgb, var(--lr-color-success) 8%, transparent)] -
  * Background of `[part="overlay"][data-drag-state="accept"]`.
  * @cssprop [--lr-drop-zone-reject-border-color=var(--lr-color-danger)] - Border color of
  * `[part="overlay"][data-drag-state="reject"]`.
- * @cssprop [--lr-drop-zone-reject-bg=color-mix(in srgb, var(--lr-color-danger) 12%, transparent)] -
+ * @cssprop [--lr-drop-zone-reject-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
  * Background of `[part="overlay"][data-drag-state="reject"]`.
  * @status experimental
  * @since 16.0.0
@@ -251,10 +247,14 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     });
   }
 
-  /** Readonly state derived from the current drag session.
+  /** Readonly state derived from the current drag session. Assignment is ignored, so a framework
+   * binding that spreads every property cannot throw.
    * @default false */
   get dragging(): boolean {
     return this.dragState !== 'default';
+  }
+  set dragging(_value: boolean) {
+    // Derived from the drag session.
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {

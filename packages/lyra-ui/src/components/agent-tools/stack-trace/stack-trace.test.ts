@@ -39,7 +39,7 @@ it('keeps an expanded internal run open when a parent re-binds the same internal
 expectLocaleFallback('ar-EG', [
   'stackTraceLabel',
   'copy',
-  'stackTraceShowFrames',
+  'stackTraceInternalFrames',
 ]);
 describe('lr-stack-trace', () => {
   it('expands separate internal runs independently', async () => {
@@ -461,7 +461,7 @@ describe('lr-stack-trace', () => {
 
   it('honors a .strings override for the internal-frame toggle label', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace .trace=${trace} .strings=${{ stackTraceShowFrames: '{count} masqués' }}></lr-stack-trace>`,
+      html`<lr-stack-trace .trace=${trace} .strings=${{ stackTraceInternalFrames: '{count} masqués' }}></lr-stack-trace>`,
     )) as LyraStackTrace;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
@@ -785,4 +785,27 @@ describe('lr-stack-trace deprecated --lr-stack-trace-background alias', () => {
     expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
+});
+
+it('keeps the internal frames disclosure name stable when expanded', async () => {
+  const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="internal-toggle"]')!;
+  expect(button.textContent!.trim()).to.equal('2 internal frames');
+  button.click();
+  await el.updateComplete;
+  expect(button.getAttribute('aria-expanded')).to.equal('true');
+  expect(button.textContent!.trim()).to.equal('2 internal frames');
+});
+
+it('honors existing state-specific message overrides until a stable label is supplied', async () => {
+  const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}
+    .strings=${{ stackTraceShowFrames: 'Inspect {count}', stackTraceHideFrames: 'Close {count}' }}></lr-stack-trace>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="internal-toggle"]')!;
+  expect(button.textContent!.trim()).to.equal('Inspect 2');
+  button.click();
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('Close 2');
+  el.strings = { ...el.strings, stackTraceInternalFrames: 'Library frames ({count})' };
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('Library frames (2)');
 });

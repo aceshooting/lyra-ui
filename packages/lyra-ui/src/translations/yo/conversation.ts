@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Tọ́ka sí orísun',
   promptInputLabel: 'Prompt AI',
   promptInputControls: 'Àwọn àṣàyàn prompt',
+  promptInputCollectionLimit: 'A yọ apá kan nínú prompt tí a tẹ̀ wọlé kúrò nítorí a ti dé ààlà ìwọlé.',
   promptInputSources: 'Àwọn orísun',
   promptInputAttachments: 'Àwọn àfikún',
   handoffLabel: 'Gbé lọ sí aṣojú',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Kò sí ohùn tó wà',
   voicePickerRequired: 'Jọ̀wọ́ yan ohùn kan.',
   voicePickerPreview: 'Àwòyẹ {name}',
+  voicePickerPreviewFailed: 'Àwòyẹ ohùn kò sí.',
   voicePickerStopPreview: 'Dá àwòyẹ dúró',
   realtimeSessionLabel: 'Ìpàdé ní àkókò gidi',
   realtimeSessionDisconnected: 'Ìsopọ̀ ti gé',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'A ń ṣàfihàn kóòdù gígùn láì lo àwọ̀ láti fi ìlànà ìkọ̀wé kóòdù hàn.',
   codeBlockHighlightedLine: 'Ila ti a ṣe afihan',
   codeBlockActiveLine: 'Ila ti a ṣe afihan ti n ṣiṣẹ',
+  codeBlockToggle: 'Fi kóòdù hàn tàbí fi í pamọ́',
 };
 
 registerLyraLocale('yo', strings);

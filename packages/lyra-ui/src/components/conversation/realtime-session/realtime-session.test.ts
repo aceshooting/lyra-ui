@@ -6,6 +6,13 @@ import type { LyraPushToTalk } from '../push-to-talk/push-to-talk.js';
 import './realtime-session.js';
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './realtime-session.js';
 
+async function settleTranscript(el: LyraRealtimeSession): Promise<void> {
+  const feed = el.shadowRoot!.querySelector('lr-transcript-feed')!;
+  await feed.updateComplete;
+  const entry = feed.shadowRoot!.querySelector('[part~="entry"]')!;
+  await Promise.all(entry.getAnimations().map(animation => animation.finished));
+}
+
 it('composes connection status, voice activity, transcript, and capture controls', async () => {
   const el = (await fixture(
     html`<lr-realtime-session
@@ -23,6 +30,7 @@ it('composes connection status, voice activity, transcript, and capture controls
     'voice-session-a'
   );
   expect(el.shadowRoot!.textContent).to.contain('Connected');
+  await settleTranscript(el);
   await expect(el).to.be.accessible();
 });
 
@@ -38,6 +46,7 @@ it('audits clean against axe as the real, composed custom element -- not just it
       .entries=${[{ id: '1', speaker: 'Assistant', text: 'Hello' }]}
     ></lr-realtime-session>`
   )) as LyraRealtimeSession;
+  await settleTranscript(connected);
   await expect(connected).to.be.accessible();
 });
 

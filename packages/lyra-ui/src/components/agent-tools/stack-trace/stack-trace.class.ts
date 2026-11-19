@@ -14,7 +14,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_stackTraceInternalFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -45,7 +45,7 @@ function snapshotInternalPatterns(value: unknown): readonly (string | RegExp)[] 
       const pattern = descriptor.value;
       if (typeof pattern === 'string') {
         if (pattern.trim().length > 0) patterns.push(pattern);
-      } else if (pattern instanceof RegExp) {
+      } else if (Object.prototype.toString.call(pattern) === '[object RegExp]') {
         patterns.push(new RegExp(pattern.source, pattern.flags));
       }
     } catch {
@@ -136,10 +136,9 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    stackTraceHideFrames: LYRA_DEFAULT_stackTraceHideFrames,
+    stackTraceInternalFrames: LYRA_DEFAULT_stackTraceInternalFrames,
     stackTraceLabel: LYRA_DEFAULT_stackTraceLabel,
     stackTraceLimit: LYRA_DEFAULT_stackTraceLimit,
-    stackTraceShowFrames: LYRA_DEFAULT_stackTraceShowFrames,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -289,6 +288,9 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
       if (run.length === 1) {
         rendered.push(this.renderFrame(run[0]!));
       } else {
+        const legacyKey = expanded ? 'stackTraceHideFrames' : 'stackTraceShowFrames';
+        const labelKey = this.strings.stackTraceInternalFrames === undefined && this.strings[legacyKey] !== undefined
+          ? legacyKey : 'stackTraceInternalFrames';
         const count = getNumberFormat(this.effectiveLocale).format(run.length);
         rendered.push(html`
           <button
@@ -297,9 +299,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
             aria-expanded=${expanded ? 'true' : 'false'}
             @click=${() => this.toggleInternalRun(runKey)}
           >
-            ${expanded
-              ? this.localize('stackTraceHideFrames', undefined, { count })
-              : this.localize('stackTraceShowFrames', undefined, { count })}
+            ${this.localize(labelKey, undefined, { count })}
           </button>
           ${expanded ? run.map((frame) => this.renderFrame(frame)) : nothing}
         `);

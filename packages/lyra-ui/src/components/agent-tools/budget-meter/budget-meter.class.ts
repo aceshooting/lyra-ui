@@ -1,3 +1,4 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { bdi } from '../../../internal/bidi.js';
 import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -29,6 +30,11 @@ export type BudgetMeterValueFormatter = (value: number, context: BudgetMeterForm
  * not price usage, enforce limits, or take action when the budget is exceeded.
  *
  * @customElement lr-budget-meter
+ * @cssprop [--lr-budget-meter-border-color] - Card border color.
+ * @cssprop [--lr-budget-meter-radius] - Card and track corner radius.
+ * @cssprop [--lr-budget-meter-track-bg] - Track background.
+ * @cssprop [--lr-budget-meter-fill] - Fill within budget.
+ * @cssprop [--lr-budget-meter-exceeded-fill] - Over-budget fill.
  * @csspart base - The component wrapper and semantic group.
  * @csspart label - The visible meter label.
  * @csspart meter - The budget meter, present only for a positive finite limit.
@@ -53,6 +59,11 @@ export class LyraBudgetMeter extends LyraElement {
     budgetMeterValue: LYRA_DEFAULT_budgetMeterValue,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  /** Outer frame. Defaults to `card`. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
+  /** Layout density. Small sizes use compact spacing. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   static override styles = [LyraElement.styles, styles];
 
@@ -185,7 +196,7 @@ export class LyraBudgetMeter extends LyraElement {
                 aria-valuenow=${String(ariaValueNow)}
                 aria-valuetext=${text}
               >
-                <span part="track"><span part="fill" style=${styleMap({ inlineSize: `${ratio * 100}%` })}></span></span>
+                <span part="track"><span part="fill" ?data-exceeded=${used > limit} style=${styleMap({ inlineSize: `${ratio * 100}%` })}></span></span>
               </div>
               <span part="percent">${this.localize('budgetMeterPercent', undefined, { percent: percentage })}</span>
             `

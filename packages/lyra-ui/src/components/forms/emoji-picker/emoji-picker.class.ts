@@ -1,10 +1,15 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
@@ -176,6 +181,7 @@ export interface LyraEmojiPickerEventMap {
   blur: FocusEvent;
   focus: FocusEvent;
   /** Fired when an emoji is picked. `detail.value` is the picked glyph. */
+  'lr-activate': CustomEvent<{ value: string }>;
   'lr-input': CustomEvent<{ value: string; previousValue: string }>;
   /** Fired when an emoji pick is committed. `detail.value` is the picked glyph. */
   'lr-change': CustomEvent<{ value: string; previousValue: string }>;
@@ -184,6 +190,9 @@ export interface LyraEmojiPickerEventMap {
 }
 
 class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
+
+// Lowercased search text per item snapshot, shared by every picker rendering that snapshot.
+const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: string }>();
 
 /**
  * `<lr-emoji-picker>` — a searchable, keyboard-navigable, form-associated emoji picker. In the
@@ -209,7 +218,7 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * is tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap
  * under RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to
  * the first/last option, and Enter/Space picks. The search input doubles as a `role="combobox"`
- * over the same listbox: the arrow keys and Enter also work there while focus stays in the input,
+ * over the same listbox: Up/Down navigate the options and Enter selects while Left/Right move the text caret,
  * with `aria-activedescendant` tracking the active option. Composing keyboard events remain with
  * text editing and do not navigate or pick an emoji. Large data sets automatically window
  * their visible rows so scrolling does not create one button per supplied emoji in the DOM.
@@ -244,7 +253,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @customElement lr-emoji-picker
  * @event input - Native `InputEvent` emitted in the host's current owner realm after a user pick.
  * @event change - Native commit `Event` emitted in the host's current owner realm with `input`.
- * @event lr-input - An emoji was picked. `detail: { value, previousValue }`.
+ * @event lr-activate - An emoji was activated, including a repeat pick. `detail: { value }`.
+ * @event lr-input - The selected emoji changed. `detail: { value, previousValue }`.
  * @event lr-change - An emoji pick was committed. `detail: { value, previousValue }`.
  * @event lr-load-error - The built-in emoji set failed to load. A retry button reloads it.
  * @event blur - Native owner-realm `FocusEvent` relayed from the internal search input.
@@ -294,6 +304,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   shrinking the interactive target.
  * @cssprop [--lr-emoji-picker-glyph-size=var(--lr-font-size-lg)] - Font size of the emoji glyph,
  *   scaled by the `size` property to keep the glyph proportional to the item box.
+ * @cssprop [--lr-emoji-picker-grid-max-height=var(--lr-size-16rem)] - Maximum block size of the
+ *   scrolling emoji grid.
  * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
  * @cssprop [--lr-emoji-picker-control-gap=var(--lr-space-xs)] - Gap between field sections.
  * @cssprop [--lr-emoji-picker-search-clear-gap=var(--lr-space-xs)] - Gap between the search
@@ -476,8 +488,6 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   @state() private touched = false;
 
   private readonly labelId = nextId('emoji-picker-label');
-  private readonly hintId = nextId('emoji-picker-hint');
-  private readonly errorId = nextId('emoji-picker-error');
 
   /** Injectable loader seam -- overridden directly by tests with a synchronous fake instead of
    *  needing the real `emoji-picker-element-data` package to load in the test browser (mirrors
@@ -560,31 +570,24 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** The large-data path keeps only visible rows in the DOM. The regular path remains unchanged
    * for small sets so consumers keep the simple grouped light-DOM shape they already receive. */
   private virtualScrollTop = 0;
-  private virtualScrollRaf?: number;
-  private virtualScrollRafWindow?: Window;
-  private virtualScrollRafDocument?: Document;
+  private readonly scrollFrame = new OwnedFrame(this);
+  private readonly geometryFrame = new OwnedFrame(this);
   private observedGrid?: HTMLElement;
-  private observedGridVirtualized = false;
-  private gridResizeObserver?: ResizeObserver;
-  private gridResizeObserverDocument?: Document;
+  private readonly gridResizeObserver = new OwnedResizeObserver(this, () => this.requestUpdate());
   private geometryProbe?: { root: HTMLElement; item: HTMLElement; gap: HTMLElement; row: HTMLElement };
   private geometryCache?: EmojiPickerGeometry;
   private liveGeometryReady = false;
-  private geometryObserver?: ResizeObserver;
-  private geometryObserverDocument?: Document;
+  private readonly geometryObserver = new OwnedResizeObserver(this, () => this.onGeometryResize());
   private geometryObserverRoot?: HTMLElement;
   private ownerRealmGeneration = 0;
 
   @query('[part="search"]') private searchEl?: HTMLInputElement;
 
   /** Reads both component state and the UA's synchronous fieldset cascade before host actions. */
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
-  }
 
   /** Moves focus to the search combobox while the form control is enabled. */
   override focus(options?: FocusOptions): void {
-    if (!this.liveDisabled) this.searchEl?.focus(options);
+    if (!isLiveDisabled(this)) this.searchEl?.focus(options);
   }
 
   /** Blurs the currently focused owned search or emoji target, including a nested shadow owner. */
@@ -597,7 +600,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   /** Activates the live search control while the form control is enabled. */
   override click(): void {
-    if (!this.liveDisabled) this.searchEl?.click();
+    if (!isLiveDisabled(this)) this.searchEl?.click();
   }
 
   private readonly gridId = nextId('emoji-picker-grid');
@@ -621,26 +624,18 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.touched = false;
   }
 
-  // Lowercased search haystack per item, computed once per item object -- re-joining and
-  // re-lowercasing every item on every keystroke dominates filter cost for large sets. Keyed by
-  // item identity in a WeakMap, so replacing `groups` invalidates naturally (stale entries are
-  // simply collected).
-  private readonly haystacks = new WeakMap<
-    EmojiPickerItem,
-    { locale: string; value: string }
-  >();
   private projectionCache?: EmojiProjection;
   private rowCache?: { projection: EmojiProjection; columns: number; rows: VirtualEmojiRow[] };
 
   private haystackFor(item: EmojiPickerItem): string {
     const locale = this.effectiveLocale;
-    let cached = this.haystacks.get(item);
+    let cached = emojiHaystacks.get(item);
     if (cached === undefined || cached.locale !== locale) {
       cached = {
         locale,
         value: [item.name, ...(item.shortcodes ?? [])].join(' ').toLocaleLowerCase(locale),
       };
-      this.haystacks.set(item, cached);
+      emojiHaystacks.set(item, cached);
     }
     return cached.value;
   }
@@ -760,9 +755,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       prior.gap !== next.gap ||
       prior.rowHeight !== next.rowHeight
     ) {
-      this.ownerDocument.defaultView?.requestAnimationFrame(() => {
-        if (this.isConnected && this.geometryProbe?.root === root) this.requestUpdate();
-      });
+      this.geometryFrame.schedule(() => this.requestUpdate());
     }
   }
 
@@ -772,44 +765,16 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  actually differ, with no per-frame reads. */
   private observeGeometryProbe(): void {
     const probe = this.geometryProbe;
-    const ownerDocument = this.ownerDocument;
-    if (!probe || !this.isConnected) return;
-    if (
-      this.geometryObserver &&
-      this.geometryObserverDocument === ownerDocument &&
-      this.geometryObserverRoot === probe.root
-    ) {
-      return;
-    }
+    if (!probe || !this.isConnected || this.geometryObserverRoot === probe.root) return;
     this.resetGeometryObserver();
-    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
-    if (!ResizeObserverCtor) return;
-    const generation = this.ownerRealmGeneration;
-    const observer = new ResizeObserverCtor(() => {
-      if (
-        this.geometryObserver !== observer ||
-        this.geometryObserverDocument !== ownerDocument ||
-        this.geometryObserverRoot !== probe.root ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onGeometryResize();
-    });
-    this.geometryObserver = observer;
-    this.geometryObserverDocument = ownerDocument;
     this.geometryObserverRoot = probe.root;
-    observer.observe(probe.item);
-    observer.observe(probe.gap);
-    observer.observe(probe.row);
+    this.geometryObserver.observe(probe.item);
+    this.geometryObserver.observe(probe.gap);
+    this.geometryObserver.observe(probe.row);
   }
 
   private resetGeometryObserver(): void {
-    this.geometryObserver?.disconnect();
-    this.geometryObserver = undefined;
-    this.geometryObserverDocument = undefined;
+    this.geometryObserver.clear();
     this.geometryObserverRoot = undefined;
   }
 
@@ -833,7 +798,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    * `loadEmojiData()` directly without going through this component's rendering.
    */
   private groupLabel(group: EmojiPickerGroup): string {
-    if (!this.builtInGroups.has(group)) return group.label;
+    if (!this.builtInGroups.has(group)) {
+      // An explicitly empty label opts out of the visible heading; whitespace does not.
+      const custom = group.label === '' ? '' : normalizeLabel(group.label);
+      if (custom !== undefined) return custom;
+    }
     const labelKey = BUILT_IN_GROUP_LABEL_KEYS[group.key];
     return labelKey
       ? this.localize(labelKey)
@@ -955,7 +924,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private onSearchInput = (event: Event): void => {
     event.stopPropagation();
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.pendingGridFocus = undefined;
     this.queryText = (event.target as HTMLInputElement).value;
     this.activeIndex = 0;
@@ -965,7 +934,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // browser's own clear affordance with no replacement -- this button, and the search input's
   // refocus afterward, restore a real one-click way to reset the filter.
   private onClearSearch = (): void => {
-    if (this.liveDisabled || this.queryText === '') return;
+    if (isLiveDisabled(this) || this.queryText === '') return;
     this.pendingGridFocus = undefined;
     this.queryText = '';
     this.activeIndex = 0;
@@ -976,7 +945,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // listener on <lr-emoji-picker> would never fire without this bridge -- mirrors
   // <lr-input>'s/<lr-select>'s onFocus/onBlur pair (including the disabled-blur guard below).
   private onSearchFocus = (event: FocusEvent): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -992,26 +961,29 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // on timing, capable of reentering that same in-flight update and tripping Lit's dev-mode
     // "scheduled an update after an update completed" warning for a state flip nothing observable
     // needed -- a disabled control is barred from validation regardless.
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     relayNativeEvent(this, event);
   };
 
   private pick(item: EmojiPickerItem): void {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const detail = { value: item.emoji, previousValue: this.value };
-    this.value = item.emoji;
-    this.syncSelectedProjection();
-    dispatchNativeInputEvent(this);
-    this.emit('lr-input', detail);
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', detail);
+    if (item.emoji !== this.value) {
+      this.value = item.emoji;
+      this.syncSelectedProjection();
+      dispatchNativeInputEvent(this);
+      this.emit('lr-input', detail);
+      dispatchNativeEvent(this, 'change');
+      this.emit('lr-change', detail);
+    }
+    this.emit('lr-activate', { value: item.emoji });
   }
 
   // Shared between the search input (combobox idiom: focus stays in the input while
   // `aria-activedescendant` tracks the active option) and the grid itself (roving tabindex: focus
   // follows the active option).
   private onNavigationKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled || event.isComposing || event.keyCode === 229) return;
+    if (isLiveDisabled(this) || shouldIgnoreNavigationKey(event)) return;
     const items = this.flatItems;
     if (items.length === 0) return;
     const inSearch = event.currentTarget === this.searchEl;
@@ -1020,8 +992,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     let target: number;
-    if (event.key === forwardKey) target = this.activeIndex + 1;
-    else if (event.key === backwardKey) target = this.activeIndex - 1;
+    if (!inSearch && event.key === forwardKey) target = this.activeIndex + 1;
+    else if (!inSearch && event.key === backwardKey) target = this.activeIndex - 1;
     else if (event.key === 'ArrowDown') target = this.activeIndex + this.columnsPerRow();
     else if (event.key === 'ArrowUp') target = this.activeIndex - this.columnsPerRow();
     // In the input, Home/End keep their native caret meaning.
@@ -1030,6 +1002,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     else if (event.key === 'Enter' || (event.key === ' ' && !inSearch)) {
       // Space only picks from the grid -- in the search input it types a literal space.
       event.preventDefault();
+      if (isRepeatedActivationKey(event)) return;
       const item = items[this.activeIndex];
       if (item) this.pick(item);
       return;
@@ -1064,95 +1037,27 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     if (!this.isVirtualized) return;
     const grid = event.currentTarget as HTMLElement;
     this.virtualScrollTop = grid.scrollTop;
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    if (
-      this.virtualScrollRaf !== undefined &&
-      this.virtualScrollRafWindow === ownerWindow &&
-      this.virtualScrollRafDocument === ownerDocument
-    ) {
-      return;
-    }
-    this.cancelVirtualScrollFrame();
-    const generation = this.ownerRealmGeneration;
-    let handle = 0;
-    handle = ownerWindow.requestAnimationFrame(() => {
-      if (
-        this.virtualScrollRaf !== handle ||
-        this.virtualScrollRafWindow !== ownerWindow ||
-        this.virtualScrollRafDocument !== ownerDocument ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.virtualScrollRaf = undefined;
-      this.virtualScrollRafWindow = undefined;
-      this.virtualScrollRafDocument = undefined;
-      this.requestUpdate();
-    });
-    this.virtualScrollRaf = handle;
-    this.virtualScrollRafWindow = ownerWindow;
-    this.virtualScrollRafDocument = ownerDocument;
+    if (!this.scrollFrame.pending) this.scrollFrame.schedule(() => this.requestUpdate());
   };
 
-  private cancelVirtualScrollFrame(): void {
-    if (this.virtualScrollRaf !== undefined) {
-      this.virtualScrollRafWindow?.cancelAnimationFrame(this.virtualScrollRaf);
-    }
-    this.virtualScrollRaf = undefined;
-    this.virtualScrollRafWindow = undefined;
-    this.virtualScrollRafDocument = undefined;
-  }
-
   private syncGridObserver(): void {
-    const grid = this.renderRoot?.querySelector<HTMLElement>('[part="grid"]');
-    const virtualized = this.isVirtualized;
-    const ownerDocument = this.ownerDocument;
-    if (
-      grid === this.observedGrid &&
-      virtualized === this.observedGridVirtualized &&
-      (!virtualized || this.gridResizeObserverDocument === ownerDocument)
-    ) {
-      return;
-    }
+    const grid = this.isConnected && this.isVirtualized
+      ? this.renderRoot?.querySelector<HTMLElement>('[part="grid"]') ?? undefined
+      : undefined;
+    if (grid === this.observedGrid) return;
     this.resetGridObserver();
-    if (!this.isConnected) return;
-    this.observedGrid = grid ?? undefined;
-    this.observedGridVirtualized = virtualized;
-    if (!grid || !virtualized) return;
-    grid.addEventListener('scroll', this.onGridScroll, { passive: true });
-    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
-    if (!ResizeObserverCtor) return;
-    const generation = this.ownerRealmGeneration;
-    const observer = new ResizeObserverCtor(() => {
-      if (
-        this.gridResizeObserver !== observer ||
-        this.gridResizeObserverDocument !== ownerDocument ||
-        this.observedGrid !== grid ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.requestUpdate();
-    });
-    this.gridResizeObserver = observer;
-    this.gridResizeObserverDocument = ownerDocument;
-    observer.observe(grid);
+    this.observedGrid = grid;
+    if (grid) {
+      grid.addEventListener('scroll', this.onGridScroll, { passive: true });
+      this.gridResizeObserver.observe(grid);
+    }
   }
 
   private resetGridObserver(): void {
     this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
-    this.gridResizeObserver?.disconnect();
-    this.gridResizeObserver = undefined;
-    this.gridResizeObserverDocument = undefined;
+    this.gridResizeObserver.clear();
     this.observedGrid = undefined;
-    this.observedGridVirtualized = false;
-    this.cancelVirtualScrollFrame();
+    this.scrollFrame.cancel();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1246,6 +1151,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
 
   private resetOwnerRealmResources(): void {
+    this.geometryFrame.cancel();
     this.ownerRealmGeneration += 1;
     if (this.pendingGroupsLoad) {
       this.pendingGroupsLoad = undefined;
@@ -1274,7 +1180,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       aria-selected=${live(itemIndex === selectedIndex ? 'true' : 'false')}
       aria-setsize=${total}
       aria-posinset=${itemIndex + 1}
-      aria-label=${item.name}
+      aria-label=${normalizeLabel(item.name) ?? nothing}
       ?data-active=${live(itemIndex === this.activeIndex)}
       ?disabled=${this.effectiveDisabled}
       @click=${() => this.pick(item)}
@@ -1329,7 +1235,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
+    const describedBy = [hasError ? 'emoji-picker-error' : '', hasHint ? 'emoji-picker-hint' : ''].filter(Boolean).join(' ');
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
     const gridLabel = hostAriaLabel(this);
     const searchLabel = this.localize('emojiPickerSearchLabel');
@@ -1415,12 +1321,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
             ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLoad}>${this.localize('retry')}</button>`
             : nothing}
         </div>
-        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint"></slot>
-        </div>
-        <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
+        ${renderFormControlHintError({ idPrefix: 'emoji-picker', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
       </div>
       <div data-probe="root" aria-hidden="true">
         <div data-probe="item"></div>

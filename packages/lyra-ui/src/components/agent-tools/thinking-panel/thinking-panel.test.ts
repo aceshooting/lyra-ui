@@ -128,6 +128,18 @@ it('honors a prevented lr-toggle-request without mutating or emitting lr-toggle'
   expect(commits).to.equal(0);
 });
 
+function countScrollWrites(el: LyraThinkingPanel): () => number {
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const scrollTop = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop')!;
+  let writes = 0;
+  Object.defineProperty(body, 'scrollTop', {
+    configurable: true,
+    get: () => scrollTop.get!.call(body) as number,
+    set(value: number) { writes++; scrollTop.set!.call(body, value); },
+  });
+  return () => writes;
+}
+
 describe('duration display', () => {
   it('shows a pulsing "Thinking…" placeholder in live mode while duration-ms is unset', async () => {
     const el = (await fixture(html`<lr-thinking-panel mode="live"></lr-thinking-panel>`)) as LyraThinkingPanel;
@@ -622,15 +634,7 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
   });
 
   it("triggers a follow-scroll attempt when a composed <lr-markdown>'s content PROPERTY changes -- the same property-driven case the class doc's own example composes", async () => {
-    // Asserts that the mechanism actually ran (scrollToBottom() was invoked), the same
-    // observable this suite's own "does not double-scroll" test below uses, rather than exact
-    // post-scroll pixel math -- <lr-markdown> can settle more than once for one content
-    // assignment (a transient plain-text fallback frame, then the real parsed render; see its own
-    // class doc), and the browser's own scroll-anchoring can additionally nudge a tiny, capped
-    // scrollable region as that multi-step layout settles, making an exact final scrollTop/
-    // scrollHeight assertion here flaky in a way this component's own behavior is not responsible
-    // for. lr-content-settled's own emission points are covered directly by markdown.test.ts and
-    // streaming-text.test.ts.
+    // Observe the scroll write; successive Markdown renders can change the final layout.
     const el = await fixture<LyraThinkingPanel>(html`
       <lr-thinking-panel mode="live">
         <lr-markdown></lr-markdown>
@@ -645,12 +649,7 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
     await twoFrames();
     const markdown = el.querySelector('lr-markdown')!;
 
-    let scrollCalls = 0;
-    const originalScrollToBottom = el.scrollToBottom.bind(el);
-    el.scrollToBottom = () => {
-      scrollCalls += 1;
-      originalScrollToBottom();
-    };
+    const scrollCalls = countScrollWrites(el);
 
     const settled = oneEvent(el, 'lr-content-settled');
     (markdown as unknown as { content: string }).content = longChunk;
@@ -658,7 +657,7 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
     await twoFrames();
 
     expect(
-      scrollCalls,
+      scrollCalls(),
       'the composed lr-markdown settle should have triggered at least one follow-scroll attempt',
     ).to.be.greaterThan(0);
   });
@@ -717,10 +716,7 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
       await forceSmallBody(el);
       const streamingText = el.querySelector('lr-streaming-text')!;
 
-      let scrollCalls = 0;
-      el.scrollToBottom = () => {
-        scrollCalls += 1;
-      };
+      const scrollCalls = countScrollWrites(el);
 
       const settled = oneEvent(el, 'lr-content-settled');
       const settle = (): void => {
@@ -735,7 +731,7 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
       await settled;
       await twoFrames();
 
-      expect(scrollCalls, 'both signals landing in one frame must still coalesce to a single scroll').to.equal(1);
+      expect(scrollCalls(), 'both signals landing in one frame must still coalesce to a single scroll').to.equal(1);
     });
   }
 });
@@ -817,10 +813,9 @@ it('rebinds content observation and animation frames to its owner realm across a
     expect(cancelledFrames, 'adoption cancels the old owner frame').to.deep.equal([71]);
     contentMutationCallback!([], {} as MutationObserver);
     expect(frames.size, 'a stale old-realm observer callback cannot schedule new work').to.equal(0);
-    let scrollCalls = 0;
-    el.scrollToBottom = () => { scrollCalls += 1; };
+    const scrollCalls = countScrollWrites(el);
     staleFrame!(0);
-    expect(scrollCalls, 'a stale old-realm callback cannot mutate the adopted element').to.equal(0);
+    expect(scrollCalls(), 'a stale old-realm callback cannot mutate the adopted element').to.equal(0);
   } finally {
     frameWindow.MutationObserver = originalMutationObserver;
     frameWindow.requestAnimationFrame = originalRequestAnimationFrame;

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Als Quelle angeben',
   promptInputLabel: 'KI-Prompt',
   promptInputControls: 'Prompt-Optionen',
+  promptInputCollectionLimit: 'Ein Teil der Prompt-Eingabe wurde ausgelassen, weil eine Eingabegrenze erreicht wurde.',
   promptInputSources: 'Quellen',
   promptInputAttachments: 'Anhänge',
   handoffLabel: 'Agentenübergabe',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Keine Stimmen verfügbar',
   voicePickerRequired: 'Bitte wählen Sie eine Stimme aus.',
   voicePickerPreview: 'Hörprobe von {name}',
+  voicePickerPreviewFailed: 'Die Hörprobe ist nicht verfügbar.',
   voicePickerStopPreview: 'Hörprobe beenden',
   realtimeSessionLabel: 'Echtzeitsitzung',
   realtimeSessionDisconnected: 'Getrennt',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Langer Code wird ohne Syntaxhervorhebung angezeigt.',
   codeBlockHighlightedLine: 'Hervorgehobene Zeile',
   codeBlockActiveLine: 'Aktive hervorgehobene Zeile',
+  codeBlockToggle: 'Code anzeigen oder ausblenden',
 };
 
 registerLyraLocale('de', strings);

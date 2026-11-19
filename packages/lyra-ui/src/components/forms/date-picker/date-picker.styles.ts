@@ -296,13 +296,30 @@ export const styles = css`
     outline-offset: var(--lr-size-neg-1px);
   }
   [part~="day-range-inner"] {
-    background: var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet));
+    --_lr-date-picker-range-fill: var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet));
+    background: var(--_lr-date-picker-range-fill);
     border-radius: 0;
   }
   [part~="day-range-preview"] {
-    background: var(
+    --_lr-date-picker-range-fill: var(
       --lr-date-picker-range-preview-bg,
       var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet))
+    );
+    background: var(--_lr-date-picker-range-fill);
+  }
+  /* A range day mixes hover and press over its own range fill. */
+  :where([part~="day-range-inner"], [part~="day-range-preview"]):hover:not(:disabled) {
+    background-color: var(--lr-date-picker-day-hover-bg, var(--_lr-date-picker-range-fill));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+  }
+  :where([part~="day-range-inner"], [part~="day-range-preview"]):active:not(:disabled) {
+    background-color: var(--lr-date-picker-day-active-bg, var(--lr-date-picker-day-hover-bg, var(--_lr-date-picker-range-fill)));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
   }
   [part~="day-selected"],

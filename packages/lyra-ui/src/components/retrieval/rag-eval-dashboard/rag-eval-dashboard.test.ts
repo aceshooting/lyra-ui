@@ -589,7 +589,11 @@ describe('blank label', () => {
     expect(part(spaced).textContent!.trim()).to.not.equal('');
     expect(part(spaced).textContent!.trim()).to.equal(part(base).textContent!.trim());
     expect(part(spaced).getAttribute('role')).to.equal('heading');
-    const empty = (await fixture(html`<lr-rag-eval-dashboard label="" heading-level="2"  .runs=${runs}></lr-rag-eval-dashboard>`)) as HTMLElement;
+    const empty = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard label="" heading-level="2" .runs=${runs}></lr-rag-eval-dashboard>`);
+    expect(part(empty).hasAttribute('role')).to.equal(false);
+    expect(part(empty).hasAttribute('aria-level')).to.equal(false);
+    empty.slice = 'missing';
+    await empty.updateComplete;
     expect(part(empty).hasAttribute('role')).to.equal(false);
     expect(part(empty).hasAttribute('aria-level')).to.equal(false);
   });
@@ -606,4 +610,64 @@ it('never rounds a small nonzero percent metric to 0%', async () => {
   `);
   const values = [...el.shadowRoot!.querySelectorAll('lr-stat')].map((stat) => stat.value);
   expect(values).to.deep.equal(['<0.1%']);
+});
+
+it('shows out-of-range percent values as-is so cards match the plotted value', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      locale="en-US"
+      .metrics=${[
+        { id: 'over', label: 'Over', category: 'generation', format: 'percent' },
+        { id: 'under', label: 'Under', category: 'generation', format: 'percent' },
+      ]}
+      .runs=${[{ id: 'run', label: 'Run', metrics: { over: 1.5, under: -0.2 } }]}
+    ></lr-rag-eval-dashboard>
+  `);
+  const values = [...el.shadowRoot!.querySelectorAll('lr-stat')].map((stat) => stat.value);
+  expect(values).to.deep.equal(['150%', '-20%']);
+});
+
+it('shows a localized unavailable state for an unmatched controlled metricId and clears it on match', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="missing"></lr-rag-eval-dashboard>
+  `);
+  const notice = () => el.shadowRoot!.querySelector('[part="metric-unavailable"]') as (HTMLElement & { heading: string }) | null;
+  expect(notice()?.heading).to.equal('No evaluation metric is available for missing.');
+  el.strings = { ragEvalDashboardMetricUnavailable: 'Metric {metric} absent.' };
+  await el.updateComplete;
+  expect(notice()?.heading).to.equal('Metric missing absent.');
+  el.metricId = metrics[0]!.id;
+  await el.updateComplete;
+  expect(notice() === null).to.equal(true);
+  el.metricId = '';
+  await el.updateComplete;
+  expect(notice() === null).to.equal(true);
+});
+
+it('does not name the run-history section as a second landmark beside its heading', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>
+  `);
+  const section = el.shadowRoot!.querySelector('[part="runs"]')!;
+  expect(section.hasAttribute('aria-label')).to.equal(false);
+  expect(section.querySelector('[part="runs-heading"]')?.textContent?.trim()).to.equal('Evaluation runs');
+});
+
+it('keeps the selected slice hit area without a duplicate rule', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} slice="legal"></lr-rag-eval-dashboard>
+  `);
+  const selected = el.shadowRoot!.querySelector('[part~="slice-selected"]') as HTMLElement;
+  expect(getComputedStyle(selected).minBlockSize).to.equal('36px');
+  expect(getComputedStyle(selected).minInlineSize).to.equal('36px');
+});
+
+it('wraps a long unbroken run label inside the run button', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 240px"><lr-rag-eval-dashboard .metrics=${metrics} .runs=${[{ id: 'r', label: 'r'.repeat(200), metrics: { mrr: 0.5 } }]}></lr-rag-eval-dashboard></div>`);
+  const el = wrapper.querySelector('lr-rag-eval-dashboard') as LyraRagEvalDashboard;
+  await el.updateComplete;
+  const run = el.shadowRoot!.querySelector<HTMLElement>('[part="run"]')!;
+  const label = run.querySelector('span')!;
+  expect(run.scrollWidth <= run.clientWidth + 1).to.equal(true);
+  expect(label.getBoundingClientRect().width <= run.getBoundingClientRect().width).to.equal(true);
 });

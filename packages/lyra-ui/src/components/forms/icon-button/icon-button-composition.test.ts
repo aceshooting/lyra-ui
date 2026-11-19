@@ -49,6 +49,19 @@ describe('lr-icon-button: composition contract', () => {
     expect(resolved.map((node) => node.id)).to.deep.equal(['verb', 'item']);
   });
 
+  it('returns one stable toolbar action and releases its lease on disconnect', async () => {
+    const el = (await fixture(html`<lr-icon-button aria-label="Close"></lr-icon-button>`)) as LyraIconButton;
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+    const [first] = el.getToolbarActions();
+    expect(first === el.getToolbarActions()[0]).to.equal(true);
+    first!.setTabIndex(-1);
+    expect(nativeControl(el).getAttribute('tabindex')).to.equal('-1');
+    el.remove();
+    expect(nativeControl(el).hasAttribute('tabindex')).to.equal(false);
+  });
+
   it('contributes one logical toolbar action that leases the internal tab stop', async () => {
     const el = (await fixture(html`
       <lr-icon-button aria-label="Close">

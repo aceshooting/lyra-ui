@@ -154,3 +154,13 @@ export const InputLimit: StoryObj = {
   parameters: { docs: { description: { story: 'The wrapper reports original catalog loss even when its deep-input budget is reached before the child picker row ceiling.' } } },
   render: () => html`<lr-model-settings-panel .catalog=${Array.from({ length: 1000 }, (_, index) => ({ id: `model${index}`, label: `Model ${index}`, metadata: Array.from({ length: 100 }, () => 'detail') }))}></lr-model-settings-panel>`,
 };
+
+export const PaddedPanel: Story = {
+  render: () => html`<lr-model-settings-panel .catalog=${OPENAI_CATALOG}
+    style="--lr-model-settings-panel-padding: var(--lr-space-s); --lr-model-settings-panel-bg: var(--lr-color-surface-raised)">
+  </lr-model-settings-panel>`,
+};
+
+export const ReadonlySettings: Story = {
+  render: () => html`<lr-model-settings-panel readonly size="s" model="Standard"></lr-model-settings-panel>`,
+};

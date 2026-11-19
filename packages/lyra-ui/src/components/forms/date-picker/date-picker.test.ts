@@ -1,10 +1,11 @@
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
 import "./date-picker.js";
 import type { LyraDatePicker } from "./date-picker.js";
-import { hoverUntilMatched, resetMouse, settlePointer } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
@@ -2417,4 +2418,115 @@ it("leaves the decade view unchanged when its title cannot advance farther", asy
 
   expect(el.view).to.equal("decades");
   expect(changes).to.equal(0);
+});
+
+for (const view of ['days', 'months'] as const) {
+  it(`leaves modified arrows and held activation alone in the ${view} grid`, async () => {
+    const el = await fixture<LyraDatePicker>(html`<lr-date-picker today="2026-07-15" .view=${view}></lr-date-picker>`);
+    const cell = el.shadowRoot!.querySelector<HTMLElement>('[tabindex="0"]')!;
+    const arrow = new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true, cancelable: true });
+    cell.dispatchEvent(arrow);
+    expect(arrow.defaultPrevented).to.equal(false);
+    cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true }));
+    expect(el.value).to.equal('');
+    expect(el.view).to.equal(view);
+  });
+}
+
+it('exposes today independently of the selected day and period', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker today="2026-07-01" value="2026-06-29"
+    with-outside-days months="2"></lr-date-picker>`);
+  for (const view of ['days', 'months', 'years', 'decades'] as const) {
+    el.view = view;
+    await el.updateComplete;
+    const current = el.shadowRoot!.querySelectorAll('[aria-current="date"]');
+    expect(current.length, view).to.equal(1);
+    expect(current[0]!.part.contains(view === 'days' ? 'day-today' : 'view-item-today')).to.equal(true);
+  }
+});
+
+it('includes the previously selected date in both value notifications', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker value="2026-07-01"></lr-date-picker>`);
+  const input = oneEvent(el, 'lr-input');
+  const change = oneEvent(el, 'lr-change');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-03"]')!.click();
+  for (const event of await Promise.all([input, change])) {
+    expect(event.detail).to.deep.equal({ value: '2026-07-03', previousValue: '2026-07-01' });
+  }
+});
+
+it('ignores a disabled-date array whose length cannot be inspected', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker value="2026-07-01"></lr-date-picker>`);
+  el.disabledDates = new Proxy(['2026-07-03'], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'length') throw new Error('unreadable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-03"]')!.disabled).to.equal(false);
+});
+
+it('uses Gregorian calendar dates for an explicitly non-Gregorian display locale', async () => {
+  const locale = 'en-u-ca-islamic';
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker locale=${locale} value="2026-07-01"></lr-date-picker>`);
+  const expected = new Intl.DateTimeFormat(locale, { calendar: 'gregory', day: 'numeric', month: 'long',
+    year: 'numeric', weekday: 'long' }).format(new Date(2026, 6, 1));
+  expect(el.shadowRoot!.querySelector('[data-date="2026-07-01"]')!.getAttribute('aria-label')).to.equal(expected);
+});
+
+for (const view of ['days', 'months', 'years', 'decades'] as const) {
+  it(`announces the displayed ${view} page after navigation`, async () => {
+    const el = await fixture<LyraDatePicker>(html`<lr-date-picker value="2026-07-15" locale="en"
+      .view=${view} months="2"></lr-date-picker>`);
+    const messages = () => Array.from(
+      document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > *`), child => child.textContent,
+    );
+    const titles = () => Array.from(el.shadowRoot!.querySelectorAll('[part="month-label"]'), node => node.textContent!.trim());
+    const page = () => new Intl.ListFormat('en').format(titles());
+    expect(messages()).not.to.include(page());
+    for (const part of ['next', 'previous', 'next']) {
+      const before = messages().length;
+      el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!.click();
+      await el.updateComplete;
+      expect(messages().slice(before)).to.deep.equal([page()]);
+    }
+  });
+}
+
+it('distinguishes selected, hovered and pressed calendar days in forced colors', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker today="2026-07-10" value="2026-07-15"></lr-date-picker>`);
+  const day = (date: string) => el.shadowRoot!.querySelector<HTMLButtonElement>(`[data-date="${date}"]`)!;
+  const target = day('2026-07-16');
+  try {
+    await setForcedColors('active');
+    await hoverUntilMatched(target, 'unselected day receives the pointer');
+    expect(getComputedStyle(day('2026-07-15')).outlineStyle).to.equal('solid');
+    expect(getComputedStyle(target).outlineStyle).to.equal('dashed');
+    await sendMouse({ type: 'down', button: 'left' });
+    await waitUntil(() => getComputedStyle(target).outlineStyle === 'double');
+  } finally {
+    await resetMouse();
+    await setForcedColors('none');
+  }
+});
+
+it('mixes range-day hover and press over the range fill instead of replacing it', async () => {
+  const el = (await fixture(
+    html`<lr-date-picker
+      mode="range"
+      value="2026-06-10/2026-06-20"
+      style="--lr-date-picker-range-bg: rgb(200, 0, 0)"
+    ></lr-date-picker>`
+  )) as LyraDatePicker;
+  await el.updateComplete;
+  const inner = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="day-range-inner"]')!;
+  expect(getComputedStyle(inner).backgroundImage).to.equal('none');
+  try {
+    await hoverUntilMatched(inner, 'the pointer never hovered the range day');
+    await waitUntil(() => getComputedStyle(inner).backgroundImage !== 'none', 'hover never painted');
+    expect(getComputedStyle(inner).backgroundColor).to.equal('rgb(200, 0, 0)');
+  } finally {
+    await resetMouse();
+  }
 });

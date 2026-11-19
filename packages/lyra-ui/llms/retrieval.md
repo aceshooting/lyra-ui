@@ -1238,6 +1238,10 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   the sorted inspector list. The open-button name includes this ordinal, title, and score tier. Setting it marks the inspector as one row of that list, so it renders without its own
   group, list or listitem semantics.
 
+In a standalone inspector with multiple chunks, the row actions share one Tab stop. Up/Down and
+Home/End move between chunks, including rows outside the virtualized window. Inline arrows switch
+between Open and Show more/less, following the reading direction.
+
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-toggle` (`detail: { expanded, itemId }`, a chunk's text
@@ -1392,8 +1396,8 @@ set), `select-all` (omitted while `without-select-all` is set), `select-all-cont
 owner), `summary` ("{selected} of {total} selected"), `tree`
 (`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
-`aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
-surrounding treeitem owns keyboard expansion),
+`aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse chevron, rotated when expanded and
+mirrored under RTL; the surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state box: a check when selected, a dash when mixed), `icon` (the `lr-file-icon` type
 badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMatches` when a filter
 empties the tree), `error` (a nonempty raw
@@ -1475,8 +1479,8 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` carries `{ section, expanded }` for a section header or
-`{ section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
+**Events:** `lr-toggle` carries `{ kind: 'section', section, expanded }` for a section header or
+`{ kind: 'chunk', section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
 re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
@@ -1489,7 +1493,8 @@ edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the 
 
 **Slots:** none.
 
-**CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
+**CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `toggle` (the header's
+chevron; rotated while expanded, mirrored under RTL), `count` (a section's
 full item-count badge), `body` (stable `aria-controls` target; heavy rows mount only while expanded),
 `limit` (localized notice above 500 rows per section), `entity-row` (the wrapping row of entity chips
 inside the entities section), `empty` (shown when every section is empty).
@@ -2032,15 +2037,17 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `label: string | null = null` (attribute `label`) — names the overall dossier group after a
   host `aria-label`, before the localized Details fallback. It does not rename the tab strip.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
-  the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
-  `aria-label` names the dossier as a whole and is not cloned onto the strip
+  the host attribute is absent, names the internal `lr-tab-group` strip. A non-empty authored host
+  `aria-label` names the dossier as a whole: the host is then the sole named owner, so neither
+  the inner group nor the strip repeats it
 
 **Events:** composed child events reach the host (`composed: true`), with the direct supporting
 chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
 embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
 add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
-inspector adds `section: 'chunks'`, while provenance-panel toggles pass through), and `lr-tab-show`
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (the direct supporting-chunk
+inspector carries `{ kind: 'chunk', section: 'chunks', expanded, itemId }`; provenance-panel toggles
+pass through), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
 host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
@@ -2528,7 +2535,8 @@ In source mode, `lr-sort-request` is the original cancelable table proposal with
 `TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
 `lr-sort` is the accepted, noncancelable table commit with frozen
 `TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
-the commit and leaves the current source sort unchanged.
+the commit and leaves the current source sort unchanged. With no source provider, the table's
+page and sort events stay inside `lr-knowledge-base`.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while the host error or a current provider failure is shown.
@@ -2905,8 +2913,11 @@ omitted without hiding later valid memories.
 
 At most 500 items per section render as `item` rows; a section's list past that length renders a
 localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
-The primary Add action in short-term memory and Remove action in long-term memory each rove within
-their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain reachable by Tab.
+Short-term Add and Remove actions share one Tab stop. Inline arrows switch between the two actions,
+and Up/Down and Home/End move between rows within the current column. Long-term Remove actions share
+one Tab stop and use the same row keys. Expand buttons remain reachable by Tab.
+The Add button's accessible name begins with the visible `memoryPanelAdd` label and includes the
+item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{label}`.
 
 **Events:**
 
@@ -2916,8 +2927,9 @@ their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
-  Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
+- `lr-toggle` carries `{ kind: 'memory', expanded, itemId, memoryId, scope }` for a memory item's
+  own disclosure. Nested provenance toggles retain their `kind` and `section` and add the owning
+  `memoryId` and `scope`.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
@@ -3364,14 +3376,15 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `label?: string` — accessible name for the timeline; omission keeps its localized default and an
   explicit empty string clears it. An authored host `aria-label` independently names the trace and is
   not cloned onto the timeline; explicit-empty/dynamic host changes preserve that single-owner
-  distinction
+  distinction. Without a host label, `base` is a `role="group"` named by the localized
+  `retrievalTraceLabel` ("Retrieval trace")
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `evidence-toggle` and `evidence-body` padding; `m` and larger keep the full padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-toggle` (`{ expanded, itemId }` for a stage's evidence panel toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time, or
-`{ expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
+Enter, Space), `lr-toggle` (`{ kind: 'stage', expanded, itemId }` for a stage's evidence panel,
+either from its own button or the first timeline selection, or
+`{ kind: 'chunk', expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
 explicit stage identity.
@@ -3834,7 +3847,8 @@ localized no-data text if no run in the current slice provides a finite measurem
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`; the first metric is used when
-unset, while an id that matches no metric selects none and renders no chart); `slice: string = ''`;
+unset, while an id that matches no metric selects none, renders no chart and shows the localized
+`metric-unavailable` state); `slice: string = ''`;
 `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`, the run-history heading sits one
 level below; `'none'` keeps the visible text without heading semantics); `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
@@ -3843,7 +3857,8 @@ while an explicitly empty host label stays empty on the region);
 `chartHeight: string = '220px'` (attribute `chart-height`).
 
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
-`'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
+`'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`; a
+percent value is a fraction shown as-is, so 1.5 reads 150% and -0.2 reads -20%, matching the chart.
 `LyraRagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
 The bounded run-history buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End;
 activation still emits the existing run events.
@@ -3869,7 +3884,8 @@ corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice that only the most recent 500
+`chart`, `metric-unavailable` (an unmatched controlled `metricId`), `runs`, `runs-heading`, `run`,
+`limit` (localized notice that only the most recent 500
 filtered runs are shown), `input-limit`, `slices-limit`, `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default

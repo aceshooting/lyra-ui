@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'ଦୀର୍ଘକାଳୀନ ସ୍ମୃତି',
   memoryPanelAdd: 'ଦୀର୍ଘକାଳୀନ ସ୍ମୃତିରେ ଯୋଡ଼ନ୍ତୁ',
   memoryPanelAddWithContext: '"{label}"କୁ ଦୀର୍ଘକାଳୀନ ସ୍ମୃତିରେ ଯୋଡ଼ନ୍ତୁ',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'ସବୁ ଭୁଲିଯାଆନ୍ତୁ',
   memoryPanelConfirmAddHeading: 'ଏହାକୁ ଦୀର୍ଘକାଳୀନ ସ୍ମୃତିରେ ଯୋଡ଼ିବେ କି?',
   memoryPanelConfirmRemoveHeading: 'ଏହି ବସ୍ତୁ ହଟାଇବେ କି?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'ମୂଲ୍ୟାଙ୍କନ ଖଣ୍ଡ',
   ragEvalDashboardAllSlices: 'ସମସ୍ତ',
   ragEvalDashboardSliceUnavailable: '{slice} ପାଇଁ କୌଣସି ମୂଲ୍ୟାଙ୍କନ ରନ୍ ଉପଲବ୍ଧ ନାହିଁ।',
+  ragEvalDashboardMetricUnavailable: '{metric} ପାଇଁ କୌଣସି ମୂଲ୍ୟାଙ୍କନ ମାପ ଉପଲବ୍ଧ ନାହିଁ।',
   knowledgeBaseSyncIdle: 'ନିଷ୍କ୍ରିୟ',
   knowledgeBaseSyncSyncing: 'ସିଙ୍କ୍ ହେଉଛି',
   knowledgeBaseSyncPaused: 'ବିରତ',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'ଫଳାଫଳ {index} {total} ର |',
   ragAnswerEmpty: 'ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉତ୍ତର ନାହିଁ।',
   retrievalTraceEmpty: 'କୌଣସି ପୁନରୁଦ୍ଧାର ପର୍ଯ୍ୟାୟ ନାହିଁ।',
+  retrievalTraceLabel: 'ପୁନରୁଦ୍ଧାର ଟ୍ରେସ୍',
   sourcePickerMatches: {
     one: '{count} ଉତ୍ସ ମେଳ |',
     other: '{count} ଉତ୍ସଗୁଡିକ ମେଳ |',

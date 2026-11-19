@@ -207,3 +207,9 @@ export const RetainedTranscript: Story = {
     <div slot="details">Host-owned details replace the built-in detail components.</div>
   </lr-agent-workspace>`,
 };
+
+export const EmbeddedReview: Story = {
+  render: () => html`<lr-agent-workspace label="Conversation review" heading-level="4" composer-disabled
+    style="--lr-agent-workspace-radius: var(--lr-radius); --lr-agent-workspace-padding: var(--lr-space-s)">
+  </lr-agent-workspace>`,
+};

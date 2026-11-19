@@ -217,7 +217,7 @@ export interface LyraZoomableFrameEventMap {
  *   and hidden from assistive technology; the native zoom-in button remains the sole action.
  * @slot zoom-out-icon - Override for the decorative zoom-out glyph. Its flattened subtree is inert
  *   and hidden from assistive technology; the native zoom-out button remains the sole action.
- * @event lr-zoom-change - `zoomIn()`/`zoomOut()` (controls and keys) changed `zoom`. `detail: { zoom }`.
+ * @event lr-zoom-change - `zoomIn()`/`zoomOut()` (controls and keys) changed the rendered scale. `detail: { zoom }`.
  * @event load - Relayed native iframe load event; non-bubbling and non-composed.
  * @event error - Relayed native iframe error event; non-bubbling and non-composed.
  * @event {FocusEvent} focus - Relayed once from the internal iframe as a bubbling, composed native
@@ -281,6 +281,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   @property() sandbox = DEFAULT_IFRAME_SANDBOX;
   /** Current iframe scale. Programmatic values need not appear in `zoomLevels`. */
   @property({ type: Number, reflect: true }) zoom = 1;
+  private pendingZoomChange?: number;
   /** Space-separated decimal and percentage stops used only by `zoomIn()`/`zoomOut()`. The
    * normalized projection reads at most 16,384 UTF-16 code units and 256 whitespace-delimited
    * tokens, ignores a token cut by the source ceiling, and is cached until this string changes. */
@@ -543,6 +544,9 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    const zoom = this.pendingZoomChange;
+    this.pendingZoomChange = undefined;
+    if (zoom !== undefined && zoom === this.zoom) this.emit('lr-zoom-change', { zoom });
     if (!changed.has('withThemeSync')) return;
     if (this.withThemeSync) {
       // Theme observation is armed only once sync is first wanted.
@@ -627,8 +631,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   }
 
   private zoomTo(zoom: number): void {
+    this.pendingZoomChange = zoom;
     this.zoom = zoom;
-    this.emit('lr-zoom-change', { zoom });
   }
 
   private isZoomInDisabled(): boolean {
@@ -701,8 +705,10 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       const computed = view?.getComputedStyle(this);
       if (!computed) return;
       const nextProperties = new Set<string>();
-      for (let index = 0; index < computed.length; index++) {
+      // CSSOM appends custom properties after the standard longhands.
+      for (let index = computed.length - 1; index >= 0; index--) {
         const property = computed.item(index);
+        if (!property.startsWith('--')) break;
         if (!property.startsWith('--lr-theme-')) continue;
         this.setSyncedThemeProperty(state, property, computed.getPropertyValue(property));
         nextProperties.add(property);

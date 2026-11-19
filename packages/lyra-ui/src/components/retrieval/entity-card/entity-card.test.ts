@@ -520,4 +520,20 @@ it('names the focus button with its visible text first and the entity label, and
     'Focus in graph: Marie Curie',
   );
   expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
+  el.setAttribute('aria-level', '4');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('4');
+  el.setAttribute('aria-level', 'none');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
+});
+
+it('wraps a long unbroken title without collapsing its min-content to one glyph', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 160px"><lr-entity-card .entity=${{ ...entity, label: 'x'.repeat(200) }}></lr-entity-card></div>`);
+  const el = wrapper.querySelector('lr-entity-card') as LyraEntityCard;
+  await el.updateComplete;
+  const title = el.shadowRoot!.querySelector<HTMLElement>('[part="title"]')!;
+  expect(title.getBoundingClientRect().width <= 161).to.equal(true);
+  expect(title.scrollWidth <= title.clientWidth + 1).to.equal(true);
+  expect(getComputedStyle(title).overflowWrap).to.equal('break-word');
 });

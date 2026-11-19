@@ -1,3 +1,4 @@
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -177,7 +178,7 @@ it('re-emits one contextual toggle for an embedded chunk', async () => {
   const seen: CustomEvent[] = [];
   el.addEventListener('lr-toggle', (event) => seen.push(event as CustomEvent));
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen.map((event) => event.detail)).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(seen.map((event) => event.detail)).to.deep.equal([{ kind: 'chunk', section: 'chunks', expanded: true, itemId: 'ch1' }]);
   expect(seen[0]!.target === el).to.equal(true);
 });
 
@@ -194,7 +195,7 @@ it('all four sections start expanded, and toggling one emits lr-toggle without c
   const listener = oneEvent(el, 'lr-toggle');
   (headers[0] as HTMLButtonElement).click();
   const event = await listener;
-  expect(event.detail.expanded).to.be.false;
+  expect(event.detail).to.deep.equal({ kind: 'section', section: 'entities', expanded: false });
   await el.updateComplete;
   expect(headers[0]!.getAttribute('aria-expanded')).to.equal('false');
   expect(headers[1]!.getAttribute('aria-expanded')).to.equal('true');
@@ -378,5 +379,46 @@ describe('part="entity-row" / --lr-provenance-panel-entity-justify', () => {
       '--lr-provenance-panel-entity-justify: center;'
     );
     expect(getComputedStyle(row!).justifyContent).to.equal('center');
+  });
+});
+
+describe('section disclosure affordance and stacking', () => {
+  it('shows a chevron that turns with the section state and mirrors under RTL', async () => {
+    await setReducedMotion('reduce');
+    try {
+      const el = (await fixture(html`<lr-provenance-panel .provenance=${provenance}></lr-provenance-panel>`)) as LyraProvenancePanel;
+      const header = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!;
+      const toggle = header.querySelector('[part="toggle"]')!;
+      expect(toggle.getAttribute('aria-hidden')).to.equal('true');
+      expect(toggle.querySelector('svg') !== null).to.equal(true);
+      expect(header.getAttribute('aria-expanded')).to.equal('true');
+      const [a, b] = getComputedStyle(toggle).transform.replace(/^matrix\(|\)$/g, '').split(',').map(Number);
+      expect(Math.abs(a!) < 1e-6 && Math.abs(b! - 1) < 1e-6).to.equal(true);
+      const matrix = () => getComputedStyle(toggle).transform;
+      header.click();
+      await el.updateComplete;
+      expect(header.getAttribute('aria-expanded')).to.equal('false');
+      await waitUntil(() => matrix() === 'none', 'collapsed chevron rests unrotated');
+      el.dir = 'rtl';
+      await el.updateComplete;
+      await waitUntil(() => matrix() === 'matrix(-1, 0, 0, 1, 0, 0)', 'collapsed chevron mirrors under RTL');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+  });
+
+  it('separates stacked community cards and path strips with a gap', async () => {
+    const many: LyraProvenance = {
+      ...provenance,
+      relationships: [...provenance.relationships!, ...provenance.relationships!.map((r) => ({ path: [...r.path] }))],
+      communities: [{ id: 'c1', label: 'One', memberCount: 1 }, { id: 'c2', label: 'Two', memberCount: 2 }],
+    };
+    const el = (await fixture(html`<lr-provenance-panel .provenance=${many}></lr-provenance-panel>`)) as LyraProvenancePanel;
+    const cards = [...el.shadowRoot!.querySelectorAll('lr-community-card')];
+    const strips = [...el.shadowRoot!.querySelectorAll('lr-path-strip')];
+    expect(cards.length).to.equal(2);
+    expect(strips.length).to.equal(2);
+    expect(cards[1]!.getBoundingClientRect().top - cards[0]!.getBoundingClientRect().bottom > 0).to.equal(true);
+    expect(strips[1]!.getBoundingClientRect().top - strips[0]!.getBoundingClientRect().bottom > 0).to.equal(true);
   });
 });

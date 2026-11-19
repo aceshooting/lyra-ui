@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Посочи източник',
   promptInputLabel: 'Промпт за ИИ',
   promptInputControls: 'Опции на промпта',
+  promptInputCollectionLimit: 'Част от въведеното съдържание на промпта е пропусната, защото е достигнато ограничение за входните данни.',
   promptInputSources: 'Източници',
   promptInputAttachments: 'Прикачени файлове',
   handoffLabel: 'Предаване към агент',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Няма налични гласове',
   voicePickerRequired: 'Моля, изберете глас.',
   voicePickerPreview: 'Прослушай {name}',
+  voicePickerPreviewFailed: 'Прослушването на гласа не е налично.',
   voicePickerStopPreview: 'Спри прослушването',
   realtimeSessionLabel: 'Сесия в реално време',
   realtimeSessionDisconnected: 'Прекъсната връзка',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Дългият код се показва без оцветяване на синтаксиса.',
   codeBlockHighlightedLine: 'Откроен ред',
   codeBlockActiveLine: 'Активен откроен ред',
+  codeBlockToggle: 'Покажи или скрий кода',
 };
 
 registerLyraLocale('bg', strings);

@@ -127,6 +127,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Memori jangka dawa',
   memoryPanelAdd: 'Tambahake menyang memori jangka dawa',
   memoryPanelAddWithContext: 'Tambahake "{label}" menyang memori jangka dawa',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Lalekake kabeh',
   memoryPanelConfirmAddHeading: 'Tambahake iki menyang memori jangka dawa?',
   memoryPanelConfirmRemoveHeading: 'Busak barang iki?',
@@ -185,6 +186,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Perangan evaluasi',
   ragEvalDashboardAllSlices: 'Kabeh',
   ragEvalDashboardSliceUnavailable: 'Ora ana proses evaluasi kanggo {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Ora ana metrik evaluasi kanggo {metric}.',
   knowledgeBaseSyncIdle: 'Meneng',
   knowledgeBaseSyncSyncing: 'Lagi diselarasake',
   knowledgeBaseSyncPaused: 'Diendhegake',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Asil {index} saka {total}',
   ragAnswerEmpty: 'Durung wangsulan',
   retrievalTraceEmpty: 'Ora ana tahapan njupuk maneh',
+  retrievalTraceLabel: 'Jejak njupuk maneh',
   sourcePickerMatches: {
     other: '{count} sumber cocog',
   },

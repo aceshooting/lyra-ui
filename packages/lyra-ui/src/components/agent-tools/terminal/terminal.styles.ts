@@ -99,19 +99,11 @@ export const styles = css`
     padding-inline: var(--lr-space-s);
     line-height: var(--lr-line-height-normal);
   }
-  /* Only an interactive (highlight-owning) line carries tabindex="0" -- renderLine() in
-     terminal.class.ts -- so :focus-visible below needs no extra scoping. :hover cannot be scoped
-     the same way: every line shares one part name and ::part() forbids a trailing attribute
-     selector, so this is a plain pointer preview across all lines. Semantic aliases below
-     reassert their own tone. */
-  lr-virtual-list::part(line):hover {
+  /* Only a highlight-owning line is activatable, so only it previews hover and press. */
+  lr-virtual-list::part(line-interactive):hover {
     background: var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed is the line hover tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner, as for [part='copy-button']/[part='download-button'] above: a
-     highlight-owning line is a real activatable target (renderLine() wires @click/@keydown), not a
-     hover-only preview. */
-  lr-virtual-list::part(line):active {
+  lr-virtual-list::part(line-interactive):active {
     background: var(--lr-terminal-line-active-bg, color-mix(in oklab, var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* State-specific parts keep semantic highlights intact through hover/press, and give a consumer
@@ -146,8 +138,24 @@ export const styles = css`
   lr-virtual-list::part(line-highlight-neutral):active {
     background: var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface));
   }
-  lr-virtual-list::part(line):focus-visible {
+  lr-virtual-list::part(line-interactive):focus-visible {
     ${focusRingInsetOffset}
+  }
+  /* An inset ring marks a search match so the outline stays free for the focus ring. */
+  lr-virtual-list::part(line-match) {
+    box-shadow: inset 0 0 0 var(--lr-size-2px) var(--lr-terminal-search-outline-color, var(--lr-color-warning));
+  }
+  lr-virtual-list::part(line-active-match) {
+    box-shadow: inset 0 0 0 var(--lr-size-2px) var(--lr-terminal-search-active-outline-color, var(--lr-color-brand));
+  }
+  @media (forced-colors: active) {
+    lr-virtual-list::part(line-match) {
+      outline: var(--lr-size-2px) dashed CanvasText;
+      outline-offset: calc(-1 * var(--lr-size-2px));
+    }
+    lr-virtual-list::part(line-active-match) {
+      outline-style: solid;
+    }
   }
   /* The log's half of the density escape above: the same one-hop ::part() selector as the base
      rule, plus the host attribute selector, so it outranks it on specificity and source order. */

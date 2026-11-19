@@ -310,7 +310,11 @@ isolated. In progressive streaming a text tail follows the page direction while 
 preview uses code direction. Bidi formatting characters inside code (for example U+202E) are
 rendered as authored, not neutralized.
 
-**Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
+**Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
+on both logical axes (default `var(--lr-icon-button-size)`). `--lr-markdown-code-copy-bg`,
+`--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
+button background for its resting, hovered, and pressed states. Shared icon-button state tokens
+take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
 property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
@@ -433,7 +437,7 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -529,6 +533,7 @@ anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`,
 `streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
+`--lr-markdown-content-min-size` and the three `--lr-markdown-code-copy-bg*` state tokens.
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
 `maxHeight` property sets this token inline) and its code-surface tokens —
 `--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
@@ -568,7 +573,7 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -926,6 +931,10 @@ decorative; `label` is the entire accessible content, nothing narrates individua
 
 ## `lr-chat-composer`
 
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+Plain Enter submits once per keypress. Browser shortcuts, Shift+Enter and IME composition keep their native behavior. The selection accessors return `null` before the textarea is available.
+
 The message input for a chat/agent conversation surface: an auto-resizing `<textarea>` plus a
 built-in send/stop button. Deliberately no label/hint/error chrome — a composite chat-input
 control, not a labeled form field; wrap it in your own layout for that context. **Form-associated**
@@ -1055,9 +1064,8 @@ composer docked into a themed panel can match it, with no `::part(base)` overrid
 the chrome hooks above, `frame="plain"` still zeroes the padding. `--lr-chat-composer-focus-shadow`
 (default `inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)`) is the
 `frame="plain"` focus underline painted on `[part="base"]:focus-within` — override it to reshape the
-underline, or set it to `none` to cede focus chrome entirely to a wrapper you draw yourself. The
-`:focus-within` border keeps its `--lr-color-brand` shift — that is state paint, not card chrome —
-and `frame="plain"` still removes the border, radius and fill outright. Plus shared tokens
+underline, or set it to `none` to cede focus chrome entirely to a wrapper you draw yourself. The focused card uses `--lr-chat-composer-focus-border-color`, which defaults to `var(--lr-color-brand)`.
+`frame="plain"` removes the border, radius and fill outright. Plus shared tokens
 `--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
 `--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
@@ -1481,6 +1489,10 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 
 ## `lr-model-select`
 
+`--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
+
+While typing, `lr-input` includes the draft string in `detail.query`. Its `value` and `inCatalog` fields describe the committed selection. Enter commits the draft. Escape or leaving the control dismisses it. Picking the current model closes the list without emitting a change.
+
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
 
@@ -1733,7 +1745,7 @@ use, not on `:host`, so it isn't tied to `size`. The selected row
 `--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
-without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `0.5`)
+without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `var(--lr-opacity-disabled)`)
 — opacity of an option row whose catalog entry sets `disabled`. `--lr-model-select-max-inline-size` (default
 `var(--lr-size-24rem)`) publishes the host's own width ceiling, which was previously a hard-wired
 literal: set a length to retune it, or `none` to let the control fill its container the way
@@ -2288,6 +2300,10 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
+The collapse control uses the stable `codeBlockToggle` string and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
+
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -2341,6 +2357,9 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
+style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
+`--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default
@@ -2524,6 +2543,10 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
+The collapse control uses the stable `codeBlockToggle` string and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
+
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -2543,7 +2566,8 @@ identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
 `--lr-code-block-radius`, `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
-`--lr-code-block-line-number-color`. `--lr-code-block-max-height`
+`--lr-code-block-line-number-color`, and the `--lr-code-block-toggle-bg*` and
+`--lr-code-block-gutter-bg*` state tokens. `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),
@@ -2594,6 +2618,11 @@ const view = html`<lr-code-block-core
 ---
 
 ## `lr-model-settings-panel`
+
+`readonly` locks both controls. `size` sets the shared picker and slider size, with a default of `m`.
+The panel supplies localized field labels and a model placeholder. Use the standalone controls for custom validation text or field labels.
+
+When an updated temperature range or step corrects the current value, the panel emits `lr-change` after rendering the corrected slider. `--lr-model-settings-panel-bg`, `--lr-model-settings-panel-border-color`, `--lr-model-settings-panel-radius` and `--lr-model-settings-panel-padding` style its frame.
 
 A fixed composition of `<lr-model-select>` and `<lr-slider>` into one agent-configuration card:
 pick a provider's model, then tune its sampling temperature. First-party invention (no Web Awesome
@@ -2706,6 +2735,8 @@ yet for it.
 ---
 
 ## `lr-audio-visualizer`
+
+Whitespace-only name overrides use the same fallback as an omitted name.
 
 A presentational, canvas-drawn voice-activity visualization (bars or waveform) — the
 LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream` (lazily wired to a
@@ -2980,6 +3011,10 @@ reading them. Unset, each falls back to exactly the token its rule used before.
 
 ## `lr-push-to-talk`
 
+`--lr-push-to-talk-trigger-hover-bg` and `--lr-push-to-talk-trigger-active-bg` set the trigger background on hover and press.
+
+In hold mode, a primary pointer press starts capture and releasing that pointer ends it, including outside the trigger. A click-only activation from assistive technology starts capture with one activation and stops it with the next. Modified keyboard shortcuts leave capture unchanged.
+
 A mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle: permission request,
 recording, optional chunked streaming, teardown. The one place in this library that touches the
 microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `mode="hold"` (the
@@ -2996,7 +3031,9 @@ grouping, and pads its seconds field to two locale-aware digits.
 **Properties:** `mode: PushToTalkMode = 'hold'` (`'hold' | 'toggle'`, reflected; invalid writes
 normalize to `hold`), `timesliceMs: number = 0` (attribute
 `timeslice-ms`) — `> 0` passes a timeslice to `MediaRecorder.start()` and emits `lr-record-chunk` per
-slice, `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
+slice. Set `stream-only` (`streamOnly`, default `false`) to deliver chunks without retaining a
+recording. In this mode the default interval is one second and the stop event carries an empty Blob.
+The recorder snapshots both options at the start of a take. Other properties include `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
 string = ''` (attribute `device-id`) — a specific input device, `audioConstraints?:
 PushToTalkAudioConstraints` (attribute: false) — merged into the `getUserMedia` audio constraints;
 it deliberately excludes `deviceId`, whose single authority is the dedicated property,
@@ -3032,7 +3069,7 @@ decorative inside the named trigger: their flattened content is inert and hidden
 APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
-Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
+Blob }`, with `stream-only` or `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
 }`), `lr-record-cancel` (`detail: null`), `lr-record-error`
 (`detail: { error: DOMException | Error }`, covering permission, recorder construction/start, and
 recorder runtime failures), `lr-level`
@@ -3898,13 +3935,14 @@ ancestor to change every unset usage badge beneath it.
 
 ## `lr-widget-renderer`
 
+An invalid document emits one `lr-render-error` after the previous content clears. Changing bindings on the same invalid document leaves that failure quiet. A successful render or a new document starts a new reporting interval.
+
 Renders an agent-streamed version-two declarative JSON widget document through an immutable,
 allowlisted `type -> lyra tag` registry. Mapped tags and children render declaratively, so populated
 documents work during SSR without a global `document`; primitive mapped props remain property-only
 and are assigned during hydration. Keyed reconciliation preserves the mapped element's focus,
-scroll position, and internal state across streamed document updates. An unchanged resolved mapped
-node also retains its memoized template and ref callback, so unrelated renderer updates neither
-reassign its props nor detach and reattach its action/binding listeners. Built-in `row`/`col`/`text`
+scroll position, and internal state across streamed document updates. Updating a binding preserves
+unrelated property values and event subscriptions on keyed elements. Built-in `row`/`col`/`text`
 structural nodes render through ordinary nested templates. Not a
 form runtime (no input/select/form types in the default registry), no expression language or
 implicit state mutation, no remote widget/schema fetching, and it never renders arbitrary HTML or
@@ -4096,6 +4134,10 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
+
+`--lr-voice-picker-trigger-hover-bg` and `--lr-voice-picker-trigger-active-bg` set the trigger background on hover and press.
+
+Picking the current voice closes the list without emitting a change. A rejected preview address or failed playback announces `voicePickerPreviewFailed`.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -4331,12 +4373,20 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
 - `--lr-voice-picker-option-synthetic-border-style` — Synthetic stale-value row border style. Default: `dashed`.
 - `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
-- `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `0.5`.
+- `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `var(--lr-opacity-disabled)`.
 - `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
 
 ## `lr-agent-workspace`
+
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). The workspace forwards the events listed below. Listen directly on a built-in child for its other control, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
+
+`headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level. Details headings use the next level up to six. Use `none` to omit heading semantics, or `label=""` to omit the visible title. Host `aria-labelledby` and `aria-describedby` name and describe the workspace region.
+
+`--lr-agent-workspace-bg`, `--lr-agent-workspace-border-color`, `--lr-agent-workspace-radius` and `--lr-agent-workspace-padding` style the workspace frame.
 
 Responsive, fully controlled shell for an AI conversation and its supporting run, tool, retrieval,
 grounding, and context state: transcript + composer in the main pane, and a details pane composing
@@ -4722,6 +4772,12 @@ its header. `lr-copy-error` passes through the immutable failed clipboard outcom
 
 ## `lr-prompt-input`
 
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+In `readonly` mode the built-in pickers and prompt queue preserve their values. Queue pagination and attachment previews remain available.
+
+An omitted attachment, attachment capability, source, selected source ID or queue item shows the localized `promptInputCollectionLimit` notice. Moving the caret out of a pending suggestion range dismisses that suggestion on selection.
+
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
 upload, retrieval, or model call. It is deliberately not form-associated: the complete interaction
@@ -4840,6 +4896,10 @@ import "@aceshooting/lyra-ui/components/lr-prompt-input.js";
 
 ## `lr-prompt-queue`
 
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+Host `aria-labelledby` and `aria-describedby` name and describe the queue region. `--lr-prompt-queue-bg`, `--lr-prompt-queue-border-color`, `--lr-prompt-queue-radius` and `--lr-prompt-queue-padding` style each queued item.
+
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
 Admission inspects at most 10,000 item positions and 10,000 attachment positions across one
@@ -4894,6 +4954,10 @@ import "@aceshooting/lyra-ui/components/lr-prompt-queue.js";
 ```
 
 ## `lr-selection-toolbar`
+
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+Copy announces its localized result. When two actions overlap, only the latest activation can update feedback or emit its completion events.
 
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
 `DocumentLocator` into ask, quote, cite, and copy actions. The toolbar is positioned in viewport
@@ -4967,6 +5031,14 @@ import "@aceshooting/lyra-ui/components/lr-selection-toolbar.js";
 ```
 
 ## `lr-realtime-session`
+
+Whitespace-only name overrides use the same fallback as an omitted name.
+
+Set `disabled` to disable the built-in session actions and capture. The `lr-mute-change` event requests a new mute state. Assign `muted` to apply it.
+Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
+Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults.
+
+Host `aria-labelledby` and `aria-describedby` name and describe the session region. The built-in capture control supports click-only start and stop in hold mode.
 
 Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
 `lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.

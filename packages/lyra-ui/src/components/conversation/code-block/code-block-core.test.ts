@@ -99,7 +99,7 @@ describe("lr-code-block-core", () => {
         .strings=${{
           copy: "Copier",
           copyCode: "Copier le code",
-          collapseCode: "Réduire le code",
+          codeBlockToggle: "Afficher ou masquer le code",
         }}
       ></lr-code-block-core>
     `)) as LyraCodeBlockCore;
@@ -111,7 +111,7 @@ describe("lr-code-block-core", () => {
     ) as HTMLButtonElement;
     expect(copy.textContent?.trim()).to.equal("Copier");
     expect(copy.getAttribute("aria-label")).to.equal("Copier le code");
-    expect(toggle.getAttribute("aria-label")).to.equal("Réduire le code");
+    expect(toggle.getAttribute("aria-label")).to.equal("Afficher ou masquer le code");
   });
 
   it('inherits live host font size into the collapse toggle and its 1em glyph', async () => {
@@ -442,7 +442,7 @@ describe("lr-code-block-core", () => {
     el.language = 'json';
     el.languages = sharedJsonLanguages;
     el.code = '{"answer":42}';
-    el.strings = { collapseCode: 'Réduire le code' };
+    el.strings = { codeBlockToggle: 'Afficher ou masquer le code' };
     document.body.append(el);
     try {
       await el2Ready(el);
@@ -452,7 +452,7 @@ describe("lr-code-block-core", () => {
       );
       expect(
         el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')
-      ).to.equal('Réduire le code');
+      ).to.equal('Afficher ou masquer le code');
     } finally {
       el.remove();
       __setShikiHighlighterCoreLoaderForTesting(undefined);

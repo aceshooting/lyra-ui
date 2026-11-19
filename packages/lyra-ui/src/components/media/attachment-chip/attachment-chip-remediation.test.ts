@@ -1,4 +1,5 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './attachment-chip.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
@@ -63,4 +64,23 @@ it('falls back to the localized remove name when remove-label is whitespace only
   const inner = button.shadowRoot?.querySelector('button') ?? button;
   const name = button.getAttribute('aria-label') ?? inner.getAttribute('aria-label');
   expect(name).to.equal('Remove report.pdf');
+});
+
+it('paints action hover and press and sizes the thumbnail from public tokens', async () => {
+  const el = await fixture<LyraAttachmentChip>(html`<lr-attachment-chip name="a.txt" style="--lr-transition-interactive: none; --lr-attachment-chip-action-hover-bg: rgb(1, 2, 3); --lr-attachment-chip-action-active-bg: rgb(4, 5, 6); --lr-attachment-chip-thumbnail-size: 31px; --lr-attachment-chip-thumbnail-radius: 3px"></lr-attachment-chip>`);
+  const thumbnail = el.shadowRoot!.querySelector<HTMLElement>('[part="thumbnail"]')!;
+  expect(getComputedStyle(thumbnail).inlineSize).to.equal('31px');
+  expect(getComputedStyle(thumbnail).borderTopLeftRadius).to.equal('3px');
+  const remove = el.shadowRoot!.querySelector<HTMLElement>('[part="remove-button"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(remove, 'remove hover');
+    await waitUntil(() => getComputedStyle(remove).backgroundColor === 'rgb(1, 2, 3)', 'hover token');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => remove.matches(':active'), 'pressed state');
+    expect(getComputedStyle(remove).backgroundColor).to.equal('rgb(4, 5, 6)');
+  } finally {
+    await sendMouse({ type: 'move', position: [0, 0] });
+    await resetMouse();
+  }
 });

@@ -1596,7 +1596,8 @@ describe('lr-terminal', () => {
       ><lr-terminal></lr-terminal></div>
     `);
     const el = parent.querySelector<LyraTerminal>('lr-terminal')!;
-    el.write('ordinary terminal line');
+    el.write('highlighted terminal line');
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 1, end: 1 } }];
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector<HTMLElement>('[part="copy-button"]')!;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;

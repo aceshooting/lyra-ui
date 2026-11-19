@@ -3,7 +3,6 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { Citation } from '../../../ai/types.js';
 import type { ContextMeterSegment, ContextMeterTone } from '../../data/context-meter/context-meter.class.js';
@@ -19,6 +18,7 @@ import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js'
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorLimit, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -170,6 +170,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
     contextInspectorCopyLabel: LYRA_DEFAULT_contextInspectorCopyLabel,
     contextInspectorEmpty: LYRA_DEFAULT_contextInspectorEmpty,
     contextInspectorLabel: LYRA_DEFAULT_contextInspectorLabel,
@@ -178,13 +179,22 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     contextInspectorSegmentTokens: LYRA_DEFAULT_contextInspectorSegmentTokens,
     contextInspectorTruncated: LYRA_DEFAULT_contextInspectorTruncated,
     contextInspectorTruncatedCount: LYRA_DEFAULT_contextInspectorTruncatedCount,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['segments', 'exportFormats']);
 
-  static override styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, styles];
 
   private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
 
@@ -214,6 +224,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
 
   private normalizedFor?: readonly ContextInspectorSegment[];
   private normalizedCache: ContextInspectorSegment[] = [];
+  private readonly renderedRedactions = new WeakMap<ContextInspectorSegment, NormalizedRedaction[]>();
 
   private get normalizedSegments(): ContextInspectorSegment[] {
     if (this.normalizedFor !== this.segments) {
@@ -261,7 +272,11 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
 
   private renderSegmentText(segment: ContextInspectorSegment): TemplateResult {
     const text = segment.text;
-    const redactions = normalizeRedactions(segment.redactions, text.length);
+    let redactions = this.renderedRedactions.get(segment);
+    if (!redactions) {
+      redactions = normalizeRedactions(segment.redactions, text.length);
+      this.renderedRedactions.set(segment, redactions);
+    }
     if (redactions.length === 0) return html`${text}`;
     const nodes: unknown[] = [];
     let cursor = 0;

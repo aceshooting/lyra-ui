@@ -1,3 +1,5 @@
+import { VisibilityGate, watchDevicePixelRatio } from '../../../internal/owned-observer.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
@@ -46,28 +48,6 @@ function clampAmplitudeProduct(amplitude: number, gain: number, min: number, max
   if (product > 0) return max;
   if (product < 0) return min;
   return 0;
-}
-
-/** Reads only a complete entry for this host. Browser callbacks are ordinarily well-formed, but
- * a partial polyfill callback must not make visibility state or animation scheduling throw. */
-function readIntersectionState(entries: unknown, target: Element): boolean | undefined {
-  try {
-    if (!Array.isArray(entries)) return undefined;
-    for (const candidate of entries) {
-      if (!candidate || (typeof candidate !== 'object' && typeof candidate !== 'function')) continue;
-      try {
-        const entry = candidate as Pick<IntersectionObserverEntry, 'target' | 'isIntersecting'>;
-        if (entry.target !== target) continue;
-        const isIntersecting = entry.isIntersecting;
-        if (typeof isIntersecting === 'boolean') return isIntersecting;
-      } catch {
-        // Ignore a malformed entry and continue looking for a usable entry for this host.
-      }
-    }
-  } catch {
-    // A hostile entries container is no more useful than an absent observer callback.
-  }
-  return undefined;
 }
 
 /**
@@ -127,7 +107,7 @@ export class LyraAudioVisualizer extends LyraElement {
   /** Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level
    *  (e.g. `lr-push-to-talk`'s `lr-level`). `null` (the default) means "no external signal" --
    *  see `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`. */
-  @property({ type: Number }) level: number | null = null;
+  @property({ converter: (value: string | null) => value?.trim() ? Number(value) : null }) level: number | null = null;
   private _state: AudioVisualizerState = 'idle';
   @property({ reflect: true, converter: AUDIO_VISUALIZER_STATE })
   get state(): AudioVisualizerState {
@@ -163,12 +143,13 @@ export class LyraAudioVisualizer extends LyraElement {
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
-  private dprQuery?: MediaQueryList;
-  private dprChangeListener?: (event: MediaQueryListEvent) => void;
+  private stopDprWatch?: () => void;
   private stopMotionWatch?: () => void;
   private reducedMotion = false;
   private readonly drawFrameRequest = new OwnedFrame(this);
   private lastAmbientDrawMs = 0;
+  private nextTrackCheckMs = 0;
+  private readonly amplitudes: number[] = [];
   private generatedAriaLabel?: string;
   /** Host size cached from the `ResizeObserver` so `draw()` never forces a per-frame layout read. */
   private hostSize?: { width: number; height: number };
@@ -182,17 +163,12 @@ export class LyraAudioVisualizer extends LyraElement {
   private sourceNode?: MediaStreamAudioSourceNode;
   private timeDomainData?: Uint8Array<ArrayBuffer>;
 
-  /** Whether the host is currently on-screen, per `intersectionObserver` below. Gates
-   *  `scheduleDraw()` so a visualizer scrolled out of view (e.g. behind later transcript messages)
-   *  while still driven by a live `stream`/non-idle `state` stops burning CPU on a redraw loop
-   *  nobody can see -- mirrors `<lr-chart>`'s own `visible`-gated `draw()`. Not `@state()`: nothing
-   *  in `render()` depends on it, so making it reactive would only schedule pointless extra update
-   *  passes. */
-  private visible = true;
-  /** An owner-realm observer starts unknown so no canvas work can race ahead of its first entry. */
-  private visibilityKnown = true;
-  private intersectionObserver?: IntersectionObserver;
-  private intersectionGeneration = 0;
+  private readonly visibility = new VisibilityGate(this, {
+    onVisible: (visible, wasPaintable) => {
+      if (!visible) this.cancelDrawFrame();
+      else if (!wasPaintable) this.scheduleDraw();
+    },
+  });
 
   private get effectiveBarCount(): number {
     return finiteInteger(this.barCount, 5, 1, 64);
@@ -240,7 +216,7 @@ export class LyraAudioVisualizer extends LyraElement {
       this.resizeObserver = observer;
       observer.observe(this);
     }
-    this.watchDpr();
+    this.stopDprWatch = watchDevicePixelRatio(owner, this.scheduleDraw);
     // The draw loop parks itself while ambient output is static under reduced motion, so a
     // preference flip must restart it (and re-simplify/re-animate the pattern) explicitly.
     this.reducedMotion = prefersReducedMotion(this);
@@ -253,7 +229,6 @@ export class LyraAudioVisualizer extends LyraElement {
     this.resolvedColors = undefined;
     this.ambientDurationMs = undefined;
     this.syncAnalyser();
-    this.bindVisibilityObserver(owner);
     this.lastAmbientDrawMs = 0;
     this.scheduleDraw();
   }
@@ -263,123 +238,11 @@ export class LyraAudioVisualizer extends LyraElement {
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.hostSize = undefined;
-    this.clearDprWatcher();
+    this.stopDprWatch?.();
+    this.stopDprWatch = undefined;
     this.clearMotionWatcher();
-    this.clearVisibilityObserver();
-    this.visible = false;
-    this.visibilityKnown = false;
     this.cancelDrawFrame();
     this.closeAudioContext();
-  }
-
-  override adoptedCallback(): void {
-    super.adoptedCallback();
-    this.clearVisibilityObserver();
-    this.visible = false;
-    this.visibilityKnown = false;
-  }
-
-  /** Binds visibility in the current document. If the platform cannot safely provide an observer,
-   * retain the established eager draw behavior rather than making the visualizer permanently blank. */
-  private bindVisibilityObserver(owner: Window): void {
-    this.clearVisibilityObserver();
-    let IntersectionObserverCtor: typeof IntersectionObserver | undefined;
-    try {
-      IntersectionObserverCtor = (owner as Window & typeof globalThis).IntersectionObserver;
-    } catch {
-      this.restoreImmediateVisibility();
-      return;
-    }
-    if (typeof IntersectionObserverCtor !== 'function') {
-      this.restoreImmediateVisibility();
-      return;
-    }
-
-    this.visible = false;
-    this.visibilityKnown = false;
-    const generation = ++this.intersectionGeneration;
-    let observer: IntersectionObserver | undefined;
-    try {
-      observer = new IntersectionObserverCtor((entries) => {
-        if (
-          generation !== this.intersectionGeneration ||
-          !this.isConnected ||
-          this.ownerDocument.defaultView !== owner ||
-          this.intersectionObserver !== observer
-        ) {
-          return;
-        }
-        const isIntersecting = readIntersectionState(entries, this);
-        if (isIntersecting === undefined) return;
-        const wasPaintable = this.visibilityKnown && this.visible;
-        this.visibilityKnown = true;
-        this.visible = isIntersecting;
-        if (!this.visible) {
-          this.cancelDrawFrame();
-        } else if (!wasPaintable) {
-          this.scheduleDraw();
-        }
-      });
-      this.intersectionObserver = observer;
-      observer.observe(this);
-    } catch {
-      try {
-        observer?.disconnect();
-      } catch {
-        // A broken observer has no further cleanup contract to rely on.
-      }
-      if (generation !== this.intersectionGeneration) return;
-      this.intersectionObserver = undefined;
-      this.intersectionGeneration++;
-      this.restoreImmediateVisibility();
-    }
-  }
-
-  private clearVisibilityObserver(): void {
-    this.intersectionGeneration++;
-    try {
-      this.intersectionObserver?.disconnect();
-    } catch {
-      // A failed disconnect cannot keep its callback current: the generation has already advanced.
-    }
-    this.intersectionObserver = undefined;
-  }
-
-  private restoreImmediateVisibility(): void {
-    this.visible = true;
-    this.visibilityKnown = true;
-  }
-
-  private watchDpr(): void {
-    // A MediaQueryList's `matches` is fixed at creation time, so crossing the DPR threshold it was
-    // built for means building a fresh one for the new ratio — remove the previous instance's
-    // listener first, or it leaks (disconnectedCallback only ever cleans up whichever is current).
-    this.clearDprWatcher();
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || typeof owner.matchMedia !== 'function') return;
-    const query = owner.matchMedia(`(resolution: ${owner.devicePixelRatio}dppx)`);
-    const listener = (): void => {
-      if (
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner ||
-        this.dprQuery !== query
-      ) {
-        return;
-      }
-      this.watchDpr();
-      this.scheduleDraw();
-    };
-    this.dprQuery = query;
-    this.dprChangeListener = listener;
-    query.addEventListener('change', listener);
-  }
-
-  private clearDprWatcher(): void {
-    if (this.dprQuery && this.dprChangeListener) {
-      this.dprQuery.removeEventListener('change', this.dprChangeListener);
-    }
-    this.dprQuery = undefined;
-    this.dprChangeListener = undefined;
   }
 
   private clearMotionWatcher(): void {
@@ -407,6 +270,7 @@ export class LyraAudioVisualizer extends LyraElement {
    *  Clearing `stream` suspends the context (cheap to resume if reassigned soon); `disconnectedCallback`
    *  is what actually closes it. */
   private syncAnalyser(): void {
+    this.nextTrackCheckMs = 0;
     if (!this.isConnected || !this.hasUsableAudioStream) {
       this.sourceNode?.disconnect();
       this.sourceNode = undefined;
@@ -498,13 +362,13 @@ export class LyraAudioVisualizer extends LyraElement {
     if (changed.has('stream') || (changed.has('mode') && this.stream)) this.syncAnalyser();
     this.syncDefaultRole();
     const currentAriaLabel = this.getAttribute('aria-label');
-    const consumerSuppliedAriaLabel = currentAriaLabel !== null && currentAriaLabel !== this.generatedAriaLabel;
+    const consumerSuppliedAriaLabel = currentAriaLabel !== this.generatedAriaLabel &&
+      (currentAriaLabel === '' || normalizeLabel(currentAriaLabel) !== undefined);
     if (consumerSuppliedAriaLabel) {
       this.generatedAriaLabel = undefined;
     } else {
-      const generated = this.label == null
-        ? this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() })
-        : this.label;
+      const generated = this.label === '' ? '' : normalizeLabel(this.label) ??
+        this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() });
       if (currentAriaLabel !== generated) this.setAttribute('aria-label', generated);
       this.generatedAriaLabel = generated;
     }
@@ -538,18 +402,17 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   private scheduleDraw = (): void => {
-    if (!this.visibilityKnown || !this.visible) return;
+    if (!this.visibility.visible) return;
     if (this.drawFrameRequest.pending) return;
     this.drawFrameRequest.schedule((nowMs) => this.drawFrame(nowMs));
   };
 
   private drawFrame(nowMs: number): void {
-    // Belt-and-suspenders alongside `scheduleDraw()`'s own gate: `IntersectionObserver` callbacks
-    // are asynchronously batched, so a frame already in flight when visibility flips off could
-    // otherwise still draw and re-arm itself before the observer's `cancelAnimationFrame` call
-    // catches up. Redraws resume once the observer reports intersecting again via `scheduleDraw()`.
-    if (!this.visibilityKnown || !this.visible) return;
-    if (this.analyser && !this.hasUsableAudioStream) this.syncAnalyser();
+    if (!this.visibility.visible) return;
+    if (this.analyser && nowMs >= this.nextTrackCheckMs) {
+      this.nextTrackCheckMs = nowMs + 500;
+      if (!this.hasUsableAudioStream) this.syncAnalyser();
+    }
     const reduced = this.reducedMotion;
     if (reduced && !this.hasLiveSignal) {
       if (nowMs - this.lastAmbientDrawMs < AMBIENT_REDUCED_MOTION_INTERVAL_MS) {
@@ -571,7 +434,8 @@ export class LyraAudioVisualizer extends LyraElement {
 
   private barsFromTimeDomain(data: Uint8Array, barCount: number): number[] {
     const segmentSize = Math.max(1, Math.floor(data.length / barCount));
-    const bars: number[] = [];
+    const bars = this.amplitudes;
+    bars.length = barCount;
     for (let i = 0; i < barCount; i++) {
       let sumSquares = 0;
       const start = i * segmentSize;
@@ -580,7 +444,7 @@ export class LyraAudioVisualizer extends LyraElement {
         const norm = (data[j]! - 128) / 128;
         sumSquares += norm * norm;
       }
-      bars.push(Math.sqrt(sumSquares / Math.max(1, end - start)));
+      bars[i] = Math.sqrt(sumSquares / Math.max(1, end - start));
     }
     return bars;
   }
@@ -591,23 +455,26 @@ export class LyraAudioVisualizer extends LyraElement {
    *  collapses to a flat mid-height pattern (never a frozen mid-sweep frame). */
   private ambientAmplitudes(nowMs: number, reduced: boolean): number[] {
     const n = this.mode === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
+    const amplitudes = this.amplitudes;
+    amplitudes.length = n;
     const phase = reduced ? 0 : finiteNumber(nowMs, 0) / this.resolveAmbientDuration();
     switch (this.state) {
       case 'listening':
       case 'speaking': {
         const pulse = reduced ? 0.3 : 0.25 + 0.15 * Math.sin(phase * 2 * Math.PI);
-        return new Array(n).fill(pulse);
+        return amplitudes.fill(pulse);
       }
       case 'thinking': {
-        if (reduced) return new Array(n).fill(0.3);
-        return Array.from({ length: n }, (_, i) => {
-          const pos = phase % 1;
+        if (reduced) return amplitudes.fill(0.3);
+        const pos = phase % 1;
+        for (let i = 0; i < n; i++) {
           const dist = Math.abs(i / (n - 1 || 1) - pos);
-          return 0.15 + 0.35 * Math.max(0, 1 - dist * 4);
-        });
+          amplitudes[i] = 0.15 + 0.35 * Math.max(0, 1 - dist * 4);
+        }
+        return amplitudes;
       }
       default:
-        return new Array(n).fill(0.08);
+        return amplitudes.fill(0.08);
     }
   }
 
@@ -624,15 +491,25 @@ export class LyraAudioVisualizer extends LyraElement {
     return this.ambientDurationMs;
   }
 
-  private currentAmplitudes(nowMs: number): number[] {
+  private currentAmplitudes(nowMs: number, maxPoints = Infinity): number[] {
     if (this.analyser && this.timeDomainData && this.audioCtx?.state === 'running') {
       this.analyser.getByteTimeDomainData(this.timeDomainData);
-      if (this.mode === 'waveform') return Array.from(this.timeDomainData, (v) => (v - 128) / 128);
+      if (this.mode === 'waveform') {
+        const data = this.timeDomainData;
+        const count = Math.min(data.length, maxPoints);
+        this.amplitudes.length = count;
+        for (let i = 0; i < count; i++) {
+          const index = Math.floor(i * (data.length - 1) / Math.max(1, count - 1));
+          this.amplitudes[i] = (data[index]! - 128) / 128;
+        }
+        return this.amplitudes;
+      }
       return this.barsFromTimeDomain(this.timeDomainData, this.effectiveBarCount);
     }
     if (this.effectiveLevel != null) {
       const n = this.mode === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
-      return new Array(n).fill(this.effectiveLevel);
+      this.amplitudes.length = n;
+      return this.amplitudes.fill(this.effectiveLevel);
     }
     return this.ambientAmplitudes(nowMs, this.reducedMotion);
   }
@@ -683,7 +560,7 @@ export class LyraAudioVisualizer extends LyraElement {
 
     this.resolvedColors ??= this.resolveColors();
     const { active: activeColor, quiet: quietColor } = this.resolvedColors;
-    const amplitudes = this.currentAmplitudes(nowMs);
+    const amplitudes = this.currentAmplitudes(nowMs, Math.max(1, backingW));
     const active =
       this.hasLiveSignal ||
       this.state === 'listening' ||

@@ -1,5 +1,5 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -15,9 +15,10 @@ export const styles = css`
     --_lr-markdown-max-height: none;
   }
   [part='content'] {
-    min-block-size: var(--lr-icon-button-size);
+    --_lr-markdown-content-min-size: var(--lr-markdown-content-min-size, var(--lr-icon-button-size));
+    min-block-size: var(--_lr-markdown-content-min-size);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
+    min-inline-size: var(--_lr-markdown-content-min-size);
     max-inline-size: 100%;
     max-block-size: var(--lr-markdown-max-height, var(--_lr-markdown-max-height));
     overflow-inline: auto;
@@ -268,7 +269,7 @@ export const styles = css`
     background-color: var(--lr-markdown-highlight-danger-bg, var(--lr-color-danger-quiet));
   }
   ::highlight(lr-highlight-neutral) {
-    background-color: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface));
+    background-color: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface-raised));
   }
   ::highlight(lr-highlight-active) {
     background-color: var(--lr-markdown-highlight-active-bg, var(--lr-color-brand-quiet));
@@ -289,7 +290,7 @@ export const styles = css`
     background: var(--lr-markdown-highlight-danger-bg, var(--lr-color-danger-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='neutral'] {
-    background: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface));
+    background: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface-raised));
   }
   [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
     outline: var(--lr-border-width-thin) solid var(--lr-markdown-highlight-active-outline-color, var(--lr-color-brand));
@@ -335,9 +336,10 @@ export const styles = css`
     ${iconHitTarget}
     ${iconAction}
     flex-shrink: 0;
-    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    --_lr-icon-button-background-default: var(--lr-markdown-code-copy-bg, transparent);
+    --_lr-icon-button-background-hover-default: var(--lr-markdown-code-copy-bg-hover, var(--lr-color-brand-quiet));
     --_lr-icon-button-color-hover-default: var(--lr-color-brand);
-    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-icon-button-background-active-default: var(--lr-markdown-code-copy-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]) svg {
     inline-size: var(--lr-size-1em);

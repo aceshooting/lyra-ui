@@ -169,7 +169,7 @@ it('surfaces the chunk inspector lr-toggle, without the removed lr-chunk-toggle 
   for (const type of ['lr-chunk-toggle', 'lr-expand'])
     el.addEventListener(type, () => seen.push(type));
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen).to.deep.equal(['toggle:{"section":"chunks","expanded":true,"itemId":"ch1"}']);
+  expect(seen).to.deep.equal(['toggle:{"kind":"chunk","section":"chunks","expanded":true,"itemId":"ch1"}']);
 });
 
 it('forwards provenance and types to lr-provenance-panel', async () => {
@@ -415,7 +415,8 @@ it('names the overall dossier independently of the compatibility tab-strip name'
   expect(base().getAttribute('aria-label')).to.equal('');
   el.setAttribute('aria-label', 'Host record');
   await el.updateComplete;
-  expect(base().getAttribute('aria-label')).to.equal('Host record');
+  expect(base().hasAttribute('aria-label')).to.equal(false);
+  expect(base().hasAttribute('role')).to.equal(false);
   expect(tabs().getAttribute('aria-label')).to.equal(null);
   el.setAttribute('aria-label', '');
   await el.updateComplete;
@@ -441,7 +442,7 @@ it('qualifies the supporting inspector toggle once, without the removed lr-chunk
   el.addEventListener('lr-toggle', (event) => toggles.push(event.detail));
   el.addEventListener('lr-chunk-toggle', (event) => legacy.push((event as CustomEvent).detail));
   inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-  expect(toggles).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(toggles).to.deep.equal([{ kind: 'chunk', section: 'chunks', expanded: true, itemId: 'ch1' }]);
   expect(legacy).to.deep.equal([]);
 });
 
@@ -456,4 +457,22 @@ it('leaves descendant toggles distinct from the inspector-owned disclosure event
     bubbles: true, composed: true, detail: { expanded: true, itemId: 'nested' },
   }));
   expect(seen).to.deep.equal([{ expanded: true, itemId: 'nested' }]);
+});
+
+it("contains the inner tab group's raw lr-tab-hide when the user switches tabs", async () => {
+  const el = await populated();
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
+  await tabs.updateComplete;
+  const hidden: unknown[] = [];
+  const onHide = (event: Event) => hidden.push((event as CustomEvent).detail);
+  document.addEventListener('lr-tab-hide', onHide);
+  try {
+    const chunksTab = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].find((b) => b.textContent!.trim() === 'Retrieved chunks') as HTMLButtonElement;
+    const shown = oneEvent(el, 'lr-tab-show');
+    chunksTab.click();
+    await shown;
+    expect(hidden.length).to.equal(0);
+  } finally {
+    document.removeEventListener('lr-tab-hide', onHide);
+  }
 });

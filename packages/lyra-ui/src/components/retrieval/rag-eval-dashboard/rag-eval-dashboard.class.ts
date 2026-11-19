@@ -13,7 +13,6 @@ import {
   isNonBlankIdentity,
   isRecord,
 } from '../retrieval-identity.js';
-import { finiteRange } from '../../../internal/numbers.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import '../../charts/chart/lite-chart.class.js';
 import '../../data/stat/stat.class.js';
@@ -25,7 +24,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardInputLimit, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices, LYRA_DEFAULT_ragEvalDashboardSlicesLimit } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardInputLimit, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardMetricUnavailable, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices, LYRA_DEFAULT_ragEvalDashboardSlicesLimit } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_noData, LYRA_DEFAULT_ragEvalDashboardRunsLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -104,6 +103,7 @@ const MAX_SLICE_CONTROLS = 500;
  * @csspart metric-selected - The controlled active metric.
  * @csspart metric-category - The metric's caller-supplied category label.
  * @csspart chart - The active metric trend.
+ * @csspart metric-unavailable - Shown when a controlled `metricId` matches no metric.
  * @csspart runs - Evaluation run history.
  * @csspart runs-heading - Run-history heading.
  * @csspart run - One evaluation run.
@@ -126,6 +126,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     ragEvalDashboardLabel: LYRA_DEFAULT_ragEvalDashboardLabel,
     ragEvalDashboardRuns: LYRA_DEFAULT_ragEvalDashboardRuns,
     ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
+    ragEvalDashboardMetricUnavailable: LYRA_DEFAULT_ragEvalDashboardMetricUnavailable,
     ragEvalDashboardSliceUnavailable: LYRA_DEFAULT_ragEvalDashboardSliceUnavailable,
     ragEvalDashboardSlices: LYRA_DEFAULT_ragEvalDashboardSlices,
     ragEvalDashboardSlicesLimit: LYRA_DEFAULT_ragEvalDashboardSlicesLimit,
@@ -300,7 +301,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   ): string {
     if (raw === undefined || !Number.isFinite(raw)) return this.localize('noData');
     if (metric.format === 'percent') {
-      return formatAdaptiveShare(this.effectiveLocale, finiteRange(raw, 0, 0, 1));
+      return formatAdaptiveShare(this.effectiveLocale, raw);
     }
     return getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 3,
@@ -472,6 +473,12 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
             `;
           })}
         </div>
+        ${!active && this.metricId
+          ? html`<lr-empty
+              part="metric-unavailable"
+              heading=${this.localize('ragEvalDashboardMetricUnavailable', undefined, { metric: this.metricId })}
+            ></lr-empty>`
+          : nothing}
         ${!this.withoutChart && active && renderedRuns.length
           ? html`
               <div part="chart">
@@ -495,10 +502,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
               </div>
             `
           : nothing}
-        <section
-          part="runs"
-          aria-label=${this.localize('ragEvalDashboardRuns')}
-        >
+        <section part="runs">
           <div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('ragEvalDashboardRuns')}</div>
           ${renderedRuns.map(
             (run, index) => html`

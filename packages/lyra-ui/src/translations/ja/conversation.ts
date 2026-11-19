@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: '出典を追加',
   promptInputLabel: 'AI プロンプト',
   promptInputControls: 'プロンプトのオプション',
+  promptInputCollectionLimit: '入力上限に達したため、プロンプト入力の一部が省略されました。',
   promptInputSources: 'ソース',
   promptInputAttachments: '添付ファイル',
   handoffLabel: 'エージェントの引き継ぎ',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: '利用できる音声がありません',
   voicePickerRequired: '音声を選択してください。',
   voicePickerPreview: '{name} を試聴',
+  voicePickerPreviewFailed: '音声を試聴できません。',
   voicePickerStopPreview: '試聴を停止',
   realtimeSessionLabel: 'リアルタイムセッション',
   realtimeSessionDisconnected: '切断',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: '長いコードはシンタックスハイライトなしで表示されます。',
   codeBlockHighlightedLine: 'ハイライトされた行',
   codeBlockActiveLine: 'アクティブなハイライト行',
+  codeBlockToggle: 'コードの表示を切り替える',
 };
 
 registerLyraLocale('ja', strings);

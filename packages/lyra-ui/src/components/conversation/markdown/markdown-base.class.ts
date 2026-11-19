@@ -1,5 +1,6 @@
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { PropertyValues, TemplateResult } from 'lit';
+import { resolveIsDarkTheme } from '../code-block/shiki-dark-theme.js';
 import { normalizeShikiLanguage } from '../code-block/shiki-types.js';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -70,7 +71,6 @@ import {
   renderMarkdownContent,
   renderMarkdownDocument,
   repaintMarkdownHighlights,
-  resolveMarkdownDarkTheme,
   setCachedHighlight,
   type MarkdownHeadingItem,
   type MarkdownHtmlMode,
@@ -304,7 +304,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       getContentRoot: () => this.contentRoot(),
       localize: this.boundLocalize,
       buildHeader: (frame, language) => renderMarkdownCodeHeader(frame, language),
-      emit: (name, detail) => this.emit(name, detail ?? null),
+      emit: (name: 'lr-copy' | 'lr-error' | 'lr-copy-error', detail) => this.emit(name, detail ?? null),
     });
   }
 
@@ -315,7 +315,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   /** Recomputes Shiki palette selection after an imperative theme change. */
   refreshTheme(): void {
-    this.isDarkTheme = resolveMarkdownDarkTheme(this);
+    this.isDarkTheme = resolveIsDarkTheme(this);
   }
 
   private readonly teardown = new DeferredTeardown(() => this.releaseHighlightState());
@@ -415,7 +415,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       if (this.progressiveAdopted) { this.progressiveSession?.resume(); this.progressiveAdopted = false; }
       this.progressiveSession?.update(this.content ?? '');
       if (this.progressiveSession) this.syncProgressiveMarkdown();
-      this.scheduleStreamingRender();
+      if (progressive) this.scheduleStreamingRender();
+      else {
+        this.cancelStreamingRender();
+        this.renderMarkdown();
+      }
     } else {
       this.cancelStreamingRender();
       if (changed.has('content') && !changed.has('streaming') || configurationChanged) this.resetProgressiveMarkdown();

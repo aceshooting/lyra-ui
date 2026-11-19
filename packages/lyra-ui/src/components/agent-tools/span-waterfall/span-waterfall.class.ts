@@ -1,3 +1,5 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
+import { niceStep, boundedTicks } from '../../../internal/chart-ticks.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
@@ -5,9 +7,9 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -60,38 +62,6 @@ const STATUS_TONE: Record<LyraSpan['status'], string> = {
   unknown: 'neutral',
 };
 
-/** Nice-numbers step (1/2/5 x 10^n) for axis tick spacing — the same small
- *  algorithm used by this library's own chart axis code, duplicated locally
- *  rather than imported since that implementation is a private module
- *  function there, not a shared export. */
-function niceStep(span: number, count: number): number {
-  if (span <= 0) return 1;
-  const rough = span / Math.max(1, count);
-  const magnitude = 10 ** Math.floor(Math.log10(rough));
-  const residual = rough / magnitude;
-  const niceResidual = residual < 1.5 ? 1 : residual < 3 ? 2 : residual < 7 ? 5 : 10;
-  return niceResidual * magnitude;
-}
-
-function axisTicks(start: number, end: number, count = 5): number[] {
-  const step = niceStep(end - start, count);
-  if (!Number.isFinite(step) || step <= 0) return [start, end];
-  const first = Math.ceil(start / step) * step;
-  if (!Number.isFinite(first)) return [start, end];
-  const ticks: number[] = [];
-  // Index-based and explicitly bounded: additive stepping can stop making forward progress near
-  // Number.MAX_VALUE and would otherwise hang the render loop forever.
-  for (let index = 0; index <= count + 2; index++) {
-    const value = first + index * step;
-    if (!Number.isFinite(value) || value > end + step / 2) break;
-    const rounded = Math.round(value / step) * step;
-    if (Number.isFinite(rounded) && (ticks.length === 0 || rounded > ticks[ticks.length - 1]!)) {
-      ticks.push(rounded);
-    }
-  }
-  return ticks;
-}
-
 interface ViewWindow {
   start: number;
   end: number;
@@ -112,7 +82,7 @@ export interface LyraSpanWaterfallEventMap {
  * display schema; later rendering never re-reads an admitted source row. Create a new collection
  * and reassign it after changes; mutating the assigned array does not update the view.
  *
- * The time axis always scales to the whole trace, including spans the 500-row ceiling drops, so a
+ * The time axis always scales to the whole trace, including spans the row ceiling drops, so a
  * truncated tail never stretches the surviving bars across the track.
  *
  * With treeSource defined, provider preorder and child metadata replace local sorting/topology.
@@ -142,7 +112,7 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart status-text - The visible status label.
  * @csspart duration - The formatted duration text.
  * @csspart empty - The empty-state message shown when `spans` is empty.
- * @csspart limit - Localized shown/source count when the 500-span projection or 10,000-input ceiling is reached.
+ * @csspart limit - Localized shown/source count when the span projection or 10,000-input ceiling is reached.
  * @cssprop [--lr-span-waterfall-name-width=8rem] - Width of the name gutter column.
  * @cssprop [--lr-span-waterfall-stripe-speed=var(--lr-duration-ambient)] - Animation duration for a
  *   `running` span's striped bar. The fallback is the bare-duration `--lr-duration-ambient`, not the
@@ -206,6 +176,11 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  /** Outer frame. Defaults to `plain`. */
+  @property({ reflect: true }) frame: LyraFrame = 'plain';
+  /** Layout density. Small sizes use compact spacing. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
@@ -223,17 +198,18 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private readonly sourceSummaries = new WeakMap<object, Readonly<LyraTraceSourceSummary> & { readonly current: () => boolean }>();
   private sourceAnnouncement?: string;
   private sourceReveal?: readonly [number, string];
-  private readonly sourceControl = new HierarchySourceController<LyraSpan>(this, {
-    normalize: (value, key) => this.normalizeSourceSpan(value, key),
-    payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
-      unitsOf: span => span.id.length + span.name.length },
-    onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
-    accepted: (action, _row, _state, current) => {
-      if (!current() || this.treeSource === undefined) return;
-      if (action.type === 'select') this.emit('lr-span-select', { spanId: action.key });
-    },
-  });
-
+  private provider?: HierarchySourceController<LyraSpan>;
+  private get sourceControl(): HierarchySourceController<LyraSpan> {
+    return this.provider ??= new HierarchySourceController(this, {
+      normalize: (value, key) => this.normalizeSourceSpan(value, key),
+      payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
+        unitsOf: span => span.id.length + span.name.length },
+      onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
+      accepted: (action) => {
+        if (action.type === 'select') this.emit('lr-span-select', { spanId: action.key });
+      },
+    });
+  }
   /** Immutable provider preorder; defined sources win over spans, even when invalid.
    * Four 100-row pages and one focused row are retained; at most 301 rows mount.
    * Provider metadata owns topology and selection, and summary owns the complete timing extent.
@@ -257,7 +233,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private syncSource(force = false): void {
-    this.sourceControl?.update(this.sourceWrapper, this.effectiveLocale, force,
+    const control = this.sourceWrapper === undefined ? this.provider : this.sourceControl;
+    control?.update(this.sourceWrapper, this.effectiveLocale, force,
       SOURCE_QUERY);
   }
 
@@ -359,7 +336,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order).
    * Retains the first 10,000 source entries by identity; the closed span projection avoids the
    * shared 50,000-value deep-copy budget. The default rendered window remains 500 spans.
-   *  The controlled `activeSpanId` reserves a position inside the shared 500-row ceiling. Foreign
+   *  The controlled `activeSpanId` reserves a position inside the projected window. Foreign
    *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
@@ -376,6 +353,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   @property() label?: string;
 
   private focusedId: string | null = null;
+  /** Maximum array-mode span rows, clamped to 1–5000. The active span retains its place. */
+  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 500;
+
+  private sortedLimit = 0;
   private sortedSource?: readonly LyraSpan[];
   private sortedActiveSpanId: string | null = null;
   private sortedProjection?: readonly LyraSpan[];
@@ -416,15 +397,17 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.sourceVersion++;
     this.sourceReveal = undefined;
     this.sourceAnnouncement = undefined;
-    this.sourceControl.adopted();
+    this.provider?.adopted();
     this.syncSource(true);
   }
 
   private sortedSpans(): LyraSpan[] {
-    if (this.sortedSource === this.spans && this.sortedActiveSpanId === this.activeSpanId) return this.sortedCache;
+    const limit = Math.max(1, Math.min(5000, finiteCount(this.maxNodes, 500)));
+    if (this.sortedLimit === limit && this.sortedSource === this.spans && this.sortedActiveSpanId === this.activeSpanId) return this.sortedCache;
+    this.sortedLimit = limit;
     this.sortedSource = this.spans;
     this.sortedActiveSpanId = this.activeSpanId;
-    const projection = projectLyraSpans(this.spans, this.activeSpanId);
+    const projection = projectLyraSpans(this.spans, this.activeSpanId, limit);
     this.sortedCacheTruncated = projection.truncated || publicCollectionTruncation(this, 'spans') !== undefined;
     this.sortedCacheExtentEndMs = projection.extentEndMs;
     if (this.sortedProjection === projection.spans) return this.sortedCache;
@@ -441,13 +424,13 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     // past MAX_RENDERED_LYRA_SPANS the surviving rows are the EARLIEST ones, so reducing over them
     // shortened the axis to the truncated head and stretched every bar to fill the track -- a 1s
     // span in a 10s trace drew at 100% width with nothing to indicate it.
-    const projection = this.sourceControl.projection;
+    const projection = this.provider?.projection;
     const summary = this.treeSource !== undefined && projection ? this.sourceSummaries.get(projection.rows) : undefined;
     if (this.treeSource === undefined) this.sortedSpans();
     const fallbackStart = summary?.startMs ?? 0;
     const fallbackEnd = summary?.endMs ?? (this.treeSource === undefined ? Math.max(finiteNumber(this.sortedCacheExtentEndMs, 0), 1) : 1);
     // `null` means "fit the whole trace"; a non-null-but-NaN value (a bad attribute) falls back
-    // to that same default instead of flowing NaN into axisTicks()/barGeometry(). Both bounds are
+    // to that same default instead of flowing NaN into axis or bar geometry. Both bounds are
     // trace-relative ms, so never negative (min 0), mirroring `LyraSpan.startMs`'s own contract.
     const start = this.viewStartMs == null
       ? fallbackStart
@@ -509,23 +492,15 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     if (rows.length === 0) return;
     const currentIndex = rows.findIndex((s) => s.id === this.focusedId);
     const idx = currentIndex >= 0 ? currentIndex : 0;
+    const next = resolveListMove(e.key, {
+      count: rows.length, current: idx, orientation: 'vertical', wrap: false, clamp: true, backwardFromMissing: 'first',
+    });
+    if (next !== null) {
+      e.preventDefault();
+      this.focusRow(rows[next]);
+      return;
+    }
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.focusRow(rows[Math.min(rows.length - 1, idx + 1)]);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.focusRow(rows[Math.max(0, idx - 1)]);
-        break;
-      case 'Home':
-        e.preventDefault();
-        this.focusRow(rows[0]);
-        break;
-      case 'End':
-        e.preventDefault();
-        this.focusRow(rows[rows.length - 1]);
-        break;
       case 'Enter':
       case ' ':
         e.preventDefault();
@@ -542,7 +517,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.focusWasInside = captureComposedFocusRepair(this, this) !== null;
-    this.syncSource();
+    if (this.treeSource !== undefined) this.syncSource();
     if (this.treeSource !== undefined) return;
     if (changed.has('treeSource')) {
       this.sourceAnnouncement = undefined;
@@ -551,6 +526,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }
     if (
       changed.has('spans')
+      || changed.has('maxNodes')
       || changed.has('viewStartMs')
       || changed.has('viewEndMs')
       || changed.has('activeSpanId')
@@ -687,7 +663,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private renderAxis(view: ViewWindow): TemplateResult {
-    const ticks = axisTicks(view.start, view.end);
+    const ticks = boundedTicks(view.start, view.end, niceStep(view.end - view.start, 5), 8);
     return html`
       <div part="axis" aria-hidden="true">
         ${ticks.map((t) => {

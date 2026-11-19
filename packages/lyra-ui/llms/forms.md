@@ -1525,6 +1525,9 @@ The date-picker class module also exports three helpers from
 - `inclusiveDayCount(from: Date, to: Date): number` counts calendar days between valid dates in
   either order, including both endpoints and avoiding daylight-saving-hour differences.
 
+`lr-date-input` forwards its `strings` to the popup calendar, so `previousMonth`/`nextMonth`
+relabel its navigation; the popup's `view` and `focused-date` stay internal.
+
 For `lr-date-input`, host `aria-describedby` targets resolve in the host's root and describe the
 native combobox input through element references, before its existing error and hint descriptions.
 Replacement, removal, reinsertion, newly resolved IDs, reconnect, and adoption update those
@@ -1671,13 +1674,16 @@ RTL), Home/End move to the first/last enabled period in the current page, and En
 into the focused period. Moving beyond a selection-grid edge opens the adjacent period page;
 disabled periods never receive the roving focus. A period is enabled only when it contains at least
 one date selectable under the active bounds, past/future limits, disabled dates/weekdays, predicate,
-and pending-range limits; activating an unavailable period is a no-op.
+and pending-range limits; activating an unavailable period is a no-op. The previous and next
+buttons announce the displayed month or period titles. The cell for today, or for the period
+containing today, carries `aria-current="date"` independently of the selection.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
-values. Their typed aliases `lr-input` and `lr-change` carry `{ value }` after the corresponding
+values. Their typed aliases `lr-input` and `lr-change` carry `{ value, previousValue }` after the corresponding
 native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
-`lr-clear` (no detail) follows `clear()`'s `input`/`change`.
+`lr-clear` (no detail) follows `clear()`'s `input`/`change`. A date input keeps the embedded calendar's
+`lr-view-change` inside its popup.
 
 **Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
 `day-YYYY-MM-DD` slot is also accepted as a Lyra extension and takes precedence over `dayContent`.
@@ -1824,9 +1830,9 @@ access.
 internal native date input.
 
 **Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
-`lr-input` and `lr-change` carry `{ value }`. `focus`/`blur` are
+`lr-input` and `lr-change` carry `{ value, previousValue }` in ISO form. During an uncommitted text edit both refer to the committed date. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
-bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
+bubbling, composed, and non-cancelable. Method calls and live `open` property or attribute changes emit cancelable `lr-show`/`lr-hide` requests.
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
 settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
 it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open
@@ -2701,6 +2707,10 @@ Only when none of them supplies one does it fall back to the localized `iconButt
 rather than being empty — override it per instance with `.strings` or app-wide with
 `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a button whose purpose
 isn't generic. Slotted content is re-checked on `slotchange`, not on text edits inside it.
+
+For icon-only toggles (mute, favorite, pin), assign the non-reflected `pressed` property (`true`,
+`false`, `'mixed'` or `null`), as on `lr-button`; it renders `aria-pressed` on the internal
+`<button>` and wins over a host `aria-pressed` attribute.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
@@ -4394,7 +4404,7 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-change` (`detail: { value }`) — fired only when the selected value actually
+**Events:** `lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
 `lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
 Arrow/Home/End key that lands on one), whether or not the selection actually moved. Bubbling,
@@ -4418,6 +4428,7 @@ follows `size` —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
 place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
 glyph fills the wrapper; the wrapper is inert and aria-hidden across the flattened subtree).
+A selected custom icon keeps an outline in the selected color, including when its glow is zero.
 Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the
@@ -6565,9 +6576,9 @@ unchanged.
 and names both the trigger and dialog; a host `aria-label` remains the strongest naming override.
 
 **Events:** each serialized value-changing edit emits a bubbling/composed native `InputEvent` named
-`input`, followed by the no-detail `lr-input` compatibility alias. A completed interaction emits
+`input`, followed by `lr-input` with `{ value, previousValue }` for that edit. A completed interaction emits
 one bubbling/composed native `Event` named `change`, followed by `lr-change` with
-`detail: { value }`. The commit pair occurs on pointer release, key release, swatch click, an
+`detail: { value, previousValue }`. On commit, `previousValue` is the value at the start of the interaction. The commit pair occurs on pointer release, key release, swatch click, an
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
 Pointer drags are reversible previews: `pointercancel`, lost pointer capture, mid-gesture
@@ -6701,7 +6712,8 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
   `var(--lr-color-surface)`.
 - `--lr-color-picker-swatch-disabled-opacity` — Opacity of a palette swatch whose own entry sets
-  `disabled`. Default: `0.5`.
+  `disabled`. Default: `var(--lr-opacity-disabled)`.
+- `::part(swatch-check)` — The check-mark icon inside the selected palette swatch.
 
 ```html
 <lr-color-picker
@@ -6819,8 +6831,8 @@ focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCusto
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`; both aliases carry `detail: { value, previousValue }`. `lr-load-error` (no detail,
+**Events:** selecting a different emoji emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows any value events. `lr-load-error` (no detail,
 non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
@@ -6832,8 +6844,8 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox: the arrow keys and Enter also work while focus stays in
-the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. ArrowUp and ArrowDown navigate results, Enter picks, and
+ArrowLeft and ArrowRight move the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
@@ -6888,6 +6900,8 @@ frame. `--lr-emoji-picker-search-min-height` (default `auto`),
 field. `size` does NOT drive them — on this component `size` scales the emoji glyph and item box,
 never the form-control ladder — so point the height at `--lr-form-control-height-s` (or any tier of
 that ladder) when the filter field has to match a themed search field beside it.
+`--lr-emoji-picker-grid-max-height` (default `var(--lr-size-16rem)`) caps the scrolling grid's
+block size.
 
 Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-bg`, `--lr-emoji-picker-selected-bg`/
@@ -6895,7 +6909,9 @@ Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-outline-color`,
 `--lr-emoji-picker-selected-outline-color`, and
 `--lr-emoji-picker-pressed-outline-color` hooks for active, selected, and pressed. The legacy
-`--lr-emoji-picker-active-bg` remains the fallback for hover and keyboard-active. These are inline
+`--lr-emoji-picker-active-bg` remains the fallback for hover and keyboard-active. Hovering or
+pressing a selected or keyboard-active cell mixes from that cell's own fill unless the hover or
+pressed hook is set. These are inline
 `var()` fallbacks rather than host declarations, so values set on any ancestor remain effective.
 The committed form `value` alone drives `aria-selected`; roving focus and pointer navigation use
 `data-active`, so moving through the grid never falsely changes selection. Forced-colors mode also
@@ -7013,8 +7029,8 @@ extra host controls rendered in the footer beside Submit/Skip.
 **Rebinding:** re-binding the same `keys`, `value` or `defaultValue` object (every Lit parent render does) is ignored, so the reviewer's entries survive; assign a new object to replace the value.
 
 **Events:** rubric-owned native `input` and `change` notifications precede their `lr-input`
-(`detail: { value }`) and `lr-change` (`detail: { value }` after a user commit) aliases;
-the native events carry no detail, so read the aggregate `event.target.value`.
+and `lr-change` aliases. Both carry `{ value, previousValue }` snapshots of the aggregate form.
+The native events carry no detail, so read the aggregate `event.target.value`.
 `lr-validity-change` (frozen
 `detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
 errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
@@ -7037,7 +7053,8 @@ clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
 so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
 `focus(options?)` moves focus to that same active field, matching `click()`'s target; this is also
-what lets the native `autofocus` attribute reach the rubric.
+what lets the native `autofocus` attribute reach the rubric. Call `blur()` to release focus from
+the currently focused editor.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `form-control` (aggregate chrome wrapper),
 `aggregate-label` / `form-control-label`, `fields` / `form-control-input`, `aggregate-hint` /
@@ -8075,6 +8092,11 @@ granular component directory. These lean entries register the picker alone; impo
 and `lr-option.js` for both ordinary and searchable controls. The searchable `lr-combobox` loads when needed
 without registering option itself.
 The default picker entries register select and option synchronously.
+
+Listen on the country picker in compact or searchable mode for `lr-show` and `lr-hide` requests
+and their settled `lr-after-show` and `lr-after-hide` events. Cancel an ordinary popup request
+with `preventDefault()`. `lr-activate` carries the activated country code in `detail.value`,
+including a repeated pick. `lr-clear` fires when the clear button empties the selection.
 
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
 trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts

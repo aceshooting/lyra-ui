@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Pesa citation',
   promptInputLabel: 'Prompt ya AI',
   promptInputControls: 'Ba option ya prompt',
+  promptInputCollectionLimit: 'Balongoli ndambo ya makambo oyo okɔtisaki na prompt mpo motango ya kokɔtisa ekómi na ndelo.',
   promptInputSources: 'Ba source',
   promptInputAttachments: 'Ba pièce jointe',
   handoffLabel: 'Transfert ya agent',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Mongongo ezali te',
   voicePickerRequired: 'Pona mongongo.',
   voicePickerPreview: 'Prévisualiser {name}',
+  voicePickerPreviewFailed: 'Prévisualisation ya mongongo ezali te.',
   voicePickerStopPreview: 'Telemisa prévisualisation',
   realtimeSessionLabel: 'Session ya ntango ya solo',
   realtimeSessionDisconnected: 'Connexion elongolami',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Code ya molai emonisami kozanga kokesenisa syntaxe na balangi.',
   codeBlockHighlightedLine: 'Molongo emonisami makasi',
   codeBlockActiveLine: 'Molongo emonisami makasi ezali kosala',
+  codeBlockToggle: 'Lakisa to bomba code',
 };
 
 registerLyraLocale('ln', strings);

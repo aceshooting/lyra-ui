@@ -9,6 +9,7 @@ import type {
 } from './prompt-studio.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
@@ -20,6 +21,51 @@ const reorderMessages: PromptStudioMessage[] = [
   { id: 'user', role: 'user', content: 'Explain the tradeoff.' },
   { id: 'assistant', role: 'assistant', content: 'I will compare both options.' },
 ];
+
+it('warns about a large workspace while keeping every message editable and savable', async () => {
+  const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio></lr-prompt-studio>`);
+  const notice = () => el.shadowRoot!.querySelector('[part="size-notice"][role="note"]')?.textContent;
+  const text = 'This workspace contains 501 rows. Large workspaces may respond slowly.';
+  expect(notice()).to.equal(undefined);
+  el.messages = Array.from({ length: 501 }, (_, index) => ({
+    id: `message-${index}`, role: 'user', content: `Message ${index + 1}`,
+  }));
+  await el.updateComplete;
+  expect(notice()).to.equal(text);
+  await waitUntil(() => sinkTexts().includes(text), 'workspace size announcement');
+  const controls = el.shadowRoot!.querySelectorAll<HTMLTextAreaElement>('[part="message-content"]');
+  expect(controls.length).to.equal(501);
+  controls[500]!.value = 'Edited';
+  controls[500]!.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+  const saved = oneEvent(el, 'lr-save');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="save"]')!.click();
+  const detail = (await saved).detail as { messages: readonly PromptStudioMessage[] };
+  expect(detail.messages.length).to.equal(501);
+  expect(detail.messages[500]!.content).to.equal('Edited');
+  el.messages = el.messages.slice(0, 500);
+  await el.updateComplete;
+  expect(notice()).to.equal(undefined);
+});
+
+it('announces changes to the workspace advisory in the adopted document', async () => {
+  const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio></lr-prompt-studio>`);
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const otherDocument = iframe.contentDocument!;
+    otherDocument.body.append(el);
+    await el.updateComplete;
+    el.strings = { promptStudioLargeWorkspace: 'Workspace rows: {count}' };
+    el.versions = Array.from({ length: 501 }, (_, index) => ({ id: `v${index}`, label: `Version ${index}`, messages: [] }));
+    await el.updateComplete;
+    await waitUntil(() => sinkTexts('polite', otherDocument).includes('Workspace rows: 501'), 'adopted workspace announcement');
+    expect(sinkTexts().includes('Workspace rows: 501')).to.equal(false);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
+});
 
 it('treats not-yet-loaded null collections as empty', async () => {
   const el = document.createElement('lr-prompt-studio') as LyraPromptStudio;

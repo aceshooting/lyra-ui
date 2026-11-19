@@ -52,3 +52,21 @@ it('keeps focus on the remaining content when the final action disappears', asyn
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('status');
 });
+
+it('ignores inherited prototype members when looking up status labels, tones and step states', async () => {
+  const steps = [{ id: 's1', kind: 'tool', label: 'One', status: { kind: 'toString' } }];
+  const el = await fixture<LyraAgentRun>(html`<lr-agent-run
+    .run=${{ id: 'r', status: { kind: 'constructor' }, startedAt: 1, endedAt: 2, steps }}
+    .statusLabels=${{ custom: 'Custom' }}
+    .statusVariants=${{ custom: 'warning' }}
+  ></lr-agent-run>`);
+  const badge = el.shadowRoot!.querySelector('[part="status-badge"]')!;
+  expect(badge.textContent?.trim()).to.equal('Constructor');
+  expect(badge.getAttribute('variant')).to.equal('neutral');
+  const list = el.shadowRoot!.querySelector('lr-task-list')!;
+  expect(list.items.map((item) => item.status)).to.deep.equal(['pending']);
+  el.run = { id: 'r', status: { kind: 'custom' }, startedAt: 1, endedAt: 2, steps: [] };
+  await el.updateComplete;
+  expect(badge.textContent?.trim()).to.equal('Custom');
+  expect(badge.getAttribute('variant')).to.equal('warning');
+});

@@ -23,6 +23,10 @@ export const Default: Story = {
   `,
 };
 
+export const UnavailableMetric: Story = {
+  render: () => html`<lr-agent-eval-dashboard metric-id="accuracy" .metrics=${metrics} .runs=${runs}></lr-agent-eval-dashboard>`,
+};
+
 export const Narrow320: Story = {
   name: 'Narrow (320px, long content)',
   render: () => html`

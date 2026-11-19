@@ -3,7 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { labelWithVisibleText, normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import type { LyraFrame } from '../../../internal/variants.js';
@@ -155,6 +155,7 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * @cssprop [--lr-media-card-bg=var(--lr-color-surface)] - Background of the RESTING `frame="card"`
  * chrome, the companion to the pressed state's `--lr-media-card-active-bg`. `frame="plain"` still
  * drops the fill entirely.
+ * @cssprop [--lr-media-card-hover-border-color=var(--lr-color-brand)] - Hovered border color for image/file card actions.
  * @cssprop [--lr-media-card-active-border-color=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed border color for image/file card actions.
  * @cssprop [--lr-media-card-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background color for image/file card actions.
  *
@@ -210,7 +211,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  names the internal action when no host label is present. Nested actions otherwise keep a
    *  localized purpose name derived from `filename`, `alt`, or the resolved media kind. An
    *  explicit empty string is equivalent to the unset `null` default -- both fall through to the
-   *  generated purpose-specific name. */
+   *  generated purpose-specific name. A file link always includes its visible filename. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Turns off this card's OWN action: the image button and the video `open-button` render
@@ -268,7 +269,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   }
 
   private get displayFilename(): string {
-    return this.filename || this.localize('mediaCardUntitledFile');
+    return normalizeLabel(this.filename) ?? this.localize('mediaCardUntitledFile');
   }
 
   /** Accessible name for the card's own actionable element (`base` or, for
@@ -456,6 +457,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
       <span part="filename" title=${name}>${name}</span>
     `;
     if (href) {
+      const label = this.actionLabel;
       // Two deliberate departures from a literal copy of `<lr-button>`'s forwarding, both because
       // an anchor is not a button:
       //   1. `aria-pressed` never reaches this anchor. `link` does not support it (only a button
@@ -471,7 +473,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
           style=${this.baseStyle}
           download=${this.disabled ? nothing : this.filename || ''}
           role=${this.disabled ? 'link' : nothing}
-          aria-label=${this.actionLabel}
+          aria-label=${label.includes(name) ? label : labelWithVisibleText(name, label)}
           aria-current=${this.forwardedCurrent}
           aria-disabled=${this.disabled ? 'true' : 'false'}
           tabindex=${this.disabled ? '-1' : nothing}

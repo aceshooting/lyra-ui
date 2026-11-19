@@ -21,6 +21,8 @@ const katex = /* @__PURE__ */ createOptionalPeerLoader<KatexApi>({
   isCapability: isKatexApi,
   warningKey: 'lyra-markdown-katex-unavailable',
   warning:
+    '<lr-markdown>/<lr-markdown-core>: The optional KaTeX peer could not be resolved to a math renderer. TeX is rendered as literal text.',
+  failedWarning:
     '<lr-markdown>/<lr-markdown-core>: Math rendering is unavailable because the optional KaTeX peer could not load. TeX is rendered as literal text.',
 });
 

@@ -1,5 +1,6 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -89,6 +90,7 @@ export const styles = css`
   }
 
   [part='evidence-text'] {
+    ${wrapGuard}
     margin: 0;
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);

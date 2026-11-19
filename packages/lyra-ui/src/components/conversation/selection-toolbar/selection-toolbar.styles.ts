@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -65,7 +65,6 @@ export const styles = css`
     justify-content: center;
     ${iconHitTarget}
     max-inline-size: 100%;
-    transition: color var(--lr-transition-fast);
   }
 
   [part~='action']::part(base) {
@@ -73,22 +72,6 @@ export const styles = css`
     max-inline-size: 100%;
     white-space: normal;
     overflow-wrap: anywhere;
-  }
-
-  [part~='action']:hover {
-    color: var(--_lr-glass-brand-text, var(--lr-color-brand));
-  }
-
-  /* Each action is an <lr-button appearance="plain">, which already supplies its own pressed
-     treatment (--lr-button-active-scale) in its shadow root; this rule escalates the toolbar's
-     brand accent one step. A background box on the host would sit behind the button's transparent
-     base and read as a second, misaligned control. */
-  [part~='action']:active {
-    color: color-mix(in oklab, var(--_lr-glass-brand-text, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-  }
-
-  [part~='action']:focus-visible {
-    ${focusRing}
   }
 
   ${glassScrollLayerStyles}

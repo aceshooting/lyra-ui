@@ -218,19 +218,31 @@ export const styles = css`
      because the pointer can be over the button itself or over the pointer-events: none content
      stacked on top of it in the same grid cell. */
   :host(:not(:disabled)) [part~="file-input"]:active {
-    border-color: var(--lr-color-brand);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    border-color: var(
+      --lr-file-input-dropzone-active-border-color,
+      var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand))
+    );
+    background: var(
+      --lr-file-input-dropzone-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-file-input-dropzone-fill, var(--lr-color-surface)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   :host(:not(:disabled)) .dropzone:active [part~="file-input"] {
-    border-color: var(--lr-color-brand);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    border-color: var(
+      --lr-file-input-dropzone-active-border-color,
+      var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand))
+    );
+    background: var(
+      --lr-file-input-dropzone-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-file-input-dropzone-fill, var(--lr-color-surface)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   [part~="file-input"]:focus-visible {
@@ -254,7 +266,7 @@ export const styles = css`
     max-inline-size: 100%;
     margin-block: var(--lr-space-2xs) 0;
     color: var(--lr-color-danger);
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-file-input-detail-font-size, var(--_lr-file-input-detail-font-size));
     text-align: start;
     overflow-wrap: anywhere;
   }
@@ -275,17 +287,17 @@ export const styles = css`
     min-inline-size: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-file-input-file-radius, var(--lr-radius));
     background: var(--lr-color-surface-raised);
   }
   [part="file-thumbnail"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-icon-button-size);
-    block-size: var(--lr-icon-button-size);
+    inline-size: var(--lr-file-input-thumbnail-size, var(--lr-icon-button-size));
+    block-size: var(--lr-file-input-thumbnail-size, var(--lr-icon-button-size));
     overflow: hidden;
-    border-radius: var(--lr-radius-xs);
+    border-radius: var(--lr-file-input-thumbnail-radius, var(--lr-radius-xs));
     color: var(--lr-color-text-quiet);
   }
   [part="file-image"] {

@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'استشهاد',
   promptInputLabel: 'مُوجّه الذكاء الاصطناعي',
   promptInputControls: 'خيارات المُوجّه',
+  promptInputCollectionLimit: 'حُذف جزء من مدخلات المطالبة لبلوغ حد الإدخال.',
   promptInputSources: 'المصادر',
   promptInputAttachments: 'المرفقات',
   handoffLabel: 'تسليم بين الوكلاء',
@@ -163,6 +164,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'لا توجد أصوات متاحة',
   voicePickerRequired: 'يُرجى اختيار صوت.',
   voicePickerPreview: 'معاينة {name}',
+  voicePickerPreviewFailed: 'معاينة الصوت غير متاحة.',
   voicePickerStopPreview: 'إيقاف المعاينة',
   realtimeSessionLabel: 'جلسة فورية',
   realtimeSessionDisconnected: 'غير متصل',
@@ -193,6 +195,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'يُعرض الكود الطويل دون تلوين الصياغة البرمجية.',
   codeBlockHighlightedLine: 'سطر مميّز',
   codeBlockActiveLine: 'سطر مميّز نشط',
+  codeBlockToggle: 'إظهار أو إخفاء الشيفرة',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

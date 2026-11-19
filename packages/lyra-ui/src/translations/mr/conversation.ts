@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'संदर्भ द्या',
   promptInputLabel: 'AI प्रॉम्प्ट',
   promptInputControls: 'प्रॉम्प्ट पर्याय',
+  promptInputCollectionLimit: 'इनपुटची मर्यादा गाठल्यामुळे प्रॉम्प्ट इनपुटचा काही भाग वगळला गेला.',
   promptInputSources: 'स्रोत',
   promptInputAttachments: 'जोडण्या',
   handoffLabel: 'एजंटकडे हस्तांतरण',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'आवाज उपलब्ध नाहीत',
   voicePickerRequired: 'आवाज निवडा.',
   voicePickerPreview: '{name} चे पूर्वदृश्य',
+  voicePickerPreviewFailed: 'आवाजाचे पूर्वदृश्य उपलब्ध नाही.',
   voicePickerStopPreview: 'पूर्वदृश्य थांबवा',
   realtimeSessionLabel: 'रिअल-टाइम सत्र',
   realtimeSessionDisconnected: 'कनेक्शन तुटले',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'लांब कोड सिंटॅक्स हायलाइटिंगशिवाय दाखवला जातो.',
   codeBlockHighlightedLine: 'हायलाइट केलेली ओळ',
   codeBlockActiveLine: 'सक्रिय हायलाइट केलेली ओळ',
+  codeBlockToggle: 'कोड दाखवा किंवा लपवा',
 };
 
 registerLyraLocale('mr', strings);

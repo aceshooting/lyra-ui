@@ -1,7 +1,7 @@
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { guard } from 'lit/directives/guard.js';
-import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { AutocorrectState, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { publicCollectionTruncation, collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -15,7 +15,7 @@ import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { styles } from './model-select.styles.js';
-import { autocorrectConverter, normalizeAutocorrect, spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -47,7 +47,7 @@ type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
 
 export interface LyraModelSelectEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-input': CustomEvent<{ value: string; inCatalog: boolean; query?: string }>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   input: Event;
   change: Event;
@@ -91,7 +91,7 @@ export interface LyraModelSelectEventMap {
  * catalog array after changing its rows.
  *
  * @customElement lr-model-select
- * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-input - Input detail includes the committed `value` and the draft `query` while typing.
  * @event lr-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
  * @event {Event} change - Owner-realm native event fired alongside `lr-change`, mirroring
  *   `<lr-select>`/`<lr-combobox>`'s value-change pair so native form bindings/framework `v-model`
@@ -122,6 +122,8 @@ export interface LyraModelSelectEventMap {
  * before the user has done anything is hostile.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The complete label, control, hint, error, and listbox frame.
+ * @cssprop [--lr-model-select-trigger-hover-bg=var(--lr-color-brand-quiet)] - Hovered trigger background.
+ * @cssprop --lr-model-select-trigger-active-bg - Pressed trigger background. Defaults to a mix from the hover fill.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for trigger and combobox text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -174,7 +176,7 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-option-synthetic-border-style=dashed] - Border style of a synthetic stale-value option row.
  * @cssprop [--lr-model-select-option-synthetic-border-color=var(--lr-color-border)] - Border color of a synthetic stale-value option row.
  * @cssprop [--lr-model-select-option-synthetic-font-style=italic] - Font style of a synthetic stale-value option row's label.
- * @cssprop [--lr-model-select-option-disabled-opacity=0.5] - Opacity of an option row whose catalog entry sets `disabled`.
+ * @cssprop [--lr-model-select-option-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of an option row whose catalog entry sets `disabled`.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  *   other quoted string (`' (required)'`, a localized word) to replace it.
@@ -264,16 +266,15 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
   /** Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits
    *  the attribute (browser default). */
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
    *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
   /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
   @property() autocomplete = 'off';
@@ -314,7 +315,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     isReadonly: () => this.readonly,
     locale: () => this.effectiveLocale,
     searchableFields: (entry) => [entry.id, entry.label],
-    emitInput: (detail) => this.emit('lr-input', detail),
+    emitInput: (detail) => this.emit('lr-input', this.open ? { ...detail, query: this.query } : detail),
     emitChange: (detail) => this.emit('lr-change', detail),
     onValueChange: (value, oldValue) => {
       this.internals.setFormValue(value);
@@ -471,51 +472,21 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     this.finishModeFocus('model-select-mode-focus');
   }
 
-  // -- Closed-dropdown mode (trigger button) --------------------------------
-
   private onTriggerClick = (): void => {
     if (this.effectiveDisabled) return;
     this.open ? this.hide() : this.show();
   };
-  private onTriggerBlur = (event: FocusEvent): void => {
-    this.catalogPicker.handleControlBlur(event);
-  };
-  private onTriggerFocus = (event: FocusEvent): void => {
-    this.catalogPicker.handleControlFocus(event);
-  };
-  private onTriggerKeyDown = (e: KeyboardEvent): void => {
-    this.catalogPicker.handleTriggerKeyDown(e);
-  };
+  private readonly onControlBlur = this.catalogPicker.handleControlBlur.bind(this.catalogPicker);
+  private readonly onTriggerFocus = this.catalogPicker.handleControlFocus.bind(this.catalogPicker);
+  private readonly onTriggerKeyDown = this.catalogPicker.handleTriggerKeyDown.bind(this.catalogPicker);
 
-  // -- Free-text mode (text input) ------------------------------------------
+  private readonly onComboMouseDown = this.catalogPicker.handleComboMouseDown.bind(this.catalogPicker);
+  private readonly onInputFocus = this.catalogPicker.handleInputFocus.bind(this.catalogPicker);
+  private readonly onInput = this.catalogPicker.handleInput.bind(this.catalogPicker);
+  private readonly onInputKeyDown = this.catalogPicker.handleInputKeyDown.bind(this.catalogPicker);
 
-  private onComboMouseDown = (e: MouseEvent): void => {
-    this.catalogPicker.handleComboMouseDown(e);
-  };
-  private onInputFocus = (event: FocusEvent): void => {
-    this.catalogPicker.handleInputFocus(event);
-  };
-  private onInput = (e: Event): void => {
-    this.catalogPicker.handleInput(e);
-  };
-  private onInputBlur = (event: FocusEvent): void => {
-    this.catalogPicker.handleControlBlur(event);
-  };
-  private onInputKeyDown = (e: KeyboardEvent): void => {
-    this.catalogPicker.handleInputKeyDown(e);
-  };
-
-  // -- Shared listbox ---------------------------------------------------
-
-  // Delegated onto [part="listbox"] rather than one closure pair allocated
-  // per row per render — resolves the target row via closest('[part="option"]')
-  // + a data-value lookup, mirroring lr-select/lr-combobox.
-  private onListboxMouseDown = (e: MouseEvent): void => {
-    this.catalogPicker.handleListboxMouseDown(e);
-  };
-  private onListboxClick = (e: MouseEvent): void => {
-    this.catalogPicker.handleListboxClick(e);
-  };
+  private readonly onListboxMouseDown = this.catalogPicker.handleListboxMouseDown.bind(this.catalogPicker);
+  private readonly onListboxClick = this.catalogPicker.handleListboxClick.bind(this.catalogPicker);
 
   private renderRows(rows: DisplayEntry[], activeId: string): TemplateResult[] {
     return rows.map((entry, i) => {
@@ -559,6 +530,16 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     `;
   }
 
+  private get supportingState() {
+    return formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'model-select',
+      hint: this.hint,
+      errorText: this.errorText,
+      extraDescribedBy: [this.getAttribute('aria-describedby')],
+    });
+  }
+
   private get hasVisibleLabel(): boolean {
     return (this.label ?? '').length > 0 || this.slotPresence.has('label');
   }
@@ -583,11 +564,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this.value.length > 0;
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
-      .filter(Boolean)
-      .join(' ');
+    const { hasHint, hasError, describedBy } = this.supportingState;
     return html`
       ${this.renderLabel()}
       <button
@@ -608,7 +585,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
         @click=${this.onTriggerClick}
         @keydown=${this.onTriggerKeyDown}
         @focus=${this.onTriggerFocus}
-        @blur=${this.onTriggerBlur}
+        @blur=${this.onControlBlur}
       >
         ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}
         <span class="trigger-label" ?data-placeholder=${!hasValue}
@@ -625,11 +602,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
-      .filter(Boolean)
-      .join(' ');
+    const { hasHint, hasError, describedBy } = this.supportingState;
     return html`
       ${this.renderLabel()}
       <div part="combobox" @mousedown=${this.onComboMouseDown}>
@@ -660,7 +633,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
           @input=${this.onInput}
           @keydown=${this.onInputKeyDown}
           @focus=${this.onInputFocus}
-          @blur=${this.onInputBlur}
+          @blur=${this.onControlBlur}
         />
         <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>
       </div>

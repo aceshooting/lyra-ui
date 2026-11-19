@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Yisho umthombo',
   promptInputLabel: 'Umyalo we-AI',
   promptInputControls: 'Izinketho zomyalo',
+  promptInputCollectionLimit: 'Okunye okufakwe emyalweni kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
   promptInputSources: 'Imithombo',
   promptInputAttachments: 'Okunamathiselwe',
   handoffLabel: 'Ukudlulisela ku-ejenti',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Awekho amazwi atholakalayo',
   voicePickerRequired: 'Khetha izwi.',
   voicePickerPreview: 'Buka kuqala u-{name}',
+  voicePickerPreviewFailed: 'Isampula yezwi ayitholakali.',
   voicePickerStopPreview: 'Misa ukuhlola kuqala',
   realtimeSessionLabel: 'Iseshini yesikhathi sangempela',
   realtimeSessionDisconnected: 'Inqanyuliwe',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Ikhodi ende iboniswa ngaphandle kokugqamisa i-syntax.',
   codeBlockHighlightedLine: 'Umugqa ogqanyisiwe',
   codeBlockActiveLine: 'Umugqa ogqanyisiwe osebenzayo',
+  codeBlockToggle: 'Bonisa noma ufihle ikhodi',
 };
 
 registerLyraLocale('zu', strings);

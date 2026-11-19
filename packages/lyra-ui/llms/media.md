@@ -3003,7 +3003,7 @@ reimplemented.
   up. The default slot is not a drop target while a target is bound.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
-- `readonly dragging: boolean` — `true` during an active drag session. Assigning this getter in strict mode throws a `TypeError`.
+- `readonly dragging: boolean` — `true` during an active drag session. Assignment is ignored, so a framework binding that spreads every property cannot throw.
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
   can match a neighboring small-tier `lr-file-input` in the same dense layout.
@@ -3044,9 +3044,9 @@ its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-ove
 `--lr-drop-zone-overlay-padding` (default `var(--lr-space-l)`, retuned per `size` tier),
 `--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
 `--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
-`color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and
+`color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) and
 `--lr-drop-zone-reject-border-color`/`--lr-drop-zone-reject-bg` (defaults `var(--lr-color-danger)`/
-`color-mix(in srgb, var(--lr-color-danger) 12%, transparent)`) — independently overridable on the
+`color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — independently overridable on the
 element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
 
 **Optional peer deps:** none.
@@ -3132,7 +3132,7 @@ height for that content and the dropzone's minimum size.
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count. Drag events update `dragging`. Assigning either getter in strict mode throws a `TypeError`.
+  updates the selected-file count. Drag events update `dragging`. Assigning either is ignored, so a framework binding that spreads every property cannot throw.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -3439,6 +3439,8 @@ an extension-only `accept` list.
 - the click/keyboard-to-browse path is correctly operable (`role="button"`, `tabindex` 0/-1 by
   disabled, `aria-disabled`, Enter/Space handling).
 
+Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
+
 ---
 
 ## `lr-image-comparer`
@@ -3510,9 +3512,8 @@ Focus on either zoom control does not enter the iframe browsing context, and `bl
 a focused zoom control.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
-`--lr-icon-button-bg`, and `--lr-icon-button-color`, plus the hover and pressed variants
-`--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-bg-hover`,
-`--lr-icon-button-bg-active`, `--lr-icon-button-color-hover`, and `--lr-icon-button-color-active`.
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
 
 **Properties:**
 
@@ -3561,7 +3562,7 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`) when `zoomIn()`/`zoomOut()` (buttons or keys)
-change `zoom`; assigning `zoom` stays silent. Internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
+change `zoom`. The event reports the last action that reaches the rendered frame. Direct assignments stay silent. Internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
 `FocusEvent`s (bubbling and composed, preserving external `relatedTarget`; a transition to or from an internal zoom control uses `null` because retargeting that control to the host would suppress the relay);
 native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
@@ -3615,9 +3616,8 @@ existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
-`--lr-icon-button-bg`, and `--lr-icon-button-color`, plus the hover and pressed variants
-`--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-bg-hover`,
-`--lr-icon-button-bg-active`, `--lr-icon-button-color-hover`, and `--lr-icon-button-color-active`.
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
 
 **Properties:**
 
@@ -3638,7 +3638,7 @@ Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 A failed image renders a localized message in the `error` part, announces the failure, and emits
 `lr-render-error` with `{ error: Error }`.
 
-**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
+**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
 the nearest `zoomStep`. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from
@@ -3654,8 +3654,7 @@ component's own keyboard target — a bare host `.focus()` would otherwise be a 
 relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
 `relatedTarget`).
 
-**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and
-`error` (the localized message shown in place of an image that failed to load). The
+**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
 `zoom` on every render (not a fixed "100%"). Its accessible name includes both the localized reset
 action and that visible percentage, so the visible label is contained in the computed name.
@@ -3676,6 +3675,8 @@ import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
   aria-label="Map preview"
 ></lr-pan-zoom>
 ```
+
+`--lr-pan-zoom-control-hover-bg` sets the zoom and reset button hover fill and supplies the base for their pressed fill.
 
 ---
 
@@ -3756,14 +3757,13 @@ coalesce into one update.
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
   localized default (`'Untitled file'` in English)
 
-The component identifies _which_ attachment an action event is about through `attachmentId`. Set
-`attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
-and `file` is set, a stable attachment id is
-derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
-generated internal id is used as a last resort. Give duplicate occurrences distinct `attachment-id` values if their actions need to target different chips.
+Attachment actions carry a stable id for the lifetime of each chip, including separate chips for
+the same file. Set `attachment-id` to preserve an application id across component replacement.
+To retain metadata-based ids, explicitly set `attachment-id` from the file name, size and last-modified time.
 
 A chip requests attachment preview with `lr-preview-request`. Its `name` and `src` correspond to
-`filename` and `src` on a media card’s `lr-media-open` event.
+`filename` and `src` on a media card’s `lr-media-open` event. The email viewer’s `lr-attachment-open`
+provides `detail.attachment.filename`, `mimeType`, and an optional `content` Blob.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`; the button is not rendered while
 `without-remove-button` is set), `lr-retry`
@@ -3895,6 +3895,8 @@ previous entry, reassigning `file` several times before the next paint leaks not
   `File` nor `preview-src` supplies a source. The viewer's footer omits its download link for unsafe
   source schemes.
 
+Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners.
+
 ---
 
 ## `lr-file-icon`
@@ -3953,6 +3955,8 @@ consumer record replacing a built-in MIME also owns that type's verbatim label, 
 ></lr-file-icon>
 ```
 
+`--lr-file-icon-border-color` sets the badge border color and `--lr-file-icon-radius` sets its corner radius.
+
 ## `lr-media-card`
 
 A lightweight inline preview for one already-sent, already-available attachment inside a rendered
@@ -3984,7 +3988,7 @@ and later MIME values restore detection.
   the host as a whole while its nested button/link keeps a purpose-specific localized action name. A property-only assignment names the nested action and updates reactively when no host label is present, without creating a host attribute. An explicit
   empty string behaves like the unset `null` default — both fall through to the generated
   purpose-specific name. Image alt text and the native video's own purpose label remain independent;
-  an explicitly empty host still leaves every interactive descendant named.
+  an explicitly empty host still leaves every interactive descendant named. File links include their visible filename in the action name, including the localized untitled fallback.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
@@ -4047,7 +4051,7 @@ above.
 **CSS parts:** `base` (a `<button>` for `kind="image"`, a plain wrapper `<div>` for `kind="video"`,
 an `<a>` or `<span>` for the file-chip fallback depending on href safety), `media` (the `<img>`/
 `<video>`), `file-icon`, `filename` (file-chip fallback only), `open-button` (video only — see
-below), `media-error` (the localized message shown in place of media that failed to load).
+below).
 
 **Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
@@ -4117,6 +4121,8 @@ the video's own native controls bubble up and spuriously fire `lr-media-open`.
 - `kind` only reflects to the host attribute when explicitly set — CSS keying off the
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
   not `:host([kind=...])`, since the latter won't see an auto-detected kind.
+
+`--lr-media-card-hover-border-color` sets the hovered border of an image or file action.
 
 ---
 
@@ -4654,6 +4660,8 @@ tiers still paint an exactly avatar-sized disc instead of an oversized circle.
 - avatars are non-interactive, so there is no roving tabindex / arrow-key handling; the badge is the
   only tab stop.
 
+`--lr-avatar-group-badge-hover-ring-color` sets the overflow badge ring color on hover and press.
+
 ## `lr-lightbox`
 
 A modal, full-screen image viewer with prev/next navigation, captions, and pan/zoom delegated to one
@@ -4723,8 +4731,7 @@ a stable global `key`, canonical nonnegative safe-integer `order`, and image `va
 stable within a revision; publish a new revision and refresh when its contents change. Navigation,
 clamping, looping and the localized counter use the full logical count, so first, middle and final
 images remain reachable in a million-image host collection without copying it into `images`.
-Current navigation emits `lr-index-change` for the logical destination before its image finishes
-loading; direct consumer `index` writes stay event-silent. Source mode adds no new event.
+Navigation emits `lr-index-change` after the final logical destination renders, including a loading state for a pending image; direct consumer `index` writes stay event-silent. Source mode adds no new event.
 
 Only the current image loads, after resolving its descriptor. The component retains at most three
 descriptors in one-record pages, with one range read physically pending and no neighbour prefetch.
@@ -4802,6 +4809,8 @@ photo content.
 - scope for v1: no per-image slotted content (data-driven via `images` or `imageSource`), no dot indicators, no
   visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
   still observable through the before/after events and methods above.
+
+Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.
 
 ## `lr-qr-code`
 
@@ -4895,9 +4904,8 @@ box always wins over another region's enlarged area, and where only enlarged are
 later highlight in document order wins. Keyboard navigation between highlights is unaffected.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
-`--lr-icon-button-bg`, and `--lr-icon-button-color`, plus the hover and pressed variants
-`--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-bg-hover`,
-`--lr-icon-button-bg-active`, `--lr-icon-button-color-hover`, and `--lr-icon-button-color-active`.
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
@@ -5008,6 +5016,8 @@ on any ancestor_:
 `::part()` — which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
 element that read them. Unset, each falls back to the token its rule used before.
+
+`--lr-image-viewer-control-hover-bg` sets the toolbar hover fill and supplies the base for its pressed fill.
 
 ## `lr-av-player`
 

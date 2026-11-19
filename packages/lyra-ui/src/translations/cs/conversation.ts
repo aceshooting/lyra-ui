@@ -121,6 +121,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Uvést zdroj',
   promptInputLabel: 'Prompt pro AI',
   promptInputControls: 'Možnosti promptu',
+  promptInputCollectionLimit: 'Část zadané výzvy byla vynechána kvůli dosažení limitu vstupu.',
   promptInputSources: 'Zdroje',
   promptInputAttachments: 'Přílohy',
   handoffLabel: 'Předání agentovi',
@@ -159,6 +160,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Nejsou k dispozici žádné hlasy',
   voicePickerRequired: 'Vyberte prosím hlas.',
   voicePickerPreview: 'Přehrát ukázku hlasu {name}',
+  voicePickerPreviewFailed: 'Ukázka hlasu není k dispozici.',
   voicePickerStopPreview: 'Zastavit ukázku',
   realtimeSessionLabel: 'Relace v reálném čase',
   realtimeSessionDisconnected: 'Odpojeno',
@@ -187,6 +189,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Dlouhý kód se zobrazuje bez zvýraznění syntaxe.',
   codeBlockHighlightedLine: 'Zvýrazněný řádek',
   codeBlockActiveLine: 'Aktivní zvýrazněný řádek',
+  codeBlockToggle: 'Zobrazit nebo skrýt kód',
 };
 
 registerLyraLocale('cs', strings);

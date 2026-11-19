@@ -1,8 +1,10 @@
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
+    ${wrapGuard}
   }
 
   [part='base'] {

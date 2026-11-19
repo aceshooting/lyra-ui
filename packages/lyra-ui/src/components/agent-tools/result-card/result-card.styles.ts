@@ -1,8 +1,10 @@
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
+    ${wrapGuard}
   }
   /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below: each
      fallback is the pre-existing token, so an unset card paints exactly as before while a

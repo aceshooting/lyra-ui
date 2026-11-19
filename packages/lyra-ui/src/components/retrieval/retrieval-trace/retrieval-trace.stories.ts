@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, nothing } from 'lit';
-import type { RetrievalStage } from './retrieval-trace.class.js';
+import type { LyraRetrievalTraceEventMap, RetrievalStage } from './retrieval-trace.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const stages: RetrievalStage[] = [
@@ -70,6 +70,8 @@ export const Default: Story = {
   render: () => html`<lr-retrieval-trace
     style="max-width: 40rem"
     .stages=${stages}
+    @lr-toggle=${(event: LyraRetrievalTraceEventMap['lr-toggle']) =>
+      console.log(event.detail.kind, event.detail.itemId)}
     @lr-stage-chunk-action=${(event: CustomEvent) =>
       console.log('lr-stage-chunk-action', event.detail)}
   ></lr-retrieval-trace>`,

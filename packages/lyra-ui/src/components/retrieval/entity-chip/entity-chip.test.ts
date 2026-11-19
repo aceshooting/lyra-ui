@@ -595,3 +595,16 @@ it('leaves modified and composing Space keydowns to the browser', async () => {
   }
   expect(opened).to.equal(0);
 });
+
+it('keeps the surrounding line box at the prose line height while the target stays full size', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="font-size: 16px; line-height: 24px">
+    <p data-plain style="margin: 0">Plain line of text</p>
+    <p data-chip style="margin: 0">Entity <lr-entity-chip entity-id="e" text="Curie"></lr-entity-chip> in text</p>
+  </div>`);
+  const chip = wrapper.querySelector('lr-entity-chip') as LyraEntityChip;
+  await chip.updateComplete;
+  const plain = wrapper.querySelector<HTMLElement>('[data-plain]')!.getBoundingClientRect().height;
+  const withChip = wrapper.querySelector<HTMLElement>('[data-chip]')!.getBoundingClientRect().height;
+  expect(Math.abs(withChip - plain) <= 1).to.equal(true);
+  expect(chip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getBoundingClientRect().height >= 36).to.equal(true);
+});

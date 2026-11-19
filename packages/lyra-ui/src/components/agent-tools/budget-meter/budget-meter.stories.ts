@@ -47,3 +47,7 @@ export const ByteQuantities: Story = {
       unit="bytes"></lr-budget-meter>
   `,
 };
+
+export const CompactFrame: Story = {
+  render: () => html`<lr-budget-meter frame="plain" size="s" used="110" limit="100" unit="tokens"></lr-budget-meter>`,
+};

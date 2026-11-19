@@ -1,3 +1,5 @@
+import { isMarkdownFenceCloser, matchMarkdownFenceLine, type MarkdownFenceLine } from './markdown-fence.js';
+
 const MARKDOWN_FALLBACK_BLOCK_RUN_MAX = 128;
 const MARKDOWN_FALLBACK_INLINE_RUN_MAX = 128;
 const MARKDOWN_FALLBACK_FENCE_PROBE = 64;
@@ -7,23 +9,6 @@ export interface MarkdownFallbackSegment {
   readonly kind: MarkdownFallbackSegmentKind;
   readonly text: string;
 }
-export interface MarkdownFenceLine {
-  readonly char: '`' | '~';
-  readonly length: number;
-  readonly indent: number;
-  readonly info: string;
-}
-
-/** Classifies a complete source line. This deliberately does not parse nested Markdown. */
-export function matchMarkdownFenceLine(line: string): MarkdownFenceLine | null {
-  const match = /^([\t ]*)(`{3,}|~{3,})([^\r\n]*)\r?$/.exec(line);
-  if (!match) return null;
-  const run = match[2]!;
-  const info = match[3]!;
-  if (run[0] === '`' && info.includes('`')) return null;
-  return { char: run[0] as '`' | '~', length: run.length, indent: match[1]!.length, info };
-}
-
 interface Tick { start: number; end: number; escaped: boolean }
 
 /** A text-only scanner: source bytes are never normalized, interpreted as HTML, or discarded. */
@@ -162,7 +147,7 @@ export class MarkdownFallbackCodeScanner {
     this.examined += line.length;
     const match = matchMarkdownFenceLine(line);
     if (this.fence) {
-      if (match?.char === this.fence.char && match.length >= this.fence.length && !match.info.trim()) {
+      if (match && isMarkdownFenceCloser(this.fence, match)) {
         this.commit('block', this.blockStart, end);
         this.blocks++;
         this.fence = null;
@@ -202,9 +187,4 @@ export class MarkdownFallbackCodeScanner {
     this.slashes = 0;
     this.resetProbe();
   }
-}
-
-/** One-shot reference entry, with the same prefix-only classification as a streaming scanner. */
-export function segmentMarkdownFallback(content: string): readonly MarkdownFallbackSegment[] | null {
-  return new MarkdownFallbackCodeScanner().segments(content);
 }

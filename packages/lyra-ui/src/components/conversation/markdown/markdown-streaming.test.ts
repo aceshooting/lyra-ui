@@ -1,7 +1,186 @@
 import { expect } from '@open-wc/testing';
 import type { LyraMarkedParser } from './markdown-loader.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
-import { MarkdownStreamingBuffer, markdownOpenFence, type MarkdownBlockToken } from './markdown-streaming.js';
+import { markdownFenceClosePattern, parseMarkdownFenceOpener } from './markdown-fence.js';
+
+/** The small block-token shape used from marked's optional lexer. */
+interface MarkdownBlockToken {
+  type?: string;
+  raw: string;
+  lang?: string;
+}
+
+type MarkdownBlockLexer = (source: string) => readonly MarkdownBlockToken[];
+
+interface MarkdownStreamingSnapshot {
+  /** All immutable block source accumulated in this stream generation. */
+  settledBlocks: readonly string[];
+  /** Blocks newly added to the immutable prefix by this update. */
+  newSettledBlocks: readonly string[];
+  /** The one lexer tail that remains mutable as more text arrives. */
+  tail: string;
+  /** Reference definitions seen in this stream, prepended when parsing isolated blocks. */
+  definitions: readonly string[];
+  /** True when the caller replaced an earlier source rather than appending to it. */
+  reset: boolean;
+}
+
+/**
+ * Keeps Markdown block lexing bounded to the unfinished tail. The caller gives this class the
+ * complete source on each property update; on an append it lexes only the previous tail plus the
+ * new suffix, then moves lexer-confirmed blocks into a stable prefix. Lists, tables, block quotes,
+ * and fenced blocks remain indivisible because marked returns them as top-level block tokens.
+ */
+class MarkdownStreamingBuffer {
+  private source = '';
+  private tail = '';
+  private readonly settled: string[] = [];
+  private readonly definitions: string[] = [];
+
+  update(source: string, lex: MarkdownBlockLexer): MarkdownStreamingSnapshot {
+    // Marked normalizes CRLF and CR in token.raw. Use that same canonical source for offsets and
+    // parsing so line-ending variants cannot cut the wrong UTF-16 boundary.
+    source = source.replace(/\r\n?/g, '\n');
+    const reset = !source.startsWith(this.source);
+    if (reset) this.reset();
+    const appended = source.slice(this.source.length);
+    this.source = source;
+    this.tail += appended;
+
+    let tokens: readonly MarkdownBlockToken[];
+    try {
+      tokens = lex(this.tail);
+    } catch {
+      // A configured marked extension can throw during lexing. Keep the text visible and retry
+      // from the current source on the next update rather than retaining a partially trusted tree.
+      this.reset();
+      this.source = source;
+      this.tail = source;
+      return this.snapshot([], true);
+    }
+
+    let settledCount = countSettledTokens(tokens);
+    for (let index = 0; index < settledCount; index++) {
+      const token = tokens[index];
+      if (token?.type === 'def' && token.raw && !this.definitions.includes(token.raw)) {
+        this.definitions.push(token.raw);
+      }
+    }
+    for (let index = 0; index < settledCount; index++) {
+      const token = tokens[index];
+      if (token?.type !== 'code' && hasUnresolvedReference(token?.raw ?? '', this.definitions)) {
+        settledCount = index;
+        break;
+      }
+    }
+    const added: string[] = [];
+    let consumed = 0;
+    for (let index = 0; index < settledCount; index++) {
+      const raw = tokens[index]?.raw;
+      if (typeof raw !== 'string' || raw.length === 0) continue;
+      added.push(raw);
+      consumed += raw.length;
+    }
+    const committedSource = added.join('');
+    // Marked's `raw` is meant to be a source slice. Fail closed to a visible mutable tail if a
+    // peer extension returns normalized or synthetic token text that cannot safely index the
+    // caller's canonical UTF-16 source.
+    if (committedSource && !this.tail.startsWith(committedSource)) {
+      return this.snapshot([], reset);
+    }
+    if (consumed > 0) {
+      this.settled.push(...added);
+      this.tail = this.tail.slice(consumed);
+    }
+    return this.snapshot(added, reset);
+  }
+
+  /** Commits the final tail when streaming ends, allowing the ordinary full parse to take over. */
+  finish(): string[] {
+    const tail = this.tail;
+    if (tail) this.settled.push(tail);
+    this.tail = '';
+    return [...this.settled];
+  }
+
+  reset(): void {
+    this.source = '';
+    this.tail = '';
+    this.settled.length = 0;
+    this.definitions.length = 0;
+  }
+
+  private snapshot(added: string[], reset: boolean): MarkdownStreamingSnapshot {
+    return {
+      settledBlocks: [...this.settled],
+      newSettledBlocks: added,
+      tail: this.tail,
+      definitions: [...this.definitions],
+      reset,
+    };
+  }
+}
+
+function hasUnresolvedReference(raw: string, definitions: readonly string[]): boolean {
+  const available = new Set<string>();
+  for (const definition of definitions) {
+    const match = /^ {0,3}\[([^\]]+)\]:/m.exec(definition);
+    if (match?.[1]) available.add(normalizeReferenceLabel(match[1]));
+  }
+  const withoutTaskMarkers = raw.replace(/^[ \t]*(?:[-*+]\s+|\d+[.)]\s+)\[[ xX]\][ \t]+/gm, '');
+  const withoutInlineCode = withoutTaskMarkers.replace(/(`+)[^`\n]*\1/g, '');
+  const references = [
+    /!?\[([^\]]+)\]\[([^\]]*)\]/g,
+    /!?\[([^\]]+)\](?!\s*[[(])/g,
+  ];
+  for (const reference of references) for (const match of withoutInlineCode.matchAll(reference)) {
+    const label = normalizeReferenceLabel(match[2] || match[1] || '');
+    if (label && !available.has(label)) return true;
+  }
+  return false;
+}
+
+function normalizeReferenceLabel(label: string): string {
+  return label.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function countSettledTokens(tokens: readonly MarkdownBlockToken[]): number {
+  let lastSubstantive = tokens.length - 1;
+  while (lastSubstantive >= 0 && tokens[lastSubstantive]?.type === 'space') lastSubstantive--;
+  if (lastSubstantive < 0) return 0;
+  const trailingTokens = tokens.slice(lastSubstantive);
+  if (
+    trailingTokens[0]?.type === 'code' &&
+    isClosedFence(trailingTokens.map((token) => token.raw).join(''))
+  ) {
+    return tokens.length;
+  }
+  if (lastSubstantive === 0) {
+    // A closed fenced block cannot be extended by appended source, so it is safe to commit even
+    // while it remains the lexer's last token. An unterminated fence stays in the live tail.
+    return isClosedFence(tokens[0]?.raw ?? '') ? 1 : 0;
+  }
+  const last = tokens[lastSubstantive];
+  // Trailing blank lines do not close an extensible list: another list item can follow the blank
+  // line and still belong to the same loose list. Keep that token and the separator together.
+  const settled = lastSubstantive;
+  // A closed final fence is also immutable; otherwise keep the final token alive so paragraph and
+  // list continuation remain ordinary Markdown while the stream is in flight.
+  return isClosedFence(last?.raw ?? '') ? settled + 1 : settled;
+}
+
+function isClosedFence(source: string): boolean {
+  const opening = parseMarkdownFenceOpener(source);
+  return Boolean(opening && markdownFenceClosePattern(opening).test(source.slice(opening.end, source.lastIndexOf('\n') + 1)));
+}
+
+/** Returns an unfinished fenced block's displayable language and code, if the tail is one. */
+function markdownOpenFence(source: string): { language: string; code: string } | null {
+  const opening = parseMarkdownFenceOpener(source);
+  if (!opening || isClosedFence(source)) return null;
+  const language = opening.info.trim().split(/\s+/, 1)[0] ?? '';
+  return { language, code: source.slice(opening.end) };
+}
 
 async function getLexer(): Promise<(source: string) => readonly MarkdownBlockToken[]> {
   const deps = await loadMarkdownDeps();
@@ -183,5 +362,58 @@ describe('MarkdownStreamingBuffer with unusual peer tokens', () => {
     ]);
     expect(afterProse.settledBlocks).to.deep.equal(['Intro\n\n', fence]);
     expect(afterProse.tail).to.equal('');
+  });
+});
+
+it('does not treat backticks inside a backtick fence info string as an opener', () => {
+  expect(markdownOpenFence('\x60\x60\x60ts\x60\nsource')).to.equal(null);
+  expect(markdownOpenFence('~~~sh\x60\nsource')).to.deep.equal({ language: 'sh\x60', code: 'source' });
+});
+
+describe('Markdown stream recovery', () => {
+  it('preserves complete source after a lexer extension fails and retries it on the next append', () => {
+    const buffer = new MarkdownStreamingBuffer();
+    const first = buffer.update('first\n\npartial', () => [
+      { type: 'paragraph', raw: 'first\n\n' },
+      { type: 'paragraph', raw: 'partial' },
+    ]);
+    expect(first.settledBlocks).to.deep.equal(['first\n\n']);
+    const failed = buffer.update('first\n\npartial text', () => {
+      throw new Error('extension unavailable');
+    });
+    expect(failed.reset).to.equal(true);
+    expect(failed.settledBlocks).to.deep.equal([]);
+    expect(failed.tail).to.equal('first\n\npartial text');
+    let retried = '';
+    const recovered = buffer.update('first\n\npartial text!', source => {
+      retried = source;
+      return [{ type: 'paragraph', raw: 'first\n\n' }, { type: 'paragraph', raw: 'partial text!' }];
+    });
+    expect(retried).to.equal('first\n\npartial text!');
+    expect(recovered.settledBlocks).to.deep.equal(['first\n\n']);
+    expect(buffer.finish()).to.deep.equal(['first\n\n', 'partial text!']);
+    expect(buffer.finish()).to.deep.equal(['first\n\n', 'partial text!']);
+  });
+
+  it('keeps the original text mutable when an extension manufactures a different source slice', () => {
+    const buffer = new MarkdownStreamingBuffer();
+    const source = 'original\n\ntail';
+    const snapshot = buffer.update(source, () => [
+      { type: 'paragraph', raw: 'manufactured\n\n' },
+      { type: 'paragraph', raw: 'tail' },
+    ]);
+    expect(snapshot.settledBlocks).to.deep.equal([]);
+    expect(snapshot.tail).to.equal(source);
+    expect(buffer.finish()).to.deep.equal([source]);
+  });
+
+  it('settles a closed fence together with trailing whitespace without waiting for another block', () => {
+    const buffer = new MarkdownStreamingBuffer();
+    const fence = '```ts\nconst value = 1;\n```\n';
+    const snapshot = buffer.update(fence + '\n', () => [
+      { type: 'code', raw: fence }, { type: 'space', raw: '\n' },
+    ]);
+    expect(snapshot.settledBlocks).to.deep.equal([fence, '\n']);
+    expect(snapshot.tail).to.equal('');
   });
 });

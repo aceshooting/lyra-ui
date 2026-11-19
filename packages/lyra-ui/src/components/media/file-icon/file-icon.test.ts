@@ -936,3 +936,10 @@ it('frames the extension tile in the subtle border tier', async () => {
   expect(icon === null, 'icon part missing').to.be.false;
   expect(getComputedStyle(icon!).borderTopColor).to.equal('rgb(1, 2, 3)');
 });
+
+it('paints the badge border and radius from public tokens', async () => {
+  const el = await fixture<LyraFileIcon>(html`<lr-file-icon name="a.pdf" style="--lr-file-icon-border-color: rgb(1, 2, 3); --lr-file-icon-radius: 5px"></lr-file-icon>`);
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+  expect(getComputedStyle(icon).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(icon).borderTopLeftRadius).to.equal('5px');
+});

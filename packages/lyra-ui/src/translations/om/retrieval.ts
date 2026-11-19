@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Yaadannoo yeroo dheeraa',
   memoryPanelAdd: 'Yaadannoo yeroo dheeraatti dabali',
   memoryPanelAddWithContext: '"{label}" yaadannoo yeroo dheeraatti dabali',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Hunda irraanfadhu',
   memoryPanelConfirmAddHeading: 'Kana yaadannoo yeroo dheeraatti dabalu?',
   memoryPanelConfirmRemoveHeading: 'Wanta kana haquu?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Kutaa madaallii',
   ragEvalDashboardAllSlices: 'Hunda',
   ragEvalDashboardSliceUnavailable: 'Kutaa {slice} kanaaf raawwiin madaallii hin jiru.',
+  ragEvalDashboardMetricUnavailable: '{metric}’f safartuun madaallii hin jiru.',
   knowledgeBaseSyncIdle: 'Hojii hin jiru',
   knowledgeBaseSyncSyncing: 'Walsimsiisaa jira',
   knowledgeBaseSyncPaused: 'Dhaabbateera',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Bu\'aa {index} kan {total}.',
   ragAnswerEmpty: 'Ammatti deebii hin arganne',
   retrievalTraceEmpty: 'Sadarkaa deebisanii argachuu hin jiru',
+  retrievalTraceLabel: 'Galmee adeemsa deebisanii argachuu',
   sourcePickerMatches: {
     one: '{count} madda walsimsiisa',
     other: '{count} maddoonni walsimsiisu',

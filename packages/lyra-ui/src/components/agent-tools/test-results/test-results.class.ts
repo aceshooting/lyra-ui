@@ -1,5 +1,5 @@
 import type { LyraPageSource, LyraSourceRecord } from '../../../data-sources.js';
-import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -49,14 +49,21 @@ export interface TestResultsSourceRow { readonly suiteId: string; readonly suite
 export interface TestResultsSourceSummary { readonly total: number; readonly passed: number; readonly failed: number; readonly skipped: number; readonly running: number; }
 export type TestResultsSource = LyraPageSource<TestResultsSourceRow, TestResultsSourceQuery, TestResultsSourceSummary>;
 
-function sourceField(value: unknown, name: string): unknown {
-  if (!value || typeof value !== 'object') throw new TypeError('Invalid result');
-  const descriptor = Object.getOwnPropertyDescriptor(value, name);
-  if (descriptor && !('value' in descriptor)) throw new TypeError('Invalid result field');
-  return descriptor?.value;
+interface SourceSuiteRun { suiteName: string; rows: { value: TestResultsSourceRow; index: number }[] }
+
+/** Consecutive page rows of one suite share a single list, like the in-memory suites. */
+function sourceSuiteRuns(rows: readonly { readonly value: TestResultsSourceRow }[]): SourceSuiteRun[] {
+  const runs: (SourceSuiteRun & { suiteId: string })[] = [];
+  rows.forEach(({ value }, index) => {
+    const last = runs[runs.length - 1];
+    if (last && last.suiteId === value.suiteId) last.rows.push({ value, index });
+    else runs.push({ suiteId: value.suiteId, suiteName: value.suiteName, rows: [{ value, index }] });
+  });
+  return runs;
 }
+
 function checkRowText(suiteId: string, suiteName: string, test: TestCaseResult): void {
-  if (suiteId.length + suiteName.length + test.id.length + test.name.length + (test.message?.length ?? 0) > 65_536) throw new RangeError('Result text limit');
+  if (suiteId.length + suiteName.length + test.id.length + test.name.length + (test.message?.length ?? 0) > SOURCE_TEXT_UNIT_LIMIT) throw new RangeError('Result text limit');
 }
 
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
@@ -215,6 +222,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsCollapseTest: LYRA_DEFAULT_testResultsCollapseTest,
     testResultsCompleteAnnounce: LYRA_DEFAULT_testResultsCompleteAnnounce,
     testResultsExpandTest: LYRA_DEFAULT_testResultsExpandTest,
+    testResultsShownAnnounce: LYRA_DEFAULT_testResultsShownAnnounce,
+    testResultsUnnamedTest: LYRA_DEFAULT_testResultsUnnamedTest,
     testResultsFailed: LYRA_DEFAULT_testResultsFailed,
     testResultsFilterLabel: LYRA_DEFAULT_testResultsFilterLabel,
     testResultsInputTooLarge: LYRA_DEFAULT_testResultsInputTooLarge,
@@ -222,9 +231,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsLimit: LYRA_DEFAULT_testResultsLimit,
     testResultsPassed: LYRA_DEFAULT_testResultsPassed,
     testResultsRunning: LYRA_DEFAULT_testResultsRunning,
-    testResultsShownAnnounce: LYRA_DEFAULT_testResultsShownAnnounce,
     testResultsSkipped: LYRA_DEFAULT_testResultsSkipped,
-    testResultsUnnamedTest: LYRA_DEFAULT_testResultsUnnamedTest,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -261,8 +268,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   private readonly sourcePages = new SourcePageController<TestResultsSourceRow, TestResultsSourceQuery, TestResultsSourceSummary>(this, {
     normalizeRecord: (record, isCurrent) => this.normalizeSourceRecord(record, isCurrent),
     normalizeSummary: value => {
+      if (typeof value !== 'object' || value === null) throw new TypeError('Invalid summary');
       const counts = Object.fromEntries(['total', ...STATUSES].map(key => {
-        const count = sourceField(value, key);
+        const count = readOwnSourceField(value, key, () => true, true);
         if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) throw new TypeError('Invalid summary');
         return [key, count];
       })) as unknown as TestResultsSourceSummary;
@@ -300,21 +308,17 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   private get sourceMode(): boolean { return this.dataSource !== undefined; }
 
   private normalizeSourceRecord(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<TestResultsSourceRow> {
-    const field = (input: unknown, key: string): unknown => {
-      if (!isCurrent()) throw new Error('Obsolete source result');
-      const value = sourceField(input, key);
-      if (!isCurrent()) throw new Error('Obsolete source result');
-      return value;
-    };
+    if (typeof record.value !== 'object' || record.value === null) throw new TypeError('Invalid result');
     const text = (value: unknown): string => { if (typeof value !== 'string') throw new TypeError('Invalid text'); return value; };
-    const suiteId = text(field(record.value, 'suiteId'));
-    const suiteName = text(field(record.value, 'suiteName'));
-    const raw = field(record.value, 'test');
-    const id = text(field(raw, 'id'));
-    const name = text(field(raw, 'name'));
-    const messageValue = field(raw, 'message');
-    const duration = field(raw, 'durationMs');
-    const test = Object.freeze({ id, name, status: normalizeTestStatus(field(raw, 'status')),
+    const suiteId = text(readOwnSourceField(record.value, 'suiteId', isCurrent, true));
+    const suiteName = text(readOwnSourceField(record.value, 'suiteName', isCurrent, true));
+    const raw = readOwnSourceField(record.value, 'test', isCurrent, true);
+    if (typeof raw !== 'object' || raw === null) throw new TypeError('Invalid result');
+    const id = text(readOwnSourceField(raw, 'id', isCurrent, true));
+    const name = text(readOwnSourceField(raw, 'name', isCurrent, true));
+    const messageValue = readOwnSourceField(raw, 'message', isCurrent);
+    const duration = readOwnSourceField(raw, 'durationMs', isCurrent);
+    const test = Object.freeze({ id, name, status: normalizeTestStatus(readOwnSourceField(raw, 'status', isCurrent)),
       ...(messageValue === undefined ? {} : { message: text(messageValue) }),
       ...(typeof duration === 'number' ? { durationMs: duration } : {}) });
     checkRowText(suiteId, suiteName, test);
@@ -490,12 +494,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         const suiteId = suite.id;
         if (!current()) return;
         if (typeof suiteId !== 'string') continue;
-        if (suiteId.length > 65_536) throw new RangeError('Result text limit');
+        if (suiteId.length > SOURCE_TEXT_UNIT_LIMIT) throw new RangeError('Result text limit');
         if (!suiteId.trim() || suiteIds.has(suiteId)) continue;
         const rawSuiteName = suite.name;
         if (!current()) return;
         const suiteName = typeof rawSuiteName === 'string' ? rawSuiteName : '';
-        if (suiteId.length + suiteName.length > 65_536) throw new RangeError('Result text limit');
+        if (suiteId.length + suiteName.length > SOURCE_TEXT_UNIT_LIMIT) throw new RangeError('Result text limit');
         suiteIds.add(suiteId);
         const testIds = new Set<string>();
         const tests: TestCaseResult[] = [];
@@ -508,7 +512,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           const id = test.id;
           if (!current()) return;
           if (typeof id !== 'string') continue;
-          if (id.length > 65_536) throw new RangeError('Result text limit');
+          if (id.length > SOURCE_TEXT_UNIT_LIMIT) throw new RangeError('Result text limit');
           if (!id.trim() || testIds.has(id)) continue;
           const status = normalizeTestStatus(test.status);
           if (!current()) return;
@@ -828,8 +832,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       ${failed ? html`<button part="source-retry" data-agent-action="neutral" type="button" @click=${() => {
         if (this.isConnected && this.dataSource === source && this.sourcePages.state === state) { this.sourceInputs = undefined; this.syncSource(); this.sourceVersion++; }
       }}>${this.localize('retry')}</button>` : nothing}
-      ${rows.map((record, index) => html`${index === 0 || rows[index - 1]!.value.suiteId !== record.value.suiteId ? html`<div part="suite-header">${record.value.suiteName}</div>` : nothing}
-        <div role="list">${this.renderTest(record.value.suiteId, record.value.suiteName, record.value.test, index, 0)}</div>`)}
+      ${sourceSuiteRuns(rows).map((run) => html`<div part="suite-header">${run.suiteName}</div>
+        <div role="list" aria-label=${run.suiteName || nothing}
+          >${run.rows.map(({ value, index }) => this.renderTest(value.suiteId, value.suiteName, value.test, index, 0))}</div
+        >`)}
       ${result && !rows.length ? html`<lr-empty part="empty" heading=${this.localize(result.summary!.total ? 'noMatches' : 'noData')}></lr-empty>` : nothing}
       <lr-pagination part="source-pagination" format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
         .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${!result}

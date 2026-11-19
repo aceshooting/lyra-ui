@@ -104,6 +104,8 @@ function estimatedTokenEm(token: string): number {
  * @cssprop [--lr-file-icon-bg=var(--lr-color-brand-quiet)] - Background of the `icon` part. Every
  *   file category renders the same fill; retint it without hijacking `--lr-color-brand-quiet`
  *   library-wide.
+ * @cssprop [--lr-file-icon-border-color=var(--lr-color-border-subtle)] - Border color of the `icon` part.
+ * @cssprop [--lr-file-icon-radius=var(--lr-radius)] - Corner radius of the `icon` part.
  * @cssprop [--lr-file-icon-color=var(--lr-color-brand)] - Text/glyph color of the `icon` part.
  * @status stable
  * @since 4.0.0

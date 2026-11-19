@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Henvis',
   promptInputLabel: 'KI-ledetekst',
   promptInputControls: 'Ledetekstalternativer',
+  promptInputCollectionLimit: 'Noe av inndataene til ledeteksten ble utelatt fordi en inndatagrense ble nådd.',
   promptInputSources: 'Kilder',
   promptInputAttachments: 'Vedlegg',
   handoffLabel: 'Agentoverlevering',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Ingen stemmer tilgjengelig',
   voicePickerRequired: 'Velg en stemme.',
   voicePickerPreview: 'Forhåndslytt {name}',
+  voicePickerPreviewFailed: 'Forhåndslytting er ikke tilgjengelig.',
   voicePickerStopPreview: 'Stopp forhåndslytting',
   realtimeSessionLabel: 'Sanntidsøkt',
   realtimeSessionDisconnected: 'Frakoblet',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Lang kode vises uten syntaksutheving.',
   codeBlockHighlightedLine: 'Uthevet linje',
   codeBlockActiveLine: 'Aktiv uthevet linje',
+  codeBlockToggle: 'Vis eller skjul koden',
 };
 
 registerLyraLocale('nb', strings);

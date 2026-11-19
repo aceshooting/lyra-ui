@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ጠቅስ',
   promptInputLabel: 'የAI ጥያቄ',
   promptInputControls: 'የጥያቄ አማራጮች',
+  promptInputCollectionLimit: 'የግቤት ገደብ ስለተደረሰ የጥያቄ ግቤቱ አንዳንድ ክፍሎች ተትተዋል።',
   promptInputSources: 'ምንጮች',
   promptInputAttachments: 'አባሪዎች',
   handoffLabel: 'ወደ ወኪል ማስተላለፍ',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'ምንም ድምጽ አይገኝም',
   voicePickerRequired: 'እባክዎ ድምጽ ይምረጡ።',
   voicePickerPreview: 'የ{name} ቅድመ እይታ',
+  voicePickerPreviewFailed: 'የድምፅ ቅድመ እይታ አይገኝም።',
   voicePickerStopPreview: 'ቅድመ እይታውን አቁም',
   realtimeSessionLabel: 'በቅጽበት ክፍለ ጊዜ',
   realtimeSessionDisconnected: 'ግንኙነት ተቋርጧል',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'ረጅም ኮድ የአገባብ ማድመቂያ ሳይኖረው ይታያል።',
   codeBlockHighlightedLine: 'ጎልቶ የወጣ መስመር',
   codeBlockActiveLine: 'ንቁ ጎልቶ የወጣ መስመር',
+  codeBlockToggle: 'ኮዱን አሳይ ወይም ደብቅ',
 };
 
 registerLyraLocale('am', strings);

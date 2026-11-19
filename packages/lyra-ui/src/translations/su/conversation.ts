@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Rujuk',
   promptInputLabel: 'Prompt AI',
   promptInputControls: 'Pilihan prompt',
+  promptInputCollectionLimit: 'Sababaraha asupan prompt dileungitkeun lantaran wates input geus kahontal.',
   promptInputSources: 'Sumber',
   promptInputAttachments: 'Lampiran',
   handoffLabel: 'Alihkeun ka agén',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Teu aya sora',
   voicePickerRequired: 'Punten pilih sora.',
   voicePickerPreview: 'Dangukeun {name}',
+  voicePickerPreviewFailed: 'Tilik sora teu sadia.',
   voicePickerStopPreview: 'Eureunkeun sawangan',
   realtimeSessionLabel: 'Sesi realtime',
   realtimeSessionDisconnected: 'Pegat',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Kode nu panjang dipintonkeun tanpa panyorot sintaksis.',
   codeBlockHighlightedLine: 'Baris anu disorot',
   codeBlockActiveLine: 'Baris sorotan aktif',
+  codeBlockToggle: 'Témbongkeun atawa sumputkeun kode',
 };
 
 registerLyraLocale('su', strings);

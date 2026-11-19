@@ -1,3 +1,4 @@
+import { markdownFenceClosePattern, parseMarkdownFenceOpener } from './markdown-fence.js';
 import { Slugger } from '../../../internal/slugger.js';
 import type { MarkdownCodeBlockRecord } from './markdown-code-header.js';
 import type { MarkdownParserCapabilities, MarkdownLexicalState, MarkdownDefinition, MarkdownLexToken, MarkdownHeadingItem, PendingHighlight } from './markdown-shared.js';
@@ -125,19 +126,10 @@ function decisive(line: string): boolean {
   return Boolean(match && (match[1]!.length >= 4 || !/[#>*+\-=_`~<|["'(\d]/.test(match[2]!)));
 }
 
-function fence(source: string): { run: string; indent: number; end: number; backtick: boolean } | null {
-  const match = /^( {0,3})(`{3,}|~{3,})([^\n]*)\n/.exec(source);
-  if (!match || (match[2]![0] === '`' && match[3]!.includes('`'))) return null;
-  return { run: match[2]!, indent: match[1]!.length, end: match[0].length, backtick: match[2]![0] === '`' };
-}
-/** A closing fence repeats the opening character at least as often, followed only by spaces. */
-function fenceClosePattern(opening: { run: string }): RegExp {
-  return new RegExp(`^ {0,3}${opening.run}${opening.run[0]!}* *$`, 'm');
-}
 function hasFenceClose(source: string, completeEnd = source.length): boolean {
-  const opening = fence(source);
+  const opening = parseMarkdownFenceOpener(source);
   if (!opening) return false;
-  const pattern = fenceClosePattern(opening);
+  const pattern = markdownFenceClosePattern(opening);
   return pattern.test(source.slice(opening.end, completeEnd).replace(/[^\n]*$/, ''));
 }
 
@@ -390,12 +382,12 @@ export class MarkdownProgressiveSession {
     const delta = source.slice(Math.max(start, this.lastLexEnd));
     const hint = this.hintsEnabled && /\n[ \t]*\n(?![*+-](?:\s|$)|\d{1,9}[.)](?:\s|$))[^\s]/.test(delta);
     const tail = source.slice(start, end);
-    const opening = fence(tail);
+    const opening = parseMarkdownFenceOpener(tail);
     let justClosed = false;
     if (opening) {
       if (this.fenceScan?.start !== start) this.fenceScan = { start, end: start + opening.end, closed: false };
       const scan = this.fenceScan;
-      const pattern = fenceClosePattern(opening);
+      const pattern = markdownFenceClosePattern(opening);
       if (!scan.closed && completeEnd > scan.end) {
         scan.closed = pattern.test(source.slice(scan.end, completeEnd).replace(/[^\n]*$/, ''));
         justClosed = scan.closed;
@@ -602,11 +594,11 @@ export class MarkdownProgressiveSession {
   get tail(): { kind: 'text' | 'open-fence'; text: string } | null {
     const tail = this.normalized.text.slice(this.committedEnd);
     if (!tail || this.eof) return null;
-    const opening = !this.frozen && fence(tail);
+    const opening = !this.frozen && parseMarkdownFenceOpener(tail);
     const closed = this.fenceScan?.start === this.committedEnd ? this.fenceScan.closed : hasFenceClose(tail);
     if (opening && !closed) {
       let text = tail.slice(opening.end);
-      if (opening.backtick && opening.indent) text = text.replace(new RegExp(`^ {0,${opening.indent}}`, 'gm'), '');
+      if (opening.char === '`' && opening.indent) text = text.replace(new RegExp(`^ {0,${opening.indent}}`, 'gm'), '');
       return { kind: 'open-fence', text };
     }
     const text = this.normalized.text.slice(this.committedEnd, Math.max(this.committedEnd, this.normalized.displayEnd));

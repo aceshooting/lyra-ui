@@ -123,6 +123,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Tagair',
   promptInputLabel: 'Leid IS',
   promptInputControls: 'Roghanna leide',
+  promptInputCollectionLimit: 'Fágadh cuid d’ionchur na leide ar lár mar gur sroicheadh teorainn ionchuir.',
   promptInputSources: 'Foinsí',
   promptInputAttachments: 'Ceangaltáin',
   handoffLabel: 'Aistriú gníomhaire',
@@ -161,6 +162,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Níl aon ghuthanna ar fáil',
   voicePickerRequired: 'Roghnaigh guth.',
   voicePickerPreview: 'Réamhéist ar {name}',
+  voicePickerPreviewFailed: 'Níl sampla den ghuth ar fáil.',
   voicePickerStopPreview: 'Stop an réamhéisteacht',
   realtimeSessionLabel: 'Seisiún fíor-ama',
   realtimeSessionDisconnected: 'Dícheangailte',
@@ -190,6 +192,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Taispeántar cód fada gan aibhsiú comhréire.',
   codeBlockHighlightedLine: 'Líne aibhsithe',
   codeBlockActiveLine: 'Líne aibhsithe ghníomhach',
+  codeBlockToggle: 'Taispeáin nó folaigh an cód',
 };
 
 registerLyraLocale('ga', strings);

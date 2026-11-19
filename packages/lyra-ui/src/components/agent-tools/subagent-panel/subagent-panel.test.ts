@@ -250,7 +250,7 @@ it('iteratively bounds a deeply nested hierarchy without overflowing the stack',
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
     'Only the first 500 subagent runs are shown.',
   );
-  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal('note');
   expect(sinkTexts(), 'a hierarchy that mounts already truncated is not a live change').to.deep.equal([]);
 });
 
@@ -347,7 +347,7 @@ it('announces a newly reached run ceiling through the shared light-DOM sink', as
   await el.updateComplete;
 
   expect(sinkTexts()).to.deep.equal(['Only the first 500 subagent runs are shown.']);
-  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal('note');
   el.remove();
   expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(0);
 });

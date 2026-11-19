@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'حوالہ دیں',
   promptInputLabel: 'AI پرومپٹ',
   promptInputControls: 'پرومپٹ کے اختیارات',
+  promptInputCollectionLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے پرامپٹ کے ان پٹ کا کچھ حصہ چھوڑ دیا گیا ہے۔',
   promptInputSources: 'ذرائع',
   promptInputAttachments: 'منسلکات',
   handoffLabel: 'ایجنٹ کو منتقل کریں',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'کوئی آواز دستیاب نہیں',
   voicePickerRequired: 'براہ کرم آواز منتخب کریں۔',
   voicePickerPreview: '{name} کا پیش نظارہ',
+  voicePickerPreviewFailed: 'آواز کا پیش نظارہ دستیاب نہیں ہے۔',
   voicePickerStopPreview: 'پیش نظارہ روکیں',
   realtimeSessionLabel: 'حقیقی وقت کا سیشن',
   realtimeSessionDisconnected: 'منقطع',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'طویل کوڈ سنٹیکس ہائی لائٹنگ کے بغیر دکھایا جاتا ہے۔',
   codeBlockHighlightedLine: 'نمایاں لائن',
   codeBlockActiveLine: 'فعال نمایاں لائن',
+  codeBlockToggle: 'کوڈ دکھائیں یا چھپائیں',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

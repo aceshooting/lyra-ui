@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Bộ nhớ dài hạn',
   memoryPanelAdd: 'Thêm vào bộ nhớ dài hạn',
   memoryPanelAddWithContext: 'Thêm "{label}" vào bộ nhớ dài hạn',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Xóa tất cả',
   memoryPanelConfirmAddHeading: 'Thêm mục này vào bộ nhớ dài hạn?',
   memoryPanelConfirmRemoveHeading: 'Xóa mục này?',
@@ -183,6 +184,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Phân đoạn đánh giá',
   ragEvalDashboardAllSlices: 'Tất cả',
   ragEvalDashboardSliceUnavailable: 'Không có lượt đánh giá nào cho {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Không có chỉ số đánh giá cho {metric}.',
   knowledgeBaseSyncIdle: 'Không hoạt động',
   knowledgeBaseSyncSyncing: 'Đang đồng bộ',
   knowledgeBaseSyncPaused: 'Đã tạm dừng',
@@ -258,6 +260,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Kết quả {index} trên {total}',
   ragAnswerEmpty: 'Chưa có câu trả lời',
   retrievalTraceEmpty: 'Không có giai đoạn truy xuất',
+  retrievalTraceLabel: 'Dấu vết truy xuất',
   sourcePickerMatches: {
     other: '{count} nguồn phù hợp',
   },

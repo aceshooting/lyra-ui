@@ -31,6 +31,12 @@ export const Connecting: Story = {
   render: () => html`<lr-browser-frame style="max-width:36rem" phase="connecting"></lr-browser-frame>`,
 };
 
+export const BoundedActionMarkers: Story = {
+  render: () => html`<lr-browser-frame phase="streaming" .pings=${Array.from({ length: 501 }, (_, index) => ({
+    id: `action-${index}`, x: index % 100, y: (index * 7) % 100, kind: 'move',
+  }))}></lr-browser-frame>`,
+};
+
 export const Stalled: Story = {
   render: () => html`
     <lr-browser-frame

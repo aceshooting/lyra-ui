@@ -214,6 +214,10 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @cssprop --lr-lightbox-overlay-color - The backdrop scrim color.
  * @cssprop --lr-lightbox-control-bg - Background for every floating/toolbar icon button.
  * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
+ * @cssprop --lr-lightbox-control-hover-bg - Hovered control background. Defaults to `--lr-color-brand-quiet`.
+ * @cssprop --lr-lightbox-control-hover-color - Hovered control icon/text color. Defaults to `--lr-color-brand`.
+ * @cssprop --lr-lightbox-control-active-bg - Pressed control background. Defaults to the hover background mixed toward `--lr-color-mix-partner`.
+ * @cssprop --lr-lightbox-control-active-color - Pressed control icon/text color. Defaults to the hover color.
  * @cssprop --lr-lightbox-status-color - Color of the source-mode loading and error messages on the backdrop.
  * @status stable
  * @since 4.0.0
@@ -271,6 +275,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   protected static override readonly identityCollectionObjectProperties = Object.freeze(['imageSource']);
   private _imageSource?: LyraLightboxSource;
   private navigationIntent = 0;
+  private pendingIndexChange?: number;
   private sourceBindingCurrent = true;
   @state() private sourceState = 0;
   private readonly sourceController = new LightboxSourceController(this, () => { this.sourceState++; });
@@ -436,9 +441,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       ? ((requested % count) + count) % count
       : Math.min(count - 1, Math.max(0, requested));
     if (next === this.currentIndex()) return;
-    const intent = this.navigationIntent + 1;
+    this.pendingIndexChange = this.navigationIntent + 1;
     this.index = next;
-    if (this.navigationIntent === intent) this.emit('lr-index-change', { index: next });
   }
 
   /** Advances to the next image, respecting `loop`. */
@@ -576,10 +580,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       const intent = this.navigationIntent + 1;
       this.syncImages();
       if (index !== undefined && this.index !== index && this.navigationIntent === intent && this.sourceBindingCurrent) {
-        const corrected = this.index;
-        this.scheduleAfterUpdate(() => {
-          if (this.index === corrected && this.navigationIntent === intent) this.emit('lr-index-change', { index: corrected });
-        }, 'index-change');
+        this.pendingIndexChange = intent;
       }
     }
     if (this.sourceBindingCurrent && this.imageSource !== undefined) this.sourceController.select(this.currentIndex());
@@ -661,6 +662,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (this.open && (changed.has('index') || currentSourceChanged)) {
       this.frameEl?.resetView();
     }
+    const intent = this.pendingIndexChange;
+    this.pendingIndexChange = undefined;
+    if (intent === this.navigationIntent) this.emit('lr-index-change', { index: this.index });
   }
 
   override connectedCallback(): void {

@@ -55,3 +55,26 @@ it('keeps focus on the remaining content when the final action disappears', asyn
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
+
+it('projects the requested span window and keeps the selected span when the cap shrinks', async () => {
+  const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS} active-span-id="search"></lr-span-waterfall>`);
+  const ids = () => Array.from(el.shadowRoot!.querySelectorAll('[part="bar"]'), bar => bar.getAttribute('data-id'));
+  expect(ids()).to.deep.equal(['root', 'search']);
+  el.setAttribute('max-nodes', '1');
+  await el.updateComplete;
+  expect(ids()).to.deep.equal(['search']);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('1');
+});
+
+it('applies card and plain frames and reflects compact density', async () => {
+  const el = await fixture<HTMLElement & { updateComplete: Promise<boolean>; frame: string; size: string }>(html`<lr-span-waterfall></lr-span-waterfall>`);
+  el.frame = 'card';
+  el.size = 's';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(getComputedStyle(base).borderTopStyle).to.equal('solid');
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(base).borderTopWidth).to.equal('0px');
+});

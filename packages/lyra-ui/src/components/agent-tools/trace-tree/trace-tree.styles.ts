@@ -22,9 +22,9 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     --_lr-trace-tree-bar-column: var(--lr-size-6rem);
-    --_lr-trace-tree-tokens-in-column: 0;
-    --_lr-trace-tree-tokens-out-column: 0;
-    --_lr-trace-tree-cost-column: 0;
+    --_lr-trace-tree-tokens-in-column: ;
+    --_lr-trace-tree-tokens-out-column: ;
+    --_lr-trace-tree-cost-column: ;
   }
 
   :host([without-bars]) {
@@ -39,6 +39,14 @@ export const styles = css`
   :host([with-cost]) {
     --_lr-trace-tree-cost-column: var(--lr-size-3-5rem);
   }
+
+  :host([frame='card']) [part~='base'] {
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+  }
+
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='row'],
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='header'] { padding-block: var(--lr-space-2xs); }
 
   [part='base'] {
     display: flex;
@@ -80,7 +88,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part='row']:hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-trace-tree-row-hover-bg, var(--lr-color-surface-raised));
   }
   [part='row']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -108,7 +116,7 @@ export const styles = css`
      hover companion: all three are (0,2,0), so source order alone decides whether pressing the
      already-selected row shows any feedback. */
   [part='row']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-trace-tree-row-pressed-bg, color-mix(in oklab, var(--lr-trace-tree-row-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* Pressing the active row mixes from the active fill, not the plain-row surface, so it never reads
      as deselected mid-click. :where() keeps it (0,2,0); MUST stay after the plain :active rule. */
@@ -271,6 +279,7 @@ export const styles = css`
   [part='bar'] {
     position: absolute;
     inset-block: 0;
+    min-inline-size: var(--lr-size-2px);
     border-radius: inherit;
   }
   [part='bar'][data-status='success'] {

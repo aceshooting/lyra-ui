@@ -29,22 +29,22 @@ it('names the real file anchor through a reactive property-only label while reta
   el.accessibleLabel = 'Download report';
   await el.updateComplete;
   expect(el.hasAttribute('aria-label')).to.equal(false);
-  expect(action.getAttribute('aria-label')).to.equal('Download report');
+  expect(action.getAttribute('aria-label')).to.equal('Untitled file Download report');
   el.accessibleLabel = 'Updated action';
   await el.updateComplete;
-  expect(action.getAttribute('aria-label')).to.equal('Updated action');
+  expect(action.getAttribute('aria-label')).to.equal('Untitled file Updated action');
   el.accessibleLabel = '';
   await el.updateComplete;
-  expect(action.getAttribute('aria-label')).to.equal('Open attachment');
+  expect(action.getAttribute('aria-label')).to.equal('Untitled file Open attachment');
   el.setAttribute('aria-label', 'Host label');
   await el.updateComplete;
-  expect(action.getAttribute('aria-label')).to.equal('Open attachment');
+  expect(action.getAttribute('aria-label')).to.equal('Untitled file Open attachment');
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(action.getAttribute('aria-label')).to.equal('Open attachment');
+  expect(action.getAttribute('aria-label')).to.equal('Untitled file Open attachment');
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(action.getAttribute('aria-label')).to.equal('Open attachment');
+  expect(action.getAttribute('aria-label')).to.equal('Untitled file Open attachment');
 });
 
 const broken = 'data:image/png;base64,AAAA';
@@ -68,7 +68,7 @@ it('retries the media after src changes', async () => {
 
 it('does not paint the pressed fill under frame="plain"', async () => {
   const src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
-  const el = await fixture<LyraMediaCard>(html`<lr-media-card data-lr-theme-scope kind="image" frame="plain" style="--lr-media-card-active-bg: red; --lr-transition-fast: 0s" src=${src}></lr-media-card>`);
+  const el = await fixture<LyraMediaCard>(html`<lr-media-card kind="image" frame="plain" style="--lr-media-card-active-bg: red; --lr-transition-fast: 0s" src=${src}></lr-media-card>`);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   await resetMouse();
   try {
@@ -117,5 +117,17 @@ it('keeps announcing after moving to another document', async () => {
     expect(el.ownerDocument === frame.contentDocument).to.equal(true);
   } finally {
     frame.remove();
+  }
+});
+
+it('paints the hovered border from its public token', async () => {
+  const el = await fixture<LyraMediaCard>(html`<lr-media-card src="/file" style="--lr-transition-fast: 0s; --lr-media-card-hover-border-color: rgb(1, 2, 3)"></lr-media-card>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(base, 'card receives hover');
+    expect(getComputedStyle(base).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
   }
 });

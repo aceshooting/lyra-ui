@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'దీర్ఘకాలిక జ్ఞాపకాలు',
   memoryPanelAdd: 'దీర్ఘకాలిక జ్ఞాపకంలో చేర్చండి',
   memoryPanelAddWithContext: '"{label}"ను దీర్ఘకాలిక జ్ఞాపకంలో చేర్చండి',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'అన్నీ మర్చిపోండి',
   memoryPanelConfirmAddHeading: 'దీన్ని దీర్ఘకాలిక జ్ఞాపకంలో చేర్చాలా?',
   memoryPanelConfirmRemoveHeading: 'ఈ అంశాన్ని తొలగించాలా?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'మూల్యాంకన భాగాలు',
   ragEvalDashboardAllSlices: 'అన్నీ',
   ragEvalDashboardSliceUnavailable: '{slice}కు మూల్యాంకన రన్‌లు అందుబాటులో లేవు.',
+  ragEvalDashboardMetricUnavailable: '{metric}కు మూల్యాంకన కొలమానం అందుబాటులో లేదు.',
   knowledgeBaseSyncIdle: 'నిష్క్రియం',
   knowledgeBaseSyncSyncing: 'సింక్ అవుతోంది',
   knowledgeBaseSyncPaused: 'పాజ్ చేశారు',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total}లో {index}వ ఫలితం',
   ragAnswerEmpty: 'ఇంకా సమాధానం లేదు',
   retrievalTraceEmpty: 'పునరుద్ధరణ దశలు లేవు',
+  retrievalTraceLabel: 'పునరుద్ధరణ ట్రేస్',
   sourcePickerMatches: {
     one: '{count} మూలం సరిపోలిక',
     other: '{count} మూలాధారాలు సరిపోలాయి',

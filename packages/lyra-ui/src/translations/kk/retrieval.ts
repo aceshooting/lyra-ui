@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Ұзақ мерзімді жад',
   memoryPanelAdd: 'Ұзақ мерзімді жадқа қосу',
   memoryPanelAddWithContext: 'Ұзақ мерзімді жадқа қосу: «{label}»',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Барлығын ұмыту',
   memoryPanelConfirmAddHeading: 'Мұны ұзақ мерзімді жадқа қосу керек пе?',
   memoryPanelConfirmRemoveHeading: 'Бұл элементті жою керек пе?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Бағалау кесінділері',
   ragEvalDashboardAllSlices: 'Барлығы',
   ragEvalDashboardSliceUnavailable: 'Бағалау іске қосылымдары жоқ: {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Бағалау метрикасы қолжетімді емес: {metric}.',
   knowledgeBaseSyncIdle: 'Бос',
   knowledgeBaseSyncSyncing: 'Синхрондалуда',
   knowledgeBaseSyncPaused: 'Кідіртілді',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total} нәтиженің {index} нәтижесі',
   ragAnswerEmpty: 'Әлі жауап жоқ',
   retrievalTraceEmpty: 'Қайта алу кезеңдері жоқ',
+  retrievalTraceLabel: 'Қайта алу трассасы',
   sourcePickerMatches: {
     one: '{count} бастапқы сәйкестік',
     other: '{count} дереккөз сәйкес келеді',

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'حوالہ دیو',
   promptInputLabel: 'AI پرامپٹ',
   promptInputControls: 'پرامپٹ دے اختیار',
+  promptInputCollectionLimit: 'اِن پُٹ دی حد پوری ہون کارن پرامپٹ دا کجھ اِن پُٹ چھڈ دتا گیا اے۔',
   promptInputSources: 'ذرائع',
   promptInputAttachments: 'منسلکات',
   handoffLabel: 'ایجنٹ نوں حوالے کرو',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'کوئی آواز دستیاب نئیں',
   voicePickerRequired: 'براہ کرم اک آواز چنو۔',
   voicePickerPreview: '{name} دا پیش نظارہ',
+  voicePickerPreviewFailed: 'آواز دا پیش نظارہ دستیاب نئیں۔',
   voicePickerStopPreview: 'پیش نظارہ روکو',
   realtimeSessionLabel: 'حقیقی ویلے دا سیشن',
   realtimeSessionDisconnected: 'رابطہ ٹٹ گیا',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'لمبا کوڈ سنٹیکس ہائی لائٹنگ توں بغیر وکھایا جاندا اے۔',
   codeBlockHighlightedLine: 'نمایاں لائن',
   codeBlockActiveLine: 'فعال نمایاں لائن',
+  codeBlockToggle: 'کوڈ وکھاؤ یا لُکاؤ',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

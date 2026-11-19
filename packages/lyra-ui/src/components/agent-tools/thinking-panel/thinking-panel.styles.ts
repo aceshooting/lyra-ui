@@ -149,8 +149,8 @@ export const styles = css`
       --lr-thinking-panel-max-block-size,
       var(--_lr-thinking-panel-max-block-size)
     );
-    overflow-inline: hidden;
-    overflow-block: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     overflow-wrap: anywhere;
     /* Hitting this region's edge stops there instead of chaining the scroll into the page -- the
        component tracks the reader's scroll within it, so it must not hand it off. Same convention

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'మూలాన్ని పేర్కొనండి',
   promptInputLabel: 'AI ప్రాంప్ట్',
   promptInputControls: 'ప్రాంప్ట్ ఎంపికలు',
+  promptInputCollectionLimit: 'ఇన్‌పుట్ పరిమితి చేరుకోవడంతో ప్రాంప్ట్ ఇన్‌పుట్‌లో కొంత భాగం వదిలివేయబడింది.',
   promptInputSources: 'మూలాలు',
   promptInputAttachments: 'జోడింపులు',
   handoffLabel: 'ఏజెంట్‌కు అప్పగింత',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'వాయిస్‌లు అందుబాటులో లేవు',
   voicePickerRequired: 'దయచేసి ఒక వాయిస్‌ను ఎంచుకోండి.',
   voicePickerPreview: '{name}ను వినిపించండి',
+  voicePickerPreviewFailed: 'వాయిస్ ప్రివ్యూ అందుబాటులో లేదు.',
   voicePickerStopPreview: 'వినిపించడాన్ని ఆపండి',
   realtimeSessionLabel: 'రియల్‌టైమ్ సెషన్',
   realtimeSessionDisconnected: 'కనెక్షన్ లేదు',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'పొడవైన కోడ్ సింటాక్స్ హైలైటింగ్ లేకుండా చూపబడుతుంది.',
   codeBlockHighlightedLine: 'హైలైట్ చేసిన లైన్',
   codeBlockActiveLine: 'క్రియాశీల హైలైట్ చేసిన లైన్',
+  codeBlockToggle: 'కోడ్‌ను చూపించండి లేదా దాచండి',
 };
 
 registerLyraLocale('te', strings);

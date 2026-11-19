@@ -1,3 +1,9 @@
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { containShadowChildEvents } from '../../../internal/child-event-containment.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { ref } from 'lit/directives/ref.js';
+import { acquireResolvedAriaRelationship, HostDescriptionController, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -9,7 +15,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
-import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
+import { normalizeChatComposerStatus } from '../chat-composer/chat-composer-status.js';
 import type { ChatComposerStatus, ChatComposerWrap } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunCancelDetail, AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 export type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
@@ -37,33 +43,14 @@ import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversa
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+const childEvents = [
+  'input', 'change', 'lr-change', 'lr-invalid', 'lr-toggle', 'lr-toggle-request', 'lr-tool-activate',
+  'lr-tool-render-error', 'lr-chunk-open', 'lr-load-more', 'lr-claim-select', 'lr-citation-open',
+  'lr-citation-activate', 'lr-copy', 'lr-error', 'lr-copy-error', 'lr-toolbar-actions-change',
+  'lr-export-request', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide',
+];
+
 const MAX_RENDERED_MESSAGES = 500;
-
-// Keyed by the owned (frozen) snapshot, so a projection is recomputed only when its input changes.
-const projections = new WeakMap<object, { identity: unknown; result: unknown[] }>();
-
-function firstByWorkspaceIdentity<T>(
-  items: readonly T[],
-  identity: (item: T) => unknown
-): T[] {
-  const known = projections.get(items);
-  if (known?.identity === identity) return known.result as T[];
-  const result: T[] = [];
-  const seen = new Set<string>();
-  for (const item of items) {
-    let id: unknown;
-    try {
-      id = identity(item);
-    } catch {
-      continue;
-    }
-    if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
-    seen.add(id);
-    result.push(item);
-  }
-  projections.set(items, { identity, result });
-  return result;
-}
 
 const workspaceId = (item: { readonly id?: unknown }): unknown => item.id;
 
@@ -150,6 +137,10 @@ export interface LyraAgentWorkspaceEventMap {
  * @event lr-run-cancel - Forwarded from the built-in agent run.
  * @event lr-run-retry - Forwarded from the built-in agent run.
  * @csspart input-limit - Original collection admission-loss notices.
+ * @cssprop [--lr-agent-workspace-radius] - Corner radius of the base surface.
+ * @cssprop [--lr-agent-workspace-bg] - Background color of the base surface.
+ * @cssprop [--lr-agent-workspace-border-color] - Border color of the base surface.
+ * @cssprop [--lr-agent-workspace-padding] - Inner padding of the base surface.
  * @csspart base - The root workspace wrapper.
  * @csspart header - The workspace heading and header-actions slot.
  * @csspart heading - The visible workspace heading.
@@ -199,6 +190,12 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  private regionLabel?: ResolvedAriaRelationshipLease;
+  private readonly labelRegion = (target?: Element): void => {
+    this.regionLabel?.release();
+    this.regionLabel = target ? acquireResolvedAriaRelationship(this, target as HTMLElement, 'aria-labelledby') : undefined;
+  };
+  private readonly hostDescription = new HostDescriptionController(this, () => this.shadowRoot?.querySelector('[part="base"]') ?? null);
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -225,6 +222,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   /** Accessible name and visible heading for the workspace. */
   @property() label?: string;
+
+  /** Outline level of the workspace title. Details use the next level, up to six. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
 
   /** Host-level accessible-name override for the internal `role="region"` root. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -303,7 +303,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   /** Minimum and maximum rows for the built-in composer. */
   @property({ type: Number, attribute: 'composer-min-rows' }) composerMinRows = 1;
-  @property({ type: Number, attribute: 'composer-max-rows' }) composerMaxRows = 8;
+  @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'composer-max-rows' }) composerMaxRows = 8;
 
   /** Gates the built-in Send action without disabling its textarea or busy Stop action. */
   @property({ type: Boolean, attribute: 'composer-submit-disabled' }) composerSubmitDisabled = false;
@@ -313,6 +313,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   /** Makes plain Enter insert a newline in the built-in composer. */
   @property({ type: Boolean, attribute: 'composer-without-enter-submit' }) composerWithoutEnterSubmit = false;
+
+  /** Disables editing and actions in the built-in composer. */
+  @property({ type: Boolean, attribute: 'composer-disabled' }) composerDisabled = false;
 
   /** Native editing constraints forwarded to the built-in composer. */
   @property({ type: Boolean, attribute: 'composer-readonly' }) composerReadOnly = false;
@@ -355,6 +358,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.inputAnnouncements.adopted();
   }
 
@@ -408,19 +412,19 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   private get effectiveTools(): readonly ToolTimelineEntry[] {
-    return firstByWorkspaceIdentity(this.tools, toolIdentity);
+    return firstByIdentityMemo(this.tools, toolIdentity);
   }
 
   private get effectiveRetrievalChunks(): readonly RetrievalChunk[] {
-    return firstByWorkspaceIdentity(this.retrievalChunks, workspaceId);
+    return firstByIdentityMemo(this.retrievalChunks, workspaceId);
   }
 
   private get effectiveCitations(): readonly Citation[] {
-    return firstByWorkspaceIdentity(this.citations, workspaceId);
+    return firstByIdentityMemo(this.citations, workspaceId);
   }
 
   private get effectiveContextSegments(): readonly ContextInspectorSegment[] {
-    return firstByWorkspaceIdentity(this.contextSegments, workspaceId);
+    return firstByIdentityMemo(this.contextSegments, workspaceId);
   }
 
   private messagesMemo?: { source: readonly ChatMessage[]; result: readonly EffectiveWorkspaceMessage[] };
@@ -530,6 +534,17 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     this.requestUpdate();
   };
 
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    containShadowChildEvents(this.renderRoot, childEvents);
+  }
+
+  private renderHeading(text: string, section = false): TemplateResult {
+    const level = resolveHeadingLevel(this.headingLevel);
+    return html`<div part=${section ? 'section-heading' : 'heading'} role=${level ? 'heading' : nothing}
+      aria-level=${level ? Math.min(6, Number(level) + Number(section)) : nothing}>${text}</div>`;
+  }
+
   private renderDetails(): TemplateResult {
     const tools = this.effectiveTools;
     const retrievalChunks = this.effectiveRetrievalChunks;
@@ -539,19 +554,19 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
       <div part="details-content">
         ${this.run
           ? html`<section part="section">
-              <h3 part="section-heading">${this.localize('agentWorkspaceRun')}</h3>
+              ${this.renderHeading(this.localize('agentWorkspaceRun'), true)}
               <lr-agent-run .run=${this.run} .metrics=${this.metrics}></lr-agent-run>
             </section>`
           : nothing}
         ${tools.length > 0
           ? html`<section part="section">
-              <h3 part="section-heading">${this.localize('agentWorkspaceTools')}</h3>
+              ${this.renderHeading(this.localize('agentWorkspaceTools'), true)}
               <lr-tool-timeline .entries=${tools}></lr-tool-timeline>
             </section>`
           : nothing}
         ${retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalErrorText
           ? html`<section part="section">
-              <h3 part="section-heading">${this.localize('agentWorkspaceRetrieval')}</h3>
+              ${this.renderHeading(this.localize('agentWorkspaceRetrieval'), true)}
               <lr-retrieval-results
                 .chunks=${retrievalChunks}
                 .selectedChunkIds=${this.selectedRetrievalChunkIds}
@@ -564,7 +579,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
           : nothing}
         ${this.groundingAssessment || citations.length > 0
           ? html`<section part="section">
-              <h3 part="section-heading">${this.localize('agentWorkspaceGrounding')}</h3>
+              ${this.renderHeading(this.localize('agentWorkspaceGrounding'), true)}
               <lr-grounding-summary
                 .assessment=${this.groundingAssessment}
                 .citations=${citations}
@@ -573,7 +588,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
           : nothing}
         ${contextSegments.length > 0
           ? html`<section part="section">
-              <h3 part="section-heading">${this.localize('agentWorkspaceContext')}</h3>
+              ${this.renderHeading(this.localize('agentWorkspaceContext'), true)}
               <lr-context-inspector
                 .segments=${contextSegments}
                 .total=${this.safeContextTotal}
@@ -598,22 +613,22 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel ?? (this.label == null ? this.localize('agentWorkspaceLabel') : this.label);
-    const heading = this.label == null ? this.localize('agentWorkspaceLabel') : this.label;
+    const heading = this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('agentWorkspaceLabel');
+    const label = this.accessibleLabel === '' ? '' : normalizeLabel(this.accessibleLabel) ?? heading;
     const hasSlottedDetails = this.hasSlotted('details');
     const hasDetails = hasSlottedDetails || (!this.withoutDetails && this.hasBuiltInDetails);
     const hasSlottedComposer = this.hasSlotted('composer');
     return html`
-      <div part="base" role="region" aria-label=${label}>
+      <div ${ref(this.labelRegion)} part="base" role="region" aria-label=${label}>
         <div part="header">
-          <h2 part="heading">${heading}</h2>
+          ${heading ? this.renderHeading(heading) : nothing}
           ${this.inputLimitMessages().map((notice) => html`<p part="input-limit" role="note">${notice}</p>`)}
           <span part="header-actions" ?hidden=${!this.hasSlotted('header-actions')}
             ><slot name="header-actions" @slotchange=${this.onNamedSlotChange}></slot
           ></span>
         </div>
         <div part="body" data-details=${hasDetails ? 'true' : 'false'}>
-          <section part="conversation" aria-label=${this.localize('agentWorkspaceConversation')}>
+          <section part="conversation">
             <lr-chat-viewport
               part="viewport"
               .follow=${this.follow}
@@ -648,6 +663,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                   .submitDisabled=${this.composerSubmitDisabled}
                   .withoutStop=${this.composerWithoutStop}
                   .withoutEnterSubmit=${this.composerWithoutEnterSubmit}
+                  .disabled=${this.composerDisabled}
                   .readOnly=${this.composerReadOnly}
                   .minLength=${this.composerMinLength}
                   .maxLength=${this.composerMaxLength}

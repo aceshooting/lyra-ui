@@ -1,5 +1,5 @@
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
-import { fixture, expect, oneEvent, html } from "@open-wc/testing";
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import "./date-input.js";
 import "../button/button.js";
 import type { LyraDateInput } from "./date-input.js";
@@ -450,10 +450,14 @@ it("hides the error and hint parts when empty, shows them once populated", async
   expect(getComputedStyle(hintPart).display).to.not.equal("none");
 });
 
-it("clamps the popup to the viewport width like the combobox listbox", () => {
-  expect(styles.cssText).to.match(
-    /max-inline-size:\s*min\(\s*var\(--lr-popover-viewport-clamp\),\s*var\(--lr-size-28rem\)\s*\)/
-  );
+it('uses the narrower of the viewport clamp and the design maximum for the popup', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+  const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+  popup.style.setProperty('--lr-popover-viewport-clamp', '120px');
+  popup.style.setProperty('--lr-size-28rem', '180px');
+  expect(getComputedStyle(popup).maxInlineSize).to.equal('120px');
+  popup.style.setProperty('--lr-popover-viewport-clamp', '220px');
+  expect(getComputedStyle(popup).maxInlineSize).to.equal('180px');
 });
 
 it("renders no calendar while disabled or readonly, and drops an open one once its forced close settles", async () => {
@@ -1079,19 +1083,17 @@ it("tracks slotted hint and error content through slotchange", async () => {
     </lr-date-input>
   `)) as LyraDateInput;
   await el.updateComplete;
-  const flags = el as unknown as {
-    hasHintSlot: boolean;
-    hasErrorSlot: boolean;
-  };
-  expect(flags.hasHintSlot).to.be.true;
-  expect(flags.hasErrorSlot).to.be.true;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+  const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.false;
 
   el.querySelector('[slot="hint"]')!.remove();
   el.querySelector('[slot="error"]')!.remove();
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
-  expect(flags.hasHintSlot).to.be.false;
-  expect(flags.hasErrorSlot).to.be.false;
+  expect(hint.hidden).to.be.true;
+  expect(error.hidden).to.be.true;
 });
 
 //    Enter commit. -----------------------------------------------------------------------------
@@ -1890,4 +1892,179 @@ it("shares the text-field native passthrough shape: boolean autocorrect, inputMo
   expect(el.inputMode).to.equal("text");
   expect(native().getAttribute("inputmode")).to.equal("text");
   expect(native().getAttribute("enterkeyhint")).to.equal("go");
+});
+
+it('rejects unreadable validator results with a localized validation error', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input .strings=${{ dateInputInvalid: 'Date rejected' }}></lr-date-input>`);
+  el.validators = [() => new Proxy({}, { getOwnPropertyDescriptor() { throw new Error('unreadable'); },
+    ownKeys() { throw new Error('unreadable'); } })];
+  expect(el.checkValidity()).to.equal(false);
+  expect(el.validity.customError).to.equal(true);
+  expect(el.validationMessage).to.equal('Date rejected');
+});
+
+it('limits the calendar popup to both dimensions reported by placement', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+  await el.show();
+  const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+  popup.style.setProperty('--lr-positioner-available-block-size', '50px');
+  popup.style.setProperty('--lr-positioner-available-inline-size', '90px');
+  expect(getComputedStyle(popup).maxBlockSize).to.equal('50px');
+  expect(getComputedStyle(popup).maxInlineSize).to.equal('90px');
+});
+
+it('shares selection endpoints and editing hints with the rendered input', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input value="2026-07-15"></lr-date-input>`);
+  el.inputmode = 'numeric';
+  el.enterkeyhint = 'go';
+  el.autocorrect = false;
+  await el.updateComplete;
+  expect(el.input!.inputMode).to.equal('numeric');
+  const native = document.createElement('input');
+  native.setAttribute('enterkeyhint', 'go');
+  expect(el.enterKeyHint).to.equal('go');
+  expect(el.input!.getAttribute('enterkeyhint')).to.equal('go');
+  expect(el.input!.enterKeyHint).to.equal(native.enterKeyHint);
+  expect(el.input!.getAttribute('autocorrect')).to.equal('off');
+  el.selectionStart = 1;
+  el.selectionEnd = 4;
+  el.selectionDirection = 'backward';
+  expect([el.input!.selectionStart, el.input!.selectionEnd, el.input!.selectionDirection]).to.deep.equal([1, 4, 'backward']);
+});
+
+it('uses the same cancelable requests and settled events for open property and attribute writes', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+  const names: string[] = [];
+  for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) el.addEventListener(name, () => names.push(name));
+  el.addEventListener('lr-show', event => event.preventDefault(), { once: true });
+  el.setAttribute('open', '');
+  expect(el.open).to.equal(false);
+  expect(el.hasAttribute('open')).to.equal(false);
+  const shown = oneEvent(el, 'lr-after-show');
+  el.open = true;
+  await shown;
+  el.addEventListener('lr-hide', event => event.preventDefault(), { once: true });
+  el.removeAttribute('open');
+  expect(el.open).to.equal(true);
+  expect(el.hasAttribute('open')).to.equal(true);
+  const hidden = oneEvent(el, 'lr-after-hide');
+  el.open = false;
+  await hidden;
+  expect(names).to.deep.equal(['lr-show', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-hide', 'lr-after-hide']);
+});
+
+it('reports the previous ISO value on typed edits, calendar picks and clearing', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input value="2026-07-01"></lr-date-input>`);
+  const edits: unknown[] = [];
+  const commits: unknown[] = [];
+  el.addEventListener('lr-input', event => edits.push(event.detail));
+  el.addEventListener('lr-change', event => commits.push(event.detail));
+  el.input!.value = '2026-07-02';
+  el.input!.dispatchEvent(new Event('change'));
+  await el.show();
+  el.shadowRoot!.querySelector('lr-date-picker')!.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-03"]')!.click();
+  el.clear();
+  const expected = [
+    { value: '2026-07-02', previousValue: '2026-07-01' },
+    { value: '2026-07-03', previousValue: '2026-07-02' },
+    { value: '', previousValue: '2026-07-03' },
+  ];
+  expect(edits).to.deep.equal(expected);
+  expect(commits).to.deep.equal(expected);
+});
+
+it('rejects an opening if the listener disables or removes the date field', async () => {
+  for (const action of ['disable', 'remove'] as const) {
+    const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+    el.addEventListener('lr-show', () => {
+      if (action === 'disable') el.disabled = true;
+      else el.remove();
+    }, { once: true });
+    await el.show();
+    expect(el.open).to.equal(false);
+  }
+});
+
+it('keeps calendar view events inside the popup and accepts a standalone calendar commit', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input value="2026-07-02"></lr-date-input>`);
+  await el.show();
+  const calendar = el.shadowRoot!.querySelector('lr-date-picker')!;
+  let outside = 0;
+  el.addEventListener('lr-view-change', () => outside++);
+  const changedView = oneEvent(calendar, 'lr-view-change');
+  calendar.shadowRoot!.querySelector<HTMLButtonElement>('[part="title"]')!.click();
+  const { detail } = await changedView;
+  expect(detail.view).to.equal('months');
+  expect(detail.date.getFullYear()).to.equal(2026);
+  expect(outside).to.equal(0);
+  const committed = oneEvent(el, 'lr-change');
+  calendar.value = '2026-07-03';
+  calendar.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  expect((await committed).detail).to.deep.equal({ previousValue: '2026-07-02', value: '2026-07-03' });
+});
+
+it('keeps observing valid validators when another entry cannot be inspected', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input value="2026-07-15"></lr-date-input>`);
+  const broken = new Proxy({ checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }) }, {
+    has() { throw new Error('Unreadable validator'); },
+  });
+  const validator = {
+    observedAttributes: ['data-rule'],
+    checkValidity: () => ({ isValid: !el.hasAttribute('data-rule'), invalidKeys: ['customError' as const], message: 'Rule' }),
+  };
+  el.validators = [validator, broken];
+  await el.updateComplete;
+  el.setAttribute('data-rule', '');
+  await waitUntil(() => el.validationMessage === 'Rule');
+});
+
+for (const action of ['remove', 'disable', 'readonly'] as const) {
+  it(`closes the date popup when a hide listener vetoes and then applies ${action}`, async () => {
+    const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+    await el.show();
+    el.addEventListener('lr-hide', event => {
+      event.preventDefault();
+      if (action === 'remove') el.remove();
+      else if (action === 'disable') el.disabled = true;
+      else el.readonly = true;
+    }, { once: true });
+    await el.hide();
+    if (action === 'remove') await fixture(el);
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+  });
+}
+
+it('accepts a disconnected open property when selector matching is unavailable', () => {
+  const el = document.createElement('lr-date-input');
+  Object.defineProperty(el, 'matches', { configurable: true, value: undefined });
+  el.open = true;
+  expect(el.open).to.equal(true);
+});
+
+it('shows a not-allowed cursor on disabled actions and a default cursor while readonly', async () => {
+  const disabled = await fixture<LyraDateInput>(html`<lr-date-input disabled with-clear value="2026-01-01"></lr-date-input>`);
+  for (const name of ['clear-button', 'expand-button']) {
+    const button = disabled.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${name}"]`)!;
+    expect(getComputedStyle(button).cursor).to.equal('not-allowed');
+  }
+  const readonly = await fixture<LyraDateInput>(html`<lr-date-input readonly with-clear value="2026-01-01"></lr-date-input>`);
+  for (const name of ['clear-button', 'expand-button']) {
+    const button = readonly.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${name}"]`)!;
+    expect(getComputedStyle(button).cursor).to.equal('default');
+  }
+  const enabled = await fixture<LyraDateInput>(html`<lr-date-input with-clear value="2026-01-01"></lr-date-input>`);
+  expect(getComputedStyle(enabled.shadowRoot!.querySelector('[part="expand-button"]')!).cursor).to.equal('pointer');
+});
+
+it('forwards .strings to the nested calendar navigation labels', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input value="2026-07-15"></lr-date-input>`);
+  el.strings = { previousMonth: 'Mois precedent', nextMonth: 'Mois suivant' };
+  el.open = true;
+  await waitUntil(() => el.shadowRoot!.querySelector('lr-date-picker')?.shadowRoot?.querySelector('[part="previous"]'), 'calendar never rendered');
+  const picker = el.shadowRoot!.querySelector<LyraDatePicker>('lr-date-picker')!;
+  await picker.updateComplete;
+  expect(picker.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal('Mois precedent');
+  expect(picker.shadowRoot!.querySelector('[part="next"]')!.getAttribute('aria-label')).to.equal('Mois suivant');
 });

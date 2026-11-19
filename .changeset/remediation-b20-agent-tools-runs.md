@@ -17,3 +17,14 @@ Show and announce a localized terminal note when an input or line exceeds its ch
 Report terminal text selection only inside the viewport and once for unchanged endpoints. Listen on the selected content's owner for selections elsewhere on the page.
 Recognize shared completion, failure, and cancellation spellings in task lists.
 Observe streamed thinking-panel content only while the expanded live transcript follows new output.
+Load question form controls when a schema is supplied.
+Navigate background runs and reorderable tasks with arrow keys and a single active row.
+Stack background-run actions in compact layouts and announce newly truncated run lists.
+Keep the count-based internal-frame disclosure label stable and recognize patterns from another window.
+Use a host accessible name for trace trees, agent traces and thinking-panel transcripts.
+Choose a compact density or card frame for budget meters, agent traces, trace trees and span waterfalls.
+Set the number of spans shown in an array-mode waterfall with `max-nodes`.
+Customize activity-header, trace-row and handoff pointer colors and distinguish over-budget meter fills.
+Keep short spans visible and omit disabled metric columns from trace-tree layouts.
+Keep terminal search results visible alongside keyboard focus and limit pointer feedback to interactive lines.
+Handle structured run statuses and lifecycle names that match inherited JavaScript properties.

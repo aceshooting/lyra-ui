@@ -142,12 +142,12 @@ export const styles = css`
   [part='overflow-badge']:hover [part='overflow-badge-visual'] {
     box-shadow: 0 0 0
       var(--lr-avatar-group-ring-width, var(--_lr-avatar-group-ring-width))
-      var(--lr-color-brand);
+      var(--lr-avatar-group-badge-hover-ring-color, var(--lr-color-brand));
   }
   [part='overflow-badge']:active [part='overflow-badge-visual'] {
     box-shadow: 0 0 0
       var(--lr-avatar-group-ring-width, var(--_lr-avatar-group-ring-width))
-      var(--lr-color-brand);
+      var(--lr-avatar-group-badge-hover-ring-color, var(--lr-color-brand));
     background: color-mix(
       in oklab,
       var(--lr-avatar-group-badge-bg, var(--_lr-avatar-group-badge-bg)),

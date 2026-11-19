@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Hosszú távú emlékek',
   memoryPanelAdd: 'Hozzáadás a hosszú távú memóriához',
   memoryPanelAddWithContext: 'Hozzáadás a hosszú távú memóriához: „{label}”',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Az összes elfelejtése',
   memoryPanelConfirmAddHeading: 'Hozzáadja ezt a hosszú távú memóriához?',
   memoryPanelConfirmRemoveHeading: 'Eltávolítja ezt az elemet?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Kiértékelési szeletek',
   ragEvalDashboardAllSlices: 'Összes',
   ragEvalDashboardSliceUnavailable: 'Ehhez nem érhetők el kiértékelési futtatások: {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Nem érhető el kiértékelési mutató ehhez: {metric}.',
   knowledgeBaseSyncIdle: 'Tétlen',
   knowledgeBaseSyncSyncing: 'Szinkronizálás',
   knowledgeBaseSyncPaused: 'Szüneteltetve',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total}/{index}. találat',
   ragAnswerEmpty: 'Még nincs válasz',
   retrievalTraceEmpty: 'Nincs visszakeresési szakasz',
+  retrievalTraceLabel: 'Visszakeresési nyomkövetés',
   sourcePickerMatches: {
     one: '{count} forrásegyezés',
     other: '{count} forrás egyezik',

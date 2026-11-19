@@ -550,8 +550,6 @@ describe("owner-realm line interactions", () => {
       setDarkTheme: () => undefined,
       emitLineActivate: () => undefined,
       reportCopy: () => undefined,
-      requestToggle: () => true,
-      emitToggle: () => undefined,
       emitTextSelect: () => undefined,
     });
     root.addEventListener('keydown', controller.onBodyKeyDown as EventListener);

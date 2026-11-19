@@ -1,3 +1,7 @@
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -35,7 +39,7 @@ import {
   composedContains,
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './selection-toolbar.styles.js';
 import {
   isLibraryPromotedAndShowing,
@@ -46,7 +50,7 @@ import {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectionAsk, LYRA_DEFAULT_selectionCite, LYRA_DEFAULT_selectionQuote, LYRA_DEFAULT_selectionToolbarLabel } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const COMPOSITE_ROLES = new Set(['menu', 'menubar', 'listbox', 'tree', 'treegrid', 'grid', 'tablist', 'radiogroup']);
@@ -148,6 +152,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
     selectionAsk: LYRA_DEFAULT_selectionAsk,
@@ -200,13 +205,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   @query('[part="toolbar"]') private toolbar?: HTMLElement;
   private overlay?: OverlayHandle;
   private stopPositioning?: () => void;
-  /** Announces a copy failure -- the copy button's own `aria-label`/text flipping to
-   *  `localize('copyFailed')` is not reliably re-announced by a screen reader without an
-   *  explicit live region, unlike every other failure/transition state in this family. */
-  private sink?: AnnouncementSink;
+  private readonly copyAnnouncements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
+  private activationGeneration = 0;
   private activeActionIndex = 0;
   private lifecycleGeneration = 0;
-  private positioningGeneration = 0;
   private rovingGeneration = 0;
   private pendingActionFocus?: ActionFocusRepair;
   private focusedAction?: ActionFocusRepair;
@@ -235,12 +237,6 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Acquired on connect, not on the first failure: assistive tech has to have been observing a
-    // live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
     // updated()'s `changed.has('open')` branch never reruns to notice `open` is still true --
@@ -262,13 +258,12 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.releaseManagedActionStops();
     this.retirePositioning();
     this.overlay?.suspend();
-    this.sink?.release();
-    this.sink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.copyAnnouncements.adopted();
     this.hostDescription.adopted();
     // Adoption can happen after a node was already disconnected, so independently invalidate
     // every continuation and exact owner-window subscription retained by the old document.
@@ -376,20 +371,25 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const anchor = this.anchor;
     const generation = this.lifecycleGeneration;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
+    const activation = ++this.activationGeneration;
+    const current = () => this.isCurrentLifecycle(generation, owner) && activation === this.activationGeneration;
     this.copyFailed = false;
     if (action === 'copy') {
       const outcome = await writeClipboardText(owner, text);
-      if (!this.isCurrentLifecycle(generation, owner)) return;
-      if (!outcome.ok) {
-        this.copyFailed = true;
-        this.sink?.announce(this.localize('copyFailed'));
-        this.emit('lr-error', null);
-        this.emit('lr-copy-error', outcome);
-        return;
-      }
-      this.emit('lr-copy', outcome);
+      reportCopyOutcome({
+        announce: ok => {
+          this.copyFailed = !ok;
+          this.copyAnnouncements.announce(this.localize(ok ? 'copied' : 'copyFailed'), ok ? 'polite' : 'assertive');
+        },
+        emit: name => {
+          if (name === 'lr-error') this.emit('lr-error', null);
+          else if (outcome.ok) this.emit('lr-copy', outcome);
+          else this.emit('lr-copy-error', outcome);
+        },
+      }, outcome, current);
+      if (!outcome.ok) return;
     }
-    if (!this.isCurrentLifecycle(generation, owner)) return;
+    if (!current()) return;
     this.emit('lr-selection-action', { action, text, anchor });
   }
 
@@ -836,14 +836,14 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       0,
       Number.MAX_VALUE,
     );
-    toolbar.style.setProperty(
-      '--_lr-selection-toolbar-max-inline-size',
-      this.px(maxInlineSize),
-    );
-    toolbar.style.setProperty(
-      '--_lr-selection-toolbar-max-block-size',
-      this.px(maxBlockSize),
-    );
+    const inlineLimit = this.px(maxInlineSize);
+    const blockLimit = this.px(maxBlockSize);
+    if (toolbar.style.getPropertyValue('--_lr-selection-toolbar-max-inline-size') !== inlineLimit) {
+      toolbar.style.setProperty('--_lr-selection-toolbar-max-inline-size', inlineLimit);
+    }
+    if (toolbar.style.getPropertyValue('--_lr-selection-toolbar-max-block-size') !== blockLimit) {
+      toolbar.style.setProperty('--_lr-selection-toolbar-max-block-size', blockLimit);
+    }
     const width = finiteRange(toolbar.offsetWidth, 0, 0, Number.MAX_VALUE);
     const height = finiteRange(toolbar.offsetHeight, 0, 0, Number.MAX_VALUE);
     const desiredInline = finiteRange(
@@ -897,46 +897,26 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const toolbar = this.toolbar;
     const view = this.ownerDocument.defaultView;
     if (!toolbar || !view || !this.isConnected) return;
-    const generation = this.positioningGeneration;
-    const update = (): void => {
-      if (
-        generation !== this.positioningGeneration ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== view ||
-        this.toolbar !== toolbar
-      )
-        return;
-      this.updateToolbarPosition();
-    };
-    let resizeFrame: number | undefined;
+    const resizeFrame = new OwnedFrame(this);
     const scheduleResizeUpdate = (): void => {
-      if (resizeFrame !== undefined) return;
-      resizeFrame = view.requestAnimationFrame(() => {
-        resizeFrame = undefined;
-        update();
-      });
+      if (!resizeFrame.pending) resizeFrame.schedule(this.updateToolbarPosition);
     };
-    const observer =
-      typeof view.ResizeObserver === 'undefined'
-        ? undefined
-        : new view.ResizeObserver(scheduleResizeUpdate);
-    observer?.observe(toolbar);
-    view.addEventListener('resize', update);
-    view.visualViewport?.addEventListener('resize', update);
-    view.visualViewport?.addEventListener('scroll', update);
-    update();
+    const observer = new OwnedResizeObserver(this, scheduleResizeUpdate);
+    observer.observe(toolbar);
+    view.addEventListener('resize', scheduleResizeUpdate);
+    view.visualViewport?.addEventListener('resize', scheduleResizeUpdate);
+    view.visualViewport?.addEventListener('scroll', scheduleResizeUpdate);
+    this.updateToolbarPosition();
     this.stopPositioning = () => {
-      observer?.disconnect();
-      if (resizeFrame !== undefined) view.cancelAnimationFrame(resizeFrame);
-      resizeFrame = undefined;
-      view.removeEventListener('resize', update);
-      view.visualViewport?.removeEventListener('resize', update);
-      view.visualViewport?.removeEventListener('scroll', update);
+      observer.disconnect();
+      resizeFrame.cancel();
+      view.removeEventListener('resize', scheduleResizeUpdate);
+      view.visualViewport?.removeEventListener('resize', scheduleResizeUpdate);
+      view.visualViewport?.removeEventListener('scroll', scheduleResizeUpdate);
     };
   }
 
   private retirePositioning(): void {
-    this.positioningGeneration++;
     const stop = this.stopPositioning;
     this.stopPositioning = undefined;
     stop?.();
@@ -958,9 +938,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override render(): TemplateResult {
     if (!this.open || !this.text) return html`${nothing}`;
-    const label =
-      this.accessibleLabel ??
-      (this.label == null ? this.localize('selectionToolbarLabel') : this.label);
+    const hostLabel = this.accessibleLabel;
+    const label = hostLabel === '' ? '' : normalizeLabel(hostLabel) ??
+      (this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('selectionToolbarLabel'));
     return html`<div
       part="toolbar"
       role="toolbar"

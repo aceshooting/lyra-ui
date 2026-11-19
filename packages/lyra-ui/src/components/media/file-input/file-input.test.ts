@@ -1858,10 +1858,10 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
 
     expect(() => {
       (el as unknown as { fileCount: number }).fileCount = 4;
-    }).to.throw(TypeError);
+    }).not.to.throw();
     expect(() => {
       (el as unknown as { dragging: boolean }).dragging = true;
-    }).to.throw(TypeError);
+    }).not.to.throw();
     expect(el.fileCount).to.equal(0);
     expect(el.dragging).to.equal(false);
 
@@ -2927,14 +2927,14 @@ it("discards a non-array write to files instead of throwing", async () => {
   expect(el.files).to.deep.equal([]);
 });
 
-it("rejects even a same-value write to the readonly dragging getter", async () => {
+it("ignores a same-value write to the readonly dragging property", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
   expect(el.dragging).to.be.false;
   expect(() => {
     (el as unknown as { dragging: boolean }).dragging = false;
-  }).to.throw(TypeError);
+  }).not.to.throw();
   expect(el.dragging).to.be.false;
 });
 

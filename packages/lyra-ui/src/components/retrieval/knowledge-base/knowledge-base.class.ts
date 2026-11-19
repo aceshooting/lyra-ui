@@ -960,14 +960,14 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .unknownTotal=${source && this.sourceTotal === null}
           .hasNext=${false}
           .loading=${source && state.pending && !this.error}
-          @lr-page-change=${(event: CustomEvent<{ page: number }>) => { if (!source) return; event.stopPropagation(); if (current()) this.sourcePage = event.detail.page - 1; }}
+          @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (source && current()) this.sourcePage = event.detail.page - 1; }}
           @lr-sort-request=${(event: CustomEvent<{ sortKey: string; sortDir: 'asc' | 'desc' }>) => {
-            if (!source) return;
+            if (!source) { event.stopPropagation(); return; }
             if (!current()) { event.preventDefault(); event.stopPropagation(); return; }
             this.sortRequest = { target: event.currentTarget, version, columns, key: event.detail.sortKey, dir: event.detail.sortDir };
           }}
           @lr-sort=${(event: CustomEvent<{ sortKey: string; sortDir: 'asc' | 'desc' }>) => {
-            if (!source) return;
+            if (!source) { event.stopPropagation(); return; }
             const request = this.sortRequest; this.sortRequest = undefined;
             if (!current() || !request || request.target !== event.currentTarget || request.version !== version || request.columns !== this.tableColumns() || request.key !== event.detail.sortKey || request.dir !== event.detail.sortDir) { event.stopPropagation(); return; }
             this.sourceSortKey = event.detail.sortKey; this.sourceSortDir = event.detail.sortDir; this.syncSource(); this.sourceStateVersion++;

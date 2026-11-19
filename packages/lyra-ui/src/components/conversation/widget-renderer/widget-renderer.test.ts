@@ -767,3 +767,101 @@ describe("lr-widget-renderer", () => {
     expect(ids).to.deep.equal(["second"]);
   });
 });
+
+it('reports each invalid document after clearing the previous tree', async () => {
+  const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer></lr-widget-renderer>`);
+  el.document = documentFor({ type: 'text', props: { text: 'Previous' } });
+  await el.updateComplete;
+  const root = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(root.childElementCount).to.be.greaterThan(0);
+  const counts: number[] = [];
+  el.addEventListener('lr-render-error', () => counts.push(root.childElementCount));
+  el.document = { version: 'invalid' } as unknown as NonNullable<typeof el.document>;
+  await el.updateComplete;
+  await Promise.resolve();
+  el.bindingState = {};
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(counts).to.deep.equal([0]);
+});
+
+it('wraps built-in text in a narrow nested row', async () => {
+  const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer style="inline-size:160px"
+    .document=${documentFor({ type: 'row', children: [{ type: 'text', props: { value: 'abcdefgh'.repeat(40) } }] })}
+  ></lr-widget-renderer>`);
+  const text = el.shadowRoot!.querySelector<HTMLElement>('[part="text"]')!;
+  expect(text.textContent?.trim()).to.equal('abcdefgh'.repeat(40));
+  expect(text.scrollWidth).to.be.at.most(el.clientWidth + 1);
+  expect(text.clientHeight).to.be.greaterThan(32);
+});
+
+it('keeps unchanged field properties and listeners when a sibling binding changes', async () => {
+  const registry = createWidgetTypeRegistry([['field', { tag: 'lr-input', props: { value: 'string' },
+    interaction: 'control', bindings: { value: { event: 'lr-input' } } }]]);
+  const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer .registry=${registry}
+    .bindingState=${{ left: 'A', right: 'B' }} .document=${documentFor({ type: 'row',
+      children: ['left', 'right'].map(id => ({ id, type: 'field', props: { value: { $bind: '/' + id } } })) })}
+  ></lr-widget-renderer>`);
+  const [left, right] = el.shadowRoot!.querySelectorAll('lr-input');
+  let writes = 0;
+  let removals = 0;
+  Object.defineProperty(left!, 'value', { configurable: true, get: () => 'A', set: () => { writes++; } });
+  const target: EventTarget = left!;
+  const remove = target.removeEventListener.bind(target);
+  target.removeEventListener = (type, handler, options) => {
+    if (type === 'lr-input') removals++;
+    remove(type, handler, options);
+  };
+  el.bindingState = { left: 'A', right: 'C' };
+  await el.updateComplete;
+  expect(right!.value).to.equal('C');
+  expect([writes, removals]).to.deep.equal([0, 0]);
+  const event = oneEvent(el, 'lr-widget-state-change');
+  left!.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'D' } }));
+  expect((await event).detail.path).to.equal('/left');
+});
+
+it('restores keyed field subscriptions across a detach and retires removed bindings', async () => {
+  const registry = createWidgetTypeRegistry([['field', { tag: 'lr-input', props: { value: 'string' },
+    interaction: 'control', bindings: { value: { event: 'lr-input' } } }]]);
+  const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer .registry=${registry}
+    .bindingState=${{ name: 'First' }} .document=${documentFor({ id: 'field', type: 'field', props: { value: { $bind: '/name' } } })}>
+  </lr-widget-renderer>`);
+  const field = el.shadowRoot!.querySelector('lr-input')!;
+  const parent = el.parentNode!;
+  let changes = 0;
+  el.addEventListener('lr-widget-state-change', () => changes++);
+  el.remove();
+  el.bindingState = { name: 'Second' };
+  await el.updateComplete;
+  field.dispatchEvent(new Event('lr-input'));
+  expect(changes).to.equal(0);
+  parent.appendChild(el);
+  expect(field.value).to.equal('Second');
+  field.dispatchEvent(new Event('lr-input'));
+  expect(changes).to.equal(1);
+  el.document = documentFor({ id: 'field', type: 'field' });
+  await el.updateComplete;
+  expect(field.value).to.equal('');
+  field.dispatchEvent(new Event('lr-input'));
+  expect(changes).to.equal(1);
+});
+
+it('stops obsolete binding events after a synchronous document or state replacement', async () => {
+  const registry = createWidgetTypeRegistry([['field', { tag: 'lr-input', props: { value: 'string' },
+    interaction: 'control', action: { event: 'lr-input' }, bindings: { value: { event: 'lr-input' } } }]]);
+  const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer .registry=${registry}
+    .bindingState=${{ name: 'A' }} .document=${documentFor({ id: 'field', type: 'field', actionId: 'edit',
+      props: { value: { $bind: '/name' } } })}></lr-widget-renderer>`);
+  const field = el.shadowRoot!.querySelector('lr-input')!;
+  let changes = 0;
+  el.addEventListener('lr-widget-state-change', () => changes++);
+  el.addEventListener('lr-widget-action', () => { el.bindingState = { name: 'B' }; }, { once: true });
+  field.dispatchEvent(new Event('lr-input'));
+  expect(changes).to.equal(0);
+  await el.updateComplete;
+  field.dispatchEvent(new CustomEvent('lr-input', { detail: {
+    get value() { el.document = null; return 'obsolete'; }
+  } }));
+  expect(changes).to.equal(0);
+});

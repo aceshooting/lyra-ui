@@ -54,14 +54,14 @@ export const styles = css`
 
   [part="base"] {
     display: inline-flex;
-    align-items: baseline;
-    /* Cross-axis stays baseline (the number sits on the surrounding text's baseline); the main axis
-       must centre, since the min-inline-size hit-area floor below is far wider than a one- or
-       two-digit label and the default justify-content (normal => flex-start) left that number
-       hugging the leading edge. */
+    /* The host's baseline is the number's, so centring it in the hit area keeps it on the prose
+       baseline while the target extends evenly above and below. */
+    align-items: center;
     justify-content: center;
     box-sizing: border-box;
     ${iconHitTarget}
+    /* The target keeps its full size but contributes only one line to the surrounding prose. */
+    margin-block: min(0px, calc((1lh - var(--lr-icon-button-size)) / 2));
     padding: 0 var(--lr-size-0-3em);
     border: var(--lr-border-width-thin) solid
       var(--lr-citation-badge-border, var(--_lr-citation-badge-border));

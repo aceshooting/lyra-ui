@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'ಉಲ್ಲೇಖ ನೀಡಿ',
   promptInputLabel: 'AI ಪ್ರಾಂಪ್ಟ್',
   promptInputControls: 'ಪ್ರಾಂಪ್ಟ್ ಆಯ್ಕೆಗಳು',
+  promptInputCollectionLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಪ್ರಾಂಪ್ಟ್ ಇನ್‌ಪುಟ್‌ನ ಸ್ವಲ್ಪ ಭಾಗವನ್ನು ಬಿಟ್ಟುಬಿಡಲಾಗಿದೆ.',
   promptInputSources: 'ಮೂಲಗಳು',
   promptInputAttachments: 'ಲಗತ್ತುಗಳು',
   handoffLabel: 'ಏಜೆಂಟ್‌ಗೆ ಹಸ್ತಾಂತರ',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'ಯಾವುದೇ ಧ್ವನಿಗಳು ಲಭ್ಯವಿಲ್ಲ',
   voicePickerRequired: 'ಧ್ವನಿ ಆಯ್ಕೆಮಾಡಿ.',
   voicePickerPreview: '{name} ಪೂರ್ವವೀಕ್ಷಿಸಿ',
+  voicePickerPreviewFailed: 'ಧ್ವನಿಯ ಪೂರ್ವವೀಕ್ಷಣೆ ಲಭ್ಯವಿಲ್ಲ.',
   voicePickerStopPreview: 'ಪೂರ್ವವೀಕ್ಷಣೆ ನಿಲ್ಲಿಸಿ',
   realtimeSessionLabel: 'ನೈಜ-ಸಮಯ ಸೆಷನ್',
   realtimeSessionDisconnected: 'ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'ಉದ್ದವಾದ ಕೋಡ್ ಅನ್ನು ಸಿಂಟ್ಯಾಕ್ಸ್ ಹೈಲೈಟಿಂಗ್ ಇಲ್ಲದೆ ತೋರಿಸಲಾಗುತ್ತದೆ.',
   codeBlockHighlightedLine: 'ಹೈಲೈಟ್ ಮಾಡಿದ ಸಾಲು',
   codeBlockActiveLine: 'ಸಕ್ರಿಯ ಹೈಲೈಟ್ ಮಾಡಿದ ಸಾಲು',
+  codeBlockToggle: 'ಕೋಡ್ ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ',
 };
 
 registerLyraLocale('kn', strings);

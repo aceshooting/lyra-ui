@@ -1,7 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -19,6 +19,7 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
 import { agentStatusText } from '../../../internal/agent-status-text.js';
+import { agentStatusKind } from '../agent-status-presentation.js';
 import { isRtl } from '../../../internal/rtl.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import '../../overlays/badge/badge.class.js';
@@ -368,29 +369,22 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (shouldIgnoreNavigationKey(e)) return;
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
+    if ((e.target as Element).closest('[part="cancel"], [part="retry"]')) return;
     const { rows } = this.orderedRunsCache;
     if (rows.length === 0) return;
     const currentIndex = rows.findIndex((r) => r.run.id === this.focusedId);
     const depth = rows[currentIndex]?.depth ?? 0;
     const [childKey, parentKey] = isRtl(this) ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
+    const next = resolveListMove(e.key, {
+      count: rows.length, current: currentIndex, orientation: 'vertical', wrap: false, clamp: true, backwardFromMissing: 'first',
+    });
+    if (next !== null) {
+      e.preventDefault();
+      this.focusRow(rows[next]);
+      return;
+    }
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.focusRow(rows[Math.min(rows.length - 1, currentIndex + 1)]);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.focusRow(rows[Math.max(0, currentIndex - 1)]);
-        break;
-      case 'Home':
-        e.preventDefault();
-        this.focusRow(rows[0]);
-        break;
-      case 'End':
-        e.preventDefault();
-        this.focusRow(rows[rows.length - 1]);
-        break;
       case childKey: {
         e.preventDefault();
         const child = rows[currentIndex + 1];
@@ -436,7 +430,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
       try { return candidate?.id === runId; } catch { return false; }
     });
     if (current !== run) return;
-    const status = current.status;
+    const status = agentStatusKind(current.status);
     if (this.runs === runs && (retry ? status === 'error' || status === 'cancelled' : ACTIVE.has(status))) {
       if (retry) {
         const attempt = (this.retryAttempts.get(runId) ?? 0) + 1;
@@ -450,6 +444,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   private renderRun = ({ run, depth, posInSet, setSize }: SubagentRow, firstId: string | undefined): TemplateResult => {
     const runId = run.id;
+    const status = agentStatusKind(run.status);
     const selected = runId === this.selectedRunId;
     const progress = typeof run.progressRatio === 'number' ? finiteRange(run.progressRatio, 0, 0, 1) : null;
     const runPart = selected ? 'run run-selected' : 'run';
@@ -477,12 +472,12 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
             @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}
           >
             <span part="label">${run.label}</span>
-            <lr-badge part="status" variant=${AGENT_STATUS_VARIANTS[run.status] ?? 'neutral'}>${this.statusLabel(run.status)}</lr-badge>
+            <lr-badge part="status" variant=${(Object.hasOwn(AGENT_STATUS_VARIANTS, status) ? AGENT_STATUS_VARIANTS[status] : undefined) ?? 'neutral'}>${this.statusLabel(status)}</lr-badge>
             ${run.task ? html`<span part="task">${run.task}</span>` : nothing}
             ${run.model ? html`<span part="model">${run.model}</span>` : nothing}
           </button>
           <span part="actions">
-            ${ACTIVE.has(run.status)
+            ${ACTIVE.has(status)
               ? html`<button
                   part="cancel"
                   data-agent-action="inline"
@@ -492,7 +487,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                   @click=${(event: Event) => this.requestRunAction(event, run, runId, false)}
                 >×</button>`
               : nothing}
-            ${run.status === 'error' || run.status === 'cancelled'
+            ${status === 'error' || status === 'cancelled'
               ? html`<button
                   part="retry"
                   data-agent-action="inline"
@@ -536,7 +531,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               @focusin=${this.onFocusIn}
             >${repeat(ordered.rows, (row) => row.run.id, (row) => this.renderRun(row, firstId))}</ul>
               ${ordered.truncated
-                ? html`<p part="limit">${this.localize('subagentPanelLimit', undefined, {
+                ? html`<p part="limit" role="note">${this.localize('subagentPanelLimit', undefined, {
                       count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),
                     })}</p>`
                 : nothing}`

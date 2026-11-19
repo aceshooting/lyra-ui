@@ -35,7 +35,7 @@ export const Vertical: Story = {
     orientation="vertical"
     position="65"
     aria-label="Vertical comparison"
-    style="--divider-width: var(--lr-border-width-medium); --handle-size: var(--lr-size-2rem)"
+    style="--divider-width: var(--lr-border-width-medium); --handle-size: var(--lr-size-2rem); --lr-image-comparer-divider-color: var(--lr-color-text); --lr-image-comparer-handle-border-color: var(--lr-color-text)"
   >
     <div slot="before" style="padding: var(--lr-space-2xl); background: var(--lr-color-surface-raised);">Top</div>
     <div slot="after" style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">Bottom</div>

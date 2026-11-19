@@ -17,7 +17,7 @@ import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
 import { styles } from './retrieval-search.styles.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -189,11 +189,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (size) => { this._size = size; });
   }
 
   private _mode: LyraRetrievalMode = 'hybrid';

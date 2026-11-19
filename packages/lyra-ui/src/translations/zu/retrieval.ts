@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Izinkumbulo zesikhathi eside',
   memoryPanelAdd: 'Engeza enkumbulweni yesikhathi eside',
   memoryPanelAddWithContext: 'Engeza u-"{label}" enkumbulweni yesikhathi eside',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Khohlwa konke',
   memoryPanelConfirmAddHeading: 'Engeza lokhu enkumbulweni yesikhathi eside?',
   memoryPanelConfirmRemoveHeading: 'Susa le nto?',
@@ -184,6 +185,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Izingxenye zokuhlola',
   ragEvalDashboardAllSlices: 'Konke',
   ragEvalDashboardSliceUnavailable: 'Akukho kuqalisa kokuhlola okutholakalayo kwe-{slice}.',
+  ragEvalDashboardMetricUnavailable: 'Asikho isilinganiso sokuhlola esitholakalayo se-{metric}.',
   knowledgeBaseSyncIdle: 'Ayisebenzi',
   knowledgeBaseSyncSyncing: 'Iyavumelanisa',
   knowledgeBaseSyncPaused: 'Imisiwe isikhashana',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Umphumela {index} kwangu-{total}',
   ragAnswerEmpty: 'Ayikho impendulo okwamanje',
   retrievalTraceEmpty: 'Azikho izigaba zokubuyisa',
+  retrievalTraceLabel: 'Umkhondo wokubuyisa ulwazi',
   sourcePickerMatches: {
     one: '{count} ukufana komthombo',
     other: '{count} imithombo iyafana',

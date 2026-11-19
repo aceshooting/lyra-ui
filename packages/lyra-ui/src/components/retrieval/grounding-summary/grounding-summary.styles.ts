@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -50,6 +51,7 @@ export const styles = css`
     padding-inline-start: var(--lr-space-l);
   }
   [part="warning"] {
+    ${wrapGuard}
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }

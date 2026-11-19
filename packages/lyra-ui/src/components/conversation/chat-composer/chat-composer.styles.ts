@@ -10,10 +10,6 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-chat-composer-gap, var(--lr-space-xs));
     box-sizing: border-box;
-    /* Card chrome behind inline var() fallbacks: each fallback is the pre-existing token, so an
-       unset composer paints exactly as before while a docking surface can retune the card without
-       a ::part(base) override. The focus-within border-color below is state paint, not card
-       chrome, so it stays on the brand token. */
     border: var(--lr-border-width-thin) solid
       var(--lr-chat-composer-border-color, var(--lr-color-border));
     border-radius: var(--lr-chat-composer-radius, var(--lr-radius));
@@ -23,7 +19,7 @@ export const styles = css`
     transition: border-color var(--lr-transition-fast);
   }
   [part='base']:focus-within {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-chat-composer-focus-border-color, var(--lr-color-brand));
   }
   /* Chrome-less escape, the library-wide frame="plain" (and lr-callout's [inline]): a composer
      docked to the block-end edge of a surface that already draws its own border/background -- chat

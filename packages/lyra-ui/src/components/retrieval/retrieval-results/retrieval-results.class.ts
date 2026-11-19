@@ -1075,7 +1075,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         label: labelOf(key, groupChunks),
         startIndex: rows.length,
       });
-      rows.push(...groupChunks);
+      for (const chunk of groupChunks) rows.push(chunk);
     }
     return { chunks: rows, groups };
   }

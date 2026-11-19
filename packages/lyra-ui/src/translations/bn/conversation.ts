@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'সূত্র দিন',
   promptInputLabel: 'AI প্রম্পট',
   promptInputControls: 'প্রম্পটের বিকল্প',
+  promptInputCollectionLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় প্রম্পটের কিছু ইনপুট বাদ দেওয়া হয়েছে।',
   promptInputSources: 'উৎস',
   promptInputAttachments: 'সংযুক্তি',
   handoffLabel: 'এজেন্টের কাছে হস্তান্তর',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'কোনো কণ্ঠস্বর নেই',
   voicePickerRequired: 'একটি কণ্ঠস্বর বেছে নিন।',
   voicePickerPreview: '{name}-এর নমুনা শুনুন',
+  voicePickerPreviewFailed: 'কণ্ঠস্বরের নমুনা উপলব্ধ নেই।',
   voicePickerStopPreview: 'নমুনা শোনা থামান',
   realtimeSessionLabel: 'রিয়েল-টাইম সেশন',
   realtimeSessionDisconnected: 'সংযোগ বিচ্ছিন্ন',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'দীর্ঘ কোড সিনট্যাক্স হাইলাইটিং ছাড়াই দেখানো হয়।',
   codeBlockHighlightedLine: 'হাইলাইট করা লাইন',
   codeBlockActiveLine: 'সক্রিয় হাইলাইট করা লাইন',
+  codeBlockToggle: 'কোড দেখান বা লুকান',
 };
 
 registerLyraLocale('bn', strings);

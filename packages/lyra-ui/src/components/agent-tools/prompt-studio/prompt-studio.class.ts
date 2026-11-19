@@ -1,7 +1,7 @@
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { live } from 'lit/directives/live.js';
@@ -18,10 +18,11 @@ import { composedContains } from '../../../internal/composed-tree.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioMoveMessageDown, LYRA_DEFAULT_promptStudioMoveMessageUp, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessageNumbered, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioLargeWorkspace, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioMoveMessageDown, LYRA_DEFAULT_promptStudioMoveMessageUp, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessageNumbered, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Conversation message roles plus the tool-result role needed by prompt authoring. */
@@ -74,6 +75,7 @@ const MESSAGE_ROLES = ['system', 'user', 'assistant', 'tool'] as const;
 const PREVIEW_MAX_DEPTH = 64;
 const PREVIEW_MAX_SUBSTITUTIONS = 10_000;
 const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
+const WORKSPACE_SIZE_NOTICE_THRESHOLD = 500;
 
 /**
  * `<lr-prompt-studio>` — a provider-neutral prompt-development workbench for ordered role
@@ -111,6 +113,7 @@ const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
  * @csspart base - The named studio region.
  * @csspart toolbar - Save/run controls.
  * @csspart editor - Messages and variables workspace.
+ * @csspart size-notice - The advisory when messages, variables and versions total more than 500 rows.
  * @csspart messages - Ordered prompt-message editor.
  * @csspart message - One prompt message.
  * @csspart message-role - A message role selector.
@@ -141,15 +144,18 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    moveDown: LYRA_DEFAULT_moveDown,
+    moveUp: LYRA_DEFAULT_moveUp,
     promptStudioAddMessage: LYRA_DEFAULT_promptStudioAddMessage,
     promptStudioLabel: LYRA_DEFAULT_promptStudioLabel,
+    promptStudioLargeWorkspace: LYRA_DEFAULT_promptStudioLargeWorkspace,
     promptStudioMessageContent: LYRA_DEFAULT_promptStudioMessageContent,
     promptStudioMessageRole: LYRA_DEFAULT_promptStudioMessageRole,
     promptStudioMessages: LYRA_DEFAULT_promptStudioMessages,
-    promptStudioMoveMessageDown: LYRA_DEFAULT_promptStudioMoveMessageDown,
-    promptStudioMoveMessageUp: LYRA_DEFAULT_promptStudioMoveMessageUp,
     promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
     promptStudioPreviewLimit: LYRA_DEFAULT_promptStudioPreviewLimit,
+    promptStudioMoveMessageDown: LYRA_DEFAULT_promptStudioMoveMessageDown,
+    promptStudioMoveMessageUp: LYRA_DEFAULT_promptStudioMoveMessageUp,
     promptStudioRemoveMessageNumbered: LYRA_DEFAULT_promptStudioRemoveMessageNumbered,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
@@ -213,6 +219,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private previewVariableSource?: readonly PromptStudioVariable[];
   private previewResult?: string[] | null;
   private previewRows = new Map<string, { text: string; substitutions: number; memoLength: number }>();
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   /** The moved row's next usable action. Lit retains keyed rows but native button focus is not
    * preserved when their position changes, so restore it after the new boundary state renders. */
   private pendingMessageMoveFocus?: { messageId: string; part: PromptStudioMessageMovePart };
@@ -220,6 +227,22 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   override disconnectedCallback(): void {
     this.pendingMessageMoveFocus = undefined;
     super.disconnectedCallback();
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const notice = this.renderRoot.querySelector('[part="size-notice"]')?.textContent ?? '';
+    this.announcements.transition('workspace-size', notice ? 'large' : 'normal', notice, 'polite');
   }
 
   private roleLabel(role: PromptStudioRole): string {
@@ -671,6 +694,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const messages = this.uniqueMessages();
     const variables = this.variableItems();
     const versions = this.uniqueVersions();
+    const size = messages.length + variables.length + versions.length;
     const previews = this.resolvePreviews(messages, variables);
     return html`
       <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
@@ -689,6 +713,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
             ${this.localize('promptStudioRun')}
           </button>
         </header>
+        ${size > WORKSPACE_SIZE_NOTICE_THRESHOLD ? html`<p part="size-notice" role="note">${this.localize('promptStudioLargeWorkspace', undefined, {
+          count: this.formatLocaleNumber(size),
+        })}</p>` : nothing}
         <div part="editor">
           <section aria-label=${this.localize('promptStudioMessages')}>
             <ol part="messages">${repeat(

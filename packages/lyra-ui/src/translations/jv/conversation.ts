@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Wenehi sumber',
   promptInputLabel: 'Pituduh AI',
   promptInputControls: 'Pilihan pituduh',
+  promptInputCollectionLimit: 'Sawetara input pituduh ora dilebokake amarga wates input wis tekan.',
   promptInputSources: 'Sumber',
   promptInputAttachments: 'Lampiran',
   handoffLabel: 'Pasrahake marang agen',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Ora ana swara sing kasedhiya',
   voicePickerRequired: 'Pilih swara.',
   voicePickerPreview: 'Pratinjau {name}',
+  voicePickerPreviewFailed: 'Pratinjau swara ora kasedhiya.',
   voicePickerStopPreview: 'Mandhegake pratinjau',
   realtimeSessionLabel: 'Sesi wektu nyata',
   realtimeSessionDisconnected: 'Pedhot',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Kode dawa ditampilake tanpa panyorotan sintaks.',
   codeBlockHighlightedLine: 'Baris sing disorot',
   codeBlockActiveLine: 'Baris sorotan aktif',
+  codeBlockToggle: 'Tampilake utawa dhelikake kode',
 };
 
 registerLyraLocale('jv', strings);

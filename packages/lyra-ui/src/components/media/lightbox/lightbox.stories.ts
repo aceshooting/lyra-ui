@@ -202,7 +202,9 @@ export const MillionImageSource: Story = {
         const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
         void lightbox.show();
       }}>Open million-image collection</button>
-      <lr-lightbox .imageSource=${source} loop fit="contain">
+      <lr-lightbox .imageSource=${source} loop fit="contain" style="--lr-lightbox-status-color: var(--lr-color-on-strong-overlay);
+        --lr-lightbox-control-hover-bg: var(--lr-color-success-quiet); --lr-lightbox-control-hover-color: var(--lr-color-success);
+        --lr-lightbox-control-active-bg: var(--lr-color-brand-quiet); --lr-lightbox-control-active-color: var(--lr-color-brand);">
         <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(0)}>First</button>
         <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(500_000)}>Middle</button>
         <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(999_999)}>Last</button>

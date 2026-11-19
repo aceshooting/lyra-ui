@@ -53,3 +53,44 @@ it('keeps stacked response content visible at a narrow allocation while retainin
   expect(panes[0]!.getBoundingClientRect().height, 'long responses keep the configured cap').to.be.at.most(142);
   expect(panes[0]!.scrollHeight).to.be.greaterThan(panes[0]!.clientHeight);
 });
+
+describe('lr-compare-panel vote commit and pane tab stops', () => {
+  it('reports an accepted vote after committing it, and stays silent for a vetoed one', async () => {
+    const el = await fixture<LyraComparePanel>(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`);
+    const changes: { vote: string; itemId: string; committed: string | null }[] = [];
+    el.addEventListener('lr-vote-change', (event) => {
+      const { vote, itemId } = (event as CustomEvent<{ vote: string; itemId: string }>).detail;
+      changes.push({ vote, itemId, committed: el.vote });
+    });
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="vote-button"]')];
+    buttons[1]!.click();
+    expect(changes).to.deep.equal([{ vote: 'b', itemId: 'pair-1', committed: 'b' }]);
+    el.addEventListener('lr-vote-request', (event) => event.preventDefault(), { once: true });
+    buttons[0]!.click();
+    expect(changes.length).to.equal(1);
+    expect(el.vote).to.equal('b');
+  });
+
+  it('makes a pane a tab stop only while its response overflows', async () => {
+    const el = await fixture<LyraComparePanel>(html`
+      <lr-compare-panel style="--lr-compare-panel-max-height: 120px">
+        <p slot="a">Short.</p>
+        <p slot="b">Short too.</p>
+      </lr-compare-panel>
+    `);
+    await paint();
+    const paneA = el.shadowRoot!.querySelector<HTMLElement>('[part="pane-a"]')!;
+    expect(paneA.hasAttribute('tabindex')).to.equal(false);
+    el.querySelector<HTMLElement>('[slot="a"]')!.textContent = 'A long response line. '.repeat(200);
+    await paint();
+    await paint();
+    expect(paneA.getAttribute('tabindex')).to.equal('0');
+    el.remove();
+    expect(paneA.hasAttribute('tabindex')).to.equal(false);
+    document.body.append(el);
+    await paint();
+    await paint();
+    expect(paneA.getAttribute('tabindex')).to.equal('0');
+    el.remove();
+  });
+});

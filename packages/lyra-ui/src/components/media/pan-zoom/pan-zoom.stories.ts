@@ -34,6 +34,7 @@ export const ImageSource: Story = {
     src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
     alt="Preview"
     aria-label="Image preview"
+    style="--lr-pan-zoom-control-hover-bg: var(--lr-color-success-quiet)"
   ></lr-pan-zoom>`,
 };
 
@@ -75,4 +76,8 @@ export const Narrow320LocalizedReset: Story = {
       </div>
     </div>
   `,
+};
+
+export const UnreadableImage: Story = {
+  render: () => html`<lr-pan-zoom src="data:image/png;base64,AA=="></lr-pan-zoom>`,
 };

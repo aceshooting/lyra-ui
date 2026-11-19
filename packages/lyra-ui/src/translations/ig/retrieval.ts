@@ -128,6 +128,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Ihe ncheta ogologo oge',
   memoryPanelAdd: 'Tinye na ebe nchekwa ogologo oge',
   memoryPanelAddWithContext: 'Tinye "{label}" na ebe nchekwa ogologo oge',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Chefuo ha niile',
   memoryPanelConfirmAddHeading: 'Tinye nke a na ebe nchekwa ogologo oge?',
   memoryPanelConfirmRemoveHeading: 'Wepụ ihe a?',
@@ -186,6 +187,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Akụkụ nyocha',
   ragEvalDashboardAllSlices: 'Ha niile',
   ragEvalDashboardSliceUnavailable: 'Enweghị ọrụ nyocha dị maka {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Enweghị ihe e ji atụ nyocha maka {metric}.',
   knowledgeBaseSyncIdle: 'Adịghị arụ ọrụ',
   knowledgeBaseSyncSyncing: 'Na-emekọrịta',
   knowledgeBaseSyncPaused: 'Kwụsịtụla',
@@ -262,6 +264,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Nsonaazụ {index} nke {total}',
   ragAnswerEmpty: 'Enweghị azịza ma',
   retrievalTraceEmpty: 'Enweghị usoro eweghachi',
+  retrievalTraceLabel: 'Nsuso usoro eweghachi',
   sourcePickerMatches: {
     other: 'Isi mmalite {count} dakọtara',
   },

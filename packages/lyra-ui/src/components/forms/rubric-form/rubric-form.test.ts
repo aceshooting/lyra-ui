@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
@@ -1101,8 +1102,8 @@ describe("lr-rubric-form", () => {
     ).to.contain("Try again");
     expect(group.getAttribute("aria-labelledby")).to.equal(label.id);
     expect(group.getAttribute("aria-describedby")?.split(/\s+/)).to.deep.equal([
-      hint.id,
       error.id,
+      hint.id,
     ]);
 
     el.setAttribute("aria-label", "");
@@ -1973,7 +1974,9 @@ it("consumes nested control aliases and exposes the aggregate native and typed i
   for (const type of ["input", "change", "lr-change", "lr-input"]) {
     el.addEventListener(type, event => {
       expect(event.composedPath()[0] === el, `${type} originates on the aggregate form`).to.equal(true);
-      if (type === 'lr-input') expect((event as CustomEvent).detail).to.deep.equal({ value: { notes: 'Updated' } });
+      if (type === 'lr-input' || type === 'lr-change') {
+        expect((event as CustomEvent).detail).to.deep.equal({ previousValue: {}, value: { notes: 'Updated' } });
+      }
       events.push(type);
     });
   }
@@ -3333,4 +3336,51 @@ describe("lr-rubric-form contains the composed lr-checkbox-group's toggle propos
     expect(options[0]!.checked).to.equal(false);
     expect([...group.value]).to.deep.equal([]);
   });
+});
+
+it('submits a shortcut once and leaves composing Enter to the editor', async () => {
+  const el = await fixture<LyraRubricForm>(html`<lr-rubric-form
+    .keys=${[{ key: 'note', type: 'comment' }]}></lr-rubric-form>`);
+  let submits = 0;
+  el.addEventListener('lr-submit', () => { submits++; });
+  const shortcut = (init: KeyboardEventInit) =>
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, cancelable: true, ...init }));
+  expect(shortcut({ isComposing: true })).to.equal(true);
+  expect(shortcut({ keyCode: 229 })).to.equal(true);
+  expect(shortcut({})).to.equal(false);
+  expect(shortcut({ repeat: true })).to.equal(false);
+  expect(submits).to.equal(1);
+});
+
+it('drops a schema with an unreadable array length', async () => {
+  const el = await fixture<LyraRubricForm>(html`<lr-rubric-form></lr-rubric-form>`);
+  el.keys = new Proxy<RubricKey[]>([{ key: 'note', type: 'comment' }], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'length') throw new Error('unreadable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(0);
+});
+
+it('blurs the focused rubric editor and preserves focus outside the form', async () => {
+  const el = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${[{ type: 'comment', key: 'notes' }]}></lr-rubric-form>`);
+  await focusByKeyboard(el);
+  expect(document.activeElement === el).to.equal(true);
+  el.blur();
+  expect(document.activeElement === el).to.equal(false);
+  const other = await fixture<HTMLButtonElement>(html`<button>Continue</button>`);
+  await focusByKeyboard(other);
+  el.blur();
+  expect(document.activeElement === other).to.equal(true);
+});
+
+it('uses the current aggregate for a comment commit without a preceding edit', async () => {
+  const el = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${[{ type: 'comment', key: 'notes' }]}
+    .value=${{ notes: 'Saved' }}></lr-rubric-form>`);
+  const field = el.shadowRoot!.querySelector('lr-textarea')!;
+  const committed = oneEvent(el, 'lr-change');
+  field.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true, detail: { value: 'Saved' } }));
+  expect((await committed).detail).to.deep.equal({ previousValue: { notes: 'Saved' }, value: { notes: 'Saved' } });
 });

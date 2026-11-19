@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'સંદર્ભ આપો',
   promptInputLabel: 'AI પ્રોમ્પ્ટ',
   promptInputControls: 'પ્રોમ્પ્ટ વિકલ્પો',
+  promptInputCollectionLimit: 'ઇનપુટ મર્યાદા પૂરી થતાં પ્રોમ્પ્ટ ઇનપુટનો કેટલોક ભાગ છોડી દેવાયો છે.',
   promptInputSources: 'સ્રોતો',
   promptInputAttachments: 'જોડાણો',
   handoffLabel: 'એજન્ટને સોંપવું',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'કોઈ અવાજ ઉપલબ્ધ નથી',
   voicePickerRequired: 'અવાજ પસંદ કરો.',
   voicePickerPreview: '{name}નું પૂર્વાવલોકન',
+  voicePickerPreviewFailed: 'અવાજનું પૂર્વાવલોકન ઉપલબ્ધ નથી.',
   voicePickerStopPreview: 'પૂર્વાવલોકન બંધ કરો',
   realtimeSessionLabel: 'રીઅલટાઇમ સત્ર',
   realtimeSessionDisconnected: 'જોડાણ તૂટ્યું',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'લાંબો કોડ સિન્ટેક્સ હાઇલાઇટિંગ વિના બતાવવામાં આવે છે.',
   codeBlockHighlightedLine: 'હાઇલાઇટ કરેલ લાઇન',
   codeBlockActiveLine: 'સક્રિય હાઇલાઇટ કરેલ લાઇન',
+  codeBlockToggle: 'કોડ બતાવો અથવા છુપાવો',
 };
 
 registerLyraLocale('gu', strings);

@@ -78,3 +78,8 @@ export const RetainedCaptions: Story = {
   parameters: { docs: { description: { story: 'The session discloses original input loss before forwarding its newest retained captions to the transcript feed.' } } },
   render: () => html`<lr-realtime-session without-capture .entries=${Array.from({ length: 12000 }, (_, i) => ({ id: `e${i}`, text: `Caption ${i}` }))}></lr-realtime-session>`,
 };
+
+export const SessionOptions: Story = {
+  render: () => html`<lr-realtime-session state="connected" .captureOptions=${{mode: 'toggle', maxDurationMs: 30000}}
+    .transcriptOptions=${{withTimestamps: true, maxRenderedEntries: 50}}></lr-realtime-session>`,
+};

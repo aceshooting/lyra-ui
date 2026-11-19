@@ -128,6 +128,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Довгострокові спогади',
   memoryPanelAdd: 'Додати до довгострокової пам’яті',
   memoryPanelAddWithContext: 'Додати «{label}» до довгострокової пам’яті',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Забути все',
   memoryPanelConfirmAddHeading: 'Додати це до довгострокової пам’яті?',
   memoryPanelConfirmRemoveHeading: 'Вилучити цей елемент?',
@@ -186,6 +187,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Зрізи оцінювання',
   ragEvalDashboardAllSlices: 'Усі',
   ragEvalDashboardSliceUnavailable: 'Для зрізу {slice} немає запусків оцінювання.',
+  ragEvalDashboardMetricUnavailable: 'Для {metric} немає доступної метрики оцінювання.',
   knowledgeBaseSyncIdle: 'Неактивна',
   knowledgeBaseSyncSyncing: 'Синхронізація',
   knowledgeBaseSyncPaused: 'Призупинено',
@@ -264,6 +266,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Результат {index} з {total}',
   ragAnswerEmpty: 'Відповіді ще немає',
   retrievalTraceEmpty: 'Немає етапів пошуку',
+  retrievalTraceLabel: 'Трасування пошуку',
   sourcePickerMatches: {
     one: '{count} відповідне джерело',
     few: '{count} відповідні джерела',

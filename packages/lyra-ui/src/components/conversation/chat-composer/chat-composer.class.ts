@@ -1,5 +1,9 @@
+import { OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
-import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeSelectionAccessors, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import {
   html,
   nothing,
@@ -29,7 +33,6 @@ import type { ChatComposerStatus } from './chat-composer-status.js';
 import {
   autocorrectConverter,
   literalSetConverter,
-  normalizeAutocorrect,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
@@ -198,7 +201,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @cssprop [--lr-chat-composer-bg=var(--lr-color-surface)] - Fill of the card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
  * @cssprop [--lr-chat-composer-border-color=var(--lr-color-border)] - Resting colour of the card's
- *   border. The `:focus-within` border stays on the brand token -- it is state paint, not chrome.
+ *   border.
+ * @cssprop [--lr-chat-composer-focus-border-color=var(--lr-color-brand)] - Border color while the card contains focus.
  * @cssprop [--lr-chat-composer-radius=var(--lr-radius)] - Corner radius of the card.
  *   `frame="plain"` still squares the corners.
  * @cssprop [--lr-chat-composer-shadow=none] - Box shadow of the card. The shadow stays visible
@@ -234,7 +238,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   @property() placeholder = '';
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
-  @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
+  @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'max-rows' }) maxRows = 8;
   private statusValue: ChatComposerStatus = 'idle';
   /** Sending state. Invalid direct or attribute writes normalize and reflect as `idle`. */
   @property({ reflect: true })
@@ -391,16 +395,15 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   /** Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native autocorrect state. Reads are boolean; writes accept boolean or the legacy
    * `'off'`/`'false'` string vocabulary and reflect canonical `on`/`off`. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
   /** Native editing-assistance attributes forwarded to the internal textarea. */
   @property() wrap: ChatComposerWrap = 'soft';
@@ -416,13 +419,14 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
   private descriptionLease?: ResolvedAriaRelationshipLease;
-  private textareaResizeObserver?: ResizeObserver;
-  private textareaResizeObserverDocument?: Document;
-  private textareaResizeObserverTarget?: HTMLTextAreaElement;
-  private textareaResizeRaf?: number;
-  private textareaResizeRafOwner?: Window;
-  private textareaResizeRafDocument?: Document;
-  private textareaResizeGeneration = 0;
+  private readonly resizeFrame = new OwnedFrame(this);
+  private lastTextareaWidth = 0;
+  private readonly textareaResizeObserver = new OwnedResizeObserver(this, entries => {
+    const width = readInlineSize(entries[0]);
+    if (width === undefined || Math.abs(width - this.lastTextareaWidth) < 0.5) return;
+    this.lastTextareaWidth = width;
+    if (!this.resizeFrame.pending) this.resizeFrame.schedule(() => this.resizeTextarea());
+  });
 
   // Purely presentational sizing (never form-submitted, unlike `value`/`disabled`/`required`
   // above), so a read-time getter -- mirroring `<lr-audio-visualizer>`'s `effectiveBarCount` --
@@ -454,30 +458,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     return this.textareaEl ?? null;
   }
 
-  get selectionStart(): number | null {
-    return this.textareaEl?.selectionStart ?? null;
-  }
-
-  set selectionStart(value: number | null) {
-    if (this.textareaEl) this.textareaEl.selectionStart = value ?? 0;
-  }
-
-  get selectionEnd(): number | null {
-    return this.textareaEl?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.textareaEl) this.textareaEl.selectionEnd = value ?? 0;
-  }
-
-  get selectionDirection(): ChatComposerSelectionDirection | null {
-    return this.textareaEl
-      ?.selectionDirection as ChatComposerSelectionDirection | null;
-  }
-
-  set selectionDirection(value: ChatComposerSelectionDirection | null) {
-    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
-  }
+  declare selectionStart: number | null;
+  declare selectionEnd: number | null;
+  declare selectionDirection: ChatComposerSelectionDirection | null;
 
   override focus(options?: FocusOptions): void {
     this.textareaEl?.focus(options);
@@ -492,17 +475,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (!this.effectiveDisabled) this.textareaEl?.focus();
   }
 
-  select(): void {
-    this.textareaEl?.select();
-  }
-
-  setSelectionRange(
-    start: number | null,
-    end: number | null,
-    direction?: ChatComposerSelectionDirection
-  ): void {
-    this.textareaEl?.setSelectionRange(start, end, direction);
-  }
+  declare select: () => void;
+  declare setSelectionRange: (start: number | null, end: number | null, direction?: ChatComposerSelectionDirection) => void;
 
   setRangeText(replacement: string): void;
   setRangeText(
@@ -554,15 +528,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // A reconnect (e.g. a drag-drop reparent, a repeat() re-key, or a tab
-    // panel detaching and reattaching its content) leaves
-    // textareaResizeObserver undefined from disconnectedCallback()'s own
-    // teardown below -- Lit's connectedCallback doesn't schedule a re-render
-    // on its own, so without this, the width-triggered auto-resize would stay
-    // permanently dead until some unrelated reactive property happened to
-    // change. `hasUpdated` guards the very first connect, where
-    // firstUpdated() above already arms it once the textarea actually
-    // exists. Mirrors `<lr-textarea>`'s identical connectedCallback() guard.
+    // Reconnecting a rendered textarea does not trigger firstUpdated again.
     if (this.hasUpdated) {
       this.armTextareaResizeObserver();
       this.resizeTextarea();
@@ -687,112 +653,16 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     ta.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';
   }
 
-  /**
-   * Re-fits the textarea whenever its own box *width* changes, independent
-   * of any `value`/`min-rows`/`max-rows` update -- `updated()` above only
-   * reacts to those, so a pure layout change (a responsive breakpoint, a
-   * sidebar collapsing/expanding, a window resize, an orientation change)
-   * would otherwise leave the height pinned at whatever it last was, even
-   * though the same text now wraps across a different number of lines.
-   * Mirrors split.ts's `collapseResizeObserver`/virtual-list.ts's
-   * `containerResizeObserver`/lite-chart.ts's `resizeObserver`.
-   *
-   * Only reacts to an actual inline-size change rather than calling
-   * `resizeTextarea()` unconditionally on every callback: `resizeTextarea()`
-   * itself sets `ta.style.height`, a *block*-size change on the very element
-   * being observed, which would otherwise re-trigger this same observer
-   * every tick. Diffing against the last-seen width (same technique as
-   * split.ts keying its collapse state off `contentBoxSize[0].inlineSize`)
-   * keeps a same-width, height-only callback from doing anything.
-   *
-   * The actual recompute is deferred one animation frame rather than run
-   * synchronously inside the callback: `ResizeObserver`'s spec re-delivers,
-   * within the same notification pass, to any observed element resized by
-   * its own callback -- mutating `ta.style.height` synchronously here would
-   * do exactly that to the very box just observed, and the browser reports
-   * it as "ResizeObserver loop completed with undelivered notifications"
-   * (a real, user-visible console error, not just noise). Deferring the
-   * mutation to the next frame -- outside that notification pass -- avoids
-   * ever resizing the observed element from inside its own callback.
-   */
   private armTextareaResizeObserver(): void {
-    const ta = this.textareaEl;
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ta || !this.isConnected || !ownerWindow?.ResizeObserver) return;
-    if (
-      this.textareaResizeObserver &&
-      this.textareaResizeObserverDocument === ownerDocument &&
-      this.textareaResizeObserverTarget === ta
-    ) {
-      return;
-    }
-    this.resetTextareaResizeWork();
-    const generation = this.textareaResizeGeneration;
-    let lastWidth = ta.getBoundingClientRect().width;
-    const observer = new ownerWindow.ResizeObserver((entries) => {
-      if (
-        this.textareaResizeObserver !== observer ||
-        this.textareaResizeObserverDocument !== ownerDocument ||
-        this.textareaResizeObserverTarget !== ta ||
-        this.textareaResizeGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      const box = entries[0]?.contentBoxSize?.[0];
-      const width = box
-        ? box.inlineSize
-        : entries[0]?.contentRect.width ?? lastWidth;
-      // A sub-pixel-only difference (common with fractional layout/zoom)
-      // isn't worth a recompute.
-      if (Math.abs(width - lastWidth) < 0.5) return;
-      lastWidth = width;
-      if (this.textareaResizeRaf !== undefined) {
-        this.textareaResizeRafOwner?.cancelAnimationFrame(
-          this.textareaResizeRaf
-        );
-      }
-      const handle = ownerWindow.requestAnimationFrame(() => {
-        if (
-          this.textareaResizeRaf !== handle ||
-          this.textareaResizeRafOwner !== ownerWindow ||
-          this.textareaResizeRafDocument !== ownerDocument ||
-          this.textareaResizeGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument ||
-          this.textareaResizeObserverTarget !== ta
-        ) {
-          return;
-        }
-        this.textareaResizeRaf = undefined;
-        this.textareaResizeRafOwner = undefined;
-        this.textareaResizeRafDocument = undefined;
-        this.resizeTextarea();
-      });
-      this.textareaResizeRaf = handle;
-      this.textareaResizeRafOwner = ownerWindow;
-      this.textareaResizeRafDocument = ownerDocument;
-    });
-    this.textareaResizeObserver = observer;
-    this.textareaResizeObserverDocument = ownerDocument;
-    this.textareaResizeObserverTarget = ta;
-    observer.observe(ta);
+    const textarea = this.textareaEl;
+    if (!textarea || !this.isConnected) return;
+    this.lastTextareaWidth = textarea.getBoundingClientRect().width;
+    this.textareaResizeObserver.observe(textarea);
   }
 
   private resetTextareaResizeWork(): void {
-    this.textareaResizeGeneration += 1;
-    this.textareaResizeObserver?.disconnect();
-    this.textareaResizeObserver = undefined;
-    this.textareaResizeObserverDocument = undefined;
-    this.textareaResizeObserverTarget = undefined;
-    if (this.textareaResizeRaf !== undefined) {
-      this.textareaResizeRafOwner?.cancelAnimationFrame(this.textareaResizeRaf);
-    }
-    this.textareaResizeRaf = undefined;
-    this.textareaResizeRafOwner = undefined;
-    this.textareaResizeRafDocument = undefined;
+    this.textareaResizeObserver.clear();
+    this.resizeFrame.cancel();
   }
 
   private onTextareaInput = (event: InputEvent): void => {
@@ -817,26 +687,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private onTextareaKeyDown = (e: KeyboardEvent): void => {
-    // Composite controls such as lr-prompt-input can consume a suggestion key during capture
-    // before this native textarea handler sees it. Respect that ownership rather than submitting
-    // a mention selection as an ordinary message.
-    if (e.defaultPrevented) return;
-    if (e.key !== 'Enter') return;
-    // Shift+Enter always inserts a newline, regardless of without-enter-submit --
-    // leave the browser's own default action alone.
-    if (e.shiftKey) return;
-    // without-enter-submit: Enter always inserts a newline too.
-    if (this.withoutEnterSubmit) return;
-    // An IME composition step (e.g. confirming a Japanese/Chinese/Korean
-    // candidate) must never be treated as "the user pressed Enter to send" --
-    // keyCode 229 is a defense-in-depth fallback for browsers that report
-    // isComposing inconsistently on the compositionend-adjacent keydown.
-    if (e.isComposing || e.keyCode === 229) return;
-    // Nothing meaningful to (re-)submit while already sending/streaming --
-    // fall through to the default newline insertion instead, so the
-    // textarea stays a normal place to keep composing the next message.
-    if (this.status !== 'idle') return;
+    if (e.defaultPrevented || e.key !== 'Enter' || e.shiftKey || this.withoutEnterSubmit ||
+        this.status !== 'idle' || shouldIgnoreNavigationKey(e)) return;
     e.preventDefault();
+    if (isRepeatedActivationKey(e)) return;
     this.submit();
   };
 
@@ -941,8 +795,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
           ${this.toolbarInActions ? nothing : this.renderStart()}
           <textarea
             part="textarea"
-            aria-label=${this.accessibleLabel ??
-            (this.placeholder || this.localize('composerLabel'))}
+            aria-label=${this.accessibleLabel === '' ? '' :
+              normalizeLabel(this.accessibleLabel) ?? normalizeLabel(this.placeholder) ?? this.localize('composerLabel')}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid
               ? 'true'
@@ -979,6 +833,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     `;
   }
 }
+
+installNativeSelectionAccessors(LyraChatComposer.prototype, host => host.input);
 
 declare global {
   interface HTMLElementTagNameMap {

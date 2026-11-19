@@ -115,6 +115,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Dẫn nguồn',
   promptInputLabel: 'Lời nhắc AI',
   promptInputControls: 'Tùy chọn lời nhắc',
+  promptInputCollectionLimit: 'Một phần nội dung lời nhắc đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
   promptInputSources: 'Nguồn',
   promptInputAttachments: 'Tệp đính kèm',
   handoffLabel: 'Chuyển giao cho tác tử',
@@ -153,6 +154,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Không có giọng đọc nào',
   voicePickerRequired: 'Vui lòng chọn giọng đọc.',
   voicePickerPreview: 'Xem trước {name}',
+  voicePickerPreviewFailed: 'Không thể nghe thử giọng đọc.',
   voicePickerStopPreview: 'Dừng nghe thử',
   realtimeSessionLabel: 'Phiên thời gian thực',
   realtimeSessionDisconnected: 'Đã ngắt kết nối',
@@ -178,6 +180,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Mã dài được hiển thị mà không tô màu cú pháp.',
   codeBlockHighlightedLine: 'Dòng được làm nổi bật',
   codeBlockActiveLine: 'Dòng nổi bật đang hoạt động',
+  codeBlockToggle: 'Hiện hoặc ẩn mã',
 };
 
 registerLyraLocale('vi', strings);

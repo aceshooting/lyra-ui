@@ -1,3 +1,4 @@
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -1766,4 +1767,71 @@ it('reports a toggle only as lr-selection-change, never the removed lr-sources-c
   selectAllCheckbox(el).click();
   await el.updateComplete;
   expect(seen).to.deep.equal(['lr-selection-change']);
+});
+
+describe('folder disclosure glyph', () => {
+  const transformOf = (el: LyraSourcePicker) =>
+    getComputedStyle(el.shadowRoot!.querySelector('[role="treeitem"] [part="disclosure"] svg')!).transform;
+
+  it('renders a chevron icon that rotates when expanded and mirrors under RTL', async () => {
+    await setReducedMotion('reduce');
+    try {
+      const el = (await fixture(html`<lr-source-picker .sources=${sources}></lr-source-picker>`)) as LyraSourcePicker;
+      const disclosure = el.shadowRoot!.querySelector('[role="treeitem"] [part="disclosure"]')!;
+      expect(disclosure.textContent!.trim()).to.equal('');
+      expect(disclosure.querySelector('svg') !== null).to.equal(true);
+      expect(transformOf(el)).to.equal('none');
+      el.dir = 'rtl';
+      await el.updateComplete;
+      await waitUntil(() => transformOf(el) === 'matrix(-1, 0, 0, 1, 0, 0)', 'collapsed chevron mirrors under RTL');
+      (disclosure as HTMLElement).click();
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[role="treeitem"]')!.getAttribute('aria-expanded')).to.equal('true');
+      await waitUntil(() => {
+        const [a, b] = transformOf(el).replace(/^matrix\(|\)$/g, '').split(',').map(Number);
+        return Math.abs(a!) < 1e-6 && Math.abs(b! - 1) < 1e-6;
+      }, 'expanded chevron rotates a quarter turn');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+  });
+});
+
+describe('accent-insensitive search', () => {
+  const accented: LyraSourceEntry[] = [
+    { id: 'f', label: 'Résumés', children: [{ id: 'cafe', label: 'Café menu.pdf' }, { id: 'tea', label: 'Tea list.pdf' }] },
+    { id: 'naive', label: 'NAÏVE notes.txt' },
+  ];
+  const search = async (el: LyraSourcePicker, value: string) => {
+    el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(new CustomEvent('lr-input', { detail: { value }, bubbles: true }));
+    await el.updateComplete;
+    return [...el.shadowRoot!.querySelectorAll('[part="label"]')].map((label) => label.textContent);
+  };
+
+  it('matches labels regardless of case and diacritics, in either direction', async () => {
+    const el = (await fixture(html`<lr-source-picker .sources=${accented}></lr-source-picker>`)) as LyraSourcePicker;
+    expect(await search(el, 'cafe')).to.deep.equal(['Résumés', 'Café menu.pdf']);
+    expect(await search(el, '  CAFÉ ')).to.deep.equal(['Résumés', 'Café menu.pdf']);
+    expect(await search(el, 'naive')).to.deep.equal(['NAÏVE notes.txt']);
+    expect(await search(el, 'resume')).to.deep.equal(['Résumés']);
+  });
+
+  it('does not refold the corpus on an update that changes neither the query nor the sources', async () => {
+    const many: LyraSourceEntry[] = Array.from({ length: 60 }, (_unused, index) => ({ id: `d${index}`, label: `Dossier ${index}.pdf` }));
+    const el = (await fixture(html`<lr-source-picker .sources=${many}></lr-source-picker>`)) as LyraSourcePicker;
+    await search(el, 'dossier 1');
+    const original = String.prototype.normalize;
+    let calls = 0;
+    String.prototype.normalize = function (this: string, form?: string) { calls += 1; return original.call(this, form); };
+    try {
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(calls < 10).to.equal(true);
+      calls = 0;
+      expect((await search(el, 'dossier 2')).length).to.equal(11);
+      expect(calls < 10).to.equal(true);
+    } finally {
+      String.prototype.normalize = original;
+    }
+  });
 });

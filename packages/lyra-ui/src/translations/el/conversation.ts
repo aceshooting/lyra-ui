@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Παραπομπή',
   promptInputLabel: 'Ερώτημα AI',
   promptInputControls: 'Επιλογές ερωτήματος',
+  promptInputCollectionLimit: 'Παραλείφθηκε μέρος του περιεχομένου του ερωτήματος επειδή συμπληρώθηκε το όριο εισόδου.',
   promptInputSources: 'Πηγές',
   promptInputAttachments: 'Συνημμένα',
   handoffLabel: 'Παράδοση σε πράκτορα',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Δεν υπάρχουν διαθέσιμες φωνές',
   voicePickerRequired: 'Επιλέξτε φωνή.',
   voicePickerPreview: 'Προεπισκόπηση {name}',
+  voicePickerPreviewFailed: 'Η προεπισκόπηση φωνής δεν είναι διαθέσιμη.',
   voicePickerStopPreview: 'Διακοπή προεπισκόπησης',
   realtimeSessionLabel: 'Συνεδρία σε πραγματικό χρόνο',
   realtimeSessionDisconnected: 'Αποσυνδεδεμένο',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Ο μεγάλος κώδικας εμφανίζεται χωρίς επισήμανση σύνταξης.',
   codeBlockHighlightedLine: 'Επισημασμένη γραμμή',
   codeBlockActiveLine: 'Ενεργή επισημασμένη γραμμή',
+  codeBlockToggle: 'Εμφάνιση ή απόκρυψη κώδικα',
 };
 
 registerLyraLocale('el', strings);

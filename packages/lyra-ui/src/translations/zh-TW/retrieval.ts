@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: '長期記憶',
   memoryPanelAdd: '新增到長期記憶',
   memoryPanelAddWithContext: '將“{label}”新增到長期記憶',
+  memoryPanelAddAccessibleName: '{action}：{label}',
   memoryPanelForgetAll: '全部忘記',
   memoryPanelConfirmAddHeading: '要將此項新增到長期記憶嗎？',
   memoryPanelConfirmRemoveHeading: '要移除此項嗎？',
@@ -183,6 +184,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: '評估切片',
   ragEvalDashboardAllSlices: '全部',
   ragEvalDashboardSliceUnavailable: '{slice}沒有可用的評估執行。',
+  ragEvalDashboardMetricUnavailable: '{metric}沒有可用的評估指標。',
   knowledgeBaseSyncIdle: '空閒',
   knowledgeBaseSyncSyncing: '同步中',
   knowledgeBaseSyncPaused: '已暫停',
@@ -258,6 +260,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '第 {index} 個結果（共 {total} 個）',
   ragAnswerEmpty: '還沒有答案',
   retrievalTraceEmpty: '無檢索階段',
+  retrievalTraceLabel: '檢索追蹤',
   sourcePickerMatches: {
     other: '{count} 個來源匹配',
   },

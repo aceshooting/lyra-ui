@@ -1,3 +1,5 @@
+import { FollowTailController } from '../../../internal/follow-tail-controller.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -70,9 +72,6 @@ export interface LyraActivityFeedEventMap {
   'lr-follow-change': CustomEvent<ActivityFeedFollowChangeDetail>;
 }
 
-/** Close enough to the body's own max scroll position to count as anchored there -- identical
- *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
-const NEAR_BOTTOM_PX = 48;
 const entryId = (entry: ActivityEntry): unknown => entry.id;
 
 /** The variant dot's `part` list: the shared `variant-dot` name plus a variant-specific one. Shadow
@@ -144,6 +143,8 @@ function variantDotPart(variant: LyraVariant): string {
  *   expanded }`.
  * @event lr-follow-change - A user scroll released or re-engaged `follow`. `detail: {
  *   following }`. Direct property/attribute assignments never echo an event.
+ * @cssprop [--lr-activity-feed-header-hover-bg] - Hover fill of the header.
+ * @cssprop [--lr-activity-feed-header-pressed-bg] - Pressed fill of the header.
  * @csspart limit - Notice of input entries omitted by retention limits.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`).
@@ -304,12 +305,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  mounting in a non-default mode never announces historical state. */
   private isMounting = true;
 
-  private scrollRafId?: number;
-  private scrollRafOwner?: Window;
-  private scrollRafDocument?: Document;
-  private virtualAnchorReleaseRafId?: number;
-  private virtualAnchorReleaseRafOwner?: Window;
-  private virtualAnchorReleaseRafDocument?: Document;
+  private readonly tail = new FollowTailController(this, {
+    scroller: () => this.renderRoot.querySelector<HTMLElement>('[part="body"]'),
+    shouldFollow: () => this.shouldFollowLiveTail && !this.isVirtualized,
+  });
+  private readonly virtualRelease = new OwnedFrame(this);
   private anchoringVirtualTail = false;
   private ownerRealmGeneration = 0;
   private virtualAnchorRequest = 0;
@@ -368,32 +368,14 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     return this.expanded && this.mode === 'live' && this.follow;
   }
 
-  private cancelScrollFrame(): void {
-    if (this.scrollRafId !== undefined) {
-      this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
-    }
-    this.scrollRafId = undefined;
-    this.scrollRafOwner = undefined;
-    this.scrollRafDocument = undefined;
-  }
-
-  private cancelVirtualAnchorReleaseFrame(): void {
-    if (this.virtualAnchorReleaseRafId !== undefined) {
-      this.virtualAnchorReleaseRafOwner?.cancelAnimationFrame(this.virtualAnchorReleaseRafId);
-    }
-    this.virtualAnchorReleaseRafId = undefined;
-    this.virtualAnchorReleaseRafOwner = undefined;
-    this.virtualAnchorReleaseRafDocument = undefined;
-  }
-
   private resetOwnerRealmWork(): void {
     this.ownerRealmGeneration += 1;
     this.virtualAnchorRequest += 1;
     this.relationshipSyncRequest += 1;
     this.entryFocusRepairRequest += 1;
     this.pendingEntryFocusRepair = undefined;
-    this.cancelScrollFrame();
-    this.cancelVirtualAnchorReleaseFrame();
+    this.tail.cancel();
+    this.virtualRelease.cancel();
     this.anchoringVirtualTail = false;
   }
 
@@ -525,8 +507,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     if (!ownerWindow || !this.isConnected || !this.shouldFollowLiveTail) return;
     const generation = this.ownerRealmGeneration;
     if (this.isVirtualized) {
-      this.cancelScrollFrame();
-      this.cancelVirtualAnchorReleaseFrame();
+      this.tail.cancel();
+      this.virtualRelease.cancel();
       this.anchoringVirtualTail = true;
       const request = ++this.virtualAnchorRequest;
       // Deferred to updateComplete: the internal virtual-list may not have re-rendered its own
@@ -549,80 +531,20 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           align: 'end',
           behavior: 'auto',
         });
-        const firstHandle = ownerWindow.requestAnimationFrame(() => {
-          if (
-            this.virtualAnchorReleaseRafId !== firstHandle ||
-            this.virtualAnchorReleaseRafOwner !== ownerWindow ||
-            this.virtualAnchorReleaseRafDocument !== ownerDocument ||
-            request !== this.virtualAnchorRequest ||
-            generation !== this.ownerRealmGeneration ||
-            !this.isConnected ||
-            this.ownerDocument !== ownerDocument
-          ) {
-            return;
-          }
-          this.virtualAnchorReleaseRafId = undefined;
-          this.virtualAnchorReleaseRafOwner = undefined;
-          this.virtualAnchorReleaseRafDocument = undefined;
-          if (!this.anchoringVirtualTail || !this.isVirtualized || !this.shouldFollowLiveTail) {
+        this.virtualRelease.schedule(() => {
+          if (!this.isVirtualized || !this.shouldFollowLiveTail) {
             this.anchoringVirtualTail = false;
             return;
           }
-          const secondHandle = ownerWindow.requestAnimationFrame(() => {
-            if (
-              this.virtualAnchorReleaseRafId !== secondHandle ||
-              this.virtualAnchorReleaseRafOwner !== ownerWindow ||
-              this.virtualAnchorReleaseRafDocument !== ownerDocument ||
-              request !== this.virtualAnchorRequest ||
-              generation !== this.ownerRealmGeneration ||
-              !this.isConnected ||
-              this.ownerDocument !== ownerDocument
-            ) {
-              return;
-            }
-            this.virtualAnchorReleaseRafId = undefined;
-            this.virtualAnchorReleaseRafOwner = undefined;
-            this.virtualAnchorReleaseRafDocument = undefined;
-            this.anchoringVirtualTail = false;
-          });
-          this.virtualAnchorReleaseRafId = secondHandle;
-          this.virtualAnchorReleaseRafOwner = ownerWindow;
-          this.virtualAnchorReleaseRafDocument = ownerDocument;
+          this.virtualRelease.schedule(() => { this.anchoringVirtualTail = false; });
         });
-        this.virtualAnchorReleaseRafId = firstHandle;
-        this.virtualAnchorReleaseRafOwner = ownerWindow;
-        this.virtualAnchorReleaseRafDocument = ownerDocument;
       });
       return;
     }
     this.virtualAnchorRequest += 1;
-    this.cancelVirtualAnchorReleaseFrame();
+    this.virtualRelease.cancel();
     this.anchoringVirtualTail = false;
-    if (this.scrollRafId !== undefined) return;
-    const handle = ownerWindow.requestAnimationFrame(() => {
-      if (
-        this.scrollRafId !== handle ||
-        this.scrollRafOwner !== ownerWindow ||
-        this.scrollRafDocument !== ownerDocument ||
-        generation !== this.ownerRealmGeneration ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.scrollRafId = undefined;
-      this.scrollRafOwner = undefined;
-      this.scrollRafDocument = undefined;
-      // Re-check inside the callback -- the reader may have scrolled away in the window between
-      // scheduling and firing (identical rationale/pattern to lr-thinking-panel's own
-      // onContentMutated rAF coalescing).
-      if (!this.shouldFollowLiveTail || this.isVirtualized) return;
-      const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
-      if (body) body.scrollTop = body.scrollHeight;
-    });
-    this.scrollRafId = handle;
-    this.scrollRafOwner = ownerWindow;
-    this.scrollRafDocument = ownerDocument;
+    this.tail.scheduleScrollToTail();
   }
 
   private completedStepsSummary(count: number): string {
@@ -710,11 +632,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.emit('lr-follow-change', { following });
   }
 
-  private onBodyScroll = (e: Event): void => {
+  private onBodyScroll = (): void => {
     if (this.isVirtualized || this.mode !== 'live') return;
-    const body = e.currentTarget as HTMLElement;
-    const nearBottom = body.scrollHeight - body.scrollTop - body.clientHeight <= NEAR_BOTTOM_PX;
-    this.setFollowFromUser(nearBottom);
+    this.setFollowFromUser(this.tail.atTail);
   };
 
   private onVirtualListRangeChanged = (e: CustomEvent<LyraVirtualListRange>): void => {

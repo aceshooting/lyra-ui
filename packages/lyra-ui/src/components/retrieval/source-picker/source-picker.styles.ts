@@ -75,6 +75,20 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
+  [part="disclosure"] svg {
+    transition: transform var(--lr-transition-fast);
+  }
+  [aria-expanded="true"] > [part="disclosure"] svg {
+    transform: rotate(90deg);
+  }
+  :host(:dir(rtl)) [aria-expanded="false"] > [part="disclosure"] svg {
+    transform: scaleX(-1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part="disclosure"] svg {
+      transition: none;
+    }
+  }
   [part="disclosure"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }

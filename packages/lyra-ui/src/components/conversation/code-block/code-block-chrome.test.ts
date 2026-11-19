@@ -1,4 +1,5 @@
-import { expect, fixture, oneEvent } from '@open-wc/testing';
+import { expect, fixture, oneEvent, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './code-block.js';
 import './code-block-core.js';
@@ -100,3 +101,100 @@ it('reports a copy of empty source after the code attribute is removed', async (
     else Reflect.deleteProperty(navigator, 'clipboard');
   }
 });
+
+for (const name of ['lr-code-block', 'lr-code-block-core']) {
+  it(`${name} gives the disclosure a stable localized name`, async () => {
+    const el = await fixture<LyraCodeBlock>(`<${name} collapsible></${name}>`);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal('Toggle code');
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+    el.strings = { codeBlockToggle: 'Show or hide source' };
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Show or hide source');
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Show or hide source');
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it(`${name} lets a request listener own collapse state or retire the disclosure`, async () => {
+    const el = await fixture<LyraCodeBlock>(`<${name} collapsible></${name}>`);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+    let commits = 0;
+    let requests = 0;
+    el.addEventListener('lr-toggle', () => commits++);
+    el.addEventListener('lr-toggle-request', () => requests++);
+    el.addEventListener('lr-toggle-request', () => { el.collapsed = false; }, { once: true });
+    toggle.click();
+    expect(el.collapsed).to.be.false;
+    expect(commits).to.equal(0);
+    el.addEventListener('lr-toggle-request', () => { el.collapsible = false; }, { once: true });
+    toggle.click();
+    expect(el.collapsed).to.be.false;
+    expect(commits).to.equal(0);
+    toggle.click();
+    expect(requests).to.equal(2);
+    el.collapsible = true;
+    el.addEventListener('lr-toggle-request', () => el.remove(), { once: true });
+    toggle.click();
+    expect(el.collapsed).to.be.false;
+    expect(commits).to.equal(0);
+    toggle.click();
+    expect(requests).to.equal(3);
+  });
+
+  it(`${name} observes reassigned header actions in the owner document`, async () => {
+    const frame = await fixture<HTMLIFrameElement>('<iframe></iframe>');
+    const el = document.createElement(name) as LyraCodeBlock;
+    el.withoutCopyButton = true;
+    const doc = frame.contentDocument!;
+    const view = doc.defaultView!;
+    const descriptor = Object.getOwnPropertyDescriptor(view, 'MutationObserver')!;
+    const NativeObserver = view.MutationObserver;
+    let observed = false;
+    class RealmObserver extends NativeObserver {
+      override observe(target: Node, options?: MutationObserverInit): void {
+        if (target === el && options?.attributeFilter?.includes('slot')) observed = true;
+        super.observe(target, options);
+      }
+    }
+    Object.defineProperty(view, 'MutationObserver', { ...descriptor, value: RealmObserver });
+    try {
+      doc.body.append(el);
+      await el.updateComplete;
+      const action = doc.createElement('button');
+      el.append(action);
+      action.slot = 'header-actions';
+      await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part="header"]')));
+      expect(observed).to.be.true;
+      action.slot = '';
+      await waitUntil(() => !el.shadowRoot!.querySelector('[part="header"]'));
+    } finally {
+      el.remove();
+      Object.defineProperty(view, 'MutationObserver', descriptor);
+    }
+  });
+
+  for (const [selector, token] of [['[part="toggle"]', 'toggle'], ['.line-gutter', 'gutter']] as const) {
+    it(`${name} themes the ${token} background in each pointer state`, async () => {
+      const el = await fixture<LyraCodeBlock>(`<${name} collapsible line-numbers activatable-lines code="one"></${name}>`);
+      const control = el.shadowRoot!.querySelector(selector)!;
+      el.style.setProperty(`--lr-code-block-${token}-bg`, 'red');
+      el.style.setProperty(`--lr-code-block-${token}-bg-hover`, 'green');
+      el.style.setProperty(`--lr-code-block-${token}-bg-active`, 'blue');
+      const background = () => getComputedStyle(control).backgroundColor;
+      try {
+        await resetMouse();
+        expect(background()).to.equal('rgb(255, 0, 0)');
+        await hoverUntilMatched(control, `hovering the ${token}`);
+        expect(background()).to.equal('rgb(0, 128, 0)');
+        await sendMouse({ type: 'down' });
+        await waitUntil(() => background() === 'rgb(0, 0, 255)');
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+}

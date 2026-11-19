@@ -1,5 +1,57 @@
 import { expect, fixture, html, aTimeout } from "@open-wc/testing";
-import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
+import { resolveIsDarkTheme } from "./shiki-dark-theme.js";
+import { flattenedThemeParent, THEME_ATTRIBUTES } from "../../../internal/theme-observation.js";
+
+function watchDarkTheme(
+  host: HTMLElement,
+  onChange: () => void
+): () => void {
+  const view = host.ownerDocument.defaultView;
+  if (!view || !host.isConnected) return () => {};
+  let active = true;
+  const update = (): void => {
+    if (!active || !host.isConnected || host.ownerDocument.defaultView !== view)
+      return;
+    onChange();
+  };
+  let colorSchemeQuery: MediaQueryList | undefined;
+  try {
+    colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
+    colorSchemeQuery?.addEventListener('change', update);
+  } catch {
+    colorSchemeQuery = undefined;
+  }
+
+  let observer: MutationObserver | undefined;
+  const Observer = view.MutationObserver;
+  if (typeof Observer === 'function') {
+    const targets: Element[] = [host];
+    let parent = flattenedThemeParent(host);
+    while (parent && !targets.includes(parent)) {
+      targets.push(parent);
+      parent = flattenedThemeParent(parent);
+    }
+    try {
+      observer = new Observer(update);
+      for (const target of targets) {
+        observer.observe(target, {
+          attributes: true,
+          attributeFilter: [...THEME_ATTRIBUTES],
+        });
+      }
+    } catch {
+      observer?.disconnect();
+      observer = undefined;
+    }
+  }
+
+  return () => {
+    if (!active) return;
+    active = false;
+    colorSchemeQuery?.removeEventListener('change', update);
+    observer?.disconnect();
+  };
+}
 
 for (const { name, text, surface, inheritedColor, dark } of [
   { name: 'short hex dark', text: '#fff', surface: '#111', dark: true },
@@ -411,7 +463,7 @@ describe('platform failures around the resolved theme', () => {
 });
 
 it('compares the luminance of a green foreground and a red surface', async () => {
-  const host = await fixture<HTMLElement>(html`<div data-lr-theme-scope style="--lr-color-text:lime;--lr-color-surface:red"></div>`);
+  const host = await fixture<HTMLElement>(html`<div style="--lr-color-text:lime;--lr-color-surface:red"></div>`);
   expect(resolveIsDarkTheme(host)).to.equal(true);
   host.style.setProperty('--lr-color-text', 'red');
   host.style.setProperty('--lr-color-surface', 'lime');

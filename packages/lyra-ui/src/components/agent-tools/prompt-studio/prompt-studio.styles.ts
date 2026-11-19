@@ -5,6 +5,7 @@ import { wideContainerQuery, compactContainerQuery } from '../../../internal/con
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
+  [part='size-notice'] { margin: 0; color: var(--lr-color-text-quiet); }
   [part='toolbar'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-s); align-items: center; }
   [part='toolbar'] :is(h1, h2, h3, h4, h5, h6, .heading) { min-inline-size: 0; flex: 1; margin: 0; font-size: var(--lr-font-size-lg); font-weight: var(--lr-font-weight-bold); }
   [part='editor'] { display: grid; grid-template-columns: minmax(0, 2fr) minmax(var(--lr-size-12rem), 1fr); gap: var(--lr-space-m); }

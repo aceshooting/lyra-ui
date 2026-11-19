@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Сілтеме жасау',
   promptInputLabel: 'ЖИ промпты',
   promptInputControls: 'Промпт параметрлері',
+  promptInputCollectionLimit: 'Енгізу шегіне жеткендіктен, промпттың бір бөлігі алынып тасталды.',
   promptInputSources: 'Дереккөздер',
   promptInputAttachments: 'Тіркемелер',
   handoffLabel: 'Агентке тапсыру',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Қолжетімді дауыстар жоқ',
   voicePickerRequired: 'Дауысты таңдаңыз.',
   voicePickerPreview: 'Тыңдап көру: {name}',
+  voicePickerPreviewFailed: 'Дауыс үлгісін тыңдау мүмкін емес.',
   voicePickerStopPreview: 'Тыңдауды тоқтату',
   realtimeSessionLabel: 'Нақты уақыт сеансы',
   realtimeSessionDisconnected: 'Ажыратылған',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Ұзын код синтаксисті ерекшелеусіз көрсетіледі.',
   codeBlockHighlightedLine: 'Бөлектелген жол',
   codeBlockActiveLine: 'Белсенді бөлектелген жол',
+  codeBlockToggle: 'Кодты көрсету немесе жасыру',
 };
 
 registerLyraLocale('kk', strings);

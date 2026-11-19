@@ -7,13 +7,15 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import '../../media/file-icon/file-icon.class.js';
 import '../../forms/input/input.class.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './source-picker.styles.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -197,11 +199,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (size) => { this._size = size; });
   }
   /** Visible/fallback accessible label for the source tree. Omitting it falls back to a
    *  localized default; an explicit empty string clears it. */
@@ -380,23 +378,41 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     return !this.withoutSearch && this.query.trim().length > 0;
   }
 
+  private readonly foldedLabels = createHaystackMemo<NormalizedSourceNode>((node, locale) =>
+    foldSearchText(node.entry.label, locale)
+  );
+
+  private rowsCache?: {
+    readonly key: readonly unknown[];
+    readonly rows: SourceRow[];
+    readonly selfMatches: number;
+  };
+
   private visibleRows(): SourceRow[] {
-    const rows: SourceRow[] = [];
+    return this.rowProjection().rows;
+  }
+
+  private rowProjection(): { rows: SourceRow[]; selfMatches: number } {
     const filtering = this.isFiltering();
+    const model = this.sourceModel;
+    const locale = this.effectiveLocale;
+    const needle = filtering ? prepareNeedle(this.query, locale) : '';
+    const key = [model, filtering, needle, locale, filtering ? null : this.expandedIds];
+    const cached = this.rowsCache;
+    if (cached && key.every((value, index) => value === cached.key[index])) return cached;
+    const rows: SourceRow[] = [];
     const matches = new Set<NormalizedSourceNode>();
+    const selfMatched = new Set<LyraSourceEntry>();
     if (filtering) {
-      const locale = this.effectiveLocale;
-      const query = this.query.trim().toLocaleLowerCase(locale);
-      for (let index = this.sourceModel.nodes.length - 1; index >= 0; index--) {
-        const node = this.sourceModel.nodes[index]!;
-        if (
-          node.entry.label.toLocaleLowerCase(locale).includes(query) ||
-          node.children.some((child) => matches.has(child))
-        )
-          matches.add(node);
+      const folded = this.foldedLabels(model.nodes, locale);
+      for (let index = model.nodes.length - 1; index >= 0; index--) {
+        const node = model.nodes[index]!;
+        const own = folded[index]!.includes(needle);
+        if (own) selfMatched.add(node.entry);
+        if (own || node.children.some((child) => matches.has(child))) matches.add(node);
       }
     }
-    const stack = [...this.sourceModel.roots].reverse();
+    const stack = [...model.roots].reverse();
     while (stack.length) {
       const node = stack.pop()!;
       if (filtering && !matches.has(node)) continue;
@@ -407,7 +423,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
           stack.push(node.children[index]!);
       }
     }
-    return rows;
+    let selfMatches = 0;
+    for (const row of rows) if (selfMatched.has(row.entry)) selfMatches += 1;
+    this.rowsCache = { key, rows, selfMatches };
+    return this.rowsCache;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -502,16 +521,15 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     }
     // Ancestor folders remain visible for navigation but are not matches unless their own label
     // matches the query.
-    const locale = this.effectiveLocale;
-    const query = this.query.trim().toLocaleLowerCase(locale);
-    const count = this.visibleRows().filter((row) => row.entry.label.toLocaleLowerCase(locale).includes(query)).length;
+    const query = prepareNeedle(this.query, this.effectiveLocale);
+    const count = this.rowProjection().selfMatches;
     const signature = `${query}\u0000${count}`;
     if (signature === this.lastFilterAnnouncement) return;
     this.lastFilterAnnouncement = signature;
     this.announcementSink?.announce(count === 0
       ? this.localize('noMatches')
       : this.localize('sourcePickerMatches', undefined, {
-          count: getNumberFormat(locale).format(count),
+          count: getNumberFormat(this.effectiveLocale).format(count),
           pluralCount: count,
         }));
   }
@@ -684,7 +702,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
                 else next.add(row.entry.id);
                 this.expandedIds = next;
               }}
-              >${expanded ? '−' : '+'}</span
+              >${chevronIcon()}</span
             >`
           : nothing}
         <span part="checkbox" aria-hidden="true" data-state=${state}></span>

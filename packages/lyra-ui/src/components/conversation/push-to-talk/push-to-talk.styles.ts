@@ -41,13 +41,14 @@ export const styles = css`
      ::part(trigger):hover: encapsulation context sorts before specificity, so an outer normal
      declaration wins whatever this rule weighs. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-push-to-talk-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Press-and-hold is this component's entire interaction, so the pressed fill is the
      hold-registered signal, not decoration; it appears the instant the pointer goes down, before
      the recording state and its pulse ring have anything to show. */
   :where([part='trigger']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-push-to-talk-trigger-active-bg,
+      color-mix(in oklab, var(--lr-push-to-talk-trigger-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   :host([data-state='recording']) [part='trigger'] {
     border-color: var(
@@ -64,6 +65,8 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
   }
   [part='pulse'] {
+    display: grid;
+    place-items: center;
     position: absolute;
     inset: calc(-1 * var(--lr-size-4px));
     border-radius: 50%;

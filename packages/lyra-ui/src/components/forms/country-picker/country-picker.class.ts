@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import type { SelectionCatalogRow } from '../../../internal/selection-catalog.js';
+import { writeCatalogProperty, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
 import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCatalogPickerEventMap } from '../catalog-picker-base.js';
 import { COUNTRY_CODES, resolveCountryNames, snapshotCountryCatalog, type LyraCountryCatalog, type LyraCountryEntry } from '../../../countries.js';
 import { styles } from './country-picker.styles.js';
@@ -51,6 +51,12 @@ function normalizeCountry(value: unknown): string {
  * @csspart limit - Catalog input-loss notice, separate from the popup render-window overflow.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
+ * @event lr-show - Cancelable request to open the country list.
+ * @event lr-hide - Request to close the country list; a connected, enabled transition can be vetoed.
+ * @event lr-after-show - The country list finished opening.
+ * @event lr-after-hide - The country list finished closing.
+ * @event lr-activate - An offered country was activated, with its code in `detail.value`.
+ * @event lr-clear - The clear button emptied the selected country.
  * @event {Event} input - User selection changed the committed value and form state.
  * @event lr-input - User selection changed the committed value.
  * @event {Event} change - Fired once after a user selection or clear.
@@ -82,10 +88,10 @@ export class LyraCountryPicker extends LyraCatalogPickerBase {
   @property({ attribute: false })
   get countries(): LyraCountryCatalog | undefined { return this._countries; }
   set countries(value: LyraCountryCatalog | null | undefined) {
-    const previous = this._countries;
-    this._countries = snapshotCountryCatalog(value);
-    this.updateValidity();
-    this.requestUpdate('countries', previous);
+    writeCatalogProperty(this, 'countries', this._countries,
+      () => snapshotCountryCatalog(value),
+      catalog => { this._countries = catalog; },
+      () => this.updateValidity());
   }
   protected override get entries(): readonly LyraCountryEntry[] { return this._countries ?? defaultEntries; }
   protected override get pickerLabel(): string { return this.localize('countryPickerLabel'); }

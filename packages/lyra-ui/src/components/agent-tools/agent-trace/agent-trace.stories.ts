@@ -138,3 +138,7 @@ export const MillionSource: Story = {
     return html`<lr-agent-trace label="Million-span trace" .treeSource=${source}></lr-agent-trace>`;
   },
 };
+
+export const CompactFrame: Story = {
+  render: () => html`<lr-agent-trace frame="card" size="s" .spans=${spans}></lr-agent-trace>`,
+};

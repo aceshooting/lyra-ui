@@ -29,6 +29,10 @@ export const Default: Story = {
   `,
 };
 
+export const ThemedFocusBorder: Story = {
+  render: () => html`<lr-chat-composer style="--lr-chat-composer-focus-border-color: var(--lr-color-success);"></lr-chat-composer>`,
+};
+
 export const AutoResize: Story = {
   render: () => html`
     <lr-chat-composer

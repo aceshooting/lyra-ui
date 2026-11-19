@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -60,6 +60,9 @@ export const styles = css`
     border-block-end: 0;
   }
   [part='toggle'] {
+    --_lr-code-block-toggle-bg: var(--lr-code-block-toggle-bg, transparent);
+    --_lr-code-block-toggle-bg-hover: var(--lr-code-block-toggle-bg-hover, var(--lr-color-brand-quiet));
+    --_lr-code-block-toggle-bg-active: var(--lr-code-block-toggle-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
     /* Keep the glyph compact while giving the interactive box the shared
        minimum target size. */
     font: inherit;
@@ -72,21 +75,17 @@ export const styles = css`
     justify-content: center;
     padding: 0;
     border: none;
-    background: none;
+    background: var(--_lr-code-block-toggle-bg);
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
     cursor: pointer;
   }
   [part='toggle']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--_lr-code-block-toggle-bg-hover);
     color: var(--lr-color-brand);
   }
   [part='toggle']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: var(--_lr-code-block-toggle-bg-active);
     color: var(--lr-color-brand);
   }
   [part='toggle'] .chevron {
@@ -308,6 +307,9 @@ export const styles = css`
   }
   /* The gutter alone is interactive; source remains ordinary selectable text. */
   [part='pre'] button.line-gutter {
+    --_lr-code-block-gutter-bg: var(--lr-code-block-gutter-bg, transparent);
+    --_lr-code-block-gutter-bg-hover: var(--lr-code-block-gutter-bg-hover, var(--lr-color-brand-quiet));
+    --_lr-code-block-gutter-bg-active: var(--lr-code-block-gutter-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
     display: inline-flex;
     align-items: center;
     justify-content: end;
@@ -316,7 +318,7 @@ export const styles = css`
     margin-inline-end: var(--lr-space-s);
     padding: 0;
     border: none;
-    background: none;
+    background: var(--_lr-code-block-gutter-bg);
     color: inherit;
     font: inherit;
     text-align: start;
@@ -328,14 +330,10 @@ export const styles = css`
      -- the gutter looked identical hovered, held and idle, while the keyboard path worked. Any
      rewrite must stay at least as specific as that resting rule. */
   [part='pre'] button.line-gutter:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--_lr-code-block-gutter-bg-hover);
   }
   [part='pre'] button.line-gutter:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: var(--_lr-code-block-gutter-bg-active);
   }
   [part='pre'] button.line-gutter:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

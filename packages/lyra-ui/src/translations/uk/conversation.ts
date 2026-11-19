@@ -121,6 +121,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Послатися',
   promptInputLabel: 'Запит до ШІ',
   promptInputControls: 'Параметри запиту',
+  promptInputCollectionLimit: 'Частину введеного запиту пропущено через досягнення обмеження вхідних даних.',
   promptInputSources: 'Джерела',
   promptInputAttachments: 'Вкладення',
   handoffLabel: 'Передавання агенту',
@@ -159,6 +160,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Голоси недоступні',
   voicePickerRequired: 'Виберіть голос.',
   voicePickerPreview: 'Прослухати {name}',
+  voicePickerPreviewFailed: 'Попереднє прослуховування голосу недоступне.',
   voicePickerStopPreview: 'Зупинити попереднє прослуховування',
   realtimeSessionLabel: 'Сеанс реального часу',
   realtimeSessionDisconnected: 'Від’єднано',
@@ -187,6 +189,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Довгий код показується без підсвічування синтаксису.',
   codeBlockHighlightedLine: 'Виділений рядок',
   codeBlockActiveLine: 'Активний виділений рядок',
+  codeBlockToggle: 'Показати або приховати код',
 };
 
 registerLyraLocale('uk', strings);

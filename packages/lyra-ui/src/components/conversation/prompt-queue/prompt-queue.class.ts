@@ -1,3 +1,6 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { ref } from 'lit/directives/ref.js';
+import { acquireResolvedAriaRelationship, HostDescriptionController, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -8,6 +11,8 @@ import type { DocumentRef } from '../../../ai/types.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   getOwnDataDescriptor,
+  projectFrozenRows,
+  readOwnArrayLength,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -47,7 +52,7 @@ const MAX_PROJECTED_QUEUE_ITEMS = 10_000;
 const MAX_PROJECTED_QUEUE_ATTACHMENTS = 10_000;
 const QUEUE_PAGE_SIZE = 20;
 const ATTACHMENT_PREVIEW_SIZE = 50;
-interface QueueAttachmentBudget { remaining: number; readonly onTruncate?: () => void; }
+interface QueueAttachmentBudget { remaining: number; readonly onTruncate: () => void; }
 
 interface CanonicalPromptQueueAttachment {
   readonly id: string;
@@ -71,10 +76,6 @@ const canonicalByExportedItem = new WeakMap<object, CanonicalPromptQueueItem>();
 
 const EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS: readonly CanonicalPromptQueueItem[] = Object.freeze([]);
 
-function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
-
 function valueOfDescriptor(descriptor: ReturnType<typeof getOwnDataDescriptor>): unknown {
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? undefined
@@ -84,11 +85,11 @@ function valueOfDescriptor(descriptor: ReturnType<typeof getOwnDataDescriptor>):
 function projectPromptQueueAttachment(value: unknown): CanonicalPromptQueueAttachment | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const nameDescriptor = descriptorValue(value, 'name');
-    const mimeTypeDescriptor = descriptorValue(value, 'mimeType');
-    const uriDescriptor = descriptorValue(value, 'uri');
-    const versionDescriptor = descriptorValue(value, 'version');
+    const idDescriptor = getOwnDataDescriptor(value, 'id');
+    const nameDescriptor = getOwnDataDescriptor(value, 'name');
+    const mimeTypeDescriptor = getOwnDataDescriptor(value, 'mimeType');
+    const uriDescriptor = getOwnDataDescriptor(value, 'uri');
+    const versionDescriptor = getOwnDataDescriptor(value, 'version');
     if (
       [idDescriptor, nameDescriptor, mimeTypeDescriptor, uriDescriptor, versionDescriptor]
         .some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
@@ -116,21 +117,15 @@ function projectPromptQueueAttachment(value: unknown): CanonicalPromptQueueAttac
 function projectPromptQueueAttachments(value: unknown, budget: QueueAttachmentBudget): readonly CanonicalPromptQueueAttachment[] | undefined {
   try {
     if (!Array.isArray(value)) return undefined;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    ) return undefined;
+    const sourceLength = readOwnArrayLength(value);
+    if (sourceLength === undefined) return undefined;
 
     const attachments: CanonicalPromptQueueAttachment[] = [];
-    const length = Math.min(lengthDescriptor.value, budget.remaining);
-    if (length < lengthDescriptor.value) budget.onTruncate?.();
+    const length = Math.min(sourceLength, budget.remaining);
+    if (length < sourceLength) budget.onTruncate();
     for (let index = 0; index < length; index += 1) {
       budget.remaining--;
-      const descriptor = descriptorValue(value, String(index));
+      const descriptor = getOwnDataDescriptor(value, String(index));
       if (
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
@@ -152,11 +147,11 @@ function projectPromptQueueItem(value: unknown, budget: QueueAttachmentBudget): 
       budget.remaining -= owned.attachments?.length ?? 0;
       return owned;
     }
-    const idDescriptor = descriptorValue(value, 'id');
-    const valueDescriptor = descriptorValue(value, 'value');
-    const attachmentsDescriptor = descriptorValue(value, 'attachments');
-    const createdAtDescriptor = descriptorValue(value, 'createdAt');
-    const metadataDescriptor = descriptorValue(value, 'metadata');
+    const idDescriptor = getOwnDataDescriptor(value, 'id');
+    const valueDescriptor = getOwnDataDescriptor(value, 'value');
+    const attachmentsDescriptor = getOwnDataDescriptor(value, 'attachments');
+    const createdAtDescriptor = getOwnDataDescriptor(value, 'createdAt');
+    const metadataDescriptor = getOwnDataDescriptor(value, 'metadata');
     if (
       [idDescriptor, valueDescriptor, attachmentsDescriptor, createdAtDescriptor, metadataDescriptor]
         .some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
@@ -185,40 +180,15 @@ function projectPromptQueueItem(value: unknown, budget: QueueAttachmentBudget): 
   }
 }
 
-function projectPromptQueueItems(value: unknown, onTruncate?: () => void): readonly CanonicalPromptQueueItem[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    ) return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
-
-    const budget: QueueAttachmentBudget = { remaining: MAX_PROJECTED_QUEUE_ATTACHMENTS, onTruncate };
-    const items: CanonicalPromptQueueItem[] = [];
-    const seen = new Set<string>();
-    const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_QUEUE_ITEMS);
-    if (length < lengthDescriptor.value) onTruncate?.();
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-      ) continue;
-      const item = projectPromptQueueItem(descriptor.value, budget);
-      // Validation deliberately precedes identity reservation, so an invalid duplicate cannot
-      // hide a later valid row with the same public id.
-      if (!item || seen.has(item.id)) continue;
-      seen.add(item.id);
-      items.push(item);
-    }
-    return Object.freeze(items);
-  } catch {
-    return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
-  }
+function projectPromptQueueItems(value: unknown, onTruncate: () => void): readonly CanonicalPromptQueueItem[] {
+  const budget: QueueAttachmentBudget = { remaining: MAX_PROJECTED_QUEUE_ATTACHMENTS, onTruncate };
+  return projectFrozenRows(
+    value,
+    entry => projectPromptQueueItem(entry, budget),
+    MAX_PROJECTED_QUEUE_ITEMS,
+    EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS,
+    item => item.id,
+  );
 }
 
 const exportedItems = new WeakMap<CanonicalPromptQueueItem, PromptQueueItem>();
@@ -268,6 +238,10 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
  * @event lr-send-now - Immediate send was requested. `detail: { item }` includes the row's
  *   visible draft while editable, without applying that draft to the controlled queue.
+ * @cssprop [--lr-prompt-queue-radius] - Corner radius of the item surface.
+ * @cssprop [--lr-prompt-queue-bg] - Background color of the item surface.
+ * @cssprop [--lr-prompt-queue-border-color] - Border color of the item surface.
+ * @cssprop [--lr-prompt-queue-padding] - Inner padding of the item surface.
  * @csspart base - The queue wrapper.
  * @csspart heading - The queue heading; omitted when the visible label is empty.
  * @csspart list - The current page of at most 20 admitted queued prompts.
@@ -312,6 +286,12 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  private regionLabel?: ResolvedAriaRelationshipLease;
+  private readonly labelRegion = (target?: Element): void => {
+    this.regionLabel?.release();
+    this.regionLabel = target ? acquireResolvedAriaRelationship(this, target as HTMLElement, 'aria-labelledby') : undefined;
+  };
+  private readonly hostDescription = new HostDescriptionController(this, () => this.shadowRoot?.querySelector('[part="base"]') ?? null);
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
@@ -451,6 +431,14 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.pendingRemovalFocus?.pageAction) {
+      this.scheduleAfterUpdate(() => this.restoreQueueFocus(), 'page-focus');
+    } else {
+      this.restoreQueueFocus();
+    }
+  }
+
+  private restoreQueueFocus(): void {
     const pending = this.pendingRemovalFocus;
     if (!pending) return;
     this.pendingRemovalFocus = undefined;
@@ -461,7 +449,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body)
     ) return;
     if (pending.pageAction) {
-      const pages = [...(this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-page-action]:not(:disabled)') ?? [])];
+      const pages = [...(this.renderRoot.querySelectorAll<HTMLElement>('[data-page-action]:not(:disabled)'))];
       const page = pages.find(button => button.dataset['pageAction'] === pending.pageAction) ?? pages[0];
       if (page) { if (internalActive !== page) page.focus(); return; }
     }
@@ -504,7 +492,11 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
   }
 
-  override adoptedCallback(): void { super.adoptedCallback(); this.announcements.adopted(); }
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+    this.announcements.adopted();
+  }
   override disconnectedCallback(): void { this.pendingRemovalFocus = undefined; super.disconnectedCallback(); }
 
   private get inputTruncated(): boolean {
@@ -526,11 +518,11 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   private renderPagination(): TemplateResult | typeof nothing {
     const pages = Math.ceil(this.effectiveItems.length / QUEUE_PAGE_SIZE);
     return pages > 1 ? html`<div part="pagination" role="group" aria-label=${this.localize('paginationLabel')}>
-      <button part="page-button" data-page-action="first" type="button" ?disabled=${this.disabled || this.page === 0} @click=${() => this.changePage(0)}>${this.localize('paginationFirstPage')}</button>
-      <button part="page-button" data-page-action="previous" type="button" ?disabled=${this.disabled || this.page === 0} @click=${() => this.changePage(this.page - 1)}>${this.localize('previous')}</button>
+      <lr-button exportparts="button:page-button" size="s" data-page-action="first" type="button" ?disabled=${this.disabled || this.page === 0} @click=${() => this.changePage(0)}>${this.localize('paginationFirstPage')}</lr-button>
+      <lr-button exportparts="button:page-button" size="s" data-page-action="previous" type="button" ?disabled=${this.disabled || this.page === 0} @click=${() => this.changePage(this.page - 1)}>${this.localize('previous')}</lr-button>
       <span part="page-status">${this.pageText()}</span>
-      <button part="page-button" data-page-action="next" type="button" ?disabled=${this.disabled || this.page >= pages - 1} @click=${() => this.changePage(this.page + 1)}>${this.localize('next')}</button>
-      <button part="page-button" data-page-action="last" type="button" ?disabled=${this.disabled || this.page >= pages - 1} @click=${() => this.changePage(pages - 1)}>${this.localize('paginationLastPage')}</button>
+      <lr-button exportparts="button:page-button" size="s" data-page-action="next" type="button" ?disabled=${this.disabled || this.page >= pages - 1} @click=${() => this.changePage(this.page + 1)}>${this.localize('next')}</lr-button>
+      <lr-button exportparts="button:page-button" size="s" data-page-action="last" type="button" ?disabled=${this.disabled || this.page >= pages - 1} @click=${() => this.changePage(pages - 1)}>${this.localize('paginationLastPage')}</lr-button>
     </div>` : nothing;
   }
 
@@ -674,12 +666,12 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   }
 
   override render(): TemplateResult {
-    const visibleLabel = this.label == null ? this.localize('promptQueueLabel') : this.label;
-    const accessibleLabel = this.accessibleLabel ?? visibleLabel;
+    const visibleLabel = this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('promptQueueLabel');
+    const accessibleLabel = this.accessibleLabel === '' ? '' : normalizeLabel(this.accessibleLabel) ?? visibleLabel;
     const items = this.effectiveItems;
     const level = resolveHeadingLevel(this.headingLevel);
     return html`<section
-      part="base"
+      ${ref(this.labelRegion)} part="base"
       aria-label=${accessibleLabel}
       tabindex="-1"
       @input=${this.containNativeEvent}

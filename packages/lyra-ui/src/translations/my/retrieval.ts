@@ -127,6 +127,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'ကာလရှည် မှတ်ဉာဏ်များ',
   memoryPanelAdd: 'ကာလရှည်မှတ်ဉာဏ်သို့ ထည့်ရန်',
   memoryPanelAddWithContext: '"{label}" ကို ကာလရှည်မှတ်ဉာဏ်သို့ ထည့်ရန်',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'အားလုံး မေ့ရန်',
   memoryPanelConfirmAddHeading: 'ဤအရာကို ကာလရှည်မှတ်ဉာဏ်သို့ ထည့်မလား။',
   memoryPanelConfirmRemoveHeading: 'ဤအရာကို ဖယ်ရှားမလား။',
@@ -185,6 +186,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'အကဲဖြတ်မှု အပိုင်းများ',
   ragEvalDashboardAllSlices: 'အားလုံး',
   ragEvalDashboardSliceUnavailable: '{slice} အတွက် အကဲဖြတ်မှု လုပ်ဆောင်ချက် မရှိပါ။',
+  ragEvalDashboardMetricUnavailable: '{metric} အတွက် အကဲဖြတ်မှု တိုင်းတာချက် မရှိပါ။',
   knowledgeBaseSyncIdle: 'မလှုပ်ရှားပါ',
   knowledgeBaseSyncSyncing: 'ထပ်တူပြုနေသည်',
   knowledgeBaseSyncPaused: 'ခေတ္တရပ်ထားသည်',
@@ -260,6 +262,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: '{total} ၏ရလဒ် {index}',
   ragAnswerEmpty: 'အဖြေမရှိသေးပါ။',
   retrievalTraceEmpty: 'ပြန်လည်ရယူခြင်း အဆင့်များ မရှိပါ။',
+  retrievalTraceLabel: 'ပြန်လည်ရယူမှု ခြေရာ',
   sourcePickerMatches: {
     other: 'အရင်းအမြစ် {count} ခု ကိုက်ညီပါသည်။',
   },

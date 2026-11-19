@@ -1,8 +1,10 @@
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
+    ${wrapGuard}
   }
   /* Dense "label: value" single-line row by default -- the short
      status/duration/count content this component is meant for reads better

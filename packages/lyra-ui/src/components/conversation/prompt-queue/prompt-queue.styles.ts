@@ -1,6 +1,6 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -36,10 +36,10 @@ export const styles = css`
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--lr-space-xs);
-    padding: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    padding: var(--lr-prompt-queue-padding, var(--lr-space-xs));
+    border: var(--lr-border-width-thin) solid var(--lr-prompt-queue-border-color, var(--lr-color-border-subtle));
+    border-radius: var(--lr-prompt-queue-radius, var(--lr-radius));
+    background: var(--lr-prompt-queue-bg, var(--lr-color-surface));
   }
 
   [part='value'] {
@@ -86,7 +86,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
-  @container ${compactContainerQuery} {
+  @container ${wideContainerQuery} {
     [part~='item'] {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -102,20 +102,6 @@ export const styles = css`
     gap: var(--lr-space-xs);
     margin-block: var(--lr-space-s);
   }
-  [part='page-button'] {
-    ${iconHitTarget}
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
-  }
-  [part='page-button']:hover:where(:not(:disabled)) { background: var(--lr-color-surface-raised); }
-  [part='page-button']:active:where(:not(:disabled)) { background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
-  [part='page-button']:focus-visible { ${focusRing} }
-  [part='page-button']:disabled { opacity: var(--lr-opacity-disabled); cursor: default; }
   [part='page-status'],
   [part='input-limit'],
   [part='attachment-limit'] {

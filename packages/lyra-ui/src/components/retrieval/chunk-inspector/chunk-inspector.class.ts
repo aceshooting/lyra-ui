@@ -1,9 +1,12 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
@@ -16,6 +19,7 @@ import {
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
 import '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualList, LyraVirtualListEventMap } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
 import {
@@ -79,6 +83,7 @@ export interface LyraChunkInspectorEventMap {
 }
 
 type Tier = 'high' | 'medium' | 'low';
+type ChunkAction = 'open-button' | 'toggle';
 
 const DEFAULT_TIERS: LyraScoreThresholds = { high: 0.75, medium: 0.5 };
 
@@ -96,6 +101,9 @@ function isDenseSize(size: LyraSize): boolean {
  * expandable chunk text, and the deep-link event that lands a chunk in `lr-document-viewer`.
  * Never fetches or ranks and never opens documents itself. Blank chunk identities and later
  * duplicates are omitted first-wins before sorting, rendering, state, or events.
+ *
+ * Standalone lists with multiple rows share a Tab stop across row actions. Up/Down and Home/End
+ * move between rows; inline arrows switch between Open and Show more/less.
  *
  * Every row-level part is reachable through `::part()` in both rendering paths: above
  * `virtualize-at` a row lives in the internal `<lr-virtual-list>`'s shadow root, and its parts are
@@ -213,6 +221,18 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   /** Logical result count paired with `ordinalIndex`. */
   @property({ attribute: false }) ordinalTotal?: number;
 
+  @state() private rovingChunk?: { id: string; action: ChunkAction };
+
+  private pendingChunkFocus?: { chunks: readonly LyraChunk[]; index: number; action: ChunkAction; from: HTMLButtonElement };
+
+  private virtualRange?: LyraVirtualListEventMap['lr-visible-range-change']['detail'];
+
+  override disconnectedCallback(): void {
+    this.pendingChunkFocus = undefined;
+    this.virtualRange = undefined;
+    super.disconnectedCallback();
+  }
+
   /** Whether `size` selects the dense rows (`s` or smaller). */
   private get dense(): boolean {
     return isDenseSize(this.size);
@@ -296,6 +316,76 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     this.emit('lr-toggle', { itemId: chunkId, expanded });
   }
 
+  private get rovesChunkActions(): boolean {
+    return this.ordinalIndex === undefined && this.sortedChunks().length > 1;
+  }
+
+  private chunkTabIndex(index: number, action: ChunkAction): number | typeof nothing {
+    if (!this.rovesChunkActions) return nothing;
+    const current = this.rovingChunk;
+    const currentIndex = current ? this.chunkOrdinalById.get(current.id) : undefined;
+    const currentAction = this.dense || currentIndex === undefined ? 'open-button' : current!.action;
+    return index === (currentIndex ?? 0) && action === currentAction ? 0 : -1;
+  }
+
+  private rememberChunkAction(id: string, action: ChunkAction): void {
+    if (!this.rovesChunkActions || (this.rovingChunk?.id === id && this.rovingChunk.action === action)) return;
+    this.rovingChunk = { id, action };
+  }
+
+  private onChunkActionKey(event: KeyboardEvent, index: number, action: ChunkAction): void {
+    if (event.defaultPrevented || !this.rovesChunkActions) return;
+    const chunks = this.sortedChunks();
+    const row = resolveListMove(event, { count: chunks.length, current: index, orientation: 'vertical', wrap: false });
+    const column = row === null && !this.dense && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+      ? resolveListMove(event, { count: 2, current: action === 'toggle' ? 1 : 0, orientation: 'horizontal', direction: this.effectiveDirection, wrap: false })
+      : null;
+    if (row === null && column === null) return;
+    event.preventDefault();
+    const nextIndex = row ?? index;
+    const nextAction = column === null ? action : column === 0 ? 'open-button' : 'toggle';
+    const list = this.renderRoot.querySelector<LyraVirtualList>(tag('virtual-list'));
+    this.pendingChunkFocus = undefined;
+    const from = event.currentTarget as HTMLButtonElement;
+    const root = list?.shadowRoot ?? this.renderRoot;
+    const target = this.chunkAction(root, nextIndex, nextAction);
+    if (target && isRovingTargetAvailable(target, this)) target.focus({ preventScroll: Boolean(list) });
+    if (!list) return;
+    if (!target) this.pendingChunkFocus = { chunks, index: nextIndex, action: nextAction, from };
+    list.scrollToIndex(nextIndex, { behavior: 'auto' });
+  }
+
+  private chunkAction(root: ParentNode, index: number, action: ChunkAction): HTMLButtonElement | null {
+    return root.querySelector<HTMLButtonElement>(`[data-chunk-index="${index}"] [part="${action}"]`);
+  }
+
+  private onVirtualRange = (event: LyraVirtualListEventMap['lr-visible-range-change']): void => {
+    event.stopPropagation();
+    this.virtualRange = event.detail;
+    const pending = this.pendingChunkFocus;
+    if (pending) {
+      const root = (event.currentTarget as LyraVirtualList).shadowRoot!;
+      if (pending.chunks !== this.sortedChunks() || deepActiveElementIn(root) !== pending.from) {
+        this.pendingChunkFocus = undefined;
+      } else {
+        const target = this.chunkAction(root, pending.index, pending.action);
+        if (!target) return;
+        this.pendingChunkFocus = undefined;
+        if (isRovingTargetAvailable(target, this)) target.focus({ preventScroll: true });
+      }
+    }
+    if (!deepActiveElementIn(this.shadowRoot)?.closest('[data-chunk-index]')) this.rebaseVirtualTabStop();
+  };
+
+  private rebaseVirtualTabStop(): void {
+    const range = this.virtualRange;
+    if (!range || !this.rovesChunkActions) return;
+    const current = this.chunkOrdinalById.get(this.rovingChunk?.id ?? '') ?? 0;
+    if (current >= range.start && current <= range.end) return;
+    const row = this.sortedChunks()[range.start];
+    if (row) this.rememberChunkAction(row.id, 'open-button');
+  }
+
   // Row state is mirrored into a second part-name token (`chunk-current`, `score-fill-<tone>`,
   // `text-clamped`) alongside the attribute that already carries it. Whenever this row is rendered
   // through `<lr-virtual-list>` it lives in *that* component's shadow root, reachable only via
@@ -305,6 +395,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // inside its own tree.
   private chunkTemplate(
     chunk: LyraChunk,
+    index: number,
     virtualized: boolean
   ): TemplateResult {
     const tier = this.tier(chunk.score);
@@ -328,7 +419,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
             page: formattedPage,
           });
     const ordinalIndex = this.ordinalIndex === undefined
-      ? (this.chunkOrdinalById.get(chunk.id) ?? 0) + 1
+      ? index + 1
       : Math.max(1, finiteCount(this.ordinalIndex, 1));
     const ordinalTotal = this.ordinalTotal === undefined
       ? this.sortedChunks().length
@@ -338,6 +429,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     return html`
       <div
         part=${current ? 'chunk chunk-current' : 'chunk'}
+        data-chunk-index=${index}
         role=${virtualized ? nothing : 'listitem'}
         aria-current=${current ? 'true' : 'false'}
       >
@@ -358,6 +450,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         <button
           part="open-button"
           type="button"
+          tabindex=${this.chunkTabIndex(index, 'open-button')}
+          @focus=${() => this.rememberChunkAction(chunk.id, 'open-button')}
+          @keydown=${(event: KeyboardEvent) => this.onChunkActionKey(event, index, 'open-button')}
           aria-label=${getListFormat(this.effectiveLocale, {
             style: 'short',
             type: 'conjunction',
@@ -388,6 +483,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               <button
                 part="toggle"
                 type="button"
+                tabindex=${this.chunkTabIndex(index, 'toggle')}
+                @focus=${() => this.rememberChunkAction(chunk.id, 'toggle')}
+                @keydown=${(event: KeyboardEvent) => this.onChunkActionKey(event, index, 'toggle')}
                 aria-expanded=${expanded ? 'true' : 'false'}
                 aria-label=${this.localize(expanded ? 'retrievalShowLessWithContext' : 'retrievalShowMoreWithContext', undefined, { label: titleWithPage })}
                 @click=${() => this.toggleExpand(chunk.id)}
@@ -414,22 +512,14 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     return this.expandedMembership.ids.has(id);
   }
 
-  private renderChunk = (item: unknown): TemplateResult =>
-    this.chunkTemplate(item as LyraChunk, this.ordinalIndex !== undefined);
-
-  // `<lr-virtual-list>` already wraps every row it renders in its own `role="listitem"`; a second
-  // one nested inside it would leave the inner listitem with a listitem (rather than list) parent,
-  // which is an invalid ARIA containment.
-  private renderVirtualChunk = (item: unknown): TemplateResult =>
-    this.chunkTemplate(item as LyraChunk, true);
-
   /** Deliberately a *fresh* closure per render, the mirror image of the stable `items`/`chunkKey`
    *  identities above. `<lr-virtual-list>` rebuilds its O(n) offsets/identities whenever either of
    *  those changes identity, but treats a new `renderItem` as nothing more than "re-paint the
    *  visible rows" -- which is exactly the signal a change to this component's own row-affecting
    *  state (expansion, the active row, thresholds, locale) needs, at none of the cost. */
-  private virtualRenderItem(): (item: unknown) => TemplateResult {
-    return (item: unknown) => this.renderVirtualChunk(item);
+  private virtualRenderItem(): (item: unknown, index: number) => TemplateResult {
+    // The virtual list provides the listitem wrapper.
+    return (item, index) => this.chunkTemplate(item as LyraChunk, index, true);
   }
 
   /** The internal virtual list's scroll and range events are not part of this component's surface. */
@@ -470,10 +560,11 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               .keyFunction=${this.chunkKey}
               .activeItemId=${this.activeChunkId || ''}
               @lr-virtual-scroll=${this.stopOwnedEvent}
-              @lr-visible-range-change=${this.stopOwnedEvent}
+              @lr-visible-range-change=${this.onVirtualRange}
+              @focusout=${this.rebaseVirtualTabStop}
             ></lr-virtual-list>`
           : html`<div role=${embedded ? nothing : 'list'}>
-              ${sorted.map((c) => this.renderChunk(c))}
+              ${sorted.map((chunk, index) => this.chunkTemplate(chunk, index, embedded))}
             </div>`}
       </div>
     `;

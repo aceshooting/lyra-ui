@@ -795,7 +795,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   private captureActionFocus(): void {
     const active = deepActiveElementIn(this.ownerDocument);
-    if (!active || !this.renderedActionButtons().includes(active as HTMLButtonElement)) return;
+    if (!active?.hasAttribute('data-ingestion-action')) return;
+    const rendered = this.renderedActionButtons();
+    if (!rendered.includes(active as HTMLButtonElement)) return;
     const itemId = active.getAttribute('data-ingestion-item')!;
     const key = active.getAttribute('data-ingestion-action')!;
     const rows = this.currentRows();
@@ -803,8 +805,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     if (current && this.rowActions(current).some(action => ingestionActionKey(action) === key && !action.disabled)) return;
     const snapshot = captureComposedFocusRepair(this, active as HTMLElement);
     if (!snapshot) return;
-    const siblings = this.renderedActionButtons().filter(button => button.getAttribute('data-ingestion-item') === itemId);
-    const renderedIds = [...new Set(this.renderedActionButtons().map(button => button.getAttribute('data-ingestion-item')))];
+    const siblings = rendered.filter(button => button.getAttribute('data-ingestion-item') === itemId);
+    const renderedIds = [...new Set(rendered.map(button => button.getAttribute('data-ingestion-item')))];
     this.focusRepairGeneration++;
     this.actionFocusRepair = { snapshot, itemId, actionIndex: Math.max(0, siblings.indexOf(active as HTMLButtonElement)),
       rowIndex: Math.max(0, renderedIds.indexOf(itemId)) };

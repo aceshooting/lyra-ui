@@ -6,7 +6,6 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
-import { styles } from './voice-picker.styles.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
@@ -1712,14 +1711,19 @@ it('localizes the fallback accessible name and preview labels via this.localize(
 
 // -- Available-space clamping (internal/positioner.js's place()) ------------
 
-it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lr-positioner-available-* custom properties, mirroring lr-menu's/lr-combobox's identical clamp", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const listboxBlock = /\[part=['"]?listbox['"]?\]\s*\{([^}]+)\}/.exec(css);
-  expect(listboxBlock, 'expected a [part="listbox"] rule').to.not.equal(null);
-  const body = listboxBlock![1];
-  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lr-positioner-available-block-size/);
-  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
-  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
+it('constrains the open listbox to the available inline and block sizes', async () => {
+  const el = await fixture<LyraVoicePicker>(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`);
+  el.open = true;
+  await el.updateComplete;
+  const box = listbox(el);
+  await waitUntil(() => box.style.getPropertyValue('--lr-positioner-available-block-size') !== '');
+  box.style.setProperty('--lr-positioner-available-block-size', '41px');
+  box.style.setProperty('--lr-positioner-available-inline-size', '73px');
+  const style = getComputedStyle(box);
+  expect(style.maxBlockSize).to.equal('41px');
+  expect(style.maxInlineSize).to.equal('73px');
+  expect(style.minInlineSize).to.equal('73px');
+  expect(box.getBoundingClientRect().width).to.be.at.most(74);
 });
 
 it("actually applies place()'s available-space custom properties onto the rendered listbox once open, not just declaring them in CSS", async () => {
@@ -3534,4 +3538,58 @@ it('exposes autocorrect as a boolean forwarded to the free-text input, omitted u
   await el.updateComplete;
   expect(native().getAttribute('autocorrect')).to.equal('off');
   expect('autoCorrect' in el).to.equal(false);
+});
+
+it('announces a preview failure for a rejected address and a rejected play request', async () => {
+  const restore = stubMediaPlay(() => Promise.reject(new Error('play blocked')));
+  try {
+    const el = await fixture<LyraVoicePicker>(html`<lr-voice-picker value="a"></lr-voice-picker>`);
+    for (const previewUrl of ['invalid:sample', '/audio/sample.ogg']) {
+      el.catalog = [{ id: 'a', label: 'A', previewUrl }];
+      el.strings = { voicePickerPreviewFailed: previewUrl === 'invalid:sample' ? 'Address unavailable' : 'Playback unavailable' };
+      await el.updateComplete;
+      previewButton(el).click();
+      await waitUntil(() => document.querySelector('[data-lr-live-region="polite"]')?.textContent?.includes(
+        previewUrl === 'invalid:sample' ? 'Address unavailable' : 'Playback unavailable') === true);
+    }
+  } finally { restore(); }
+});
+
+it('releases the native preview resource on stop, failure and disconnect', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = await fixture<LyraVoicePicker>(html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`);
+    for (const reason of ['stop', 'error', 'disconnect']) {
+      previewButton(el).click();
+      const audio = (el as unknown as { audioEl: HTMLAudioElement }).audioEl;
+      expect(audio.hasAttribute('src')).to.equal(true);
+      let loads = 0;
+      audio.load = () => { loads++; };
+      if (reason === 'error') audio.dispatchEvent(new Event('error'));
+      else if (reason === 'disconnect') el.remove();
+      else previewButton(el).click();
+      expect(audio.hasAttribute('src')).to.equal(false);
+      expect(loads).to.equal(1);
+    }
+  } finally { restore(); }
+});
+
+it('keeps a replacement preview playing when an unloaded resource rejects', async () => {
+  let rejectOld!: (reason: Error) => void;
+  const first = new Promise<void>((_, reject) => { rejectOld = reject; });
+  let plays = 0;
+  const restore = stubMediaPlay(() => ++plays === 1 ? first : Promise.resolve());
+  try {
+    const el = await fixture<LyraVoicePicker>(html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="aria"></lr-voice-picker>`);
+    previewButton(el).click();
+    el.value = 'nova';
+    await el.updateComplete;
+    const started = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click();
+    expect((await started).detail.voiceId).to.equal('nova');
+    rejectOld(new Error('Unloaded'));
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(true);
+  } finally { restore(); }
 });

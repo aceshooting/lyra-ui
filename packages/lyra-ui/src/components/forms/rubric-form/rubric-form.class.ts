@@ -1,3 +1,6 @@
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { StructuredFormValidityController } from '../../../internal/form-validator-runtime.js';
+import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -11,7 +14,7 @@ import { LyraFormControlElement } from '../../../internal/form-control-element.j
 import { tag } from '../../../internal/prefix.js';
 import { nextId } from '../../../internal/a11y.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
-import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './rubric-form.styles.js';
@@ -36,6 +39,7 @@ import { finiteMidpoint } from '../../../internal/numbers.js';
 import { clampSteppedValue } from '../../../internal/step-value.js';
 import {
   getOwnDataDescriptor,
+  readOwnArrayLength,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -102,17 +106,10 @@ function cloneRubricValue(value: RubricValue): RubricValue {
 function projectRubricStringArray(value: unknown): readonly string[] | undefined {
   try {
     if (!Array.isArray(value)) return undefined;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return undefined;
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return undefined;
     const values: string[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
       if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
       if (typeof entry.value === 'string') values.push(entry.value);
@@ -126,17 +123,10 @@ function projectRubricStringArray(value: unknown): readonly string[] | undefined
 function projectRubricOptions(value: unknown): readonly RubricKeyOption[] {
   try {
     if (!Array.isArray(value)) return Object.freeze([]);
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return Object.freeze([]);
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return Object.freeze([]);
     const options: RubricKeyOption[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
       const candidate = getOwnDataDescriptor(value, String(index));
       if (
         candidate === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -269,18 +259,11 @@ function projectRubricKey(candidate: unknown): RubricKey | undefined {
 function normalizeRubricKeys(next: unknown): readonly RubricKey[] {
   try {
     if (!Array.isArray(next)) return EMPTY_KEYS;
-    const length = getOwnDataDescriptor(next, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    )
-      return EMPTY_KEYS;
+    const length = readOwnArrayLength(next);
+    if (length === undefined) return EMPTY_KEYS;
     const seen = new Set<string>();
     const normalized: RubricKey[] = [];
-    for (let index = 0; index < Math.min(length.value, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
+    for (let index = 0; index < Math.min(length, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
       const candidate = getOwnDataDescriptor(next, String(index));
       if (candidate === MISSING_OWN_DATA_DESCRIPTOR || candidate === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
       const key = projectRubricKey(candidate.value);
@@ -363,8 +346,8 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
 
 export interface LyraRubricFormEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<Readonly<{ value: RubricValue }>>;
-  'lr-change': CustomEvent<Readonly<{ value: RubricValue }>>;
+  'lr-input': CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>;
+  'lr-change': CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>;
   input: Event;
   change: Event;
   'lr-validity-change': CustomEvent<{
@@ -425,8 +408,8 @@ export interface LyraRubricFormEventMap {
  * @slot actions - Extra host controls rendered in the footer beside Submit/Skip.
  * @event {Event} input - Native notification after a user edits the aggregate value.
  * @event {Event} change - Native notification after a user commits an aggregate value edit.
- * @event lr-change - A user committed an edit; detail is `{ value }` with the complete value snapshot.
- * @event lr-input - `detail: { value }` — any control changed; the full current value object.
+ * @event lr-change - A user committed an edit; detail carries `{ value, previousValue }` snapshots.
+ * @event lr-input - A field edit with `{ value, previousValue }` snapshots of the rubric.
  * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
  * @event lr-submit - `detail: { value, itemId }` — Submit clicked or Ctrl/Cmd+Enter, after validity passes.
  * @event lr-skip - `detail: { itemId }` — Skip activated (`skippable` only); no validation.
@@ -566,11 +549,16 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   private _hasNext = false;
   private _skippable = false;
   private _disabled = false;
-  // Guards lr-validity-change so it only fires on an actual change, not on
-  // every render -- `undefined` guarantees the first computed state always
-  // "changes" from it, so mounting with an unmet required field still
-  // announces `valid:false` once up front.
-  private lastValidityKey: string | undefined;
+  private readonly structuredValidity = new StructuredFormValidityController(this, {
+    baseErrorMessage: () => this.validityController.customValidityMessage,
+    fieldErrors: () => this._errors,
+    validityController: () => this.validityController,
+    reveal: () => {
+      this.syncFormState();
+      this.markInteracted();
+    },
+    emit: snapshot => this.emit('lr-validity-change', snapshot),
+  });
   private pendingFocusFirst = false;
 
   constructor() {
@@ -598,6 +586,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   set keys(next: readonly RubricKey[]) {
     if (next === this._boundKeys) return;
     this._boundKeys = next;
+    this.commentBaseline = undefined;
     const old = this._keys;
     // Only the transition away from "no schema yet" re-normalizes from the caller's original,
     // pre-normalization input -- once a real schema is already in place, a later schema change
@@ -645,6 +634,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   }
 
   private setLiveValue(next: unknown, dirty: boolean): void {
+    this.commentBaseline = undefined;
     const old = this._value;
     this._rawValue = next ?? EMPTY_VALUE;
     this._value = normalizeRubricValue(this._rawValue, this._keys);
@@ -729,24 +719,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   /** The current effective validation errors. Intrinsic errors are keyed by their rubric key;
    *  a caller-supplied custom validity message is keyed by the whole-control `base` part. */
   get errors(): Readonly<Record<string, string>> {
-    return this.publicValidityErrors();
-  }
-
-  private publicValidityErrors(): Readonly<Record<string, string>> {
-    const errors: Record<string, string> = { ...this._errors };
-    if (this.willValidate && this.validityController.customValidityMessage)
-      errors['base'] = this.validationMessage;
-    return Object.freeze(errors);
-  }
-
-  private publishValiditySnapshot(): void {
-    if (!this.isConnected) return;
-    const valid = !this.willValidate || this.validity.valid;
-    const errors = valid ? Object.freeze({}) : this.publicValidityErrors();
-    const key = JSON.stringify({ valid, errors });
-    if (key === this.lastValidityKey) return;
-    this.lastValidityKey = key;
-    this.emit('lr-validity-change', Object.freeze({ valid, errors }));
+    return this.structuredValidity.errors;
   }
 
   private fieldElement(key: string): HTMLElement | null {
@@ -834,7 +807,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
       this.validityController.setValidity(flags, message);
     }
     this.syncCustomStates();
-    this.publishValiditySnapshot();
+    this.structuredValidity.publish();
   }
 
   /**
@@ -887,15 +860,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
    * mirroring a native `<form>`'s `reportValidity()`.
    */
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    this.syncFormState();
-    if (Object.keys(this._errors).length > 0) {
-      this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
-      // Re-published after the reveal, not before: `syncFormState()` above ran while the rubric
-      // was still pristine, so `user-invalid` would otherwise stay off until the next edit.
-      this.syncCustomStates();
-    }
-    return this.internals.reportValidity();
+    return this.structuredValidity.reportValidity();
   }
 
   /**
@@ -917,7 +882,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncCustomStates();
-    this.publishValiditySnapshot();
+    this.structuredValidity.publish();
     this.requestUpdate();
   }
 
@@ -951,16 +916,21 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   }
 
   private onFormKeyDown = (e: KeyboardEvent): void => {
-    if (!e.defaultPrevented && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (!e.defaultPrevented && !e.isComposing && e.keyCode !== 229 && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      this.submit();
+      if (!isRepeatedActivationKey(e)) this.submit();
     }
   };
 
+  private commentBaseline?: RubricValue;
+
   private setFieldValue(key: string, val: number | string | string[], committed = true): void {
     if (this.effectiveDisabled) return;
+    const previousValue = this.value;
+    const baseline = this.commentBaseline ?? previousValue;
     this.setLiveValue({ ...this._value, [key]: val }, true);
-    const detail = Object.freeze({ value: cloneRubricValue(this._value) });
+    if (!committed) this.commentBaseline = baseline;
+    const detail = Object.freeze({ value: this.value, previousValue });
     emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
     if (committed) emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
   }
@@ -968,7 +938,10 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   private onValueCommit = (event: Event): void => {
     event.stopPropagation();
     if (!this.effectiveDisabled) {
-      emitValueEvents(this, 'change', Object.freeze({ value: cloneRubricValue(this._value) }), detail => this.emit('lr-change', detail));
+      const value = this.value;
+      const detail = Object.freeze({ value, previousValue: this.commentBaseline ?? value });
+      this.commentBaseline = undefined;
+      emitValueEvents(this, 'change', detail, snapshot => this.emit('lr-change', snapshot));
     }
   };
 
@@ -1022,6 +995,12 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     this.focusFirstControl(options);
   }
 
+  /** Blurs the focused editor inside the rubric. */
+  override blur(): void {
+    const active = deepActiveElementIn(this.shadowRoot) as HTMLElement | null;
+    active?.blur();
+  }
+
   /** Forwards host clicks to the first rendered field, so programmatic and `<label>`-driven
    *  interactions target the active rubric field. */
   override click(): void {
@@ -1029,43 +1008,17 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     this.focusFirstControl();
   }
 
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-
-  private syncExternalDescription(): void {
-    const target = this.isConnected ? this.renderRoot.querySelector<HTMLElement>('[part="base"][role="group"]') : null;
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
-    }
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
-  }
-
-  override disconnectedCallback(): void {
-    this.releaseExternalDescription();
-    super.disconnectedCallback();
-  }
+  private readonly description = new HostDescriptionController(this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part="base"][role="group"]'));
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
+    this.description.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.syncExternalDescription();
-    this.publishValiditySnapshot();
+    this.structuredValidity.publish();
       if (this.pendingFocusFirst) {
       this.pendingFocusFirst = false;
       this.focusFirstControl();
@@ -1271,8 +1224,8 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     const hasError = this.hasErrorSlot || aggregateError.length > 0;
     const hostLabel = this.getAttribute('aria-label');
     const describedBy = [
-      hasHint ? this.aggregateHintId : '',
       hasError ? this.aggregateErrorId : '',
+      hasHint ? this.aggregateHintId : '',
     ].filter(Boolean).join(' ');
     return html`
       <div
@@ -1309,18 +1262,18 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
                 )}
           </div>
           <div
-            id=${this.aggregateHintId}
-            part="aggregate-hint form-control-help-text"
-            ?hidden=${!hasHint}
-          >
-            ${this.hint}<slot name="hint"></slot>
-          </div>
-          <div
             id=${this.aggregateErrorId}
             part="aggregate-error form-control-error"
             ?hidden=${!hasError}
           >
             ${aggregateError}<slot name="error"></slot>
+          </div>
+          <div
+            id=${this.aggregateHintId}
+            part="aggregate-hint form-control-help-text"
+            ?hidden=${!hasHint}
+          >
+            ${this.hint}<slot name="hint"></slot>
           </div>
         </div>
         ${this._keys.length > 0

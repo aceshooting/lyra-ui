@@ -1136,3 +1136,31 @@ it('draws the frame and toolbar edges in the subtle border tier while the zoom b
   expect(getComputedStyle(controls!).borderTopColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(zoomIn!).borderTopColor).to.equal('rgb(7, 8, 9)');
 });
+
+it('copies inherited theme properties without scanning standard CSS declarations', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>`);
+  const key = '--lr-theme-frame-accent';
+  el.style.setProperty(key, 'teal');
+  const getStyle = window.getComputedStyle;
+  let standardReads = 0;
+  window.getComputedStyle = function (element, pseudo) {
+    const computed = getStyle.call(this, element, pseudo);
+    if (element === el) {
+      const item = computed.item.bind(computed);
+      Object.defineProperty(computed, 'item', { value: (index: number) => {
+        const name = item(index);
+        if (!name.startsWith('--')) standardReads++;
+        return name;
+      } });
+    }
+    return computed;
+  };
+  try {
+    el.withThemeSync = true;
+    await el.updateComplete;
+    expect(frameOf(el).contentDocument!.documentElement.style.getPropertyValue(key)).to.equal('teal');
+    expect(standardReads).to.be.lessThan(10);
+  } finally {
+    window.getComputedStyle = getStyle;
+  }
+});

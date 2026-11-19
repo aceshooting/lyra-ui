@@ -8,6 +8,7 @@ import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { styles } from './compare-panel.styles.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_compareResponseB, LYRA_DEFAULT_compareVoteBetter, LYRA_DEFAULT_compareVoteBothBad, LYRA_DEFAULT_compareVoteLabel, LYRA_DEFAULT_compareVoteRecorded, LYRA_DEFAULT_compareVoteTie } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -18,6 +19,7 @@ export type CompareVote = 'a' | 'b' | 'tie' | 'both-bad';
 
 export interface LyraComparePanelEventMap {
   'lr-vote-request': CustomEvent<{ choice: CompareVote; itemId: string }>;
+  'lr-vote-change': CustomEvent<{ vote: CompareVote; itemId: string }>;
 }
 
 /**
@@ -34,6 +36,8 @@ export interface LyraComparePanelEventMap {
  * @slot b - The second output.
  * @slot prompt - Optional shared-input header above both panes.
  * @event lr-vote-request - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
+ * @event lr-vote-change - `detail: { vote, itemId }`. Fired after an accepted user vote is committed
+ *   to `vote`; not fired for a vetoed request, a listener-written vote, or host assignments.
  * @csspart base - The outer wrapper.
  * @csspart prompt - The optional prompt header, hidden when the `prompt` slot is empty.
  * @csspart panes - The row (or, under 640px, column) wrapping both panes. Stacked panes size to
@@ -194,8 +198,25 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.hasPromptSlot = slot.assignedNodes({ flatten: true }).length > 0;
   }
 
+  private paneFocusDisposers: (() => void)[] = [];
+
+  private syncPaneFocusability(): void {
+    for (const dispose of this.paneFocusDisposers) dispose();
+    this.paneFocusDisposers = this.isConnected
+      ? [...this.renderRoot.querySelectorAll<HTMLElement>('[part="pane-a"], [part="pane-b"]')].map((pane) =>
+          makeScrollRegionFocusable(pane, undefined),
+        )
+      : [];
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncPaneFocusability();
+  }
+
   override disconnectedCallback(): void {
     this.resetScrollSyncFrame();
+    this.syncPaneFocusability();
     super.disconnectedCallback();
   }
 
@@ -235,7 +256,10 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       // that reset by re-stamping `choice` onto the pair the user never actually saw vote on. The
       // announcement still fires unconditionally: `label`/`itemId` were captured before the
       // listener ran, so it correctly reports the vote against the *original* pair.
-      if (this.itemId === itemId) this.vote = choice;
+      if (this.itemId === itemId) {
+        this.vote = choice;
+        this.emit('lr-vote-change', Object.freeze({ vote: choice, itemId }));
+      }
       this.liveRegion?.announce(this.localize('compareVoteRecorded', undefined, { label }), { force: true });
     } finally {
       this.voteDispatching = false;
@@ -297,6 +321,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
+    this.syncPaneFocusability();
     // happy-dom (through at least 20.14.5) never fires the "prompt" slot's INITIAL `slotchange` --
     // see `collectInitialSlotAssignment`'s own doc -- so an `<lr-compare-panel>` whose prompt
     // content already exists at connect (the ordinary "render once data is ready" Lit pattern)
@@ -328,11 +353,11 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
           <slot name="prompt" @slotchange=${this.onPromptSlotChange}></slot>
         </div>
         <div part="panes">
-          <div part="pane-a" role="region" aria-label=${labelAText} tabindex="0" @scroll=${this.onPaneScroll('a')}>
+          <div part="pane-a" role="region" aria-label=${labelAText} @scroll=${this.onPaneScroll('a')}>
             <div part="pane-header">${labelAText}</div>
             <slot name="a"></slot>
           </div>
-          <div part="pane-b" role="region" aria-label=${labelBText} tabindex="0" @scroll=${this.onPaneScroll('b')}>
+          <div part="pane-b" role="region" aria-label=${labelBText} @scroll=${this.onPaneScroll('b')}>
             <div part="pane-header">${labelBText}</div>
             <slot name="b"></slot>
           </div>

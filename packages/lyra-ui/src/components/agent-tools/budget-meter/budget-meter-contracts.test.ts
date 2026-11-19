@@ -50,3 +50,26 @@ it('isolates repeated and reordered formatted quantities and caller units in a l
   expect(value.textContent).to.equal('USD 20 / 3 (3)');
   expect(el.shadowRoot!.querySelector('[part="meter"]')!.getAttribute('aria-valuetext')).to.equal(value.textContent);
 });
+
+it('applies card and plain frames and reflects compact density', async () => {
+  const el = await fixture<HTMLElement & { updateComplete: Promise<boolean>; frame: string; size: string }>(html`<lr-budget-meter></lr-budget-meter>`);
+  el.frame = 'card';
+  el.size = 's';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(getComputedStyle(base).borderTopStyle).to.equal('solid');
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(base).borderTopWidth).to.equal('0px');
+});
+
+it('uses separate track, ordinary fill, and over-budget fill colors', async () => {
+  const el = await fixture<LyraBudgetMeter>(html`<lr-budget-meter used="4" limit="5" style="--lr-budget-meter-track-bg: red; --lr-budget-meter-fill: green; --lr-budget-meter-exceeded-fill: blue"></lr-budget-meter>`);
+  const color = (part: string) => getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`)!).backgroundColor;
+  expect(color('track')).to.equal('rgb(255, 0, 0)');
+  expect(color('fill')).to.equal('rgb(0, 128, 0)');
+  el.used = 6;
+  await el.updateComplete;
+  expect(color('fill')).to.equal('rgb(0, 0, 255)');
+});

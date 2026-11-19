@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': patch
+'@aceshooting/lyra-ui': major
 ---
 
 - Keep lightbox loading and error messages legible over the backdrop in dark mode.
@@ -20,3 +20,10 @@
 - Preserve a media card’s plain frame while its action is pressed.
 - Keep file icon labels readable alongside descriptions and sizes in narrow layouts.
 - Let shrink-to-fit iframe previews follow their allocated dimensions.
+- Give each attachment chip its own fallback action id. Set `attachment-id` explicitly for ids that must persist across remounts.
+- Include the visible filename in file-card action names, including localized untitled files.
+- Report the rendered zoom or image index after navigation settles. Synchronous actions in one render report their final destination.
+- Accept read-only file-count and drag-state bindings while keeping the underlying state derived from file and drag operations.
+- Theme media control hover and press states, file preview geometry, and avatar overflow badge rings with component-level properties.
+- Match drag verdict tints across file inputs and drop targets and scale rejection text with the field.
+- Synchronize iframe theme properties without enumerating standard CSS longhands.

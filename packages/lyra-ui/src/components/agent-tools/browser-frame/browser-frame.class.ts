@@ -5,17 +5,18 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './browser-frame.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
-import { firstByIdentity } from '../../../internal/collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFramePingsLimit, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -25,6 +26,7 @@ const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
 );
 
 const BROWSER_FRAME_CONTROLLER = literalSetConverter<BrowserFrameController>(['agent', 'user'], 'agent');
+const MAX_RENDERED_PINGS = 500;
 
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
  *  an image of `naturalW`x`naturalH` shown inside a `containerW`x`containerH` box -- ping
@@ -65,6 +67,8 @@ const STATUS_KEY = {
   stalled: 'browserFrameStatusStalled',
 } as const;
 
+const pingIdentity = (ping: BrowserPing): string => ping.id;
+
 export interface LyraBrowserFrameEventMap {
   'lr-take-over': CustomEvent<{ controller: BrowserFrameController }>;
   'lr-stop': CustomEvent<null>;
@@ -96,6 +100,7 @@ export interface LyraBrowserFrameEventMap {
  * @csspart viewport - The frame/media container.
  * @csspart frame - The `frame-src` `<img>` (absent once the default slot is populated).
  * @csspart ping - One action-ping marker; carries `data-kind`.
+ * @csspart limit - The localized notice when the action-marker window omits older entries.
  * @cssprop [--lr-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
  * @cssprop [--lr-browser-frame-controller-bg=var(--lr-color-brand-quiet)] - Controller
  *   badge background.
@@ -119,6 +124,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     browserFrameControllerUser: LYRA_DEFAULT_browserFrameControllerUser,
     browserFrameHandBack: LYRA_DEFAULT_browserFrameHandBack,
     browserFrameLabel: LYRA_DEFAULT_browserFrameLabel,
+    browserFramePingsLimit: LYRA_DEFAULT_browserFramePingsLimit,
     browserFrameStatusConnecting: LYRA_DEFAULT_browserFrameStatusConnecting,
     browserFrameStatusIdle: LYRA_DEFAULT_browserFrameStatusIdle,
     browserFrameStatusLive: LYRA_DEFAULT_browserFrameStatusLive,
@@ -143,7 +149,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['pings']);
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, agentActionButtonStyles];
 
   private _frameSrc = '';
 
@@ -187,7 +193,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.requestUpdate('controller', old);
   }
   /** Pointer markers keyed by stable id. Empty/blank ids are omitted and duplicates normalize
-   *  first-wins before rendering. */
+   *  first-wins. Only the last 500 normalized entries are rendered. */
   @property({ attribute: false }) pings: readonly BrowserPing[] = [];
   /** Hides the built-in take-over/hand-back and stop buttons, for a read-only viewer. The
    *  `actions` slot still renders. */
@@ -242,6 +248,9 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.seedFirstRenderState(() => {
+      this.hasDefaultSlotContent = Array.from(this.children).some((el) => !el.getAttribute('slot'));
+    });
     // The status shown at mount is context, not a user-triggered change. Later lifecycle
     // transitions are infrequent and useful, so announce each one as its own light-DOM addition.
     if (this.hasUpdated && !this.suppressNextStatusAnnouncement && changed.has('phase')) {
@@ -252,6 +261,8 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
     this.suppressNextStatusAnnouncement = false;
+    const notice = this.renderRoot.querySelector('[part="limit"]')?.textContent ?? '';
+    this.announcements.transition('ping-limit', notice ? 'limited' : 'ready', notice, 'polite');
   }
 
   protected override firstUpdated(changed: PropertyValues<this>): void {
@@ -385,6 +396,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   override render(): TemplateResult {
     const safeSrc = safeMediaSrc(this.frameSrc);
+    const pings = firstByIdentityMemo(this.pings, pingIdentity);
     return html`
       <div
         part="base"
@@ -403,12 +415,12 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
           <slot name="actions" part="actions"></slot>
           ${!this.withoutControls
             ? html`
-                <button part="take-over-button" type="button" @click=${this.onTakeOver}>
+                <button part="take-over-button" data-agent-action="neutral" type="button" @click=${this.onTakeOver}>
                   ${this.controller === 'user'
                     ? this.localize('browserFrameHandBack')
                     : this.localize('browserFrameTakeOver')}
                 </button>
-                <button part="stop-button" type="button" @click=${() => this.emit('lr-stop')}>
+                <button part="stop-button" data-agent-action="neutral" type="button" @click=${() => this.emit('lr-stop')}>
                   ${this.localize('browserFrameStop')}
                 </button>
               `
@@ -416,7 +428,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
         </div>
         <div part="viewport">
           <slot @slotchange=${this.onSlotChange}></slot>
-          ${!this.hasDefaultSlotContent && safeSrc
+          ${!this.renderSlotPresence(this.hasDefaultSlotContent) && safeSrc
             ? html`<img
                 part="frame"
                 src=${safeSrc}
@@ -427,7 +439,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
                 @error=${this.onFrameError}
               />`
             : nothing}
-          ${firstByIdentity(Array.isArray(this.pings) ? this.pings : [], (ping) => ping.id).map(
+          ${pings.slice(-MAX_RENDERED_PINGS).map(
             (ping) => html`<span
               part="ping"
               data-kind=${ping.kind}
@@ -436,6 +448,9 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
             ></span>`,
           )}
         </div>
+        ${pings.length > MAX_RENDERED_PINGS ? html`<p part="limit" role="note">${this.localize('browserFramePingsLimit', undefined, {
+          count: this.formatLocaleNumber(MAX_RENDERED_PINGS),
+        })}</p>` : nothing}
       </div>
     `;
   }

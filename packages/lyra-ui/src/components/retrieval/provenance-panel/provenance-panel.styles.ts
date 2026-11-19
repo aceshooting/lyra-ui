@@ -38,6 +38,27 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
+  [part='toggle'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    transition: transform var(--lr-transition-fast);
+  }
+  [aria-expanded='true'] > [part='toggle'] {
+    transform: rotate(90deg);
+  }
+  :host(:dir(rtl)) [aria-expanded='false'] > [part='toggle'] {
+    transform: scaleX(-1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='toggle'] {
+      transition: none;
+    }
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+  }
   [part='count'] {
     color: var(--lr-color-text-quiet);
     font-weight: var(--lr-font-weight-medium);

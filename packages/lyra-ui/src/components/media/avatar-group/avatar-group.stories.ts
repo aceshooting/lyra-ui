@@ -172,7 +172,7 @@ export const RadiusToken: Story = {
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group shape="rounded" max="1" style="--lr-avatar-group-radius: 0.25rem;">
+      <lr-avatar-group shape="rounded" max="1" style="--lr-avatar-group-radius: 0.25rem; --lr-avatar-group-badge-hover-ring-color: var(--lr-color-success);">
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
       </lr-avatar-group>

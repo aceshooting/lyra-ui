@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'மேற்கோள் சேர்',
   promptInputLabel: 'AI கோரிக்கை',
   promptInputControls: 'கோரிக்கை விருப்பங்கள்',
+  promptInputCollectionLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் கோரிக்கை உள்ளீட்டின் ஒரு பகுதி விடப்பட்டது.',
   promptInputSources: 'மூலங்கள்',
   promptInputAttachments: 'இணைப்புகள்',
   handoffLabel: 'முகவருக்கு ஒப்படை',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'குரல்கள் கிடைக்கவில்லை',
   voicePickerRequired: 'ஒரு குரலைத் தேர்ந்தெடுக்கவும்.',
   voicePickerPreview: '{name}-ஐ முன்னோட்டம் கேள்',
+  voicePickerPreviewFailed: 'குரல் முன்னோட்டம் கிடைக்கவில்லை.',
   voicePickerStopPreview: 'முன்னோட்டத்தை நிறுத்து',
   realtimeSessionLabel: 'நிகழ்நேர அமர்வு',
   realtimeSessionDisconnected: 'துண்டிக்கப்பட்டது',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'நீளமான குறியீடு தொடரியல் சிறப்பித்தல் இல்லாமல் காட்டப்படுகிறது.',
   codeBlockHighlightedLine: 'சிறப்பிக்கப்பட்ட வரி',
   codeBlockActiveLine: 'செயலில் உள்ள சிறப்பிக்கப்பட்ட வரி',
+  codeBlockToggle: 'குறியீட்டைக் காட்டு அல்லது மறை',
 };
 
 registerLyraLocale('ta', strings);

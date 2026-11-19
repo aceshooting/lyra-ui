@@ -32,7 +32,7 @@ import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
-  type FileIntakeResult,
+  type FileIntakeDetail, type FileIntakeRejected, type FileIntakeResult,
 } from './file-intake.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -87,13 +87,9 @@ function isElementTarget(value: EventTarget): value is Element {
   return candidate.nodeType === 1 && typeof candidate.matches === 'function';
 }
 
-export interface LyraFileInputRejectedFile {
-  readonly file: File;
-  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
-}
+export interface LyraFileInputRejectedFile extends FileIntakeRejected {}
 
-export interface LyraFileInputFilesDetail {
-  readonly files: readonly File[];
+export interface LyraFileInputFilesDetail extends FileIntakeDetail {
   readonly rejected: readonly LyraFileInputRejectedFile[];
   /** Remaining allowance under `maxFiles` after this batch, at the control's running count
    *  (retained files, unless `nonRetaining`, plus `heldFileCount`) -- `null` while `maxFiles` is
@@ -215,7 +211,12 @@ export interface LyraFileInputEventMap {
  * @cssprop [--lr-file-input-dropzone-padding=var(--lr-space-l)] - Padding inside `[part~="file-input"]`
  * and the stacked dropzone content. Retuned per `size` tier.
  * @cssprop [--lr-file-input-detail-font-size=var(--lr-font-size-sm)] - Size of the secondary text:
- * the hint, the validation error, and each selected file's formatted size. Retuned per `size` tier.
+ * the hint, the validation error, the rejection list, and each selected file's formatted size.
+ * Retuned per `size` tier.
+ * @cssprop [--lr-file-input-file-radius=var(--lr-radius)] - Corner radius of each `[part="file"]` row.
+ * @cssprop [--lr-file-input-thumbnail-size=var(--lr-icon-button-size)] - Size of each
+ * `[part="file-thumbnail"]`, rethemeable independently of the remove button's hit area.
+ * @cssprop [--lr-file-input-thumbnail-radius=var(--lr-radius-xs)] - Corner radius of each thumbnail.
  * @cssprop [--lr-file-input-gap=var(--lr-space-xs)] - Gap between the dropzone's slotted
  * children. At `size="s"` or `size="small"`, this is the fallback when
  * `--lr-file-input-compact-gap` is unset.
@@ -241,6 +242,10 @@ export interface LyraFileInputEventMap {
  * color. The dashed border style is unchanged.
  * @cssprop [--lr-file-input-dropzone-hover-border-color=var(--lr-color-brand)] - Dropzone border
  * color while the pointer is over it, whether over the button or over the content stacked on it.
+ * @cssprop [--lr-file-input-dropzone-active-border-color=var(--lr-file-input-dropzone-hover-border-color)] -
+ * Dropzone border color while pressed.
+ * @cssprop [--lr-file-input-dropzone-active-bg] - Dropzone background while pressed. Defaults to
+ * `--lr-file-input-dropzone-fill` mixed toward `--lr-color-mix-partner`.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
  * library, so a halo is configured once rather than per component. Additive: the focus outline and
@@ -548,16 +553,23 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     if (oldCount !== this._fileCount) this.requestUpdate('fileCount', oldCount);
   }
 
-  /** Readonly selected-file count derived from `files`.
+  /** Readonly selected-file count derived from `files`. Assignment is ignored, so a framework
+   * binding that spreads every property cannot throw.
    * @default 0 */
   get fileCount(): number {
     return this._fileCount;
   }
+  set fileCount(_value: number) {
+    // Derived from `files`.
+  }
 
-  /** Readonly state derived from the current drag session.
+  /** Readonly state derived from the current drag session. Assignment is ignored.
    * @default false */
   get dragging(): boolean {
     return this.dragState !== 'default';
+  }
+  set dragging(_value: boolean) {
+    // Derived from the drag session.
   }
 
   private get effectiveMultiple(): boolean {

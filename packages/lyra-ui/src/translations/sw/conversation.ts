@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Taja chanzo',
   promptInputLabel: 'Agizo la AI',
   promptInputControls: 'Chaguo za agizo',
+  promptInputCollectionLimit: 'Baadhi ya maudhui ya agizo yameachwa kwa sababu kikomo cha ingizo kimefikiwa.',
   promptInputSources: 'Vyanzo',
   promptInputAttachments: 'Viambatisho',
   handoffLabel: 'Makabidhiano ya wakala',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Hakuna sauti zinazopatikana',
   voicePickerRequired: 'Chagua sauti.',
   voicePickerPreview: 'Sikiliza {name}',
+  voicePickerPreviewFailed: 'Onyesho la kusikiliza sauti halipatikani.',
   voicePickerStopPreview: 'Simamisha usikilizaji',
   realtimeSessionLabel: 'Kipindi cha muda halisi',
   realtimeSessionDisconnected: 'Imekatika',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Msimbo mrefu unaonyeshwa bila uangaziaji wa sintaksia.',
   codeBlockHighlightedLine: 'Mstari ulioangaziwa',
   codeBlockActiveLine: 'Mstari unaotumika ulioangaziwa',
+  codeBlockToggle: 'Onyesha au ficha msimbo',
 };
 
 registerLyraLocale('sw', strings);

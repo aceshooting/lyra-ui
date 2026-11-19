@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Magdagdag ng sanggunian',
   promptInputLabel: 'Prompt ng AI',
   promptInputControls: 'Mga opsyon sa prompt',
+  promptInputCollectionLimit: 'May ilang bahagi ng input sa prompt na hindi isinama dahil naabot ang limitasyon sa input.',
   promptInputSources: 'Mga pinagmulan',
   promptInputAttachments: 'Mga attachment',
   handoffLabel: 'Paglipat sa agent',
@@ -155,6 +156,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'Walang available na boses',
   voicePickerRequired: 'Pumili ng boses.',
   voicePickerPreview: 'I-preview ang {name}',
+  voicePickerPreviewFailed: 'Hindi available ang preview ng boses.',
   voicePickerStopPreview: 'Ihinto ang preview',
   realtimeSessionLabel: 'Realtime na sesyon',
   realtimeSessionDisconnected: 'Hindi konektado',
@@ -181,6 +183,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'Ipinapakita ang mahabang code nang walang pagha-highlight ng sintaks.',
   codeBlockHighlightedLine: 'Naka-highlight na linya',
   codeBlockActiveLine: 'Aktibong naka-highlight na linya',
+  codeBlockToggle: 'Ipakita o itago ang code',
 };
 
 registerLyraLocale('tl', strings);

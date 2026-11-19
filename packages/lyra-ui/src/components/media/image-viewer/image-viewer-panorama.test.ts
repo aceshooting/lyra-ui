@@ -242,7 +242,7 @@ describe('lr-image-viewer panorama', () => {
     host.restored!(); await el.updateComplete;
     expect(camera).to.deep.equal(el.panoramaCamera);
     expect(changes).to.equal(0);
-    expect((style as { accent: string }).accent).to.equal('rgba(1, 2, 3, 1)');
+    expect((style as { accent: string }).accent).to.equal('rgb(1, 2, 3)');
   });
 
   it('keeps the native image on texture rejection and does not expose raw failure details', async () => {
@@ -631,7 +631,7 @@ describe('lr-image-viewer panorama', () => {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
         expect(creates).to.equal(1);
         wrapper.style.setProperty('--lr-color-brand', 'rgb(11, 22, 33)');
-        await waitUntil(() => (style as { accent: string })?.accent === 'rgba(11, 22, 33, 1)', 'the renderer receives inherited theme changes');
+        await waitUntil(() => (style as { accent: string })?.accent === 'rgb(11, 22, 33)', 'the renderer receives inherited theme changes');
         expect(disposed).to.equal(0);
       } finally { el.remove(); }
       expect(disposed).to.equal(1);

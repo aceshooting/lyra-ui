@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { contrastRatio } from '../../../../test/color-contrast.js';
 import { sendKeys } from '@web/test-runner-commands';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './lightbox.js';
 import type { LyraLightbox, LyraLightboxSource } from './lightbox.js';
 
@@ -55,4 +56,38 @@ it('emits lr-index-change after the clamped index has rendered', async () => {
   await changed;
   expect(el.index).to.equal(0);
   expect(renderedAtEvent).to.equal(pixel);
+});
+
+it('paints hovered and pressed controls from their public tokens', async () => {
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox open style="--lr-transition-interactive: none; --lr-lightbox-control-hover-bg: rgb(1, 2, 3); --lr-lightbox-control-hover-color: rgb(4, 5, 6); --lr-lightbox-control-active-bg: rgb(7, 8, 9); --lr-lightbox-control-active-color: rgb(10, 11, 12)" .images=${[{ src: pixel, alt: 'a' }]}></lr-lightbox>`);
+  const close = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(close, 'close button hover');
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => close.matches(':active'), 'pressed state');
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(close).color).to.equal('rgb(10, 11, 12)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+it('reports the rendered image after navigation and discards superseded requests', async () => {
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${['a', 'b', 'c'].map(alt => ({ src: pixel, alt }))}></lr-lightbox>`);
+  const changes: string[] = [];
+  el.addEventListener('lr-index-change', event => {
+    changes.push(`${event.detail.index}/${el.shadowRoot!.querySelector('lr-pan-zoom')?.alt}`);
+  });
+  el.next();
+  el.next();
+  await el.updateComplete;
+  expect(changes).to.deep.equal(['2/c']);
+  el.previous();
+  el.index = 0;
+  await el.updateComplete;
+  expect(changes).to.deep.equal(['2/c']);
 });

@@ -1,5 +1,27 @@
 ---
-'@aceshooting/lyra-ui': patch
+'@aceshooting/lyra-ui': major
 ---
 
-Retrieval components: modified or composing keys no longer trigger the citation and entity chips or the retrieval search submit, blank labels fall back to the localized name, per-row toggles and card actions carry the row title in their accessible names, selected rows keep a visible outline in the plain frame, small nonzero scores and shares no longer round to 0%, member and memory counts pluralize, retrieval-compare chunk selection also reports chunkId and sourceId, research progress keeps running and failed steps when it exceeds its row cap, source-picker names its truncation notice instead of showing a generic invalid message, selection-limit and reload notices are announced, and the knowledge-base admin keeps nested table and queue events inside.
+- Citation badges, entity chips and retrieval search leave modified or composing keystrokes to the browser.
+- Whitespace-only retrieval labels use their localized fallback.
+- Retrieval results restore focus when Load more becomes a spinner and announce provider errors.
+- Chunk inspector and retrieval compare keep focus rings inside clipped rows.
+- Retrieval compare includes `chunkId` and `sourceId` in `lr-chunk-select`, and page buttons share hover and press treatments.
+- Retrieval trace, provenance panel, memory panel and entity dossier include `detail.kind` in their `lr-toggle` events. Use it to distinguish stage, section, memory and chunk disclosures.
+- Chunk inspector gives standalone multi-row lists one row-action Tab stop and supports arrow navigation across virtualized rows.
+- Memory panel gives short-term actions one Tab stop, and Add buttons name the item being promoted. Customize the name through `memoryPanelAddAccessibleName` with `{action}` and `{label}`.
+- Retrieval status changes are announced after reconnect, during provider reloads and when selection reaches its limit.
+- Knowledge base keeps its internal table's page and sort events inside when no data source is set. Move legacy listeners to the table or use provider mode for public sort events. Knowledge-base admin and entity dossier also contain nested events.
+- Per-item toggles and card actions include the item's visible label or title in their accessible names.
+- Member and memory counts pluralize.
+- Inline citation badges and entity chips retain their hit areas without making the surrounding line taller.
+- Source picker identifies and announces truncation, matches labels without regard to accents and case, and uses directional folder chevrons.
+- Research progress prioritizes running, failed and recent steps when the display reaches its cap, and its fill remains visible in forced colors.
+- Selected claim, chunk and evidence rows keep a visible outline with the plain frame.
+- Long titles, warnings, evidence text and run labels wrap in constrained space.
+- Community card member buttons use a pill-shaped hover treatment, and community and entity headings validate the authored level.
+- Provenance section headers show directional disclosure chevrons and use consistent spacing between community cards and paths.
+- RAG answer reports the citation displayed by an activated badge while the citation list is changing.
+- RAG answers and evaluation dashboards use their visible section headings. Entity dossier and retrieval trace avoid repeating the host's accessible name.
+- Evaluation dashboards report an unavailable metric, and short shares and out-of-range percent values preserve their meaning.
+- Knowledge-base admin tabs reserve their selected width.

@@ -343,7 +343,7 @@ describe("lr-swatch-picker", () => {
     const buttons = swatches(el);
     setTimeout(() => buttons[2]!.click());
     const ev = await oneEvent(el, "lr-change");
-    expect(ev.detail).to.deep.equal({ value: "red" });
+    expect(ev.detail).to.deep.equal({ value: 'red', previousValue: 'blue' });
     expect(el.value).to.equal("red");
     await el.updateComplete;
     expect(buttons[2]!.getAttribute("aria-checked")).to.equal("true");
@@ -1678,4 +1678,26 @@ it('moves real focus to the roving stop when a focused swatch becomes disabled',
   expect(before!.disabled).to.equal(true);
   expect(after!.tabIndex).to.equal(0);
   expect(el.shadowRoot!.activeElement === after).to.equal(true);
+});
+
+it('preserves browser-modified and composing arrows on the roving radio', async () => {
+  const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker .items=${options()} value="blue"></lr-swatch-picker>`);
+  for (const modifier of [{ altKey: true }, { isComposing: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', ...modifier, cancelable: true, bubbles: true });
+    swatches(el)[0]!.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+    expect(el.value).to.equal('blue');
+  }
+});
+
+it('keeps a visible selection ring on custom icons with zero glow', async () => {
+  const choices = options().map(option => ({ ...option, icon: html`<span>★</span>` }));
+  const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker .items=${choices} value="green"
+    style="--lr-swatch-picker-selected-blur: 0px; --lr-swatch-picker-selected-color: rgb(132, 41, 70)"></lr-swatch-picker>`);
+  const paint = () => swatches(el).map(button => getComputedStyle(button.querySelector('[part="swatch-icon"]')!));
+  expect(paint().map(style => style.outlineStyle)).to.deep.equal(['none', 'solid', 'none']);
+  expect(paint()[1]!.outlineColor).to.equal('rgb(132, 41, 70)');
+  swatches(el)[2]!.click();
+  await el.updateComplete;
+  expect(paint().map(style => style.outlineStyle)).to.deep.equal(['none', 'none', 'solid']);
 });

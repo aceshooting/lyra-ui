@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   selectionCite: 'Referenciar',
   promptInputLabel: 'Prompt de IA',
   promptInputControls: 'Opciones del prompt',
+  promptInputCollectionLimit: 'Se han omitido algunos datos del prompt porque se ha alcanzado un límite de entrada.',
   promptInputSources: 'Fuentes',
   promptInputAttachments: 'Adjuntos',
   handoffLabel: 'Transferencia entre agentes',
@@ -157,6 +158,7 @@ const strings: LyraLocaleStrings = {
   voicePickerNoVoices: 'No hay voces disponibles',
   voicePickerRequired: 'Elija una voz.',
   voicePickerPreview: 'Escuchar {name}',
+  voicePickerPreviewFailed: 'La vista previa de la voz no está disponible.',
   voicePickerStopPreview: 'Detener la reproducción',
   realtimeSessionLabel: 'Sesión en tiempo real',
   realtimeSessionDisconnected: 'Desconectado',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   codeBlockHighlightLimit: 'El código largo se muestra sin resaltado de sintaxis.',
   codeBlockHighlightedLine: 'Línea destacada',
   codeBlockActiveLine: 'Línea destacada activa',
+  codeBlockToggle: 'Mostrar u ocultar el código',
 };
 
 registerLyraLocale('es', strings);

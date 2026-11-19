@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Abubuwan ƙwaƙwalwa na dogon lokaci',
   memoryPanelAdd: 'Ƙara zuwa ƙwaƙwalwar dogon lokaci',
   memoryPanelAddWithContext: 'Ƙara "{label}" zuwa ƙwaƙwalwar dogon lokaci',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Manta duka',
   memoryPanelConfirmAddHeading: 'A ƙara wannan zuwa ƙwaƙwalwar dogon lokaci?',
   memoryPanelConfirmRemoveHeading: 'A cire wannan abu?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Sassan kimantawa',
   ragEvalDashboardAllSlices: 'Duka',
   ragEvalDashboardSliceUnavailable: 'Babu gudanarwar kimantawa don {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Babu ma’aunin kimantawa don {metric}.',
   knowledgeBaseSyncIdle: 'Ba ya aiki',
   knowledgeBaseSyncSyncing: 'Ana daidaitawa',
   knowledgeBaseSyncPaused: 'An dakatar',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Sakamako {index} na {total}',
   ragAnswerEmpty: 'Babu amsa tukuna',
   retrievalTraceEmpty: 'Babu matakan dawo da bayanai',
+  retrievalTraceLabel: 'Tarihin matakan dawo da bayanai',
   sourcePickerMatches: {
     one: '{count} tushen daidaita',
     other: '{count} tushen sun dace',

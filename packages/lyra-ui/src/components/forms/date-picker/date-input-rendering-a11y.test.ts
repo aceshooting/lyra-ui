@@ -2011,18 +2011,22 @@ describe('coverage-gap fixes', () => {
       html`<lr-date-input></lr-date-input>`
     )) as LyraDateInput;
     el.remove();
-    el.validators = [
-      {
-        checkValidity: () => ({ isValid: true, invalidKeys: [], message: "" }),
-        observedAttributes: ["data-flag"],
-      },
-    ];
-    await el.updateComplete;
-    const priv = el as unknown as { validatorAttributeObserver?: unknown };
-    expect(
-      priv.validatorAttributeObserver,
-      "no observer is created for a disconnected control"
-    ).to.equal(undefined);
+    const original = MutationObserver.prototype.observe;
+    const registrations: MutationObserverInit[] = [];
+    MutationObserver.prototype.observe = function (target, options) {
+      if (target === el && options) registrations.push(options);
+      original.call(this, target, options);
+    };
+    try {
+      el.validators = [{
+        checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+        observedAttributes: ['data-flag'],
+      }];
+      await el.updateComplete;
+      expect(registrations.filter(options => options.attributeFilter?.includes('data-flag')).length).to.equal(0);
+    } finally {
+      MutationObserver.prototype.observe = original;
+    }
   });
 
   it('tolerates a non-array invalidKeys and a non-string message from an untyped checkValidity() result', async () => {
@@ -2054,29 +2058,34 @@ describe('coverage-gap fixes', () => {
     const el = (await fixture(
       html`<lr-date-input value="2026-07-15"></lr-date-input>`
     )) as LyraDateInput;
-    el.validators = [
-      {
-        checkValidity: () => ({ isValid: true, invalidKeys: [], message: "" }),
-        observedAttributes: ["data-flag"],
-      },
-    ];
-    await el.updateComplete;
-    const priv = el as unknown as {
-      validatorAttributeObserver?: unknown;
-      validityRevision: number;
-    };
-    expect(priv.validatorAttributeObserver).to.not.equal(undefined);
-    const revisionBefore = priv.validityRevision;
-    // A differently-identified binding with a real (no-op) observer, so the
-    // guard's `!==` check trips while fixture cleanup can still safely call
-    // `.observer.disconnect()` on it afterwards.
-    priv.validatorAttributeObserver = { observer: { disconnect() {} } };
-    el.setAttribute("data-flag", "go");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(
-      priv.validityRevision,
-      "a stale observer callback must not revalidate"
-    ).to.equal(revisionBefore);
+    const Original = window.MutationObserver;
+    let deliver: (() => void) | undefined;
+    class CapturedObserver extends Original {
+      constructor(private readonly callback: MutationCallback) { super(callback); }
+      override observe(target: Node, options: MutationObserverInit): void {
+        if (target === el && options.attributeFilter?.includes('data-flag')) {
+          deliver = () => this.callback([], this);
+        }
+        super.observe(target, options);
+      }
+    }
+    window.MutationObserver = CapturedObserver;
+    try {
+      el.validators = [{
+        checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+        observedAttributes: ['data-flag'],
+      }];
+      await el.updateComplete;
+      expect(typeof deliver).to.equal('function');
+      let checks = 0;
+      el.validators = [() => { checks++; return true; }];
+      await el.updateComplete;
+      const before = checks;
+      deliver!();
+      expect(checks).to.equal(before);
+    } finally {
+      window.MutationObserver = Original;
+    }
   });
 
   it('bindVisibilityListener no-ops when invoked while disconnected', async () => {

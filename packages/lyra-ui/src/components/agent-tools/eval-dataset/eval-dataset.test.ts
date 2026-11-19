@@ -24,6 +24,7 @@ expectLocaleFallback('de', [
   'exportButtonLabel',
   'exportFormatMenuLabel',
   'fileInputDefaultLabel',
+  'showMoreCollapsed',
   'tableFilterLabel',
   'tableFilterPlaceholder',
 ]);

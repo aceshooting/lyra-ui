@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   memoryPanelLongTermHeading: 'Дългосрочни спомени',
   memoryPanelAdd: 'Добави в дългосрочната памет',
   memoryPanelAddWithContext: 'Добави „{label}“ в дългосрочната памет',
+  memoryPanelAddAccessibleName: '{action}: {label}',
   memoryPanelForgetAll: 'Забрави всичко',
   memoryPanelConfirmAddHeading: 'Да се добави ли това в дългосрочната памет?',
   memoryPanelConfirmRemoveHeading: 'Да се премахне ли този елемент?',
@@ -187,6 +188,7 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardSlices: 'Срезове на оценката',
   ragEvalDashboardAllSlices: 'Всички',
   ragEvalDashboardSliceUnavailable: 'Няма налични изпълнения на оценка за {slice}.',
+  ragEvalDashboardMetricUnavailable: 'Няма наличен показател за оценка за {metric}.',
   knowledgeBaseSyncIdle: 'Неактивно',
   knowledgeBaseSyncSyncing: 'Синхронизира се',
   knowledgeBaseSyncPaused: 'На пауза',
@@ -263,6 +265,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Резултат {index} от {total}',
   ragAnswerEmpty: 'Все още няма отговор',
   retrievalTraceEmpty: 'Няма етапи на извличане',
+  retrievalTraceLabel: 'Проследяване на извличането',
   sourcePickerMatches: {
     one: '{count} съответстващ източник',
     other: '{count} съответстващи източника',

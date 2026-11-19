@@ -73,7 +73,51 @@ it('roves each section primary action while preserving secondary row buttons', a
   expect(el.shadowRoot!.activeElement === short[1]).to.equal(true);
   await el.updateComplete;
   expect(short.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
-  expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-scope="short-term"] [part="remove-button"]')!.tabIndex).to.equal(0);
+  const shortRemove = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-scope="short-term"] [part="remove-button"]')];
+  expect(shortRemove.map((button) => button.tabIndex)).to.deep.equal([-1, -1]);
+  await focusByKeyboard(long[0]!);
+  long[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === long[1]).to.equal(true);
+  long[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === long[1]).to.equal(true);
+});
+
+it('keeps one short-term tab stop across the add and remove columns', async () => {
+  const el = await populated();
+  const add = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-scope="short-term"] [part="add-button"]')];
+  const remove = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-scope="short-term"] [part="remove-button"]')];
+  const stops = () => [...add, ...remove].filter((button) => button.tabIndex === 0).length;
+  expect(stops()).to.equal(1);
+  await focusByKeyboard(add[0]!);
+  add[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === remove[0]).to.equal(true);
+  await el.updateComplete;
+  expect(remove.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  expect(stops()).to.equal(1);
+  remove[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === remove[1]).to.equal(true);
+  await el.updateComplete;
+  expect(remove.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+  remove[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === remove[1]).to.equal(true);
+  remove[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === add[1]).to.equal(true);
+  await el.updateComplete;
+  expect(add.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+  expect(stops()).to.equal(1);
+});
+
+it('swaps the short-term column arrows under RTL', async () => {
+  const el = await populated();
+  el.dir = 'rtl';
+  await el.updateComplete;
+  const add = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-scope="short-term"] [part="add-button"]')!;
+  const remove = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-scope="short-term"] [part="remove-button"]')!;
+  await focusByKeyboard(add);
+  add.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === add).to.equal(true);
+  add.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  expect(el.shadowRoot!.activeElement === remove).to.equal(true);
 });
 
 it('leaves modified and unrelated keys on a section primary action to the browser', async () => {
@@ -311,7 +355,7 @@ describe('lr-memory-panel', () => {
     expect(event.detail.memoryId).to.equal('l1');
     expect(event.detail.scope).to.equal('long-term');
     expect(event.detail.expanded).to.equal(true);
-    expect(toggles).to.deep.equal([{ itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true }]);
+    expect(toggles).to.deep.equal([{ kind: 'memory', itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true }]);
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     const body = withProvenance.querySelector(
@@ -340,6 +384,7 @@ describe('lr-memory-panel', () => {
     toggle.click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
+      kind: 'memory',
       itemId: 'l1',
       memoryId: 'l1',
       scope: 'long-term',
@@ -666,8 +711,9 @@ describe('lr-memory-panel', () => {
         .shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement
     ).click();
     const event = await listener;
-    expect(event.detail.section).to.equal('entities');
-    expect(event.detail.memoryId).to.equal('l1');
+    expect(event.detail).to.deep.equal({
+      kind: 'section', section: 'entities', expanded: false, memoryId: 'l1', scope: 'long-term',
+    });
   });
 
   it('reports an opened provenance chunk as its own lr-chunk-open carrying the owning memory', async () => {
@@ -1867,7 +1913,7 @@ describe('lr-memory-panel disclosure events', () => {
     }
     toggle.click();
     await el.updateComplete;
-    const detail = { itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true };
+    const detail = { kind: 'memory', itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true };
     expect(seen).to.deep.equal([{ type: 'lr-toggle', detail, cancelable: false }]);
   });
 });
@@ -1901,17 +1947,18 @@ it('lr-memory-panel drops its card chrome under frame="plain" and tightens paddi
   expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
 });
 
-it('names memory promotion from its complete visible localized label and retains item context in the description', async () => {
+it('names memory promotion from its complete visible localized label and the item text', async () => {
   const el = await populated();
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="add-button"]')!;
-  expect(button.getAttribute('aria-description')).to.equal('Add "User is debugging a TypeScript build error." to long-term memory');
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
-  expect(accessibleName(button)).to.equal('Add to long-term memory');
-  el.strings = { memoryPanelAdd: 'Ajouter à la mémoire', memoryPanelAddWithContext: 'Mémoriser « {label} »' };
+  expect(accessibleName(button)).to.equal('Add to long-term memory: User is debugging a TypeScript build error.');
+  el.strings = { memoryPanelAdd: 'Ajouter à la mémoire', memoryPanelAddAccessibleName: '{action} « {label} »' };
   await el.updateComplete;
-  expect(button.getAttribute('aria-description')).to.equal('Mémoriser « User is debugging a TypeScript build error. »');
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
-  expect(accessibleName(button)).to.equal('Ajouter à la mémoire');
+  expect(accessibleName(button)).to.equal('Ajouter à la mémoire « User is debugging a TypeScript build error. »');
+  el.strings = { memoryPanelAdd: 'Ajouter à la mémoire', memoryPanelAddAccessibleName: '« {label} »' };
+  await el.updateComplete;
+  expect(accessibleName(button)).to.equal('Ajouter à la mémoire « User is debugging a TypeScript build error. »');
 });
 
 it('leaves a populated panel to its host-authored name without a second shadow role or label', async () => {

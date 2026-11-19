@@ -1,6 +1,6 @@
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { normalizeSelectionValue, snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
+import { writeCatalogProperty, normalizeSelectionValue, snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
 import { getTimeZoneCodes, type LyraTimeZoneCatalog, type LyraTimeZoneEntry } from '../../../time-zones.js';
 import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCatalogPickerEventMap } from '../catalog-picker-base.js';
 import { styles } from './time-zone-picker.styles.js';
@@ -77,10 +77,10 @@ export class LyraTimeZonePicker extends LyraCatalogPickerBase {
   @property({ attribute: false })
   get timeZones(): LyraTimeZoneCatalog | undefined { return this._timeZones; }
   set timeZones(value: LyraTimeZoneCatalog | null | undefined) {
-    const previous = this._timeZones;
-    this._timeZones = snapshotSelectionCatalog(value, normalizeSelectionValue);
-    this.updateValidity();
-    this.requestUpdate('timeZones', previous);
+    writeCatalogProperty(this, 'timeZones', this._timeZones,
+      () => snapshotSelectionCatalog(value, normalizeSelectionValue),
+      catalog => { this._timeZones = catalog; },
+      () => this.updateValidity());
   }
 
   protected override get entries(): readonly LyraTimeZoneEntry[] {

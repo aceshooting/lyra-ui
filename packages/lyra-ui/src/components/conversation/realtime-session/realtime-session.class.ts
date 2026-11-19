@@ -1,3 +1,6 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { ref } from 'lit/directives/ref.js';
+import { acquireResolvedAriaRelationship, HostDescriptionController, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -5,9 +8,9 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import type { LyraTranscriptEntry } from '../transcript-feed/transcript-feed.class.js';
+import type { LyraTranscriptFeed, LyraTranscriptEntry } from '../transcript-feed/transcript-feed.class.js';
 import type { AudioVisualizerState } from '../audio-visualizer/audio-visualizer.class.js';
-import type { LyraPushToTalkEventMap } from '../push-to-talk/push-to-talk.class.js';
+import type { LyraPushToTalk, LyraPushToTalkEventMap } from '../push-to-talk/push-to-talk.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../audio-visualizer/audio-visualizer.class.js';
 import '../push-to-talk/push-to-talk.class.js';
@@ -102,6 +105,12 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     transcriptFeedInputLimit: LYRA_DEFAULT_transcriptFeedInputLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  private regionLabel?: ResolvedAriaRelationshipLease;
+  private readonly labelRegion = (target?: Element): void => {
+    this.regionLabel?.release();
+    this.regionLabel = target ? acquireResolvedAriaRelationship(this, target as HTMLElement, 'aria-labelledby') : undefined;
+  };
+  private readonly hostDescription = new HostDescriptionController(this, () => this.shadowRoot?.querySelector('[part="base"]') ?? null);
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
@@ -136,6 +145,15 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   }
   @property({ type: Number }) level: number | null = null;
   @property({ attribute: false }) stream: MediaStream | null = null;
+  /** Disables the built-in session actions and microphone capture. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Options for the built-in recorder. Assign a new object to change recording configuration. */
+  @property({ attribute: false }) captureOptions?: Readonly<Partial<Pick<LyraPushToTalk,
+    'mode' | 'deviceId' | 'mimeType' | 'timesliceMs' | 'maxDurationMs' | 'withoutTimer' | 'audioConstraints'>>>;
+  /** Options for transcript following, timestamps and the number of mounted entries. */
+  @property({ attribute: false }) transcriptOptions?: Readonly<Partial<Pick<LyraTranscriptFeed,
+    'follow' | 'withTimestamps' | 'formatTimestamp' | 'maxRenderedEntries'>>>;
+
   /** Stable identity forwarded to the transcript feed. Changing it resets finalized-entry
    *  announcement history so reused entry ids in a new session remain unambiguous. */
   @property({ attribute: 'session-id' }) sessionId = '';
@@ -183,6 +201,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.announcements.adopted();
   }
 
@@ -275,14 +294,14 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   };
 
   override render(): TemplateResult {
-    const label =
-      this.getAttribute('aria-label') ??
-      (this.label == null ? this.localize('realtimeSessionLabel') : this.label);
+    const hostLabel = this.getAttribute('aria-label');
+    const label = hostLabel === '' ? '' : normalizeLabel(hostLabel) ??
+      (this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('realtimeSessionLabel'));
     const active = this.state === 'connected';
     const safeLevel = this.level == null ? null : finiteRange(this.level, 0, 0, 1);
     return html`
       <section
-        part="base"
+        ${ref(this.labelRegion)} part="base"
         aria-label=${label}
         aria-busy=${this.state === 'connecting' || this.state === 'reconnecting' ? 'true' : 'false'}
         @input=${this.containNativeEvent}
@@ -298,22 +317,22 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           ></lr-audio-visualizer>
           <div part="controls">
             ${this.state === 'disconnected' || this.state === 'error'
-              ? html`<button part="connect" type="button" @click=${() => this.emit('lr-connect', null)}>
+              ? html`<button part="connect" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-connect', null)}>
                   ${this.localize('realtimeSessionConnect')}
                 </button>`
-              : html`<button part="disconnect" type="button" @click=${() => this.emit('lr-disconnect', null)}>
+              : html`<button part="disconnect" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-disconnect', null)}>
                   ${this.localize('realtimeSessionDisconnect')}
                 </button>`}
             ${active
               ? html`
                   <button
                     part="mute"
-                    type="button"
+                    type="button" ?disabled=${this.disabled}
                     @click=${() => this.emit('lr-mute-change', { muted: !this.muted })}
                   >
                     ${this.localize(this.muted ? 'realtimeSessionUnmute' : 'realtimeSessionMute')}
                   </button>
-                  <button part="interrupt" type="button" @click=${() => this.emit('lr-interrupt', null)}>
+                  <button part="interrupt" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-interrupt', null)}>
                     ${this.localize('realtimeSessionInterrupt')}
                   </button>
                 `
@@ -327,12 +346,23 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
         <lr-push-to-talk
           part="capture"
           ?hidden=${this.withoutCapture}
-          .disabled=${!active || this.muted || this.withoutCapture}
+          .disabled=${this.disabled || !active || this.muted || this.withoutCapture}
+          .mode=${this.captureOptions?.mode ?? 'hold'}
+          .deviceId=${this.captureOptions?.deviceId ?? ''}
+          .mimeType=${this.captureOptions?.mimeType ?? ''}
+          .timesliceMs=${this.captureOptions?.timesliceMs ?? 0}
+          .maxDurationMs=${this.captureOptions?.maxDurationMs ?? 0}
+          .withoutTimer=${this.captureOptions?.withoutTimer ?? false}
+          .audioConstraints=${this.captureOptions?.audioConstraints}
           level-events
         ></lr-push-to-talk>
         ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
         <lr-transcript-feed
           part="transcript"
+          .follow=${this.transcriptOptions?.follow ?? true}
+          .withTimestamps=${this.transcriptOptions?.withTimestamps ?? false}
+          .formatTimestamp=${this.transcriptOptions?.formatTimestamp}
+          .maxRenderedEntries=${this.transcriptOptions?.maxRenderedEntries ?? 500}
           .sessionId=${this.sessionId}
           .entries=${this.entries}
           @lr-follow-change=${this.containNativeEvent}

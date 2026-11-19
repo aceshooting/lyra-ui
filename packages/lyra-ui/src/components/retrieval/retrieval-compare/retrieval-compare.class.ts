@@ -385,7 +385,6 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   };
 
   override render(): TemplateResult {
-    this.updateComparison();
     const sets = this.visibleSets;
     const inputLimit = publicCollectionTruncation(this, 'sets')
       ? html`<p part="input-limit" role="note">${this.localize('retrievalCompareInputLimit')}</p>` : nothing;

@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -54,7 +55,7 @@ export const styles = css`
     display: block;
     box-sizing: border-box;
     ${iconHitTarget}
-    max-inline-size: 100%;
+    ${wrapGuard}
     padding: 0;
     border: none;
     background: transparent;
@@ -110,7 +111,11 @@ export const styles = css`
   [part='overflow'] {
     box-sizing: border-box;
     ${iconHitTarget}
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
+    border-radius: var(--lr-radius-pill);
     background: transparent;
     padding: 0;
     cursor: pointer;

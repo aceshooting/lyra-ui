@@ -12,6 +12,7 @@ import { formatShortDuration } from '../../../internal/duration.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
+import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import type { AgentRun, AgentStatusKind, AgentStep, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
@@ -42,25 +43,30 @@ const TERMINAL_KINDS: ReadonlySet<string> = new Set(['done', 'error', 'cancelled
  *  `waiting-*` kinds map to `'running'` -- still in progress from the plan's point of view, even
  *  though it isn't actively executing -- and `cancelled` maps to `'incomplete'`, a stopped
  *  step that neither succeeded nor failed. */
-const STEP_TO_TASK_STATUS: Record<string, TaskStatus> = {
-  idle: 'pending',
-  running: 'running',
-  collecting: 'running',
-  'waiting-input': 'running',
-  'waiting-approval': 'running',
-  done: 'success',
-  error: 'error',
-  cancelled: 'incomplete',
-};
+const STEP_TO_TASK_STATUS: ReadonlyMap<string, TaskStatus> = new Map<string, TaskStatus>([
+  ['idle', 'pending'],
+  ['running', 'running'],
+  ['collecting', 'running'],
+  ['waiting-input', 'running'],
+  ['waiting-approval', 'running'],
+  ['done', 'success'],
+  ['error', 'error'],
+  ['cancelled', 'incomplete'],
+]);
 
 function toTaskItem(step: AgentStep): TaskItem {
   const kind = agentStatusKind(step.status);
   return {
     id: step.id,
     label: step.label,
-    status: STEP_TO_TASK_STATUS[kind] ?? 'pending',
+    status: STEP_TO_TASK_STATUS.get(kind) ?? 'pending',
     detail: agentStatusMessage(step.status),
   };
+}
+
+function ownString(record: Readonly<Record<string, string>>, key: string): string | undefined {
+  const value = readOwnDataValue(record, key);
+  return typeof value === 'string' ? value : undefined;
 }
 
 function runSteps(run: AgentRun | null): readonly AgentStep[] {
@@ -393,7 +399,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private statusLabel(kind: AgentStatusKind): string {
-    return this.statusLabels[kind] || agentStatusText(this.localize.bind(this), kind);
+    return ownString(this.statusLabels, kind) || agentStatusText(this.localize.bind(this), kind);
   }
 
   private get runKind(): AgentStatusKind | undefined {
@@ -499,7 +505,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                 <div part="status" tabindex="-1">
                   <lr-badge
                     part="status-badge"
-                    variant=${this.statusVariants[kind] ?? AGENT_STATUS_VARIANTS[kind] ?? 'neutral'}
+                    variant=${(ownString(this.statusVariants, kind) as BadgeVariant | undefined) ??
+                      (Object.hasOwn(AGENT_STATUS_VARIANTS, kind) ? AGENT_STATUS_VARIANTS[kind] : undefined) ?? 'neutral'}
                     >${this.statusLabel(kind)}</lr-badge
                   >
                   ${message ? html`<span part="status-message">${message}</span>` : nothing}
