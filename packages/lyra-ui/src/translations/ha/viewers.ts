@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Juya dama',
   modelViewerRotateUp: 'Juya sama',
   modelViewerRotateDown: 'Juya ƙasa',
+  modelViewerViewport: 'Samfurin da za ka iya sarrafawa',
 };
 
 registerLyraLocale('ha', strings);

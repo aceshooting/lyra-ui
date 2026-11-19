@@ -1,7 +1,7 @@
+import { __setShikiModuleLoaderForTesting } from '../../../internal/shiki/full.js';
 import { expect } from "@open-wc/testing";
 import jsonGrammar from "shiki/langs/json.mjs";
 import {
-  __setShikiModuleLoaderForTesting,
   loadShikiHighlighter,
   loadShikiLanguage,
 } from "./code-loader.js";
@@ -9,6 +9,19 @@ import {
   loadShikiHighlighterCore,
 } from "./shiki-types.js";
 import type { ShikiHighlighter, ShikiLanguageInput } from "./shiki-types.js";
+
+import {
+  loadShikiHighlighter as loadSharedHighlighter,
+  shikiHasLoadedLanguage as sharedHasLoadedLanguage,
+} from '../../../internal/shiki/full.js';
+import { loadShikiHighlighterCore as loadSharedCore } from '../../../internal/shiki/core.js';
+import { shikiHasLoadedLanguage } from './code-loader.js';
+
+it('uses one full highlighter and fine-grained core across the public and shared entry points', () => {
+  expect(loadShikiHighlighter === loadSharedHighlighter).to.equal(true);
+  expect(loadShikiHighlighterCore === loadSharedCore).to.equal(true);
+  expect(shikiHasLoadedLanguage === sharedHasLoadedLanguage).to.equal(true);
+});
 
 function loadedThemes(highlighter: ShikiHighlighter): string[] {
   if (!('getLoadedThemes' in highlighter) || typeof highlighter.getLoadedThemes !== 'function') {

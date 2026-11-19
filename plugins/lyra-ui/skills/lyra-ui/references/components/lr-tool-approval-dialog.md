@@ -103,6 +103,8 @@ dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` list
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
+`lr-request-close` is cancelable before user dismissal.
+Its `detail.source` is `'escape'` or `'backdrop'`, and `preventDefault()` keeps the dialog open.
 `lr-close` remains the non-cancelable dismissal notification. Non-cancelable `lr-decision-settled`
 (`detail: { decision: 'approved' | 'denied' }`) follows the `lr-close` whose reason is `'approve'` or
 `'deny'` on every path that reaches a decision.

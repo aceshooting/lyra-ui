@@ -1,7 +1,8 @@
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { panoramaStyles } from '../../../internal/media-panorama.styles.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
-import { PanoramaController, PANORAMA_PROJECTION, PANORAMA_DEFAULT_CAMERA, normalizePanoramaCamera, snapshotPanoramaHotspots, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
+import { PanoramaController, PANORAMA_PROJECTION, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
+import { PanoramaPropertyState } from '../../../internal/media-panorama-host.js';
 export type { LyraMediaProjection, LyraPanoramaCamera, LyraPanoramaHotspot, LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -11,7 +12,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
+import { DocumentAnchorTargetBase as DocumentAnchorTarget } from '../../../internal/anchor-target-base.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -37,7 +38,7 @@ import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerHighlightsLimited, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraImageFit } from '../../../internal/image-fit.js';
@@ -136,8 +137,7 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * surfaces) — this component owns raster grounding/citation display, not comparison or vector
  * rendering.
  *
- * Adopts `DocumentAnchorTarget` with `anchorKinds: ['region']` only — no text selection is bound
- * (a raster image has no selectable text), so `lr-text-select` is never emitted by this viewer.
+ * Supports `anchorKinds: ['region']` for image-relative navigation and annotation.
  *
  * Region rectangles are canonical finite, positive percentages wholly inside the 0–100 image
  * space; empty/blank IDs are omitted and duplicates use first-wins uniqueness. At most
@@ -287,7 +287,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     model: LYRA_DEFAULT_model,
-    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
@@ -295,8 +294,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     panoramaInstructions: LYRA_DEFAULT_panoramaInstructions,
     previous: LYRA_DEFAULT_previous,
     resetZoom: LYRA_DEFAULT_resetZoom,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
@@ -312,6 +309,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   ]);
 
   private panoramaRevision = 0;
+  private readonly panoramaProps = new PanoramaPropertyState(this, () => this.panorama?.invalidate());
   // @renderController PanoramaController
   private readonly panorama = new PanoramaController(this, {
     changed: () => this.scheduleAfterUpdate(() => super.requestUpdate('panoramaState', undefined, { hasChanged: () => true }), 'panorama-state'),
@@ -321,58 +319,33 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     fallback: detail => this.emit('lr-engine-fallback', detail),
     pick: detail => this.emit('lr-panorama-hotspot-select', detail),
     camera: camera => {
-      const old = this._panoramaCamera; this._panoramaCamera = camera;
-      this.requestUpdate('panoramaCamera', old);
+      this.panoramaProps.adoptCamera(camera);
       this.emit('lr-panorama-camera-change', { camera });
     },
   });
-  private _projection: LyraMediaProjection = 'flat';
+
   /** Flat media by default. Equirectangular rendering also requires engine="webgl". */
   @property({ converter: PANORAMA_PROJECTION, noAccessor: true })
-  get projection(): LyraMediaProjection { return this._projection; }
-  set projection(value: LyraMediaProjection) {
-    const next = PANORAMA_PROJECTION.normalize(value), old = this._projection;
-    if (next === old) return;
-    this._projection = next; this.panorama?.invalidate(); this.requestUpdate('projection', old);
-  }
-  private _engine: Engine3dPreference = 'builtin';
+  get projection(): LyraMediaProjection { return this.panoramaProps.projection; }
+  set projection(value: LyraMediaProjection) { this.panoramaProps.setProjection(value); }
+
   /** Preferred panorama renderer; the builtin flat view never downloads a companion. */
   @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
-  get engine(): Engine3dPreference { return this._engine; }
-  set engine(value: Engine3dPreference) {
-    const next = ENGINE_3D_PREFERENCE.normalize(value), old = this._engine;
-    if (next === old) return;
-    this._engine = next; this.panorama?.invalidate(); this.requestUpdate('engine', old);
-  }
-  private _panoramaCamera: LyraPanoramaCamera = PANORAMA_DEFAULT_CAMERA;
-  private panoramaCameraRevision = 0;
+  get engine(): Engine3dPreference { return this.panoramaProps.engine; }
+  set engine(value: Engine3dPreference) { this.panoramaProps.setEngine(value); }
+
   /** Camera yaw/pitch in radians and vertical fieldOfView in degrees (20–100). Authored writes are silent. */
   @property({ attribute: false, noAccessor: true })
-  get panoramaCamera(): LyraPanoramaCamera { return this._panoramaCamera; }
-  set panoramaCamera(value: LyraPanoramaCamera) {
-    const revision = ++this.panoramaCameraRevision;
-    const next = normalizePanoramaCamera(value), old = this._panoramaCamera;
-    if (revision !== this.panoramaCameraRevision) return;
-    if (next.yaw === old.yaw && next.pitch === old.pitch && next.fieldOfView === old.fieldOfView) return;
-    this._panoramaCamera = next; this.requestUpdate('panoramaCamera', old);
-  }
-  private _hotspots: readonly LyraPanoramaHotspot[] = Object.freeze([]);
-  private hotspotSource: unknown = this._hotspots;
-  private hotspotRevision = 0;
+  get panoramaCamera(): LyraPanoramaCamera { return this.panoramaProps.camera; }
+  set panoramaCamera(value: LyraPanoramaCamera) { this.panoramaProps.setCamera(value); }
+
   /** Bounded clone-owned hotspot snapshot. First valid unique ID wins; reassign after changes.
    * Angles are radians, pitch is within ±π/2, and invalid rows are omitted. */
   @property({ attribute: false, noAccessor: true })
-  get hotspots(): readonly LyraPanoramaHotspot[] { return this._hotspots; }
-  set hotspots(value: readonly LyraPanoramaHotspot[]) {
-    if (value === this.hotspotSource || value === this._hotspots) return;
-    const old = this._hotspots; this.hotspotSource = value;
-    const revision = ++this.hotspotRevision;
-    const next = snapshotPanoramaHotspots(value, this.ownerDocument?.defaultView ?? null);
-    if (revision !== this.hotspotRevision) return;
-    this._hotspots = next;
-    this.panorama?.invalidate(); this.requestUpdate('hotspots', old);
-  }
-  private get panoramaEnabled(): boolean { return this.projection === 'equirectangular' && this.engine === 'webgl'; }
+  get hotspots(): readonly LyraPanoramaHotspot[] { return this.panoramaProps.hotspots; }
+  set hotspots(value: readonly LyraPanoramaHotspot[]) { this.panoramaProps.setHotspots(value); }
+
+  private get panoramaEnabled(): boolean { return this.panoramaProps.enabled; }
 
   override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: Parameters<LyraElement['requestUpdate']>[2]): void {
     if (name === 'src' && this.panorama && !Object.is(this.src, oldValue)) { this.panoramaRevision++; this.panorama.invalidate(); }
@@ -433,7 +406,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
    * commands and shows the shared focus ring inside its clipped viewport; descendant highlights retain activation. */
   @property({ type: Boolean, reflect: true }) annotatable = false;
 
-  /** From `DocumentAnchorTarget` — only `region` anchors resolve here. */
+  /** Resolves anchors in image-relative coordinates. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['region'];
 
   @state() private loadState: ImageLoadState = { kind: 'idle' };
@@ -458,7 +431,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     this.declarativeAnchorUpdate = true;
-    try { super.willUpdate(changed); } finally { this.declarativeAnchorUpdate = false; } // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
+    try { super.willUpdate(changed); } finally { this.declarativeAnchorUpdate = false; }
     if (changed.has('src')) {
       this.cancelPointerDraft();
       this.revealTarget = null;

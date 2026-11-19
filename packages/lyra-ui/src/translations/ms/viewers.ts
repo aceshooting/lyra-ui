@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Putar ke kanan',
   modelViewerRotateUp: 'Putar ke atas',
   modelViewerRotateDown: 'Putar ke bawah',
+  modelViewerViewport: 'Model interaktif',
 };
 
 registerLyraLocale('ms', strings);

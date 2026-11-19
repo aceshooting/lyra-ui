@@ -21,6 +21,16 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-m);
   }
+  :where(h2[data-gen-type='heading']) {
+    font-size: var(--lr-gen-heading-font-size, var(--lr-font-size-lg));
+    font-weight: var(--lr-gen-heading-font-weight, var(--lr-font-weight-semibold));
+    line-height: var(--lr-line-height-snug);
+    margin: var(--lr-gen-heading-margin, 0);
+  }
+  :where(p[data-gen-type='text']) {
+    font-size: var(--lr-gen-text-font-size, var(--lr-font-size-m));
+    margin: var(--lr-gen-text-margin, 0);
+  }
   [part='loading'], [part='error'], [part='empty'] {
     padding: var(--lr-space-m);
     margin: 0;

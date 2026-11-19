@@ -27,17 +27,8 @@ peer's `resize()` when that allocation changes.
 
 The base reports the engine's loading state through `aria-busy`. An application can set
 `aria-busy` on the host independently. Removing that attribute resumes the loading-state mirror.
-The cancel button emits cancelable `lr-map-pick-cancel-request` and, after turning off pick mode,
-`lr-map-pick-cancel`. Both carry frozen `{ source: 'control' }`. Assigning `pickMode` stays silent.
-Globe and terrain controls emit cancelable `lr-map-projection-change-request` and
-`lr-map-terrain-change-request` with the same details as their respective change events.
-Vetoing or assigning the corresponding property during a request suppresses the default change.
 Read the settled `center` and `zoom` after an initial URL restoration or a limit clamp. Those
 initialization and constraint writes are silent.
-
-The slot anchor emits cancelable `lr-map-anchor-close-request` with frozen `{ reason }` for its close
-button, Escape, or `closeAnchor()`. A veto preserves placement and focus. The existing
-`lr-map-anchor-close` reports an accepted dismissal.
 
 Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (default 0.2),
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
@@ -1414,7 +1405,10 @@ mapEl.addEventListener('lr-map-move', () => {
 });
 ```
 
-**Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
+**Events:** `lr-map-pick-cancel-request` and `lr-map-pick-cancel` carry frozen `{ source: 'control' }`. The cancel button emits the cancelable request before leaving pick mode and the latter event after the change. Assigning `pickMode` stays silent.
+- `lr-map-projection-change-request` and `lr-map-terrain-change-request` are cancelable and share the details of their corresponding change events. A veto or a property assignment from a request listener suppresses the default change.
+- `lr-map-anchor-close-request` carries frozen `{ reason }` when the slotted anchor is dismissed with the close button, Escape or `closeAnchor()`. Vetoing the request preserves placement and focus.
+- `lr-map-load` (fired once, after the underlying map's own `'load'`),
 `lr-map-legend-toggle-request` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
 hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
 proposed hidden set in the order it would be committed, with the array detached and frozen so a

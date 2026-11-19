@@ -70,8 +70,8 @@ export const Default: Story = {
   render: () => html`<lr-retrieval-trace
     style="max-width: 40rem"
     .stages=${stages}
-    @lr-toggle=${(event: LyraRetrievalTraceEventMap['lr-toggle']) =>
-      console.log(event.detail.kind, event.detail.itemId)}
+    @lr-retrieval-disclosure-change=${({ detail }: LyraRetrievalTraceEventMap['lr-retrieval-disclosure-change']) =>
+      console.log(detail.stageId, detail.kind === 'chunk' ? detail.chunkId : null, detail.expanded)}
     @lr-stage-chunk-action=${(event: CustomEvent) =>
       console.log('lr-stage-chunk-action', event.detail)}
   ></lr-retrieval-trace>`,

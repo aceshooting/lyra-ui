@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Gira a la dreta',
   modelViewerRotateUp: 'Gira amunt',
   modelViewerRotateDown: 'Gira avall',
+  modelViewerViewport: 'Model interactiu',
 };
 
 registerLyraLocale('ca', strings);

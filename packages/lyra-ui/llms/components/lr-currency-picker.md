@@ -107,7 +107,12 @@ in both modes, following the country picker's event contract.
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
-`blur` relay once; the cancelable `lr-invalid` alias follows native validation.
+`blur` relay once. The cancelable `lr-invalid` alias follows native validation.
+`lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
+be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
+`lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
+that the clear action emptied the selection. `lr-load-error` reports a failure to load the optional
+searchable picker. The compact control remains available.
 
 **Slots:** `label`, `hint`, `error` — custom field copy. There is no option/default content slot;
 bind `currencies` to supply rows.

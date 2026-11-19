@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -19,7 +20,7 @@ export const styles = css`
     border-radius: var(--lr-chat-message-bubble-radius, var(--lr-radius));
     background: var(--lr-chat-message-bubble-bg, var(--lr-color-surface));
     color: var(--lr-chat-message-bubble-color, var(--lr-color-text));
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* -- author ------------------------------------------------------------- */
@@ -135,39 +136,20 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
+  ${iconActionStyles("[part='collapse-button']", {
+    color: 'var(--lr-color-text-quiet)',
+    hoverBackground: 'var(--lr-color-surface-raised)',
+    hoverColor: 'var(--lr-color-text)',
+    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+  })}
   [part='collapse-button'] {
-    font: inherit;
     flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    ${iconHitTarget}
     margin-inline-start: auto;
-    border: none;
-    background: var(--lr-icon-button-bg, transparent);
-    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
-    border-radius: var(--lr-icon-button-radius, var(--lr-radius));
-    cursor: pointer;
-  }
-  [part='collapse-button']:hover {
-    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
-    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
-  }
-  [part='collapse-button']:active {
-    background: var(
-      --lr-icon-button-bg-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
   }
   [part~='bubble']:focus-visible {
     ${focusRing}
   }
-  [part='collapse-button']:focus-visible,
   [part='retry-button']:focus-visible {
     ${focusRing}
   }
@@ -293,19 +275,19 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-danger);
+    border: var(--lr-border-width-thin) solid var(--lr-chat-message-retry-border-color, var(--lr-color-danger));
     border-radius: var(--lr-radius);
     background: transparent;
-    color: var(--lr-color-danger);
+    color: var(--lr-chat-message-retry-color, var(--lr-color-danger));
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
   }
   [part='retry-button']:hover {
-    background: var(--lr-color-danger-quiet);
+    background: var(--lr-chat-message-retry-hover-bg, var(--lr-color-danger-quiet));
   }
   [part='retry-button']:active {
-    background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-chat-message-retry-hover-bg, var(--lr-color-danger-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='retry-button'] svg {
     inline-size: var(--lr-size-0-875em);

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { PopupController, type PopupLifecycleEvent } from './popup-controller.js';
+import { PopupController, outsidePressHandler, type PopupLifecycleEvent } from './popup-controller.js';
 
 interface Probe {
   host: HTMLElement & { updateComplete: Promise<void> };
@@ -165,5 +165,51 @@ describe('PopupController', () => {
     controller.unbindPointer();
     wrapper.querySelector('#outside')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
     expect(pointers).to.equal(1);
+  });
+});
+
+describe('outsidePressHandler', () => {
+  async function press(options: { active?: boolean; contains?: (path: readonly EventTarget[]) => boolean; overlay?: boolean }) {
+    const wrapper = await fixture<HTMLElement>(html`<div><span id="host"><b id="inside"></b></span><button id="outside"></button></div>`);
+    const host = Object.assign(wrapper.querySelector<HTMLElement>('#host')!, { updateComplete: Promise.resolve() });
+    const calls: string[] = [];
+    const overlay = { isActive: () => options.active === true, dismissBackdrop: () => { calls.push('backdrop'); return true; } };
+    const controller = new PopupController({
+      host,
+      onPointer: outsidePressHandler(host, {
+        contains: options.contains,
+        overlay: options.overlay === false ? undefined : () => overlay,
+        dismiss: () => { calls.push('dismiss'); },
+      }),
+    });
+    controller.bindPointer();
+    const fire = (id: string) => {
+      calls.push(id);
+      wrapper.querySelector(`#${id}`)!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    };
+    return { calls, fire, release: () => controller.unbindPointer() };
+  }
+
+  it('ignores presses inside the host and dismisses outside ones', async () => {
+    const p = await press({});
+    p.fire('inside');
+    p.fire('outside');
+    p.release();
+    expect(p.calls).to.deep.equal(['inside', 'outside', 'dismiss']);
+  });
+
+  it('routes an outside press through an active overlay backdrop instead of dismissing', async () => {
+    const p = await press({ active: true });
+    p.fire('outside');
+    p.release();
+    expect(p.calls).to.deep.equal(['outside', 'backdrop']);
+  });
+
+  it('dismisses when no overlay is supplied and honours a custom membership test', async () => {
+    const p = await press({ overlay: false, contains: path => path.some(target => (target as Element).id === 'outside') });
+    p.fire('outside');
+    p.fire('inside');
+    p.release();
+    expect(p.calls).to.deep.equal(['outside', 'inside', 'dismiss']);
   });
 });

@@ -2,7 +2,8 @@ import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './html-viewer.js';
 import type { LyraHtmlViewer } from './html-viewer.js';
-import { __setHtmlSanitizerForTesting } from './dompurify-loader.js';
+import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
@@ -16,7 +17,7 @@ describe('lr-html-viewer', () => {
     expect(await el.search(note.split(' ')[0]!)).to.equal(0);
   });
 
-  afterEach(() => __setHtmlSanitizerForTesting(undefined));
+  afterEach(() => __setDompurifyImporterForTesting());
 
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(html`<lr-html-viewer></lr-html-viewer>`)) as LyraHtmlViewer;
@@ -192,7 +193,8 @@ describe('lr-html-viewer', () => {
     }
   });
   it('shows a localized missing-sanitizer error instead of a silently empty document when the optional dompurify peer is unavailable', async () => {
-    __setHtmlSanitizerForTesting(null);
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
     try {

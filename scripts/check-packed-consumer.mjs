@@ -508,23 +508,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const packageRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   const cliFiles = (await readdir(join(packageRoot, 'dist', 'cli'))).sort();
   const expectedCliFiles = [
-    'agent-registry.mjs',
-    'component-inventory.mjs',
-    'css-declarations.mjs',
-    'html-comments.mjs',
-    'init-agents.mjs',
-    'is-main-module.mjs',
-    'lyra-rename-ledger.mjs',
-    'lyra-ui.mjs',
-    'migrate-wa.mjs',
-    'migration-analysis.mjs',
-    'migration-contract.json',
-    'migration-contract.mjs',
-    'migration-immutable-collections.mjs',
-    'migration-renames.mjs',
-    'migration-theme-scopes.mjs',
-    'migration-transforms.mjs',
-    'theme-scope-vocabulary.generated.mjs',
+    'init-agents.mjs', 'lyra-ui.mjs', 'migrate-wa.mjs', 'migration-contract.json.gz',
   ];
   if (JSON.stringify(cliFiles) !== JSON.stringify(expectedCliFiles)) {
     throw new Error(

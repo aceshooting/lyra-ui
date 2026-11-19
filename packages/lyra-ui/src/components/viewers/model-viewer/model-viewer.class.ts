@@ -5,8 +5,7 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { readCanvasRgba, resolveCanvasColor } from '../../../internal/canvas-color.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { ENGINE_STYLE_MEDIA_QUERIES, resolveEngineStyle, type EngineStyle } from '../../../internal/engine-style.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
@@ -21,7 +20,7 @@ import { styles } from './model-viewer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_download, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_retry, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_modelViewerAlternative, LYRA_DEFAULT_modelViewerEmpty, LYRA_DEFAULT_modelViewerFit, LYRA_DEFAULT_modelViewerInstructions, LYRA_DEFAULT_modelViewerInvalid, LYRA_DEFAULT_modelViewerLabel, LYRA_DEFAULT_modelViewerProgress, LYRA_DEFAULT_modelViewerReady, LYRA_DEFAULT_modelViewerRotateDown, LYRA_DEFAULT_modelViewerRotateLeft, LYRA_DEFAULT_modelViewerRotateRight, LYRA_DEFAULT_modelViewerRotateUp, LYRA_DEFAULT_modelViewerUnsupportedFormat } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_modelViewerAlternative, LYRA_DEFAULT_modelViewerEmpty, LYRA_DEFAULT_modelViewerFit, LYRA_DEFAULT_modelViewerInstructions, LYRA_DEFAULT_modelViewerInvalid, LYRA_DEFAULT_modelViewerLabel, LYRA_DEFAULT_modelViewerProgress, LYRA_DEFAULT_modelViewerReady, LYRA_DEFAULT_modelViewerRotateDown, LYRA_DEFAULT_modelViewerRotateLeft, LYRA_DEFAULT_modelViewerRotateRight, LYRA_DEFAULT_modelViewerRotateUp, LYRA_DEFAULT_modelViewerUnsupportedFormat, LYRA_DEFAULT_modelViewerViewport } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraModelCamera, LyraModelFormat, LyraModelFormatPreference } from './model-viewer-source.js';
@@ -58,11 +57,14 @@ const KEY_ACTIONS: Readonly<Record<string, ModelAction>> = Object.freeze({
  * @csspart error - Visible localized failure text.
  * @csspart footer - The wrapper around the download link and the retry button.
  * @csspart download - The guarded source download link.
+ * @cssprop --lr-model-viewer-action-background - Resting background of viewer actions.
+ * @cssprop --lr-model-viewer-action-hover-background - Hover background of viewer actions.
+ * @cssprop --lr-model-viewer-action-active-background - Pressed background of viewer actions.
  * @cssprop [--lr-model-viewer-height=var(--lr-size-20rem)] - Block size of the camera surface.
  * @event lr-load - The current model finished parsing, including a valid model with no visible geometry. `detail: { format }`.
  * @event lr-render-error - The source or the engine failed. `detail: { error }`.
  * @event lr-camera-change - The user moved the camera with a pointer, key or toolbar button. Assigning `camera` is silent. `detail: { camera }`.
- * @event lr-engine-fallback - WebGL stopped rendering and the text alternative remains. `detail: { from, to, reason }`.
+ * @event lr-engine-fallback - The model could not render and the text alternative remains. `detail: { from, to, reason }`.
  * @status experimental
  * @since 30.0.0
  */
@@ -93,6 +95,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     modelViewerRotateRight: LYRA_DEFAULT_modelViewerRotateRight,
     modelViewerRotateUp: LYRA_DEFAULT_modelViewerRotateUp,
     modelViewerUnsupportedFormat: LYRA_DEFAULT_modelViewerUnsupportedFormat,
+    modelViewerViewport: LYRA_DEFAULT_modelViewerViewport,
     retry: LYRA_DEFAULT_retry,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
@@ -203,7 +206,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   private observers: Array<{ disconnect(): void }> = [];
   private mediaCleanup: Array<() => void> = [];
   private refreshFrame?: { owner: Window; handle: number; restyle: boolean };
-  private styleKey?: string;
+  private lastStyle?: EngineStyle;
   private readonly announcements = new ViewerAnnouncementController(this);
   private readonly descriptions = new HostDescriptionController(this, () => this.viewport, () => {
     const instructions = this.renderRoot.querySelector('[part="instructions"]');
@@ -323,7 +326,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       const engine = candidate;
       this.engine = engine;
       if (typeof engine.fit !== 'function') { this.fail('engineUnavailable', 'unavailable'); return; }
-      this.styleKey = undefined;
+      this.lastStyle = undefined;
       this.applyEngineStyle(engine);
       if (!current()) return;
       let parsed = false;
@@ -367,7 +370,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
             contextLost = false;
             this.message = '';
             if (parsed) publishParsedView(); else this.status = 'loading';
-            this.styleKey = undefined;
+            this.lastStyle = undefined;
             if (current()) this.refreshEngine(true);
           } catch (error) {
             if (current()) this.fail('invalid', 'error', error);
@@ -397,37 +400,10 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     }
   }
 
-  /** Resolves the live design tokens to the concrete sRGB colors the engine paints with. */
-  private engineStyle(): unknown {
-    const view = this.ownerDocument.defaultView!;
-    const computed = view.getComputedStyle(this);
-    const color = (token: string) => {
-      const resolved = resolveCanvasColor(this, `var(${token})`, computed.color);
-      const rgba = readCanvasRgba(this.ownerDocument, resolved);
-      return rgba ? `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]})` : resolved;
-    };
-    return {
-      background: color('--lr-color-surface'),
-      foreground: color('--lr-color-text'),
-      muted: color('--lr-color-text-quiet'),
-      accent: color('--lr-color-brand'),
-      focus: color('--lr-focus-ring-color'),
-      palette: [color('--lr-color-brand')],
-      fontFamily: computed.fontFamily,
-      fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128),
-      pointSize: 8,
-      lineWidth: 1,
-      devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4),
-      reducedMotion: view.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      forcedColors: view.matchMedia('(forced-colors: active)').matches,
-    };
-  }
-
   private applyEngineStyle(engine: Engine3dInstance): void {
-    const style = this.engineStyle();
-    const key = JSON.stringify(style);
-    if (key === this.styleKey) return;
-    this.styleKey = key;
+    const style = resolveEngineStyle(this, { palette: ['--lr-color-brand'] });
+    if (style === this.lastStyle) return;
+    this.lastStyle = style;
     engine.setStyle(style);
   }
 
@@ -481,7 +457,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       ancestor = ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
     }
     this.observers.push(mutation);
-    for (const query of ['(prefers-reduced-motion: reduce)', '(forced-colors: active)', '(prefers-color-scheme: dark)']) {
+    for (const query of ENGINE_STYLE_MEDIA_QUERIES) {
       const media = view.matchMedia(query);
       media.addEventListener('change', refresh);
       this.mediaCleanup.push(() => media.removeEventListener('change', refresh));
@@ -587,7 +563,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       ['fit', this.localize('modelViewerFit')],
     ];
     return html`<section part="base" tabindex="-1" role="region" aria-label=${label}>
-      <div part="viewport" role="group" aria-label=${label} aria-busy=${String(this.status === 'loading')} tabindex=${ready ? '0' : '-1'} ?data-ready=${ready} ?hidden=${this.status === 'idle' || this.status === 'empty' || this.status === 'error'} @keydown=${this.keydown}></div>
+      <div part="viewport" role="group" aria-label=${this.localize('modelViewerViewport')} aria-busy=${String(this.status === 'loading')} tabindex=${ready ? '0' : '-1'} ?data-ready=${ready} ?hidden=${this.status === 'idle' || this.status === 'empty' || this.status === 'error'} @keydown=${this.keydown}></div>
       <div part="toolbar">${controls.map(([action, label]) => html`<button part="control" type="button" ?disabled=${!ready} @click=${() => this.move(action)}>${label}</button>`)}</div>
       <p part="instructions">${this.localize('modelViewerInstructions')}</p>
       <p part="alternative">${this.alt || this.localize('modelViewerAlternative')}</p><slot></slot>

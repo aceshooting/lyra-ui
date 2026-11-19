@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Puter menyang tengen',
   modelViewerRotateUp: 'Puter munggah',
   modelViewerRotateDown: 'Puter mudhun',
+  modelViewerViewport: 'Model interaktif',
 };
 
 registerLyraLocale('jv', strings);

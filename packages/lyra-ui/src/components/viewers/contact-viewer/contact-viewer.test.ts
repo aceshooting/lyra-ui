@@ -450,3 +450,33 @@ it('does not double-pad the empty state inside the padded body', async () => {
     expect(getComputedStyle(el.shadowRoot!.querySelector('.empty-note')!).paddingInlineStart).to.equal('0px');
   } finally { window.fetch = original; }
 });
+
+it('rechecks the same document when max-contacts changes', async () => {
+  const previous = window.fetch;
+  window.fetch = () => Promise.resolve(new Response(CARD + '\r\n' + CARD));
+  try {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer src="/c.vcf"></lr-contact-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="contact"]').length === 2);
+    el.setAttribute('max-contacts', '1');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    el.removeAttribute('max-contacts');
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="contact"]').length === 2);
+  } finally { window.fetch = previous; }
+});
+
+it('admits a document above the default on request and enforces the absolute maximum', async () => {
+  const originalFetch = window.fetch;
+  let count = 251;
+  window.fetch = async () => new Response(Array.from({ length: count }, (_, i) => 'BEGIN:VCARD\r\nVERSION:4.0\r\nFN:Contact ' + i + '\r\nEND:VCARD').join('\r\n'));
+  try {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer src="/directory"></lr-contact-viewer>`);
+    const error = () => el.shadowRoot!.querySelector('[part="error"]') !== null;
+    await waitUntil(error);
+    el.setAttribute('max-contacts', '251');
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="contact"]').length === 251, 'raised limit admits 251 records');
+    count = 2501;
+    el.setAttribute('max-contacts', '99999');
+    await waitUntil(error);
+    expect(el.shadowRoot!.querySelectorAll('[part="contact"]').length).to.equal(0);
+  } finally { window.fetch = originalFetch; }
+});

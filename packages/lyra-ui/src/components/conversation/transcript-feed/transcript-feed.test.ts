@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
@@ -66,7 +67,7 @@ it('renders final entries inside a role="log" container labeled Transcript, grou
   const log = el.shadowRoot!.querySelector('[part="log"]')!;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('role')).to.equal('region');
-  expect(base.getAttribute('aria-label')).to.equal('Transcript');
+  expect(base.getAttribute('aria-label')).to.equal('Transcript history');
   expect(log.getAttribute('role')).to.equal('log');
   expect(log.getAttribute('aria-label')).to.equal('Transcript');
 
@@ -776,4 +777,59 @@ it('isolates caller-authored speaker names with dir="auto"', async () => {
   el.entries = [{ id: '1', speaker: 'مستخدم', text: 'Hello' }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="speaker"]')!.getAttribute('dir')).to.equal('auto');
+});
+
+it('shows and announces the number omitted by the render window', async () => {
+  const el = await fixture<LyraTranscriptFeed>(html`<lr-transcript-feed></lr-transcript-feed>`);
+  el.entries = ['one', 'two', 'three'].map(id => ({ id, text: id }));
+  el.maxRenderedEntries = 1;
+  await el.updateComplete;
+  const notice = () => el.shadowRoot!.querySelector<HTMLElement>('[part="window-notice"]');
+  expect(notice()?.dataset['omitted']).to.equal('2');
+  expect(notice()?.textContent).to.equal('Earlier captions hidden: 2.');
+  el.strings = { transcriptFeedWindowNotice: 'Hidden: {count}' };
+  el.maxRenderedEntries = 2;
+  await el.updateComplete;
+  expect(notice()?.textContent).to.equal('Hidden: 1');
+  await waitUntil(() => sinkTexts('polite').includes('Hidden: 1'));
+  el.maxRenderedEntries = 0;
+  await el.updateComplete;
+  expect(notice() === null).to.equal(true);
+});
+
+it('fits and themes a long jump label in a narrow feed and respects reduced motion', async () => {
+  const el = await fixture<LyraTranscriptFeed>(html`<lr-transcript-feed style="width:140px; --lr-transcript-feed-jump-bg:rgb(12, 34, 56)"
+    .follow=${false} .entries=${[{ id: '1', text: 'Caption' }]} .strings=${{ jumpToLatest: 'Return to the most recent caption in this conversation' }}></lr-transcript-feed>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="jump-button"]')!;
+  expect(getComputedStyle(button).backgroundColor).to.equal('rgb(12, 34, 56)');
+  expect(getComputedStyle(button).textOverflow).to.equal('ellipsis');
+  expect(button.scrollWidth).to.be.greaterThan(button.clientWidth);
+  expect(button.getBoundingClientRect().width).to.be.at.most(el.clientWidth);
+  try {
+    await setReducedMotion('reduce');
+    expect(getComputedStyle(button).transitionDuration).to.equal('0s');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
+});
+
+it('names the scroll region independently of its transcript log', async () => {
+  const el = await fixture<LyraTranscriptFeed>(html`<lr-transcript-feed label="Call captions"
+    .entries=${[{ id: 'one', text: 'Hello' }]} .strings=${{ transcriptFeedRegion: 'Call history' }}></lr-transcript-feed>`);
+  expect(el.shadowRoot!.querySelector('[role="region"]')?.getAttribute('aria-label')).to.equal('Call history');
+  expect(el.shadowRoot!.querySelector('[role="log"]')?.getAttribute('aria-label')).to.equal('Call captions');
+});
+
+it('resolves whitespace names on the role owner and preserves an explicitly empty override', async () => {
+  const el = await fixture<LyraTranscriptFeed>(html`<lr-transcript-feed aria-label="   " label="Inbox"
+    .strings=${{ transcriptFeedLabel: 'Localized name' }} .entries=${[{ id: 'hello', text: 'Hello' }]}></lr-transcript-feed>`);
+  const owner = () => el.shadowRoot!.querySelector('[role="log"]')!.getAttribute('aria-label');
+  expect(owner()).to.equal('Inbox');
+  el.removeAttribute('aria-label');
+  el.label = '   ';
+  await el.updateComplete;
+  expect(owner()).to.equal('Localized name');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(owner()).to.equal('');
 });

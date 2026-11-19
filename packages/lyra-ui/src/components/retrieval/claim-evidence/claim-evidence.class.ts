@@ -10,9 +10,9 @@ import type {
 } from '../../../ai/types.js';
 import {
   getOwnDataDescriptor,
+  ownDataDescriptorValue,
+  hasUnsafeOwnDescriptor,
   projectFrozenRows,
-  MISSING_OWN_DATA_DESCRIPTOR,
-  UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { projectGroundedClaim } from '../grounded-claim-projection.js';
@@ -93,23 +93,6 @@ const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
   []
 );
 
-function valueOfDescriptor(
-  descriptor: ReturnType<typeof getOwnDataDescriptor>
-): unknown {
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    ? undefined
-    : descriptor.value;
-}
-
-function hasUnsafeDescriptor(
-  descriptors: readonly ReturnType<typeof getOwnDataDescriptor>[]
-): boolean {
-  return descriptors.some(
-    (descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-  );
-}
-
 function projectCitation(value: unknown): CanonicalCitation | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -119,7 +102,7 @@ function projectCitation(value: unknown): CanonicalCitation | undefined {
     const labelDescriptor = getOwnDataDescriptor(value, 'label');
     const quoteDescriptor = getOwnDataDescriptor(value, 'quote');
     if (
-      hasUnsafeDescriptor([
+      hasUnsafeOwnDescriptor([
         idDescriptor,
         sourceIdDescriptor,
         labelDescriptor,
@@ -128,11 +111,11 @@ function projectCitation(value: unknown): CanonicalCitation | undefined {
     )
       return undefined;
 
-    const id = valueOfDescriptor(idDescriptor);
+    const id = ownDataDescriptorValue(idDescriptor);
     if (typeof id !== 'string' || id.trim().length === 0) return undefined;
-    const sourceId = valueOfDescriptor(sourceIdDescriptor);
-    const label = valueOfDescriptor(labelDescriptor);
-    const quote = valueOfDescriptor(quoteDescriptor);
+    const sourceId = ownDataDescriptorValue(sourceIdDescriptor);
+    const label = ownDataDescriptorValue(labelDescriptor);
+    const quote = ownDataDescriptorValue(quoteDescriptor);
     return Object.freeze({
       source: value as Citation,
       id,

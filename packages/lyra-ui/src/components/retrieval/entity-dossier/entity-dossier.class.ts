@@ -16,6 +16,7 @@ import type {
 export type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type {
   LyraProvenance,
+  LyraProvenancePanelDisclosureDetail,
   LyraProvenancePanelEventMap,
 } from '../provenance-panel/provenance-panel.class.js';
 export type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
@@ -64,24 +65,26 @@ export interface LyraEntityDossierConfidence {
 export interface LyraEntityDossierEventMap
   extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
     Omit<LyraChunkInspectorEventMap, 'lr-toggle'>,
-    Omit<LyraProvenancePanelEventMap, 'lr-entity-select'>,
+    Omit<LyraProvenancePanelEventMap, 'lr-entity-select' | 'lr-toggle' | 'lr-retrieval-disclosure-change'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show' | 'lr-tab-hide'> {
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
+  /** @deprecated Use `lr-retrieval-disclosure-change` and read `origin` and `kind`. */
+  'lr-toggle': LyraProvenancePanelEventMap['lr-toggle'];
+  'lr-retrieval-disclosure-change': CustomEvent<LyraEntityDossierDisclosureDetail>;
 }
+
+/** The disclosed item and the dossier panel that owns it. */
+export type LyraEntityDossierDisclosureDetail =
+  | (Extract<LyraProvenancePanelDisclosureDetail, { kind: 'chunk' }> & Readonly<{ origin: 'supporting' }>)
+  | (LyraProvenancePanelDisclosureDetail & Readonly<{ origin: 'provenance' }>);
 
 /**
  * `<lr-entity-dossier>` — a full entity detail surface: a persistent header (`lr-entity-card` plus
  * an optional confidence `lr-stat`) above a `lr-tab-group` strip for Relationships (`lr-neighbor-list`),
  * Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —
- * it never fetches, ranks, or mutates graph/document state, and never re-renders what any of those
- * five composed components already render themselves; every one of their own events (`
- * lr-entity-select`, `lr-node-expand`, `lr-chunk-open`,
- * `lr-toggle`, `lr-tab-show`, plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
- * `lr-relation-activate`) bubbles through unmodified (`composed: true` crosses this component's own
- * shadow boundary with no re-dispatch needed), except direct chunk-inspector `lr-toggle` events,
- * which gain `kind: 'chunk'` and `section: 'chunks'`, and tab changes, which expose the dossier's `tabId`.
+ * it never fetches, ranks, or mutates graph or document state.
  *
  * `chunks`/`thresholds` (the "supporting chunks" tab) and `provenance` (the "Provenance" tab) are
  * deliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks
@@ -111,9 +114,10 @@ export interface LyraEntityDossierEventMap
  *   `detail: { nodeId }`.
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
  *   `detail: { chunkId, sourceId, anchor? }`.
- * @event lr-toggle - A section or chunk disclosure changed. Direct supporting-chunk toggles
- *   carry `{ kind: 'chunk', section: 'chunks', expanded, itemId }`.
- *   Provenance-panel section and chunk toggles pass through unchanged.
+ * @event lr-toggle - Deprecated. Use `lr-retrieval-disclosure-change`.
+ *   Legacy detail is `{ section, expanded, itemId? }`.
+ * @event lr-retrieval-disclosure-change - A section or chunk disclosure changed. Detail
+ *   includes `kind`, `section`, `expanded`, `origin` and, for a chunk, `chunkId`.
  * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
  *   panel. `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from a community card inside the embedded provenance panel.
@@ -157,6 +161,9 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-retrieval-disclosure-change',
+  ]);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'entity',
@@ -210,18 +217,8 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
    *  authored. A host label independently names the dossier and is not cloned onto the strip. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** Which tab is active -- internal, not a controlled public property: `lr-tab-group` already owns
-   *  this state, and a one-way `.active=${...}` binding driven by a *stale* public property here
-   *  would fight the user's own click the next time this component re-renders for an unrelated
-   *  reason (see `lr-spreadsheet-viewer`'s identical `activeSheetIndex` pattern). */
   @state() private activeTab: LyraEntityDossierTab = 'relationships';
 
-  /** `<lr-tab-group>`'s own raw `lr-tab-show` carries `detail: { name }` (its upstream-mirrored
-   *  shape). This component's own documented/typed event contract instead promises `detail: {
-   *  tabId }` -- matching `LyraEntityDossierTab` naming rather than the generic upstream `name` --
-   *  so the raw child event is swallowed here (never forwarded as-is) and a correctly-shaped one is
-   *  dispatched in its place, the same swap `lr-spreadsheet-viewer`'s own internal `lr-tab-group`
-   *  consumer already makes for its own tab-change handling. */
   private onTabsChange = (e: CustomEvent<{ name: string }>): void => {
     e.stopPropagation();
     const tabId = e.detail.name as LyraEntityDossierTab;
@@ -229,10 +226,6 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     this.emit('lr-tab-show', { tabId });
   };
 
-  /** The inner `<lr-tab-group>`'s `lr-activate` reports a repeat pick of the tab already active.
-   *  It is swallowed for the same reason `onTabsChange` swallows the raw `lr-tab-show`: this
-   *  component's documented event contract is its own, and a child event escaping as-is would be
-   *  public surface this tag never declared. */
   private containTabsEvent = (e: Event): void => {
     e.stopPropagation();
   };
@@ -240,12 +233,23 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   private onSupportingChunkToggle = (event: LyraChunkInspectorEventMap['lr-toggle']): void => {
     if (event.composedPath()[0] !== event.currentTarget) return;
     event.stopPropagation();
+    const { expanded, itemId } = event.detail;
     this.emit('lr-toggle', {
-      kind: 'chunk',
       section: 'chunks',
-      expanded: event.detail.expanded,
-      itemId: event.detail.itemId,
+      expanded,
+      itemId,
     });
+    this.emit('lr-retrieval-disclosure-change', {
+      origin: 'supporting', kind: 'chunk', section: 'chunks', chunkId: itemId, expanded,
+    });
+  };
+
+  private onProvenanceDisclosure = (
+    event: LyraProvenancePanelEventMap['lr-retrieval-disclosure-change']
+  ): void => {
+    if (event.composedPath()[0] !== event.currentTarget) return;
+    event.stopPropagation();
+    this.emit('lr-retrieval-disclosure-change', { ...event.detail, origin: 'provenance' });
   };
 
   override render(): TemplateResult {
@@ -260,11 +264,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     }
     const entity = this.entity;
     const c = this.confidence;
-    // Not `hostAriaLabel(this)`: that helper folds a JS-only `accessibleLabel` into its own
-    // "host already has a name" answer, so testing `=== null` could never distinguish "consumer
-    // authored the host aria-label attribute" from "consumer set accessibleLabel via JS" -- and
-    // the override this component documents (above) would never be reachable. Read the DOM
-    // attribute directly instead, mirroring `node-palette.class.ts`'s `!hasAttribute()` idiom.
+    // Only the host attribute owns the dossier name. The JS property names the tab strip.
     const tabsLabel = this.hasAttribute('aria-label')
       ? nothing
       : this.accessibleLabel ?? nothing;
@@ -332,6 +332,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
               .provenance=${this.provenance}
               .types=${this.types}
               .thresholds=${this.thresholds}
+              @lr-retrieval-disclosure-change=${this.onProvenanceDisclosure}
             ></lr-provenance-panel>
           </lr-tab-panel>
         </lr-tab-group>

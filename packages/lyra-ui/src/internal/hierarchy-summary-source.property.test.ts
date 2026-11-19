@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { traceSourceSummary } from './hierarchy-summary-source.js';
+import { hierarchySourceFieldReader, traceSourceSummary } from './hierarchy-summary-source.js';
 
 describe('trace source summary properties', () => {
   it('preserves every finite ordered nonnegative extent without mutating its input', () => {
@@ -22,6 +22,14 @@ describe('trace source summary properties', () => {
         { startMs: 0, endMs: Infinity }, { startMs: NaN, endMs: value }]) {
         expect(() => traceSourceSummary(summary, () => undefined)).to.throw(TypeError);
       }
+    }), propertyRuns());
+  });
+
+  it('reads every own data field of a row exactly as stored while authority holds', () => {
+    const value = fc.oneof(fc.string(), fc.double(), fc.boolean(), fc.constant(null));
+    fc.assert(fc.property(fc.dictionary(fc.string({ minLength: 1 }), value), (row) => {
+      const field = hierarchySourceFieldReader(row, () => true, 'changed');
+      for (const key of Object.keys(row)) expect(Object.is(field(key), row[key])).to.equal(true);
     }), propertyRuns());
   });
 });

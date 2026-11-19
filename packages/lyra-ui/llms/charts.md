@@ -70,6 +70,13 @@ authoritative. With no host label, `label` and then the generated chart name pro
 
 ## `lr-chart` (core)
 
+The chart, lite-chart and box-plot data-table buttons share the resting style hooks
+`--lr-chart-data-table-toggle-border-color`, `--lr-chart-data-table-toggle-bg`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size` and
+`--lr-chart-data-table-toggle-justify` (grid `justify-self`). Lite-chart and box-plot
+accept the same suffixes under their own component prefix, which takes precedence.
+
+
 Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-histogram`;
 `lr-lite-chart` and `lr-box-plot` are independent implementations. It supports both a simplified
 series surface and a raw Chart.js `config` passthrough (mirrors Web Awesome's `wa-chart` `config`

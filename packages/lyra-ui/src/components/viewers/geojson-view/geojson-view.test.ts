@@ -473,15 +473,35 @@ describe('missing maplibre-gl peer', () => {
     el.addEventListener('lr-render-error', () => {
       count++;
     });
+    const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
     const event = oneEvent(el, 'lr-render-error');
     el.src = GEOJSON_URL;
     await event;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-json-viewer') !== null
     );
+    const warning = (await diagnostic).detail.diagnostic;
+    expect(warning.code).to.equal('geojson-map-unavailable');
+    expect(warning.severity).to.equal('warning');
+    expect(warning.fatal).to.equal(false);
+    expect(warning.source).to.equal('maplibre-gl');
     expect(count).to.equal(1);
     expect(el.shadowRoot!.querySelector('lr-json-viewer')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="missing-library"]')).to.exist;
+  });
+
+  it('ends map fallback notifications when the diagnostic listener removes the viewer', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = await fixture<LyraGeoJsonViewer>(html`<lr-geojson-viewer></lr-geojson-viewer>`);
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => { errors++; });
+    el.addEventListener('lr-viewer-diagnostic', () => el.remove(), { once: true });
+    const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+    el.src = GEOJSON_URL;
+    await diagnostic;
+    expect(el.isConnected).to.equal(false);
+    expect(errors).to.equal(0);
   });
 
   it('suppresses undeclared composed events from the fallback JSON viewer', async () => {

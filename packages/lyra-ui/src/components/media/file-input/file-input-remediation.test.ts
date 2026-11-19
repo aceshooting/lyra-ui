@@ -22,6 +22,31 @@ it('falls back to the visible label or localized instruction for a whitespace-on
   }
 });
 
+it('describes the rendered hint without associating an unused help-text slot', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`
+    <lr-file-input><span slot="help-text">Unrendered guidance</span></lr-file-input>
+  `);
+  const root = el.shadowRoot!;
+  const trigger = root.querySelector('[part="file-input"]')!;
+  const hint = root.querySelector<HTMLElement>('[part="hint"]')!;
+  expect(hint.hidden).to.equal(true);
+  expect(trigger.getAttribute('aria-describedby')).to.equal(null);
+
+  el.hint = 'Select up to three files';
+  await el.updateComplete;
+  expect(hint.hidden).to.equal(false);
+  expect(hint.textContent?.trim()).to.equal('Select up to three files');
+  expect(trigger.getAttribute('aria-describedby')).to.equal('file-input-hint');
+});
+
+it('shows the selected file size with locale digits and the supplied unit label', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`
+    <lr-file-input locale="de" .files=${[new File([new Uint8Array(1536)], 'report.txt')]}
+      .strings=${{ fileSizeUnitKb: 'KiB', fileInputDefaultLabel: 'Dateien auswählen', removeWithContext: '{label} entfernen' }}></lr-file-input>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="file-size"]')?.textContent).to.equal('1,5 KiB');
+});
+
 for (const property of ['label', 'hint'] as const) {
   it(`consumes removed ${property} without changing null readback and recovers text and association`, async () => {
     const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input></lr-file-input>`);

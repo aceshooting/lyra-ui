@@ -35,7 +35,7 @@ export interface ParseVCardsOptions {
 }
 
 const DEFAULT_MAX_CONTACTS = 250;
-const MAX_CONTACTS = 250;
+const MAX_VIEWER_CONTACTS = 2500;
 const MAX_RENDERED_CONTACT_CHARS = 2 * 1024 * 1024;
 const MAX_LOGICAL_LINES = 100_000;
 const MAX_PROPERTIES_PER_CONTACT = 10_000;
@@ -55,11 +55,6 @@ interface ParsedProperty {
 
 function malformed(message: string): Error {
   return new Error(`Malformed vCard: ${message}`);
-}
-
-function normalizedMaxContacts(value: number | ParseVCardsOptions): number {
-  const candidate = typeof value === 'number' ? value : value.maxContacts ?? DEFAULT_MAX_CONTACTS;
-  return finiteCount(candidate, DEFAULT_MAX_CONTACTS, MAX_CONTACTS);
 }
 
 function splitOutsideQuotes(value: string, separator: string): string[] {
@@ -342,8 +337,14 @@ export function parseVCards(
   text: string,
   options: number | ParseVCardsOptions = DEFAULT_MAX_CONTACTS,
 ): VCardContact[] {
+  const limit = typeof options === 'number' ? options : options.maxContacts ?? DEFAULT_MAX_CONTACTS;
+  return parseContactDocument(text, finiteCount(limit, DEFAULT_MAX_CONTACTS, DEFAULT_MAX_CONTACTS));
+}
+
+/** @internal */
+export function parseContactDocument(text: string, limit: number): VCardContact[] {
   if (text.includes('\0')) throw malformed('NUL byte');
-  const maxContacts = normalizedMaxContacts(options);
+  const maxContacts = finiteCount(limit, DEFAULT_MAX_CONTACTS, MAX_VIEWER_CONTACTS);
   const physicalLines = splitLines(text);
   if (physicalLines.length > MAX_LOGICAL_LINES) {
     throw new LyraResourceLimitError('The vCard contains too many lines.');

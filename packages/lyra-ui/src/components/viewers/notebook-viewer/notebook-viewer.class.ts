@@ -1,26 +1,26 @@
+import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
+import { templateContent } from 'lit/directives/template-content.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
-import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isResourceLimitError, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
-import { loadNotebookSanitizer } from './dompurify-loader.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
-import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
+import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
@@ -465,6 +465,7 @@ export type LyraNotebookViewerSource = LyraViewerSource<NotebookDoc | string>;
 export interface LyraNotebookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
+  'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
@@ -536,6 +537,7 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   cells and search retains at most one match per cell. Search accepts at most 4,096 query code
  *   units and scans at most 4,000,000 source/output code units; a false `matchCountExact` makes the
  *   returned count a lower bound after either ceiling is reached.
+ * @event lr-viewer-diagnostic - Reports a recoverable dompurify failure while the fallback remains visible.
  * @event lr-render-error - Fired when fetching, parsing, or validating the notebook fails.
  *   `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -714,7 +716,17 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
    *  independently schedule an update for it). */
   private highlightedCells: ReadonlyMap<number, LyraHighlight> = new Map();
 
-  private generation = 0;
+  private get generation(): number { return this.transport.generation; }
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.loadState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private lastSearchLocale = '';
   private sanitizerGeneration = 0;
   private sanitizerFailureReported = false;
@@ -776,17 +788,16 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   override disconnectedCallback(): void {
-    if (this._notebook === undefined && this.loadState.kind === 'loading') this.generation++;
+    if (this._notebook === undefined && this.loadState.kind === 'loading') this.transport.cancel();
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
   }
 
   private releaseDetachedNotebook(): void {
-    this.generation++;
+    this.transport.cancel();
     this.sanitizerGeneration++;
-    this.beginAbortableLoad();
-    this.sanitizedOutputCache.clear();
+    this.sanitizedOutputCache = new WeakMap();
     this.sanitizationTasks.clear();
     this.sanitizerFailureReported = false;
     this.sourceLoadScheduled = false;
@@ -801,8 +812,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
 
   private parseInline(): void {
     if (this._notebook === undefined) return;
-    const generation = ++this.generation;
-    this.beginAbortableLoad();
+    this.transport.cancel();
+    const generation = this.transport.generation;
     this.resetParsedState();
     this.loadState = { kind: 'idle' };
     try {
@@ -820,7 +831,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       || !this.searchMatchCountExact
       || this.activeSearchIndex !== -1;
     this.sanitizerGeneration++;
-    this.sanitizedOutputCache.clear();
+    this.sanitizedOutputCache = new WeakMap();
     this.sanitizationTasks.clear();
     this.sanitizerFailureReported = false;
     this.expandedOutputs = new Set();
@@ -830,8 +841,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   private beginSourceTransition(kind: 'idle' | 'loading'): void {
-    this.generation++;
-    this.beginAbortableLoad();
+    this.transport.cancel();
     this.resetParsedState();
     this.loadState = { kind };
   }
@@ -846,43 +856,15 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   private async loadFromSrc(): Promise<void> {
-    // Re-checked here (not just by updated()'s scheduling guard) -- this call is deferred via
-    // scheduleAfterUpdate(), so a synchronous `notebook` assignment arriving after it was scheduled
-    // but before it actually runs must still win; otherwise this stale src-fetch attempt would
-    // overwrite the freshly-parsed inline notebook's `loaded` state back to `idle`.
     if (!this.isConnected || this._notebook !== undefined) return;
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (!this.src) {
-      this.loadState = { kind: 'idle' };
-      return;
-    }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.loadState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.loadState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const text = await readResponseText(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.setDoc(JSON.parse(text), generation);
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.loadState = {
-        kind: 'error',
-        message: viewerFailureMessage(error, this.localize.bind(this)),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-    }
+    this.loadState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const text = await this.transport.readText(response);
+    if (this.transport.isStale(token)) return;
+    this.setDoc(JSON.parse(text), token.generation);
   }
 
   private setDoc(raw: unknown, generation: number): void {
@@ -1140,19 +1122,15 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       return html`<div part="output" data-output-type=${output.output_type}><img part="output-image" src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${mediaName} /></div>`;
     }
     if (data['image/svg+xml']) {
-      // The image role goes on the SANITIZED result only. role="img" makes every descendant
-      // presentational, so wrapping the whole renderSanitized() call would bury the loading
-      // notice and the peer-missing alert -- and any focusable control inside the text fallback
-      // becomes a tab stop that axe reports as `nested-interactive`. Same shape as
-      // svg-viewer.class.ts, which names only its `loaded` branch.
-      const svg = this.renderSanitized(joinText(data['image/svg+xml']), 'svg', key, joinText(data['text/plain']));
-      const named = this.sanitizedOutputCache.get(`svg:${joinText(data['image/svg+xml'])}`);
+      // Name the sanitized image while keeping loading and fallback text readable.
+      const svg = this.renderSanitized(output, data['image/svg+xml'], 'svg', key, joinText(data['text/plain']));
+      const named = this.sanitizedOutputCache.get(output)?.content.hasChildNodes();
       return named
         ? html`<div part="output" data-output-type=${output.output_type} role="img" aria-label=${mediaName}>${svg}</div>`
         : html`<div part="output" data-output-type=${output.output_type}>${svg}</div>`;
     }
     if (data['text/html']) {
-      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['text/html']), 'html', key, joinText(data['text/plain']))}</div>`;
+      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(output, data['text/html'], 'html', key, joinText(data['text/plain']))}</div>`;
     }
     if (data['application/json']) {
       const parsed = typeof data['application/json'] === 'string' ? this.parsedJsonOutput(output, data['application/json']) : data['application/json'];
@@ -1169,12 +1147,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     return html`<div part="output" data-output-type=${output.output_type}>${this.localize('notebookViewerUnrenderedOutput')}</div>`;
   }
 
-  /** Cache of already-sanitized SVG/HTML output markup, keyed by `profile:rawMarkup` -- `undefined`
-   *  means "not requested yet", `null` means "sanitizer peer unavailable" (missing-peer notice),
-   *  otherwise the sanitized string. Sanitizing is async (`loadNotebookSanitizer()` lazy-loads the
-   *  `dompurify` peer), which can't resolve inside a synchronous `render()` pass -- `renderSanitized()`
-   *  kicks off the async work on first render and repaints via `requestUpdate()` once it resolves. */
-  private sanitizedOutputCache = new Map<string, string | null>();
+  private sanitizedOutputCache = new WeakMap<NotebookOutput, HTMLTemplateElement | null>();
   private readonly jsonOutputs = new WeakMap<object, unknown>();
 
   private parsedJsonOutput(output: object, text: string): unknown {
@@ -1182,64 +1155,62 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     return this.jsonOutputs.get(output);
   }
 
-  private sanitizationTasks = new Map<string, Promise<void>>();
+  private sanitizationTasks = new Map<NotebookOutput, Promise<void>>();
 
-  private async ensureSanitized(raw: string, profile: SanitizeProfile): Promise<void> {
-    const cacheKey = `${profile}:${raw}`;
-    if (this.sanitizedOutputCache.has(cacheKey)) return;
-    const existing = this.sanitizationTasks.get(cacheKey);
+  private reportSanitizerFailure(generation: number, failure?: { error: unknown }): void {
+    if (this.sanitizerFailureReported) return;
+    this.sanitizerFailureReported = true;
+    const message = this.localize('documentViewerMissingSanitizer');
+    this.announcements.announceAssertive(message);
+    const error = failure ? failure.error : new LyraUserFacingError(message);
+    this.emit('lr-viewer-diagnostic', {
+      diagnostic: { code: 'notebook-sanitizer-unavailable', severity: 'warning', fatal: false, source: 'dompurify', cause: error },
+    });
+    if (this.isConnected && generation === this.sanitizerGeneration) this.emit('lr-render-error', { error });
+  }
+
+  private async ensureSanitized(output: NotebookOutput, raw: unknown, profile: SanitizeProfile): Promise<void> {
+    const existing = this.sanitizationTasks.get(output);
     if (existing) return existing;
     const generation = this.sanitizerGeneration;
     const task = (async () => {
       try {
-        const sanitizer = await loadNotebookSanitizer();
+        const sanitizer = await loadDompurify();
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
-        const clean = sanitizer
-          ? sanitizePassiveMarkup(
-              sanitizer,
-              raw,
-              this.ownerDocument,
-              profile === 'svg' ? 'passive-svg' : 'passive-document',
-            )
-          : null;
-        if (!this.isConnected || generation !== this.sanitizerGeneration) return;
-        if (!sanitizer && !this.sanitizerFailureReported) {
-          this.sanitizerFailureReported = true;
-          const message = this.localize('documentViewerMissingSanitizer');
-          this.announcements.announceAssertive(message);
-          this.emit('lr-render-error', {
-            error: new LyraUserFacingError(message),
-          });
+        let clean: HTMLTemplateElement | null = null;
+        if (sanitizer) {
+          clean = this.ownerDocument.createElement('template');
+          clean.content.append(sanitizePassiveMarkupFragment(sanitizer, joinText(raw),
+            this.ownerDocument, profile === 'svg' ? 'passive-svg' : 'passive-document'));
         }
-        this.sanitizedOutputCache.set(cacheKey, clean);
+        if (!this.isConnected || generation !== this.sanitizerGeneration) return;
+        this.sanitizedOutputCache.set(output, clean);
         this.requestUpdate();
+        if (!sanitizer) this.reportSanitizerFailure(generation);
       } catch (error) {
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
-        this.sanitizedOutputCache.set(cacheKey, null);
-        if (!this.sanitizerFailureReported && !isResourceLimitError(error)) {
-          this.sanitizerFailureReported = true;
-          this.announcements.announceAssertive(this.localize('documentViewerMissingSanitizer'));
-        }
-        this.emit('lr-render-error', { error });
+        this.sanitizedOutputCache.set(output, null);
         this.requestUpdate();
+        if (isResourceLimitError(error)) this.emit('lr-render-error', { error });
+        else this.reportSanitizerFailure(generation, { error });
       } finally {
-        if (generation === this.sanitizerGeneration) this.sanitizationTasks.delete(cacheKey);
+        if (generation === this.sanitizerGeneration) this.sanitizationTasks.delete(output);
       }
     })();
-    this.sanitizationTasks.set(cacheKey, task);
+    this.sanitizationTasks.set(output, task);
     return task;
   }
 
   private renderSanitized(
-    raw: string,
+    output: NotebookOutput,
+    raw: unknown,
     profile: SanitizeProfile,
     outputKey: string,
     textFallback: string,
   ): TemplateResult {
-    const cacheKey = `${profile}:${raw}`;
-    const cached = this.sanitizedOutputCache.get(cacheKey);
+    const cached = this.sanitizedOutputCache.get(output);
     if (cached === undefined) {
-      void this.ensureSanitized(raw, profile);
+      void this.ensureSanitized(output, raw, profile);
       return html`<span part="output-loading">${this.localize('loadingDocument')}</span>`;
     }
     if (cached === null) {
@@ -1251,7 +1222,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         ? this.renderTextOutput(outputKey, textFallback)
         : html`<p>${this.localize('documentViewerMissingSanitizer')}</p>`;
     }
-    return profile === 'svg' ? html`${unsafeSVG(cached)}` : html`${unsafeHTML(cached)}`;
+    return html`${templateContent(cached)}`;
   }
 
   private renderCell = (cell: unknown, index: number): TemplateResult => {

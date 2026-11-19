@@ -178,7 +178,7 @@ it('re-emits one contextual toggle for an embedded chunk', async () => {
   const seen: CustomEvent[] = [];
   el.addEventListener('lr-toggle', (event) => seen.push(event as CustomEvent));
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen.map((event) => event.detail)).to.deep.equal([{ kind: 'chunk', section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(seen.map((event) => event.detail)).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
   expect(seen[0]!.target === el).to.equal(true);
 });
 
@@ -195,7 +195,7 @@ it('all four sections start expanded, and toggling one emits lr-toggle without c
   const listener = oneEvent(el, 'lr-toggle');
   (headers[0] as HTMLButtonElement).click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ kind: 'section', section: 'entities', expanded: false });
+  expect(event.detail).to.deep.equal({ section: 'entities', expanded: false });
   await el.updateComplete;
   expect(headers[0]!.getAttribute('aria-expanded')).to.equal('false');
   expect(headers[1]!.getAttribute('aria-expanded')).to.equal('true');
@@ -421,4 +421,35 @@ describe('section disclosure affordance and stacking', () => {
     expect(cards[1]!.getBoundingClientRect().top - cards[0]!.getBoundingClientRect().bottom > 0).to.equal(true);
     expect(strips[1]!.getBoundingClientRect().top - strips[0]!.getBoundingClientRect().bottom > 0).to.equal(true);
   });
+});
+
+it('delegates section and chunk disclosures and leaves descendant-owned toggles alone', async () => {
+  const el = await fixture<LyraProvenancePanel>(html`
+    <lr-provenance-panel .provenance=${provenance}></lr-provenance-panel>
+  `);
+  const seen: unknown[] = [];
+  el.parentElement!.addEventListener('lr-retrieval-disclosure-change', (event) => {
+    expect(event.composedPath()[0] === el).to.be.true;
+    seen.push((event as CustomEvent).detail);
+  });
+  el.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+    const id: string = detail.kind === 'chunk' ? detail.chunkId : detail.section;
+    expect(id).to.be.a('string');
+  });
+
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector')!;
+  inspector.size = 'm';
+  await inspector.updateComplete;
+  inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!.click();
+  const child = document.createElement('span');
+  inspector.append(child);
+  child.dispatchEvent(new CustomEvent('lr-toggle', {
+    bubbles: true, composed: true, detail: { expanded: true, itemId: 'unrelated' },
+  }));
+
+  expect(seen).to.deep.equal([
+    { kind: 'chunk', section: 'chunks', chunkId: 'ch1', expanded: true },
+    { kind: 'section', section: 'entities', expanded: false },
+  ]);
 });

@@ -772,6 +772,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   streamStallClearedAnnounce: 'No longer stalled.',
   thinkingPanelLabel: 'Thinking',
   messagePartsLabel: 'Message content',
+  messagePartsWindowNotice: 'Earlier parts hidden: {count}.',
   messagePartError: 'Part failed',
   messagePartRetry: 'Retry this part',
   promptQueueLabel: 'Queued prompts',
@@ -1366,7 +1367,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   memoryPanelShortTermHeading: 'Short-term context',
   memoryPanelLongTermHeading: 'Long-term memories',
   memoryPanelAdd: 'Add to long-term memory',
-  memoryPanelAddAccessibleName: '{action}: {label}',
+  memoryPanelAddWithContext: 'Add "{label}" to long-term memory',
+  memoryPanelAddPosition: 'item {index}',
   memoryPanelForgetAll: 'Forget all',
   memoryPanelConfirmAddHeading: 'Add this to long-term memory?',
   memoryPanelConfirmRemoveHeading: 'Remove this item?',
@@ -1722,6 +1724,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   emojiPickerInputLimit: 'Some emoji data was omitted because an input limit was reached.',
   mentionInputLimit: 'Only the first 10,000 mention candidates are available.',
   transcriptFeedInputLimit: 'Only the newest {count} of {total} entries are retained.',
+  transcriptFeedWindowNotice: 'Earlier captions hidden: {count}.',
+  transcriptFeedRegion: 'Transcript history',
   spanWaterfallLimit: 'Showing {shown} of {total} spans.',
   toolTimelineInputLimit: 'Only the newest {count} of {total} tool calls are retained.',
   retrievalResultsInputLimit: 'Only the first {count} of {total} retrieval results are retained.',
@@ -1809,6 +1813,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   modelViewerRotateRight: 'Rotate right',
   modelViewerRotateUp: 'Rotate up',
   modelViewerRotateDown: 'Rotate down',
+  modelViewerViewport: 'Interactive model',
 };
 
 export {

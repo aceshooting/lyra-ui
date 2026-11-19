@@ -865,6 +865,11 @@ const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated fil
  * registrations. Each entry is a full `a -> b` module path.
  */
 const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
+  // Questions with a supplied, supported schema load the parameter form on demand.
+  'src/components/agent-tools/agent-question/agent-question.class.ts -> src/components/agent-tools/tool-param-form/tool-param-form.ts',
+  // A connected confirmation bar loads argument disclosure and JSON rendering when it receives args.
+  'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/layout/details/details.ts',
+  'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
   // The expanded evaluation-run detail and the tool-timeline result view register on first use.
   'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/agent-tools/tool-timeline/tool-timeline.ts',
   'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/code-block/code-block.ts',
@@ -873,6 +878,9 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   // The approval dialog registers when the first approval-gated entry arrives.
   'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.ts',
   'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
+  // Feedback reason choices load chips only when configured, including inside message actions.
+  'src/components/conversation/message-actions/message-actions.class.ts -> src/components/conversation/message-feedback/message-feedback.class.ts -> src/components/overlays/chip/chip.ts',
+  'src/components/conversation/message-feedback/message-feedback.class.ts -> src/components/overlays/chip/chip.ts',
   // Message parts register non-text renderers only when a matching part or retry control appears.
   'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/thinking-panel/thinking-panel.ts',
   'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-call-block/tool-call-block.ts',
@@ -883,6 +891,15 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/conversation/message-parts/message-parts.class.ts -> src/components/media/attachment-chip/attachment-chip.ts',
   'src/components/conversation/message-parts/message-parts.class.ts -> src/components/retrieval/citation-badge/citation-badge.ts',
   'src/components/conversation/message-parts/message-parts.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  // An interrupted stream only loads the resume button when resume is enabled.
+  'src/components/conversation/stream-status/stream-status.class.ts -> src/components/forms/button/button.ts',
+  // Thread lists load the pager in provider mode and the error view after a load fails.
+  'src/components/conversation/thread-list/thread-list.class.ts -> src/components/data/pagination/pagination.ts',
+  'src/components/conversation/thread-list/thread-list.class.ts -> src/components/overlays/empty/empty.ts',
+  // Only grids opting into the columns menu load the dropdown, its items, and its trigger button.
+  'src/components/data/data-grid/data-grid.class.ts -> src/components/forms/button/button.ts',
+  'src/components/data/data-grid/data-grid.class.ts -> src/components/layout/menu/dropdown-item.ts',
+  'src/components/data/data-grid/data-grid.class.ts -> src/components/overlays/overlay/dropdown.ts',
   // The searchable catalog pickers load the filter combobox on first use.
   'src/components/forms/country-picker/country-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   'src/components/forms/currency-picker/currency-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
@@ -895,11 +912,22 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/viewers/document-preview/document-preview.ts',
   // `toast()` loads the toast stack on its first call.
   'src/components/overlays/alert/alert.class.ts -> src/components/overlays/toast/toast.ts',
-  // Only lists above `virtualizeAt` need the virtualizer.
+  // Neighbor lists use the pager for centered sources and the virtualizer for long local lists.
+  'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/data/pagination/pagination.ts',
   'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
-  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  // Only source-backed graphs need a pager, including the graph rendered by the explorer.
+  'src/components/retrieval/graph/graph.class.ts -> src/components/data/pagination/pagination.ts',
+  // Explorer details load on selection, while the embedded graph pager follows source mode.
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/entity-card/entity-card.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/graph/graph.class.ts -> src/components/data/pagination/pagination.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.ts',
   // A supplied path enables the explorer's optional path strip; empty paths need no registration.
   'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/path-strip/path-strip.ts',
+  // The memory panel reaches these loaders through the confirmation bar's optional argument display.
+  'src/components/retrieval/memory-panel/memory-panel.class.ts -> src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/layout/details/details.ts',
+  'src/components/retrieval/memory-panel/memory-panel.class.ts -> src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  // Neighbor lists use the pager for centered sources and the virtualizer for long local lists.
+  'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/data/pagination/pagination.ts',
   'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
   // Both GeoJSON class entry points load the JSON viewer only when the optional map peer is absent.
   'src/components/viewers/geojson-view/geojson-view.class.ts -> src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/utility/json-viewer/json-viewer.ts',

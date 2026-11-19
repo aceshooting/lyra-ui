@@ -1,5 +1,6 @@
 import { DocumentPointerListener } from './document-pointer.js';
 import { PopupTransitionWaiters, settlePopupTransition } from './anchored-overlay-runtime.js';
+import type { OverlayHandle } from './nonmodal-overlay-manager.js';
 
 export type PopupLifecycleEvent = 'lr-after-show' | 'lr-after-hide';
 
@@ -11,6 +12,31 @@ export interface PopupControllerOptions {
   emit?: (name: 'lr-show' | 'lr-hide' | PopupLifecycleEvent, cancelable: boolean) => boolean;
   /** Called for a capture-phase `pointerdown` while bound. */
   onPointer: (event: PointerEvent) => void;
+}
+
+/** What {@linkcode outsidePressHandler} reads for each press. */
+export interface OutsidePressOptions {
+  /** Whether the press belongs to the control; default: its composed path includes the host. */
+  contains?: (path: readonly EventTarget[]) => boolean;
+  /** The control's overlay. While active, the press dismisses through its backdrop path, which
+   *  acts only when that overlay is topmost, so a press meant for a higher surface keeps it open. */
+  overlay?: () => Pick<OverlayHandle, 'isActive' | 'dismissBackdrop'> | undefined;
+  /** Closes the control when no overlay is active, without returning focus to it. */
+  dismiss: () => void;
+}
+
+/** Builds a {@linkcode PopupControllerOptions.onPointer} that light-dismisses on outside presses. */
+export function outsidePressHandler(host: Element, options: OutsidePressOptions): (event: PointerEvent) => void {
+  return (event) => {
+    const path = event.composedPath();
+    if (options.contains ? options.contains(path) : path.includes(host)) return;
+    const overlay = options.overlay?.();
+    if (overlay?.isActive()) {
+      overlay.dismissBackdrop();
+      return;
+    }
+    options.dismiss();
+  };
 }
 
 /** Dispatches a popup lifecycle event through a host's protected `emit()`; true when cancelled. */

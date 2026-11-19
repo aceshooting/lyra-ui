@@ -5,7 +5,6 @@ import type { PropertyValues } from 'lit';
 import './svg-viewer.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraSvgViewer } from './svg-viewer.js';
-import { styles } from './svg-viewer.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
@@ -368,19 +367,12 @@ describe('lr-svg-viewer', () => {
     }
   });
 
-  it('declares the host shrinkability contract on the :host rule', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    const hostBlock = /:host\s*{([^}]*)}/.exec(css);
-    expect(hostBlock, 'expected a :host rule').to.not.equal(null);
-    expect(hostBlock![1]).to.include('min-inline-size: 0;');
-    expect(hostBlock![1]).to.include('max-inline-size: 100%;');
+  it('keeps its allocation inside a narrow flex row', async () => {
+    const row = await fixture<HTMLElement>(html`<div style="display:flex;width:160px"><lr-svg-viewer style="width:320px"></lr-svg-viewer></div>`);
+    expect(row.firstElementChild!.getBoundingClientRect().width).to.be.at.most(row.clientWidth);
   });
 
-  it('resolves min-inline-size/max-inline-size as live computed styles on a rendered host, not just stylesheet source text', async () => {
-    // Regression test for the same declarations the source assertion above only proves exist in the
-    // stylesheet source -- a typo, or the declaration moving to a selector that no longer matches
-    // the host, would not be caught there. getComputedStyle() on an actually-rendered instance
-    // proves the rule is live and resolves as specified.
+  it('resolves the host minimum and maximum inline sizes', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const computed = getComputedStyle(el);
     expect(computed.minInlineSize).to.equal('0px');

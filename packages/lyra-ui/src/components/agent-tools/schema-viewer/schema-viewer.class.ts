@@ -468,10 +468,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     budget: SchemaRenderBudget,
     issuesByPath: ReadonlyMap<string, readonly SchemaValidationIssue[]>
   ): TemplateResult | typeof nothing {
-    // A node reserved by `budget.reservedPaths` (the selected node and its ancestor chain, see
-    // `resolvedSelectionPathChain()`) always renders, bypassing the shared budget entirely --
-    // `render()` already subtracted the reservation from `budget.remaining` up front, so the total
-    // rendered node count stays within MAX_RENDERED_SCHEMA_NODES.
+    // Selected ancestors were already debited from the shared budget.
     const reserved = budget.reservedPaths.has(path);
     if (!reserved) {
       if (budget.remaining <= 0) {
@@ -500,10 +497,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
       path: string;
       required: boolean;
     }> = [];
-    // When this node itself sits on the reserved selection chain but isn't the selected leaf, one
-    // of its children continues that chain and must be admitted regardless of the shared budget --
-    // keep scanning past an exhausted budget until that reserved child is found (or the candidate
-    // list runs out), instead of breaking on the first budget-exceeded child like the ordinary case.
+    // Keep scanning for the reserved child after the shared budget runs out.
     let pendingReservedChild = budget.reservedPaths.has(path) && path !== this.selectedPath;
     const requiredKeys = Array.isArray(schema.required) ? schema.required : undefined;
     let requiredLookups = 0;

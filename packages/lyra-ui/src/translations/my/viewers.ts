@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ညာဘက်သို့ လှည့်ရန်',
   modelViewerRotateUp: 'အပေါ်သို့ လှည့်ရန်',
   modelViewerRotateDown: 'အောက်သို့ လှည့်ရန်',
+  modelViewerViewport: 'လှည့်ပတ်ကြည့်ရှုနိုင်သော မော်ဒယ်',
 };
 
 registerLyraLocale('my', strings);

@@ -10,7 +10,7 @@ import type {
   LyraHighlight,
 } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
-import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
+import type { ShikiLanguageInput } from '../../../internal/shiki/core.js';
 import type { LyraDiffView, LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
 import type { LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
@@ -341,6 +341,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   /** Forwarded to the internal `<lr-diff-view>`'s `contextLines` while `view="diff"`; unset shows
    *  every unchanged line. */
+  // numeric-guard-exempt: pure pass-through to <lr-diff-view>, which normalizes it with finiteCount()
   @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
 
   /** Highlight id marked active in both `view="side-by-side"` panes. */

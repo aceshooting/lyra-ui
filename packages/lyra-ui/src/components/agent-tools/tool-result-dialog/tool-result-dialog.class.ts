@@ -277,8 +277,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     }
   }
 
-  // Runs after render so the manager can resolve the panel and its composed
-  // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncBodyRegion();
@@ -290,27 +288,11 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // A reconnect (e.g. a drag-and-drop reparent keeping this same element
-    // instance) fires disconnectedCallback then connectedCallback
-    // synchronously with no update in between, so willUpdate never reruns to
-    // notice `open` is still true -- restore the scroll lock/trap it dropped.
-    if (this.hasUpdated && this.open) {
-      this.modalSurface.prepare();
-      this.requestUpdate();
-      if (this.overlay?.isActive()) {
-        this.overlay.resume();
-      } else {
-        this.activateOverlay();
-      }
-      // The shadow panel survives a same-document reparent, so restore focus before the pending
-      // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
-      this.overlay?.focusInitial();
-      this.scheduleAfterUpdate(() => {
-        if (!this.open) return;
-        this.modalSurface.show();
-        this.overlay?.focusInitial();
-      }, 'modal-reconnect');
-    }
+    this.modalSurface.reconnect({
+      isOpen: () => this.open,
+      overlay: () => this.overlay,
+      activate: () => this.activateOverlay(),
+    });
   }
 
   override disconnectedCallback(): void {
@@ -322,10 +304,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     this.overlay?.suspend();
   }
 
-  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
-  // even though the assigned child's own `slot` attribute never changed.
+  // Forwarding slots can make assignedElements() transiently empty in WebKit.
   private onFooterSlotChange = (): void => {
     this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
   };
@@ -401,7 +380,8 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   /** Keeps the capped, scrolling body keyboard-scrollable (and named) only while it overflows. */
   private syncBodyRegion(rearm = false): void {
-    const body = this.open ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
+    const body = this.open && this.isConnected
+      ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
     const name = body ? resolveAccessibleName(this, this.accessibleLabel, this.renderRoot.querySelector(`[id="${this.titleId}"]`)!.textContent) : undefined;
     if (!rearm && body === this.bodyRegionEl && name === this.bodyRegionName) return;
     this.disposeBodyRegion?.();

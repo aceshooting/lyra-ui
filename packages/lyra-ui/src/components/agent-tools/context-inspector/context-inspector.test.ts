@@ -5,6 +5,7 @@ import type { LyraContextMeter } from '../../data/context-meter/context-meter.js
 import type { LyraCopyButton } from '../../utility/copy-button/copy-button.js';
 import type { LyraExportButton } from '../../utility/export-button/export-button.js';
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 
 const segments: ContextInspectorSegment[] = [
   { id: 's1', label: 'System prompt', text: 'You are helpful.', tokens: 100 },
@@ -452,6 +453,24 @@ it('caps rendered segment rows at the render ceiling and shows a localized limit
 it('renders no limit notice when segments stays within the render ceiling', async () => {
   const el = await fixture<LyraContextInspector>(html`<lr-context-inspector .segments=${segments}></lr-context-inspector>`);
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});
+
+it('announces the context limit when a mounted inspector first exceeds it', async () => {
+  const el = await fixture<LyraContextInspector>(html`<lr-context-inspector
+    .strings=${{ contextInspectorLimit: 'Showing the first {count} context segments.' }}></lr-context-inspector>`);
+  el.segments = Array.from({ length: 501 }, (_, index) => ({
+    id: String(index), label: `Segment ${index}`, text: 'Context', tokens: 1,
+  }));
+  await el.updateComplete;
+  const note = el.shadowRoot!.querySelector('[part="limit"]');
+  const message = 'Showing the first 500 context segments.';
+  expect(note?.getAttribute('role')).to.equal('note');
+  expect(note?.textContent).to.equal(message);
+  expect(sinkTexts().filter(text => text === message)).to.have.length(1);
+
+  el.label = 'Context';
+  await el.updateComplete;
+  expect(sinkTexts().filter(text => text === message)).to.have.length(1);
 });
 
 describe('template whitespace', () => {

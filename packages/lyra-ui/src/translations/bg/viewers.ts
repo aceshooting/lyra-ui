@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Завърти надясно',
   modelViewerRotateUp: 'Завърти нагоре',
   modelViewerRotateDown: 'Завърти надолу',
+  modelViewerViewport: 'Интерактивен модел',
 };
 
 registerLyraLocale('bg', strings);

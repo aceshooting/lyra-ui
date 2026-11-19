@@ -499,3 +499,12 @@ it('does not re-announce an unchanged label when reparented', async () => {
   observer.disconnect();
   expect(seen.filter((text) => text === 'Assistant typing')).to.deep.equal([]);
 });
+
+it('uses the localized or supplied label when a host name contains only whitespace', async () => {
+  const el = await fixture<LyraTypingIndicator>(html`<lr-typing-indicator aria-label="   "
+    .strings=${{ thinking: 'Preparing response' }}></lr-typing-indicator>`);
+  expect(el.getAttribute('aria-label')).to.equal('Preparing response');
+  el.label = 'Checking history';
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Checking history');
+});

@@ -239,3 +239,33 @@ describe('generated view state and host actions', () => {
     expect((await requested as CustomEvent).detail).to.deep.equal({ surfaceId: 'forms', nodeId: 'save', revision: 0, name: 'save', payload: null });
   });
 });
+
+describe('generated view typography and component styling', () => {
+  it('applies host typography tokens and author sheets to generated component parts', async () => {
+    const host = await mounted({ id: 'root', type: 'stack', children: [
+      { id: 'title', type: 'heading', text: 'Title' },
+      { id: 'body', type: 'text', text: 'Body' },
+      { id: 'panel', type: 'card' }
+    ] });
+    const heading = node(host, 'title');
+    const body = node(host, 'body');
+    expect(getComputedStyle(heading).marginTop).to.equal('0px');
+    expect(getComputedStyle(body).marginBottom).to.equal('0px');
+    host.style.setProperty('--lr-gen-heading-font-size', '23px');
+    host.style.setProperty('--lr-gen-heading-font-weight', '500');
+    host.style.setProperty('--lr-gen-text-font-size', '17px');
+    host.style.setProperty('--lr-gen-text-margin', '3px');
+    expect(getComputedStyle(heading).fontSize).to.equal('23px');
+    expect(getComputedStyle(heading).fontWeight).to.equal('500');
+    expect(getComputedStyle(body).fontSize).to.equal('17px');
+    expect(getComputedStyle(body).marginLeft).to.equal('3px');
+
+    const theme = new CSSStyleSheet();
+    theme.replaceSync('[data-gen-type="card"]::part(base) { border-radius: 31px; }');
+    host.shadowRoot!.adoptedStyleSheets = [...host.shadowRoot!.adoptedStyleSheets, theme];
+    const panel = node<Control>(host, 'panel');
+    await panel.updateComplete;
+    const base = panel.shadowRoot!.querySelector('[part~="base"]')!;
+    expect(getComputedStyle(base).borderTopLeftRadius).to.equal('31px');
+  });
+});

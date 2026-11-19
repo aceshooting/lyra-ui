@@ -99,3 +99,7 @@ export const Narrow320px: Story = {
     </div>
   `,
 };
+
+export const Disabled: Story = {
+  render: () => html`<lr-message-actions disabled .controls=${['copy', 'regenerate', 'edit', 'feedback']}></lr-message-actions>`,
+};

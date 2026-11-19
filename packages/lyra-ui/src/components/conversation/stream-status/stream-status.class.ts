@@ -232,10 +232,19 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     }
   }
 
+  private resumeRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.resumeRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const previous = this.lastRenderedPhase;
     const current = this.phase;
+    if (current === 'interrupted' && this.resumable) this.resumeRegistration ??= import('../../forms/button/button.js');
     this.lastRenderedPhase = current;
     this.toggleAttribute('data-stalled', current === 'stalled');
 
@@ -436,8 +445,8 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
             </div>`
           : nothing}
         ${this.phase === 'interrupted' && this.resumable
-          ? html`<button part="resume" type="button" ?disabled=${this.disabled}
-              @click=${this.requestResume}>${this.localize('streamResume')}</button>`
+          ? html`<lr-button part="resume" exportparts="base:resume" wrap size="s" variant="neutral" type="button" ?disabled=${this.disabled}
+              @click=${this.requestResume}>${this.localize('streamResume')}</lr-button>`
           : nothing}
         <div part="actions" ?hidden=${!this.hasActionsSlot}>
           <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>

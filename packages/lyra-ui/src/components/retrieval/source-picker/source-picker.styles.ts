@@ -1,4 +1,7 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import {
+  disclosureChevron,
+  iconHitTarget,
+} from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -75,20 +78,11 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  [part="disclosure"] svg {
-    transition: transform var(--lr-transition-fast);
-  }
-  [aria-expanded="true"] > [part="disclosure"] svg {
-    transform: rotate(90deg);
-  }
-  :host(:dir(rtl)) [aria-expanded="false"] > [part="disclosure"] svg {
-    transform: scaleX(-1);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    [part="disclosure"] svg {
-      transition: none;
-    }
-  }
+  ${disclosureChevron({
+    glyph: "[part='disclosure'] svg",
+    expanded: "[aria-expanded='true'] > [part='disclosure'] svg",
+    collapsedRtl: ":host(:dir(rtl)) [aria-expanded='false'] > [part='disclosure'] svg",
+  })}
   [part="disclosure"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }

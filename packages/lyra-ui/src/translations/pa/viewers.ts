@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ਸੱਜੇ ਘੁੰਮਾਓ',
   modelViewerRotateUp: 'ਉੱਪਰ ਘੁੰਮਾਓ',
   modelViewerRotateDown: 'ਹੇਠਾਂ ਘੁੰਮਾਓ',
+  modelViewerViewport: 'ਇੰਟਰਐਕਟਿਵ ਮਾਡਲ',
 };
 
 registerLyraLocale('pa', strings);

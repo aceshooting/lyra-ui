@@ -403,9 +403,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
   }
 
-  // Runs after render (not willUpdate) so [part="panel"]/[part="deny-button"]
-  // have already landed in the DOM before the focus calls below can rely on
-  // them -- mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncBodyRegion();
@@ -417,17 +414,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
     if (changed.has('editing')) {
       if (this.editing) {
-        // Entering edit mode is a deliberate request to start typing --
-        // steering focus into the textarea beats leaving it on the Edit
-        // button the click already left it on.
         this.shadowRoot?.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.focus();
       } else if (this.open && !shadowFocusTarget(this)) {
-        // Reached when editing was turned off some way other than clicking
-        // Cancel (e.g. `readonly` turning on while the textarea held
-        // focus, in willUpdate above) -- the textarea that held focus was
-        // just unmounted without anything else claiming it, which would
-        // otherwise drop focus to <body> and silently stop the Tab trap
-        // from engaging. Refocus a stable target inside the panel instead.
+        // Removing the focused editor can leave focus outside the trap.
         this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]')?.focus();
       }
     }
@@ -441,24 +430,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) {
-      // Treat an existing invalid draft as resting content after reconnect, including when its
-      // state write was queued during the detached interval.
+      // An invalid draft carried across reconnect is resting content.
       this.suppressNextErrorAnnouncement = true;
       this.requestUpdate();
     }
-    if (this.hasUpdated && this.open) {
-      this.modalSurface.prepare();
-      this.requestUpdate();
-      this.activateOverlay();
-      // The shadow panel survives a same-document reparent, so restore focus before the pending
-      // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
-      this.overlay?.focusInitial();
-      this.scheduleAfterUpdate(() => {
-        if (!this.open) return;
-        this.modalSurface.show();
-        this.overlay?.focusInitial();
-      }, 'modal-reconnect');
-    }
+    this.modalSurface.reconnect({
+      isOpen: () => this.open,
+      overlay: () => this.overlay,
+      activate: () => this.activateOverlay(),
+    });
   }
 
   override disconnectedCallback(): void {
@@ -477,7 +457,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /** Keeps the capped, scrolling body keyboard-scrollable (and named) only while it overflows. */
   private syncBodyRegion(): void {
-    const body = this.open ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
+    const body = this.open && this.isConnected
+      ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
     const name = body ? resolveAccessibleName(
       this,
       this.accessibleLabel,

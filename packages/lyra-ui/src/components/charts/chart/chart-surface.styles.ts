@@ -26,10 +26,12 @@ export const chartDataTableStyles = css`
     font-size: var(--lr-font-size-xs);
     ${iconHitTarget}
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--_lr-chart-toggle-border-color, var(--lr-chart-data-table-toggle-border-color, var(--lr-color-border)));
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    background: var(--_lr-chart-toggle-bg, var(--lr-chart-data-table-toggle-bg, var(--lr-color-surface)));
+    color: var(--_lr-chart-toggle-color, var(--lr-chart-data-table-toggle-color, var(--lr-color-text)));
+    inline-size: var(--_lr-chart-toggle-inline-size, var(--lr-chart-data-table-toggle-inline-size, auto));
+    justify-self: var(--_lr-chart-toggle-justify, var(--lr-chart-data-table-toggle-justify, auto));
     max-inline-size: 100%;
     white-space: normal;
     overflow-wrap: break-word;

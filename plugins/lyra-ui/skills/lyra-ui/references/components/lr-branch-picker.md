@@ -16,6 +16,8 @@
 
 ## `lr-branch-picker`
 
+Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
+
 The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it
 never mutates its own `index` — the same contract `<lr-pagination>` already establishes for
 `page`. The host listens for `lr-branch-change`, swaps the displayed branch content, and applies

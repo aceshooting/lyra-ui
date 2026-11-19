@@ -4,7 +4,7 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { fileIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
-import { formatFileSize, FILE_SIZE_UNIT_KEYS, localizedNumberLabel } from '../attachment-chip/file-size.js';
+import { formatLocalizedFileSize } from '../../../internal/bytes.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import {
@@ -18,7 +18,7 @@ import { styles } from './file-icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fileTypeArchive, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_fileTypeCode, LYRA_DEFAULT_fileTypeFile, LYRA_DEFAULT_fileTypeImage, LYRA_DEFAULT_fileTypePdf, LYRA_DEFAULT_fileTypePresentation, LYRA_DEFAULT_fileTypeSpreadsheet, LYRA_DEFAULT_fileTypeText, LYRA_DEFAULT_fileTypeVideo, LYRA_DEFAULT_fileTypeWithSize, LYRA_DEFAULT_fileTypeWord } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -135,10 +135,7 @@ export class LyraFileIcon extends LyraElement {
     fileTypeWithSize: LYRA_DEFAULT_fileTypeWithSize,
     fileTypeWord: LYRA_DEFAULT_fileTypeWord,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -210,17 +207,10 @@ export class LyraFileIcon extends LyraElement {
     const metadata = this.resolveMetadata();
     const metadataLabel = metadata.label;
     const renderedLabel = this.label ?? metadataLabel;
-    // A NaN/negative `bytes` (e.g. an invalid `bytes` attribute) would otherwise make `bytes > 0`
-    // false anyway (so no crash), but normalizing here keeps it explicit and consistent with
-    // this library's other numeric guards, rather than relying on that comparison quirk.
     const bytes = finiteRange(this.bytes, 0, 0);
     const sizeText =
       bytes > 0
-        ? formatFileSize(
-            bytes,
-            (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-            localizedNumberLabel(this.effectiveLocale),
-          )
+        ? formatLocalizedFileSize(bytes, this.effectiveLocale, (key) => this.localize(key))
         : '';
     // An explicit empty `label` is preserved for the VISIBLE text above (`renderedLabel`), but
     // never leaves a non-decorative `role="img"` unnamed: the accessible-name chain below falls

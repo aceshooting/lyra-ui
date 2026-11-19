@@ -1726,20 +1726,6 @@
   {
     "type": "dependency",
     "from": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
-    "to": "src/components/media/attachment-chip/file-size.ts",
-    "unresolvedTo": "../../media/attachment-chip/file-size.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
     "to": "src/components/viewers/document-viewer/anchors.ts",
     "unresolvedTo": "../document-viewer/anchors.js",
     "dependencyTypes": [
@@ -1899,21 +1885,6 @@
   {
     "type": "dependency",
     "from": "src/components/viewers/document-compare/document-compare.class.ts",
-    "to": "src/components/conversation/code-block/code-loader.ts",
-    "unresolvedTo": "../../conversation/code-block/code-loader.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/document-compare/document-compare.class.ts",
     "to": "src/components/viewers/document-viewer/anchors.ts",
     "unresolvedTo": "../document-viewer/anchors.js",
     "dependencyTypes": [
@@ -2059,20 +2030,6 @@
     "from": "src/components/viewers/email-viewer/email-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/email-viewer/email-viewer.class.ts",
-    "to": "src/components/media/attachment-chip/file-size.ts",
-    "unresolvedTo": "../../media/attachment-chip/file-size.js",
     "dependencyTypes": [
       "local",
       "import"

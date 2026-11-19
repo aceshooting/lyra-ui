@@ -7,7 +7,7 @@ export const styles = css`
   [part='base'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-s);
+    gap: var(--lr-handoff-divider-gap, var(--lr-space-s));
     inline-size: 100%;
   }
   [part='line'] {
@@ -23,11 +23,11 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: var(--lr-size-24rem);
     box-sizing: border-box;
-    padding: var(--lr-space-2xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface-raised);
-    color: var(--lr-color-text-quiet);
+    padding: var(--lr-space-2xs) var(--lr-handoff-divider-padding-inline, var(--lr-space-s));
+    border: var(--lr-border-width-thin) solid var(--lr-handoff-divider-border-color, var(--lr-color-border-subtle));
+    border-radius: var(--lr-handoff-divider-radius, var(--lr-radius-pill));
+    background: var(--lr-handoff-divider-bg, var(--lr-color-surface-raised));
+    color: var(--lr-handoff-divider-color, var(--lr-color-text-quiet));
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;
   }

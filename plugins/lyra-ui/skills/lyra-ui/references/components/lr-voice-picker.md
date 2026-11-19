@@ -137,7 +137,10 @@ mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`
 `input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
 before the input renders.
 
-**Events:** `lr-input` — typed value edit notification with `detail: { value }`.
+**Events:** `lr-input` (`detail: { value: string; inCatalog: boolean; query?: string }`) — reports
+the committed value. Free-text edits include the exact draft in `query`, including an empty string.
+Commit events omit `query`. Enter commits the active enabled suggestion or the trimmed draft.
+Escape or leaving the control dismisses the draft.
 `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits

@@ -1,5 +1,5 @@
 import { matrixRectangle } from './heatmap-matrix-source.js';
-import { HeatmapMatrixSourceController, type MatrixExactRecord } from './heatmap-matrix-source-controller.js';
+import type { HeatmapMatrixSourceController, MatrixExactRecord } from './heatmap-matrix-source-controller.js';
 import type { LyraHeatmapMatrixSource, LyraHeatmapMatrixViewport, LyraHeatmapMatrixReducer, LyraHeatmapTile, LyraHeatmapMatrixRangeSelectDetail } from './heatmap-matrix-source.js';
 export type { LyraHeatmapMatrixSource, LyraHeatmapMatrixViewport, LyraHeatmapMatrixReducer, LyraHeatmapTile, LyraHeatmapMatrixRangeSelectDetail } from './heatmap-matrix-source.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
@@ -716,10 +716,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   get matrixSource(): LyraHeatmapMatrixSource | null { return this.sourceInput; }
   set matrixSource(value: LyraHeatmapMatrixSource | null) {
     const old = this.sourceInput; this.sourceInput = value;
+    this.sourceBindingGeneration++;
     if (value === null) this.matrixController?.detach(); else this.matrixController?.invalidate();
     this.sourceNeedsConfigure = true;
     this.requestUpdate('matrixSource', old, { hasChanged: () => true });
   }
+  private sourceBindingGeneration = 0;
   private sourceInput: LyraHeatmapMatrixSource | null = null;
   /** Half-open source rectangle. Null displays the complete matrix. */
   @property({ attribute: false, noAccessor: true })
@@ -755,16 +757,36 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   @state() private sourceResult = 0;
   private matrixController?: HeatmapMatrixSourceController;
 
+  private sourceModuleFailed = false;
+
+  protected override async scheduleUpdate(): Promise<unknown> {
+    if (this.matrixSource && !this.matrixController) {
+      try {
+        const module = await import('./heatmap-matrix-source-controller.js');
+        if (this.matrixSource && this.isConnected) {
+          this.matrixController = new module.HeatmapMatrixSourceController(this, () => { this.sourceResult++; }, () => this.effectiveLocale);
+        }
+      } catch {
+        this.sourceModuleFailed = true;
+      }
+    }
+    return super.scheduleUpdate();
+  }
+
   private get sourceController(): HeatmapMatrixSourceController {
-    return this.matrixController ??= new HeatmapMatrixSourceController(this, () => { this.sourceResult++; }, () => this.effectiveLocale);
+    return this.matrixController!;
   }
 
   /** Focus an exact source coordinate without selecting it. Pans an explicit viewport when needed. */
   async revealSourceCell(row: number, col: number): Promise<boolean> {
     const source = this.matrixSource, intent = ++this.sourceRevealIntent;
     if (!source || !this.isConnected) return false;
-    const owner = this.ownerDocument;
-    const currentIntent = () => intent === this.sourceRevealIntent && this.matrixSource === source && this.isConnected && this.ownerDocument === owner;
+    const owner = this.ownerDocument, generation = this.sourceBindingGeneration;
+    const currentIntent = () => intent === this.sourceRevealIntent && generation === this.sourceBindingGeneration && this.matrixSource === source && this.isConnected && this.ownerDocument === owner;
+    if (!this.matrixController) {
+      await this.updateComplete;
+      if (!currentIntent() || !this.matrixController) return false;
+    }
     this.sourceController.retainWindowFor(row, col);
     if (!currentIntent()) return false;
     await this.updateComplete;
@@ -808,7 +830,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return this.isConnected && this.matrixSource === source && this.sourceController.requests.epoch === epoch;
   }
   private configureSource(): void {
-    if (!this.matrixSource) return;
+    if (!this.matrixSource || !this.matrixController) return;
     const width = Math.floor(Math.min(MAX_CANVAS_DIMENSION, Math.max(0, this.getBoundingClientRect().width)));
     if (width <= 0) return;
     if (!this.sourceNeedsConfigure && width === this.sourceWidth) return;
@@ -948,6 +970,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return [header, ...rows].join('\r\n');
   }
   private paintSource(): void {
+    if (!this.matrixController) return;
     this.configureSource();
     const controller = this.sourceController, viewport = controller.viewport;
     const canvas = this.shadowRoot?.querySelector<HTMLCanvasElement>('canvas');
@@ -994,6 +1017,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.canvasHasContent = true;
   }
   private renderSource(): TemplateResult {
+    if (!this.matrixController) return this.sourceModuleFailed
+      ? html`<p part="source-error">${this.localize('heatmapSourceError')}</p>`
+      : html`<div part="source-status">${this.localize('loading')}</div>`;
     const controller = this.sourceController, viewport = controller.viewport;
     const number = (value: number) => getNumberFormat(this.effectiveLocale).format(value);
     const summary = viewport ? this.localize('heatmapSourceSummary', undefined, { rows: number(controller.rows), cols: number(controller.cols), rowStart: number(viewport.rowStart + 1), rowEnd: number(viewport.rowEnd), columnStart: number(viewport.columnStart + 1), columnEnd: number(viewport.columnEnd), tiles: number(controller.tiles.length) }) : this.localize('noData');
@@ -1294,7 +1320,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    */
   exportData(format: LyraHeatmapExportFormat): string {
     if (format === 'csv') return this.exportCsv();
-    if (this.matrixSource && (this.sourceController.loading || this.sourceController.error || this.sourceNeedsConfigure)) return '';
+    if (this.matrixSource && (!this.matrixController || this.sourceController.loading || this.sourceController.error || this.sourceNeedsConfigure)) return '';
     if (format !== 'png' || !this.canvasHasContent || this.drawDirty || !this.canvas) return '';
     if (this.canvas.width <= 0 || this.canvas.height <= 0) return '';
     try {
@@ -1321,7 +1347,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** `exportData('csv')`'s worker: one header row plus one data row per real (non-no-data) cell,
    *  reading `data` directly rather than any bounded render cache. */
   private exportCsv(): string {
-    if (this.matrixSource) return this.sourceCsv();
+    if (this.matrixSource) return this.matrixController ? this.sourceCsv() : '';
     const data = this.data;
     if (data.kind === 'calendar') {
       const header = 'date,value';
@@ -1981,7 +2007,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (this.calendarSpacingTrackingArmed && name !== undefined && CALENDAR_SPACING_PROPERTIES.has(name)) {
       (this.explicitCalendarSpacingProperties ??= new Set()).add(name);
     }
-    if (this.matrixController && name === undefined) { this.matrixController.invalidate(); this.sourceNeedsConfigure = true; }
+    if (name === undefined) {
+      this.sourceBindingGeneration = (this.sourceBindingGeneration ?? 0) + 1;
+      this.matrixController?.invalidate();
+      this.sourceNeedsConfigure = true;
+    }
     super.requestUpdate(name, oldValue, options);
   }
 
@@ -2130,6 +2160,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.matrixSource && !this.matrixController) this.requestUpdate('matrixSource');
     this.sourceNeedsConfigure = true;
     this.refreshAccessibleTargetSize();
     const owner = this.ownerDocument.defaultView;
@@ -2179,6 +2210,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.sourceBindingGeneration++;
     this.dismissTooltip();
     super.disconnectedCallback();
     this.cancelSelectionGesture();
@@ -2208,6 +2240,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.sourceBindingGeneration++;
     super.adoptedCallback();
     this.matrixController?.requests.adopted(); this.sourceNeedsConfigure = true;
     this.announcements.adopted();
@@ -2222,6 +2255,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.selectionContext = this.captureSelectionContext();
     if (changed.has('matrixSource') && !this.matrixSource) changed.set('data', undefined);
     if (this.matrixSource) {
+      if (!this.matrixController) return;
       if (changed.has('locale') || changed.has('strings')) { this.sourceRevealIntent++; this.sourceNavigationIntent++; this.sourceController.cancelExact(); }
       if (changed.has('data') || changed.has('maxCells')) this.sourceNeedsConfigure = true;
       if (!['mean', 'min', 'max'].includes(this.matrixReducer)) { this.sourceController.fail(); return; }
@@ -2719,6 +2753,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const localeChanged = this.lastUpdatedLocale !== locale;
     this.lastUpdatedLocale = locale;
     if (this.matrixSource) {
+      if (!this.matrixController) return;
       if (this.sourceController.error) {
         if (this.sourceHasSucceeded && !this.sourceFailureAnnounced) this.announcements.announcePolite(this.localize('heatmapSourceError'));
         this.sourceFailureAnnounced = true;
@@ -4655,11 +4690,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // still-focused position) even if some future caller forgets to reset the cursor first.
     if (!this.isCellInteractive(pos) || current && !current()) return;
     if (this.multiple && select) {
-      const epoch = this.sourceController.requests.epoch;
+      const generation = this.sourceBindingGeneration;
       this.selectionAnchor = pos;
       this.selectionRangeBase = undefined;
       this.toggleSelectionPositions([pos], source);
-      if (!this.sourceCurrent(null, epoch)) return;
+      if (!this.isConnected || this.matrixSource || this.sourceBindingGeneration !== generation) return;
     }
     let detail: LyraHeatmapCellClickDetail;
     if ('week' in pos) {

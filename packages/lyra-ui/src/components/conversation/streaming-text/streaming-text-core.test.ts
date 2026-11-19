@@ -445,3 +445,14 @@ describe('stable languages identity', () => {
     expect(markdown.languages === first).to.equal(true);
   });
 });
+
+it('forwards the composed Markdown render failure once with its original detail', async () => {
+  const host = await fixture(html`<lr-streaming-text-core content-mode="markdown" content="# Title"></lr-streaming-text-core>`);
+  const markdown = host.shadowRoot!.querySelector('lr-markdown-core')!;
+  const detail = { error: new Error('Markdown unavailable') };
+  const received: unknown[] = [];
+  host.addEventListener('lr-render-error', event => { received.push((event as CustomEvent).detail); });
+  markdown.dispatchEvent(new CustomEvent('lr-render-error', { bubbles: true, composed: true, detail }));
+  expect(received.length).to.equal(1);
+  expect(received[0] === detail).to.equal(true);
+});

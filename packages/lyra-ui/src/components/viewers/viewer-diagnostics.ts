@@ -4,6 +4,8 @@ export type LyraViewerDiagnosticSeverity = 'warning' | 'error';
 /** Stable diagnostic codes currently emitted by viewer integrations. */
 export type LyraViewerDiagnosticCode =
   | 'delimited-parse-diagnostic'
+  | 'geojson-map-unavailable'
+  | 'notebook-sanitizer-unavailable'
   | 'docx-conversion-message'
   | 'pptx-slide-render-error'
   | 'pptx-node-render-error'
@@ -11,14 +13,15 @@ export type LyraViewerDiagnosticCode =
 
 /**
  * Structured detail for `lr-viewer-diagnostic`. Diagnostics are not user-facing strings.
- * Recoverable diagnostics set `fatal: false` and do not also emit `lr-render-error`; a fatal
+ * Recoverable diagnostics set `fatal: false`. GeoJSON and notebook viewers also preserve their existing
+ * `lr-render-error` notification for unavailable optional peers. A fatal
  * post-load peer diagnostic sets `fatal: true` and accompanies the terminal error state.
  */
 export interface LyraViewerDiagnostic {
   readonly code: LyraViewerDiagnosticCode;
   readonly severity: LyraViewerDiagnosticSeverity;
   readonly fatal: boolean;
-  readonly source: 'mammoth' | 'papaparse' | 'pptx-renderer';
+  readonly source: 'dompurify' | 'maplibre-gl' | 'mammoth' | 'papaparse' | 'pptx-renderer';
   readonly cause: unknown;
   readonly page?: number;
   readonly nodeId?: string;

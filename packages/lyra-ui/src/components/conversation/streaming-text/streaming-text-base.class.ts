@@ -1,11 +1,12 @@
+import { html as staticHtml, type StaticValue } from 'lit/static-html.js';
 import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, noChange, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import type { ShikiLanguageInput, ShikiLanguageLoader, ShikiLanguageSource } from '../code-block/shiki-types.js';
+import type { ShikiLanguageInput, ShikiLanguageLoader, ShikiLanguageSource } from '../code-block/code-block.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import { streamingTailText } from '../markdown/markdown-streaming-tail.js';
 import { styles } from './streaming-text.styles.js';
@@ -18,6 +19,7 @@ export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
 
 export interface LyraStreamingTextEventMap {
   'lr-content-settled': CustomEvent<null>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-activate': CustomEvent<{ href: string }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
@@ -229,12 +231,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Only the plain-text path emits its own settle signal. In markdown mode the composed
-    // Markdown element this template renders emits its own `lr-content-settled` at its own settle
-    // point, and -- being composed -- that event already bubbles out through this element's
-    // shadow boundary unmodified (see stopOwnedEvent(), which deliberately does NOT intercept
-    // this one the way it intercepts the composed element's other events). Emitting here too would
-    // double-fire every listener for the same coalesced content.
+    // Markdown announces its own settled content.
     if (changed.has('displayedContent') && !this.effectiveMarkdown) {
       this.emit('lr-content-settled', null);
     }
@@ -268,6 +265,37 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   /** Renders the Markdown-mode composed element for `displayedContent` -- `<lr-markdown>` for
    *  `LyraStreamingText`, `<lr-markdown-core>` for `LyraStreamingTextCore`. The only difference
    *  between the two leaf classes. */
+  protected renderMarkdownElement(
+    element: StaticValue,
+    languages: Readonly<Record<string, ShikiLanguageSource>> | undefined,
+    loaders: Readonly<Record<string, ShikiLanguageLoader>> | undefined | typeof noChange,
+  ): TemplateResult {
+    return staticHtml`<${element}
+      exportparts="content, heading, paragraph, list, code-block, code-block-header, code-block-language, code-block-copy, inline-code, link, table, blockquote, img, math, task-list, task-item, task-item-checked, task-checkbox, table-wrapper, code-block-frame, code-block-copy-success, code-block-copy-error, streaming-tail"
+      .content=${this.displayedContent}
+      .streaming=${this.streaming}
+      .streamingRender=${this.streamingRender}
+      .codeBlockHeader=${this.codeBlockHeader}
+      .languages=${languages}
+      .languageLoaders=${loaders}
+      .tabSize=${this.tabSize}
+      .htmlMode=${this.htmlMode}
+      .withoutGfm=${this.withoutGfm}
+      .withoutImages=${this.withoutImages}
+      .linkTarget=${this.linkTarget}
+      .linkSchemes=${this.linkSchemes}
+      .internalLinkPrefix=${this.internalLinkPrefix}
+      .headingOffset=${this.headingOffset}
+      .withoutSyntaxHighlighting=${this.withoutSyntaxHighlighting}
+      .headingAnchors=${this.headingAnchors}
+      .math=${this.math}
+      .maxHeight=${this.maxHeight}
+      @lr-highlight-activate=${this.stopOwnedEvent}
+      @lr-text-select=${this.stopOwnedEvent}
+      @lr-anchor-result=${this.stopOwnedEvent}
+    ></${element}>`;
+  }
+
   protected abstract renderMarkdown(): TemplateResult;
 
   override render(): TemplateResult {

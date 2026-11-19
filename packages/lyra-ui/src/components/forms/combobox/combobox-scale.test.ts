@@ -32,11 +32,15 @@ it('reuses folded local labels across query changes', async () => {
 });
 it('batches selected writes and does not clone closed adornments', async () => {
   const { el, options } = await mount();
-  const seam = el as unknown as { setValue: (...args: unknown[]) => void; adornmentsFor: (...args: unknown[]) => unknown };
-  const setValue = seam.setValue; const adornments = seam.adornmentsFor;
+  const seam = el as unknown as {
+    setValue: (...args: unknown[]) => void;
+    adornments: { get: (option: HTMLElement) => unknown };
+  };
+  const setValue = seam.setValue;
+  const getAdornments = seam.adornments.get;
   let reconciliations = 0; let clones = 0;
   seam.setValue = function(...args) { reconciliations++; setValue.apply(this, args); };
-  seam.adornmentsFor = function(...args) { clones++; return adornments.apply(this, args); };
+  seam.adornments.get = function(option) { clones++; return getAdornments.call(this, option); };
   try {
     for (const option of options.slice(0, 100)) option.selected = true;
     expect(options.slice(0, 100).every(option => option.selected)).equal(true);
@@ -44,7 +48,7 @@ it('batches selected writes and does not clone closed adornments', async () => {
     await settle(el);
     expect((el.value as string[]).length).equal(100); expect(reconciliations).equal(1); expect(clones).equal(0);
     recordScaleMeasurement('lr-combobox', 'n=1100 batch100 closed selected writes', { reconciliations, clones });
-  } finally { seam.setValue = setValue; seam.adornmentsFor = adornments; }
+  } finally { seam.setValue = setValue; seam.adornments.get = getAdornments; }
 });
 it('does not rebind plain option labels or observe their ancestors on selected updates', async () => {
   const observe = MutationObserver.prototype.observe;

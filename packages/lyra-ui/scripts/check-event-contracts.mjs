@@ -28,6 +28,7 @@ const EVENT_NAME_RE = /^(?:lr-[a-z0-9]+(?:-[a-z0-9]+)*|beforeinput|input|change|
 const RUNTIME_EVENT_MIXINS = new Set([
   'CheckedFormAssociated',
   'DocumentAnchorTarget',
+  'DocumentAnchorTargetBase',
   'FormAssociated',
   'TextViewerTarget',
 ]);
@@ -1452,13 +1453,17 @@ function isThisEmitCall(candidate) {
   );
 }
 
-function runtimeEventAnalysisFromNode(node, suppliedBooleanMembers, contextualParameterInits = new Map()) {
+function runtimeEventAnalysisFromNode(node, suppliedBooleanMembers, contextualParameterInits = new Map(), callbackEventNames = new Map()) {
   const observations = new Map();
   let unresolvedNames = 0;
   for (const context of runtimeCancelabilityContexts(node)) {
     const booleanMembers = suppliedBooleanMembers ??
       literalBooleanMembersForClassBody(context.classBody);
     const seeds = privateHelperEventNameSeeds(context, booleanMembers);
+    for (const [callback, names] of callbackEventNames) {
+      const parameter = callableParameterTarget(callback.params?.[0]);
+      if (parameter?.type === 'Identifier') addSeededEventNames(seeds, callback, parameter.name, names);
+    }
     const helperEventParameters = new Map(
       [...context.methods.values()].map((callable) => [
         callable,
@@ -1568,6 +1573,7 @@ function parseModule(file) {
   }
 
   const imports = new Map();
+  const reexports = new Map();
   const interfaces = new Map();
   const classes = new Map();
   const mixinAliases = new Map();
@@ -1583,6 +1589,19 @@ function parseModule(file) {
         });
       }
       continue;
+    }
+
+    if (statement.type === 'ExportNamedDeclaration' && statement.source) {
+      const target = resolveImportFile(file, statement.source.value);
+      if (target) {
+        for (const specifier of statement.specifiers) {
+          if (specifier.type !== 'ExportSpecifier') continue;
+          reexports.set(propertyName(specifier.exported), {
+            imported: propertyName(specifier.local),
+            file: target,
+          });
+        }
+      }
     }
 
     const declaration = unwrapDeclaration(statement);
@@ -1604,12 +1623,13 @@ function parseModule(file) {
       }
     }
   }
-  return { file, source, program: parsed.program, imports, interfaces, classes, mixinAliases };
+  return { file, source, program: parsed.program, imports, reexports, interfaces, classes, mixinAliases };
 }
 
-function moduleGraph() {
+function moduleGraph(root = packageDir) {
   const cache = new Map();
   return {
+    root,
     runtimeMixins: new Map(),
     get(file) {
       const absolute = path.resolve(file);
@@ -1622,13 +1642,18 @@ function moduleGraph() {
 function resolveNamedDeclaration(graph, module, localName, collection) {
   const local = module[collection].get(localName);
   if (local) return { module, declaration: local, name: localName };
-  const imported = module.imports.get(localName);
-  if (!imported?.file || !imported.imported) return undefined;
-  const target = graph.get(imported.file);
-  const declaration = target[collection].get(imported.imported);
-  return declaration
-    ? { module: target, declaration, name: imported.imported }
-    : undefined;
+  let imported = module.imports.get(localName);
+  const seen = new Set();
+  while (imported?.file && imported.imported) {
+    const key = `${imported.file}#${imported.imported}`;
+    if (seen.has(key)) return undefined;
+    seen.add(key);
+    const target = graph.get(imported.file);
+    const declaration = target[collection].get(imported.imported);
+    if (declaration) return { module: target, declaration, name: imported.imported };
+    imported = target.reexports.get(imported.imported);
+  }
+  return undefined;
 }
 
 function directInterfaceEvents(interfaceDeclaration) {
@@ -1753,7 +1778,7 @@ function resolveBaseClass(graph, module, classDeclaration) {
   if (
     base?.type === 'CallExpression' &&
     base.callee.type === 'Identifier' &&
-    RUNTIME_EVENT_MIXINS.has(base.callee.name) &&
+    RUNTIME_EVENT_MIXINS.has(module.imports.get(base.callee.name)?.imported ?? base.callee.name) &&
     base.arguments.length === 1 &&
     base.arguments[0]?.type === 'Identifier'
   ) {
@@ -2073,9 +2098,15 @@ function runtimeMixinAnalysis(graph, fromModule, localName, seen = new Set()) {
 function runtimeMixinAnalysisForClass(graph, module, classDeclaration, localName) {
   const analysis = runtimeMixinAnalysis(graph, module, localName);
   const canonicalName = module.imports.get(localName)?.imported ?? localName;
-  if (canonicalName !== 'DocumentAnchorTarget') return analysis;
-  const classSource = module.source.slice(classDeclaration.start, classDeclaration.end);
-  if (/\bbindTextSelection\s*\(/u.test(classSource)) return analysis;
+  if (canonicalName !== 'DocumentAnchorTarget' && canonicalName !== 'DocumentAnchorTargetBase') return analysis;
+  let bindsSelection = false;
+  walkAst(classDeclaration.body, node => {
+    const callee = unwrapExpression(node.callee);
+    if (node.type === 'CallExpression' && callee?.type === 'MemberExpression' &&
+        ['ThisExpression', 'Super'].includes(unwrapExpression(callee.object)?.type) &&
+        propertyName(callee.property) === 'bindTextSelection') bindsSelection = true;
+  });
+  if (bindsSelection) return analysis;
   const events = new Map(analysis.events);
   events.delete('lr-text-select');
   return { events, unresolvedNames: analysis.unresolvedNames };
@@ -2153,6 +2184,49 @@ function contextualFormInvalidCallbackInits(graph, module, classDeclaration) {
   return callbacks;
 }
 
+/** Derive forwarded names from the imported reporter's actual calls. An escaping host or a
+ * dynamic event name makes the callback opaque, so the normal unresolved-name check still fires. */
+function copyReporterEventNames(module) {
+  const reporter = module.program.body.find(statement => statement.type === 'ExportNamedDeclaration' &&
+    statement.declaration?.type === 'FunctionDeclaration' && statement.declaration.id?.name === 'reportCopyOutcome')?.declaration;
+  const host = reporter?.params[0];
+  if (host?.type !== 'Identifier') return [];
+  const names = new Set();
+  const references = [];
+  const receivers = new Set();
+  walkAst(reporter.body, node => {
+    if (node.type === 'Identifier' && node.name === host.name) references.push(node);
+    if (node.type !== 'CallExpression') return;
+    const member = node.callee;
+    if (member?.type !== 'MemberExpression' || member.computed || member.object?.name !== host.name) return;
+    if (propertyName(member.property) === 'emit') {
+      const argument = node.arguments[0];
+      if (argument?.type !== 'Literal' || typeof argument.value !== 'string' || !EVENT_NAME_RE.test(argument.value)) return;
+      names.add(argument.value);
+    } else if (propertyName(member.property) !== 'announce') return;
+    receivers.add(member.object);
+  });
+  return references.every(reference => receivers.has(reference)) ? [...names] : [];
+}
+
+function contextualCopyReporterEvents(graph, module, declaration) {
+  const file = path.resolve(graph.root, 'src/internal/record-copy-feedback.ts');
+  const imports = new Set([...module.imports].filter(([, entry]) =>
+    entry.imported === 'reportCopyOutcome' && entry.file === file).map(([name]) => name));
+  const callbacks = new Map();
+  if (!imports.size) return callbacks;
+  const names = copyReporterEventNames(graph.get(file));
+  if (!names.length) return callbacks;
+  walkAst(declaration.body, node => {
+    if (node.type !== 'CallExpression' || node.callee.type !== 'Identifier' || !imports.has(node.callee.name)) return;
+    const options = unwrapExpression(node.arguments[0]);
+    if (options?.type !== 'ObjectExpression') return;
+    const emit = options.properties.find(property => property.type === 'Property' && objectPropertyName(property) === 'emit');
+    if (isCallableNode(emit?.value)) callbacks.set(emit.value, names);
+  });
+  return callbacks;
+}
+
 function effectiveClassRuntimeEventAnalysis(
   graph,
   module,
@@ -2169,6 +2243,7 @@ function effectiveClassRuntimeEventAnalysis(
     classDeclaration.body,
     booleanMembers,
     contextualFormInvalidCallbackInits(graph, module, classDeclaration),
+    contextualCopyReporterEvents(graph, module, classDeclaration),
   );
   const observations = new Map();
   mergeRuntimeCancelability(observations, own.events);
@@ -2201,7 +2276,7 @@ export function collectRepositoryEventContracts(root = packageDir, manifestOverr
   const manifest = manifestOverride ?? JSON.parse(
     readFileSync(path.join(root, 'custom-elements.json'), 'utf8'),
   );
-  const graph = moduleGraph();
+  const graph = moduleGraph(root);
   const components = [];
 
   for (const { modulePath, declaration } of eventContractManifestDeclarations(manifest)) {

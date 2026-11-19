@@ -177,8 +177,8 @@ read repeated submitted values.
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
 
-Source options with `inert`, including inherited inertness, are unavailable through the popup. Live
-inert changes refresh row availability. Text, insertion, replacement, removal, slot
+The popup marks options with `disabled`, `aria-disabled="true"`, `hidden`, or inherited or explicit
+`inert` as unavailable. Changing an option's availability updates its open row. Text, insertion, replacement, removal, slot
 reassignment/removal, and relevant attributes of `start`/`end`/`prefix`/`suffix` adornments refresh
 the corresponding cloned presentation; unchanged presentation retains its clone identity while
 filtering.
@@ -551,7 +551,9 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
-selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
+selection mutation first proposes `lr-change-request` with `detail: { value; previousValue; data }`.
+A listener can veto it with `preventDefault()` or assign the controlled value. An accepted
+mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
 clear — emits one native `input` Event, then `lr-input`, one native `change` Event, then
 `lr-change`. The native events have no detail. Both typed events carry
 `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
@@ -814,7 +816,9 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
   attribute or `defaultSelected`. Consumer writes update the option immediately and reconcile
-  parent selection/form state once in the next microtask, without parent input/change events
+  parent selection/form state once in the next microtask, without parent input/change events.
+  Writing `selected = true` after changing a selected option's value replaces that occurrence's
+  submitted value in place, including when another option shares its old value
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)
@@ -1042,10 +1046,9 @@ consumer that read it as a plain string needs a narrowing step —
 
 **Single-option auto-commit.** Opt-in via `autoCommitSingleOption` (default `false` — a select always
 renders the normal combobox/listbox/chevron trigger unless enabled, matching pre-1.3.0 behavior).
-When set and exactly one option is available (neither disabled nor inert, including through an
-inert ancestor), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the
-trigger
-commits that sole option directly, and the trigger renders as a plain `role="button"` with no
+When exactly one option is available, the trigger commits it directly on click, Enter, Space,
+ArrowDown or ArrowUp. Disabled, hidden, inert and `aria-disabled="true"` options are excluded.
+The trigger renders as a plain `role="button"` with no
 chevron/`aria-haspopup`/`aria-expanded`/`aria-controls`/`aria-activedescendant` rather than a
 combobox with a permanently inert popup state — opening a one-row list to pick the only available
 choice is pure friction with no real decision behind it. It never changes `value`/validity defaults
@@ -1469,9 +1472,9 @@ purposes.
 - While open, live option reorders preserve the active row by option identity. Removing or
   disabling/inerting that option rehomes activity to the nearest available survivor (preferring the
   following row on a tie); removing every available option clears `aria-activedescendant`.
-- One availability rule governs keyboard navigation, type-ahead, single-option auto-commit,
-  pointer selection, and each proxy row's `aria-disabled`: an option is unavailable when it is
-  disabled, inert itself, or inside an inert ancestor. Pointer activation of such a row is a no-op.
+- Keyboard navigation, type-ahead, single-option auto-commit and pointer selection skip disabled,
+  hidden and `aria-disabled="true"` options, as well as options with explicit or inherited
+  inertness. The corresponding popup rows expose `aria-disabled="true"`.
 - The floating listbox participates in Lyra's shared nonmodal overlay stack. Its computed
   `--lr-overlay-stack-index`, Escape owner, capture-phase outside-pointer dismissal, and focus
   handoff follow the newest open overlay rather than DOM order. A single dismissal therefore closes
@@ -3587,7 +3590,7 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
+**Events:** User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
 `badInput`, including after blur. Erasing its last visible segment commits the empty value and
 fires `change` once. Entering a complete time also fires `change`.
 The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
@@ -8008,7 +8011,12 @@ in both modes, following the country picker's event contract.
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
-`blur` relay once; the cancelable `lr-invalid` alias follows native validation.
+`blur` relay once. The cancelable `lr-invalid` alias follows native validation.
+`lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
+be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
+`lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
+that the clear action emptied the selection. `lr-load-error` reports a failure to load the optional
+searchable picker. The compact control remains available.
 
 **Slots:** `label`, `hint`, `error` — custom field copy. There is no option/default content slot;
 bind `currencies` to supply rows.
@@ -8188,6 +8196,11 @@ After directly editing its DOM value, dispatch a native `input` event to refilte
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+`lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
+be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
+`lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
+that the clear action emptied the selection. `lr-load-error` reports a failure to load the optional
+searchable picker. The compact control remains available.
 
 An accepted user choice or clear synchronously updates the form value, then emits one
 `input`, `lr-input`, `change`, `lr-change` sequence. Prefixed details have readonly `value: string`
@@ -8427,7 +8440,6 @@ and `click()` focus the drawing surface (both do nothing while disabled), and `b
 **Events:**
 
 - `lr-clear` follows the change pair when the user empties the pad with its Clear button.
-
 - `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
   pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting
   the keyboard pen also commits the stroke.

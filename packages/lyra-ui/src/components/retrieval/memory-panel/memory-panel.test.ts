@@ -355,7 +355,7 @@ describe('lr-memory-panel', () => {
     expect(event.detail.memoryId).to.equal('l1');
     expect(event.detail.scope).to.equal('long-term');
     expect(event.detail.expanded).to.equal(true);
-    expect(toggles).to.deep.equal([{ kind: 'memory', itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true }]);
+    expect(toggles).to.deep.equal([{ itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true }]);
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     const body = withProvenance.querySelector(
@@ -384,7 +384,6 @@ describe('lr-memory-panel', () => {
     toggle.click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
-      kind: 'memory',
       itemId: 'l1',
       memoryId: 'l1',
       scope: 'long-term',
@@ -712,7 +711,7 @@ describe('lr-memory-panel', () => {
     ).click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
-      kind: 'section', section: 'entities', expanded: false, memoryId: 'l1', scope: 'long-term',
+      section: 'entities', expanded: false, memoryId: 'l1', scope: 'long-term',
     });
   });
 
@@ -1913,7 +1912,7 @@ describe('lr-memory-panel disclosure events', () => {
     }
     toggle.click();
     await el.updateComplete;
-    const detail = { kind: 'memory', itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true };
+    const detail = { itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true };
     expect(seen).to.deep.equal([{ type: 'lr-toggle', detail, cancelable: false }]);
   });
 });
@@ -1947,18 +1946,53 @@ it('lr-memory-panel drops its card chrome under frame="plain" and tightens paddi
   expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
 });
 
-it('names memory promotion from its complete visible localized label and the item text', async () => {
+it('names repeated memory promotion actions and retains the localized description', async () => {
   const el = await populated();
-  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="add-button"]')!;
-  await expectValidAriaRules(button, ['label-content-name-mismatch']);
-  expect(accessibleName(button)).to.equal('Add to long-term memory: User is debugging a TypeScript build error.');
-  el.strings = { memoryPanelAdd: 'Ajouter à la mémoire', memoryPanelAddAccessibleName: '{action} « {label} »' };
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="add-button"]')];
+  const first = buttons[0]!;
+  await expectValidAriaRules(first, ['label-content-name-mismatch']);
+  expect(buttons.map((button) => accessibleName(button))).to.deep.equal([
+    'Add to long-term memory User is debugging a TypeScript build error.',
+    'Add to long-term memory User prefers concise answers.',
+  ]);
+  expect(first.getAttribute('aria-description')).to.equal(
+    'Add "User is debugging a TypeScript build error." to long-term memory',
+  );
+  el.strings = {
+    memoryPanelAdd: 'Ajouter à la mémoire',
+    memoryPanelAddWithContext: 'Archiver « {label} »',
+  };
   await el.updateComplete;
-  await expectValidAriaRules(button, ['label-content-name-mismatch']);
-  expect(accessibleName(button)).to.equal('Ajouter à la mémoire « User is debugging a TypeScript build error. »');
-  el.strings = { memoryPanelAdd: 'Ajouter à la mémoire', memoryPanelAddAccessibleName: '« {label} »' };
+  await expectValidAriaRules(first, ['label-content-name-mismatch']);
+  expect(accessibleName(first)).to.equal('Ajouter à la mémoire User is debugging a TypeScript build error.');
+  expect(first.getAttribute('aria-description')).to.equal('Archiver « User is debugging a TypeScript build error. »');
+
+  el.shortTerm = [shortTermItems[0]!];
   await el.updateComplete;
-  expect(accessibleName(button)).to.equal('Ajouter à la mémoire « User is debugging a TypeScript build error. »');
+  const sole = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="add-button"]')!;
+  expect(accessibleName(sole)).to.equal('Ajouter à la mémoire');
+  expect(sole.getAttribute('aria-description')).to.equal('Archiver « User is debugging a TypeScript build error. »');
+});
+
+it('distinguishes promotion actions when row text is repeated or blank', async () => {
+  const el = await fixture<LyraMemoryPanel>(html`
+    <lr-memory-panel
+      .shortTerm=${[
+        { id: 'a', text: 'Same text' },
+        { id: 'b', text: '  Same   text ' },
+        { id: 'c', text: '\u00ad' },
+        { id: 'd', text: ' \u00ad ' },
+      ]}
+      .strings=${{ memoryPanelAdd: 'Promouvoir', memoryPanelAddPosition: 'ligne {index}' }}
+    ></lr-memory-panel>
+  `);
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="add-button"]')];
+  expect(buttons.map((button) => accessibleName(button))).to.deep.equal([
+    'Promouvoir Same text ligne 1',
+    'Promouvoir Same text ligne 2',
+    'Promouvoir ligne 3',
+    'Promouvoir ligne 4',
+  ]);
 });
 
 it('leaves a populated panel to its host-authored name without a second shadow role or label', async () => {
@@ -2027,4 +2061,63 @@ describe('per-item control names', () => {
     const toggle = el.shadowRoot!.querySelector('[part="item"][data-id="l1"] [part="expand-toggle"]')!;
     expect(toggle.getAttribute('aria-label')).to.equal(`Show more: ${longTermItems[0]!.text}`);
   });
+});
+
+it('delegates memory and nested provenance disclosures with their owning scope', async () => {
+  const item = {
+    id: 'm1', text: 'Memory',
+    provenance: { chunks: [{ id: 'c1', text: 'Chunk', score: 0.8, sourceId: 's1' }] },
+  };
+  const el = await fixture<LyraMemoryPanel>(html`
+    <lr-memory-panel .shortTerm=${[item]} .longTerm=${[item]}></lr-memory-panel>
+  `);
+  const seen: unknown[] = [];
+  el.parentElement!.addEventListener('lr-retrieval-disclosure-change', (event) => {
+    expect(event.composedPath()[0] === el).to.be.true;
+    seen.push((event as CustomEvent).detail);
+  });
+  el.addEventListener('lr-retrieval-disclosure-change', (event) => {
+    if (event.composedPath()[0] !== el) return;
+    const { detail } = event;
+    const id: string = detail.kind === 'chunk' ? detail.chunkId : detail.memoryId;
+    expect(id).to.be.a('string');
+  });
+
+  const row = el.shadowRoot!.querySelector('[part="item"][data-scope="short-term"]')!;
+  row.querySelector<HTMLButtonElement>('[part="expand-toggle"]')!.click();
+  await el.updateComplete;
+  const panel = row.querySelector('lr-provenance-panel')!;
+  const inspector = panel.shadowRoot!.querySelector('lr-chunk-inspector')!;
+  inspector.size = 'm';
+  await inspector.updateComplete;
+  inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  panel.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!.click();
+
+  expect(seen).to.deep.equal([
+    { kind: 'memory', memoryId: 'm1', scope: 'short-term', expanded: true },
+    { kind: 'chunk', section: 'chunks', chunkId: 'c1', memoryId: 'm1', scope: 'short-term', expanded: true },
+    { kind: 'section', section: 'chunks', memoryId: 'm1', scope: 'short-term', expanded: false },
+  ]);
+
+  const child = document.createElement('span');
+  panel.append(child);
+  const unrelated = new CustomEvent('lr-retrieval-disclosure-change', {
+    bubbles: true, composed: true, detail: { kind: 'section', section: 'chunks', expanded: true },
+  });
+  const bubbled: boolean[] = [];
+  el.addEventListener('lr-retrieval-disclosure-change', (event) => {
+    bubbled.push(event === unrelated && event.composedPath()[0] === child);
+    event.stopPropagation();
+  });
+  child.dispatchEvent(unrelated);
+  expect(bubbled).to.deep.equal([true]);
+  const unrelatedLegacy = new CustomEvent('lr-toggle', {
+    bubbles: true, composed: true, detail: { section: 'chunks', expanded: true },
+  });
+  const legacy: boolean[] = [];
+  el.addEventListener('lr-toggle', (event) => {
+    legacy.push(event === unrelatedLegacy && event.composedPath()[0] === child);
+  });
+  child.dispatchEvent(unrelatedLegacy);
+  expect(legacy).to.deep.equal([true]);
 });

@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './memory-panel.js';
-import type { LyraMemoryItem } from './memory-panel.class.js';
+import type { LyraMemoryItem, LyraMemoryPanelEventMap } from './memory-panel.class.js';
 
 const meta: Meta = {
   title: 'MemoryPanel',
@@ -46,7 +46,12 @@ const longTerm: LyraMemoryItem[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lr-memory-panel .shortTerm=${shortTerm} .longTerm=${longTerm}></lr-memory-panel>`,
+  render: () => html`<lr-memory-panel
+    .shortTerm=${shortTerm}
+    .longTerm=${longTerm}
+    @lr-retrieval-disclosure-change=${({ detail }: LyraMemoryPanelEventMap['lr-retrieval-disclosure-change']) =>
+      console.log(detail.scope, detail.memoryId, detail.kind, detail.expanded)}
+  ></lr-memory-panel>`,
 };
 
 export const Empty: Story = {
@@ -55,6 +60,20 @@ export const Empty: Story = {
 
 export const ShortTermOnly: Story = {
   render: () => html`<lr-memory-panel .shortTerm=${shortTerm}></lr-memory-panel>`,
+};
+
+export const LocalizedPromotion: Story = {
+  render: () => html`<lr-memory-panel
+    .shortTerm=${[
+      { id: 's1', text: 'Préférences de rédaction' },
+      { id: 's2', text: 'Préférences de rédaction' },
+    ]}
+    .strings=${{
+      memoryPanelAdd: 'Ajouter à la mémoire',
+      memoryPanelAddWithContext: 'Archiver « {label} »',
+      memoryPanelAddPosition: 'ligne {index}',
+    }}
+  ></lr-memory-panel>`,
 };
 
 export const WithTypeLabels: Story = {

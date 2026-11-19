@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ወደ ቀኝ አዙር',
   modelViewerRotateUp: 'ወደ ላይ አዙር',
   modelViewerRotateDown: 'ወደ ታች አዙር',
+  modelViewerViewport: 'መስተጋብራዊ ሞዴል',
 };
 
 registerLyraLocale('am', strings);

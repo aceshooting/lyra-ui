@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -1560,4 +1561,65 @@ it('rejects a stale retry after its part is replaced before the button rerenders
   el.parts = [{ type: 'error', id: 'failure', message: 'Second failure', retryable: false }];
   button.click();
   expect(requests).to.equal(1);
+});
+
+it('shows and announces the number omitted by the render window', async () => {
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts></lr-message-parts>`);
+  el.parts = ['one', 'two', 'three'].map(id => ({ id, type: 'text', text: id }));
+  el.maxRenderedParts = 1;
+  await el.updateComplete;
+  const notice = () => el.shadowRoot!.querySelector<HTMLElement>('[part="window-notice"]');
+  expect(notice()?.dataset['omitted']).to.equal('2');
+  expect(notice()?.textContent).to.equal('Earlier parts hidden: 2.');
+  el.strings = { messagePartsWindowNotice: 'Hidden: {count}' };
+  el.maxRenderedParts = 2;
+  await el.updateComplete;
+  expect(notice()?.textContent).to.equal('Hidden: 1');
+  await waitUntil(() => sinkTexts('polite').includes('Hidden: 1'));
+  el.maxRenderedParts = 0;
+  await el.updateComplete;
+  expect(notice() === null).to.equal(true);
+});
+
+it('names the group with label and honors native name precedence and explicit opt-outs', async () => {
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts></lr-message-parts>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  el.label = 'Message details';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Message details');
+  el.setAttribute('aria-label', 'Response');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Response');
+  el.removeAttribute('aria-label');
+  el.label = '';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('');
+  el.label = '  ';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Message content');
+});
+
+it('preserves whole-word intrinsic width in a shrink-to-fit message', async () => {
+  const el = await fixture(html`<lr-message-parts content-mode="plain" .parts=${[{ id: 'text', type: 'text', text: 'Conversation' }]}></lr-message-parts>`);
+  const content = el.shadowRoot!.querySelector<HTMLElement>('[part~="part"]')!;
+  const probe = document.createElement('span');
+  probe.textContent = 'Conversation';
+  probe.style.cssText = 'display:block; inline-size:min-content; padding:0';
+  content.append(probe);
+  const intrinsicWidth = probe.getBoundingClientRect().width;
+  probe.style.whiteSpace = 'nowrap';
+  expect(intrinsicWidth).to.be.at.least(probe.getBoundingClientRect().width - 1);
+});
+
+it('applies the shared button radius and external resume part to the operable control', async () => {
+  const wrapper = await fixture(html`<div>
+    <style>.resume-theme::part(resume) { border-top-color: rgb(12, 34, 56); }</style>
+    <lr-message-parts class="resume-theme" style="--lr-button-radius: 13px" .parts=${[{ id: 't', type: 'text', text: 'Draft', state: 'interrupted', interruption: { resumable: true } }]}></lr-message-parts>
+  </div>`);
+  const host = wrapper.querySelector('lr-message-parts')!;
+  await host.updateComplete;
+  const resume = host.shadowRoot!.querySelector<HTMLElement>('[part="resume"]')!;
+  const control = resume.shadowRoot?.querySelector('button') ?? resume;
+  const style = getComputedStyle(control);
+  expect([style.borderTopLeftRadius, style.borderTopColor]).to.deep.equal(['13px', 'rgb(12, 34, 56)']);
 });

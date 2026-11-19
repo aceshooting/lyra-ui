@@ -39,7 +39,8 @@ its content.
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
-click or Enter/Space activation of the pill, exactly once per activation.
+click or Enter/Space activation of the pill, exactly once per activation. `lr-tool-activate`
+(`detail: { invocationId: string }`) identifies the activated invocation.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the internal native chip
 button, so programmatic focus/activation reaches the same semantic owner as pointer and keyboard
@@ -179,7 +180,8 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 **Events:** `lr-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lr-json-viewer>`, whether because no renderer matched, a candidate
 renderer's `matches()` predicate threw during dispatch, a renderer's `load()` rejected, or its
-`render()` threw.
+`render()` threw. `lr-status-change` (`detail: { status: ToolStatus }`) reports a committed
+status change with its normalized status.
 
 **Slots:** none.
 
@@ -418,7 +420,10 @@ reason string so every dismissal path funnels through the same event.
 `<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
 target-filtering guard. `lr-maximize-change-request` (cancelable, `detail:
 { readonly maximized: boolean }`, the would-be new `maximized` state) fired when the header's
-maximize/restore toggle is clicked, before `maximized` changes; `preventDefault()` vetoes the toggle.
+maximize/restore toggle is clicked, before `maximized` changes. `preventDefault()` vetoes the toggle.
+`lr-after-maximize-change` (`detail: { readonly maximized: boolean }`) reports the committed toggle
+after the update. `lr-request-close` is cancelable before user dismissal. Its `detail.source` is
+`'escape'`, `'backdrop'`, or `'close-button'`, and `preventDefault()` keeps the dialog open.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
@@ -604,8 +609,9 @@ over the request; recursive requests are ignored. `lr-close`
 click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
 inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
 event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
-target-filtering guard), and no-detail `focus`/`blur` events
-re-dispatched when the internal search input gains or loses focus.
+target-filtering guard). `lr-request-close` is cancelable before user dismissal.
+Its `detail.source` is `'escape'` or `'backdrop'`, and `preventDefault()` keeps the dialog open.
+The dialog re-dispatches no-detail `focus` and `blur` events when the search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request` proposals; listen for the single aggregate
@@ -1075,6 +1081,8 @@ dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` list
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
+`lr-request-close` is cancelable before user dismissal.
+Its `detail.source` is `'escape'` or `'backdrop'`, and `preventDefault()` keeps the dialog open.
 `lr-close` remains the non-cancelable dismissal notification. Non-cancelable `lr-decision-settled`
 (`detail: { decision: 'approved' | 'denied' }`) follows the `lr-close` whose reason is `'approve'` or
 `'deny'` on every path that reaches a decision.
@@ -2439,6 +2447,8 @@ to a diff view.
 An expanded commit renders its first 500 files and shows `[part="limit"]` when more exist;
 the diffstat and fold count still reflect the full file list.
 
+The file rows share one Tab stop. ArrowUp, ArrowDown, Home and End move between files.
+
 Removing the `message` attribute clears the displayed subject and body; the property retains the
 normal `null` readback of a removed string attribute.
 
@@ -2497,6 +2507,9 @@ you opt in. `frame="plain"` still removes the border and radius.
 A pass/fail suite summary with per-status counts, status filter toggles, and per-test rows whose
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
+
+Visible test-name buttons share one Tab stop across suites. ArrowUp, ArrowDown, Home and End move
+between them. Detail toggles and other controls have their own Tab stops.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
@@ -3033,6 +3046,10 @@ library-wide brand tokens as the only prior lever.
 ```
 
 ## `lr-agent-run`
+
+The header keeps the model and metrics together while the current step label ellipsizes.
+When the summary no longer fits beside the status it moves below it, following the run's
+inline direction.
 
 Top-level shell for one agent run: status, elapsed time, current step, model/cost summary, arbitrary
 metrics, and Cancel/Retry actions. Built-in and application-defined lifecycle statuses are supported;
@@ -3732,8 +3749,10 @@ data or exhausting the page.
 **Events:** `lr-tool-activate` (`detail: { invocationId: string; sourceKey?: string }`) for a
 non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
 sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
-The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
-timeline boundary. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
+`lr-tool-approval-open` (`detail: { invocationId: string; sourceKey?: string }`) reports an
+opened approval review. `lr-tool-approval-close` adds `reason: string` to that detail when the
+review closes. The timeline contains the raw child chip-selection, renderer-error, details, and
+dialog events. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
 approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
 `@aceshooting/lyra-ui/ai`). `args` is present only when
@@ -3806,6 +3825,8 @@ rail-dot color for a `status="incomplete"` entry, independent of the pending one
 Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
 history. It never launches or scores evaluations.
 
+The run history shares one Tab stop. ArrowUp, ArrowDown, Home and End move between runs.
+
 **Properties:** `metrics: AgentEvaluationMetric[] = []` (attribute: false), where each metric is
 `{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `currency:
 string = 'USD'` is the ISO 4217 code used by currency-formatted metrics (invalid codes safely fall
@@ -3859,11 +3880,12 @@ heading while an explicit empty string renders no heading/name. Later duplicate 
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
-**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` (`{ invocationId,
-approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+**Events:** `lr-approval-select` and `lr-approval-open` (each `{ invocationId }`),
+`lr-approval-decision-request` (`{ invocationId, approved, args? }`), and `lr-approval-close`
+(`{ invocationId, reason }`).
 `lr-approval-decision-request` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
-The selection and close events are non-cancelable notifications.
+The selection, open, and close events are non-cancelable notifications.
 
 **Settling a vetoed decision:** `pendingApproval` (read-only, `'approve' | 'deny' | null`) is the
 held decision; after persisting it call `finalizePendingApproval()` (or resolve the request), after a
@@ -5183,7 +5205,9 @@ announced as read-only, and refuses every change. A blank rule `label` names its
 | `limit` | Notice that more than 100 valid rules were supplied. |
 
 
-**Events:** non-cancelable `lr-permission-rule-change` (`detail: { ruleId, decision }`) requests a decision change; the host evaluates policy and updates the controlled collection.
+**Events:** Cancelable `lr-permission-rule-change-request` (`detail: { ruleId, decision }`)
+proposes a decision change. Unless vetoed, non-cancelable `lr-permission-rule-change` carries
+the same detail. The host evaluates policy and updates the controlled collection.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-permission-rules.js';
 import type { PermissionRule } from '@aceshooting/lyra-ui/components/agent-tools/permission-rules/permission-rules.class.js';

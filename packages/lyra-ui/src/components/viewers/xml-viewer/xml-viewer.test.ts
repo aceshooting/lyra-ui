@@ -1943,3 +1943,35 @@ it('stops reporting a clipboard failure when the first listener disconnects the 
     expect(details).to.equal(0);
   } finally { restore(); }
 });
+
+it('does not stringify a path per hidden element when loading and searching a wide document', async () => {
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer expand-depth="0"></lr-xml-viewer>`);
+  const stringify = JSON.stringify;
+  let paths = 0;
+  JSON.stringify = new Proxy(stringify, {
+    apply(target, receiver, args) {
+      if (Array.isArray(args[0]) && args[0].length === 1 && typeof args[0][0] === 'number') paths++;
+      return Reflect.apply(target, receiver, args);
+    },
+  });
+  try {
+    el.xml = `<root>${'<leaf/>'.repeat(400)}<needle/></root>`;
+    await el.updateComplete;
+    expect(paths).to.be.lessThan(10);
+    const result = el.search('needle');
+    expect(paths).to.be.lessThan(10);
+    expect(await result).to.equal(1);
+  } finally { JSON.stringify = stringify; }
+});
+
+it('names each disclosure action and its XML element in both states', async () => {
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer expand-depth="0" .xml=${'<orders><order/></orders>'}
+    .strings=${{ xmlViewerExpandNode: 'Show {name}', xmlViewerCollapseNode: 'Hide {name}' }}></lr-xml-viewer>`);
+  const toggle = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+  expect(toggle().getAttribute('aria-label')).to.equal('Show orders');
+  expect(toggle().getAttribute('aria-expanded')).to.equal('false');
+  toggle().click();
+  await el.updateComplete;
+  expect(toggle().getAttribute('aria-label')).to.equal('Hide orders');
+  expect(toggle().getAttribute('aria-expanded')).to.equal('true');
+});

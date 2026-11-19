@@ -44,3 +44,25 @@ export function isSafeNonArrayObject(value: unknown): value is Record<string, un
     return false;
   }
 }
+
+/** `Array.isArray` for caller data: an array from any realm, and `false` for a revoked proxy. */
+export function isRuntimeArray(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether `new value()` is allowed, decided without running the candidate: constructing `Object`
+ * with `value` as `new.target` only reads its `prototype`. A revoked or throwing proxy is rejected.
+ */
+export function isConstructor(value: unknown): value is new (...args: never[]) => object {
+  if (typeof value !== 'function') return false;
+  try {
+    return Reflect.construct(Object, [], value) !== null;
+  } catch {
+    return false;
+  }
+}

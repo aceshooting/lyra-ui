@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'หมุนไปทางขวา',
   modelViewerRotateUp: 'หมุนขึ้น',
   modelViewerRotateDown: 'หมุนลง',
+  modelViewerViewport: 'โมเดลแบบโต้ตอบ',
 };
 
 registerLyraLocale('th', strings);

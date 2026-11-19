@@ -30,3 +30,12 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+export const LoadNotification: Story = {
+  render: () => html`<div @lr-load=${(event: Event) => {
+    (event.currentTarget as HTMLElement).querySelector('output')!.value = 'Report ready';
+  }}>
+    <output>Opening report</output>
+    <lr-html-viewer src=${src} name="Report"></lr-html-viewer>
+  </div>`,
+};

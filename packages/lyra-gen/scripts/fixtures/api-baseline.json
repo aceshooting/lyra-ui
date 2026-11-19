@@ -2062,7 +2062,7 @@
       "profile": "supported"
     },
     "json-stream.d.ts#JsonViewStreamOptions": {
-      "hash": "4ecfb168390ca8058c574c3f2d1b8cd66b04c702afab636312a2b0225a69d539",
+      "hash": "2e13f397f864e4af370b8ae65e05a02214b55743c4e94e427aaf6a199b9bd2dc",
       "profile": "supported"
     },
     "json-stream.d.ts#JsonViewStreamResult": {
@@ -2530,7 +2530,7 @@
       "profile": "supported"
     },
     "runtime.d.ts#validateView": {
-      "hash": "06d21334e5fb050d712164f34f0c620bbad192ea443394529a37d814487be54c",
+      "hash": "83fa7132fa7782cdd6eba2bc12123cfc54b8eaeca4f01e2dc8a2ddcf4a892b49",
       "profile": "supported"
     },
     "schema.d.ts#DEFAULT_LIMITS": {

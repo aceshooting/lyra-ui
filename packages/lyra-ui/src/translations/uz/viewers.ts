@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'O‘ngga aylantirish',
   modelViewerRotateUp: 'Yuqoriga aylantirish',
   modelViewerRotateDown: 'Pastga aylantirish',
+  modelViewerViewport: 'Interaktiv model',
 };
 
 registerLyraLocale('uz', strings);

@@ -37,13 +37,13 @@ export const styles = css`
     --_lr-page-sticky-viewport: 100dvb;
   }
   :host([auto-sticky-offsets][disable-sticky~="banner"]) [part~="page"] {
-    --_lr-page-banner-offset: 0px;
+    --_lr-page-banner-offset: 0%;
   }
   :host([auto-sticky-offsets][disable-sticky~="header"]) [part~="page"] {
-    --_lr-page-header-offset: 0px;
+    --_lr-page-header-offset: 0%;
   }
   :host([auto-sticky-offsets][disable-sticky~="subheader"]) [part~="page"] {
-    --_lr-page-subheader-offset: 0px;
+    --_lr-page-subheader-offset: 0%;
   }
 
   [part~="skip-to-content"] {

@@ -42,8 +42,8 @@ read repeated submitted values.
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
 
-Source options with `inert`, including inherited inertness, are unavailable through the popup. Live
-inert changes refresh row availability. Text, insertion, replacement, removal, slot
+The popup marks options with `disabled`, `aria-disabled="true"`, `hidden`, or inherited or explicit
+`inert` as unavailable. Changing an option's availability updates its open row. Text, insertion, replacement, removal, slot
 reassignment/removal, and relevant attributes of `start`/`end`/`prefix`/`suffix` adornments refresh
 the corresponding cloned presentation; unchanged presentation retains its clone identity while
 filtering.
@@ -416,7 +416,9 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
-selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
+selection mutation first proposes `lr-change-request` with `detail: { value; previousValue; data }`.
+A listener can veto it with `preventDefault()` or assign the controlled value. An accepted
+mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
 clear — emits one native `input` Event, then `lr-input`, one native `change` Event, then
 `lr-change`. The native events have no detail. Both typed events carry
 `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
@@ -679,7 +681,9 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
   attribute or `defaultSelected`. Consumer writes update the option immediately and reconcile
-  parent selection/form state once in the next microtask, without parent input/change events
+  parent selection/form state once in the next microtask, without parent input/change events.
+  Writing `selected = true` after changing a selected option's value replaces that occurrence's
+  submitted value in place, including when another option shares its old value
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)

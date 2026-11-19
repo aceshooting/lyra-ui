@@ -33,11 +33,12 @@ heading while an explicit empty string renders no heading/name. Later duplicate 
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
-**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` (`{ invocationId,
-approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+**Events:** `lr-approval-select` and `lr-approval-open` (each `{ invocationId }`),
+`lr-approval-decision-request` (`{ invocationId, approved, args? }`), and `lr-approval-close`
+(`{ invocationId, reason }`).
 `lr-approval-decision-request` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
-The selection and close events are non-cancelable notifications.
+The selection, open, and close events are non-cancelable notifications.
 
 **Settling a vetoed decision:** `pendingApproval` (read-only, `'approve' | 'deny' | null`) is the
 held decision; after persisting it call `finalizePendingApproval()` (or resolve the request), after a

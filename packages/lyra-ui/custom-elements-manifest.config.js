@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path/posix';
 import { fileURLToPath } from 'node:url';
 
 import { applyComponentMetadataToManifest } from './scripts/component-metadata.mjs';
@@ -1910,27 +1911,32 @@ export default {
       name: 'lr-effective-attribute-contracts',
       // CEM derives an attribute and its linked field in separate passes. Named field constants
       // and inherited accessor overrides can consequently leave the attribute with an identifier
-      // default or no type even when the effective field is precise. Resolve source-local literal
-      // constants, then make the associated field authoritative for type/default metadata.
+      // default or no type even when the effective field is precise. Resolve local and imported
+      // source literal constants, then use the field as the authority for type/default metadata.
       packageLinkPhase({ customElementsManifest }) {
-        const modulesByPath = new Map(
-          (customElementsManifest.modules ?? []).map((module) => [
-            normalizeSourcePath(module.path),
-            module,
-          ])
-        );
         const constantsByPath = new Map();
+        const importsByPath = new Map();
         const constantsFor = (modulePath) => {
           const normalized = normalizeSourcePath(modulePath);
           if (constantsByPath.has(normalized))
             return constantsByPath.get(normalized);
-          const module = modulesByPath.get(normalized);
           const constants = new Map();
-          if (module) {
-            const source = readFileSync(
-              new URL(`./${normalized}`, import.meta.url),
-              'utf8'
-            );
+          const filename = new URL(`./${normalized}`, import.meta.url);
+          if (normalized.startsWith('src/') && existsSync(filename)) {
+            const source = readFileSync(filename, 'utf8');
+            const imports = new Map();
+            const namedImport =
+              /(?:^|\n)\s*import\s*{([^}]+)}\s*from\s*['"](\.{1,2}\/[^'"]+\.js)['"]\s*;/g;
+            for (const [, specifiers, sourcePath] of source.matchAll(namedImport)) {
+              const target = normalizeSourcePath(join(dirname(normalized), sourcePath));
+              for (const specifier of specifiers.split(',')) {
+                const match = /^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/.exec(
+                  specifier.trim()
+                );
+                if (match) imports.set(match[2] ?? match[1], { name: match[1], target });
+              }
+            }
+            importsByPath.set(normalized, imports);
             const declaration =
               /(?:^|\n)\s*(?:export\s+)?const\s+([A-Za-z_$][A-Za-z0-9_$]*)[^=;\n]*=\s*([^;\n]+)\s*;/g;
             for (const match of source.matchAll(declaration)) {
@@ -1962,7 +1968,9 @@ export default {
           ) {
             if (seen.has(current)) return undefined;
             seen.add(current);
-            current = constantsFor(modulePath).get(current);
+            const local = constantsFor(modulePath).get(current);
+            const imported = importsByPath.get(normalizeSourcePath(modulePath))?.get(current);
+            current = local ?? (imported && constantsFor(imported.target).get(imported.name));
             if (current === undefined) return undefined;
           }
           return current;

@@ -25,3 +25,5 @@
 - Tool call blocks preserve renderer wrapping. Tool chips keep decorative separators out of the accessible name.
 - Confirmation bars load argument viewers on demand. Server renderers that use these viewers can import the `details` and `json-viewer` entries explicitly.
 - Embedded app loading feedback preserves frame layout and supports a CSS height override.
+- Tool dialogs release their scroll body observers while detached and restore keyboard scrolling when reconnected.
+- Timeline entry updates leave the closed approval dialog idle.

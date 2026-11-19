@@ -8,6 +8,7 @@ import {
   isResourceLimitError,
   LyraUserFacingError,
 } from '../../../internal/resource-loader.js';
+import { scrollToHeadingAnchor, scrollToResolvedRange } from '../../../internal/heading-anchor.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
@@ -20,7 +21,6 @@ import { invalidateLyraLocaleCache } from '../../../internal/localization-runtim
 import { Slugger } from '../../../internal/slugger.js';
 import {
   DocumentAnchorTarget,
-  prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
 import {
@@ -31,17 +31,26 @@ import {
   rangesFromTextQuoteMatches,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
-  TEXT_SELECTION_RECT_LIMIT,
   type TextQuoteIndex,
   type TextQuoteMatch,
   type TextQuoteMatches,
   type TextQuoteScope,
 } from '../../../internal/text-quote.js';
-import { acquireHighlightHandle, supportsCustomHighlights, wrapTextRangeInMarks, unwrapTextMark, type HighlightHandle, type TextMarkPaintBudget } from '../../../internal/text-highlights.js';
+import {
+  acquireHighlightHandle,
+  hitTestHighlightRanges,
+  paintHighlightTones,
+  paintResolvedHighlights,
+  supportsCustomHighlights,
+  wrapTextRangeInMarks,
+  unwrapTextMark,
+  type HighlightHandle,
+  type ResolvedHighlightRange,
+  type TextMarkPaintBudget,
+} from '../../../internal/text-highlights.js';
 import type {
   LyraAnchor,
   LyraHighlight,
-  LyraHighlightTone,
 } from '../document-viewer/anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
@@ -87,14 +96,8 @@ export interface DocxHeadingItem {
   level: number;
 }
 
-/** Every `LyraHighlightTone`, used to always call `HighlightHandle.setRanges()` once per tone on
- *  every repaint (with an empty array for an unused tone) -- `setRanges()` replaces a tone's ranges
- *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
- *  clear whatever it painted last pass. */
-const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
 const MAX_DOCX_SEARCH_MATCHES = 1_000;
 const MAX_DOCX_PAINTED_SEARCH_MATCHES = 200;
-const MAX_DOCX_PAINTED_HIGHLIGHTS = 100;
 const MAX_DOCX_CONVERSION_MESSAGES = 100;
 
 interface NormalizedDocxConversion {
@@ -309,7 +312,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  coordinate hit-test -- the CSS Custom Highlight API paints ranges without creating any DOM
    *  element to attach a click listener to, so activation is resolved by comparing the click point
    *  against each range's own `getClientRects()` instead, uniformly across both paint paths. */
-  private resolvedHighlightRanges: { highlight: LyraHighlight; range: Range }[] = [];
+  private resolvedHighlightRanges: ResolvedHighlightRange[] = [];
   private pendingResolvedHighlightActions: LyraHighlight[] = [];
   private resolvedHighlightActionSyncPending = false;
 
@@ -532,7 +535,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     if (!root) return false;
     switch (anchor.kind) {
       case 'fragment':
-        return this.applyFragmentAnchor(root, anchor);
+        return scrollToHeadingAnchor(root, this.headingTree, anchor.id);
       case 'text-quote':
         return this.applyTextQuoteAnchor(root, anchor);
       default:
@@ -540,51 +543,12 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
   }
 
-  private applyFragmentAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'fragment' }>): boolean {
-    if (!anchor.id) return false;
-    let expectedIndex = -1;
-    const headingLimit = Math.min(this.headingTree.length, TEXT_QUOTE_LIMITS.maxTraversalNodes);
-    for (let index = 0; index < headingLimit; index++) {
-      if (this.headingTree[index]?.id === anchor.id) {
-        expectedIndex = index;
-        break;
-      }
-    }
-    if (expectedIndex < 0) return false;
-    // Fragment anchors are heading ids, so scan that fixed set and compare the raw attribute.
-    // This accepts selector punctuation and works in adopted/partial DOM realms with no
-    // `CSS.escape`, while the positional fallback below still covers sanitizer-stripped ids.
-    const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
-    let inspected = 0;
-    let headingIndex = 0;
-    let idMatch: Element | null = null;
-    let positionalMatch: Element | null = null;
-    let node: Node | null;
-    while (
-      inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes
-      && (node = walker.nextNode())
-    ) {
-      inspected++;
-      const heading = node as Element;
-      if (!/^H[1-6]$/.test(heading.tagName)) continue;
-      if (heading.getAttribute('id') === anchor.id) idMatch ??= heading;
-      if (headingIndex === expectedIndex) positionalMatch = heading;
-      headingIndex++;
-      if (idMatch && positionalMatch) break;
-    }
-    const el = idMatch ?? positionalMatch;
-    if (!el) return false;
-    el.scrollIntoView({ behavior: prefersReducedMotion(this) ? 'auto' : 'smooth', block: 'start' });
-    return true;
-  }
-
   private applyTextQuoteAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'text-quote' }>): boolean {
     const { scope, index } = this.currentTextIndex(root);
     const match = index.resolve(anchor);
     const range = match ? rangeFromTextQuoteMatch(scope, match) : null;
     if (!range) return false;
-    const target = range.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range.startContainer.parentElement;
-    (target ?? root).scrollIntoView({ behavior: prefersReducedMotion(this) ? 'auto' : 'smooth', block: 'center' });
+    scrollToResolvedRange(root, range);
     return true;
   }
 
@@ -596,77 +560,22 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     return buildQuoteAnchor(range, this.currentTextIndex(root).scope);
   }
 
-  // -- highlight painting ------------------------------------------------------------------------
-
-  private ensureHighlightHandle(): HighlightHandle {
-    if (!this.highlightHandle) this.highlightHandle = acquireHighlightHandle(this, this.ownerDocument);
-    return this.highlightHandle;
-  }
-
-  /** Re-resolves every `text-quote` highlight against the current rendered content and repaints
-   *  via `acquireHighlightHandle()` -- resolution is always by quote text, never by node identity.
-   *  `fragment` highlights aren't painted (there is no literal span of text to wrap/underline for a
-   *  whole section). When there is no loaded content (idle/loading/error), every tone is explicitly
-   *  cleared rather than left as-is, since a previously-loaded document's content (and its painted
-   *  ranges) may no longer exist in the DOM at all. */
   private repaintHighlights(): void {
-    this.resolvedHighlightRanges = [];
     const root = this.contentRoot();
-    const handle = this.ensureHighlightHandle();
-    if (!root) {
-      this.syncResolvedHighlightActions([]);
-      for (const tone of HIGHLIGHT_TONES) handle.setRanges(tone, []);
-      handle.setActive(null);
-      return;
+    const handle = this.highlightHandle ??= acquireHighlightHandle(this, this.ownerDocument, { part: 'highlight' });
+    if (root) {
+      this.resolvedHighlightRanges = paintResolvedHighlights({
+        handle,
+        index: this.currentTextIndex(root).index,
+        highlights: this.highlights,
+        activeHighlightId: this.activeHighlightId,
+      });
+      if (!supportsCustomHighlights(this.ownerDocument)) this.textIndexMappingDirty = true;
+    } else {
+      this.resolvedHighlightRanges = [];
+      paintHighlightTones(handle, [], null);
     }
-    const { scope, index } = this.currentTextIndex(root);
-    const workBudget = index.createWorkBudget();
-    const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
-    let activeRange: Range | null = null;
-    const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
-    const resolved: Array<{ highlight: LyraHighlight; match: TextQuoteMatch }> = [];
-    for (const highlight of candidates) {
-      if (resolved.length >= MAX_DOCX_PAINTED_HIGHLIGHTS) break;
-      if (highlight.anchor.kind !== 'text-quote') continue;
-      const match = index.resolve(highlight.anchor, workBudget);
-      if (match) resolved.push({ highlight, match });
-    }
-    const resolvedRanges = rangesFromTextQuoteMatches(scope, resolved.map(({ match }) => match));
-    for (let position = 0; position < resolved.length; position++) {
-      const { highlight } = resolved[position]!;
-      const range = resolvedRanges[position] ?? null;
-      if (!range) continue;
-      rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
-      this.resolvedHighlightRanges.push({ highlight, range });
-      if (highlight.id === this.activeHighlightId) activeRange = range;
-    }
-    this.syncResolvedHighlightActions(
-      this.resolvedHighlightRanges.map(({ highlight }) => highlight),
-    );
-    for (const [tone, ranges] of rangesByTone) handle.setRanges(tone, ranges);
-    handle.setActive(activeRange);
-    if (!supportsCustomHighlights(this.ownerDocument)) {
-      // The `<mark>`-wrap fallback creates real elements but carries no `part` of its own (the
-      // module is shared by every adopting viewer, so it can't know this component's part naming)
-      // -- stamped here so a consumer can still target `::part(highlight)` in browsers lacking the
-      // CSS Custom Highlight API.
-      const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
-      let inspected = 0;
-      let node: Node | null;
-      while (
-        inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes + MAX_DOCX_PAINTED_HIGHLIGHTS
-        && (node = walker.nextNode())
-      ) {
-        inspected++;
-        const mark = node as Element;
-        if (
-          mark.localName === 'mark'
-          && mark.hasAttribute('data-lr-highlight-tone')
-          && !mark.hasAttribute('part')
-        ) mark.setAttribute('part', 'highlight');
-      }
-      this.textIndexMappingDirty = true;
-    }
+    this.syncResolvedHighlightActions(this.resolvedHighlightRanges.map(({ highlight }) => highlight));
   }
 
   /** Mirrors the synchronous range-resolution result into render state after the current Lit
@@ -698,30 +607,10 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.resolvedHighlightActions = [];
   }
 
-  /** Hit-tests a click point against every currently-resolved highlight's `getClientRects()`,
-   *  topmost (last-resolved) first -- the CSS Custom Highlight API paints ranges without creating
-   *  any DOM element to attach a click listener to, so this works identically on both paint paths. */
-  private hitTestHighlightAt(x: number, y: number): string | null {
-    let remainingRects = TEXT_SELECTION_RECT_LIMIT;
-    for (let i = this.resolvedHighlightRanges.length - 1; i >= 0; i--) {
-      const { highlight, range } = this.resolvedHighlightRanges[i]!; // safe: i in [0, length)
-      for (const rect of range.getClientRects()) {
-        if (remainingRects-- <= 0) return null;
-        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-          return highlight.id;
-        }
-      }
-    }
-    return null;
-  }
-
-  // A single delegated listener on the content wrapper (not one per node) -- the rendered markup
-  // is fully replaced on every content change, so a per-node listener would need re-attaching on
-  // every render anyway.
   private onContentClick = (e: MouseEvent): void => {
     const selection = this.ownerDocument.defaultView?.getSelection();
     if (selection && !selection.isCollapsed) return;
-    const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
+    const highlightId = hitTestHighlightRanges(this.resolvedHighlightRanges, e.clientX, e.clientY);
     if (highlightId) this.activateHighlight(highlightId);
   };
 

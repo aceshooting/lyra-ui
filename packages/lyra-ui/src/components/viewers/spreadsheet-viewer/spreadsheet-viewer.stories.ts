@@ -38,3 +38,13 @@ export const MillionRecords: Story = {
   parameters: { docs: { description: { story: 'The host supplies one million logical body records without constructing a row array. Separate column labels occupy display row one; the last body row is A1000001. Source rows use the live --lr-size-3rem token, with bounded overflowing display. Global search is available only when the source supplies search(). Assign undefined to restore the ordinary input or URL.' } } },
   render: () => html`<lr-spreadsheet-viewer .dataSource=${indexedSource} .anchor=${{ kind: 'cell-range', range: 'A1000001' } }></lr-spreadsheet-viewer>`,
 };
+
+export const PageScrolling: Story = {
+  args: { scrollMode: 'page' },
+  argTypes: { scrollMode: { control: 'select', options: ['page', 'self'] } },
+  render: ({ scrollMode }) => html`<lr-spreadsheet-viewer
+    scroll-mode=${scrollMode} max-height="16rem"
+    style="--lr-spreadsheet-viewer-header-row-bg: var(--lr-color-success-quiet)"
+    .workbook=${{ sheets: [{ name: 'People', rows: [['Name', 'Role'], ...Array.from({ length: 80 }, (_, index) => [`Scientist ${index + 1}`, 'Researcher'])] }] }}
+  ></lr-spreadsheet-viewer>`,
+};

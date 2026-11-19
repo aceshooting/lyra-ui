@@ -256,7 +256,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-stack-trace': ['lr-stack-trace'],
   'lr-stat': ['lr-stat'],
   'lr-stepper': ['lr-stepper'],
-  'lr-stream-status': ['lr-live-region', 'lr-stream-status'],
+  'lr-stream-status': ['lr-button', 'lr-live-region', 'lr-stream-status'],
   'lr-streaming-text': ['lr-markdown', 'lr-streaming-text'],
   'lr-streaming-text-core': ['lr-markdown-core', 'lr-streaming-text-core'],
   'lr-subagent-panel': ['lr-badge', 'lr-empty', 'lr-subagent-panel'],

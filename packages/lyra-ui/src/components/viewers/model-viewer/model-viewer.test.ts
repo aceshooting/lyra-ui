@@ -51,6 +51,7 @@ it('honors host aria-label by presence, instructions and strings overrides witho
   expect(viewer.shadowRoot!.textContent).to.contain('Frame object'); expect(viewer.shadowRoot!.textContent).to.contain('Object loaded');
   expect(viewer.shadowRoot!.querySelector('[aria-live], [role="alert"], [role="status"]') === null).to.equal(true);
   await expect(viewer).to.be.accessible();
+  expect(viewer.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal('Interactive model');
   viewer.setAttribute('aria-label', ''); await viewer.updateComplete;
   expect(viewer.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('');
 });
@@ -184,7 +185,7 @@ describe('empty, unsupported and failed states', () => {
       await expect(viewer).to.be.accessible();
     });
   });
-  it('reports a failure once through lr-render-error and the lr-engine-fallback chain', async () => {
+  it('reports an unsupported file format and preserves its fallback notification', async () => {
     const holder = await fixture<HTMLDivElement>(html`<div></div>`); const viewer = document.createElement('lr-model-viewer') as LyraModelViewer;
     const fallbacks: unknown[] = []; const errors: unknown[] = [];
     viewer.addEventListener('lr-engine-fallback', event => fallbacks.push((event as CustomEvent).detail));
@@ -257,7 +258,8 @@ describe('public properties', () => {
     (viewer as { camera: unknown }).camera = null; expect(viewer.camera).to.equal(undefined);
   });
   it('lets a strings override rename a reused key and a model key', async () => {
-    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj" .strings=${{ zoomIn: 'Rapprocher', modelViewerRotateLeft: 'Tourner à gauche' }}></lr-model-viewer>`); await ready(viewer);
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj" .strings=${{ zoomIn: 'Rapprocher', modelViewerRotateLeft: 'Tourner à gauche', modelViewerViewport: 'Modèle interactif' }}></lr-model-viewer>`); await ready(viewer);
+    expect(surfaceOf(viewer).getAttribute('aria-label')).to.equal('Modèle interactif');
     expect(toolbarButtons(viewer).map(button => button.textContent!.trim())).to.deep.equal(['Tourner à gauche', 'Rotate right', 'Rotate up', 'Rotate down', 'Rapprocher', 'Zoom out', 'Fit model']);
   });
   it('guards the download link for every target and author rel value', async () => {
@@ -358,9 +360,9 @@ describe('environment changes', () => {
   it('re-resolves the engine colors when an ancestor theme input changes', async () => {
     const holder = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-color-surface-default: rgb(255, 0, 0)"><lr-model-viewer src=${source} format="obj"></lr-model-viewer></div>`);
     const viewer = holder.firstElementChild as LyraModelViewer; await ready(viewer);
-    expect(background()).to.equal('rgba(255, 0, 0, 1)');
+    expect(background()).to.equal('rgb(255, 0, 0)');
     holder.style.setProperty('--lr-theme-color-surface-default', 'rgb(0, 0, 255)');
-    await waitUntil(() => background() === 'rgba(0, 0, 255, 1)');
+    await waitUntil(() => background() === 'rgb(0, 0, 255)');
   });
   it('coalesces ancestor mutations into one restyle and skips unchanged styles', async () => {
     const holder = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-color-surface-default: rgb(255, 0, 0)"><lr-model-viewer src=${source} format="obj"></lr-model-viewer></div>`);
@@ -373,7 +375,7 @@ describe('environment changes', () => {
     for (const channel of [10, 20, 30]) holder.style.setProperty('--lr-theme-color-surface-default', `rgb(0, ${channel}, 255)`);
     await twoFrames();
     expect(styles.length).to.equal(settled + 1);
-    expect(background()).to.equal('rgba(0, 30, 255, 1)');
+    expect(background()).to.equal('rgb(0, 30, 255)');
   });
   it('merges a pending resize-only refresh with a later restyle in the same frame', async () => {
     const holder = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-color-surface-default: rgb(255, 0, 0)"><lr-model-viewer src=${source} format="obj"></lr-model-viewer></div>`);
@@ -385,7 +387,7 @@ describe('environment changes', () => {
     scheduler.scheduleRefresh(false);
     await twoFrames();
     expect(styles.length).to.equal(settled + 1);
-    expect(background()).to.equal('rgba(0, 128, 0, 1)');
+    expect(background()).to.equal('rgb(0, 128, 0)');
     scheduler.scheduleRefresh(true);
     scheduler.scheduleRefresh(true);
     await twoFrames();
@@ -587,9 +589,9 @@ describe('engine lifecycle edges', () => {
     viewer.format = 'obj'; viewer.src = source; root.append(viewer);
     await ready(viewer);
     const background = () => (styles.at(-1) as { background: string }).background;
-    expect(background()).to.equal('rgba(255, 0, 0, 1)');
+    expect(background()).to.equal('rgb(255, 0, 0)');
     outer.style.setProperty('--lr-theme-color-surface-default', 'rgb(0, 0, 255)');
-    await waitUntil(() => background() === 'rgba(0, 0, 255, 1)');
+    await waitUntil(() => background() === 'rgb(0, 0, 255)');
   });
 
   it('hands the engine resolved colors when no 2D canvas context is available', async () => {

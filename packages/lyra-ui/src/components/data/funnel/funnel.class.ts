@@ -5,7 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
-import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
+import { projectArrayInBatches } from '../../../internal/staged-array-projection.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -32,12 +32,9 @@ const MAX_SHARE_PRECISION = 20;
 const MAX_RENDERED_STAGES = 500;
 
 interface StageScan {
-  readonly source: readonly unknown[];
-  readonly stages: LyraFunnelStage[];
-  readonly length: number;
-  cursor: number;
+  stages: readonly LyraFunnelStage[];
   done: boolean;
-  timer?: ReturnType<typeof setTimeout>;
+  cancel?: () => void;
 }
 
 interface ResolvedStage {
@@ -173,10 +170,12 @@ export class LyraFunnel extends LyraElement {
 
   private stagesMemo?: { stages: readonly LyraFunnelStage[]; comparison: readonly LyraFunnelStage[]; result: ResolvedStage[] };
   private readonly stageScans = new Map<unknown, StageScan>();
+  private stageGeneration = 0;
   private completedStages: ResolvedStage[] = [];
 
   private cancelStageScans(): void {
-    for (const scan of this.stageScans?.values() ?? []) clearTimeout(scan.timer);
+    for (const scan of this.stageScans?.values() ?? []) scan.cancel?.();
+    this.stageGeneration++;
     this.stageScans?.clear();
     this.stagesMemo = undefined;
   }
@@ -200,49 +199,33 @@ export class LyraFunnel extends LyraElement {
     return [...this.stageScans.values()].some(scan => !scan.done);
   }
 
-  private continueStageScan(scan: StageScan): void {
-    const end = Math.min(scan.length, scan.cursor + 10_000);
-    for (; scan.cursor < end && scan.stages.length <= MAX_RENDERED_STAGES; scan.cursor++) {
-      try {
-        const stage = scan.source[scan.cursor];
-        if (!isSafeNonArrayObject(stage)) continue;
-        const { label } = stage;
-        if (typeof label !== 'string') continue;
-        const { value, color } = stage;
-        scan.stages.push(Object.freeze({
-          label,
-          value: typeof value === 'number' ? finiteNumber(value, 0) : 0,
-          ...(typeof color === 'string' ? { color: color } : {}),
-        }));
-      } catch {
-        // An invalid entry does not hide later valid stages.
-      }
-    }
-    scan.done = scan.cursor >= scan.length || scan.stages.length > MAX_RENDERED_STAGES;
-    if (!scan.done && this.isConnected) {
-      scan.timer = setTimeout(() => {
-        scan.timer = undefined;
-        if (!this.isConnected || this.stageScans.get(scan.source) !== scan) return;
-        this.continueStageScan(scan);
-        if (scan.done) super.requestUpdate();
-      }, 0);
-    }
-  }
-
   private validStages(value: unknown): readonly LyraFunnelStage[] {
     const cached = this.stageScans.get(value);
     if (cached) return cached.stages;
-    let length: number | undefined;
-    try {
-      if (!Array.isArray(value)) return [];
-      length = readOwnArrayLength(value);
-    } catch {
-      return [];
-    }
-    if (length === undefined) return [];
-    const scan: StageScan = { source: value, stages: [], length, cursor: 0, done: false };
+    const scan: StageScan = { stages: [], done: false };
     this.stageScans.set(value, scan);
-    this.continueStageScan(scan);
+    scan.cancel = projectArrayInBatches<LyraFunnelStage>(value, {
+      batchSize: 10_000,
+      retain: MAX_RENDERED_STAGES + 1,
+      current: () => this.stageScans.get(value) === scan,
+      canSchedule: () => this.isConnected,
+      project(stage) {
+        if (!isSafeNonArrayObject(stage)) return;
+        const { label } = stage;
+        if (typeof label !== 'string') return;
+        const { value, color } = stage;
+        return Object.freeze({
+          label,
+          value: typeof value === 'number' ? finiteNumber(value, 0) : 0,
+          ...(typeof color === 'string' ? { color } : {}),
+        });
+      },
+      onComplete: stages => {
+        scan.stages = stages;
+        scan.done = true;
+        if (scan.cancel) super.requestUpdate();
+      },
+    });
     return scan.stages;
   }
 
@@ -250,7 +233,12 @@ export class LyraFunnel extends LyraElement {
   private resolveStages(): ResolvedStage[] {
     const memo = this.stagesMemo;
     if (memo && memo.stages === this.stages && memo.comparison === this.comparison) return memo.result;
+    const generation = this.stageGeneration;
     const result = this.computeStages();
+    if (generation !== this.stageGeneration) {
+      this.scheduleAfterUpdate(() => super.requestUpdate(), 'funnel-stages');
+      return this.completedStages;
+    }
     if (this.scanningStages) return this.completedStages;
     this.completedStages = result;
     this.stagesMemo = { stages: this.stages, comparison: this.comparison, result };

@@ -191,6 +191,11 @@ function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
+ * @cssprop [--lr-box-plot-data-table-toggle-border-color=var(--lr-chart-data-table-toggle-border-color, var(--lr-color-border))] - Resting border color of the data-table toggle.
+ * @cssprop [--lr-box-plot-data-table-toggle-bg=var(--lr-chart-data-table-toggle-bg, var(--lr-color-surface))] - Resting background of the data-table toggle.
+ * @cssprop [--lr-box-plot-data-table-toggle-color=var(--lr-chart-data-table-toggle-color, var(--lr-color-text))] - Resting text color of the data-table toggle.
+ * @cssprop [--lr-box-plot-data-table-toggle-inline-size=var(--lr-chart-data-table-toggle-inline-size, auto)] - Inline size of the data-table toggle.
+ * @cssprop [--lr-box-plot-data-table-toggle-justify=var(--lr-chart-data-table-toggle-justify, auto)] - Grid inline alignment of the data-table toggle.
  * @cssprop [--lr-box-plot-data-table-toggle-hover-bg=var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))] -
  *   Hover background of the `dataTableToggle` disclosure button; falls back to the chart family's
  *   shared token.

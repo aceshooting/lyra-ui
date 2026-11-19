@@ -1,6 +1,5 @@
 import { css } from 'lit';
 import { tag } from './prefix.js';
-import { collectComposedFocusTargets } from './focus-navigation.js';
 
 export {
   composedParentElement,
@@ -121,29 +120,6 @@ export function hostAriaLabel(host: Element): string | null {
  *  carrying "real" content rather than being effectively empty. */
 export function hasRealContent(nodes: Iterable<Node>): boolean {
   return Array.from(nodes).some((n) => n.nodeType === Node.ELEMENT_NODE || (n.textContent ?? '').trim().length > 0);
-}
-
-/**
- * Resolves the node that actually receives focus when a consumer-supplied trigger is activated.
- *
- * A name/description relationship is only surfaced to assistive technology on the element the user
- * is focused on. A custom-element host is almost never that element: `<lr-select>`, `<lr-switch>`,
- * `<lr-chip>` and any consumer-authored wrapper all move focus to a native control inside their
- * shadow root, so a description parked on the host is silently dropped. Walk to the first
- * programmatically focusable descendant instead, including a managed native stop after a roving
- * owner assigns `tabindex=-1`.
- *
- * Returns `trigger` itself when the trigger is its own focus target (any native control), when it
- * carries its own `tabindex`, and when nothing focusable is reachable yet (a custom element that
- * has not upgraded, or a disabled control) -- callers then behave exactly as they did before.
- */
-export function resolveAccessibleTrigger(trigger: HTMLElement): HTMLElement {
-  if (trigger.hasAttribute('tabindex') || trigger.tabIndex >= 0) return trigger;
-  const [focusable] = collectComposedFocusTargets(trigger, {
-    includeRoot: false,
-    mode: 'programmatic',
-  }).elements;
-  return focusable ?? trigger;
 }
 
 /** Visually-hidden-but-screen-reader-available helper class.

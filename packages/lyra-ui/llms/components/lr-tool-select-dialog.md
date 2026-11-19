@@ -110,8 +110,9 @@ over the request; recursive requests are ignored. `lr-close`
 click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
 inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
 event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
-target-filtering guard), and no-detail `focus`/`blur` events
-re-dispatched when the internal search input gains or loses focus.
+target-filtering guard). `lr-request-close` is cancelable before user dismissal.
+Its `detail.source` is `'escape'` or `'backdrop'`, and `preventDefault()` keeps the dialog open.
+The dialog re-dispatches no-detail `focus` and `blur` events when the search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request` proposals; listen for the single aggregate

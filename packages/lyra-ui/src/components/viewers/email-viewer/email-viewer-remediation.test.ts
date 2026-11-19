@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './email-viewer.js';
 import type { LyraEmailViewer } from './email-viewer.js';
 import { TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
@@ -12,9 +12,10 @@ async function message(kind: 'plain' | 'html', fold = true) {
     : '<p>New reply.</p><blockquote type="cite">Target café word   next fi\u00adnal ος.</blockquote>';
   const source = ['Subject: Reply', `Content-Type: text/${kind}; charset=utf-8`, 'Content-Transfer-Encoding: 8bit', '', body].join('\r\n');
   window.fetch = (() => Promise.resolve(new Response(source))) as typeof fetch;
-  const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer .foldQuotes=${fold}
-    src="https://example.test/normalized.eml"></lr-email-viewer>`);
-  await waitUntil(() => el.shadowRoot!.querySelector('[part="body-html"], [part="body-text"]') !== null);
+  const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer .foldQuotes=${fold}></lr-email-viewer>`);
+  const loaded = oneEvent(el, 'lr-load');
+  el.src = 'https://example.test/normalized.eml';
+  await loaded;
   return el;
 }
 

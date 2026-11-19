@@ -18,7 +18,10 @@
 
 `--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
 
-While typing, `lr-input` includes the draft string in `detail.query`. Its `value` and `inCatalog` fields describe the committed selection. Enter commits the draft. Escape or leaving the control dismisses it. Picking the current model closes the list without emitting a change.
+While typing, `lr-input` includes the exact draft string in `detail.query`, including an empty string.
+Its `value` and `inCatalog` fields describe the committed selection. Enter commits the active enabled
+suggestion or the trimmed draft. Escape or leaving the control dismisses the draft. Picking the
+current model closes the list without emitting a change.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -192,7 +195,8 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Events:**
 
-- `lr-input` (`detail: { value: string }`) — typed value edit notification.
+- `lr-input` (`detail: { value: string; inCatalog: boolean; query?: string }`) — reports the
+  committed value. Free-text edits include the exact draft in `query`. Commit events omit `query`.
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value

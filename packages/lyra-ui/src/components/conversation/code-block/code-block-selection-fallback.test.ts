@@ -13,7 +13,8 @@ async function mount(tag: 'lr-code-block' | 'lr-code-block-core'): Promise<LyraC
   return element;
 }
 
-function dispatchLegacySelection(element: LyraCodeBlockBase, range: Range | null, route: 'window' | 'shadow'): void {
+function dispatchLegacySelection(element: LyraCodeBlockBase, range: Range | null, route: 'window' | 'shadow',
+  event: Event = new MouseEvent('mouseup', { bubbles: true, composed: true })): void {
   const root = element.shadowRoot!;
   const windowDescriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
   const shadowDescriptor = Object.getOwnPropertyDescriptor(root, 'getSelection');
@@ -32,7 +33,7 @@ function dispatchLegacySelection(element: LyraCodeBlockBase, range: Range | null
   try {
     Object.defineProperty(window, 'getSelection', { configurable: true, value: () => route === 'window' ? selection : null });
     Object.defineProperty(root, 'getSelection', { configurable: true, value: route === 'shadow' ? () => selection : undefined });
-    root.querySelector('[part="body"]')!.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+    root.querySelector('[part="body"]')!.dispatchEvent(event);
   } finally {
     if (windowDescriptor) Object.defineProperty(window, 'getSelection', windowDescriptor);
     else Reflect.deleteProperty(window, 'getSelection');
@@ -52,6 +53,7 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
       const details: { text: string; anchor: unknown; rects: readonly TextSelectRect[] }[] = [];
       element.addEventListener('lr-text-select', event => { details.push(event.detail); });
       dispatchLegacySelection(element, range, route);
+      dispatchLegacySelection(element, range, route);
       expect(details.length).to.equal(1);
       expect(details[0]!.text).to.equal('alpha beta');
       expect(details[0]!.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
@@ -63,6 +65,28 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
       expect(details.length).to.equal(1);
     });
   }
+
+  it(`${tag} releases its selection listener on disconnect and re-arms it on reconnect`, async () => {
+    const element = await mount(tag);
+    const parent = element.parentElement!;
+    const line = element.shadowRoot!.querySelector('[data-line="1"] .line-source')!;
+    const range = document.createRange();
+    range.selectNodeContents(line);
+    let reports = 0;
+    element.addEventListener('lr-text-select', () => { reports++; });
+    dispatchLegacySelection(element, range, 'window', new KeyboardEvent('keyup'));
+    dispatchLegacySelection(element, range, 'window');
+    expect(reports).to.equal(1);
+    element.remove();
+    range.selectNodeContents(line);
+    dispatchLegacySelection(element, range, 'window');
+    expect(reports).to.equal(1);
+    parent.append(element);
+    await element.updateComplete;
+    range.selectNodeContents(element.shadowRoot!.querySelector('[data-line="1"] .line-source')!);
+    dispatchLegacySelection(element, range, 'window');
+    expect(reports).to.equal(2);
+  });
 
   it(`${tag} ignores a native selection belonging to another element with line metadata`, async () => {
     const external = await fixture<HTMLSpanElement>(html`<span data-line="99">External text</span>`);

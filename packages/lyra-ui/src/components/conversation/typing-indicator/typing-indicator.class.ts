@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { PropertyValues } from 'lit';
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -133,12 +134,7 @@ export class LyraTypingIndicator extends LyraElement {
   @property({ attribute: 'label-placement', reflect: true })
   labelPlacement: TypingIndicatorLabelPlacement = 'none';
 
-  // `label` supplies the default accessible name, but an author-provided host `aria-label` must
-  // win (the idiomatic way to name any custom element for assistive tech) -- tracked the same way
-  // `<lr-gauge>` tracks its own `explicitAriaLabel`/`appliedAriaLabel` pair, so later `label`
-  // updates stay distinguishable from author attribute edits: the value last applied by this
-  // component is remembered, and only a *different* current `aria-label` (i.e. one the host, not
-  // this component, just wrote) is captured as the override.
+  // Keep the authored override separate from the computed name reflected on the host.
   private appliedAriaLabel: string | null = null;
   private explicitAriaLabel: string | null = null;
   private sink?: AnnouncementSink;
@@ -168,16 +164,9 @@ export class LyraTypingIndicator extends LyraElement {
     this.sink?.announce(label);
   }
 
-  /** The accessible name actually used: an explicit host `aria-label` wins outright; otherwise
-   *  falls back to the localized `'thinking'` message (`"Thinking…"` in English) when `label` is
-   *  empty/whitespace-only -- otherwise both the
-   *  `aria-label` and the sr-only text node would go blank, leaving this purely-decorative
-   *  component with no accessible name at all. A caller-customized `label` is used verbatim (not a
-   *  translation concern), same convention as `<lr-date-picker>`'s `previousLabel`. */
   private get accessibleLabel(): string {
-    if (this.explicitAriaLabel !== null) return this.explicitAriaLabel;
-    const trimmed = (this.label ?? '').trim();
-    return trimmed === '' ? this.localize('thinking') : trimmed;
+    if (this.explicitAriaLabel === '') return '';
+    return normalizeLabel(this.explicitAriaLabel) ?? normalizeLabel(this.label) ?? this.localize('thinking');
   }
 
   protected override willUpdate(changed: PropertyValues): void {

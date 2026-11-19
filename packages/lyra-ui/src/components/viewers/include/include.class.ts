@@ -9,7 +9,7 @@ import {
   type OwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
-import { loadHtmlSanitizer } from '../html-viewer/dompurify-loader.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import {
   acquireSanitizedIncludeResource,
   IncludeResourceError,
@@ -144,7 +144,7 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * inside an isolated preview card.
  *
  * Loaded markup always passes through the shared DOMPurify-backed
- * sanitizer (`loadHtmlSanitizer()`, the same loader `<lr-html-viewer>`
+ * sanitizer (`loadDompurify()`, the same loader `<lr-html-viewer>`
  * uses) before it ever touches `innerHTML` — there is no `allow-scripts`
  * escape hatch here, unlike the Web Awesome/Shoelace components this element
  * otherwise mirrors: their raw, unsanitized injection (with an opt-in to
@@ -360,7 +360,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       this.fail(0, 'resource-too-large');
       return null;
     }
-    const sanitizer = await loadHtmlSanitizer();
+    const sanitizer = await loadDompurify();
     if (!this.isConnected || generation !== this.generation) return null;
     if (!sanitizer) {
       this.fail(0, 'missing-sanitizer');
@@ -372,16 +372,13 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   private fragmentFromSanitized(markup: string, fragmentId: string): DocumentFragment | null {
     const template = this.ownerDocument.createElement('template');
     template.innerHTML = markup;
-    const output = this.ownerDocument.createDocumentFragment();
-
+    let output = template.content;
     if (fragmentId) {
-      const target = elementWithId(template.content, fragmentId);
+      const target = elementWithId(output, fragmentId);
       if (!target) return null;
-      const children =
-        isTemplateElement(target) ? target.content.childNodes : target.childNodes;
-      for (const child of children) output.append(child.cloneNode(true));
-    } else {
-      output.append(template.content.cloneNode(true));
+      const parent = isTemplateElement(target) ? target.content : target;
+      output = this.ownerDocument.createDocumentFragment();
+      while (parent.firstChild) output.append(parent.firstChild);
     }
 
     this.rebaseFragmentIds(output);

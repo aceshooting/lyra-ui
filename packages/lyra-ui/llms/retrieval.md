@@ -1478,17 +1478,24 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` carries `{ kind: 'section', section, expanded }` for a section header or
-`{ kind: 'chunk', section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
-re-emits one contextual toggle at its boundary. Because the panel is a
-conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
-entity chip, a community card member or a path-strip node — only the path strip carries
-`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
-Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
-`lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the chunk inspector.
+**Events:**
+
+- `lr-entity-select` carries `{ entityId, occurrenceIndex? }` from a chip, community member or path node. Only path nodes supply `occurrenceIndex`.
+- `lr-entity-open` carries `{ entityId }` on a chip double-click or Space.
+- `lr-drill` carries `{ communityId }` from a community title, drill button or overflow chip.
+- `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a path edge.
+- `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }` from the chunk inspector.
+- `lr-retrieval-disclosure-change` is a bubbling, composed notification with readonly
+`{ kind: 'section', section, expanded }` or `{ kind: 'chunk', section: 'chunks', chunkId, expanded }`.
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. Migrate from `lr-toggle`
+(`{ section, expanded, itemId? }`) by narrowing on `detail.kind`.
+
+```ts
+panel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.chunkId, detail.expanded);
+  else console.log(detail.section, detail.expanded);
+});
+```
 
 **Slots:** none.
 
@@ -2040,19 +2047,25 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole: the host is then the sole named owner, so neither
   the inner group nor the strip repeats it
 
-**Events:** composed child events reach the host (`composed: true`), with the direct supporting
-chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
-embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
-add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (the direct supporting-chunk
-inspector carries `{ kind: 'chunk', section: 'chunks', expanded, itemId }`; provenance-panel toggles
-pass through), and `lr-tab-show`
-(`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
-host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
-double-click or Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or
-overflow chip), and `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a
-relationship path-strip edge).
+**Events:**
+
+- `lr-entity-select` carries `{ entityId, occurrenceIndex? }` from an entity card, neighbor, community member or path node.
+- `lr-node-expand` carries `{ nodeId }` from a neighbor row.
+- `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }`.
+- `lr-tab-show` carries `{ tabId }`, where `tabId` is `relationships`, `chunks` or `provenance`.
+- `lr-entity-open` carries `{ entityId }` when a provenance chip opens.
+- `lr-drill` carries `{ communityId }` from a provenance community card.
+- `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a provenance path edge.
+- `lr-retrieval-disclosure-change` bubbles from the dossier with readonly `detail.origin`
+of `'supporting'` or `'provenance'`, plus `kind`, `section`, `expanded`, and `chunkId` for a chunk.
+Migrate from `lr-toggle` (`{ section, expanded, itemId? }`) by listening on the dossier and reading
+`origin` to identify the panel.
+
+```ts
+dossier.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.origin, detail.chunkId, detail.expanded);
+});
+```
 
 **Slots:** none.
 
@@ -2915,8 +2928,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
 Short-term Add and Remove actions share one Tab stop. Inline arrows switch between the two actions,
 and Up/Down and Home/End move between rows within the current column. Long-term Remove actions share
 one Tab stop and use the same row keys. Expand buttons remain reachable by Tab.
-The Add button's accessible name begins with the visible `memoryPanelAdd` label and includes the
-item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{label}`.
+A sole promotion button uses the visible `memoryPanelAdd` label as its accessible name. When
+several promotion buttons are present, each name starts with that label and includes the item's
+text. Repeated or visually blank text adds a row number using `memoryPanelAddPosition` with
+`{index}`. `memoryPanelAddWithContext` with `{label}` continues to supply the accessible
+description. Scope exact-name queries to the memory row or match the full action-plus-item name.
 
 **Events:**
 
@@ -2926,14 +2942,21 @@ item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-toggle` carries `{ kind: 'memory', expanded, itemId, memoryId, scope }` for a memory item's
-  own disclosure. Nested provenance toggles retain their `kind` and `section` and add the owning
-  `memoryId` and `scope`.
+- `lr-retrieval-disclosure-change` bubbles from the memory panel with readonly `kind`, `expanded`,
+  `memoryId` and `scope`. A nested provenance disclosure includes `section`, plus `chunkId` when
+  `kind` is `'chunk'`. Migrate from `lr-toggle` by narrowing on `detail.kind` and reading
+  `memoryId` and `scope` for the owning row.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
+
+```ts
+memoryPanel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.scope, detail.memoryId, detail.chunkId);
+});
+```
 
 **Slots:** none.
 
@@ -3380,13 +3403,22 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `evidence-toggle` and `evidence-body` padding; `m` and larger keep the full padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
-**Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-toggle` (`{ kind: 'stage', expanded, itemId }` for a stage's evidence panel,
-either from its own button or the first timeline selection, or
-`{ kind: 'chunk', expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
-discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
-expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
-explicit stage identity.
+**Events:**
+
+- `lr-stage-select` carries `{ stageId }` when a timeline bar is activated.
+- `lr-stage-chunk-action` carries `{ stageId, action: 'open', chunkId, sourceId, anchor? }` for opening a chunk or
+  `{ stageId, action: 'expand', chunkId, expanded }` for a disclosure.
+- `lr-retrieval-disclosure-change` bubbles from the trace with readonly `detail.kind`,
+`stageId` and `expanded`. It covers the evidence button, timeline selection that expands a stage,
+and disclosures of nested chunks, which also carry `chunkId`. Migrate from `lr-toggle`
+(`{ expanded, itemId, stageId? }`) by narrowing on `detail.kind`.
+
+```ts
+trace.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.stageId, detail.chunkId, detail.expanded);
+  else console.log(detail.stageId, detail.expanded);
+});
+```
 
 **Slots:** none.
 

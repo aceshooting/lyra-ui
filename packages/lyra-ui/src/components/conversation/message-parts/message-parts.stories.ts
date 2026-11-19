@@ -156,7 +156,7 @@ export const WindowedRendering: Story = {
       },
     },
   },
-  render: () => html`<lr-message-parts .parts=${citationDenseParts} max-rendered-parts="12"></lr-message-parts>`,
+  render: () => html`<lr-message-parts label="Supporting evidence" .parts=${citationDenseParts} max-rendered-parts="12"></lr-message-parts>`,
 };
 
 export const Narrow: Story = {

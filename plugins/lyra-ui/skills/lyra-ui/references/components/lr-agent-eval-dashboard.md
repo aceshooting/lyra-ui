@@ -19,6 +19,8 @@
 Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
 history. It never launches or scores evaluations.
 
+The run history shares one Tab stop. ArrowUp, ArrowDown, Home and End move between runs.
+
 **Properties:** `metrics: AgentEvaluationMetric[] = []` (attribute: false), where each metric is
 `{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `currency:
 string = 'USD'` is the ISO 4217 code used by currency-formatted metrics (invalid codes safely fall

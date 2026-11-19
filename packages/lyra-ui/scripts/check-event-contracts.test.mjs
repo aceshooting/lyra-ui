@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
+  collectRepositoryEventContracts,
   eventContractManifestDeclarations,
   eventCancelabilityFromComponentJsDoc,
   eventNamesFromAuthoredSection,
@@ -872,6 +873,70 @@ try {
   }
 } finally {
   rmSync(mixinFixtureRoot, { recursive: true, force: true });
+}
+
+const anchorMixinRoot = mkdtempSync(path.join(tmpdir(), 'lyra-anchor-mixin-events-'));
+try {
+  writeFileSync(path.join(anchorMixinRoot, 'base.ts'), `
+    export interface BaseEvents { 'lr-text-select': CustomEvent<string>; 'lr-anchor-result': CustomEvent<boolean>; }
+    export function DocumentAnchorTargetBase(Base) {
+      return class extends Base {
+        bindTextSelection() { this.emit('lr-text-select', 'selected'); }
+        scrollToAnchor() { this.emit('lr-anchor-result', true); }
+      };
+    }
+  `);
+  writeFileSync(path.join(anchorMixinRoot, 'wrapper.ts'), `
+    import { DocumentAnchorTargetBase } from './base.js';
+    export type { BaseEvents as AnchorEvents } from './base.js';
+    export function DocumentAnchorTarget(Base) { return class extends DocumentAnchorTargetBase(Base) {}; }
+  `);
+  writeFileSync(path.join(anchorMixinRoot, 'fixture.ts'), `
+    import { DocumentAnchorTargetBase as NativeMixin } from './base.js';
+    import { DocumentAnchorTarget, type AnchorEvents } from './wrapper.js';
+    class Base extends LyraElement<AnchorEvents> {}
+    export class Native extends NativeMixin(Base) { label = 'bindTextSelection()'; }
+    export class Text extends DocumentAnchorTarget(Base) { bind(root) { this.bindTextSelection(root); } }
+  `);
+  const { components } = collectRepositoryEventContracts(anchorMixinRoot, { modules: [{
+    path: 'fixture.ts',
+    declarations: ['Native', 'Text'].map(name => ({
+      name, customElement: true, tagName: `lr-${name.toLowerCase()}`,
+    })),
+  }] });
+  for (const component of components) {
+    assert.deepEqual(sorted(component.effectiveEventMapEvents), ['lr-anchor-result', 'lr-text-select']);
+    assert.deepEqual(sorted(component.runtimeEventCancelability.keys()), component.className === 'Native'
+      ? ['lr-anchor-result'] : ['lr-anchor-result', 'lr-text-select']);
+  }
+  assert.equal(components.length, 2);
+} finally {
+  rmSync(anchorMixinRoot, { recursive: true, force: true });
+}
+
+const copyReporterRoot = mkdtempSync(path.join(tmpdir(), 'lyra-copy-reporter-events-'));
+try {
+  const internal = path.join(copyReporterRoot, 'src/internal');
+  mkdirSync(internal, { recursive: true });
+  const reporter = path.join(internal, 'record-copy-feedback.ts');
+  writeFileSync(path.join(copyReporterRoot, 'src/fixture.ts'), `
+    import { reportCopyOutcome as report } from './internal/record-copy-feedback.js';
+    export class Fixture {
+      copy() { report({ emit: (name, detail) => this.emit(name, detail) }); }
+    }
+  `);
+  const observe = body => {
+    writeFileSync(reporter, `export function reportCopyOutcome(host) { ${body} }`);
+    const { components: [fixture] } = collectRepositoryEventContracts(copyReporterRoot, { modules: [{
+      path: 'src/fixture.ts', declarations: [{ name: 'Fixture', customElement: true, tagName: 'lr-fixture' }],
+    }] });
+    return [sorted(fixture.runtimeEventCancelability.keys()), fixture.unresolvedRuntimeEmitCalls];
+  };
+  assert.deepEqual(observe("host.announce(true); host.emit('lr-copy'); host.emit('lr-error');"), [['lr-copy', 'lr-error'], 0]);
+  assert.deepEqual(observe("host.emit('lr-copy'); host.emit(dynamicName);"), [[], 1]);
+  assert.deepEqual(observe("host.emit('lr-copy'); external(host);"), [[], 1]);
+} finally {
+  rmSync(copyReporterRoot, { recursive: true, force: true });
 }
 
 const referenceRoot = mkdtempSync(path.join(tmpdir(), 'lyra-event-map-reference-'));

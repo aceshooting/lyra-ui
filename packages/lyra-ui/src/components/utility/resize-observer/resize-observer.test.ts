@@ -61,7 +61,7 @@ describe('<lr-resize-observer>', () => {
     el.remove();
     await aTimeout(0);
 
-    expect((el as unknown as { observer?: ResizeObserver }).observer, 'no observer should have been created post-disconnect').to.be.undefined;
+    expect((el as unknown as { slotted: { observer?: ResizeObserver } }).slotted.observer, 'no observer should have been created post-disconnect').to.be.undefined;
 
     parent.append(el);
   });
@@ -70,16 +70,16 @@ describe('<lr-resize-observer>', () => {
     const el = await fixture<LyraResizeObserver>(html`<lr-resize-observer><button>Resize me</button></lr-resize-observer>`);
     const parent = el.parentElement!;
     await aTimeout(0);
-    expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should exist after the initial connect').to.exist;
+    expect((el as unknown as { slotted: { observer?: ResizeObserver } }).slotted.observer, 'observer should exist after the initial connect').to.exist;
 
     // A pure reparent -- no property change, and the slot's assigned-node set
     // is unchanged, so slotchange never fires either.
     el.remove();
-    expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should be torn down on disconnect').to.be.undefined;
+    expect((el as unknown as { slotted: { observer?: ResizeObserver } }).slotted.observer, 'observer should be torn down on disconnect').to.be.undefined;
 
     parent.append(el);
     await aTimeout(0);
-    expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should be re-armed on reconnect').to.exist;
+    expect((el as unknown as { slotted: { observer?: ResizeObserver } }).slotted.observer, 'observer should be re-armed on reconnect').to.exist;
   });
 
   it('re-observes through a forwarding slot exactly once, driven solely by the internal <slot>', async () => {
@@ -215,7 +215,7 @@ describe('<lr-resize-observer>', () => {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
       await aTimeout(0);
-      expect((el as unknown as { observer?: ResizeObserver }).observer === undefined).to.be.true;
+      expect((el as unknown as { slotted: { observer?: ResizeObserver } }).slotted.observer === undefined).to.be.true;
     } finally {
       el.remove();
       Object.defineProperty(frameWindow, 'ResizeObserver', {
@@ -296,7 +296,7 @@ it('contains a throwing constructor and capability getter, then resumes', async 
   const original = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
   const el = await fixture<LyraResizeObserver>(html`<lr-resize-observer><div>Observed</div></lr-resize-observer>`);
   await aTimeout(0);
-  const rebuild = (): void => (el as unknown as { observeTargets(): void }).observeTargets();
+  const rebuild = (): void => (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
   try {
     class ThrowingResizeObserver {
       constructor() {
@@ -312,7 +312,7 @@ it('contains a throwing constructor and capability getter, then resumes', async 
       },
     });
     expect(rebuild).to.not.throw();
-    expect((el as unknown as { observer?: ResizeObserver }).observer).to.equal(undefined);
+    expect((el as unknown as { slotted: { observer?: ResizeObserver } }).slotted.observer).to.equal(undefined);
   } finally {
     if (original) Object.defineProperty(window, 'ResizeObserver', original);
     el.remove();

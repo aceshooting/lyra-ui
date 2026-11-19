@@ -16,6 +16,10 @@
 
 ## `lr-agent-run`
 
+The header keeps the model and metrics together while the current step label ellipsizes.
+When the summary no longer fits beside the status it moves below it, following the run's
+inline direction.
+
 Top-level shell for one agent run: status, elapsed time, current step, model/cost summary, arbitrary
 metrics, and Cancel/Retry actions. Built-in and application-defined lifecycle statuses are supported;
 `statusLabels` and `statusVariants` customize unknown status kinds. Named `header` and `summary` slots

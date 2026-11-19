@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-toggle` since `unreleased`; use event `@lr-retrieval-disclosure-change`; removal not before `33.0.0` — The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration.
 - **Optional peers** none
 - **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -39,17 +39,24 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` carries `{ kind: 'section', section, expanded }` for a section header or
-`{ kind: 'chunk', section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
-re-emits one contextual toggle at its boundary. Because the panel is a
-conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
-entity chip, a community card member or a path-strip node — only the path strip carries
-`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
-Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
-`lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the chunk inspector.
+**Events:**
+
+- `lr-entity-select` carries `{ entityId, occurrenceIndex? }` from a chip, community member or path node. Only path nodes supply `occurrenceIndex`.
+- `lr-entity-open` carries `{ entityId }` on a chip double-click or Space.
+- `lr-drill` carries `{ communityId }` from a community title, drill button or overflow chip.
+- `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a path edge.
+- `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }` from the chunk inspector.
+- `lr-retrieval-disclosure-change` is a bubbling, composed notification with readonly
+`{ kind: 'section', section, expanded }` or `{ kind: 'chunk', section: 'chunks', chunkId, expanded }`.
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. Migrate from `lr-toggle`
+(`{ section, expanded, itemId? }`) by narrowing on `detail.kind`.
+
+```ts
+panel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.chunkId, detail.expanded);
+  else console.log(detail.section, detail.expanded);
+});
+```
 
 **Slots:** none.
 

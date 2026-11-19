@@ -44,7 +44,8 @@ export interface EmailDeps {
   DOMPurify: HtmlSanitizer | undefined;
 }
 
-const postalMime = /* @__PURE__ */ createOptionalPeerLoader<PostalMimeApi>({
+/** @internal */
+export const postalMime = /* @__PURE__ */ createOptionalPeerLoader<PostalMimeApi>({
   load: () => import('postal-mime'),
   isCapability: isPostalMimeApi,
   warningKey: 'lyra-email-viewer-postal-mime-unavailable',
@@ -84,10 +85,4 @@ export function clearEmailDepsCache(): void {
   depsPromise = undefined;
   resolvedDeps = undefined;
   postalMime.clear();
-}
-
-/** @internal test-only hook to force a specific resolved dependency set (e.g. simulate a missing optional peer); pass `undefined` to reset to the real loader. */
-export function __setEmailDepsForTesting(deps: EmailDeps | undefined): void {
-  depsPromise = deps === undefined ? undefined : Promise.resolve(deps);
-  resolvedDeps = deps;
 }

@@ -3262,10 +3262,10 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartAnnotation",
       "kind": "interface",
-      "fingerprint": "c1e568fb52dec4c657a8",
+      "fingerprint": "ee5532b2c8c316c68bf4",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3284,7 +3284,7 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartArea",
       "kind": "interface",
       "fingerprint": "e468be768c651ac588a7",
@@ -3306,10 +3306,10 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartConfiguration",
       "kind": "interface",
-      "fingerprint": "f2f78c7fe5cef7a01028",
+      "fingerprint": "23b025e44053fd410d2c",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3328,10 +3328,10 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartDataConfiguration",
       "kind": "interface",
-      "fingerprint": "e19206630bcc444d642e",
+      "fingerprint": "c5373418cd9e79fbbbf6",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3350,7 +3350,7 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartDatasetConfiguration",
       "kind": "interface",
       "fingerprint": "8b30b9a29ad11862ef78",
@@ -3416,10 +3416,10 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartInstance",
       "kind": "interface",
-      "fingerprint": "dc8356e4f26548b53995",
+      "fingerprint": "afd1ac143c89bce89729",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3438,7 +3438,7 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartPlugin",
       "kind": "interface",
       "fingerprint": "3ca6a80a11bce3664842",
@@ -3460,7 +3460,7 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartPoint",
       "kind": "interface",
       "fingerprint": "3f21b17199045fe26919",
@@ -3482,10 +3482,10 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart.class.ts",
+      "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartSeries",
       "kind": "interface",
-      "fingerprint": "a2d760fce242fa62cd7b",
+      "fingerprint": "265a3149936807cc6111",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3691,10 +3691,10 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/code-loader.ts",
+      "module": "src/internal/shiki/full.ts",
       "exportName": "loadShikiHighlighter",
       "kind": "function",
-      "fingerprint": "62e1357cb5721c7b5a51",
+      "fingerprint": "80becf67a0da20b629ed",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3710,7 +3710,7 @@
       "module": "src/components/conversation/code-block/code-loader.ts",
       "exportName": "loadShikiLanguage",
       "kind": "function",
-      "fingerprint": "a7967fc7a11023760912",
+      "fingerprint": "3f3094d877595dba9ff1",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3723,10 +3723,10 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/code-loader.ts",
+      "module": "src/internal/shiki/full.ts",
       "exportName": "shikiHasLoadedLanguage",
       "kind": "function",
-      "fingerprint": "b9ad8b4e7505f6df522c",
+      "fingerprint": "23add4cd1cadc9d5229b",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3739,10 +3739,10 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "loadShikiHighlighterCore",
       "kind": "function",
-      "fingerprint": "2c72ac0e16df3f3ea006",
+      "fingerprint": "a99d438e798eabe39043",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3755,7 +3755,7 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "normalizeShikiLanguage",
       "kind": "function",
       "fingerprint": "2862eed603484f78a454",
@@ -3771,10 +3771,10 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "resolvedShikiLanguages",
       "kind": "function",
-      "fingerprint": "673baf434ea593b0e6f6",
+      "fingerprint": "1e0944c55c9e1e6055fa",
       "routes": [
         "src/components/conversation/code-block/code-block-core.ts",
         "src/components/conversation/markdown/markdown-core.ts",
@@ -3790,10 +3790,10 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "setShikiCoreEngine",
       "kind": "function",
-      "fingerprint": "de8a05c2d6c23d5f9cc9",
+      "fingerprint": "ae83d10e8c9c3d1eb11e",
       "routes": [
         "src/components/conversation/code-block/code-block-core.ts",
         "src/components/conversation/markdown/markdown-core.ts",
@@ -3809,10 +3809,10 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "ShikiHighlighter",
       "kind": "interface",
-      "fingerprint": "afa77d36dd1a1a8b1783",
+      "fingerprint": "db21a9a67ae9cb3c1264",
       "routes": [
         "src/all.ts",
         "src/components/conversation/code-block/code-loader.ts",
@@ -3828,7 +3828,7 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "ShikiLanguageRegistration",
       "kind": "interface",
       "fingerprint": "3e20a7fac24b73c416d8",
@@ -3846,7 +3846,7 @@
       }
     },
     {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "module": "src/internal/shiki/core.ts",
       "exportName": "ShikiRegexEngine",
       "kind": "interface",
       "fingerprint": "b97b23d00b3a4e950832",
@@ -4504,10 +4504,10 @@
       }
     },
     {
-      "module": "src/components/conversation/thread-list/thread-list.class.ts",
+      "module": "src/components/conversation/thread-list/thread-list-types.ts",
       "exportName": "LyraChatThread",
       "kind": "interface",
-      "fingerprint": "3a3dde8e2395b55fc7a0",
+      "fingerprint": "3649f6fedd489a14c1a2",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4529,7 +4529,7 @@
       "module": "src/components/conversation/thread-list/thread-list.class.ts",
       "exportName": "ThreadGroupContext",
       "kind": "interface",
-      "fingerprint": "dd31bbe9f00b1c45e7bf",
+      "fingerprint": "ff9c825ada446dd4c59a",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -9110,10 +9110,10 @@
       }
     },
     {
-      "module": "src/components/media/attachment-chip/file-size.ts",
+      "module": "src/internal/bytes.ts",
       "exportName": "formatFileSize",
       "kind": "function",
-      "fingerprint": "f879a4002e8a328f6469",
+      "fingerprint": "75f37a20e3de09a46e1b",
       "routes": [
         "src/all.ts",
         "src/components/lr-attachment-chip.ts",
@@ -9133,7 +9133,7 @@
       }
     },
     {
-      "module": "src/components/media/attachment-chip/file-size.ts",
+      "module": "src/internal/bytes.ts",
       "exportName": "localizedNumberLabel",
       "kind": "function",
       "fingerprint": "538afbfb8d3964b40330",
@@ -14633,7 +14633,7 @@
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnostic",
       "kind": "interface",
-      "fingerprint": "98c5276401b4663658f0",
+      "fingerprint": "c7416d3c7d20f8070170",
       "routes": [
         "src/all.ts",
         "src/components/lr-csv-viewer.ts",
@@ -14664,7 +14664,7 @@
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnosticEventDetail",
       "kind": "interface",
-      "fingerprint": "6979380397c5ccc2da38",
+      "fingerprint": "f03d4a90e4cf311d1dc7",
       "routes": [
         "src/all.ts",
         "src/components/lr-csv-viewer.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "6ec27ae09c9822307e30",
+      "fingerprint": "89995cec146e70ee674d",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14725,10 +14725,10 @@
       }
     },
     {
-      "module": "src/internal/anchor-target.ts",
+      "module": "src/internal/anchor-target-base.ts",
       "exportName": "LyraAnchorTarget",
       "kind": "interface",
-      "fingerprint": "18ca9ab2d6f041a6d8db",
+      "fingerprint": "4339d8396c96116f8012",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "65ac25d93b5027d6606b",
+      "fingerprint": "202c95e2575821ac1fa3",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "afe9c1e157b0131db3d3",
+      "fingerprint": "19602f57ffd5d7188626",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16113,7 +16113,7 @@
       "module": "src/internal/text-viewer-target.ts",
       "exportName": "LyraTextViewerTarget",
       "kind": "interface",
-      "fingerprint": "c52bee7df29e571c8ff8",
+      "fingerprint": "c1d44db843c86d143e98",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "7f6851c8bf1de0863e00",
+      "fingerprint": "90c4bb773fb8d6ac42cf",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "71353efd222261e42572",
+      "fingerprint": "2b11e027139b702c4f5f",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "4b40118a00708f4cb624",
+      "fingerprint": "d583c2db78b892612345",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "725504893056f620689a",
+      "fingerprint": "f7f2db4c9e02722d6b98",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "e6e3258ab96bc741b025",
+      "fingerprint": "cb991fb62fd5fd6b9735",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "1c85daf72eb3ce5ccf64",
+      "fingerprint": "579c2c88d863ffa61af8",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "6c5e0621db4ac6e813ba",
+      "fingerprint": "ccb52e3c339bbe763dba",
       "routes": [
         "src/localization.ts"
       ],
@@ -19028,7 +19028,7 @@
       "module": "src/components/conversation/thread-list/thread-list.class.ts",
       "exportName": "ThreadListSourceQuery",
       "kind": "interface",
-      "fingerprint": "25b97b3dd36bf852f472",
+      "fingerprint": "01c326363ef20f1ca7b2",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -21636,7 +21636,7 @@
       "module": "src/components/conversation/code-block/shiki-oniguruma.ts",
       "exportName": "createShikiOnigurumaEngine",
       "kind": "function",
-      "fingerprint": "2007f39ba9c4dd06d47d",
+      "fingerprint": "78fcb2660db3d9fbd86c",
       "routes": [
         "src/components/conversation/code-block/shiki-oniguruma.ts"
       ],

@@ -467,7 +467,8 @@ The table emits a cancelable `lr-page-request` with a one-based `{ page }` befor
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
-sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
+sort properties; server mode leaves them controlled. `lr-page-request` is cancelable and proposes
+a one-based page with frozen readonly `detail: { page }` before `lr-page-change`. Other events are `lr-row-activate`
 (a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more`,
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,

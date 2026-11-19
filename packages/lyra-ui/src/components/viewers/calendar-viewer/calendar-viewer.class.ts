@@ -1,6 +1,7 @@
+import { finiteCount } from '../../../internal/numbers.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { bdi } from '../../../internal/bidi.js';
 import { utcDate } from '../../../internal/calendar-date.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -12,8 +13,6 @@ import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTarge
 import {
   LyraResourceLimitError,
   LyraUserFacingError,
-  readResponseText,
-  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { loadIcal, type IcalTimeApi } from './calendar-loader.js';
@@ -48,12 +47,14 @@ export interface ParsedCalendarEvent {
 }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: () => string };
 export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
-const MAX_CALENDAR_EVENTS = 250;
+const DEFAULT_MAX_CALENDAR_EVENTS = 250;
+const MAX_CALENDAR_EVENTS = 2500;
 const MAX_CALENDAR_RENDERED_CHARS = 2 * 1024 * 1024;
 
 function exceedsEventCount(source: string, limit: number): boolean {
@@ -119,12 +120,13 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
  * VEVENT as plain text, preserving summaries, DATE/DATE-TIME semantics, locations, and details.
  * Early all-day years retain UTC calendar semantics and the exclusive DTEND display boundary.
- * At most 250 events and 2 MiB of rendered event text are retained so search, selection and
+ * By default, at most 250 events and 2 MiB of rendered event text are retained so search, selection and
  * text-quote anchors continue to cover the complete accepted document without eager 10k-row DOM.
  * The inherited fragment path performs an exact DOM `id` lookup, but generated event markup has
  * no fragment ids; such a jump reports `found: false`. Use a text-quote anchor for event content.
  *
  * @customElement lr-calendar-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing the calendar fails.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever search state
  *   changes. `matchCountExact=false` makes the retained count a lower bound. Bubbling, composed,
@@ -174,6 +176,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
+  /** Maximum admitted events (0–2,500, default 250). A larger document shows the resource-limit message. */
+  @property({ type: Number, attribute: 'max-events' }) maxEvents = 250;
   /** Display name associated with the calendar. It names `[part='base']` when host `aria-label` is
    *  absent, before the localized fallback. A non-empty host label remains on the host; an
    *  explicitly empty one is preserved on the shadow owner. */
@@ -186,7 +190,16 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
   override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
 
@@ -204,7 +217,6 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     super.connectedCallback();
     if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
-    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) {
       this.requestUpdate();
@@ -213,10 +225,9 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   }
 
   /** A same-task DOM move keeps the loaded document; a genuine disconnect invalidates its load. */
-  private readonly detached = new DeferredTeardown(() => { this.generation++; });
+  private readonly detached = new DeferredTeardown(() => this.transport.cancel());
 
   override disconnectedCallback(): void {
-    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     this.releaseScrollRegion?.();
     this.releaseScrollRegion = undefined;
@@ -238,64 +249,35 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       this.fetchState.kind,
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
-    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (changed.has('src') || changed.has('maxEvents')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
-  private async load(): Promise<void> {
+  private load(): Promise<void> {
     this.lastLoadSrc = this.src;
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const ical = await this.requireIcal(generation, signal);
-      if (!ical) return;
-      const source = await readResponseText(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const events = this.parse(source, ical);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!events) return;
-      if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', events };
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-    }
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    return this.transport.begin(this.src);
   }
 
-  private async requireIcal(generation: number, signal: AbortSignal | undefined): Promise<IcalLibrary | undefined> {
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
     const ical = await loadIcal();
-    if (signal?.aborted || !this.isConnected || generation !== this.generation) return undefined;
-    if (!ical) {
-      throw new LyraUserFacingError(
-        this.localize('calendarViewerMissingParser'),
-        (localize) => localize('calendarViewerMissingParser'),
-      );
-    }
-    return ical;
+    if (this.transport.isStale(token)) return;
+    if (!ical) throw new LyraUserFacingError(this.localize('calendarViewerMissingParser'), localize => localize('calendarViewerMissingParser'));
+    const source = await this.transport.readText(response);
+    if (this.transport.isStale(token)) return;
+    const events = this.parse(source, ical);
+    this.fetchState = { kind: 'loaded', events };
   }
 
   private parse(source: string, ical: IcalLibrary): ParsedCalendarEvent[] {
     // Count events before the peer materializes the whole (up to 25 MB) calendar tree.
-    if (exceedsEventCount(source, MAX_CALENDAR_EVENTS)) {
+    const limit = finiteCount(this.maxEvents, DEFAULT_MAX_CALENDAR_EVENTS, MAX_CALENDAR_EVENTS);
+    if (exceedsEventCount(source, limit)) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
     }
     const component = new ical.Component(ical.parse(source));
     const subcomponents = component.getAllSubcomponents('vevent') as unknown[];
-    if (subcomponents.length > MAX_CALENDAR_EVENTS) {
+    if (subcomponents.length > limit) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
     }
     let renderedChars = 0;

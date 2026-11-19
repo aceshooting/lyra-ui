@@ -1,3 +1,4 @@
+import { MIGRATION_CONTRACT_FILE, decodeMigrationContract } from './packed-migration-contract.mjs';
 import { createHash } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
@@ -11,10 +12,18 @@ export const SOURCE_INPUTS = Object.freeze({
   metadata: 'scripts/fixtures/component-metadata.json', inventory: 'scripts/fixtures/component-inventory.json',
   renameLedger: 'scripts/fixtures/lyra-renames.json',
 });
-export const PACKED_INPUTS = Object.freeze({
+const PACKED_INPUTS = Object.freeze({
   packageJson: 'package/package.json', manifest: 'package/custom-elements.json',
   migrationContract: 'package/dist/cli/migration-contract.json',
 });
+const compressedContractPath = 'package/dist/cli/' + MIGRATION_CONTRACT_FILE;
+
+export function packedInputsFor(memberPaths) {
+  const matches = memberPaths.filter(path => path === PACKED_INPUTS.migrationContract || path === compressedContractPath);
+  if (matches.length !== 1) throw new Error('Missing or duplicate packed input for the migration contract');
+  return { ...PACKED_INPUTS, migrationContract: matches[0] };
+}
+
 const MAX_EVIDENCE_BYTES = 96 * 1024 * 1024;
 const oidPattern = /^[a-f0-9]{40}$/u;
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -91,8 +100,9 @@ export function validatePublishedCapture(capture, facts, archive) {
   ensure(capture?.schemaVersion === 1 && capture.extractorVersion === 1 && archive?.schemaVersion === 1, 'Unsupported capture schema');
   ensure(capture.sourceRelease === `lyra-ui@${capture.sourceVersion}` && capture.package?.name === '@aceshooting/lyra-ui' && capture.package.version === capture.sourceVersion, 'Capture release identity mismatch');
   ensure(/^[a-f0-9]{64}$/u.test(capture.package.tarballSha256) && /^sha512-[A-Za-z0-9+/]{86}==$/u.test(capture.package.registryIntegrity), 'Invalid published tarball pin');
+  const packedInputs = packedInputsFor(capture.inputs.filter(input => input.origin === 'packed').map(input => input.path));
   const expected = [...Object.entries(SOURCE_INPUTS).map(([role, path]) => ({ origin: 'source', role, path: `packages/lyra-ui/${path}` })),
-    ...Object.entries(PACKED_INPUTS).map(([role, path]) => ({ origin: 'packed', role, path }))];
+    ...Object.entries(packedInputs).map(([role, path]) => ({ origin: 'packed', role, path }))];
   ensure(capture.inputs.length >= expected.length, 'Unexpected evidence input inventory');
   const parsed = { source: {}, packed: {} }; const usedPayloads = new Set(); const gitInputs = [];
   for (const [index, wanted] of expected.entries()) {
@@ -101,7 +111,8 @@ export function validatePublishedCapture(capture, facts, archive) {
     const data = archive.payloads[input.sha256]; const bytes = base64(data);
     ensure(sha256(bytes) === input.sha256 && bytes.length === input.bytes, `Evidence bytes disagree: ${input.path}`);
     usedPayloads.add(input.sha256);
-    parsed[input.origin][input.role] = JSON.parse(bytes.toString('utf8'));
+    const json = input.path === compressedContractPath ? decodeMigrationContract(bytes) : bytes;
+    parsed[input.origin][input.role] = JSON.parse(json.toString('utf8'));
     if (input.origin === 'source') gitInputs.push({ ...input, data });
     else ensure(input.gitBlob === null, 'Packed input unexpectedly has Git identity');
   }

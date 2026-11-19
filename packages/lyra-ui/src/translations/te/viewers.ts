@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'కుడివైపు తిప్పండి',
   modelViewerRotateUp: 'పైకి తిప్పండి',
   modelViewerRotateDown: 'కిందకు తిప్పండి',
+  modelViewerViewport: 'ఇంటరాక్టివ్ మోడల్',
 };
 
 registerLyraLocale('te', strings);

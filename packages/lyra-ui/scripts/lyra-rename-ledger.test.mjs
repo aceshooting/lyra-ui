@@ -14,7 +14,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
-import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
+import { buildMigrationRuntime } from './build-migration-runtime.mjs';
 
 import { analyzeRenameLedger, analyzeRetiredEventHistory } from './check-migration-coverage.mjs';
 import { buildLyraRenameReference } from './build-llms.mjs';
@@ -1421,7 +1421,7 @@ function packagedCli(runtimeLedger = ledger, runtimeInventory = inventory, expor
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-renames-cli-'));
   const cliDir = path.join(scratch, 'cli');
   fs.mkdirSync(cliDir);
-  copyMigrationRuntimeModules(scriptDir, cliDir);
+  buildMigrationRuntime(scriptDir, cliDir);
   fs.writeFileSync(
     path.join(cliDir, 'migration-contract.json'),
     `${JSON.stringify(createMigrationRuntimeInventory(runtimeInventory, { renameLedger: runtimeLedger, exportDeprecations }))}\n`,

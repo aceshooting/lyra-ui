@@ -232,7 +232,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
 
   private readonly labelTextObserver = new AccessibleTextController(
-    this, [], (records) => this.handleLabelRecords([...records]), ['slot', 'title'], true, false,
+    this, [], (records) => this.handleLabelRecords([...records]), ['slot', 'title', 'aria-disabled'], true, false,
     () => defaultLabelForwardingSlots(this).length > 0,
   );
   private observedDefaultLabel = '';
@@ -324,9 +324,9 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.handleLabelMutation();
   };
 
-  private inertAncestorReleases: Array<() => void> = [];
-  private bindInertAncestors(): void {
-    for (const release of this.inertAncestorReleases.splice(0)) release();
+  private availabilityReleases: Array<() => void> = [];
+  private observeAncestorAvailability(): void {
+    for (const release of this.availabilityReleases.splice(0)) release();
     const roots = new Map<Node, Set<Element>>();
     for (let ancestor = composedParentElement(this); ancestor; ancestor = composedParentElement(ancestor)) {
       const root = ancestor.getRootNode();
@@ -335,12 +335,14 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     }
     for (const [root, ancestors] of roots) {
       const release = subscribeInheritedAttributes(root, this.ownerDocument.defaultView?.MutationObserver, {
-        attributes: ['inert'],
+        attributes: ['inert', 'hidden'],
         changed: records => {
-          if (!defaultLabelForwardingSlots(this).length && records.some(record => ancestors.has(record.target as Element))) this.emit('lr-option-change');
+          const changed = records.some(record => ancestors.has(record.target as Element) &&
+            (record.attributeName === 'hidden' ? record.target.contains(this) : !defaultLabelForwardingSlots(this).length));
+          if (changed) this.emit('lr-option-change');
         },
       });
-      if (release) this.inertAncestorReleases.push(release);
+      if (release) this.availabilityReleases.push(release);
     }
   }
 
@@ -354,11 +356,11 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.addEventListener('slotchange', this.handleLabelSlotChange);
     this.cachedDefaultLabel = undefined;
     this.observedDefaultLabel = this.defaultLabel;
-    this.bindInertAncestors();
+    this.observeAncestorAvailability();
   }
 
   override disconnectedCallback(): void {
-    for (const release of this.inertAncestorReleases.splice(0)) release();
+    for (const release of this.availabilityReleases.splice(0)) release();
     this.removeEventListener('pointerenter', this.handlePointerEnter);
     this.removeEventListener('pointerleave', this.handlePointerLeave);
     this.removeEventListener('focusin', this.handleFocusIn);
@@ -374,13 +376,14 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     super.adoptedCallback();
     this.cachedDefaultLabel = undefined;
     this.labelTextObserver.adopted();
-    if (this.isConnected) this.bindInertAncestors();
+    if (this.isConnected) this.observeAncestorAvailability();
   }
 
   private handleLabelRecords(records: MutationRecord[]): void {
     this.cachedDefaultLabel = undefined;
     const presentationChanged = records.some((record) => {
-      if (record.type === 'attributes' && record.attributeName === 'inert') return true;
+      if (record.type === 'attributes' && (record.attributeName === 'inert' ||
+          (record.target === this && (record.attributeName === 'hidden' || record.attributeName === 'aria-disabled')))) return true;
       // A removed slot name no longer identifies its former adornment. Notify directly
       // for source assignment changes even when decorative text leaves the label unchanged.
       if (record.type === 'attributes' && record.attributeName === 'slot' && this.contains(record.target)) return true;

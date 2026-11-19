@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `postal-mime` — see `llms/peers.md`
-- **Themeable via** 25 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-email-viewer`
+
+Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-viewer-action-hover-background` and `--lr-email-viewer-action-active-background`.
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
@@ -24,6 +26,7 @@ attachment row is a real `<button>` that emits `lr-attachment-open` with an immu
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
 `URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
+The attachment action’s accessible name includes the visible filename and formatted size.
 An attachment with no filename uses the localized `emailViewerUnnamedAttachment` fallback
 (`"Unnamed attachment"` in English) for its visible name, open-button accessible name, and
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
@@ -65,6 +68,7 @@ reports `found: false`; text-quote anchors use the rendered message body.
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This

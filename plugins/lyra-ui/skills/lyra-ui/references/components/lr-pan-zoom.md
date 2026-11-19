@@ -42,9 +42,6 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
 
-A failed image renders a localized message in the `error` part, announces the failure, and emits
-`lr-render-error` with `{ error: Error }`.
-
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
@@ -57,9 +54,10 @@ container does not claim toolbar arrow-key navigation.
 `focus(options?)`, `blur()`, and `click()` forward to the scrollable `viewport`, which is the
 component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
-**Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
-relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`).
+**Events:** `lr-zoom-change` carries `detail: { zoom }`. `lr-render-error` carries
+`detail: { error: Error }` when an image fails to load. The frame displays and announces a
+localized failure message. The viewport relays `focus` and `blur` once as bubbling, composed
+native `FocusEvent`s from the owner realm, preserving `relatedTarget`.
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and `error` (the localized message shown in place of an image that
 failed to load). The

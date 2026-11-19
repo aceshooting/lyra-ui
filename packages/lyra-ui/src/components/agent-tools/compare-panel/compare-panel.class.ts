@@ -98,8 +98,6 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
 
   @state() private hasPromptSlot = false;
 
-  // The named "prompt" slot -- read once from `firstUpdated()` in addition to its own
-  // `@slotchange` listener; see `collectInitialSlotAssignment`'s own doc.
   @query('slot[name="prompt"]') private promptSlot?: HTMLSlotElement;
 
   @query('[part="pane-a"]') private paneAEl?: HTMLElement;
@@ -189,11 +187,6 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.collectPromptSlotContent(e.target as HTMLSlotElement);
   };
 
-  // Wired as the `slotchange` handler (via `onPromptSlotChange`) for every later mutation, and
-  // called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
-  // environment, or a real-browser timing race, where the slot's initial assignment never fires
-  // `slotchange`. Idempotent: recomputing the same boolean from the same assigned nodes a second
-  // time changes nothing observable.
   private collectPromptSlotContent(slot: HTMLSlotElement): void {
     this.hasPromptSlot = slot.assignedNodes({ flatten: true }).length > 0;
   }
@@ -251,11 +244,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       const event = this.emitVoteRequest({ choice, itemId });
       if (event.defaultPrevented || this.disabled) return;
       if (this.itemId === itemId && this.voteWriteVersion !== voteVersion) return;
-      // A listener may re-entrantly advance itemId synchronously inside emit() above -- itemId's
-      // own setter already resets `vote` to null for the new pair, and this write must not clobber
-      // that reset by re-stamping `choice` onto the pair the user never actually saw vote on. The
-      // announcement still fires unconditionally: `label`/`itemId` were captured before the
-      // listener ran, so it correctly reports the vote against the *original* pair.
+      // A listener can advance to a new pair during dispatch. Keep its vote state intact.
       if (this.itemId === itemId) {
         this.vote = choice;
         this.emit('lr-vote-change', Object.freeze({ vote: choice, itemId }));
@@ -322,18 +311,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     this.syncPaneFocusability();
-    // happy-dom (through at least 20.14.5) never fires the "prompt" slot's INITIAL `slotchange` --
-    // see `collectInitialSlotAssignment`'s own doc -- so an `<lr-compare-panel>` whose prompt
-    // content already exists at connect (the ordinary "render once data is ready" Lit pattern)
-    // would otherwise report no prompt content and keep `[part="prompt"]` wrongly hidden. Collect
-    // once here too, from the slot's current assignment; `collectPromptSlotContent()` is
-    // idempotent (it recomputes the same boolean from the same assigned nodes), so a real browser
-    // firing the initial event as well is a harmless no-op re-application. Deferred a microtask:
-    // `hasPromptSlot` is reactive, so writing it synchronously inside `firstUpdated()` -- after
-    // this same update has already been marked complete -- trips Lit's "scheduled an update after
-    // an update completed" dev warning. A real `slotchange` event runs this same collection from a
-    // task/microtask entirely outside the update cycle, which never trips it; queuing a microtask
-    // here reproduces that same "outside the cycle" timing instead of writing from inside it.
+    // The initial slotchange may be absent. Seed outside Lit's update cycle.
     const slot = this.promptSlot;
     queueMicrotask(() => {
       collectInitialSlotAssignment(slot, (s) => this.collectPromptSlotContent(s));

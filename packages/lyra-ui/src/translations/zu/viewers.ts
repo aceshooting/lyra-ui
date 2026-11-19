@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Jikisa ngakwesokudla',
   modelViewerRotateUp: 'Jikisa phezulu',
   modelViewerRotateDown: 'Jikisa phansi',
+  modelViewerViewport: 'Imodeli ongayilawula',
 };
 
 registerLyraLocale('zu', strings);

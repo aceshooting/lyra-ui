@@ -109,6 +109,11 @@ After directly editing its DOM value, dispatch a native `input` event to refilte
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+`lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
+be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
+`lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
+that the clear action emptied the selection. `lr-load-error` reports a failure to load the optional
+searchable picker. The compact control remains available.
 
 An accepted user choice or clear synchronously updates the form value, then emits one
 `input`, `lr-input`, `change`, `lr-change` sequence. Prefixed details have readonly `value: string`

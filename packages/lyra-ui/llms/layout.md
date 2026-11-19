@@ -3638,7 +3638,7 @@ dropdown owns those root-level behaviors.
 
 Assigned `details` and `suffix` elements describe the item. The default slot supplies its name.
 
-The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `submenuOpen` for the current state.
+**Events:** `lr-show` and `lr-hide` fire after the item’s assigned menu changes state. Read `submenuOpen` for the current state.
 
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
 `menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
@@ -3914,7 +3914,7 @@ menubar or an ancestor and apply to every slotted menu.
 
 The `lr-menubar-item` styling hooks include `--lr-menubar-item-hover-color`, `--lr-menubar-item-active-color`.
 
-The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `menuOpen` for the current state.
+**Events:** `lr-show` and `lr-hide` fire after the item’s assigned menu changes state. Read `menuOpen` for the current state.
 
 **Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
 and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not

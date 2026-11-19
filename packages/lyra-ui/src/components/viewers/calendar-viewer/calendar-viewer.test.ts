@@ -441,3 +441,33 @@ it('omits malformed peer text fields and preserves valid event text', async () =
     } finally { restore(); }
   } finally { Object.defineProperty(peer.Event.prototype, 'summary', descriptor); }
 });
+
+it('rechecks the same document when max-events changes', async () => {
+  const previous = window.fetch;
+  window.fetch = () => Promise.resolve(new Response(TWO_EVENTS));
+  try {
+    const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="/c.ics"></lr-calendar-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="event"]').length === 2);
+    el.setAttribute('max-events', '1');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    el.removeAttribute('max-events');
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="event"]').length === 2);
+  } finally { window.fetch = previous; }
+});
+
+it('admits a document above the default on request and enforces the absolute maximum', async () => {
+  const originalFetch = window.fetch;
+  let count = 251;
+  window.fetch = async () => new Response(['BEGIN:VCALENDAR', 'VERSION:2.0', ...Array.from({ length: count }, (_, i) => 'BEGIN:VEVENT\r\nUID:' + i + '\r\nDTSTART:20260714T140000Z\r\nSUMMARY:Meeting\r\nEND:VEVENT'), 'END:VCALENDAR'].join('\r\n'));
+  try {
+    const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="/directory"></lr-calendar-viewer>`);
+    const error = () => el.shadowRoot!.querySelector('[part="error"]') !== null;
+    await waitUntil(error);
+    el.setAttribute('max-events', '251');
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="event"]').length === 251, 'raised limit admits 251 records');
+    count = 2501;
+    el.setAttribute('max-events', '99999');
+    await waitUntil(error);
+    expect(el.shadowRoot!.querySelectorAll('[part="event"]').length).to.equal(0);
+  } finally { window.fetch = originalFetch; }
+});

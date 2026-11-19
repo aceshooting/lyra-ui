@@ -1,4 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './agent-eval-dashboard.js';
 import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
@@ -7,6 +9,25 @@ const stat = (el: LyraAgentEvalDashboard, id: string) =>
   el.shadowRoot!.querySelector(`[part="metric"][data-metric-id="${id}"]`)!.getAttribute('aria-label') ?? '';
 
 describe('lr-agent-eval-dashboard remediation', () => {
+  it('moves the run history tab stop with the keyboard and rehomes it when runs are removed', async () => {
+    const runs = ['a', 'b', 'c'].map(id => ({ id, label: id, status: 'done' as const }));
+    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard without-chart
+      .runs=${runs}></lr-agent-eval-dashboard>`);
+    const root = el.shadowRoot!;
+    const buttons = () => [...root.querySelectorAll<HTMLButtonElement>('[part="run"]')];
+    const tabOrder = () => buttons().map(button => button.tabIndex);
+    expect(tabOrder()).to.deep.equal([0, -1, -1]);
+
+    await focusByKeyboard(buttons()[0]!);
+    await sendKeys({ press: 'End' });
+    expect(root.activeElement === buttons()[2]).to.equal(true);
+    expect(tabOrder()).to.deep.equal([-1, -1, 0]);
+
+    el.runs = runs.slice(0, 2);
+    await el.updateComplete;
+    expect(tabOrder()).to.deep.equal([-1, 0]);
+  });
+
   it('paints a distinct press step on an unselected metric', async () => {
     const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard data-lr-theme-scope
       style="--lr-transition-fast: 0s"
@@ -88,5 +109,12 @@ describe('lr-agent-eval-dashboard remediation', () => {
     el.metricId = 'score';
     await el.updateComplete;
     expect(meta()).to.deep.equal([1, 0]);
+  });
+
+  it('uses a neutral badge for a status kind matching an inherited name', async () => {
+    const runs = [{ id: 'run', label: 'Run', status: { kind: 'constructor' } }];
+    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard
+      .runs=${runs}></lr-agent-eval-dashboard>`);
+    expect(el.shadowRoot!.querySelector('lr-badge')?.variant).to.equal('neutral');
   });
 });

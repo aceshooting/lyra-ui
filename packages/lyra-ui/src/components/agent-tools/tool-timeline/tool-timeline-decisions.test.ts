@@ -47,6 +47,20 @@ it('ignores dialog decisions while no entry is under review', async () => {
   expect(decisions.length).to.equal(0);
 });
 
+it('keeps the closed approval dialog idle when entries change', async () => {
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline></lr-tool-timeline>`);
+  const approval = dialog(el);
+  await approval.updateComplete;
+  const emptyArgs = approval.args;
+  const settledUpdate = approval.updateComplete;
+
+  el.entries = [{ id: 'call-1', name: 'search', status: 'success', args: { query: 'draft' } }];
+  await el.updateComplete;
+  expect(approval.open).to.equal(false);
+  expect(approval.args === emptyArgs, 'argument identity').to.equal(true);
+  expect(approval.updateComplete === settledUpdate, 'child update').to.equal(true);
+});
+
 it('omits a timestamp and duration that cannot be represented', async () => {
   const entries = [
     { id: 'far', name: 'scan', status: 'success', startedAt: 9e15, endedAt: 9e15 + 5 },

@@ -1,9 +1,10 @@
+import { setEmailDeps } from './fixtures/email-deps.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./email-viewer.js";
 import type { LyraEmailViewer } from "./email-viewer.js";
-import { __setEmailDepsForTesting } from "./email-loader.js";
 import type { PostalMessageApi } from './email-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from "../document-viewer/registry.js";
@@ -11,6 +12,9 @@ import type { LyraHighlight } from "../document-viewer/anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+
+expectDevWarning('lyra-dompurify-unavailable');
+expectDevWarning('lyra-email-viewer-postal-mime-unavailable');
 
 function trackedResponse(text: string, init?: ResponseInit): { response: Response; state: { pulls: number; cancelled: boolean } } {
   const state = { pulls: 0, cancelled: false };
@@ -227,7 +231,7 @@ function abortError(): Error {
 }
 
 describe("lr-email-viewer", () => {
-  afterEach(() => __setEmailDepsForTesting(undefined));
+  afterEach(() => setEmailDeps(undefined));
 
   it('keeps loaded message content and later updates working when a highlight omits its anchor', async () => {
     const { el, restore } = await loaded(TEXT_EML);
@@ -378,7 +382,7 @@ describe("lr-email-viewer", () => {
   });
 
   it("localizes an address group as one reorderable whole message", async () => {
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: {
         parse: () =>
           Promise.resolve({
@@ -465,7 +469,7 @@ describe("lr-email-viewer", () => {
   });
 
   it("shows an error instead of a silently empty body when an HTML-only message has no sanitizer available", async () => {
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: {
         parse: () =>
           Promise.resolve({
@@ -498,7 +502,7 @@ describe("lr-email-viewer", () => {
   });
 
   it("treats an installed sanitizer returning empty HTML as valid empty content", async () => {
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: {
         parse: () =>
           Promise.resolve({
@@ -528,7 +532,7 @@ describe("lr-email-viewer", () => {
   });
 
   it("still falls back to plain text when DOMPurify is unavailable but the message has a text alternative", async () => {
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: {
         parse: () =>
           Promise.resolve({
@@ -626,7 +630,7 @@ describe("lr-email-viewer", () => {
       to: { configurable: true, enumerable: true, value: [cyclicGroup, validRecipient], writable: true },
       attachments: { configurable: true, enumerable: true, value: attachments, writable: true },
     });
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: { parse: () => Promise.resolve(parsed as never) },
       DOMPurify: { sanitize: (value: string) => value },
     });
@@ -859,10 +863,10 @@ describe("lr-email-viewer", () => {
     const el = await fixture<LyraEmailViewer>(
       html`<lr-email-viewer></lr-email-viewer>`
     );
-    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expect(el).to.be.accessible();
     await expectLabelInName(el, reviewComponentLabels(
-      el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"]',
-      'The filename labels the attachment action; its file size is metadata.',
+      el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"], [part="attachment-size"]',
+      'The attachment action includes the visible filename and size.',
     ));
   });
 
@@ -875,10 +879,10 @@ describe("lr-email-viewer", () => {
       expect(
         el.shadowRoot!.querySelectorAll('[part="attachment-button"]').length
       ).to.be.greaterThan(0);
-      await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+      await expect(el).to.be.accessible();
       await expectLabelInName(el, reviewComponentLabels(
-        el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"]',
-        'The filename labels the attachment action; its file size is metadata.',
+        el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"], [part="attachment-size"]',
+        'The attachment action includes the visible filename and size.',
       ));
     } finally {
       restore();
@@ -904,10 +908,10 @@ describe("lr-email-viewer", () => {
       expect(
         el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute("hidden")
       ).to.be.false;
-      await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+      await expect(el).to.be.accessible();
       await expectLabelInName(el, reviewComponentLabels(
-        el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"]',
-        'The filename labels the attachment action; its file size is metadata.',
+        el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"], [part="attachment-size"]',
+        'The attachment action includes the visible filename and size.',
       ));
     } finally {
       restore();
@@ -975,7 +979,7 @@ describe("lr-email-viewer", () => {
 
   describe("attachments", () => {
     it('localizes a missing attachment filename at render time with a dedicated fallback', async () => {
-      __setEmailDepsForTesting({
+      setEmailDeps({
         PostalMime: {
           parse: () =>
             Promise.resolve({
@@ -1002,7 +1006,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('Unnamed attachment');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Open Unnamed attachment');
+        ).to.equal('Open Unnamed attachment 1 B');
 
         el.strings = {
           emailViewerUnnamedAttachment: 'pièce jointe sans nom',
@@ -1015,7 +1019,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('pièce jointe sans nom');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Ouvrir pièce jointe sans nom');
+        ).to.equal('Ouvrir pièce jointe sans nom 1 B');
       } finally {
         restore();
       }
@@ -1106,7 +1110,7 @@ describe("lr-email-viewer", () => {
     });
 
     it("formats group and address-only/name-only/empty senders, and normalizes Uint8Array/ArrayBuffer/string attachment content", async () => {
-      __setEmailDepsForTesting({
+      setEmailDeps({
         PostalMime: {
           parse: () =>
             Promise.resolve({
@@ -1226,7 +1230,7 @@ describe("lr-email-viewer", () => {
     });
 
     it("counts encoded attachment bytes and formats the number with the effective locale", async () => {
-      __setEmailDepsForTesting({
+      setEmailDeps({
         PostalMime: {
           parse: () =>
             Promise.resolve({
@@ -1406,72 +1410,28 @@ describe("lr-email-viewer", () => {
       }
     });
 
-    it("parses folded HTML and quote searches in the adopted owner realm", async () => {
+    it('loads, folds and searches HTML in the adopted owner document', async () => {
       const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
-      const frameDocument = frame.contentDocument!;
-      const frameWindow = frame.contentWindow!;
-      const ParentDOMParser = window.DOMParser;
-      const OwnerDOMParser = frameWindow.DOMParser;
-      let parentParses = 0;
-      let ownerParses = 0;
-
-      class ParentTrackedDOMParser {
-        parseFromString(
-          source: string,
-          type: DOMParserSupportedType
-        ): Document {
-          parentParses++;
-          return new ParentDOMParser().parseFromString(source, type);
-        }
-      }
-      class OwnerTrackedDOMParser {
-        parseFromString(
-          source: string,
-          type: DOMParserSupportedType
-        ): Document {
-          ownerParses++;
-          return new OwnerDOMParser().parseFromString(source, type);
-        }
-      }
-
-      const el = await fixture<LyraEmailViewer>(
-        html`<lr-email-viewer fold-quotes></lr-email-viewer>`
-      );
+      const parentFetch = window.fetch;
+      const owner = frame.contentWindow!;
+      const ownerFetch = owner.fetch;
+      let parentRequests = 0;
+      let ownerRequests = 0;
+      window.fetch = () => { parentRequests++; return Promise.reject(new Error('Unexpected realm')); };
+      owner.fetch = () => { ownerRequests++; return Promise.resolve(new Response(GMAIL_QUOTE_EML)); };
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes></lr-email-viewer>`);
       try {
-        window.DOMParser =
-          ParentTrackedDOMParser as unknown as typeof DOMParser;
-        frameWindow.DOMParser =
-          OwnerTrackedDOMParser as unknown as typeof DOMParser;
-        frameDocument.body.append(frameDocument.adoptNode(el));
-        (el as unknown as { fetchState: unknown }).fetchState = {
-          kind: "loaded",
-          email: {
-            from: "",
-            to: "",
-            subject: "",
-            date: "",
-            bodyHtml:
-              '<p>Current reply</p><div class="gmail_quote">Owner quote</div>',
-            bodyText: null,
-            attachments: [],
-          },
-        };
-        el.requestUpdate();
-        await el.updateComplete;
-        expect(
-          el.shadowRoot!.querySelector('[part="quoted"]')?.textContent
-        ).to.contain("Owner quote");
-        expect(await el.search("owner quote")).to.equal(1);
-        expect(
-          parentParses,
-          "the ambient parser must never observe adopted content"
-        ).to.equal(0);
-        expect(ownerParses).to.be.greaterThan(1);
+        owner.document.body.append(owner.document.adoptNode(el));
+        el.src = 'https://example.test/adopted.eml';
+        await untilRendered(el, '[part="quoted"]');
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.ownerDocument === owner.document).to.equal(true);
+        expect(await el.search('Sounds good')).to.equal(1);
+        expect(ownerRequests).to.equal(1);
+        expect(parentRequests).to.equal(0);
       } finally {
         el.remove();
-        window.DOMParser = ParentDOMParser;
-        frameWindow.DOMParser = OwnerDOMParser;
-        frame.remove();
+        owner.fetch = ownerFetch;
+        window.fetch = parentFetch;
       }
     });
 
@@ -1732,13 +1692,7 @@ describe("lr-email-viewer", () => {
       }
     });
 
-    it("memoizes folded HTML across unrelated re-renders and only re-parses when the fold state actually changes", async () => {
-      // `foldHtmlQuotes()` used to run a
-      // fresh `DOMParser().parseFromString()` + `QUOTE_SELECTOR` walk on every render while
-      // `fold-quotes` is on, including renders triggered by an unrelated property write. Counting
-      // real `DOMParser` construction/parse calls (the same instrumentation style used by "parses
-      // folded HTML ... in the adopted owner realm" above) proves the memoization actually skips
-      // that work instead of merely asserting the (unaffected) rendered output.
+    it('uses the sanitized message for folding without reparsing on a toggle or rename', async () => {
       const restore = stubFetch(TWO_GMAIL_QUOTE_EML);
       const OriginalDOMParser = window.DOMParser;
       let parseCount = 0;
@@ -1767,13 +1721,7 @@ describe("lr-email-viewer", () => {
           LOAD_WAIT,
         );
         const afterLoad = parseCount;
-        expect(
-          afterLoad,
-          "the sanitized body is parsed to fold it for the first render"
-        ).to.be.greaterThan(0);
-
-        // An unrelated property write forces a full `render()`/`renderBody()` pass, but neither
-        // `bodyHtml` nor `expandedHtmlQuoteIndices` changed -- the memoized fold must be reused.
+        expect(el.shadowRoot!.querySelectorAll('[part="quoted"]')).to.have.lengthOf(2);
         el.name = "renamed.eml";
         await el.updateComplete;
         expect(
@@ -1784,12 +1732,15 @@ describe("lr-email-viewer", () => {
         const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>(
           '[part="quote-toggle"]'
         )!;
+        const quote = el.shadowRoot!.querySelector('[part="quoted"]');
         toggle.click();
         await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="quoted"]') === quote).to.equal(true);
+        expect(el.shadowRoot!.querySelector('[part="quote-toggle"]') === toggle).to.equal(true);
         expect(
           parseCount,
-          "a real fold-state change re-parses exactly once"
-        ).to.equal(afterLoad + 1);
+          'toggling a quote reuses its sanitized nodes'
+        ).to.equal(afterLoad);
         const afterToggle = parseCount;
 
         // Re-render again with the now-expanded state unchanged: still cached.
@@ -1968,7 +1919,7 @@ describe('message content and Lyra chrome', () => {
   it('preserves safe message content when PostalMime returns revoked optional sender metadata', async () => {
     const revoked = Proxy.revocable({}, {});
     revoked.revoke();
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: {
         parse: async () => ({
           from: revoked.proxy as unknown as NonNullable<PostalMessageApi['from']>,
@@ -2006,7 +1957,7 @@ it('omits detached and unsupported peer attachment bytes while preserving usable
   structuredClone(detachedView.buffer, { transfer: [detachedView.buffer] });
   structuredClone(detachedBuffer, { transfer: [detachedBuffer] });
   const valid = new Uint8Array([5, 6]);
-  __setEmailDepsForTesting({
+  setEmailDeps({
     PostalMime: { parse: () => Promise.resolve({
       text: 'The message remains readable.',
       attachments: [
@@ -2035,7 +1986,7 @@ it('omits detached and unsupported peer attachment bytes while preserving usable
     expect(Array.from(new Uint8Array(await event.detail.attachment.content.arrayBuffer()))).to.deep.equal([5, 6]);
   } finally {
     restore();
-    __setEmailDepsForTesting(undefined);
+    setEmailDeps(undefined);
   }
 });
 
@@ -2079,7 +2030,7 @@ it('makes an overflowing message body keyboard scrollable with its current name'
 });
 
 it('reports a missing parser peer without downloading the message body', async () => {
-  __setEmailDepsForTesting({ PostalMime: undefined, DOMPurify: undefined } as never);
+  setEmailDeps({ PostalMime: undefined, DOMPurify: undefined } as never);
   const original = window.fetch;
   const { response, state } = trackedResponse('Subject: x\r\n\r\nbody');
   window.fetch = (() => Promise.resolve(response)) as typeof window.fetch;
@@ -2090,6 +2041,6 @@ it('reports a missing parser peer without downloading the message body', async (
     expect(state.pulls).to.equal(0);
   } finally {
     window.fetch = original;
-    __setEmailDepsForTesting(undefined);
+    setEmailDeps(undefined);
   }
 });

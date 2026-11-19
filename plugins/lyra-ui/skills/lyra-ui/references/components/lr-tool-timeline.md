@@ -92,8 +92,10 @@ data or exhausting the page.
 **Events:** `lr-tool-activate` (`detail: { invocationId: string; sourceKey?: string }`) for a
 non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
 sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
-The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
-timeline boundary. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
+`lr-tool-approval-open` (`detail: { invocationId: string; sourceKey?: string }`) reports an
+opened approval review. `lr-tool-approval-close` adds `reason: string` to that detail when the
+review closes. The timeline contains the raw child chip-selection, renderer-error, details, and
+dialog events. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
 approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
 `@aceshooting/lyra-ui/ai`). `args` is present only when

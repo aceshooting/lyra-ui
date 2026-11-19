@@ -27,6 +27,7 @@ describe('measured offset index properties', () => {
         expect(index.total).to.equal(sum);
         if (naive.length === 0) {
           expect(index.indexAt(5)).to.equal(-1);
+          expect(index.indexBefore(5)).to.equal(-1);
           return;
         }
         for (const probe of [0, 1, sum / 3, sum - 1, sum, sum + 100, -4, Number.NaN]) {
@@ -37,6 +38,9 @@ describe('measured offset index properties', () => {
             if (running + naive[i]! <= target) { running += naive[i]!; expected = i + 1; } else break;
           }
           expect(index.indexAt(probe)).to.equal(Math.min(expected, naive.length - 1));
+          const firstExcluded = naive.findIndex((_, i) => index.offsetOf(i) >= target);
+          const expectedBefore = firstExcluded === -1 ? naive.length - 1 : Math.max(0, firstExcluded - 1);
+          expect(index.indexBefore(probe)).to.equal(expectedBefore);
         }
       }
     ), propertyRuns());
@@ -72,6 +76,9 @@ describe('measured offset index properties', () => {
     expect([0, 1, 2, 3].map((i) => index.heightAt(i))).to.deep.equal([0.5, 0, 2.25, 10]);
     expect(index.total).to.equal(12.75);
     expect(index.indexAt(0.5)).to.equal(2);
+    expect(index.indexBefore(0.5)).to.equal(0);
+    expect(index.indexBefore(0.75)).to.equal(2);
+    expect(index.indexBefore(2.75)).to.equal(2);
     index.set(2, -4);
     expect(index.heightAt(2)).to.equal(0);
     const defaults = new MeasuredOffsetIndex(10, 2);

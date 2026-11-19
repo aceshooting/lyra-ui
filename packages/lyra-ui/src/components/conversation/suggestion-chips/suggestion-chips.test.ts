@@ -745,3 +745,31 @@ it('uses the localized group name for a whitespace-only label or host name', asy
   await el.updateComplete;
   expect(group.getAttribute('aria-label')).to.equal(name);
 });
+
+it('disables the entire row without losing individual suggestion availability', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`<lr-suggestion-chips .suggestions=${[
+    { suggestionId: 'first', label: 'First' }, { suggestionId: 'second', label: 'Second', disabled: true },
+  ]}></lr-suggestion-chips>`);
+  const buttons = [...el.shadowRoot!.querySelectorAll('button')];
+  let selections = 0;
+  el.addEventListener('lr-suggestion-select', () => { selections++; });
+  el.disabled = true;
+  buttons[0]!.click();
+  await el.updateComplete;
+  expect(buttons.map(button => [button.disabled, button.tabIndex])).to.deep.equal([[true, -1], [true, -1]]);
+  el.disabled = false;
+  await el.updateComplete;
+  expect(buttons.map(button => [button.disabled, button.tabIndex])).to.deep.equal([[false, 0], [true, -1]]);
+  buttons[0]!.click();
+  expect(selections).to.equal(1);
+});
+
+it('honors component paint and spacing tokens', async () => {
+  const el = await fixture(html`<lr-suggestion-chips .suggestions=${[{ suggestionId: 'a', label: 'One' }]} style="
+    --lr-suggestion-chips-chip-bg: rgb(1, 2, 3); --lr-suggestion-chips-chip-color: rgb(4, 5, 6);
+    --lr-suggestion-chips-chip-border-color: rgb(7, 8, 9); --lr-suggestion-chips-chip-radius: 11px;
+    --lr-suggestion-chips-chip-padding-inline: 13px; --lr-suggestion-chips-gap: 17px"></lr-suggestion-chips>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector('[part="chip"]')!);
+  expect([style.backgroundColor, style.color, style.borderTopColor]).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)', 'rgb(7, 8, 9)']);
+  expect([style.borderTopLeftRadius, style.paddingInlineStart, getComputedStyle(el.shadowRoot!.querySelector('.row')!).columnGap]).to.deep.equal(['11px', '13px', '17px']);
+});

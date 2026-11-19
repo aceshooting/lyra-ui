@@ -90,11 +90,7 @@ export class LyraResultCard extends LyraElement {
    *  are set. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
-  // See `<lr-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
-  // always contains a literal `<slot>` child regardless of assigned
-  // content, so CSS `:empty` never matches; real emptiness is tracked here
-  // in JS instead and used to both hide the actions wrapper and decide
-  // whether the header row itself has anything to show.
+  // The wrapper contains a slot even when no actions are assigned.
   @state() private hasActionsSlot = false;
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -106,10 +102,7 @@ export class LyraResultCard extends LyraElement {
     }
   }
 
-  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
-  // even though the assigned child's own `slot` attribute never changed.
+  // A forwarding slot can transiently empty WebKit's assignedElements() snapshot.
   private onActionsSlotChange = (): void => {
     this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
   };

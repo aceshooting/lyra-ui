@@ -16,6 +16,8 @@
 
 ## `lr-message-feedback`
 
+The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
+
 Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
 chips + a free-text comment) that opens as a disclosure directly below the thumbs. Emits; never
 persists — a host reflects a previously-recorded rating back via `rating` (+ `disabled` for a

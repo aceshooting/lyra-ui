@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: '向右旋转',
   modelViewerRotateUp: '向上旋转',
   modelViewerRotateDown: '向下旋转',
+  modelViewerViewport: '交互式模型',
 };
 
 registerLyraLocale('zh-CN', strings);

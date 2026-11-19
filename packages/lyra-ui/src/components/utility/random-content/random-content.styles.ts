@@ -33,9 +33,9 @@ export const styles = css`
   }
   [part='pause-button'],
   [part='next-button'] {
+    ${iconHitTarget}
     ${iconAction}
     ${interactiveTransition}
-    ${iconHitTarget}
     margin-block-start: var(--lr-space-xs);
     padding: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

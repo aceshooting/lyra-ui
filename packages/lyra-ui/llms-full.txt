@@ -7710,8 +7710,8 @@ read repeated submitted values.
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
 
-Source options with `inert`, including inherited inertness, are unavailable through the popup. Live
-inert changes refresh row availability. Text, insertion, replacement, removal, slot
+The popup marks options with `disabled`, `aria-disabled="true"`, `hidden`, or inherited or explicit
+`inert` as unavailable. Changing an option's availability updates its open row. Text, insertion, replacement, removal, slot
 reassignment/removal, and relevant attributes of `start`/`end`/`prefix`/`suffix` adornments refresh
 the corresponding cloned presentation; unchanged presentation retains its clone identity while
 filtering.
@@ -8084,7 +8084,9 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
-selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
+selection mutation first proposes `lr-change-request` with `detail: { value; previousValue; data }`.
+A listener can veto it with `preventDefault()` or assign the controlled value. An accepted
+mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
 clear — emits one native `input` Event, then `lr-input`, one native `change` Event, then
 `lr-change`. The native events have no detail. Both typed events carry
 `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
@@ -8347,7 +8349,9 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
   attribute or `defaultSelected`. Consumer writes update the option immediately and reconcile
-  parent selection/form state once in the next microtask, without parent input/change events
+  parent selection/form state once in the next microtask, without parent input/change events.
+  Writing `selected = true` after changing a selected option's value replaces that occurrence's
+  submitted value in place, including when another option shares its old value
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)
@@ -8575,10 +8579,9 @@ consumer that read it as a plain string needs a narrowing step —
 
 **Single-option auto-commit.** Opt-in via `autoCommitSingleOption` (default `false` — a select always
 renders the normal combobox/listbox/chevron trigger unless enabled, matching pre-1.3.0 behavior).
-When set and exactly one option is available (neither disabled nor inert, including through an
-inert ancestor), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the
-trigger
-commits that sole option directly, and the trigger renders as a plain `role="button"` with no
+When exactly one option is available, the trigger commits it directly on click, Enter, Space,
+ArrowDown or ArrowUp. Disabled, hidden, inert and `aria-disabled="true"` options are excluded.
+The trigger renders as a plain `role="button"` with no
 chevron/`aria-haspopup`/`aria-expanded`/`aria-controls`/`aria-activedescendant` rather than a
 combobox with a permanently inert popup state — opening a one-row list to pick the only available
 choice is pure friction with no real decision behind it. It never changes `value`/validity defaults
@@ -9002,9 +9005,9 @@ purposes.
 - While open, live option reorders preserve the active row by option identity. Removing or
   disabling/inerting that option rehomes activity to the nearest available survivor (preferring the
   following row on a tie); removing every available option clears `aria-activedescendant`.
-- One availability rule governs keyboard navigation, type-ahead, single-option auto-commit,
-  pointer selection, and each proxy row's `aria-disabled`: an option is unavailable when it is
-  disabled, inert itself, or inside an inert ancestor. Pointer activation of such a row is a no-op.
+- Keyboard navigation, type-ahead, single-option auto-commit and pointer selection skip disabled,
+  hidden and `aria-disabled="true"` options, as well as options with explicit or inherited
+  inertness. The corresponding popup rows expose `aria-disabled="true"`.
 - The floating listbox participates in Lyra's shared nonmodal overlay stack. Its computed
   `--lr-overlay-stack-index`, Escape owner, capture-phase outside-pointer dismissal, and focus
   handoff follow the newest open overlay rather than DOM order. A single dismissal therefore closes
@@ -11120,7 +11123,7 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
+**Events:** User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
 `badInput`, including after blur. Erasing its last visible segment commits the empty value and
 fires `change` once. Entering a complete time also fires `change`.
 The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
@@ -15541,7 +15544,12 @@ in both modes, following the country picker's event contract.
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
-`blur` relay once; the cancelable `lr-invalid` alias follows native validation.
+`blur` relay once. The cancelable `lr-invalid` alias follows native validation.
+`lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
+be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
+`lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
+that the clear action emptied the selection. `lr-load-error` reports a failure to load the optional
+searchable picker. The compact control remains available.
 
 **Slots:** `label`, `hint`, `error` — custom field copy. There is no option/default content slot;
 bind `currencies` to supply rows.
@@ -15721,6 +15729,11 @@ After directly editing its DOM value, dispatch a native `input` event to refilte
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+`lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
+be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
+`lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
+that the clear action emptied the selection. `lr-load-error` reports a failure to load the optional
+searchable picker. The compact control remains available.
 
 An accepted user choice or clear synchronously updates the form value, then emits one
 `input`, `lr-input`, `change`, `lr-change` sequence. Prefixed details have readonly `value: string`
@@ -15960,7 +15973,6 @@ and `click()` focus the drawing surface (both do nothing while disabled), and `b
 **Events:**
 
 - `lr-clear` follows the change pair when the user empties the pad with its Clear button.
-
 - `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
   pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting
   the keyboard pen also commits the stroke.
@@ -17126,7 +17138,8 @@ The table emits a cancelable `lr-page-request` with a one-based `{ page }` befor
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
-sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
+sort properties; server mode leaves them controlled. `lr-page-request` is cancelable and proposes
+a one-based page with frozen readonly `detail: { page }` before `lr-page-change`. Other events are `lr-row-activate`
 (a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more`,
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
@@ -25801,7 +25814,7 @@ dropdown owns those root-level behaviors.
 
 Assigned `details` and `suffix` elements describe the item. The default slot supplies its name.
 
-The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `submenuOpen` for the current state.
+**Events:** `lr-show` and `lr-hide` fire after the item’s assigned menu changes state. Read `submenuOpen` for the current state.
 
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
 `menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
@@ -26077,7 +26090,7 @@ menubar or an ancestor and apply to every slotted menu.
 
 The `lr-menubar-item` styling hooks include `--lr-menubar-item-hover-color`, `--lr-menubar-item-active-color`.
 
-The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `menuOpen` for the current state.
+**Events:** `lr-show` and `lr-hide` fire after the item’s assigned menu changes state. Read `menuOpen` for the current state.
 
 **Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
 and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not
@@ -29069,8 +29082,6 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 
 The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
 
-A dismissal emits cancelable `lr-hide`, then cancelable `lr-close-request`. The committed `lr-close` and the request carry `detail.reason` as `close-button`, `timeout`, or `programmatic`.
-
 A single notification.
 
 **Properties:**
@@ -29086,7 +29097,9 @@ A single notification.
 DOM. `toastItemElement: HTMLElement | null` exposes the live `[part="toast-item"]` surface (or
 `null` before rendering) and remains the same node across ordinary updates/reconnection.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-show` and `lr-hide` are the
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`, `lr-close-request`, and `lr-close`. A dismissal emits cancelable `lr-hide` followed by cancelable `lr-close-request`.
+Both close events carry `detail.reason` (`close-button`, `timeout` or `programmatic`).
+`lr-show` and `lr-hide` are the
 cancelable before-transition veto points. The item stays hidden and inert throughout `lr-show`;
 vetoing its initial request releases it from the region without an after-event or timer. Re-entering
 the same show/hide request from its own before-event coalesces onto that request, so the outer veto
@@ -31736,8 +31749,9 @@ stale observations from its previous stack cannot change its active/queued state
 disconnect discards managed work, so reconnecting that old region cannot resurrect an already-settled
 alert toast.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
-detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide`, `lr-close-request`, and `lr-close`. A dismissal emits cancelable `lr-hide` followed by cancelable `lr-close-request`.
+Both close events carry `detail.reason` (`close-button`, `timeout` or `programmatic`).
+The transition events bubble and compose with empty detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
 noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
 When an accepted hide removes the focused close action, focus moves to the nearest available
 composed action. A veto keeps focus in place, and a listener-selected external destination wins.
@@ -34407,10 +34421,6 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
 
 ## `lr-tour`
 
-`lr-tour-step-activate` fires after a changed step index renders. Its detail contains `previousIndex`, `index`,
-`step` and `via` (`next`, `back`, `goto` or `api` for a direct write). A vetoed move emits no activation.
-If a target mounts while its step is already open, assign `tour.steps = [...tour.steps]` to resolve it again.
-
 A spotlight-and-step guided walkthrough for first-run onboarding: each step anchors a popover to a
 target element elsewhere in the page via the shared Floating UI positioner, over a dimmed
 full-viewport backdrop with a cutout/ring around the current target, with Next/Previous/Skip
@@ -34466,7 +34476,8 @@ and capped at 10,000px. Provider mutation after assignment cannot change renderi
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
 `skip()` (sugar for `end('skip')`), `end(reason: LyraTourEndReason = 'api')`.
 
-**Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
+**Events:** `lr-tour-step-activate` fires after a changed step index renders. It carries `{ previousIndex, index, step, via }`. The source is `next`, `back`, `goto` or `api` for a direct write;
+`lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-request`
@@ -34477,7 +34488,7 @@ departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-r
 request; the host can use `lr-tour-end` to clear its own open state. Migrate old raw-detail reads to
 `detail.reason` and move end vetoes to `lr-tour-end-request`.
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
-it renders that step viewport-centered with no spotlight).
+it renders that step viewport-centered with no spotlight). If a target mounts while its step is already open, reassign the steps to resolve it.
 
 **Slots:** default — rich content replacing the active step's plain-text `content`. Not scoped per
 step: a consumer needing different rich content per step swaps the slotted children itself (e.g. on
@@ -35129,17 +35140,8 @@ peer's `resize()` when that allocation changes.
 
 The base reports the engine's loading state through `aria-busy`. An application can set
 `aria-busy` on the host independently. Removing that attribute resumes the loading-state mirror.
-The cancel button emits cancelable `lr-map-pick-cancel-request` and, after turning off pick mode,
-`lr-map-pick-cancel`. Both carry frozen `{ source: 'control' }`. Assigning `pickMode` stays silent.
-Globe and terrain controls emit cancelable `lr-map-projection-change-request` and
-`lr-map-terrain-change-request` with the same details as their respective change events.
-Vetoing or assigning the corresponding property during a request suppresses the default change.
 Read the settled `center` and `zoom` after an initial URL restoration or a limit clamp. Those
 initialization and constraint writes are silent.
-
-The slot anchor emits cancelable `lr-map-anchor-close-request` with frozen `{ reason }` for its close
-button, Escape, or `closeAnchor()`. A veto preserves placement and focus. The existing
-`lr-map-anchor-close` reports an accepted dismissal.
 
 Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (default 0.2),
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
@@ -36515,7 +36517,10 @@ mapEl.addEventListener('lr-map-move', () => {
 });
 ```
 
-**Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
+**Events:** `lr-map-pick-cancel-request` and `lr-map-pick-cancel` carry frozen `{ source: 'control' }`. The cancel button emits the cancelable request before leaving pick mode and the latter event after the change. Assigning `pickMode` stays silent.
+- `lr-map-projection-change-request` and `lr-map-terrain-change-request` are cancelable and share the details of their corresponding change events. A veto or a property assignment from a request listener suppresses the default change.
+- `lr-map-anchor-close-request` carries frozen `{ reason }` when the slotted anchor is dismissed with the close button, Escape or `closeAnchor()`. Vetoing the request preserves placement and focus.
+- `lr-map-load` (fired once, after the underlying map's own `'load'`),
 `lr-map-legend-toggle-request` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
 hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
 proposed hidden set in the order it would be committed, with the array detached and frozen so a
@@ -37544,14 +37549,13 @@ with a development warning while it is open, and `focusContent()` returns `false
   close button. Returns `false` while the panel is hidden or not yet placed, when it is inert, or when
   nothing in it can take focus. It never queues focus.
 
-Child anchor events bubble across shadow boundaries with a frozen `LyraMapAnchorCloseDetail`.
-Its `reason` is `api`, `close-button` or `escape`.
+**Events:**
 
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
+- `lr-close-request` and `lr-close` are deprecated aliases. A veto through either request preserves the anchor.
 
-The deprecated aliases `lr-close-request` and `lr-close` remain available. A veto through either request
-preserves the anchor. The map's slot anchor emits `lr-map-anchor-close`.
+The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.
@@ -38321,9 +38325,6 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
 
-A failed image renders a localized message in the `error` part, announces the failure, and emits
-`lr-render-error` with `{ error: Error }`.
-
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
@@ -38336,9 +38337,10 @@ container does not claim toolbar arrow-key navigation.
 `focus(options?)`, `blur()`, and `click()` forward to the scrollable `viewport`, which is the
 component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
-**Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
-relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`).
+**Events:** `lr-zoom-change` carries `detail: { zoom }`. `lr-render-error` carries
+`detail: { error: Error }` when an image fails to load. The frame displays and announces a
+localized failure message. The viewport relays `focus` and `blur` once as bubbling, composed
+native `FocusEvent`s from the owner realm, preserving `relatedTarget`.
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and `error` (the localized message shown in place of an image that
 failed to load). The
@@ -38713,8 +38715,6 @@ and later MIME values restore detection.
 `LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
-When an image or video fails to load, `media-error` displays a localized message and
-`lr-render-error` reports `{ error: Error }`. Selecting another source retries playback or display.
 A media card’s `lr-media-open` detail uses `filename` and `src`, corresponding to `name` and `src`
 on an attachment chip’s `lr-preview-request`.
 
@@ -38726,6 +38726,8 @@ cancelable only for a safe file anchor immediately before its native download/op
 `preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
+`lr-render-error` carries `detail: { error: Error }` when an image or video fails to load. The card
+displays a localized message in `media-error` and retries when `src` changes.
 Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
 composed `FocusEvent`s whose target is the `lr-media-card` host.
 
@@ -41620,6 +41622,12 @@ For `lr-lite-chart`, use the native host `aria-label`; an explicitly empty host 
 authoritative. With no host label, `label` and then the generated chart name provide the fallback.
 
 ## `lr-chart` (core)
+
+The chart, lite-chart and box-plot data-table buttons share the resting style hooks
+`--lr-chart-data-table-toggle-border-color`, `--lr-chart-data-table-toggle-bg`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size` and
+`--lr-chart-data-table-toggle-justify` (grid `justify-self`). Lite-chart and box-plot
+accept the same suffixes under their own component prefix, which takes precedence.
 
 Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-histogram`;
 `lr-lite-chart` and `lr-box-plot` are independent implementations. It supports both a simplified
@@ -44635,6 +44643,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lr-email-viewer`
 
+Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-viewer-action-hover-background` and `--lr-email-viewer-action-active-background`.
+
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
 remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
@@ -44643,6 +44653,7 @@ attachment row is a real `<button>` that emits `lr-attachment-open` with an immu
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
 `URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
+The attachment action’s accessible name includes the visible filename and formatted size.
 An attachment with no filename uses the localized `emailViewerUnnamedAttachment` fallback
 (`"Unnamed attachment"` in English) for its visible name, open-button accessible name, and
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
@@ -44684,6 +44695,7 @@ reports `found: false`; text-quote anchors use the rendered message body.
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
@@ -44724,6 +44736,8 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 
 ## `lr-calendar-viewer`
 
+`max-events` limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
 remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
@@ -44747,6 +44761,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
@@ -44773,9 +44788,7 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
-capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
-the DOM so search, selection and text-quote anchors remain truthful without the former 10,000-event
-eager tree.
+bounded by `max-events` and 2 MiB of rendered event text. Search, selection and text-quote anchors cover every accepted event.
 
 ## `lr-archive-viewer`
 
@@ -44811,7 +44824,8 @@ independently addressable through the fragment/anchor API. `search()`/`searchNex
 navigating search matches (and the resulting active-row highlight) correctly reaches every
 duplicate-named entry, not just the first.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
 navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
 (`detail: { text, anchor, rects }`) for a selection contained within one
@@ -45015,7 +45029,8 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
 **Events:**
 
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
-- `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
+- `lr-slide-change` carries `{ index, count }` when the active slide changes.
+- `lr-page-change` carries `{ page, pageCount }` when `page` changes while a presentation is shown.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
   every load so a rail can discard same-count replacement thumbnails without inferring identity
@@ -45040,9 +45055,7 @@ highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**Events (additive):** `lr-page-change` — `detail: { page, pageCount }`, fired when `page` changes
-while a presentation is shown (the same shape `<lr-pdf-viewer>` emits); `lr-slide-change` is
-unchanged. A whitespace-only `label` or `name` is ignored for the region name; an explicit
+A whitespace-only `label` or `name` is ignored for the region name; an explicit
 `label=""` still clears it. The scrollable `container` becomes a named, keyboard-focusable region
 while its content overflows.
 
@@ -45097,6 +45110,8 @@ types are `LyraViewerDiagnostic`, `LyraViewerDiagnosticCode`, `LyraViewerDiagnos
 
 ## `lr-svg-viewer`
 
+Action backgrounds accept `--lr-svg-viewer-action-background`, `--lr-svg-viewer-action-hover-background` and `--lr-svg-viewer-action-active-background`.
+
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
 removes author `<style>`/`style`, SVG animation elements, and external
@@ -45142,7 +45157,8 @@ when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnega
 carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
 timers) rather than failing immediately.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
 or a `scrollToAnchor()` call is applied, whether or not a match was found. `lr-text-select` is not
@@ -45210,6 +45226,7 @@ label. `highlights`, `activeHighlightId`, `anchor`, and
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.
@@ -45240,6 +45257,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
 
 ## `lr-dataset-viewer`
+
+Set `--lr-dataset-viewer-background`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-border-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
 
 Fetches tab-, pipe-, or delimiter-separated text, or reads a host-owned `dataSource`, and renders a
 virtualized, accessible table (a `role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
@@ -45357,7 +45376,8 @@ value, ordered row then column (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
@@ -45409,15 +45429,15 @@ each parse pass remains synchronous.
 
 ## `lr-contact-viewer`
 
+`max-contacts` limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
 `.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
 but never rendered — the card's heading uses `FN` (falling back to a localized "unnamed contact"
 label when `FN` is absent).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
-contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
-text-quote anchorable without a 10,000-card eager DOM tree.
+`documentPreviewResourceTooLarge` message instead of the contacts. The viewer applies `max-contacts` and a 2 MiB ceiling on rendered contact text. Search and text-quote anchors cover every accepted contact.
 
 **Properties:** `src: string = ''`, `name: string = ''`,
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
@@ -45435,6 +45455,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for contact conten
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
@@ -45670,6 +45691,10 @@ prevents stale page/text/region work from scrolling or reporting success.
 
 ## `lr-spreadsheet-viewer`
 
+Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
+
+`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+
 Fetches `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer, or reads a host-owned
 `dataSource`. Multiple worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
 
@@ -45782,7 +45807,8 @@ query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/s
 matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
 matches, and painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
@@ -45842,6 +45868,10 @@ archive admission before SheetJS parsing, and between sheet projections; each pa
 pass remains synchronous.
 
 ## `lr-csv-viewer`
+
+Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
+
+`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
 virtualizes body rows.
@@ -45947,7 +45977,8 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
@@ -46299,8 +46330,10 @@ matches.
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
 `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`, including
-canonical source reset and effective-locale re-evaluation. `lr-render-error` —
-`detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
+canonical source reset and effective-locale re-evaluation. When an HTML or SVG output cannot be sanitized,
+`lr-viewer-diagnostic` reports `notebook-sanitizer-unavailable` with `fatal: false`. Other notebook
+output stays readable. The existing `lr-render-error` event carries `detail: { error }` for sanitizer,
+fetch, parse and validation failures. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
 
@@ -46374,6 +46407,8 @@ PNG/JPEG outputs use their `text/plain` representation as alt text, falling back
 code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the same fallback.
 
 ## `lr-xml-viewer`
+
+Action backgrounds accept `--lr-xml-viewer-action-background`, `--lr-xml-viewer-action-hover-background` and `--lr-xml-viewer-action-active-background`.
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
@@ -46525,7 +46560,8 @@ inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
-**Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported'`, `'denied'`, or `'failed'`.
@@ -46755,6 +46791,8 @@ fragment jump reports `found: false`. Use a text-quote anchor for serialized met
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-viewer-diagnostic` reports `geojson-map-unavailable` with `fatal: false` when the JSON preview replaces the map.
 - `lr-render-error` — `detail: { error }` — fetch, parse, shape-validation, or missing-map capability
   failure. A missing optional MapLibre peer also keeps the serialized metadata fallback visible.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
@@ -47391,6 +47429,12 @@ These named interfaces and helper signatures are available to typed integrations
 
 ## `lr-model-viewer`
 
+Action backgrounds accept `--lr-model-viewer-action-background`, `--lr-model-viewer-action-hover-background` and `--lr-model-viewer-action-active-background`.
+
+The interactive viewport has a separate accessible name, supplied by `modelViewerViewport` (“Interactive model” in English).
+
+Listen for `lr-render-error` for source and format failures. The viewer also emits `lr-engine-fallback` when a source, format, engine or WebGL failure leaves the alternative visible.
+
 A bounded, static 3D model and point-cloud preview for glTF, GLB, STL, OBJ, PLY, XYZ and PCD files.
 It renders with the model engine of the optional `@aceshooting/lyra-3d` companion (`pnpm add
 @aceshooting/lyra-3d`), loaded through a lazy `import('@aceshooting/lyra-3d/model')`, and only for a
@@ -47455,9 +47499,8 @@ including the companion import after a failed load. The failed-state button call
 - `lr-camera-change` — `detail: { camera: LyraModelCamera }`. The user moved the camera with a
   pointer, a key or a toolbar button (the fit button included). Assigning `camera`, `fit()` and the
   automatic fit are silent.
-- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. WebGL stopped rendering
-  and the text alternative remains; `reason` is `'unavailable'` (companion missing or incompatible),
-  `'unsupported'` (no WebGL2, or an unsupported format), `'context-lost'` or `'error'`. A lost
+- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. The text alternative remains visible after a source or rendering failure; `reason` is `'unavailable'` (companion missing or incompatible),
+  `'unsupported'` (unsupported file format or WebGL2 unavailable), `'context-lost'` or `'error'`. A lost
   context keeps its engine so a restored context resumes rendering.
 
 All four events bubble, are composed and are not cancelable. Hover and picking are intentionally
@@ -48144,6 +48187,8 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 
 ## `lr-chat-message`
 
+Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
+
 A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,
 a `<lr-markdown>`, a custom template, anything) and this component only supplies the surrounding
@@ -48571,7 +48616,8 @@ clears the touched presentation.
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
 `setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
-disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
+disabled. Selection methods are safe to call before the textarea renders.
+`setRangeText()` synchronizes reactive/form value and auto-sizing.
 `checkValidity()`/`reportValidity()` remain inherited; `resetValidity()` clears consumer custom
 validity and recomputes the current intrinsic constraints.
 
@@ -48706,6 +48752,8 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 ---
 
 ## `lr-stream-status`
+
+The interrupted state’s Resume control accepts the shared `--lr-button-*` tokens and exposes the operable button through `::part(resume)`.
 
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
@@ -48846,6 +48894,10 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
 ---
 
 ## `lr-conversation-item`
+
+Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
+
+Customize the appearance with `--lr-conversation-item-hover-bg`.
 
 A selectable row representing one chat session in a history sidebar list. Usable standalone or as the
 `renderItem()` payload of `<lr-virtual-list>`; has no dependency on that (or any) other component.
@@ -49042,7 +49094,10 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 
 `--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
 
-While typing, `lr-input` includes the draft string in `detail.query`. Its `value` and `inCatalog` fields describe the committed selection. Enter commits the draft. Escape or leaving the control dismisses it. Picking the current model closes the list without emitting a change.
+While typing, `lr-input` includes the exact draft string in `detail.query`, including an empty string.
+Its `value` and `inCatalog` fields describe the committed selection. Enter commits the active enabled
+suggestion or the trimmed draft. Escape or leaving the control dismisses the draft. Picking the
+current model closes the list without emitting a change.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -49216,7 +49271,8 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Events:**
 
-- `lr-input` (`detail: { value: string }`) — typed value edit notification.
+- `lr-input` (`detail: { value: string; inCatalog: boolean; query?: string }`) — reports the
+  committed value. Free-text edits include the exact draft in `query`. Commit events omit `query`.
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
@@ -49361,6 +49417,8 @@ listbox along with the other floating surfaces.
 
 ## `lr-streaming-text`
 
+In Markdown mode, `lr-render-error` bubbles from the renderer with the original `{ error }` detail.
+
 A token-coalescing incremental text renderer for streaming assistant output, with an optional
 blinking cursor and auto-detected Markdown rendering. First-party invention (no Web Awesome
 equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
@@ -49453,7 +49511,8 @@ renders into its own shadow root and a plain light-DOM `MutationObserver` on the
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
 outcomes. With `internal-link-prefix` set, its intercepted links also pass through
-`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented. `lr-render-error`
+(`detail: { error: unknown }`) reports a Markdown rendering failure.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -49552,6 +49611,8 @@ outcome, bubbling and composed.
 
 ## `lr-streaming-text-core`
 
+In Markdown mode, `lr-render-error` bubbles from the renderer with the original `{ error }` detail.
+
 A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
@@ -49604,7 +49665,8 @@ share one implementation.
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
 outcomes. With `internal-link-prefix` set, its intercepted links also pass through
-`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented. `lr-render-error`
+(`detail: { error: unknown }`) reports a Markdown rendering failure.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -50338,6 +50400,8 @@ to the shared duration, while reduced-motion ambient output remains static.
 
 ## `lr-branch-picker`
 
+Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
+
 The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it
 never mutates its own `index` — the same contract `<lr-pagination>` already establishes for
 `page`. The host listens for `lr-branch-change`, swaps the displayed branch content, and applies
@@ -50364,6 +50428,8 @@ provider's logical toolbar actions change availability or order.
 arrow without restyling the button), and `position` (the visible "2 / 5" text).
 
 ## `lr-message-actions`
+
+Set `disabled` to disable all built-in controls and make slotted actions inert.
 
 The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in built-ins (copy /
 regenerate / edit / feedback) that emit intent events, plus a default slot for custom controls (e.g.
@@ -50448,6 +50514,8 @@ media rule then floors the rendered hit area at 2.75rem/44px regardless of how f
 override lowered it, so the shrink is safe on a touch device.
 
 ## `lr-message-feedback`
+
+The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
 
 Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
 chips + a free-text comment) that opens as a disclosure directly below the thumbs. Emits; never
@@ -50658,6 +50726,10 @@ recording-state hooks exist.
 
 ## `lr-transcript-feed`
 
+When `max-rendered-entries` hides earlier entries, `::part(window-notice)` displays a localized count and exposes the number in `data-omitted`. The scroll region uses `transcriptFeedRegion` for its name. The log retains its caller-supplied or localized transcript label.
+
+Customize the jump button with `--lr-transcript-feed-jump-bg`, `--lr-transcript-feed-jump-hover-bg`, `--lr-transcript-feed-jump-color`, `--lr-transcript-feed-jump-border`, `--lr-transcript-feed-jump-radius` and `--lr-transcript-feed-jump-shadow`.
+
 Live captions for an in-progress voice session: speaker-grouped entries, interim-vs-final styling
 with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with release, the same
 `follow`/`lr-follow-change` contract `<lr-terminal>` uses. Live captions only — recorded-media
@@ -50715,6 +50787,8 @@ interim entry exists), `jump-button` (shown only while `follow` is `false`), `em
 (input-loss notice).
 
 ## `lr-handoff-divider`
+
+Customize the appearance with `--lr-handoff-divider-gap`, `--lr-handoff-divider-bg`, `--lr-handoff-divider-color`, `--lr-handoff-divider-border-color`, `--lr-handoff-divider-radius` and `--lr-handoff-divider-padding-inline`.
 
 A labeled semantic separator marking control transfer between agents in a transcript ("Transferred
 to Research Agent"), with an optional agent avatar. Purely presentational: no events, no
@@ -50830,6 +50904,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a follow-state change
+caused by scrolling or activating the jump-to-latest button.
+
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
 list owns its spacing). `--lr-chat-viewport-gap` (default `0`) — block-direction gap between slotted
@@ -50884,6 +50961,10 @@ inline style) still wins over the built-in one.
 ```
 
 ## `lr-suggestion-chips`
+
+Set `disabled` to disable the entire row. Re-enabling it restores the availability of each suggestion.
+
+Customize the appearance with `--lr-suggestion-chips-gap`, `--lr-suggestion-chips-chip-bg`, `--lr-suggestion-chips-chip-color`, `--lr-suggestion-chips-chip-border-color`, `--lr-suggestion-chips-chip-radius` and `--lr-suggestion-chips-chip-padding-inline`.
 
 Starter prompts (empty thread) and follow-up suggestions (after a response) as a horizontally
 scrollable chip row; activation hands the prompt to the host, which decides whether to compose it
@@ -50971,6 +51052,8 @@ Vector icons per chip, by name or by slot:
 ```
 
 ## `lr-thread-list`
+
+A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
 affordances. _Data mode_ (at least one valid `threads` record, or no valid records with nothing
@@ -51235,7 +51318,7 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
-`group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
+`group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
 the `group-header`/`group-toggle`/`group-label`/`group-adornment`/`group-icon` markup, so those parts style the real
 header row and the pinned copy alike, and the band itself is where a shadow or bottom border
@@ -51371,6 +51454,8 @@ Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): threa
 pane driving `activeConversationId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.
 
 ## `lr-checkpoint`
+
+Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`.
 
 An inline conversation restore point: a labeled marker between messages whose Restore affordance
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores
@@ -51809,7 +51894,10 @@ mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`
 `input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
 before the input renders.
 
-**Events:** `lr-input` — typed value edit notification with `detail: { value }`.
+**Events:** `lr-input` (`detail: { value: string; inCatalog: boolean; query?: string }`) — reports
+the committed value. Free-text edits include the exact draft in `query`, including an empty string.
+Commit events omit `query`. Enter commits the active enabled suggestion or the trimmed draft.
+Escape or leaving the control dismisses the draft.
 `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
@@ -52043,7 +52131,6 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
-- `lr-link-activate` (`detail: { href: string }`) — forwarded from built-in Markdown content.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
@@ -52058,6 +52145,9 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.
+
+The original `lr-link-activate` event from built-in Markdown bubbles through the workspace with
+`detail: { href: string }`.
 
 **Methods:** `finalizePendingApproval(): void` closes a vetoed approval in the built-in tool timeline
 after persistence succeeds; `revertPendingApproval(): void` releases its pending state after a failed
@@ -52129,6 +52219,8 @@ wins over the shadow stylesheet regardless of specificity.
 reflected) forwards to each message's `lr-message-parts`. The legacy message text route is unchanged.
 
 ## `lr-message-parts`
+
+Set `label` to name the message-part group. A host `aria-label` takes precedence. An explicit empty value suppresses the default name. When `max-rendered-parts` hides earlier parts, `::part(window-notice)` displays a localized count and exposes the number in `data-omitted`. The Resume control accepts the shared `--lr-button-*` tokens and exposes the operable button through `::part(resume)`.
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
@@ -53152,7 +53244,8 @@ its content.
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
-click or Enter/Space activation of the pill, exactly once per activation.
+click or Enter/Space activation of the pill, exactly once per activation. `lr-tool-activate`
+(`detail: { invocationId: string }`) identifies the activated invocation.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the internal native chip
 button, so programmatic focus/activation reaches the same semantic owner as pointer and keyboard
@@ -53292,7 +53385,8 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 **Events:** `lr-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lr-json-viewer>`, whether because no renderer matched, a candidate
 renderer's `matches()` predicate threw during dispatch, a renderer's `load()` rejected, or its
-`render()` threw.
+`render()` threw. `lr-status-change` (`detail: { status: ToolStatus }`) reports a committed
+status change with its normalized status.
 
 **Slots:** none.
 
@@ -53531,7 +53625,10 @@ reason string so every dismissal path funnels through the same event.
 `<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
 target-filtering guard. `lr-maximize-change-request` (cancelable, `detail:
 { readonly maximized: boolean }`, the would-be new `maximized` state) fired when the header's
-maximize/restore toggle is clicked, before `maximized` changes; `preventDefault()` vetoes the toggle.
+maximize/restore toggle is clicked, before `maximized` changes. `preventDefault()` vetoes the toggle.
+`lr-after-maximize-change` (`detail: { readonly maximized: boolean }`) reports the committed toggle
+after the update. `lr-request-close` is cancelable before user dismissal. Its `detail.source` is
+`'escape'`, `'backdrop'`, or `'close-button'`, and `preventDefault()` keeps the dialog open.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
@@ -53717,8 +53814,9 @@ over the request; recursive requests are ignored. `lr-close`
 click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
 inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
 event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
-target-filtering guard), and no-detail `focus`/`blur` events
-re-dispatched when the internal search input gains or loses focus.
+target-filtering guard). `lr-request-close` is cancelable before user dismissal.
+Its `detail.source` is `'escape'` or `'backdrop'`, and `preventDefault()` keeps the dialog open.
+The dialog re-dispatches no-detail `focus` and `blur` events when the search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request` proposals; listen for the single aggregate
@@ -54188,6 +54286,8 @@ dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` list
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
+`lr-request-close` is cancelable before user dismissal.
+Its `detail.source` is `'escape'` or `'backdrop'`, and `preventDefault()` keeps the dialog open.
 `lr-close` remains the non-cancelable dismissal notification. Non-cancelable `lr-decision-settled`
 (`detail: { decision: 'approved' | 'denied' }`) follows the `lr-close` whose reason is `'approve'` or
 `'deny'` on every path that reaches a decision.
@@ -55550,6 +55650,8 @@ to a diff view.
 An expanded commit renders its first 500 files and shows `[part="limit"]` when more exist;
 the diffstat and fold count still reflect the full file list.
 
+The file rows share one Tab stop. ArrowUp, ArrowDown, Home and End move between files.
+
 Removing the `message` attribute clears the displayed subject and body; the property retains the
 normal `null` readback of a removed string attribute.
 
@@ -55608,6 +55710,9 @@ you opt in. `frame="plain"` still removes the border and radius.
 A pass/fail suite summary with per-status counts, status filter toggles, and per-test rows whose
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
+
+Visible test-name buttons share one Tab stop across suites. ArrowUp, ArrowDown, Home and End move
+between them. Detail toggles and other controls have their own Tab stops.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
@@ -56143,6 +56248,10 @@ library-wide brand tokens as the only prior lever.
 ```
 
 ## `lr-agent-run`
+
+The header keeps the model and metrics together while the current step label ellipsizes.
+When the summary no longer fits beside the status it moves below it, following the run's
+inline direction.
 
 Top-level shell for one agent run: status, elapsed time, current step, model/cost summary, arbitrary
 metrics, and Cancel/Retry actions. Built-in and application-defined lifecycle statuses are supported;
@@ -56841,8 +56950,10 @@ data or exhausting the page.
 **Events:** `lr-tool-activate` (`detail: { invocationId: string; sourceKey?: string }`) for a
 non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
 sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
-The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
-timeline boundary. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
+`lr-tool-approval-open` (`detail: { invocationId: string; sourceKey?: string }`) reports an
+opened approval review. `lr-tool-approval-close` adds `reason: string` to that detail when the
+review closes. The timeline contains the raw child chip-selection, renderer-error, details, and
+dialog events. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
 approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
 `@aceshooting/lyra-ui/ai`). `args` is present only when
@@ -56914,6 +57025,8 @@ rail-dot color for a `status="incomplete"` entry, independent of the pending one
 Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
 history. It never launches or scores evaluations.
 
+The run history shares one Tab stop. ArrowUp, ArrowDown, Home and End move between runs.
+
 **Properties:** `metrics: AgentEvaluationMetric[] = []` (attribute: false), where each metric is
 `{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `currency:
 string = 'USD'` is the ISO 4217 code used by currency-formatted metrics (invalid codes safely fall
@@ -56967,11 +57080,12 @@ heading while an explicit empty string renders no heading/name. Later duplicate 
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
-**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` (`{ invocationId,
-approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+**Events:** `lr-approval-select` and `lr-approval-open` (each `{ invocationId }`),
+`lr-approval-decision-request` (`{ invocationId, approved, args? }`), and `lr-approval-close`
+(`{ invocationId, reason }`).
 `lr-approval-decision-request` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
-The selection and close events are non-cancelable notifications.
+The selection, open, and close events are non-cancelable notifications.
 
 **Settling a vetoed decision:** `pendingApproval` (read-only, `'approve' | 'deny' | null`) is the
 held decision; after persisting it call `finalizePendingApproval()` (or resolve the request), after a
@@ -58287,7 +58401,9 @@ announced as read-only, and refuses every change. A blank rule `label` names its
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid rules were supplied. |
 
-**Events:** non-cancelable `lr-permission-rule-change` (`detail: { ruleId, decision }`) requests a decision change; the host evaluates policy and updates the controlled collection.
+**Events:** Cancelable `lr-permission-rule-change-request` (`detail: { ruleId, decision }`)
+proposes a decision change. Unless vetoed, non-cancelable `lr-permission-rule-change` carries
+the same detail. The host evaluates policy and updates the controlled collection.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-permission-rules.js';
 import type { PermissionRule } from '@aceshooting/lyra-ui/components/agent-tools/permission-rules/permission-rules.class.js';
@@ -60014,17 +60130,24 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` carries `{ kind: 'section', section, expanded }` for a section header or
-`{ kind: 'chunk', section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
-re-emits one contextual toggle at its boundary. Because the panel is a
-conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
-entity chip, a community card member or a path-strip node — only the path strip carries
-`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
-Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
-`lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the chunk inspector.
+**Events:**
+
+- `lr-entity-select` carries `{ entityId, occurrenceIndex? }` from a chip, community member or path node. Only path nodes supply `occurrenceIndex`.
+- `lr-entity-open` carries `{ entityId }` on a chip double-click or Space.
+- `lr-drill` carries `{ communityId }` from a community title, drill button or overflow chip.
+- `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a path edge.
+- `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }` from the chunk inspector.
+- `lr-retrieval-disclosure-change` is a bubbling, composed notification with readonly
+`{ kind: 'section', section, expanded }` or `{ kind: 'chunk', section: 'chunks', chunkId, expanded }`.
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. Migrate from `lr-toggle`
+(`{ section, expanded, itemId? }`) by narrowing on `detail.kind`.
+
+```ts
+panel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.chunkId, detail.expanded);
+  else console.log(detail.section, detail.expanded);
+});
+```
 
 **Slots:** none.
 
@@ -60576,19 +60699,25 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole: the host is then the sole named owner, so neither
   the inner group nor the strip repeats it
 
-**Events:** composed child events reach the host (`composed: true`), with the direct supporting
-chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
-embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
-add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (the direct supporting-chunk
-inspector carries `{ kind: 'chunk', section: 'chunks', expanded, itemId }`; provenance-panel toggles
-pass through), and `lr-tab-show`
-(`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
-host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
-double-click or Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or
-overflow chip), and `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a
-relationship path-strip edge).
+**Events:**
+
+- `lr-entity-select` carries `{ entityId, occurrenceIndex? }` from an entity card, neighbor, community member or path node.
+- `lr-node-expand` carries `{ nodeId }` from a neighbor row.
+- `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }`.
+- `lr-tab-show` carries `{ tabId }`, where `tabId` is `relationships`, `chunks` or `provenance`.
+- `lr-entity-open` carries `{ entityId }` when a provenance chip opens.
+- `lr-drill` carries `{ communityId }` from a provenance community card.
+- `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a provenance path edge.
+- `lr-retrieval-disclosure-change` bubbles from the dossier with readonly `detail.origin`
+of `'supporting'` or `'provenance'`, plus `kind`, `section`, `expanded`, and `chunkId` for a chunk.
+Migrate from `lr-toggle` (`{ section, expanded, itemId? }`) by listening on the dossier and reading
+`origin` to identify the panel.
+
+```ts
+dossier.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.origin, detail.chunkId, detail.expanded);
+});
+```
 
 **Slots:** none.
 
@@ -61451,8 +61580,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
 Short-term Add and Remove actions share one Tab stop. Inline arrows switch between the two actions,
 and Up/Down and Home/End move between rows within the current column. Long-term Remove actions share
 one Tab stop and use the same row keys. Expand buttons remain reachable by Tab.
-The Add button's accessible name begins with the visible `memoryPanelAdd` label and includes the
-item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{label}`.
+A sole promotion button uses the visible `memoryPanelAdd` label as its accessible name. When
+several promotion buttons are present, each name starts with that label and includes the item's
+text. Repeated or visually blank text adds a row number using `memoryPanelAddPosition` with
+`{index}`. `memoryPanelAddWithContext` with `{label}` continues to supply the accessible
+description. Scope exact-name queries to the memory row or match the full action-plus-item name.
 
 **Events:**
 
@@ -61462,14 +61594,21 @@ item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-toggle` carries `{ kind: 'memory', expanded, itemId, memoryId, scope }` for a memory item's
-  own disclosure. Nested provenance toggles retain their `kind` and `section` and add the owning
-  `memoryId` and `scope`.
+- `lr-retrieval-disclosure-change` bubbles from the memory panel with readonly `kind`, `expanded`,
+  `memoryId` and `scope`. A nested provenance disclosure includes `section`, plus `chunkId` when
+  `kind` is `'chunk'`. Migrate from `lr-toggle` by narrowing on `detail.kind` and reading
+  `memoryId` and `scope` for the owning row.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
+
+```ts
+memoryPanel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.scope, detail.memoryId, detail.chunkId);
+});
+```
 
 **Slots:** none.
 
@@ -61916,13 +62055,22 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `evidence-toggle` and `evidence-body` padding; `m` and larger keep the full padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
-**Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-toggle` (`{ kind: 'stage', expanded, itemId }` for a stage's evidence panel,
-either from its own button or the first timeline selection, or
-`{ kind: 'chunk', expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
-discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
-expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
-explicit stage identity.
+**Events:**
+
+- `lr-stage-select` carries `{ stageId }` when a timeline bar is activated.
+- `lr-stage-chunk-action` carries `{ stageId, action: 'open', chunkId, sourceId, anchor? }` for opening a chunk or
+  `{ stageId, action: 'expand', chunkId, expanded }` for a disclosure.
+- `lr-retrieval-disclosure-change` bubbles from the trace with readonly `detail.kind`,
+`stageId` and `expanded`. It covers the evidence button, timeline selection that expands a stage,
+and disclosures of nested chunks, which also carry `chunkId`. Migrate from `lr-toggle`
+(`{ expanded, itemId, stageId? }`) by narrowing on `detail.kind`.
+
+```ts
+trace.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.stageId, detail.chunkId, detail.expanded);
+  else console.log(detail.stageId, detail.expanded);
+});
+```
 
 **Slots:** none.
 

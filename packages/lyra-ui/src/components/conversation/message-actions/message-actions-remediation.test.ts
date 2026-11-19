@@ -1,4 +1,5 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import '../../overlays/overlay/dropdown.js';
 import '../../layout/menu/menu.js';
@@ -48,12 +49,13 @@ it('leaves keys an open slotted menu handled with that menu', async () => {
       </lr-dropdown>
     </lr-message-actions>
   `);
-  const dropdown = toolbar.querySelector('lr-dropdown') as HTMLElement & { open: boolean };
+  const dropdown = toolbar.querySelector('lr-dropdown')!;
   const [first, last] = [...toolbar.querySelectorAll<HTMLElement>('lr-menu-item')];
-  dropdown.open = true;
-  // The popup stays visibility-hidden, so unfocusable, until positioned; the menu then takes focus.
+  await focusByKeyboard(dropdown.querySelector<HTMLButtonElement>('[slot="trigger"]')!);
+  await dropdown.show();
   await waitUntil(() => document.activeElement === first, 'the opened menu took focus');
-  last!.focus();
+  await sendKeys({ press: 'End' });
+  await waitUntil(() => document.activeElement === last, 'End moved focus to the last menu item');
   await sendKeys({ press: 'Home' });
   await waitUntil(() => document.activeElement !== last, 'Home moved focus');
   expect(document.activeElement === first, 'Home stays inside the menu').to.be.true;

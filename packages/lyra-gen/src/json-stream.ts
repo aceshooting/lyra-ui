@@ -5,6 +5,8 @@ import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenLimits
 export interface JsonViewStreamOptions {
   readonly catalog: LyraGenCatalog;
   readonly limits?: Partial<LyraGenLimits>;
+  /** Apply catalog-directed property normalization during final validation. */
+  readonly normalize?: boolean;
   /** `'strict'` (default) rejects any validation error; `'isolate'` contains component-local defects in place. */
   readonly recovery?: LyraGenRecoveryMode;
 }
@@ -197,7 +199,7 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       let parsed: ReturnType<typeof snapshotJson>;
       try { parsed = snapshotJson(JSON.parse(source), limits); }
       catch { parsed = { ok: false, diagnostics: [{ code: 'json.syntax', path: '', severity: 'error', message: 'Invalid JSON syntax.' }] }; }
-      const checked = parsed.ok ? validateView(parsed.value, options.catalog, { limits, recovery: options.recovery }) : parsed;
+      const checked = parsed.ok ? validateView(parsed.value, options.catalog, { limits, recovery: options.recovery, normalize: options.normalize }) : parsed;
       terminal = checked.ok ? result('complete', checked.diagnostics, checked.value, 'isolated' in checked ? checked.isolated : undefined) : result('error', checked.diagnostics);
       return terminal;
     },

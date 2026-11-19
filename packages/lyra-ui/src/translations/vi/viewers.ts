@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Xoay sang phải',
   modelViewerRotateUp: 'Xoay lên',
   modelViewerRotateDown: 'Xoay xuống',
+  modelViewerViewport: 'Mô hình tương tác',
 };
 
 registerLyraLocale('vi', strings);

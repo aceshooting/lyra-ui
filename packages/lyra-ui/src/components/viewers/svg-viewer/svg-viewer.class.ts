@@ -1,9 +1,8 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -12,10 +11,10 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import { LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { loadSvgSanitizer } from './dompurify-loader.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
@@ -34,7 +33,7 @@ import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -52,20 +51,18 @@ function sanitizeInlineSvg(
   sanitizer: HtmlSanitizer,
   raw: string,
   ownerDocument: Document,
-): string {
+): readonly Node[] {
   const fragment = sanitizePassiveMarkupFragment(sanitizer, raw, ownerDocument, 'passive-svg');
   if (!fragment.querySelector('svg')) {
     throw new Error('SVG sanitizer did not return an SVG document.');
   }
-  const template = ownerDocument.createElement('template');
-  template.content.append(fragment);
-  return template.innerHTML;
+  return Array.from(fragment.childNodes);
 }
 
 type SvgFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; markup: string }
+  | { kind: 'loaded'; markup: readonly Node[] }
   | { kind: 'error'; message: () => string };
 
 type ResolvedRegionHighlight = LyraHighlight & {
@@ -75,6 +72,7 @@ type ResolvedRegionHighlight = LyraHighlight & {
 const MAX_PAINTED_HIGHLIGHTS = 100;
 
 export interface LyraSvgViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
@@ -94,6 +92,7 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * snapshot and placed first inside both paint ceilings.
  *
  * @customElement lr-svg-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
  * @event lr-highlight-activate - A region highlight was activated. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -119,6 +118,9 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  *   with a minimum pointer/focus area independent of the visual rectangle.
  * @csspart highlight-actions - Non-overlapping actions used for multiple region highlights.
  * @csspart region-highlight-action - One non-overlapping highlight action.
+ * @cssprop --lr-svg-viewer-action-background - Resting background of viewer actions.
+ * @cssprop --lr-svg-viewer-action-hover-background - Hover background of viewer actions.
+ * @cssprop --lr-svg-viewer-action-active-background - Pressed background of viewer actions.
  * @cssprop [--lr-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-svg-viewer-active-border=var(--lr-color-warning, var(--lr-color-brand))] - Border
  *   and outer-ring color of the `[part="region-highlight"]` matching `activeHighlightId`. The ring
@@ -155,10 +157,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
-    search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     svgViewerLabel: LYRA_DEFAULT_svgViewerLabel,
   };
@@ -187,7 +187,16 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['region'];
 
   @state() private fetchState: SvgFetchState = { kind: 'idle' };
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private readonly announcements = new ViewerAnnouncementController(this);
 
   private releaseScrollRegion?: () => void;
@@ -204,20 +213,16 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     super.connectedCallback();
     if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
-    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   /** A same-task DOM move keeps the rendered image; a genuine disconnect aborts and resets. */
   private readonly detached = new DeferredTeardown(() => {
-    this.generation++;
-    this.beginAbortableLoad();
     this.fetchState = { kind: 'idle' };
   });
 
   override disconnectedCallback(): void {
-    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     this.releaseScrollRegion?.();
     this.releaseScrollRegion = undefined;
@@ -240,48 +245,28 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
-  private async load(): Promise<void> {
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (!this.src) {
-      this.fetchState = { kind: 'idle' };
-      return;
+  private load(): Promise<void> {
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    return this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const sanitizer = await loadDompurify();
+    if (this.transport.isStale(token)) return;
+    if (!sanitizer) {
+      throw new LyraUserFacingError(
+        this.localize('documentViewerMissingSanitizer'),
+        (localize) => localize('documentViewerMissingSanitizer'),
+      );
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const sanitizer = await loadSvgSanitizer();
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!sanitizer) {
-        throw new LyraUserFacingError(
-          this.localize('documentViewerMissingSanitizer'),
-          (localize) => localize('documentViewerMissingSanitizer'),
-        );
-      }
-      const raw = await readResponseText(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const markup = sanitizeInlineSvg(sanitizer, raw, this.ownerDocument);
-      if (!signal?.aborted && this.isConnected && generation === this.generation) {
-        this.fetchState = { kind: 'loaded', markup };
-      }
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
+    const raw = await this.transport.readText(response);
+    if (this.transport.isStale(token)) return;
+    const markup = sanitizeInlineSvg(sanitizer, raw, this.ownerDocument);
+    if (!this.transport.isStale(token)) {
+      this.fetchState = { kind: 'loaded', markup };
     }
   }
 
@@ -289,7 +274,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     switch (this.fetchState.kind) {
       case 'loaded':
         return this.renderZoomableWrapper(
-          html`<div part="svg">${unsafeSVG(this.fetchState.markup)}</div>`,
+          html`<div part="svg">${this.fetchState.markup}</div>`,
           regionHighlights,
         );
       case 'loading':

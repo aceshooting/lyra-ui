@@ -8,7 +8,7 @@ import {
   BoundedResourceCache,
   type ResourceCacheLease,
 } from '../../../internal/safe-resource-cache.js';
-import { loadHtmlSanitizer } from '../html-viewer/dompurify-loader.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 
 export type LyraIncludeMode = 'cors' | 'no-cors' | 'same-origin';
@@ -83,7 +83,7 @@ export function acquireSanitizedIncludeResource(
       }
 
       signal?.throwIfAborted();
-      const sanitizer = await loadHtmlSanitizer();
+      const sanitizer = await loadDompurify();
       signal?.throwIfAborted();
       if (!sanitizer) throw new IncludeResourceError('missing-sanitizer', 0);
       return sanitizePassiveMarkup(sanitizer, raw, owner.document, 'transclusion');

@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ښي لوري ته وګرځوئ',
   modelViewerRotateUp: 'پورته وګرځوئ',
   modelViewerRotateDown: 'ښکته وګرځوئ',
+  modelViewerViewport: 'تعاملي ماډل',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

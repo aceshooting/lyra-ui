@@ -48,7 +48,8 @@ independently addressable through the fragment/anchor API. `search()`/`searchNex
 navigating search matches (and the resulting active-row highlight) correctly reaches every
 duplicate-named entry, not just the first.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
 navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
 (`detail: { text, anchor, rects }`) for a selection contained within one

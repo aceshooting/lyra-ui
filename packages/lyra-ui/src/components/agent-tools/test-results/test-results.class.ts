@@ -11,6 +11,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { RovingListController } from '../../../internal/roving-list-controller.js';
 import { styles } from './test-results.styles.js';
 import { testResultDetailSlotName } from './test-results-slots.js';
 export { testResultDetailSlotName } from './test-results-slots.js';
@@ -23,7 +24,7 @@ import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js'
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsInputTooLarge, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsShownAnnounce, LYRA_DEFAULT_testResultsSkipped, LYRA_DEFAULT_testResultsUnnamedTest } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
@@ -207,13 +208,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     expand: LYRA_DEFAULT_expand,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
     open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSkipped: LYRA_DEFAULT_statusSkipped,
@@ -411,6 +409,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   private detailSlotNames = new Set<string>();
   private detailSlotsDirty = true;
   private projectionTruncated = false;
+  private readonly testNameFocus = new RovingListController(this, {
+    items: () => [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="test-name"]')],
+  });
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private statusAnnouncementInitialized = false;
@@ -742,11 +743,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     suiteIndex: number,
     testIndex: number,
   ): TemplateResult {
-    // `manualExpanded` looks up by suite+test identity, so a row's manual expand/collapse
-    // survives the suite's tests being reordered or having a new test inserted above it -- a
-    // positional key would silently reattach one test's override to whichever test now sits at
-    // that same index. DOM ids below stay positional (not test.id), since test.id can repeat
-    // across suites or contain characters that aren't valid in an HTML id.
+    // Positional DOM IDs avoid collisions between suites and arbitrary test IDs.
     const state = this.sourcePages.state;
     const generation = this.legacyGeneration;
     const source = this.dataSource;
@@ -827,7 +824,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const failed = !state.pending && !result;
     const rows = result?.rows ?? [];
     const label = overallSemanticLabel(this, this.localize('testResultsLabel'));
-    return html`<div part="base" role=${overallSemanticRole(this, 'group') ?? nothing} aria-label=${label ?? nothing} aria-busy=${state.pending ? 'true' : 'false'}>
+    return html`<div part="base" role=${overallSemanticRole(this, 'group') ?? nothing} aria-label=${label ?? nothing} aria-busy=${state.pending ? 'true' : 'false'} @keydown=${this.testNameFocus.onKeyDown}>
       ${result ? this.renderSummary(result.summary!) : html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>`}
       ${failed ? html`<button part="source-retry" data-agent-action="neutral" type="button" @click=${() => {
         if (this.isConnected && this.dataSource === source && this.sourcePages.state === state) { this.sourceInputs = undefined; this.syncSource(); this.sourceVersion++; }
@@ -859,6 +856,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
               part="base"
               role=${overallSemanticRole(this, 'group') ?? nothing}
               aria-label=${ariaLabel ?? nothing}
+              @keydown=${this.testNameFocus.onKeyDown}
             >
               ${this.renderSummary(this.completeStatusCounts)}
               ${visibleSuites.length === 0

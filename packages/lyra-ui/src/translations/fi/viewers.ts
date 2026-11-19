@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Kierrä oikealle',
   modelViewerRotateUp: 'Kierrä ylös',
   modelViewerRotateDown: 'Kierrä alas',
+  modelViewerViewport: 'Interaktiivinen malli',
 };
 
 registerLyraLocale('fi', strings);

@@ -94,11 +94,15 @@ export interface LyraProvenancePanelEventMap
     entityId: string;
     occurrenceIndex?: number;
   }>;
-  'lr-toggle': CustomEvent<
-    | { kind: 'section'; section: Section; expanded: boolean; itemId?: undefined }
-    | { kind: 'chunk'; section: 'chunks'; expanded: boolean; itemId: string }
-  >;
+  /** @deprecated Use `lr-retrieval-disclosure-change` and read `section` or `chunkId`. */
+  'lr-toggle': CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>;
+  'lr-retrieval-disclosure-change': CustomEvent<LyraProvenancePanelDisclosureDetail>;
 }
+
+/** The provenance section or evidence chunk whose disclosure changed. */
+export type LyraProvenancePanelDisclosureDetail =
+  | Readonly<{ kind: 'section'; section: Section; expanded: boolean }>
+  | Readonly<{ kind: 'chunk'; section: 'chunks'; chunkId: string; expanded: boolean }>;
 
 /**
  * `<lr-provenance-panel>` — the grounding breakdown for one answer: a sectioned disclosure
@@ -110,8 +114,10 @@ export interface LyraProvenancePanelEventMap
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-provenance-panel
- * @event lr-toggle - A section header changed (`{ kind: 'section', section, expanded }`) or a chunk
- *   inside it changed (`{ kind: 'chunk', section: 'chunks', expanded, itemId }`).
+ * @event lr-toggle - Deprecated. Use `lr-retrieval-disclosure-change`.
+ *   Legacy detail is `{ section, expanded, itemId? }`.
+ * @event lr-retrieval-disclosure-change - A section or chunk disclosure changed. Detail includes
+ *   `kind`, `section`, `expanded`, and `chunkId` for a chunk.
  * @csspart limit - Localized notice when a section contains more than 500 rows.
  * @event lr-entity-select - Surfaced unchanged from an embedded entity chip, community card or
  *   relationship path strip. `detail: { entityId, occurrenceIndex? }`; only the path strip sets
@@ -164,6 +170,9 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-retrieval-disclosure-change',
+  ]);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'provenance',
@@ -207,7 +216,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   private toggleSection(section: Section): void {
     const expanded = !this.expandedSections[section];
     this.expandedSections = { ...this.expandedSections, [section]: expanded };
-    this.emit('lr-toggle', { kind: 'section', section, expanded });
+    this.emit('lr-toggle', { section, expanded });
+    this.emit('lr-retrieval-disclosure-change', { kind: 'section', section, expanded });
   }
 
   private renderSection(
@@ -337,9 +347,13 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
             size="s"
             .chunks=${sections.limitedChunks}
             .thresholds=${this.thresholds}
-            @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId: string }>) => {
+            @lr-toggle=${(event: LyraChunkInspectorEventMap['lr-toggle']) => {
+              if (event.composedPath()[0] !== event.currentTarget) return;
               event.stopPropagation();
-              this.emit('lr-toggle', { ...event.detail, kind: 'chunk', section: 'chunks' });
+              this.emit('lr-toggle', { section: 'chunks', ...event.detail });
+              this.emit('lr-retrieval-disclosure-change', {
+                kind: 'chunk', section: 'chunks', chunkId: event.detail.itemId, expanded: event.detail.expanded,
+              });
             }}
           ></lr-chunk-inspector>`
         )}

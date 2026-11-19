@@ -490,6 +490,15 @@ export const NamedLegendAndTable: Story = {
   `,
 };
 
+export const CompactTableToggle: Story = {
+  render: () => html`
+    <lr-lite-chart data-table-toggle aria-label="Quarterly revenue"
+      style="--lr-chart-data-table-toggle-inline-size:fit-content;--lr-chart-data-table-toggle-justify:end"
+      .labels=${['Q1', 'Q2', 'Q3']} .datasets=${[{ label: 'Revenue', data: [90, 95, 100] }]}
+    ></lr-lite-chart>
+  `,
+};
+
 export const SynchronizedMixedRenderers: Story = {
   parameters: {
     docs: { description: { story: 'SVG and canvas charts sharing sync-group coordinate by exact category label, including across shadow roots. Each tooltip uses its chart\'s own series, values and formatter. Recipient charts keep their focus and selection.' } },

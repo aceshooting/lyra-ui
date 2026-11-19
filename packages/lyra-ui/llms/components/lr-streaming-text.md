@@ -16,6 +16,8 @@
 
 ## `lr-streaming-text`
 
+In Markdown mode, `lr-render-error` bubbles from the renderer with the original `{ error }` detail.
+
 A token-coalescing incremental text renderer for streaming assistant output, with an optional
 blinking cursor and auto-detected Markdown rendering. First-party invention (no Web Awesome
 equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
@@ -108,7 +110,8 @@ renders into its own shadow root and a plain light-DOM `MutationObserver` on the
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
 outcomes. With `internal-link-prefix` set, its intercepted links also pass through
-`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented. `lr-render-error`
+(`detail: { error: unknown }`) reports a Markdown rendering failure.
 
 **Slots:** none — content renders from `content`, not a slot.
 

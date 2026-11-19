@@ -12,3 +12,5 @@ Document viewers, continued: `lr-docx-viewer`, `lr-pdf-viewer`, `lr-pptx-viewer`
 - PowerPoint previews release unread responses if the renderer fails to load.
 - PDF viewers report failures from the current text layer, including an unexpected `AbortError`.
 - DOCX text highlights respect reduced-motion and forced-color preferences, and highlight actions inherit the viewer font.
+
+- DOCX previews reuse the shared highlight painter and heading navigation. EPUB and PowerPoint loader builds omit their test hooks.

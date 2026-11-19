@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: '오른쪽으로 회전',
   modelViewerRotateUp: '위로 회전',
   modelViewerRotateDown: '아래로 회전',
+  modelViewerViewport: '조작 가능한 모델',
 };
 
 registerLyraLocale('ko', strings);

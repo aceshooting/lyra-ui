@@ -441,12 +441,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
       this.searchText = '';
     }
     if (normalizedChanged) {
-      // A host fulfilling `lr-example-remove-request` (or an import that replaces the whole array)
-      // can hand back an `examples` array that no longer contains the previously-selected id, or no
-      // longer carries every previously-active tag. Re-clamp both here rather than leaving stale
-      // state pointing at nothing: an unclamped `selectedId` would leave the Remove button enabled
-      // for an id that can't be removed again, and an unclamped tag filter would keep matching zero
-      // rows forever with no visible way back to "no filter".
+      // Clear selection and filters whose targets disappeared from the new dataset.
       if (this.selectedId !== null && !indexByKey(this.normalizedExamples, rowKey).has(this.selectedId)) {
         this.clearSelection();
       }
@@ -456,9 +451,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
       }
     }
 
-    // A row can still exist in the controlled dataset but no longer be visible once a search or
-    // tag filter narrows the grid. Clear its selection at that same boundary: leaving it active
-    // would make Remove act on an invisible row with no way for the user to verify the target.
+    // Remove must target a visible row.
     const inputs = [this.normalizedExamples, this.searchText, this.activeTags, this.effectiveLocale];
     const filtersChanged = !this.filterMemo || inputs.some((input, index) => input !== this.filterMemo!.inputs[index]);
     if (filtersChanged) this.filterMemo = { inputs, rows: this.filterExamples() };
@@ -589,10 +582,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   };
 
   private onExportButtonExport = (e: LyraExportButtonEventMap['lr-export-request']): void => {
-    // Suppress the internal <lr-export-button>'s own built-in client-side blob download -- see
-    // the class doc for why every configured format is redirected through lr-export-request
-    // instead, rather than letting csv/json download locally while other formats silently do
-    // nothing.
+    // Delegate each export to the host to keep all formats on the same path.
     e.preventDefault();
     e.stopPropagation();
     if (this.disabled) return;

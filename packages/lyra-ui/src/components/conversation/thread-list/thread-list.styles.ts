@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { disclosureChevron, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { css } from 'lit';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
@@ -100,42 +101,18 @@ export const styles = css`
     appearance: none;
     display: none;
   }
-  /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same sizing/hover/active
-     shape as [part='row-action'] below, so both icon-only buttons in this component read as one
-     visual language. */
+  ${iconActionStyles("[part='clear-button']", {
+    color: 'var(--lr-color-text-quiet)',
+    hoverBackground: 'var(--lr-color-surface-raised)',
+    hoverColor: 'var(--lr-color-text)',
+    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+  })}
   [part='clear-button'] {
+    --_lr-icon-button-radius-default: var(--lr-radius-xs);
     flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     inline-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
     block-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
-    ${iconHitTarget}
-    padding: 0;
-    border: 0;
-    border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
-    background: var(--lr-icon-button-bg, transparent);
-    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
-    font: inherit;
-    cursor: pointer;
-  }
-  [part='clear-button']:hover {
-    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
-    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
-  }
-  [part='clear-button']:active {
-    background: var(
-      --lr-icon-button-bg-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
-  }
-  [part='clear-button']:focus-visible {
-    ${focusRing}
   }
   [part='list'] {
     flex: 1 1 auto;
@@ -224,8 +201,15 @@ export const styles = css`
   lr-virtual-list::part(group-toggle):focus-visible {
     ${focusRing}
   }
+  ${disclosureChevron({
+    glyph: 'lr-virtual-list::part(group-icon)',
+    expanded: 'lr-virtual-list::part(group-icon)',
+    collapsedRtl: ':host(:dir(rtl)) lr-virtual-list::part(group-icon-collapsed)',
+  })}
+  lr-virtual-list::part(group-icon-collapsed) {
+    transform: none;
+  }
   lr-virtual-list::part(group-icon) {
-    display: inline-flex;
     align-items: center;
     justify-content: center;
     inline-size: var(--lr-size-1rem);

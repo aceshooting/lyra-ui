@@ -30,3 +30,19 @@ Conversation rename inputs restore the browser's autocorrect default when the ho
 Suggestion chips wrap unbroken labels and draw the keyboard focus outline inside scrolling rows.
 Decorative separators in generation metrics and usage badges carry empty alternative text.
 Usage badge tooltips use the shared overlay surface and border tokens.
+Thread lists load pagination and error controls on demand. Message feedback loads its chip control when reasons are present.
+Thread lists keep each group usable when its label or adornment callback fails.
+Thread lists refresh row content when its inputs change and update changed excerpts independently.
+Thread group chevrons support themed transforms, RTL and reduced motion.
+Message parts and transcript feeds show and announce how many older items their render windows hide.
+Transcript history and its caption log have distinct accessible names.
+The branch picker, message actions, conversation item and suggestion chips support disabling all built-in controls.
+Message parts supports an explicit accessible group label.
+Markdown render errors propagate through both streaming text variants.
+Resume controls in stream status and message parts use the shared button theme and support long labels.
+Chat messages and message parts preserve whole-word intrinsic sizing in narrow layouts.
+Selected feedback thumbs retain their own fill during hover and press. Closing feedback details removes unused spacing.
+Checkpoint rules remain aligned when its controls wrap.
+Conversation controls expose shared icon-action styling and component tokens for message retries, row hover, handoff dividers, checkpoints and suggestions.
+Transcript jump controls support theming, long localized labels and reduced motion.
+Usage badge and generation metric separators stay with the preceding value when metrics wrap.

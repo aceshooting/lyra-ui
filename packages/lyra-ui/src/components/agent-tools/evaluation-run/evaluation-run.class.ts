@@ -36,7 +36,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunDetailsLoadError, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_taskListStepIncompleteAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -254,11 +254,8 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     evaluationRunRunningCount: LYRA_DEFAULT_evaluationRunRunningCount,
     evaluationRunToolTraceHeading: LYRA_DEFAULT_evaluationRunToolTraceHeading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     taskListStepIncompleteAnnounce: LYRA_DEFAULT_taskListStepIncompleteAnnounce,
@@ -410,8 +407,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
       const previous = this.previousStatusById.get(example.id);
       if (previous === undefined || previous === kind) return;
       const label = this.exampleLabel(example, index);
-      // Every branch forces an immediate flush -- these are discrete lifecycle transitions, not a
-      // high-frequency stream where throttling matters (mirrors <lr-task-list>'s identical choice).
+      // Flush discrete lifecycle transitions immediately.
       switch (kind) {
         case 'running':
           region.mode = 'polite';
@@ -442,9 +438,6 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
         case 'queued':
         case 'collecting':
         default:
-          // `queued`, `collecting` and application-defined kinds have no dedicated sentence: announce the
-          // localized status name beside the example, in the same `{label}: {status}` shape task-list
-          // uses for its own residual states.
           region.mode = 'polite';
           region.announce(
             this.localize('taskListStepIncompleteAnnounce', undefined, { label, status: this.statusText(example.status) }),

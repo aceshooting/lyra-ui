@@ -38,3 +38,18 @@ it('revokes stale inspection on replacement and disconnect, then refreshes mutab
   el.stages = [{ label: 'Reconnected', value: 20 }]; document.body.append(el); await el.updateComplete;
   expect(el.shadowRoot!.textContent).to.include('Reconnected'); el.remove();
 });
+
+it('stops reading a replaced source when an indexed getter assigns new stages', async () => {
+  const el = await fixture<LyraFunnel>(html`<lr-funnel></lr-funnel>`);
+  const stages = new Array(20_000);
+  let obsoleteReads = 0;
+  Object.defineProperty(stages, 0, { get() {
+    el.stages = [{ label: 'Replacement', value: 5 }];
+    return { get label() { obsoleteReads++; return 'Obsolete'; }, value: 1 };
+  } });
+  Object.defineProperty(stages, 1, { get() { obsoleteReads++; return null; } });
+  el.stages = stages;
+  await waitUntil(() => el.shadowRoot!.textContent!.includes('Replacement'), 'replacement was not rendered');
+  expect(obsoleteReads).to.equal(0);
+  expect(el.shadowRoot!.textContent).not.to.include('Obsolete');
+});

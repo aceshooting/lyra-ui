@@ -158,6 +158,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Rothlaigh ar dheis',
   modelViewerRotateUp: 'Rothlaigh suas',
   modelViewerRotateDown: 'Rothlaigh síos',
+  modelViewerViewport: 'Samhail idirghníomhach',
 };
 
 registerLyraLocale('ga', strings);

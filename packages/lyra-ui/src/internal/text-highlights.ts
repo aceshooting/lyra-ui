@@ -1,8 +1,17 @@
-import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
-import { TEXT_QUOTE_LIMITS } from './text-quote.js';
+import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
+import { prioritizedHighlightCandidates } from './anchor-target.js';
+import {
+  rangesFromTextQuoteMatches,
+  TEXT_QUOTE_LIMITS,
+  TEXT_QUOTE_PAINT_LIMIT,
+  type TextQuoteIndex,
+  type TextQuoteMatch,
+} from './text-quote.js';
+import { TEXT_SELECTION_RECT_LIMIT } from './text-selection.js';
 import { finiteDuration } from './numbers.js';
 
-const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
+/** Every tone, in paint order. A repaint sets each one, so a tone a pass leaves out is cleared. */
+export const HIGHLIGHT_TONES: readonly LyraHighlightTone[] = Object.freeze(['accent', 'success', 'warning', 'danger', 'neutral']);
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
 /** The fallback mutates the DOM once per retained Range, so it shares the viewer search paint cap. */
 const FALLBACK_RANGE_LIMIT = 200;
@@ -86,7 +95,7 @@ function stateForDocument(doc: Document, realm: HighlightRealm): HighlightDocume
     ownersByName: new Map(),
   };
   const entries: [string, number][] = [
-    ...TONE_NAMES.map((tone): [string, number] => [highlightName(tone), 0]),
+    ...HIGHLIGHT_TONES.map((tone): [string, number] => [highlightName(tone), 0]),
     ['lr-highlight-active', 1],
     ['lr-highlight-flash', 2],
   ];
@@ -234,7 +243,7 @@ export function unwrapTextMark(mark: HTMLElement): void {
   }
 }
 
-function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
+function acquireFallbackHandle(doc: Document, part: string | undefined): HighlightHandle {
   const marksByName = new Map<string, HTMLElement[]>();
   const view = doc.defaultView;
 
@@ -257,6 +266,7 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
         mark.setAttribute('data-lr-highlight-tone', tone);
         mark.setAttribute('data-lr-highlight-name', name);
         mark.setAttribute('role', 'mark');
+        if (part) mark.setAttribute('part', part);
       }));
     }
     marksByName.set(name, marks);
@@ -347,13 +357,18 @@ function inertHighlightHandle(): HighlightHandle {
   };
 }
 
+export interface HighlightHandleOptions {
+  /** A public part name every `<mark>` the fallback paints carries (the API path creates no element). */
+  readonly part?: string;
+}
+
 /** Acquires a paint handle for one owner. Transparently uses the CSS Custom Highlight API when
  *  available, falling back to `<mark>`-wrapping otherwise. Painting callers do not need to branch;
- *  a component may still query its exact owner document to decorate fallback marks with its own
- *  public parts. */
+ *  `options.part` exposes the fallback marks as the component's own public part. */
 export function acquireHighlightHandle(
   owner: object,
   doc: Document | null = defaultDocument(),
+  options: HighlightHandleOptions = {},
 ): HighlightHandle {
   if (!doc) return inertHighlightHandle();
   const realm = highlightRealm(doc);
@@ -369,5 +384,103 @@ export function acquireHighlightHandle(
       // another document's globals.
     }
   }
-  return acquireFallbackHandle(owner, doc);
+  return acquireFallbackHandle(doc, options.part);
+}
+
+// -- resolved text-quote highlights ------------------------------------------------------------
+
+/** One text-quote highlight resolved against the rendered content. */
+export interface ResolvedHighlightRange<T extends LyraHighlight = LyraHighlight> {
+  readonly id: string;
+  readonly highlight: T;
+  readonly tone: LyraHighlightTone;
+  readonly range: Range;
+}
+
+/**
+ * Resolves the `text-quote` highlights against `index` with one shared work budget, the active one
+ * first and at most `TEXT_QUOTE_PAINT_LIMIT` of them. Resolution is by quote text, never by node
+ * identity, so a quote the content does not contain yet resolves on a later pass; other anchor
+ * kinds have no span of text and are skipped.
+ */
+export function resolveHighlightRanges<T extends LyraHighlight>(
+  index: TextQuoteIndex,
+  highlights: readonly T[],
+  activeHighlightId: string | null,
+): { readonly ranges: ResolvedHighlightRange<T>[]; readonly active: Range | null } {
+  const budget = index.createWorkBudget();
+  const accepted: T[] = [];
+  const matches: TextQuoteMatch[] = [];
+  for (const highlight of prioritizedHighlightCandidates(highlights, activeHighlightId)) {
+    if (matches.length >= TEXT_QUOTE_PAINT_LIMIT) break;
+    const anchor = highlight.anchor;
+    const match = anchor.kind === 'text-quote' ? index.resolve(anchor, budget) : null;
+    if (!match) continue;
+    accepted.push(highlight);
+    matches.push(match);
+  }
+  const materialized = rangesFromTextQuoteMatches(index.scope, matches);
+  const ranges: ResolvedHighlightRange<T>[] = [];
+  let active: Range | null = null;
+  for (let position = 0; position < accepted.length; position++) {
+    const range = materialized[position];
+    if (!range) continue;
+    const highlight = accepted[position]!;
+    ranges.push({ id: highlight.id, highlight, tone: highlight.tone ?? 'accent', range });
+    if (highlight.id === activeHighlightId) active = range;
+  }
+  return { ranges, active };
+}
+
+/** Paints `entries` grouped by tone (default `accent`), clearing every tone left empty, and sets
+ *  the owner's active range. */
+export function paintHighlightTones(
+  handle: HighlightHandle,
+  entries: Iterable<{ readonly tone?: LyraHighlightTone; readonly range: Range }>,
+  active: Range | null,
+): void {
+  const byTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
+  const accent = byTone.get('accent')!;
+  for (const { tone, range } of entries) (byTone.get(tone ?? 'accent') ?? accent).push(range);
+  for (const [tone, ranges] of byTone) handle.setRanges(tone, ranges);
+  handle.setActive(active);
+}
+
+/** Resolves and paints the `text-quote` highlights in one pass, returning the ranges for
+ *  `hitTestHighlightRanges()`. */
+export function paintResolvedHighlights<T extends LyraHighlight>(options: {
+  readonly handle: HighlightHandle;
+  readonly index: TextQuoteIndex;
+  readonly highlights: readonly T[];
+  readonly activeHighlightId: string | null;
+}): ResolvedHighlightRange<T>[] {
+  const { ranges, active } = resolveHighlightRanges(options.index, options.highlights, options.activeHighlightId);
+  paintHighlightTones(options.handle, ranges, active);
+  return ranges;
+}
+
+/** Anything that reports client rectangles under an id, such as a `ResolvedHighlightRange`. */
+export interface HitTestableRange {
+  readonly id: string;
+  readonly range: {
+    getClientRects(): Iterable<{ readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }>;
+  };
+}
+
+/**
+ * The id of the topmost (last) range with a client rectangle containing the point, edges
+ * included, after inspecting at most `TEXT_SELECTION_RECT_LIMIT` rectangles. The Custom Highlight
+ * API paints without an element to listen on, so this serves both paint paths.
+ */
+export function hitTestHighlightRanges(ranges: readonly HitTestableRange[], x: number, y: number): string | null {
+  let budget = TEXT_SELECTION_RECT_LIMIT;
+  for (let position = ranges.length - 1; position >= 0; position--) {
+    const entry = ranges[position]!;
+    for (const box of entry.range.getClientRects()) {
+      if (budget <= 0) return null;
+      budget -= 1;
+      if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) return entry.id;
+    }
+  }
+  return null;
 }

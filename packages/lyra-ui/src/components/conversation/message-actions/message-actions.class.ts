@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -362,6 +363,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   })
   revealOnInteraction = false;
 
+  /** Disables the built-in controls and makes the custom action slot inert. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
   /** Accessible name for the toolbar. Omitting it localizes the default `messageActionsLabel`
    *  message; an explicit empty string (`label=""` or `.label = ''`) suppresses that default and
    *  renders no label. */
@@ -468,7 +472,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('controls')) {
+    if (changed.has('controls') || changed.has('disabled')) {
       const stops = this.logicalActions();
       this.setActiveStop(
         stops,
@@ -622,6 +626,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   }
 
   private logicalActions(): ManagedToolbarAction[] {
+    if (this.disabled) return [];
     const actions: ManagedToolbarAction[] = [];
     const addProvider = (
       owner: Element,
@@ -845,11 +850,11 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onRegenerateClick = (): void => {
-    this.emit('lr-regenerate', null);
+    if (!this.disabled) this.emit('lr-regenerate', null);
   };
 
   private onEditClick = (): void => {
-    this.emit('lr-edit', null);
+    if (!this.disabled) this.emit('lr-edit', null);
   };
 
   private renderControl(type: MessageActionControl) {
@@ -858,12 +863,14 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         return this.copyText
           ? html`<lr-copy-button
               part="copy-button"
+              .disabled=${this.disabled}
               .value=${this.copyText}
             ></lr-copy-button>`
           : nothing;
       case 'regenerate':
         return html`<lr-icon-button
           part="regenerate-button"
+          .disabled=${this.disabled}
           exportparts="button:regenerate-button-control"
           aria-label=${this.localize('regenerateResponse')}
           @click=${this.onRegenerateClick}
@@ -873,6 +880,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       case 'edit':
         return html`<lr-icon-button
           part="edit-button"
+          .disabled=${this.disabled}
           exportparts="button:edit-button-control"
           aria-label=${this.localize('editMessage')}
           @click=${this.onEditClick}
@@ -882,6 +890,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       case 'feedback':
         return html`<lr-message-feedback
           part="feedback"
+          .disabled=${this.disabled}
           .rating=${this.feedbackRating}
           @lr-toolbar-actions-change=${this.onToolbarActionsChange}
         ></lr-message-feedback>`;
@@ -889,13 +898,14 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   }
 
   override render(): TemplateResult {
-    const label =
-      this.accessibleLabel ??
-      (this.label == null ? this.localize('messageActionsLabel') : this.label);
+    const fallback = this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('messageActionsLabel');
+    const override = this.accessibleLabel;
+    const label = override === '' ? '' : normalizeLabel(override) ?? fallback;
     return html`
       <div
         part="base"
         role="toolbar"
+        aria-disabled=${this.disabled ? 'true' : nothing}
         aria-label=${label}
         tabindex="-1"
         @keydown=${this.onToolbarKeyDown}
@@ -906,6 +916,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
           (type) => this.renderControl(type)
         )}
         <slot
+          ?inert=${this.disabled}
           @slotchange=${this.onSlotChange}
           @lr-toolbar-actions-change=${this.onToolbarActionsChange}
           @lr-feedback-change=${this.containSlottedFeedbackEvent}

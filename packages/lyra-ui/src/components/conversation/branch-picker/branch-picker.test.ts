@@ -435,3 +435,30 @@ it('uses the localized group name for a whitespace-only label or host name', asy
   await el.updateComplete;
   expect(group.getAttribute('aria-label')).to.equal('Response versions');
 });
+
+it('applies the shared icon action border to its buttons', async () => {
+  const el = await fixture<LyraBranchPicker>(html`
+    <lr-branch-picker count="3" index="1" style="--lr-icon-button-border: 3px dashed rgb(12, 34, 56)"></lr-branch-picker>
+  `);
+  for (const part of ['previous-button','next-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    const style = getComputedStyle(button);
+    expect([style.borderTopWidth, style.borderTopStyle, style.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(12, 34, 56)']);
+  }
+});
+
+it('disables both branches and their toolbar stops until re-enabled', async () => {
+  const el = await fixture<LyraBranchPicker>(html`<lr-branch-picker count="3" index="1"></lr-branch-picker>`);
+  let changes = 0;
+  el.addEventListener('lr-branch-change', () => { changes++; });
+  el.disabled = true;
+  el.click();
+  await el.updateComplete;
+  expect([...el.shadowRoot!.querySelectorAll('button')].map(b => b.disabled)).to.deep.equal([true, true]);
+  expect(el.getToolbarActions().map(action => action.disabled)).to.deep.equal([true, true]);
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.getToolbarActions().map(action => action.disabled)).to.deep.equal([false, false]);
+  el.click();
+  expect(changes).to.equal(1);
+});

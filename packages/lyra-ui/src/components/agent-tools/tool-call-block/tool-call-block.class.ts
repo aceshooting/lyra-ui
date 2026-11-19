@@ -26,7 +26,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `detail` for `lr-toggle`: the new expanded state, and the call it belongs to. */
@@ -151,11 +151,8 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
     statusIncomplete: LYRA_DEFAULT_statusIncomplete,

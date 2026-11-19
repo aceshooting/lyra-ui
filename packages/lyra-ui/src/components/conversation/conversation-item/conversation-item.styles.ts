@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -26,6 +27,10 @@ export const styles = css`
     padding: var(--lr-space-s) var(--lr-space-m);
     border-radius: var(--lr-radius);
     transition: background-color var(--lr-transition-fast);
+  }
+  :host([disabled]) [part='select-button'] {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
   }
   [part='active-indicator'] {
     position: absolute;
@@ -59,16 +64,16 @@ export const styles = css`
      Chromium and WebKit stop matching :hover on this row while the pointer is inside the menu. The
      row keeps its hover tint for as long as the menu is open instead of dropping it mid-choice.
      (0,1,0), so the pressed and active rules below still win exactly as they win over hover. */
-  :host(:hover) [part~='base'],
+  :host(:where(:not([disabled])):hover) [part~='base'],
   [part~='base-menu-open'] {
-    background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
+    background: var(--lr-conversation-item-hover-bg, color-mix(in srgb, var(--lr-color-text) 6%, transparent));
   }
   /* Pressed. :host(:active) is the transient pointer/keyboard press; :host([active]) below is 'this
      is the open session'. The press tint is the hover tint escalated to --lr-color-mix-active
      toward --lr-color-mix-partner (which tracks the text color), so it moves the right way on light
      and dark surfaces alike. :active propagates up from the pressed [part='select-button'], so this
      plain wrapper div answers a press the way it answers hover. */
-  :host(:active) [part~='base'] {
+  :host(:where(:not([disabled])):active) [part~='base'] {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   /* Both rules above are (0,3,0), like this one, so being written last hands this rule BOTH
@@ -200,41 +205,17 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
   }
 
-  /* A row has real room (unlike a compact chip pill), so the rename button takes the full shared
-     --lr-icon-button-size floor directly -- no capped/split-glyph compromise. */
+  ${iconActionStyles("[part='rename-button']", {
+    color: 'var(--lr-color-text-quiet)',
+    hoverBackground: 'var(--lr-color-surface-raised)',
+    hoverColor: 'var(--lr-color-text)',
+    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+  })}
   [part='rename-button'] {
-    font: inherit;
+    --_lr-icon-button-radius-default: var(--lr-radius-xs);
     flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    ${iconHitTarget}
-    padding: 0;
-    border: none;
-    border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
-    background: var(--lr-icon-button-bg, transparent);
-    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
-    cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
-  }
-  [part='rename-button']:hover {
-    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
-    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
-  }
-  [part='rename-button']:active {
-    background: var(
-      --lr-icon-button-bg-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
-  }
-  [part='rename-button']:focus-visible {
-    ${focusRing}
   }
   [part='rename-button'] svg {
     display: block;

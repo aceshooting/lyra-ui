@@ -2,7 +2,7 @@ import type {
   ShikiLanguageInput,
   ShikiLanguageLoader,
   ShikiLanguageSource,
-} from '../components/conversation/code-block/shiki-types.js';
+} from './shiki/core.js';
 
 const emptyLanguages: Readonly<Record<string, ShikiLanguageInput>> = Object.freeze({});
 const combinedMaps = new WeakMap<object, WeakMap<object, Readonly<Record<string, ShikiLanguageSource>>>>();

@@ -102,6 +102,12 @@ interface PendingSuggestionFocus {
  * @cssprop [--lr-suggestion-chips-chip-max-inline-size=var(--lr-size-16rem)] - Maximum inline size of
  *   each chip. In a `wrap` row it is further clamped to the row's inline size, so a chip never
  *   overflows its container.
+ * @cssprop [--lr-suggestion-chips-gap=var(--lr-space-xs)] - Gap between items.
+ * @cssprop [--lr-suggestion-chips-chip-bg=var(--lr-color-surface)] - Resting background.
+ * @cssprop [--lr-suggestion-chips-chip-color=var(--lr-color-text)] - Resting text color.
+ * @cssprop [--lr-suggestion-chips-chip-border-color=var(--lr-color-border)] - Resting border color.
+ * @cssprop [--lr-suggestion-chips-chip-radius=var(--lr-radius-pill)] - Corner radius.
+ * @cssprop [--lr-suggestion-chips-chip-padding-inline=var(--lr-space-m)] - Inline padding.
  * @status stable
  * @since 4.0.0
  */
@@ -129,6 +135,9 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
   /** Wraps into multiple rows instead of a single horizontally scrollable line. */
   @property({ type: Boolean, reflect: true }) wrap = false;
+
+  /** Disables every suggestion while preserving individual disabled states. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Accessible name for the group. Optional. Omitting it localizes the default `suggestionsLabel`
    *  message; an explicit empty string renders no visible/accessible label. */
@@ -232,7 +241,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   /** A `disabled` suggestion cannot be activated -- by click or keyboard -- and emits nothing and
    *  changes no state, matching every other declared-non-actionable entry in this library. */
   private select(suggestion: LyraChatSuggestion): void {
-    if (suggestion.disabled) return;
+    if (this.isSuggestionDisabled(suggestion)) return;
     this.emit('lr-suggestion-select', {
       suggestionId: suggestion.suggestionId,
       label: suggestion.label,
@@ -252,7 +261,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   }
 
   private isSuggestionDisabled(suggestion: LyraChatSuggestion | undefined): boolean {
-    return suggestion?.disabled === true;
+    return this.disabled || suggestion?.disabled === true;
   }
 
   /** Degrades `this.activeIndex` off a disabled suggestion to the nearest enabled one (forward
@@ -304,7 +313,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
         part="chip"
         data-suggestion-id=${suggestion.suggestionId}
         tabindex=${index === activeIndex ? '0' : '-1'}
-        ?disabled=${suggestion.disabled === true}
+        ?disabled=${this.isSuggestionDisabled(suggestion)}
         @click=${() => this.select(suggestion)}
         @focus=${() => this.onChipFocus(index)}
       >

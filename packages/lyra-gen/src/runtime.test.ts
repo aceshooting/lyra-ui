@@ -126,3 +126,40 @@ test('nested forms reject and diagnostic ceilings cannot conceal terminal author
   assert.equal(result.diagnostics.length, 1);
   assert.equal(result.diagnostics[0]?.code, 'catalog.component');
 });
+
+test('normalization moves only declared properties and text into a free caption or description', () => {
+  const role = { tag: 'aside', properties: { label: { type: 'string' }, caption: { type: 'string' }, description: { type: 'string' } } } as const;
+  const roles = { ...catalog, components: { ...catalog.components, note: role } };
+  const note = { id: 'note', type: 'note', label: 'Result', text: 'Details', props: { caption: 'Existing' } };
+  const source = { ...view(), root: { id: 'root', type: 'row', children: [note] } };
+  assert.equal(validateView(source, roles).ok, false);
+  const result = validateView(source, roles, { normalize: true });
+  assert.ok(result.ok);
+  assert.deepEqual(result.value.root.children?.[0], { id: 'note', type: 'note', props: { label: 'Result', caption: 'Existing', description: 'Details' } });
+  assert.deepEqual(result.diagnostics.map(({ severity, path }) => [severity, path]), [['warning', '/root/children/0/label'], ['warning', '/root/children/0/text']]);
+  assert.deepEqual(validateView(result.value, roles, { normalize: true }).diagnostics, []);
+  assert.equal(note.text, 'Details');
+  for (const root of [
+    { ...note, unknown: 'value' }, { ...note, label: 42 },
+    { ...note, props: { label: 'Conflicting value' } },
+    { ...note, props: { caption: 'Taken', description: 'Taken' } }
+  ]) assert.equal(validateView({ ...source, root }, roles, { normalize: true }).ok, false);
+});
+
+test('normalization preserves admission bounds and catalog validation failures', () => {
+  const options = { normalize: true, limits: { maxDiagnostics: 1 } };
+  const roles: LyraGenCatalog = { ...catalog, components: { ...catalog.components, note: { tag: 'p', properties: { caption: { type: 'string' }, label: { type: 'string' } } } } };
+  const base = view();
+  const root = { id: 'note', type: 'note', text: 'Details', label: 'Label', props: { caption: '' } };
+  const result = validateView({ ...base, root }, roles, options);
+  assert.ok(result.ok);
+  assert.deepEqual(result.value.root.props, { label: 'Label', caption: 'Details' });
+  assert.equal(result.diagnostics.length, 1);
+  for (const input of [null, {}, { ...base, root: 42 }, { ...base, root: { id: 'bad', type: 'unknown', label: 'value' } }, { ...base, root: { id: 'bad' } }, { ...base, root: { ...root, props: 7 } }]) {
+    assert.equal(validateView(input, roles, options).ok, false);
+  }
+  const throwing = { get root(): never { throw new Error('Accessor invoked'); } };
+  assert.equal(validateView(throwing, roles, options).diagnostics[0]?.code, 'json.accessor');
+  assert.equal(validateView({ ...base, root: { ...root, unexpected: true } }, roles, options).diagnostics[0]?.severity, 'error');
+  assert.equal(validateView({ ...base, root: { id: 'n', type: 'note', label: 'a' } }, roles, { normalize: true, limits: { maxDepth: 2 } }).diagnostics[0]?.code, 'limit.depth');
+});

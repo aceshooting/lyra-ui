@@ -7,7 +7,7 @@ import { assembleComponentMetadata, readComponentMetadataSources } from './compo
 import { isMainModule } from './is-main-module.mjs';
 import { createMigrationRuntimeInventory, readRenameLedger } from './migrate-wa.mjs';
 
-/** The exact `dist/cli/migration-contract.json` text; callers may pass a context already verified for this inventory. */
+/** The exact JSON text encoded in the packaged migration contract; callers may pass a context already verified for this inventory. */
 export function migrationContractText(packageDir = dirname(dirname(fileURLToPath(import.meta.url))), {
   componentInventory = JSON.parse(readFileSync(join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8')),
   compatibilityContext = readCurrentCompatibilityContextSync(packageDir, componentInventory),

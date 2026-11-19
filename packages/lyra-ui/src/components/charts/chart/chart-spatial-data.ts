@@ -1,4 +1,4 @@
-import type { LyraChartInstance } from './chart.class.js';
+import type { LyraChartInstance } from './chart-types.js';
 import type { SpatialSourceController } from '../../../internal/spatial-source-controller.js';
 export { SpatialSourceController, spatialContains } from '../../../internal/spatial-source-controller.js';
 import type { LyraSpatialBounds, LyraSpatialBin, LyraSpatialChartPoint, LyraSpatialChartSeries } from '../../../utilities/data-spatial.js';

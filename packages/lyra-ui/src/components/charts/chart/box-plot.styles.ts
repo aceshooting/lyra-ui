@@ -38,6 +38,13 @@ export const styles = css`
   }
   ${chartLegendPositionStyles('notice')}
 
+  [part='data-table-toggle'] {
+    --_lr-chart-toggle-border-color: var(--lr-box-plot-data-table-toggle-border-color);
+    --_lr-chart-toggle-bg: var(--lr-box-plot-data-table-toggle-bg);
+    --_lr-chart-toggle-color: var(--lr-box-plot-data-table-toggle-color);
+    --_lr-chart-toggle-inline-size: var(--lr-box-plot-data-table-toggle-inline-size);
+    --_lr-chart-toggle-justify: var(--lr-box-plot-data-table-toggle-justify);
+  }
   [part='data-table-toggle']:hover {
     background: var(
       --lr-box-plot-data-table-toggle-hover-bg,

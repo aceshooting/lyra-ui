@@ -25,3 +25,9 @@ export const Empty: Story = { render: () => html`<lr-contact-viewer></lr-contact
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-contact-viewer src=${narrowSrc} name="International analytical-engine research contacts.vcf"></lr-contact-viewer></div>`,
 };
+
+export const CollectionLimit: Story = {
+  args: { limit: 1 },
+  argTypes: { limit: { control: { type: 'number', min: 0, max: 2500 } } },
+  render: ({ limit }) => html`<lr-contact-viewer max-contacts=${limit} src=${src}></lr-contact-viewer>`,
+};

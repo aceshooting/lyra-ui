@@ -2,18 +2,18 @@
   "locale": "mt",
   "direction": "ltr",
   "source": {
-    "keyCount": 1714,
-    "sha256": "sha256:a4d22358f6e6ca15cd5b2d7826bd7b934a4e39858c6406f2f80a8020cafaef0b"
+    "keyCount": 1719,
+    "sha256": "sha256:b3e66923f9d8b7894616f7b9c9bf931d2bf339c17306ce07c0c1360cb1cda504"
   },
   "catalog": {
-    "keyCount": 1714,
-    "sha256": "sha256:0071c82e711b7a59050e72fbb8afcc37c274f5fe9f6dd586a383c061954706d8"
+    "keyCount": 1719,
+    "sha256": "sha256:aec216c9030dc1f9983e349d6cc5beb85fc93a6d18e1c29ed89e9fa33d46475d"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-11-16",
-    "evidence": "Original Maltese catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other, two). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
+    "evidence": "Original Maltese catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other, two). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. Added localized error, action, and viewport messages for the corresponding components."
   },
   "reviewer": {
     "status": "approved",
@@ -345,10 +345,6 @@
     {
       "messagePath": "mapSquareMeters",
       "rationale": "International SI unit symbol, which this locale writes unchanged."
-    },
-    {
-      "messagePath": "memoryPanelAddAccessibleName",
-      "rationale": "The supplied locale allowlist confirms that the shared wording for memoryPanelAddAccessibleName is appropriate for the mt catalog's UI register."
     },
     {
       "messagePath": "menuLabel",

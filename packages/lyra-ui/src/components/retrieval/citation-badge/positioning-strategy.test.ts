@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import './citation-badge.js';
 import type { LyraCitationBadge } from './citation-badge.js';
 
@@ -9,6 +10,7 @@ function popover(el: LyraCitationBadge): HTMLElement {
 }
 
 async function openPopover(wrapper: HTMLElement): Promise<LyraCitationBadge> {
+  await loadAnchoredOverlayRuntime();
   const el = wrapper.querySelector('lr-citation-badge') as LyraCitationBadge;
   // The subject is positioning, not focus modality, so the ungated hover path opens it.
   (el.shadowRoot!.querySelector('.wrapper') as HTMLElement).dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));

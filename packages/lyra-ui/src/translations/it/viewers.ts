@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Ruota a destra',
   modelViewerRotateUp: 'Ruota verso l’alto',
   modelViewerRotateDown: 'Ruota verso il basso',
+  modelViewerViewport: 'Modello interattivo',
 };
 
 registerLyraLocale('it', strings);

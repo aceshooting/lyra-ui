@@ -47,7 +47,9 @@ announced as read-only, and refuses every change. A blank rule `label` names its
 | `limit` | Notice that more than 100 valid rules were supplied. |
 
 
-**Events:** non-cancelable `lr-permission-rule-change` (`detail: { ruleId, decision }`) requests a decision change; the host evaluates policy and updates the controlled collection.
+**Events:** Cancelable `lr-permission-rule-change-request` (`detail: { ruleId, decision }`)
+proposes a decision change. Unless vetoed, non-cancelable `lr-permission-rule-change` carries
+the same detail. The host evaluates policy and updates the controlled collection.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-permission-rules.js';
 import type { PermissionRule } from '@aceshooting/lyra-ui/components/agent-tools/permission-rules/permission-rules.class.js';

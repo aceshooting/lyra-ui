@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Pööra paremale',
   modelViewerRotateUp: 'Pööra üles',
   modelViewerRotateDown: 'Pööra alla',
+  modelViewerViewport: 'Interaktiivne mudel',
 };
 
 registerLyraLocale('et', strings);

@@ -719,7 +719,7 @@ const iconHitTargetDeclarations = fs.readFileSync(
 ).match(/export const iconHitTarget = css`([\s\S]*?)`;/)?.[1];
 
 function expandHitTarget(source) {
-  if (!iconHitTargetDeclarations || !source.includes('iconHitTarget')) return source;
+  if (!iconHitTargetDeclarations || !/\b(?:iconHitTarget|iconActionStyles)\b/.test(source)) return source;
   let program;
   try {
     program = parseProgram('styles.ts', source);
@@ -727,13 +727,20 @@ function expandHitTarget(source) {
     // Plain CSS fixtures cannot import a declaration fragment.
     return source;
   }
-  const bindings = new Set();
+  const fragments = new Set();
+  const recipes = new Set();
   for (const statement of program.body) {
-    if (statement.type !== 'ImportDeclaration' || statement.importKind === 'type' ||
-        !/^(?:(?:\.\.\/)+internal\/|\.\/)interactive-control\.styles\.js$/.test(statement.source.value)) continue;
+    if (statement.type !== 'ImportDeclaration' || statement.importKind === 'type') continue;
+    const module = statement.source.value.match(/^(?:(?:\.\.\/)+internal\/|\.\/)(interactive-control|icon-action)\.styles\.js$/)?.[1];
+    if (!module) continue;
     for (const specifier of statement.specifiers) {
-      if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type' &&
-          specifier.imported.name === 'iconHitTarget') bindings.add(specifier.local.name);
+      if (specifier.type !== 'ImportSpecifier' || specifier.importKind === 'type') continue;
+      if (module === 'interactive-control' && specifier.imported.name === 'iconHitTarget') {
+        fragments.add(specifier.local.name);
+      }
+      if (module === 'icon-action' && specifier.imported.name === 'iconActionStyles') {
+        recipes.add(specifier.local.name);
+      }
     }
   }
   const replacements = [];
@@ -744,19 +751,30 @@ function expandHitTarget(source) {
       const template = variable.init;
       if (template?.type !== 'TaggedTemplateExpression' || template.tag.type !== 'Identifier' || template.tag.name !== 'css') continue;
       for (const expression of template.quasi.expressions) {
-        if (expression.type !== 'Identifier' || !bindings.has(expression.name)) continue;
+        let css;
+        if (expression.type === 'Identifier' && fragments.has(expression.name)) {
+          css = iconHitTargetDeclarations;
+        } else if (expression.type === 'CallExpression' && expression.callee.type === 'Identifier' &&
+            recipes.has(expression.callee.name)) {
+          // The shared recipe puts the same floor in the supplied selector's base rule.
+          const selector = expression.arguments[0];
+          if (selector?.type === 'Literal' && typeof selector.value === 'string') {
+            css = `${selector.value} { ${iconHitTargetDeclarations} }`;
+          }
+        }
+        if (css === undefined) continue;
         let start = expression.start;
         let end = expression.end;
         while (/\s/.test(source[start - 1] ?? '') && start > 0) start--;
         while (/\s/.test(source[end] ?? '') && end < source.length) end++;
         if (source.slice(start - 2, start) === '${' && source[end] === '}') {
-          replacements.push({ start: start - 2, end: end + 1 });
+          replacements.push({ start: start - 2, end: end + 1, css });
         }
       }
     }
   }
   for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
-    source = source.slice(0, replacement.start) + iconHitTargetDeclarations + source.slice(replacement.end);
+    source = source.slice(0, replacement.start) + replacement.css + source.slice(replacement.end);
   }
   return source;
 }

@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: '右に回転',
   modelViewerRotateUp: '上に回転',
   modelViewerRotateDown: '下に回転',
+  modelViewerViewport: '操作できるモデル',
 };
 
 registerLyraLocale('ja', strings);

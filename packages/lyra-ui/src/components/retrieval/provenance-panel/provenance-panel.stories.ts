@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './provenance-panel.js';
-import type { LyraProvenance } from './provenance-panel.class.js';
+import type { LyraProvenance, LyraProvenancePanelEventMap } from './provenance-panel.class.js';
 
 const meta: Meta = {
   title: 'Provenance Panel',
@@ -30,7 +30,12 @@ const provenance: LyraProvenance = {
 };
 
 export const Default: Story = {
-  render: () => html`<lr-provenance-panel .provenance=${provenance} .types=${[{ id: 'person', label: 'Person' }]}></lr-provenance-panel>`,
+  render: () => html`<lr-provenance-panel
+    .provenance=${provenance}
+    .types=${[{ id: 'person', label: 'Person' }]}
+    @lr-retrieval-disclosure-change=${({ detail }: LyraProvenancePanelEventMap['lr-retrieval-disclosure-change']) =>
+      console.log(detail.kind === 'chunk' ? detail.chunkId : detail.section, detail.expanded)}
+  ></lr-provenance-panel>`,
 };
 
 export const Empty: Story = {

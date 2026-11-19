@@ -76,7 +76,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-size-0-4em);
     min-inline-size: 0;
-    flex: 1 1 auto;
+    flex: 1 1 var(--lr-size-4rem);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -101,7 +101,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-s);
-    flex: 1 1 0;
+    flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     font-size: var(--lr-font-size-sm);

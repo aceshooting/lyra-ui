@@ -1,3 +1,4 @@
+import { preparedDataChanged } from '../../../internal/chart-prepared-property.js';
 import { isSafeNonArrayObject as isChartRecord } from '../../../internal/object-guards.js';
 import {
   MAX_CHART_INPUT_ENTRIES,
@@ -113,6 +114,32 @@ import {
   isolateHtml,
 } from './chart-bidi.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import type {
+  ChartHit,
+  LyraChartAnnotation,
+  LyraChartArea,
+  LyraChartInstance,
+  LyraChartConfiguration,
+  LyraChartDataConfiguration,
+  LyraChartDatasetConfiguration,
+  LyraChartIndexAxis,
+  LyraChartPlugin,
+  LyraChartPoint,
+  LyraChartSeries,
+  RuntimeChart,
+} from './chart-types.js';
+export type {
+  LyraChartArea,
+  LyraChartInstance,
+  LyraChartAnnotation,
+  LyraChartConfiguration,
+  LyraChartDataConfiguration,
+  LyraChartDatasetConfiguration,
+  LyraChartIndexAxis,
+  LyraChartPlugin,
+  LyraChartPoint,
+  LyraChartSeries,
+} from './chart-types.js';
 import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -142,59 +169,6 @@ const chartTableKeys = new Set<PropertyKey>(['preparedData', 'preparedView', 'sp
 
 export { seriesPalette } from './chart-colors.js';
 
-export interface LyraChartPoint {
-  readonly x: number;
-  readonly y: number;
-  /** Bubble radius. Ignored by chart types that do not consume a radius. */
-  readonly r?: number;
-  /**
-   * Optional caller-owned primitive identity retained by activation events. Objects, symbols,
-   * and non-finite numbers are ignored so event payloads remain bounded and descriptor-safe.
-   */
-  readonly id?: string | number;
-  /**
-   * Caller-owned per-point label retained verbatim by events/export and interpolated into the
-   * localized whole-point message used by descriptions, tables, and keyboard announcements.
-   */
-  readonly label?: string;
-}
-
-export interface LyraChartSeries {
-  readonly label: string;
-  readonly data?: readonly (number | null)[];
-  readonly points?: readonly LyraChartPoint[];
-  readonly color?: string | readonly string[];
-  readonly fill?: boolean;
-  readonly width?: number;
-  readonly dash?: boolean;
-  readonly noTooltip?: boolean;
-  readonly axis?: 'y' | 'y2';
-  /**
-   * Chart.js dataset `stack` group id. Series sharing the same `stack` value on the same axis
-   * accumulate into one stack; a different id starts an independent stack that Chart.js draws
-   * side by side with the first on that same (stacked) axis. Omitted series default to Chart.js's
-   * own ungrouped stack, matching every series's behavior before this existed. Only meaningful on
-   * an axis that is actually stacked -- see `LyraChart.stacked`/`LyraChart.stackedAxes`.
-   */
-  readonly stack?: string;
-  readonly pointColors?: readonly string[];
-  /**
-   * Per-point radius. A single number applies to every point; an array (matching `data`'s
-   * length) sets each point independently — passed straight through to Chart.js, which
-   * supports both natively.
-   */
-  readonly pointRadius?: number | readonly number[];
-  /**
-   * Per-segment (the line between two consecutive points) border color, indexed by the
-   * *starting* point of each segment — e.g. `['red', 'green']` on 3 points colors the first
-   * segment red and the second green. Wired to Chart.js's `segment.borderColor`, and cycled
-   * when shorter than the segment count. Sampled segments retain the original source starting
-   * point's palette index. Only meaningful for line-type series.
-   */
-  readonly segmentColors?: readonly string[];
-  readonly type?: 'line' | 'bar';
-}
-
 export type LyraChartType =
   | 'line'
   | 'bar'
@@ -208,26 +182,9 @@ export type LyraChartType =
 export type LyraChartGrid = 'x' | 'y' | 'both' | 'none';
 /** Complete cartesian axes, including their ticks, labels, borders and grid lines. */
 export type LyraChartAxes = LyraChartGrid;
-export type LyraChartIndexAxis = 'x' | 'y';
 /** Scale type for a chart's value axis. The categorical axis is never affected. */
 export type LyraChartScaleType = 'linear' | 'logarithmic';
 
-/**
- * One declarative chart annotation: a reference line (`value`) or a shaded band (`from`/`to`) on
- * the named axis.
- *
- * `value` and `from`/`to` are mutually exclusive; an entry supplying neither, or non-finite
- * numbers, is dropped rather than handed to Chart.js, where it would silently render nothing or
- * throw. `axis` defaults to `'y'`, the value axis for the common threshold case.
- */
-export interface LyraChartAnnotation {
-  readonly axis?: LyraChartIndexAxis;
-  readonly value?: number;
-  readonly from?: number;
-  readonly to?: number;
-  readonly label?: string;
-  readonly tone?: LyraVariant;
-}
 export type LyraChartLayoutPosition =
   | 'left'
   | 'top'
@@ -322,70 +279,6 @@ export type LyraChartTooltipGroupFormatter = (
 
 export type LyraChartExportFormat = 'csv' | 'png';
 
-export interface LyraChartArea {
-  readonly top: number;
-  readonly left: number;
-  readonly right: number;
-  readonly bottom: number;
-  readonly width: number;
-  readonly height: number;
-}
-
-/** A Chart.js-compatible plugin shape without making `chart.js` a type dependency for consumers. */
-export interface LyraChartPlugin {
-  readonly id: string;
-}
-
-/** Dataset configuration accepted by the raw `config` passthrough. */
-export interface LyraChartDatasetConfiguration {
-  type?: string;
-  label?: unknown;
-  data?: unknown[];
-  hidden?: boolean;
-  axis?: string;
-  yAxisID?: string;
-  stack?: string;
-  noTooltip?: boolean;
-  fill?: unknown;
-  backgroundColor?: unknown;
-  borderColor?: unknown;
-  borderRadius?: unknown;
-  borderWidth?: unknown;
-  borderDash?: unknown;
-  color?: unknown;
-  pointStyle?: unknown;
-  pointBackgroundColor?: unknown;
-  pointRadius?: unknown;
-  segment?: unknown;
-}
-
-/** Data block accepted by the raw `config` passthrough. */
-export interface LyraChartDataConfiguration {
-  labels?: unknown[];
-  datasets?: LyraChartDatasetConfiguration[];
-}
-
-/**
- * Peer-neutral structural configuration accepted by `LyraChart.config`.
- * Install `chart.js` and use its own `ChartConfiguration` type when stricter
- * controller-specific checking is useful; that type remains structurally
- * assignable to this passthrough surface.
- */
-export interface LyraChartConfiguration {
-  type?: string;
-  data?: LyraChartDataConfiguration;
-  options?: object;
-  plugins?: LyraChartPlugin[];
-}
-
-/** A single Chart.js hit-test result, as returned by `LyraChartInstance.getElementsAtEventForMode()`.
- *  Exported so the documented `LyraChartInstance` reference (`llms/charts.md`) names a real,
- *  importable symbol instead of an inaccessible internal interface. */
-interface ChartHit {
-  datasetIndex: number;
-  index: number;
-}
-
 interface ChartLegendItem {
   [key: string]: unknown;
   datasetIndex?: number;
@@ -404,42 +297,6 @@ interface DataLabelsContext {
   datasetIndex: number;
   dataIndex: number;
 }
-
-/** Structural shape of a live Chart.js instance, without imposing `chart.js` as a type dependency
- *  on consumers. Exported so `LyraChartInstance`'s documented `extends RuntimeChart` reference
- *  names a real, importable symbol. */
-interface RuntimeChart {
-  render?(): void;
-  data: {
-    labels?: unknown[];
-    datasets: LyraChartDatasetConfiguration[];
-  };
-  options: Record<string, unknown>;
-  config: { type?: unknown };
-  legend?: unknown;
-  chartArea?: LyraChartArea;
-  destroy(): void;
-  update(mode?: string): void;
-  toBase64Image?(): string;
-  getElementsAtEventForMode(
-    event: Event,
-    mode: string,
-    options: Record<string, unknown>,
-    useFinalPosition: boolean
-  ): ChartHit[];
-  getDatasetMeta?(index: number): { hidden: boolean | null };
-  isDatasetVisible(index: number): boolean;
-  setDatasetVisibility(index: number, visible: boolean): void;
-  getDataVisibility?(index: number): boolean;
-  toggleDataVisibility?(index: number): void;
-  getZoomedScaleBounds?(): Record<string, { min: number; max: number } | undefined>;
-  zoomScale?(id: string, range: { min: number; max: number }, mode?: string): void;
-}
-
-/** Public structural view of the current Chart.js instance, without imposing `chart.js` as a
- * type dependency on consumers. The value is `undefined` before the peer loads and after the
- * component disconnects. */
-export interface LyraChartInstance extends RuntimeChart {}
 
 interface RuntimeChartConfiguration extends LyraChartConfiguration {
   type: string;
@@ -958,6 +815,11 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   of an actionable generated-table value.
  * @cssprop --lr-chart-data-table-button-active-bg - Pressed background of an actionable generated-
  *   table value; defaults to the standard active mix of `--lr-color-brand-quiet`.
+ * @cssprop [--lr-chart-data-table-toggle-border-color=var(--lr-color-border)] - Resting border color of the data-table toggle.
+ * @cssprop [--lr-chart-data-table-toggle-bg=var(--lr-color-surface)] - Resting background of the data-table toggle.
+ * @cssprop [--lr-chart-data-table-toggle-color=var(--lr-color-text)] - Resting text color of the data-table toggle.
+ * @cssprop [--lr-chart-data-table-toggle-inline-size=auto] - Inline size of the data-table toggle.
+ * @cssprop [--lr-chart-data-table-toggle-justify=auto] - Grid inline alignment of the data-table toggle.
  * @cssprop [--lr-chart-data-table-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover background
  *   of the `dataTableToggle` disclosure button.
  * @cssprop --lr-chart-data-table-toggle-active-bg - Pressed background of the `dataTableToggle`
@@ -1117,7 +979,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * least six maxRecords slots; each line gap needs another slot. Oversized summaries fail visibly.
    * Reassign or explicitly requestUpdate after changing a host-authored descriptor/revision.
    */
-  @property({ attribute: false, hasChanged: () => true })
+  @property({ attribute: false, hasChanged: preparedDataChanged })
   preparedData: LyraChartPreparedData | null = null;
 
   /** Specialized derived distributions may supply their own bounded semantic input. */

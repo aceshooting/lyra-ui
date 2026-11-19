@@ -212,12 +212,16 @@ it("emits a cancelable collapse request followed by lr-toggle only after commit"
 
   expect(el.collapsed).to.be.true;
   expect(detail).to.deep.equal({ expanded: false });
-  expect(button.getAttribute("aria-expanded")).to.equal("false");
+  expect(button.getAttribute('aria-expanded')).to.equal('false');
+  expect(button.getAttribute('aria-label')).to.equal('Expand message');
+  expect(button.hasAttribute('aria-pressed')).to.equal(false);
 
   button.click();
   await el.updateComplete;
   expect(el.collapsed).to.be.false;
   expect(detail).to.deep.equal({ expanded: true });
+  expect(button.getAttribute('aria-expanded')).to.equal('true');
+  expect(button.getAttribute('aria-label')).to.equal('Collapse message');
 });
 
 it("honors preventDefault on lr-toggle-request without mutating collapse state", async () => {
@@ -1979,4 +1983,40 @@ it('names the retry action for a specific message while preserving its visible l
   el.messageId = '';
   await el.updateComplete;
   expect(retry.hasAttribute('aria-label')).to.equal(false);
+});
+
+it('applies the shared icon action border to its buttons', async () => {
+  const el = await fixture<LyraChatMessage>(html`
+    <lr-chat-message collapsible style="--lr-icon-button-size: 43px; --lr-icon-button-border: 3px dashed rgb(12, 34, 56)"></lr-chat-message>
+  `);
+  for (const part of ['collapse-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    const style = getComputedStyle(button);
+    expect([style.minInlineSize, style.minBlockSize]).to.deep.equal(['43px', '43px']);
+    expect([style.borderTopWidth, style.borderTopStyle, style.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(12, 34, 56)']);
+  }
+});
+
+it('uses the component hover token on its action surface', async () => {
+  const el = await fixture(html`<lr-chat-message status="failed" style="--lr-chat-message-retry-hover-bg: rgb(11, 22, 33); --lr-chat-message-retry-color: rgb(1, 2, 3); --lr-chat-message-retry-border-color: rgb(4, 5, 6)"></lr-chat-message>`);
+  const target = el.shadowRoot!.querySelector('[part="retry-button"]')!;
+  try {
+    await hoverUntilMatched(target, 'action surface hover');
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(11, 22, 33)');
+    expect([getComputedStyle(target).color, getComputedStyle(target).borderTopColor]).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('preserves whole-word intrinsic width in a shrink-to-fit message', async () => {
+  const el = await fixture(html`<lr-chat-message>Conversation</lr-chat-message>`);
+  const content = el.shadowRoot!.querySelector<HTMLElement>('[part="bubble"]')!;
+  const probe = document.createElement('span');
+  probe.textContent = 'Conversation';
+  probe.style.cssText = 'display:block; inline-size:min-content; padding:0';
+  content.append(probe);
+  const intrinsicWidth = probe.getBoundingClientRect().width;
+  probe.style.whiteSpace = 'nowrap';
+  expect(intrinsicWidth).to.be.at.least(probe.getBoundingClientRect().width - 1);
 });

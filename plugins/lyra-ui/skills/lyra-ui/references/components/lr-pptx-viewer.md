@@ -53,7 +53,8 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
 **Events:**
 
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
-- `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
+- `lr-slide-change` carries `{ index, count }` when the active slide changes.
+- `lr-page-change` carries `{ page, pageCount }` when `page` changes while a presentation is shown.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
   every load so a rail can discard same-count replacement thumbnails without inferring identity
@@ -78,9 +79,7 @@ highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**Events (additive):** `lr-page-change` — `detail: { page, pageCount }`, fired when `page` changes
-while a presentation is shown (the same shape `<lr-pdf-viewer>` emits); `lr-slide-change` is
-unchanged. A whitespace-only `label` or `name` is ignored for the region name; an explicit
+A whitespace-only `label` or `name` is ignored for the region name; an explicit
 `label=""` still clears it. The scrollable `container` becomes a named, keyboard-focusable region
 while its content overflows.
 

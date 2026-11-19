@@ -111,6 +111,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a follow-state change
+caused by scrolling or activating the jump-to-latest button.
+
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
 list owns its spacing). `--lr-chat-viewport-gap` (default `0`) — block-direction gap between slotted

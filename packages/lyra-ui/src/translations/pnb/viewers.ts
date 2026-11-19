@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'سجے گھماؤ',
   modelViewerRotateUp: 'اتے گھماؤ',
   modelViewerRotateDown: 'تھلے گھماؤ',
+  modelViewerViewport: 'انٹرایکٹو ماڈل',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

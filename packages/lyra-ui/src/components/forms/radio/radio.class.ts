@@ -5,8 +5,7 @@ import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } f
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
-import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
+import { CheckedControlLabelController } from '../../../internal/checked-control-label.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { tag } from '../../../internal/prefix.js';
 import { groupOptionSize, sizes } from '../../../internal/sizes.styles.js';
@@ -220,12 +219,13 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   @state() private hasLabel = false;
   @state() private hasStart = false;
   @state() private hasEnd = false;
-  private readonly labelTextObserver = new AccessibleTextController(
-    this, [], () => {
-      this.recomputeHasLabel();
+  private readonly labelController = new CheckedControlLabelController(this, {
+    observedSlots: [],
+    changed: present => {
+      this.hasLabel = present;
       this.recomputeButtonAdornments();
-    }, ['slot'],
-  );
+    },
+  });
   /** Set while an `appearance` change replaces the focused control; its blur is not interaction. */
   private swappingControl = false;
   // Radio keeps its own `name`/`value` storage: unlike the other checked controls it skips a write
@@ -401,10 +401,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
-    this.addEventListener('slotchange', this.onLabelSlotChange);
     this.addEventListener('slotchange', this.onAdornmentSlotChange);
-    this.recomputeHasLabel();
-    this.recomputeButtonAdornments();
     this.updateValidity();
     this.group();
     this.syncStandaloneRadios();
@@ -422,14 +419,13 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.labelTextObserver.adopted();
+    this.labelController.adopted();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
   }
 
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
-    this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.removeEventListener('slotchange', this.onAdornmentSlotChange);
     this.syncStandaloneRadios();
     super.disconnectedCallback();
@@ -711,22 +707,6 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     }
     relayNativeEvent(this, event);
   };
-  private recomputeHasLabel(): void {
-    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
-    const nodes: Node[] = slot
-      ? slot.assignedNodes({ flatten: true })
-      : Array.from(this.childNodes ?? [])
-          .filter((node) => isDefaultLabelNode(node))
-          .flatMap((node) => {
-            if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
-            const forwardingSlot = node as HTMLSlotElement;
-            return forwardingSlot.assignedNodes().length > 0
-              ? forwardingSlot.assignedNodes({ flatten: true })
-              : Array.from(forwardingSlot.childNodes);
-          });
-    this.hasLabel = hasRealContent(nodes);
-  }
-
   private assignedAdornmentNodes(names: readonly string[]): Node[] {
     const slots = names
       .map((name) => this.renderRoot.querySelector<HTMLSlotElement>(`slot[name="${name}"]`))
@@ -751,23 +731,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.hasEnd = hasRealContent(this.assignedAdornmentNodes(['end', 'suffix']));
   }
 
-  private handleLabelSlotChange(event: Event): void {
-    const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    if (
-      target.getRootNode() !== this.renderRoot &&
-      !defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)
-    ) return;
-    this.labelTextObserver.bind();
-    this.recomputeHasLabel();
-  }
-
-  private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
-  private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
-  private onAdornmentSlotChange = (): void => {
-    this.labelTextObserver.bind();
-    this.recomputeButtonAdornments();
-  };
+  private onAdornmentSlotChange = (): void => this.labelController.refresh();
 
   /** @internal Shared button-slot projection for `<lr-radio>` and `<lr-radio-button>`. */
   protected renderButtonContent(): TemplateResult {
@@ -777,7 +741,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
         <slot name="prefix" @slotchange=${this.onAdornmentSlotChange}></slot>
       </span>
       <span part="label" ?hidden=${!this.hasLabel}
-        ><slot @slotchange=${this.onSlotChange}></slot
+        ><slot @slotchange=${this.labelController.onSlotChange}></slot
       ></span>
       <span part="end suffix" ?hidden=${!this.hasEnd}>
         <slot name="end" @slotchange=${this.onAdornmentSlotChange}></slot>
@@ -830,7 +794,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
         aria-label=${this.getAttribute('aria-label') ?? nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         <span part=${controlParts}>${this.checked ? html`<span part="dot checked-icon"></span>` : nothing}</span>
-        <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.onSlotChange}></slot></span>
+        <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.labelController.onSlotChange}></slot></span>
       </span>
     `;
   }

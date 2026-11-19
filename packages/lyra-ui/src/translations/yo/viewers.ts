@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Yí sí ọ̀tún',
   modelViewerRotateUp: 'Yí sókè',
   modelViewerRotateDown: 'Yí sísàlẹ̀',
+  modelViewerViewport: 'Àwòṣe tí o lè ṣàkóso',
 };
 
 registerLyraLocale('yo', strings);

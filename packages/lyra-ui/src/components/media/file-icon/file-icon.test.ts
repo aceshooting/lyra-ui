@@ -79,6 +79,16 @@ expectStaleAttribute('lr-file-icon', 'size');
 expectLocaleFallback('ar-EG', ['fileSizeUnitMb', 'fileTypePdf', 'fileTypeWithSize']);
 expectLocaleFallback('tr', ['fileTypeFile']);
 
+it('includes the file size with locale digits and the supplied unit label', async () => {
+  const el = await fixture<LyraFileIcon>(html`
+    <lr-file-icon mode="label" mime-type="application/pdf" locale="de" bytes="1536"
+      .strings=${{ fileSizeUnitKb: 'KiB', fileTypePdf: 'PDF', fileTypeFile: 'Datei', fileTypeWithSize: '{label} ({size})' }}></lr-file-icon>
+  `);
+  const root = el.shadowRoot!;
+  expect(root.querySelector('[part="base"]')?.getAttribute('aria-label')).to.include('1,5 KiB');
+  expect(root.textContent).to.include('1,5 KiB');
+});
+
 describe('file type metadata', () => {
   it('covers every presentation category', () => {
     const values = [

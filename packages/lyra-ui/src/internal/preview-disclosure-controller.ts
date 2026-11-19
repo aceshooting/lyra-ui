@@ -1,3 +1,4 @@
+import type { ReactiveControllerHost } from 'lit';
 import { deferredPlace } from './anchored-overlay-runtime.js';
 import { isKeyboardFocusEvent } from './focus-modality.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
@@ -116,4 +117,31 @@ export class PreviewDisclosureController {
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
   }
+}
+
+/**
+ * A {@linkcode PreviewDisclosureController} wired into `host`'s update cycle: an open preview whose
+ * content emptied closes before render, the anchored overlay follows each rendered open-state
+ * change, and disconnecting releases it and resets hover and focus ownership.
+ */
+export function createPreviewDisclosure(
+  host: ReactiveControllerHost & HTMLElement,
+  options: Omit<PreviewDisclosureOptions, 'host'>,
+): PreviewDisclosureController {
+  const preview = new PreviewDisclosureController({ ...options, host });
+  let renderedOpen = false;
+  host.addController({
+    hostUpdate: () => preview.ensureContent(),
+    hostUpdated: () => {
+      const open = options.isOpen();
+      if (open === renderedOpen) return;
+      renderedOpen = open;
+      preview.syncOpen();
+    },
+    hostDisconnected: () => {
+      renderedOpen = false;
+      preview.disconnect();
+    },
+  });
+  return preview;
 }

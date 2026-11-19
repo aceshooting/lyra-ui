@@ -51,3 +51,26 @@ it('defers Escape to a newer dialog opened on top, instead of closing its own po
     if (dialog.open) await dialog.close('api');
   }
 });
+
+it('restores Escape routing when hover reopens a reconnected preview in the same update', async () => {
+  const el = await fixture<LyraCitationBadge>(html`
+    <lr-citation-badge index="1"><p>Preview</p></lr-citation-badge>
+  `);
+  const anchor = el.shadowRoot!.querySelector('.wrapper')!;
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="popover"]')!;
+  const open = () => anchor.dispatchEvent(new PointerEvent('pointerenter'));
+  open();
+  await el.updateComplete;
+  expect(panel.hidden).to.be.false;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  open();
+  await el.updateComplete;
+  expect(panel.hidden).to.be.false;
+  document.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Escape', bubbles: true, cancelable: true,
+  }));
+  await el.updateComplete;
+  expect(panel.hidden, 'Escape closes the reconnected preview').to.be.true;
+});

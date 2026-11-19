@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-checkpoint`
+
+Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`.
 
 An inline conversation restore point: a labeled marker between messages whose Restore affordance
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores

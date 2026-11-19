@@ -9,10 +9,10 @@ import {
   isAccessibilityVisible,
   isAccessibilityVisibilityHidden,
   nextId,
-  resolveAccessibleTrigger,
   sharedRealmRegistry,
   srOnly,
 } from './a11y.js';
+import { resolveAccessibleTrigger } from './accessible-trigger.js';
 import { tag } from './prefix.js';
 
 describe('srOnly', () => {

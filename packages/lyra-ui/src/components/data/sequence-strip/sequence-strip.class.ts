@@ -1,6 +1,6 @@
 import type { SequenceStripItem } from './sequence-strip-item.js';
 export type { SequenceStripItem } from './sequence-strip-item.js';
-import { SequenceStripSourceController } from './sequence-strip-source-controller.js';
+import type { SequenceStripSourceController } from './sequence-strip-source-controller.js';
 import type { LyraSequenceSource, LyraSequenceRangeSummary } from './sequence-strip-source.js';
 export type { LyraSequenceSource, LyraSequenceRangeSummary } from './sequence-strip-source.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -247,8 +247,24 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   private sourceStatusInitialized = false;
   private previousSourceStatus = '';
 
+  private sourceModuleFailed = false;
+
+  protected override async scheduleUpdate(): Promise<unknown> {
+    if (this.sourceMode && !this.sequenceController) {
+      try {
+        const module = await import('./sequence-strip-source-controller.js');
+        if (this.sourceMode && this.isConnected) {
+          this.sequenceController = new module.SequenceStripSourceController(this, () => { this.sourceVersion++; }, () => this.effectiveLocale);
+        }
+      } catch {
+        this.sourceModuleFailed = true;
+      }
+    }
+    return super.scheduleUpdate();
+  }
+
   private get sourceController(): SequenceStripSourceController {
-    return this.sequenceController ??= new SequenceStripSourceController(this, () => { this.sourceVersion++; }, () => this.effectiveLocale);
+    return this.sequenceController!;
   }
 
   /** Complete indexed sequence. Null or undefined restores items; invalid defined sources fail visibly.
@@ -304,7 +320,12 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     return this.inspectSourceItem(target, true, false);
   }
   private async inspectSourceItem(target: number | string, focus: boolean, activate: boolean): Promise<boolean> {
-    if (!this.sourceMode) return false;
+    if (!this.sourceMode || !this.isConnected) return false;
+    if (!this.sequenceController) {
+      const epoch = this.sourceEpoch;
+      await this.updateComplete;
+      if (!this.sequenceController || epoch !== this.sourceEpoch || !this.isConnected) return false;
+    }
     // An explicit inspection supersedes selection writes already present in this turn.
     // A subsequent selection write still differs when the pending update runs.
     if (this.sourceController.snapshot) this.sourceSelection = [this.sourceController.snapshot, this.selectedIndex];
@@ -508,6 +529,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.sourceMode) {
+      if (!this.sequenceController) return;
       this.syncSource();
       const snapshot = this.sourceController.snapshot;
       const selection = [snapshot, this.selectedIndex];
@@ -553,6 +575,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     super.updated(changed);
     this.syncTooltip();
     if (this.sourceMode) {
+      if (!this.sequenceController) return;
       const status = this.sourceController.pending ? this.localize('loading') : this.sourceController.error ? this.localize('sequenceStripSourceError')
         : this.sourceController.exactUnavailable ? this.localize('sequenceStripSourceItemUnavailable') : '';
       if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.sourceAnnouncements?.announcePolite(status);
@@ -881,6 +904,9 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     event.preventDefault(); void this.inspectSourceItem(next, true, false);
   }
   private renderSource(): TemplateResult {
+    if (!this.sequenceController && !this.sourceModuleFailed) return html`<div part="source-status" aria-busy="true">${this.localize('loading')}</div>`;
+    if (!this.sequenceController) return html`<div part="source-status" aria-busy="false">${this.localize('sequenceStripSourceError')}</div>
+      <button part="source-retry" type="button" @click=${() => this.requestUpdate('source')}>${this.localize('retry')}</button>`;
     const controller = this.sourceController;
     const snapshot = controller.snapshot;
     const source = this.source;

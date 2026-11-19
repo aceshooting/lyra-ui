@@ -112,13 +112,13 @@ function reviewedPreset(name: LyraGenCatalogPresetName): LyraGenCatalog {
   return selected.value;
 }
 
-export const chatCatalog = reviewedPreset('chat');
-export const formsCatalog = reviewedPreset('forms');
-export const dataCatalog = reviewedPreset('data');
-export const retrievalCatalog = reviewedPreset('retrieval');
+export const chatCatalog = /* @__PURE__ */ reviewedPreset('chat');
+export const formsCatalog = /* @__PURE__ */ reviewedPreset('forms');
+export const dataCatalog = /* @__PURE__ */ reviewedPreset('data');
+export const retrievalCatalog = /* @__PURE__ */ reviewedPreset('retrieval');
 /** Generic operation status, metrics and messages; actions still require explicit host definitions. */
-export const agentOpsCatalog = reviewedPreset('agent-ops');
-export const catalogPresets: Readonly<Record<LyraGenCatalogPresetName, LyraGenCatalog>> = Object.freeze({
+export const agentOpsCatalog = /* @__PURE__ */ reviewedPreset('agent-ops');
+export const catalogPresets: Readonly<Record<LyraGenCatalogPresetName, LyraGenCatalog>> = /* @__PURE__ */ Object.freeze({
   chat: chatCatalog, forms: formsCatalog, data: dataCatalog, retrieval: retrievalCatalog, 'agent-ops': agentOpsCatalog,
 });
 

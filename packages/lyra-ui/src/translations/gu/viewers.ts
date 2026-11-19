@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'જમણે ફેરવો',
   modelViewerRotateUp: 'ઉપર ફેરવો',
   modelViewerRotateDown: 'નીચે ફેરવો',
+  modelViewerViewport: 'ઇન્ટરેક્ટિવ મૉડલ',
 };
 
 registerLyraLocale('gu', strings);

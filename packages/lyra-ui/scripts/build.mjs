@@ -10,7 +10,8 @@ import { pruneUnreachableBuildDeclarations } from './prune-build-declarations.mj
 import { stripTestOnlyBuildExports } from './strip-test-only-build-exports.mjs';
 import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
-import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
+import { MIGRATION_CONTRACT_FILE, encodeMigrationContract } from './packed-migration-contract.mjs';
+import { buildMigrationRuntime } from './build-migration-runtime.mjs';
 import {
   assertNormalizedMixinCount,
   normalizeMixinDeclarations,
@@ -126,18 +127,10 @@ console.log(
 // authored Lyra rename ledger, validated against that inventory, for the `--origin=lyra-v*`
 // rename profiles.
 const migrationCliDir = join(packageDir, 'dist', 'cli');
-copyMigrationRuntimeModules(join(packageDir, 'scripts'), migrationCliDir);
-await writeFile(join(migrationCliDir, 'migration-contract.json'), await migrationContract, 'utf8');
+buildMigrationRuntime(join(packageDir, 'scripts'), migrationCliDir);
+await writeFile(join(migrationCliDir, MIGRATION_CONTRACT_FILE), encodeMigrationContract(await migrationContract));
 await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);
 await chmod(join(migrationCliDir, 'lyra-ui.mjs'), 0o755);
-
-const compactedMigrationCli = await compactBuildJavaScript(migrationCliDir);
-console.log(
-  `Published migration CLI compacted: ` +
-    `${compactedMigrationCli.beforeBytes.toLocaleString('en')} -> ` +
-    `${compactedMigrationCli.afterBytes.toLocaleString('en')} bytes across ` +
-    `${compactedMigrationCli.files} modules.`,
-);
 
 const prunedRuntime = await pruneEmptyBuildJavaScript(join(packageDir, 'dist'),
   JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')));

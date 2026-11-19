@@ -1,3 +1,5 @@
+import { literalSetConverter } from '../../internal/converters.js';
+import { bdi } from '../../internal/bidi.js';
 import type { LyraTabularSource, LyraWorkbookSource, LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraWorkbookHit, LyraSourceSearchResult } from '../../data-sources.js';
 import { SourceRequestController, sourceCount, sourceRevision, type SourceRequestLease } from '../../internal/source-request-controller.js';
 import { LyraResourceLimitError, isResourceLimitError } from '../../internal/resource-loader.js';
@@ -17,6 +19,9 @@ import { DeferredTeardown } from '../../internal/deferred-teardown.js';
 import type { LyraHighlight } from './document-viewer/anchors.js';
 import { ViewerAnnouncementController } from './viewer-announcements.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from './viewer-search-limits.js';
+
+export type TableViewerScrollMode = 'self' | 'page';
+export const tableViewerScrollMode = literalSetConverter<TableViewerScrollMode>(['self', 'page'], 'self');
 
 const MAX_TABLE_SEARCH_MATCHES = 1_000;
 
@@ -184,6 +189,10 @@ export class TableViewerController<M extends { row: number; col: number }> {
     this.detached = new DeferredTeardown(() => { hooks.teardown(); this.scroll.cancel(); });
   }
 
+  scrollWindow(mode: TableViewerScrollMode): Window | undefined {
+    return mode === 'page' ? this.pageView : undefined;
+  }
+
   /** After `super.connectedCallback()`. */
   connected(): void {
     this.announcements.connect();
@@ -294,12 +303,12 @@ export class TableViewerController<M extends { row: number; col: number }> {
     colorVar: string,
     activeHighlightId: string | null,
   ): TemplateResult {
-    if (!rowHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${`grid-column:${colIndex + 1}`}>${text}</div>`;
+    if (!rowHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${`grid-column:${colIndex + 1}`}>${bdi(text)}</div>`;
     let byColumn = this.columnHighlights.get(rowHighlights);
     if (!byColumn) { byColumn = new Map(); this.columnHighlights.set(rowHighlights, byColumn); }
     let colHighlights = byColumn.get(colIndex);
     if (!colHighlights) { colHighlights = tableHighlightsForColumn(rowHighlights, colIndex); byColumn.set(colIndex, colHighlights); }
-    if (!colHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${`grid-column:${colIndex + 1}`}>${text}</div>`;
+    if (!colHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${`grid-column:${colIndex + 1}`}>${bdi(text)}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === activeHighlightId);
     const primary = active ?? colHighlights[0]!;
     const accessibleLabel = primary.highlight.label
@@ -319,7 +328,7 @@ export class TableViewerController<M extends { row: number; col: number }> {
         aria-label=${accessibleLabel}
         @click=${() => this.hooks.emitActivate(primary.highlight.id)}
       >
-        ${text}
+        ${bdi(text)}
       </button>
     </div>`;
   }

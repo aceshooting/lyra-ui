@@ -16,15 +16,15 @@
 
 ## `lr-contact-viewer`
 
+`max-contacts` limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
 `.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
 but never rendered — the card's heading uses `FN` (falling back to a localized "unnamed contact"
 label when `FN` is absent).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
-contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
-text-quote anchorable without a 10,000-card eager DOM tree.
+`documentPreviewResourceTooLarge` message instead of the contacts. The viewer applies `max-contacts` and a 2 MiB ceiling on rendered contact text. Search and text-quote anchors cover every accepted contact.
 
 **Properties:** `src: string = ''`, `name: string = ''`,
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
@@ -42,6 +42,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for contact conten
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.

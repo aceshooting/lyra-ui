@@ -97,8 +97,8 @@ export const styles = css`
     --_lr-icon-button-color-default: var(--lr-color-text-quiet);
     --_lr-icon-button-color-hover-default: var(--lr-color-brand);
     --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
-    ${iconAction}
     ${iconHitTarget}
+    ${iconAction}
   }
   [part="search-clear"]:hover {
     ${iconActionHover}

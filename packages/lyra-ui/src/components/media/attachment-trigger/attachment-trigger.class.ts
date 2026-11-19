@@ -20,7 +20,7 @@ import type { LyraMessageKey } from '../../../internal/localization-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraAttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
@@ -291,10 +291,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -353,8 +350,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   @property({ type: Number, attribute: 'max-total-size', useDefault: true }) maxTotalSize = 0;
 
   /** Externally held files to count against `maxFiles`. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-input/accept.ts via finiteCount()
   @property({ type: Number, attribute: 'held-file-count', useDefault: true }) heldFileCount = 0;
   /** Externally held bytes to count against `maxTotalSize`. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-input/accept.ts via finiteCount()
   @property({ type: Number, attribute: 'held-total-size', useDefault: true }) heldTotalSize = 0;
   /** Exact MIME types allowed in addition to satisfying `accept`. An empty allowlist admits any type. */
   @property({ attribute: false }) allowedMimeTypes: readonly string[] = EMPTY_MIME_TYPES;

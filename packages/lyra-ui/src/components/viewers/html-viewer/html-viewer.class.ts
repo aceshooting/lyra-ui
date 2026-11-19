@@ -1,21 +1,20 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { loadHtmlSanitizer } from './dompurify-loader.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
-import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
+import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -28,10 +27,11 @@ import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewR
 type HtmlFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; markup: string }
+  | { kind: 'loaded'; markup: DocumentFragment }
   | { kind: 'error'; message: () => string };
 
 export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -52,6 +52,7 @@ class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
  * rendered preview.
  *
  * @customElement lr-html-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
  *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
@@ -106,7 +107,16 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   override clearSearch(): void { super.clearSearch(); }
 
   @state() private fetchState: HtmlFetchState = { kind: 'idle' };
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private readonly announcements = new ViewerAnnouncementController(this);
 
   protected override updated(changed: PropertyValues): void {
@@ -117,25 +127,22 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   /** A same-task DOM move keeps the rendered document; a genuine disconnect aborts and resets. */
   private readonly detached = new DeferredTeardown(() => {
-    this.generation++;
-    this.beginAbortableLoad();
     this.fetchState = { kind: 'idle' };
   });
 
   override disconnectedCallback(): void {
-    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -147,50 +154,31 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     this.announcements.adopted();
   }
 
-  private async load(): Promise<void> {
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
+  private load(): Promise<void> {
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    return this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const sanitizer = await loadDompurify();
+    if (this.transport.isStale(token)) return;
+    if (!sanitizer) {
+      throw new LyraUserFacingError(
+        this.localize('documentViewerMissingSanitizer'),
+        (localize) => localize('documentViewerMissingSanitizer'),
+      );
     }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const sanitizer = await loadHtmlSanitizer();
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!sanitizer) {
-        throw new LyraUserFacingError(
-          this.localize('documentViewerMissingSanitizer'),
-          (localize) => localize('documentViewerMissingSanitizer'),
-        );
-      }
-      const raw = await readResponseText(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const markup = sanitizePassiveMarkup(sanitizer, raw, this.ownerDocument, 'passive-document');
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!signal?.aborted && this.isConnected && generation === this.generation) {
-        this.fetchState = { kind: 'loaded', markup };
-      }
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
+    const raw = await this.transport.readText(response);
+    if (this.transport.isStale(token)) return;
+    const markup = sanitizePassiveMarkupFragment(sanitizer, raw, this.ownerDocument, 'passive-document');
+    if (!this.transport.isStale(token)) {
+      this.fetchState = { kind: 'loaded', markup };
     }
   }
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div part="html" role=${viewerSemanticRole(this, 'document') ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('htmlViewerLabel')) ?? nothing}>${unsafeHTML(this.fetchState.markup)}</div>`;
+      case 'loaded': return html`<div part="html" role=${viewerSemanticRole(this, 'document') ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('htmlViewerLabel')) ?? nothing}>${this.fetchState.markup}</div>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':

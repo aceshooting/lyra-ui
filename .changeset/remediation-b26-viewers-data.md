@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': patch
+'@aceshooting/lyra-ui': minor
 ---
 
 - `lr-archive-viewer` no longer shows the "File"/"Folder" text beside every entry; it stays available to assistive technology through the new `entry-kind` part.
@@ -22,3 +22,13 @@
 - `lr-notebook-viewer` gives its output toggle the minimum touch-target height.
 - `lr-calendar-viewer` stops counting events as soon as the limit is exceeded, and `lr-svg-viewer` parses sanitized markup once.
 - `lr-xml-viewer` copy feedback uses the shared feedback duration.
+
+- Model viewers report source, format and rendering failures through `lr-render-error` and preserve the existing `lr-engine-fallback` notification.
+- Archive, calendar, contact, CSV, dataset, email, GeoJSON, HTML, spreadsheet, SVG and XML viewers emit a bubbling, composed `lr-load` after a parsed document renders.
+- `lr-calendar-viewer` and `lr-contact-viewer` accept `max-events` and `max-contacts` to configure the default limit of 250 up to a maximum of 2,500.
+- CSV and spreadsheet viewers support `scroll-mode="page"` with sticky headers. CSV, spreadsheet and dataset viewers expose frame and header colors and isolate mixed-direction cell text.
+- Model, email, SVG and XML viewers expose separate action backgrounds for the resting, hovered and pressed states.
+- Email attachment names include the visible size, and the interactive model viewport has its own localized accessible name.
+- HTML, SVG, notebook, email and include reuse sanitized content. Folding an email quotation or repainting notebook output avoids parsing the same markup again.
+- XML browsing avoids indexing a collapsed document until a search or expansion needs it, and provider copy feedback stays associated with the current document.
+- GeoJSON and notebook previews emit a recoverable `lr-viewer-diagnostic` when an optional map or sanitizer is unavailable. Existing error notifications continue to fire.

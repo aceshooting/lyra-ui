@@ -23,3 +23,4 @@ Reuse file, hunk and redaction projections in `lr-change-review` and `lr-context
 Keep the last 500 distinct `lr-browser-frame` action markers in input order and announce the overflow notice.
 Show a performance advisory when `lr-prompt-studio` contains more than 500 rows.
 Leave an unmatched explicit `lr-agent-eval-dashboard` metric selection empty and display an unavailable note. Clear `metricId` to select the first valid metric.
+Use one Tab stop for run history in `lr-agent-eval-dashboard`, file rows in `lr-commit-card`, and test names in `lr-test-results`, with ArrowUp, ArrowDown, Home and End navigation.

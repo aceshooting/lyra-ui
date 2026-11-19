@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ساڄي طرف گھمايو',
   modelViewerRotateUp: 'مٿي گھمايو',
   modelViewerRotateDown: 'ھيٺ گھمايو',
+  modelViewerViewport: 'انٽرايڪٽو ماڊل',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

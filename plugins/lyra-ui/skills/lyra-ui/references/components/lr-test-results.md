@@ -20,6 +20,9 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+Visible test-name buttons share one Tab stop across suites. ArrowUp, ArrowDown, Home and End move
+between them. Detail toggles and other controls have their own Tab stops.
+
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
 **Full-source paging:** `dataSource: TestResultsSource | undefined` (attribute:

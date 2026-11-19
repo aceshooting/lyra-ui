@@ -31,7 +31,7 @@ import {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit, LYRA_DEFAULT_toolTimelineLoadError } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -134,6 +134,7 @@ type ToolSurface = 'result' | 'approval';
 
 const MAX_RENDERED_ENTRIES = 500;
 const TOOL_STATUSES: ReadonlySet<ToolStatus> = new Set<ToolStatus>(TOOL_CALL_STATUSES);
+const EMPTY_APPROVAL_ARGS = Object.freeze({});
 
 const ENTRY_FIELDS = [
   'id', 'name', 'displayName', 'args', 'status', 'result', 'error', 'sourceKey', 'icon',
@@ -362,12 +363,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
     statusIncomplete: LYRA_DEFAULT_statusIncomplete,
@@ -624,9 +622,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private reviewedArgs?: { key: string; json: string; args: unknown };
-  /** A host that reassigns the same still-pending entry (a failed save re-sending its controlled
-   *  `entries`) hands over a new but equal `args` object. Keep the one the dialog already shows, so
-   *  that dialog does not treat it as a new proposal and drop the held decision and the draft. */
+  // Equivalent args keep the current proposal's draft and pending decision.
   private reviewArgs(entry: CanonicalToolTimelineEntry): unknown {
     const key = entryIdentity(entry);
     let json: string;
@@ -861,7 +857,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         part="approval-dialog"
         tool-name=${reviewing?.name ?? ''}
         .proposalKey=${reviewing === undefined ? '' : entryIdentity(reviewing)}
-        .args=${reviewing ? this.reviewArgs(reviewing) : {}}
+        .args=${reviewing ? this.reviewArgs(reviewing) : EMPTY_APPROVAL_ARGS}
         .readonly=${this.approvalReadonly}
         .disabled=${this.disabled}
         .open=${reviewing !== undefined}

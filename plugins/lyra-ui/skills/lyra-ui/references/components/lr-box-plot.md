@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

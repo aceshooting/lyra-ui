@@ -860,3 +860,17 @@ test('lr-map-anchor reaches its map through the seam and leaves placement to the
     'lr-map-anchor must not statically import the map, its anchor runtime or the overlay and positioner internals',
   );
 });
+
+test('shared accessibility utilities keep composed focus traversal out of their static graph', () => {
+  const internalDir = path.join(packageDir, 'src', 'internal');
+  const focusNavigation = path.join(internalDir, 'focus-navigation.ts');
+  const utilities = staticValueImportClosure(path.join(internalDir, 'a11y.ts'));
+  assert.ok(!utilities.has(focusNavigation), 'IDs, hidden styles and host names must not import focus traversal');
+});
+
+test('lr-map admits a scene synchronously without loading the scene session used by peers', () => {
+  const entry = path.join(packageDir, 'src/components/media/map/map.class.ts');
+  const reachable = staticValueImportClosure(entry);
+  assert.ok(reachable.has(path.join(packageDir, 'src/components/media/map/map-scene-admission.ts')));
+  assert.ok(!reachable.has(path.join(packageDir, 'src/internal/map-scene-session.ts')));
+});

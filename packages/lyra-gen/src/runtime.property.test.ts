@@ -21,3 +21,14 @@ test('targeted replacement preserves every unrelated identity and advances exact
     assert.equal(admitted.value.revision, 0);
   }), { seed: 1729, numRuns: 200 });
 });
+
+test('normalizing declared properties is equivalent to admitting the canonical view', () => {
+  const roles: LyraGenCatalog = { ...catalog, components: { ...catalog.components, note: { tag: 'p', properties: { label: { type: 'string' } } } } };
+  fc.assert(fc.property(fc.string({ maxLength: 80 }), label => {
+    const root = { id: 'item', type: 'note' };
+    const base = { version: '1', catalog: { id: catalog.id, version: catalog.version }, surfaceId: 'surface', revision: 0 };
+    const normalized = validateView({ ...base, root: { ...root, label } }, roles, { normalize: true });
+    assert.ok(normalized.ok);
+    assert.deepEqual(validateView(normalized.value, roles), validateView({ ...base, root: { ...root, props: { label } } }, roles));
+  }), { seed: 1729, numRuns: 200 });
+});

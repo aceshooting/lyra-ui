@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { LyraMessageParts } from './message-parts.class.js';
 import './message-parts.js';
 
@@ -17,13 +17,17 @@ it('replaces a failed lazy citation registration with a localized, settled fallb
   try {
     const el = await fixture<LyraMessageParts>(html`<lr-message-parts content-mode="plain"
       .strings=${{ messagePartError: 'Source preview unavailable' }}
-      .parts=${[
-        { id: 'answer', type: 'text', text: 'The answer remains available.' },
-        { id: 'source', type: 'citation', citation: { id: 'cite', label: 'Source' } },
-      ]}
       @lr-render-error=${(event: CustomEvent<{ error: unknown }>) => errors.push(event.detail.error)}
     ></lr-message-parts>`);
-    await waitUntil(() => errors.length === 1 && el.shadowRoot!.querySelector('[aria-busy="false"]') !== null);
+    const failed = oneEvent(el, 'lr-render-error');
+    el.parts = [
+      { id: 'answer', type: 'text', text: 'The answer remains available.' },
+      { id: 'source', type: 'citation', citation: { id: 'cite', label: 'Source' } },
+    ];
+    await failed;
+    await el.updateComplete;
+    expect(errors.length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[aria-busy="false"]') !== null).to.equal(true);
     expect(errors[0]).to.equal(failure);
     expect(attempts).to.equal(1);
     expect(el.shadowRoot!.querySelector('[aria-busy="false"]')!.textContent).to.equal('Source preview unavailable');
@@ -42,4 +46,16 @@ it('replaces a failed lazy citation registration with a localized, settled fallb
   } finally {
     customElements.define = original;
   }
+});
+
+it('loads the shared resume button when the first interrupted part arrives', async () => {
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts content-mode="plain"></lr-message-parts>`);
+  expect(Boolean(customElements.get('lr-button'))).to.equal(false);
+  el.parts = [{ id: 'draft', type: 'text', text: 'Draft', state: 'interrupted', interruption: { resumable: true } }];
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('[part="resume"]')?.shadowRoot?.querySelector('button');
+  expect(Boolean(button)).to.equal(true);
+  const resumed = oneEvent(el, 'lr-part-resume');
+  button!.click();
+  expect((await resumed).detail.part.id).to.equal('draft');
 });

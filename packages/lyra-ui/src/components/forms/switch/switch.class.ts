@@ -4,11 +4,10 @@ import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js'
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
-import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
+import { CheckedControlLabelController } from '../../../internal/checked-control-label.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -16,7 +15,6 @@ import { styles } from './switch.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
-import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { CheckedFormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
@@ -215,23 +213,11 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
    *  renders. */
   @property({ attribute: 'error-text' }) errorText = '';
 
-  // Tracks whether the default slot carries any real (non-whitespace)
-  // content, so the label wrapper — and the `gap` next to the track — can
-  // collapse to nothing for an icon-only/aria-label-only switch instead of
-  // leaving a stray empty gap. See combobox/date-input's `hasHintSlot`-style
-  // state fields; this one checks `assignedNodes` rather than
-  // `assignedElements` because a plain slotted text label (the expected
-  // common case here, e.g. `<lr-switch>Enable notifications</lr-switch>`)
-  // is a text node, which `assignedElements` would silently ignore.
   @state() private hasLabelSlot = false;
-  // `[part]:empty` never matches here -- the parts always contain a literal `<slot>` child element
-  // regardless of assigned/text content -- so real emptiness is tracked in JS instead (same fix as
-  // `hasLabelSlot` above, and as `<lr-select>`'s identical hint/error parts) and reflected via
-  // the `hidden` attribute.
   private readonly slotPresence = new SlotPresenceController(this);
-  private readonly labelTextObserver = new AccessibleTextController(
-    this, [''], () => this.recomputeHasLabelSlot(), ['slot'],
-  );
+  private readonly labelController = new CheckedControlLabelController(this, {
+    changed: present => { this.hasLabelSlot = present; },
+  });
   // Shared with every other veto point in this library: `emit()` is synchronous, so a listener
   // that answers `lr-switch-toggle-request` by writing `checked` itself finishes before the
   // built-in commit runs, and a before/after value compare reads "unchanged" whenever it wrote
@@ -279,35 +265,10 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
 
   private readonly description = new HostDescriptionController(this, () => this[VALIDITY_ANCHOR]());
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.addEventListener('slotchange', this.onLabelSlotChange);
-    if (this.hasUpdated) {
-      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
-      this.recomputeHasLabelSlot();
-    } else {
-      // Browser-only mounts still seed before their first paint. During hydration the base helper
-      // defers this browser-only light-DOM sample until the server render has been reproduced.
-      this.seedFirstRenderState(() => this.recomputeHasLabelSlot());
-    }
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.labelTextObserver.adopted();
+    this.labelController.adopted();
     this.description.adopted();
-  }
-
-  override disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onLabelSlotChange);
-    super.disconnectedCallback();
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    // A future mixin layered under LyraSwitch (e.g. a shared behavior applied the same way
-    // FormAssociated is layered under lr-textarea) would otherwise silently never run its own
-    // willUpdate() -- mirrors csv-viewer.ts's/docx-viewer.ts's identical super call.
-    super.willUpdate(changed);
   }
 
   private setFromUser(next: boolean): void {
@@ -356,19 +317,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
   };
 
   private onBlur = (event: FocusEvent): void => {
-    // `<lr-switch>` is form-associated (`static formAssociated = true`), so setting the host's
-    // `disabled` attribute (the `disabled` setter's `toggleAttribute()` call) makes the browser's
-    // native form-associated-custom-element machinery treat the host as "actually disabled"
-    // synchronously -- and that runs its own unfocusing steps against whatever inside the shadow
-    // tree currently holds focus, firing a real `blur` on the internal `[part~="base"]` span
-    // *before* Lit's own async re-render has even reached its `tabindex` attribute. Confirmed via
-    // a captured marker showing the `blur` firing synchronously inside the `disabled` property
-    // setter, with the span's `tabIndex` still `0` at that point -- the exact same observable race
-    // as `<lr-input>`'s `onBlur`, just reached through the FACE
-    // disabled-state's forced blur rather than a native `<input disabled>`'s. That is not a user
-    // interaction: marking it interacted could reenter an in-flight Lit update and trip Lit's
-    // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a
-    // later re-enable flash `user-invalid` styling for an interaction the user never actually had.
+    // Disabling a focused control can force blur before its next render.
     if (!this.liveDisabled) {
       this.setInteracted(true);
     }
@@ -398,40 +347,6 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
       this.setFromUser(turnsOn);
     }
   };
-
-  private recomputeHasLabelSlot(): void {
-    const renderRoot = this.renderRoot as ParentNode | undefined;
-    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    if (!renderRoot || !childNodes) return;
-    const slot = renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
-    const nodes: Node[] = slot
-      ? slot.assignedNodes({ flatten: true })
-      : Array.from(childNodes)
-          .filter((node) => isDefaultLabelNode(node))
-          .flatMap((node) => {
-            if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
-            const forwardingSlot = node as HTMLSlotElement;
-            return forwardingSlot.assignedNodes().length > 0
-              ? forwardingSlot.assignedNodes({ flatten: true })
-              : Array.from(forwardingSlot.childNodes);
-          });
-    this.hasLabelSlot = hasRealContent(nodes);
-  }
-
-  private handleLabelSlotChange(event: Event): void {
-    const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    if (target.getRootNode() === this.renderRoot) {
-      if ((target.getAttribute('name') ?? '') !== '') return;
-    } else if (!defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)) {
-      return;
-    }
-    this.labelTextObserver.bind();
-    this.recomputeHasLabelSlot();
-  }
-
-  private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
-  private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
   override render(): TemplateResult {
     const supporting = formControlSupportingState({
@@ -464,7 +379,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
             </span>
           </span>
           <span id="switch-label" part="label" ?hidden=${!this.renderSlotPresence(this.hasLabelSlot)}>
-            <slot @slotchange=${this.onSlotChange}></slot>
+            <slot @slotchange=${this.labelController.onSlotChange}></slot>
           </span>
         </span>
         ${renderFormControlHintError({

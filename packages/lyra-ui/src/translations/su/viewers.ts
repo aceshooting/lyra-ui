@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Puter ka katuhu',
   modelViewerRotateUp: 'Puter ka luhur',
   modelViewerRotateDown: 'Puter ka handap',
+  modelViewerViewport: 'Modél interaktif',
 };
 
 registerLyraLocale('su', strings);

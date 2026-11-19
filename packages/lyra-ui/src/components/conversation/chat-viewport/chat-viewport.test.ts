@@ -2065,3 +2065,49 @@ it('emits follow changes for user scrolling or a jump, and keeps direct writes s
   await el.updateComplete;
   expect(changes).to.deep.equal([false, true]);
 });
+
+it('keeps slotted messages usable when a resize observer rejects its target', async () => {
+  const Original = window.ResizeObserver;
+  try {
+    window.ResizeObserver = class extends Original {
+      override observe(): void { throw new Error('unavailable geometry'); }
+    };
+    const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport><p>First</p></lr-chat-viewport>`);
+    expect(el.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])')!.assignedElements().map(node => node.textContent)).to.deep.equal(['First']);
+  } finally {
+    window.ResizeObserver = Original;
+  }
+});
+
+it('leaves a late virtual spacer unobserved after switching to ordinary messages', async () => {
+  const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport .follow=${false}></lr-chat-viewport>`);
+  let finish!: () => void;
+  const updateComplete = new Promise<void>(resolve => { finish = resolve; });
+  const container = document.createElement('div');
+  const spacer = container.appendChild(document.createElement('div'));
+  spacer.setAttribute('part', 'spacer');
+  const adapter = Object.assign(document.createElement('div'), {
+    scrollContainer: container, scrollToIndex() {}, updateComplete,
+  });
+  let watched = false;
+  const original = MutationObserver.prototype.observe;
+  MutationObserver.prototype.observe = function (target, options) {
+    if (target === spacer) watched = true;
+    original.call(this, target, options);
+  };
+  try {
+    el.replaceChildren(adapter);
+    await nextFrame();
+    const message = document.createElement('p');
+    message.textContent = 'Current message';
+    el.replaceChildren(message);
+    await nextFrame();
+    finish();
+    await nextFrame();
+    expect(watched).to.equal(false);
+    expect(el.textContent?.trim()).to.equal('Current message');
+  } finally {
+    finish();
+    MutationObserver.prototype.observe = original;
+  }
+});

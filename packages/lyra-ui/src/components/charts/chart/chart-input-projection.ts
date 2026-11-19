@@ -2,7 +2,7 @@ import { snapshotStructuredData, admitSnapshotArray, projectSnapshotArray, type 
 import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import type { LyraVariant } from '../../../internal/variants.js';
-import type { LyraChartAnnotation, LyraChartConfiguration, LyraChartDataConfiguration, LyraChartDatasetConfiguration, LyraChartPlugin, LyraChartPoint, LyraChartSeries } from './chart.class.js';
+import type { LyraChartAnnotation, LyraChartConfiguration, LyraChartDataConfiguration, LyraChartDatasetConfiguration, LyraChartPlugin, LyraChartPoint, LyraChartSeries } from './chart-types.js';
 import { isSafeNonArrayObject as isChartRecord } from '../../../internal/object-guards.js';
 
 export const MAX_CHART_INPUT_ENTRIES = 10_000;

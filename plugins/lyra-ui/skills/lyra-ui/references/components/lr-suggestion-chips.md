@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-suggestion-chips`
+
+Set `disabled` to disable the entire row. Re-enabling it restores the availability of each suggestion.
+
+Customize the appearance with `--lr-suggestion-chips-gap`, `--lr-suggestion-chips-chip-bg`, `--lr-suggestion-chips-chip-color`, `--lr-suggestion-chips-chip-border-color`, `--lr-suggestion-chips-chip-radius` and `--lr-suggestion-chips-chip-padding-inline`.
 
 Starter prompts (empty thread) and follow-up suggestions (after a response) as a horizontally
 scrollable chip row; activation hands the prompt to the host, which decides whether to compose it

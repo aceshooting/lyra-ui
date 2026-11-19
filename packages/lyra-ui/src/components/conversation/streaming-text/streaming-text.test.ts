@@ -701,7 +701,6 @@ describe("Markdown auto-detection and rendering mode", () => {
     const markdown = el.shadowRoot!.querySelector('lr-markdown')!;
     const leaked: string[] = [];
     for (const name of [
-      'lr-render-error',
       'lr-highlight-activate',
       'lr-text-select',
       'lr-anchor-result',
@@ -1126,4 +1125,15 @@ describe('canonical code-block-header spelling', () => {
     expect(warnings).to.have.length(0);
   });
 
+});
+
+it('forwards the composed Markdown render failure once with its original detail', async () => {
+  const host = await fixture(html`<lr-streaming-text content-mode="markdown" content="# Title"></lr-streaming-text>`);
+  const markdown = host.shadowRoot!.querySelector('lr-markdown')!;
+  const detail = { error: new Error('Markdown unavailable') };
+  const received: unknown[] = [];
+  host.addEventListener('lr-render-error', event => { received.push((event as CustomEvent).detail); });
+  markdown.dispatchEvent(new CustomEvent('lr-render-error', { bubbles: true, composed: true, detail }));
+  expect(received.length).to.equal(1);
+  expect(received[0] === detail).to.equal(true);
 });

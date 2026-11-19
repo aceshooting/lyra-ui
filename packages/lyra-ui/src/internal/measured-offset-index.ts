@@ -110,6 +110,15 @@ export class MeasuredOffsetIndex {
 
   /** Index of the item containing offset `px` (clamped to the last item; -1 when empty). */
   indexAt(px: number): number {
+    return this.findIndex(px, true);
+  }
+
+  /** Last item whose top is strictly before offset `px` (clamped to the list; -1 when empty). */
+  indexBefore(px: number): number {
+    return this.findIndex(px, false);
+  }
+
+  private findIndex(px: number, includeBoundary: boolean): number {
     const n = this.heights.length;
     if (n === 0) return -1;
     const target = finiteRange(px, 0, 0, this.maximum);
@@ -119,8 +128,10 @@ export class MeasuredOffsetIndex {
     while (step * 2 <= n) step *= 2;
     for (; step > 0; step >>>= 1) {
       const next = index + step;
-      if (next <= n && sum + this.tree[next]! <= target) {
-        sum += this.tree[next]!;
+      if (next > n) continue;
+      const candidate = sum + this.tree[next]!;
+      if (candidate < target || (includeBoundary && candidate === target)) {
+        sum = candidate;
         index = next;
       }
     }

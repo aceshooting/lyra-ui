@@ -22,18 +22,23 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { styles } from './json-viewer.styles.js';
-import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode, LyraSourceSearchResult } from '../../../data-sources.js';
-import { HierarchySourceController, hierarchyField, type HierarchyCapabilityResult } from '../../../internal/hierarchy-source-controller.js';
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode } from '../../../data-sources.js';
+import { HierarchySourceController, hierarchyField } from '../../../internal/hierarchy-source-controller.js';
+import {
+  hasHierarchySourceCopy,
+  hierarchyCopyScope,
+  HierarchySourceCopyController,
+  HierarchySourceSearchController,
+} from '../../../internal/hierarchy-source-search.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, hierarchySourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 export type JsonViewerTreeSource = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
 const INSPECTION_KINDS = new Set(['object', 'array', 'scalar', 'element', 'attribute', 'text', 'comment', 'processing-instruction']);
-type SourceHits = Extract<HierarchyCapabilityResult<LyraSourceSearchResult<{ readonly key: string }>>, { status: 'ready' }>;
 
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   writeClipboardText,
-  clipboardFailureReason,
   type LyraClipboardWriteOutcome,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
@@ -465,15 +470,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   static override styles = [LyraElement.styles, hierarchySourceStyles, styles, srOnly];
   private _treeSource?: JsonViewerTreeSource;
   private sourceMode = false;
-  private sourceSearchDirty = true;
-  private sourceSearchIntent = 0;
   private copyIntent = 0;
-  private sourceNavigationIntent = 0;
-  private sourceSearchTask: Promise<number> = Promise.resolve(0);
-  private sourceHits?: SourceHits;
-  private sourceHitKeys = new Set<string>();
-  private sourceSearchExact = true;
-  private sourceSearchUnavailable = false;
   private sourceBinding?: { source: JsonViewerTreeSource | undefined; query: string; locale: string };
   private sourceAnnouncement?: string;
   private readonly hierarchy = new HierarchySourceController<LyraInspectionNode>(this, {
@@ -481,6 +478,29 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     onChange: () => this.requestUpdate('sourceState', null), accepted: () => {},
     payload: { maxUnits: 2_000_000, maxRowUnits: 327_702,
       unitsOf: node => node.name.length + node.path.length + (node.value?.length ?? 0) + node.kind.length },
+  });
+
+  private readonly sourceSearch = new HierarchySourceSearchController({
+    host: this,
+    control: this.hierarchy,
+    source: () => this.treeSource,
+    query: () => this.query,
+    cursor: () => this.activeSearchIndex,
+    setCursor: (index) => { this.activeSearchIndex = index; },
+    changed: () => this.requestUpdate('sourceSearchResult', null),
+    emitChange: () => this.emitSearchChange(),
+  });
+  private readonly sourceCopy = new HierarchySourceCopyController({
+    host: this,
+    control: this.hierarchy,
+    source: () => this.treeSource,
+    sinks: {
+      clearFeedback: () => this.copyFeedback.clear(),
+      feedback: (key, ok) => this.copyFeedback.show(key, ok),
+      message: (ok) => this.localize(ok ? 'copied' : 'copyFailed'),
+      announce: (message) => this.searchAnnouncementSink?.announce(message),
+      emit: (name, detail) => this.emit(name, detail ?? null),
+    },
   });
 
   /** Whole-source inspection provider. Takes display precedence over data; maxNodes and expandDepth
@@ -500,7 +520,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Reveals and focuses an exact provider key; compact keys can address arbitrarily deep nodes.
    * Resolves false when absent, superseded, or no provider is active. */
   revealSourceKey(key: string): Promise<boolean> {
-    this.sourceNavigationIntent++;
+    this.sourceSearch.supersedeSteps();
     return this.treeSource === undefined ? Promise.resolve(false) : this.hierarchy.reveal(key);
   }
   private syncSource(force = false): void {
@@ -527,96 +547,18 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     return Object.freeze({ name, path, kind: kind as LyraInspectionNode['kind'], ...(text === undefined ? {} : { value: text as string }) });
   }
   private invalidateSourceSearch(): void {
-    this.sourceSearchIntent = (this.sourceSearchIntent ?? 0) + 1;
+    this.sourceSearch?.invalidate();
+    this.sourceCopy?.invalidate();
     this.copyIntent = (this.copyIntent ?? 0) + 1;
-    this.sourceNavigationIntent = (this.sourceNavigationIntent ?? 0) + 1;
-    this.sourceHits = undefined; this.sourceHitKeys?.clear();
-    this.sourceSearchExact = true; this.sourceSearchUnavailable = false; this.sourceSearchDirty = true;
     if (this.activeSearchIndex !== undefined && (this._treeSource !== undefined || this.sourceMode)) this.activeSearchIndex = -1;
     this.copyFeedback?.clear();
   }
-  private async searchSource(): Promise<number> {
-    this.sourceSearchDirty = false;
-    const intent = this.sourceSearchIntent;
-    const provider = this.treeSource;
-    const query = this.query ?? '';
-    if (!query) {
-      this.hierarchy.cancelSearch();
-      if (this.hasUpdated) this.emitSearchChange();
-      return 0;
-    }
-    const result = await this.hierarchy.search();
-    if (intent !== this.sourceSearchIntent || provider !== this.treeSource || !this.isConnected) return 0;
-    if (result.status === 'stale' || (result.status === 'ready' && !result.isCurrent())) return 0;
-    this.sourceHits = result.status === 'ready' ? result : undefined;
-    this.sourceHitKeys = new Set(this.sourceHits?.value.hits.map(hit => hit.key) ?? []);
-    this.sourceSearchExact = result.status === 'ready' && result.value.exhaustive;
-    this.sourceSearchUnavailable = result.status !== 'ready';
-    this.requestUpdate('sourceSearchResult', null);
-    this.emitSearchChange();
-    await this.updateComplete;
-    return intent === this.sourceSearchIntent ? this.sourceHitKeys.size : 0;
-  }
-  private async stepSourceSearch(direction: 1 | -1): Promise<boolean> {
-    const navigation = ++this.sourceNavigationIntent;
-    const hits = this.sourceHits;
-    if (!hits?.isCurrent() || !hits.value.hits.length) return false;
-    const size = hits.value.hits.length;
-    this.activeSearchIndex = this.activeSearchIndex < 0 ? (direction === 1 ? 0 : size - 1) : (this.activeSearchIndex + direction + size) % size;
-    const found = await this.hierarchy.reveal(hits.value.hits[this.activeSearchIndex]!.key);
-    if (!found || navigation !== this.sourceNavigationIntent || !hits.isCurrent() || this.sourceHits !== hits) return false;
-    this.emitSearchChange();
-    return found;
-  }
   private sourceSummary(): string {
-    const projection = this.hierarchy.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
-    }) : '';
-  }
-  private hasSourceCopy(): boolean {
-    const source = this.treeSource;
-    try { const available = typeof source?.copy === 'function'; return source === this.treeSource && available; }
-    catch { return false; }
-  }
-  private async copySource(key: string | null, scope: 'node' | 'subtree' | 'document'): Promise<void> {
-    const source = this.treeSource;
-    const epoch = this.hierarchy.epoch;
-    const owner = this.ownerDocument;
-    const intent = ++this.copyIntent;
-    const current = () => this.treeSource === source && this.hierarchy.epoch === epoch && this.ownerDocument === owner &&
-      this.isConnected && intent === this.copyIntent;
-    this.copyFeedback.clear();
-    const result = await this.hierarchy.copy(key, scope, 25 * 1024 * 1024);
-    if (!current() || result.status === 'stale') return;
-    const feedback = key ?? 'toolbar';
-    if (result.status !== 'ready') {
-      this.copyFeedback.show(feedback, false);
-      const message = this.localize('copyFailed');
-      if (current()) this.searchAnnouncementSink?.announce(message);
-      return;
-    }
-    const accepted = () => current() && result.isCurrent();
-    if (!accepted()) return;
-    let outcome: LyraClipboardWriteOutcome;
-    try {
-      const clipboard = owner.defaultView?.navigator.clipboard;
-      const write = clipboard?.writeText;
-      if (!accepted()) return;
-      if (typeof write !== 'function') {
-        outcome = copyOutcome('failure', { text: result.value, reason: 'unsupported', error: new Error('Clipboard is unavailable') });
-      } else {
-        await write.call(clipboard, result.value);
-        outcome = copyOutcome('success', { text: result.value });
-      }
-    } catch (error) {
-      outcome = copyOutcome('failure', { text: result.value, reason: clipboardFailureReason(error), error });
-    }
-    this.reportCopyOutcome(feedback, outcome, accepted);
+    const summary = hierarchySourceSummary(this.hierarchy.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
   private sourceCopyButton(node?: LyraInspectionNode): TemplateResult | typeof nothing {
-    if (!this.copyable || !this.hasSourceCopy()) return nothing;
+    if (!this.copyable || !hasHierarchySourceCopy(() => this.treeSource)) return nothing;
     const source = this.treeSource;
     const epoch = this.hierarchy.epoch;
     const key = node?.path ?? null;
@@ -629,27 +571,27 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         const button = event.currentTarget as HTMLButtonElement;
         if (button.isConnected && button.getRootNode() === this.renderRoot && !this.hierarchy.loading &&
           projection === this.hierarchy.projection && source === this.treeSource && epoch === this.hierarchy.epoch)
-          void this.copySource(key, node ? node.kind === 'object' || node.kind === 'array' || node.kind === 'element' ? 'subtree' : 'node' : 'document');
+          void this.sourceCopy.copy(key, hierarchyCopyScope(node?.kind), 25 * 1024 * 1024, key ?? 'toolbar');
       }}>${this.copyLabel(key ?? 'toolbar', this.localize('copy'))}</button>`;
   }
   private renderSourceNode(node: LyraInspectionNode): TemplateResult {
-    const match = this.sourceHits?.isCurrent() && this.sourceHitKeys.has(node.path);
-    const active = this.sourceHits?.value.hits[this.activeSearchIndex]?.key === node.path;
+    const match = this.sourceSearch.isMatch(node.path);
+    const active = this.sourceSearch.isActive(node.path);
     return html`<span part="key" ?data-match=${match} ?data-active=${active}>${node.name}</span><span aria-hidden="true">:</span><span
       part="value" data-type=${node.kind === 'scalar' ? 'string' : node.kind} ?data-match=${match} ?data-active=${active}>${node.value ?? node.kind}</span>${this.sourceCopyButton(node)}`;
   }
   private renderSource(): TemplateResult {
-    const partial = !this.sourceSearchExact && Boolean(this.query);
-    const count = this.sourceHitKeys.size;
+    const partial = !this.sourceSearch.exact && Boolean(this.query);
+    const count = this.sourceSearch.count;
     return html`<div class="source-shell" style=${styleMap({ '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight) ?? 'var(--lr-size-20rem)' })}>
-      ${this.copyable && this.hasSourceCopy() ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
+      ${this.copyable && hasHierarchySourceCopy(() => this.treeSource) ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
       ${hierarchySourceView(this.hierarchy, {
         label: hostAriaLabel(this) ?? this.localize('jsonValue'), rtl: this.effectiveDirection === 'rtl', multiple: false,
         loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
         retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
         name: node => node.name, content: node => this.renderSourceNode(node), select: () => {},
       })}
-      ${partial ? html`<div part="search-status">${this.sourceSearchUnavailable ? this.localize('sourceSearchUnavailable') :
+      ${partial ? html`<div part="search-status">${this.sourceSearch.unavailable ? this.localize('sourceSearchUnavailable') :
         this.localize('viewerSearchMatchCount', undefined, { count: `≥${getNumberFormat(this.effectiveLocale).format(count)}`, pluralCount: count })}</div>` : nothing}
     </div>`;
   }
@@ -1220,7 +1162,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         this.sourceMode = true; this.dataSnapshot = undefined; this.dataSnapshotTruncated = false;
         this.searchState = EMPTY_SEARCH; this.treeMemo = undefined; this.matchElements.clear(); this.expandedOverrides.clear();
       }
-      if (this.sourceSearchDirty) this.sourceSearchTask = this.searchSource();
+      this.sourceSearch.schedule();
       return;
     }
     this.sourceMode = false;
@@ -1263,10 +1205,17 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     super.updated(changed);
     this.syncScrollRegion();
     if (this.treeSource !== undefined) {
-      const message = this.hierarchy.error || this.hierarchy.rowError ? this.localize('treeSourceError') :
-        this.hierarchy.loading ? this.localize('loading') : this.sourceSummary();
-      if (this.sourceAnnouncement !== undefined && this.sourceAnnouncement !== message) this.searchAnnouncementSink?.announce(message);
-      this.sourceAnnouncement = message;
+      const source = this.treeSource;
+      const binding = this.sourceBinding;
+      const snapshot = captureHierarchySourceEffects(this, this.hierarchy,
+        () => source === this.treeSource && binding === this.sourceBinding);
+      const message = applyHierarchySourceEffects({ ...snapshot, error: snapshot.error || snapshot.rowError }, {
+        errorText: () => this.localize('treeSourceError'),
+        loadingText: () => this.localize('loading'),
+        summary: () => this.sourceSummary(),
+        announce: (text) => this.searchAnnouncementSink?.announce(text),
+      }, this.sourceAnnouncement);
+      if (message !== undefined) this.sourceAnnouncement = message;
       return;
     }
     this.syncActiveMatch();
@@ -1278,8 +1227,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private emitSearchChange(): void {
     this.emit('lr-search-change', viewerSearchDetail(
       this.query,
-      this.treeSource !== undefined ? this.sourceHitKeys.size : this.searchState.orderedMatches.length,
-      this.treeSource !== undefined ? this.sourceSearchExact : !this.searchState.truncated,
+      this.treeSource !== undefined ? this.sourceSearch.count : this.searchState.orderedMatches.length,
+      this.treeSource !== undefined ? this.sourceSearch.exact : !this.searchState.truncated,
       this.activeSearchIndex,
     ));
   }
@@ -1321,13 +1270,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    */
   async runSearch(query: string): Promise<number> {
     if (this.treeSource !== undefined) {
-      const intent = this.sourceSearchIntent;
+      const intent = this.sourceSearch.generation;
       this.query = query;
-      if (intent === this.sourceSearchIntent) this.invalidateSourceSearch();
-      const currentIntent = this.sourceSearchIntent;
+      if (intent === this.sourceSearch.generation) this.invalidateSourceSearch();
+      const currentIntent = this.sourceSearch.generation;
       this.requestUpdate('sourceSearchIntent', null);
       await this.updateComplete;
-      return currentIntent === this.sourceSearchIntent ? this.sourceSearchTask : 0;
+      return currentIntent === this.sourceSearch.generation ? this.sourceSearch.task : 0;
     }
     this.query = query;
     await this.updateComplete;
@@ -1337,7 +1286,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Advances the cursor to the next match (wrapping), revealing collapsed ancestors and
    *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchNext(): Promise<boolean> {
-    if (this.treeSource !== undefined) return this.stepSourceSearch(1);
+    if (this.treeSource !== undefined) return this.sourceSearch.step(1);
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % total;
@@ -1351,7 +1300,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    *  revealing collapsed ancestors and
    *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchPrevious(): Promise<boolean> {
-    if (this.treeSource !== undefined) return this.stepSourceSearch(-1);
+    if (this.treeSource !== undefined) return this.sourceSearch.step(-1);
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
     this.activeSearchIndex = this.activeSearchIndex < 0 ? total - 1 : (this.activeSearchIndex - 1 + total) % total;

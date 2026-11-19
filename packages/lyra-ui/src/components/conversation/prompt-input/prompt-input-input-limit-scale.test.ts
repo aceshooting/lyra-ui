@@ -3,6 +3,7 @@ import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scal
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { publicCollectionTruncation, collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { tag } from '../../../internal/prefix.js';
 import './prompt-input.js';
 
 for (const property of ['modelCatalog', 'voiceCatalog', 'mentionItems', 'commandItems'] as const) {
@@ -70,11 +71,20 @@ for (const property of ['attachments', 'attachmentCapabilities', 'queue', 'sourc
     const source = Array.from({ length: 10_001 }, (_, i) => {
       if (property === 'attachmentCapabilities') return 'files';
       if (property === 'selectedSourceIds') return String(i);
-      return { id: String(i), attachmentId: String(i), value: 'draft', label: 'item', name: 'file' };
+      return {
+        id: String(i),
+        attachmentId: property === 'attachments' ? 'attachment' : String(i),
+        value: 'draft',
+        label: 'item',
+        name: 'file',
+      };
     });
     Reflect.set(host, property, source);
     await fixture(host);
     expect(publicCollectionTruncation(host, property) !== undefined).to.equal(true);
     expect(host.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Input omitted');
+    if (property === 'attachments') {
+      expect(host.shadowRoot!.querySelectorAll(tag('attachment-chip')).length).to.equal(1);
+    }
   });
 }

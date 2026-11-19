@@ -150,3 +150,7 @@ export const Narrow320px: Story = {
     </div>
   `,
 };
+
+export const Disabled: Story = {
+  render: () => html`<lr-suggestion-chips disabled .suggestions=${followUps}></lr-suggestion-chips>`,
+};

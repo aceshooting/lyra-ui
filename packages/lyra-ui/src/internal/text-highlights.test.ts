@@ -1,6 +1,18 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import { supportsCustomHighlights, acquireHighlightHandle, wrapTextRangeInMarks, unwrapTextMark } from './text-highlights.js';
-import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
+import {
+  supportsCustomHighlights,
+  acquireHighlightHandle,
+  wrapTextRangeInMarks,
+  unwrapTextMark,
+  HIGHLIGHT_TONES,
+  hitTestHighlightRanges,
+  paintHighlightTones,
+  paintResolvedHighlights,
+  resolveHighlightRanges,
+  type HighlightHandle,
+} from './text-highlights.js';
+import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_PAINT_LIMIT } from './text-quote.js';
+import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 
 function makeContent(html: string): HTMLElement {
   const el = document.createElement('div');
@@ -842,5 +854,174 @@ describe('acquireHighlightHandle owner realms', () => {
       else Reflect.deleteProperty(window, 'NodeFilter');
       frame.remove();
     }
+  });
+});
+
+function recordingHandle(): { handle: HighlightHandle; tones: Array<[LyraHighlightTone, string[]]>; active: () => string | null } {
+  const tones: Array<[LyraHighlightTone, string[]]> = [];
+  let active: Range | null = null;
+  const handle: HighlightHandle = {
+    setRanges: (tone, ranges) => tones.push([tone, ranges.map((range) => range.toString())]),
+    setActive: (range) => {
+      active = range;
+    },
+    flash: () => undefined,
+    release: () => undefined,
+  };
+  return { handle, tones, active: () => active?.toString() ?? null };
+}
+
+const quoteHighlight = (id: string, quote: string, tone?: LyraHighlightTone): LyraHighlight =>
+  tone ? { id, anchor: { kind: 'text-quote', quote }, tone } : { id, anchor: { kind: 'text-quote', quote } };
+
+describe('resolved highlight painting', () => {
+  it('lists every tone once, in paint order', () => {
+    expect([...HIGHLIGHT_TONES]).to.deep.equal(['accent', 'success', 'warning', 'danger', 'neutral']);
+    expect(Object.isFrozen(HIGHLIGHT_TONES)).to.equal(true);
+  });
+
+  it('resolves text quotes, paints every tone and marks the active highlight', () => {
+    const root = makeContent('<p>alpha beta <b>gamma</b> delta</p>');
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root));
+      const highlights = [
+        quoteHighlight('a', 'alpha'),
+        quoteHighlight('b', 'gamma', 'warning'),
+        { id: 'c', anchor: { kind: 'fragment', id: 'intro' } } as LyraHighlight,
+        quoteHighlight('d', 'missing'),
+      ];
+      const { handle, tones, active } = recordingHandle();
+      const resolved = paintResolvedHighlights({ handle, index, highlights, activeHighlightId: 'b' });
+      expect(resolved.map(({ id, tone, range }) => [id, tone, range.toString()])).to.deep.equal([
+        ['b', 'warning', 'gamma'],
+        ['a', 'accent', 'alpha'],
+      ]);
+      expect(resolved[0]!.highlight === highlights[1]).to.equal(true);
+      expect(tones).to.deep.equal([
+        ['accent', ['alpha']],
+        ['success', []],
+        ['warning', ['gamma']],
+        ['danger', []],
+        ['neutral', []],
+      ]);
+      expect(active()).to.equal('gamma');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('resolves at most the shared paint ceiling and always keeps the active highlight', () => {
+    const words = Array.from({ length: TEXT_QUOTE_PAINT_LIMIT + 50 }, (_, index) => `t${index}z`);
+    const root = makeContent(`<p>${words.join(' ')}</p>`);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root));
+      const highlights = words.map((word, position) => quoteHighlight(`h${position}`, word));
+      const last = `h${words.length - 1}`;
+      const { ranges, active } = resolveHighlightRanges(index, highlights, last);
+      expect(ranges.length).to.equal(TEXT_QUOTE_PAINT_LIMIT);
+      expect(ranges[0]!.id).to.equal(last);
+      expect(active?.toString()).to.equal(words[words.length - 1]);
+      const inactive = resolveHighlightRanges(index, highlights, null);
+      expect([inactive.ranges[0]!.id, inactive.active]).to.deep.equal(['h0', null]);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('paints nothing for quotes whose rendered nodes changed after indexing', () => {
+    const root = makeContent('<p>stale text</p>');
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root));
+      (root.querySelector('p')!.firstChild as Text).data = 'stale words';
+      const { handle, tones, active } = recordingHandle();
+      const resolved = paintResolvedHighlights({ handle, index, highlights: [quoteHighlight('s', 'stale')], activeHighlightId: 's' });
+      expect([resolved.length, tones.every(([, ranges]) => ranges.length === 0), active()]).to.deep.equal([0, true, null]);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('paints caller ranges per tone, defaulting to accent, and clears unused tones', () => {
+    const root = makeContent('<p>one two three</p>');
+    try {
+      const { handle, tones, active } = recordingHandle();
+      const one = rangeOverText(root, 'one');
+      paintHighlightTones(handle, [
+        { range: one },
+        { tone: 'danger', range: rangeOverText(root, 'two') },
+        { tone: 'danger', range: rangeOverText(root, 'three') },
+        { tone: 'unknown' as LyraHighlightTone, range: rangeOverText(root, 'o t') },
+      ], one);
+      expect(tones).to.deep.equal([
+        ['accent', ['one', 'o t']],
+        ['success', []],
+        ['warning', []],
+        ['danger', ['two', 'three']],
+        ['neutral', []],
+      ]);
+      expect(active()).to.equal('one');
+      paintHighlightTones(handle, [], null);
+      expect(tones.slice(5).every(([, ranges]) => ranges.length === 0)).to.equal(true);
+      expect(active()).to.equal(null);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('hit-tests the topmost resolved range first, edges included, within a rectangle budget', () => {
+    const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
+    const entry = (id: string, rects: ReturnType<typeof rect>[]) => ({ id, range: { getClientRects: () => rects } });
+    const ranges = [entry('under', [rect(0, 0, 50, 50)]), entry('over', [rect(40, 40, 60, 60)])];
+    expect(hitTestHighlightRanges(ranges, 45, 45)).to.equal('over');
+    expect(hitTestHighlightRanges(ranges, 0, 50)).to.equal('under');
+    expect(hitTestHighlightRanges(ranges, 60, 60)).to.equal('over');
+    expect(hitTestHighlightRanges(ranges, 61, 10)).to.equal(null);
+    expect(hitTestHighlightRanges(ranges, Number.NaN, 10)).to.equal(null);
+    expect(hitTestHighlightRanges([], 1, 1)).to.equal(null);
+    const crowded = [entry('late', [rect(0, 0, 1, 1)]), entry('many', Array.from({ length: 1_000 }, () => rect(5, 5, 6, 6)))];
+    expect(hitTestHighlightRanges(crowded, 0, 0)).to.equal(null);
+    expect(hitTestHighlightRanges(crowded, 5, 5)).to.equal('many');
+  });
+
+  describe('fallback marks', () => {
+    let originalHighlight: unknown;
+
+    beforeEach(() => {
+      originalHighlight = (globalThis as unknown as { Highlight?: unknown }).Highlight;
+      (globalThis as unknown as { Highlight?: unknown }).Highlight = undefined;
+    });
+
+    afterEach(() => {
+      (globalThis as unknown as { Highlight?: unknown }).Highlight = originalHighlight;
+    });
+
+    it('carry the part an owner asks for on every painted state', () => {
+      const root = makeContent('<p>first second third</p>');
+      const handle = acquireHighlightHandle({}, document, { part: 'highlight' });
+      try {
+        handle.setRanges('success', [rangeOverText(root, 'first')]);
+        handle.setActive(rangeOverText(root, 'second'));
+        handle.flash(rangeOverText(root, 'third'));
+        const marks = [...root.querySelectorAll('mark')];
+        expect(marks.length).to.equal(3);
+        expect(marks.every((mark) => mark.getAttribute('part') === 'highlight')).to.equal(true);
+      } finally {
+        handle.release();
+        root.remove();
+      }
+    });
+
+    it('carry no part unless one is requested', () => {
+      const root = makeContent('<p>plain words</p>');
+      const handle = acquireHighlightHandle({}, document);
+      try {
+        handle.setRanges('accent', [rangeOverText(root, 'plain')]);
+        const marks = [...root.querySelectorAll('mark')];
+        expect([marks.length, marks[0]!.hasAttribute('part')]).to.deep.equal([1, false]);
+      } finally {
+        handle.release();
+        root.remove();
+      }
+    });
   });
 });

@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'دائیں گھمائیں',
   modelViewerRotateUp: 'اوپر گھمائیں',
   modelViewerRotateDown: 'نیچے گھمائیں',
+  modelViewerViewport: 'انٹرایکٹو ماڈل',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

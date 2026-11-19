@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'उजवीकडे फिरवा',
   modelViewerRotateUp: 'वर फिरवा',
   modelViewerRotateDown: 'खाली फिरवा',
+  modelViewerViewport: 'परस्परसंवादी मॉडेल',
 };
 
 registerLyraLocale('mr', strings);

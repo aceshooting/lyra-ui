@@ -1,5 +1,7 @@
+import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { guard } from 'lit/directives/guard.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -13,11 +15,8 @@ import {
   type LyraTextViewerTargetEventMap,
 } from '../../../internal/text-viewer-target.js';
 import {
-  isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
-  readResponseText,
-  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -38,7 +37,7 @@ import type {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The three structural container tags accepted by the GeoJSON bridge. */
@@ -488,6 +487,8 @@ type GeoJsonViewerState =
 
 export interface LyraGeoJsonViewerEventMap
   extends LyraTextViewerTargetEventMap {
+  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -507,6 +508,8 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * documents are retained across disconnect/reconnect while src is unchanged.
  *
  * @customElement lr-geojson-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-viewer-diagnostic - Reports a recoverable maplibre-gl failure while the fallback remains visible.
  * @event lr-render-error - Fetch, parse, shape-validation, or missing-map-capability failure.
  *   `detail: { error }`. A missing optional MapLibre peer leaves the serialized metadata fallback
  *   visible while reporting the degraded map capability.
@@ -546,6 +549,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
@@ -574,7 +578,17 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   @state() private mapReady = false;
   private mapCanvas: HTMLCanvasElement | null = null;
   private pendingFitBounds: GeoBounds | null = null;
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      if (this.src !== this.lastLoadSrc) return;
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.loadState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this), () => this.localize('geojsonViewInvalid')) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private lastLoadSrc = '';
   private registeredMap: LyraMap | null = null;
   private readonly announcements = new ViewerAnnouncementController(this);
@@ -654,7 +668,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   }
 
   override disconnectedCallback(): void {
-    this.generation++;
+    this.transport.cancel();
     if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
     this.registeredMap = null;
     if (this.loadState.kind !== 'loaded') this.loadState = { kind: 'idle' };
@@ -699,6 +713,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
+    if (this.isConnected && changed.has('loadState') && this.loadState.kind === 'loaded') this.emit('lr-load', {});
   }
 
   private fitLoadedData(): void {
@@ -723,83 +738,44 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   }
 
   private async load(): Promise<void> {
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
     this.lastLoadSrc = this.src;
     this.mapReady = false;
     this.mapCanvas = null;
-    if (!this.src) {
-      this.loadState = { kind: 'idle' };
-      return;
+    this.loadState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const text = await this.transport.readText(response, MAX_GEOJSON_SERIALIZED_UNITS);
+    if (this.transport.isStale(token)) return;
+    const parsed: unknown = JSON.parse(text);
+    const analysis = analyzeGeoJson(parsed);
+    const { center, zoom } = analysis.bounds
+      ? fitBboxToView(analysis.bounds)
+      : { center: [0, 0] as [number, number], zoom: 1 };
+    this.pendingFitBounds = analysis.bounds ?? null;
+    const maplibre = this.forceMissingMaplibreForTesting
+      ? null
+      : await loadMaplibre();
+    if (this.transport.isStale(token)) return;
+    if (!maplibre) {
+      await import('../../utility/json-viewer/json-viewer.js');
+      if (this.transport.isStale(token)) return;
     }
-    const src = this.src;
-    const fetchTarget = resolveOwnerFetchTarget(this, src);
-    if (!fetchTarget) {
-      const message = () => this.localize('documentPreviewUrlNotAllowed');
-      const error = new LyraUserFacingError(message());
-      this.loadState = { kind: 'error', message };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.loadState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(
-        fetchTarget.url,
-        signal ? { signal } : undefined
-      );
-      if (!this.isConnected || generation !== this.generation) return;
-      if (!response.ok)
-        throw new Error(`${response.status} ${response.statusText}`);
-      const text = await readResponseText(response, MAX_GEOJSON_SERIALIZED_UNITS);
-      if (!this.isConnected || generation !== this.generation) return;
-      const parsed: unknown = JSON.parse(text);
-      const analysis = analyzeGeoJson(parsed);
-      const { center, zoom } = analysis.bounds
-        ? fitBboxToView(analysis.bounds)
-        : { center: [0, 0] as [number, number], zoom: 1 };
-      this.pendingFitBounds = analysis.bounds ?? null;
-      const maplibre = this.forceMissingMaplibreForTesting
-        ? null
-        : await loadMaplibre();
-      if (!this.isConnected || generation !== this.generation) return;
-      if (!maplibre) {
-        await import('../../utility/json-viewer/json-viewer.js');
-        if (!this.isConnected || generation !== this.generation) return;
-      }
-      this.loadState = {
-        kind: 'loaded',
-        value: analysis.value,
-        metadata: analysis.metadata,
-        featureCount: analysis.featureCount,
-        center,
-        zoom,
-        peerAvailable: maplibre !== null,
-        dataLayers: Object.freeze([{ sourceId: 'lr-geojson', geojson: analysis.value as never }]),
-      };
-      if (!maplibre) {
-        this.emit('lr-render-error', {
-          error: new LyraUserFacingError(
-            this.localize('geojsonViewMissingMapLibrary')
-          ),
-        });
-      }
-    } catch (error) {
-      if (
-        !this.isConnected ||
-        generation !== this.generation ||
-        signal?.aborted ||
-        this.src !== src
-      ) return;
-      this.loadState = {
-        kind: 'error',
-        message: isResourceLimitError(error)
-          ? () => this.localize('documentPreviewResourceTooLarge')
-          : () => this.localize('geojsonViewInvalid'),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
+    this.loadState = {
+      kind: 'loaded',
+      value: analysis.value,
+      metadata: analysis.metadata,
+      featureCount: analysis.featureCount,
+      center,
+      zoom,
+      peerAvailable: maplibre !== null,
+      dataLayers: Object.freeze([{ sourceId: 'lr-geojson', geojson: analysis.value as never }]),
+    };
+    if (!maplibre) {
+      const error = new LyraUserFacingError(this.localize('geojsonViewMissingMapLibrary'));
+      this.emit('lr-viewer-diagnostic', { diagnostic: { code: 'geojson-map-unavailable', severity: 'warning', fatal: false, source: 'maplibre-gl', cause: error } });
+      if (!this.transport.isStale(token)) this.emit('lr-render-error', { error });
     }
   }
 

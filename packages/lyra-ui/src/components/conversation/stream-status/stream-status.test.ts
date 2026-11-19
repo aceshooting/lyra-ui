@@ -973,3 +973,16 @@ it('announces localized non-stall phase changes without firing stall or recovery
   }
   expect(stallEvents).to.equal(0);
 });
+
+it('applies the shared button radius and external resume part to the operable control', async () => {
+  const wrapper = await fixture(html`<div>
+    <style>.resume-theme::part(resume) { border-top-color: rgb(12, 34, 56); }</style>
+    <lr-stream-status class="resume-theme" style="--lr-button-radius: 13px" connection-state="interrupted" resumable></lr-stream-status>
+  </div>`);
+  const host = wrapper.querySelector('lr-stream-status')!;
+  await host.updateComplete;
+  const resume = host.shadowRoot!.querySelector<HTMLElement>('[part="resume"]')!;
+  const control = resume.shadowRoot?.querySelector('button') ?? resume;
+  const style = getComputedStyle(control);
+  expect([style.borderTopLeftRadius, style.borderTopColor]).to.deep.equal(['13px', 'rgb(12, 34, 56)']);
+});

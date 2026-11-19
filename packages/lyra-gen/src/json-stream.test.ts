@@ -77,3 +77,21 @@ test('a syntactically valid JSON document still needs active catalog and view va
   assert.equal(parseJsonView(source.replace('"text"', '"unknown"'), { catalog }).status, 'error');
   assert.equal(parseJsonView(source.replace('json-test', 'another-catalog'), { catalog }).status, 'error');
 });
+
+test('normalizes opted-in streams at finish and reports the source member', () => {
+  const roles: LyraGenCatalog = { ...catalog, components: { note: { tag: 'p', properties: { caption: { type: 'string' } } } } };
+  const input = JSON.stringify({ ...document, root: { id: 'note', type: 'note', text: 'Explanation' } });
+  assert.equal(parseJsonView(input, { catalog: roles }).status, 'error');
+  const stream = createJsonViewStream({ catalog: roles, normalize: true });
+  stream.push(input);
+  const result = stream.finish();
+  assert.equal(result.status, 'complete');
+  assert.deepEqual(result.view?.root.props, { caption: 'Explanation' });
+  assert.equal(result.diagnostics[0]?.path, '/root/text');
+});
+
+test('normalization preserves a canonical byte limit error after scanning a short exponent', () => {
+  const result = parseJsonView('1e11', { catalog, normalize: true, limits: { maxBytes: 4 } });
+  assert.equal(result.status, 'error');
+  assert.equal(result.diagnostics[0]?.code, 'limit.bytes');
+});

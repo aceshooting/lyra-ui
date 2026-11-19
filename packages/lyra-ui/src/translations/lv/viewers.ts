@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Pagriezt pa labi',
   modelViewerRotateUp: 'Pagriezt augšup',
   modelViewerRotateDown: 'Pagriezt lejup',
+  modelViewerViewport: 'Interaktīvs modelis',
 };
 
 registerLyraLocale('lv', strings);

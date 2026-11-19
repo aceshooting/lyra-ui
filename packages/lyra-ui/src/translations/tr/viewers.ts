@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Sağa döndür',
   modelViewerRotateUp: 'Yukarı döndür',
   modelViewerRotateDown: 'Aşağı döndür',
+  modelViewerViewport: 'Etkileşimli model',
 };
 
 registerLyraLocale('tr', strings);

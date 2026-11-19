@@ -33,3 +33,9 @@ export const EarlyAllDayDates: Story = {
     return html`<lr-calendar-viewer name="Historical calendar" src=${`data:text/calendar;charset=utf-8,${encodeURIComponent(calendar)}`}></lr-calendar-viewer>`;
   },
 };
+
+export const CollectionLimit: Story = {
+  args: { limit: 1 },
+  argTypes: { limit: { control: { type: 'number', min: 0, max: 2500 } } },
+  render: ({ limit }) => html`<lr-calendar-viewer max-events=${limit} src=${source}></lr-calendar-viewer>`,
+};

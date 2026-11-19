@@ -16,7 +16,7 @@ import {
   parseISO,
   resolveFirstDayOfWeek,
   weekdayLabels,
-} from '../../forms/date-picker/calendar-core.js';
+} from '../../../internal/calendar-core.js';
 import type { LyraDatePickerFirstDayOfWeek } from '../../forms/date-picker/date-picker.class.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';

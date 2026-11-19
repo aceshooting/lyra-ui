@@ -1,9 +1,9 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import type { PropertyValues, TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './mutation-observer.styles.js';
-import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
+import { ownerObserverConstructor, SlottedObserverController } from '../../../internal/slotted-observer.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -87,33 +87,54 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   })
   attributeFilter: string[] = [];
 
-  private observer?: MutationObserver;
-  private observerDocument?: Document;
-  private observerGeneration = 0;
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
-    // children, a virtualized list moving this same element instance) fires
-    // disconnectedCallback then connectedCallback synchronously with no
-    // update and no slotchange in between (the assigned-node set is
-    // unchanged by a pure reparent) -- so neither updated()'s
-    // property-change gate nor a fresh slotchange ever fires to re-arm
-    // observation. disconnectedCallback already tore the previous
-    // MutationObserver down, so resume it here on every reconnect after the
-    // very first (that initial case is already covered by the first
-    // render's own slotchange).
-    if (this.hasUpdated) this.scheduleAfterUpdate(this.observeTargets);
-  }
-
-  override disconnectedCallback(): void {
-    this.disconnect();
-    super.disconnectedCallback();
-  }
+  private readonly slotted = new SlottedObserverController<MutationObserver>(this, {
+    schedule: (rebuild) => this.scheduleAfterUpdate(rebuild),
+    // Records queued before a reconfiguration belong to the old options; deliver them first.
+    flush: (observer) => {
+      const pending = Object.freeze(observer.takeRecords());
+      return pending.length > 0 ? () => this.emit('lr-mutation', { records: pending, mutationList: pending }) : undefined;
+    },
+    configure: (ownerDocument) => {
+      const MutationObserverCtor = ownerObserverConstructor(ownerDocument, 'MutationObserver');
+      const disabled = this.disabled === true;
+      const childList = this.childList === true;
+      const attrValue = this.attr;
+      const attr = typeof attrValue === 'string' ? attrValue.trim() : null;
+      const attrTokens = (attr ?? '').split(/\s+/).filter(Boolean);
+      const mappedAttributes = attr === '*' || attrTokens.length > 0;
+      const attrOldValue = this.attrOldValue === true;
+      const charData = this.charData === true;
+      const charDataOldValue = this.charDataOldValue === true;
+      const subtree = this.withoutSubtree !== true;
+      const attributeFilter = attr === null ? normalizedAttributeFilter(this.attributeFilter) : Object.freeze([]);
+      const observesAttributes = mappedAttributes || attrOldValue || attributeFilter.length > 0;
+      const observesCharacterData = charData || charDataOldValue;
+      if (disabled || !MutationObserverCtor || (!childList && !observesAttributes && !observesCharacterData)) return undefined;
+      const options: MutationObserverInit = { childList, attributes: observesAttributes, characterData: observesCharacterData, subtree };
+      const mappedFilter = attr === '*' ? Object.freeze([]) : Object.freeze(attrTokens);
+      const effectiveFilter = attr === null ? attributeFilter : mappedFilter;
+      if (effectiveFilter.length > 0) options.attributeFilter = [...effectiveFilter];
+      if (attrOldValue && observesAttributes) options.attributeOldValue = true;
+      if (charDataOldValue && observesCharacterData) options.characterDataOldValue = true;
+      return {
+        create: (session) => new MutationObserverCtor((records) => {
+          if (!session.current()) return;
+          let mutationList: readonly MutationRecord[];
+          try {
+            mutationList = Object.freeze([...records]);
+          } catch {
+            return;
+          }
+          this.emit('lr-mutation', { records: mutationList, mutationList });
+        }),
+        observe: (observer, target) => observer.observe(target, options),
+      };
+    },
+  });
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.disconnect();
+    this.slotted.retire();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -130,126 +151,12 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
         'attributeFilter',
       ].some((key) => changed.has(key))
     ) {
-      this.scheduleAfterUpdate(this.observeTargets);
+      this.slotted.schedule();
     }
   }
-
-  private onSlotChange = (): void => this.observeTargets();
-
-  private disconnect(flush = false): void {
-    this.observerGeneration += 1;
-    const observer = this.observer;
-    let pending: readonly MutationRecord[] = [];
-    // Records queued before a reconfiguration belong to the old options; deliver them first.
-    if (flush && this.isConnected) {
-      try {
-        pending = Object.freeze(observer?.takeRecords() ?? []);
-      } catch {
-        pending = [];
-      }
-    }
-    // Clear the ownership fields before crossing a consumer-controlled observer boundary. A
-    // malformed implementation can throw while resolving or invoking disconnect(), but it must
-    // not retain a current observer through a later rebuild or reconnect.
-    this.observer = undefined;
-    this.observerDocument = undefined;
-    try {
-      disconnectObserver(observer);
-    } catch {
-      // Observer implementations are optional capabilities; teardown failures fail closed.
-    }
-    if (pending.length > 0) this.emit('lr-mutation', { records: pending, mutationList: pending });
-  }
-
-  private observeTargets = (): void => {
-    this.disconnect(true);
-    const ownerDocument = this.ownerDocument;
-    let MutationObserverCtor: typeof MutationObserver | undefined;
-    try {
-      MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    } catch {
-      // A configurable owner-window capability getter is also part of the optional boundary.
-      return;
-    }
-    const disabled = this.disabled === true;
-    const childList = this.childList === true;
-    const attrValue = this.attr;
-    const attr = typeof attrValue === 'string' ? attrValue.trim() : null;
-    const attrTokens = (attr ?? '').split(/\s+/).filter(Boolean);
-    const mappedAttributes = attr === '*' || attrTokens.length > 0;
-    const attrOldValue = this.attrOldValue === true;
-    const charData = this.charData === true;
-    const charDataOldValue = this.charDataOldValue === true;
-    const subtree = this.withoutSubtree !== true;
-    const attributeFilter = attr === null ? normalizedAttributeFilter(this.attributeFilter) : Object.freeze([]);
-    const observesAttributes =
-      mappedAttributes || attrOldValue || attributeFilter.length > 0;
-    const observesCharacterData = charData || charDataOldValue;
-    if (disabled || !this.isConnected || !MutationObserverCtor) return;
-    let targets: Element[];
-    try {
-      targets = slottedElementTargets(this.renderRoot);
-    } catch {
-      return;
-    }
-    if (targets.length === 0 || (!childList && !observesAttributes && !observesCharacterData)) return;
-    const options: MutationObserverInit = {
-      childList,
-      attributes: observesAttributes,
-      characterData: observesCharacterData,
-      subtree,
-    };
-    const mappedFilter = attr === '*' ? Object.freeze([]) : Object.freeze(attrTokens);
-    const effectiveFilter = attr === null ? attributeFilter : mappedFilter;
-    if (effectiveFilter.length > 0) options.attributeFilter = [...effectiveFilter];
-    if (attrOldValue && observesAttributes) options.attributeOldValue = true;
-    if (charDataOldValue && observesCharacterData) options.characterDataOldValue = true;
-    // One shared observer across every slotted target (mirrors <lr-intersection-observer>'s and
-    // <lr-resize-observer>'s identical single-instance pattern) rather than one instance per
-    // target -- MutationObserver natively supports observing multiple nodes and batches every
-    // mutation queued in the same microtask into a single callback invocation, so two targets
-    // mutated synchronously in the same script produce one coalesced `lr-mutation` event instead
-    // of one per target.
-    const generation = this.observerGeneration;
-    let observer: MutationObserver;
-    try {
-      observer = new MutationObserverCtor((records) => {
-        if (
-          this.observer !== observer ||
-          this.observerDocument !== ownerDocument ||
-          this.observerGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) {
-          return;
-        }
-        let mutationList: readonly MutationRecord[];
-        try {
-          mutationList = Object.freeze([...records]);
-        } catch {
-          return;
-        }
-        this.emit('lr-mutation', { records: mutationList, mutationList });
-      });
-    } catch {
-      return;
-    }
-    this.observer = observer;
-    this.observerDocument = ownerDocument;
-    let observed = false;
-    for (const target of targets) {
-      try {
-        observer.observe(target, options);
-        observed = true;
-      } catch {
-        // A rejected target cannot prevent a valid later slotted sibling from observing.
-      }
-    }
-    if (!observed) this.disconnect();
-  };
 
   override render(): TemplateResult {
-    return html`<span part="base"><slot @slotchange=${this.onSlotChange}></slot></span>`;
+    return this.slotted.renderSlot();
   }
 }
 

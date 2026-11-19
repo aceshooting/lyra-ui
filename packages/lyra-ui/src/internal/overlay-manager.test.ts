@@ -1,7 +1,7 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer } from '../../test/wtr-focus.js';
-import { resolveAccessibleTrigger } from './a11y.js';
+import { resolveAccessibleTrigger } from './accessible-trigger.js';
 import { acquireAnnouncementSink } from './announcer.js';
 import {
   activateOverlay,

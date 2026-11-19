@@ -2184,10 +2184,6 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
 
 ## `lr-tour`
 
-`lr-tour-step-activate` fires after a changed step index renders. Its detail contains `previousIndex`, `index`,
-`step` and `via` (`next`, `back`, `goto` or `api` for a direct write). A vetoed move emits no activation.
-If a target mounts while its step is already open, assign `tour.steps = [...tour.steps]` to resolve it again.
-
 A spotlight-and-step guided walkthrough for first-run onboarding: each step anchors a popover to a
 target element elsewhere in the page via the shared Floating UI positioner, over a dimmed
 full-viewport backdrop with a cutout/ring around the current target, with Next/Previous/Skip
@@ -2243,7 +2239,8 @@ and capped at 10,000px. Provider mutation after assignment cannot change renderi
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
 `skip()` (sugar for `end('skip')`), `end(reason: LyraTourEndReason = 'api')`.
 
-**Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
+**Events:** `lr-tour-step-activate` fires after a changed step index renders. It carries `{ previousIndex, index, step, via }`. The source is `next`, `back`, `goto` or `api` for a direct write;
+`lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-request`
@@ -2254,7 +2251,7 @@ departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-r
 request; the host can use `lr-tour-end` to clear its own open state. Migrate old raw-detail reads to
 `detail.reason` and move end vetoes to `lr-tour-end-request`.
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
-it renders that step viewport-centered with no spotlight).
+it renders that step viewport-centered with no spotlight). If a target mounts while its step is already open, reassign the steps to resolve it.
 
 **Slots:** default — rich content replacing the active step's plain-text `content`. Not scoped per
 step: a consumer needing different rich content per step swaps the slotted children itself (e.g. on

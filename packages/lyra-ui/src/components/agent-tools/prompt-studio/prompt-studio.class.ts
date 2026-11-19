@@ -324,9 +324,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     if (this.changeRequestPending || this.disabled) return false;
     const previousMessages = this.messages;
     const previousVariables = this.variables;
-    // The proposal is a snapshot, mirroring requestMessageMove()'s identical cancelable-veto
-    // pattern below: a listener may hold, persist, or alter its own copy without mutating the
-    // component's accepted next state behind the veto point.
+    // A listener may mutate or retain its proposal without changing the accepted state.
     const proposal: PromptStudioState = {
       messages: [...messages],
       variables: [...this.variableItems(variables)],
@@ -422,8 +420,6 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const [moved] = nextMessages.splice(fromIndex, 1);
     if (!moved) return;
     nextMessages.splice(toIndex, 0, moved);
-    // Each proposal is its own snapshot: a listener may hold, persist, or alter its copy without
-    // mutating the component's accepted next state behind the cancelable veto point.
     const proposal = (): PromptStudioMessageReorderDetail => ({
       messages: nextMessages.map((message) => ({ ...message })),
       messageId,
@@ -570,9 +566,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     return (this.previewResult = previews);
   }
 
-  // Native focus/blur events don't bubble and don't cross the shadow boundary on their own, so
-  // the message textarea and variable inputs need an explicit bridge to make host-level
-  // `addEventListener('focus' | 'blur', ...)` observe real focus/blur at all.
+  // Relay native focus and blur so host listeners observe the internal fields.
   private onFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
   private onBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 

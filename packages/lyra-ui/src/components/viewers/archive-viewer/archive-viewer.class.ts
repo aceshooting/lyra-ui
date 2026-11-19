@@ -1,5 +1,6 @@
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { tag } from '../../../internal/prefix.js';
@@ -7,8 +8,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
-import { isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import {
   buildQuoteAnchor,
   createTextQuoteIndex,
@@ -16,7 +16,7 @@ import {
   TEXT_QUOTE_LIMITS,
   type TextQuoteWorkBudget,
 } from '../../../internal/text-quote.js';
-import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/file-size.js';
+import { formatLocalizedFileSize } from '../../../internal/bytes.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
@@ -29,20 +29,21 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
 type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: () => string };
-export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-load': CustomEvent<Record<string, never>>;
+  'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 const MAX_ARCHIVE_ENTRIES = 10_000;
 // The listing never inflates, so a declared expanded size is not a resource.
 const MAX_ARCHIVE_UNCOMPRESSED_BYTES = Number.POSITIVE_INFINITY;
 class LyraArchiveViewerBase extends LyraElement<LyraArchiveViewerEventMap> {}
-const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
+const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase, 'highlight');
 
 /** Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents
  * or loading an archive parser. One owned central-directory parser is the listing and validation
@@ -60,6 +61,7 @@ const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
  * selections and painted highlights are likewise scoped to entry paths in the nested virtual list.
  *
  * @customElement lr-archive-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing the archive fails.
  * @event lr-search-change - Fired when archive-path search state or its active match changes,
  *   including source-reset and effective-locale re-evaluation.
@@ -120,10 +122,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -181,7 +181,16 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   @state() private archiveSearchMatches: ArchiveEntry[] = [];
   @state() private archiveSearchActiveIndex = -1;
   private archiveSearchMatchCountExact = true;
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private archiveSearchQuery = '';
   private lastSearchLocale = '';
   private pendingSearchResetEvent = false;
@@ -238,9 +247,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         }, 'search');
       }
     }
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
-  private readonly detached = new DeferredTeardown(() => { this.generation++; });
+  private readonly detached = new DeferredTeardown(() => this.transport.cancel());
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -250,7 +260,6 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   }
 
   override disconnectedCallback(): void {
-    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -277,7 +286,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     if (this.fetchState.kind !== 'loaded') return false;
     // Captured before any await so the post-wait checks below can tell a completed jump apart from
     // one whose archive was replaced underneath it by a concurrent `src` reassignment.
-    const loadGeneration = this.generation;
+    const loadGeneration = this.transport.generation;
     let index = -1;
     let resolvedName: string | undefined;
     if (anchor.kind === 'fragment') {
@@ -314,7 +323,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     // resolved from the previous archive address nothing in the one now rendered. Reporting
     // success here would stop the shared retry loop and fire `lr-anchor-result: { found: true }`
     // for a row that was never located, let alone scrolled to.
-    if (loadGeneration !== this.generation || this.fetchState.kind !== 'loaded') return false;
+    if (loadGeneration !== this.transport.generation || this.fetchState.kind !== 'loaded') return false;
     if (anchor.kind === 'fragment') {
       // Resolved entirely here rather than delegating to the shared base's own fragment handling:
       // that generic path finds its target by DOM `id === anchor.id`, and `anchor.id` is this
@@ -358,56 +367,27 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return buildQuoteAnchor(range, scopeFromElement(start));
   }
 
-  private async load(): Promise<void> {
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(
-        this.localize('documentPreviewUrlNotAllowed')
-      );
-      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const buffer = await readResponseArrayBuffer(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      // The local-file signature must be byte zero; an appended valid ZIP must not turn an
-      // arbitrary prefix into an accepted archive. The returned immutable metadata is also the
-      // listing authority, so the validated entry graph cannot diverge from a peer parser's view.
-      const metadata = assertZipArchiveMetadataWithinLimits(buffer, {
-        description: 'ZIP',
-        maxEntries: MAX_ARCHIVE_ENTRIES,
-        maxUncompressedBytes: MAX_ARCHIVE_UNCOMPRESSED_BYTES,
-        signal,
-      });
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const entries = metadata!.entries.map(({ name, dir, uncompressedBytes }) => ({
-        name,
-        dir,
-        size: uncompressedBytes,
-      }));
-      this.fetchState = { kind: 'loaded', entries };
-      if (this.archiveSearchQuery) this.recomputeArchiveSearch();
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = {
-        kind: 'error',
-        message: isResourceLimitError(error)
-          ? () => this.localize('documentPreviewResourceTooLarge')
-          : () => this.localize('documentPreviewFailedToLoad'),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-    }
+  private load(): Promise<void> {
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    return this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const buffer = await this.transport.readArrayBuffer(response);
+    if (this.transport.isStale(token)) return;
+    const metadata = assertZipArchiveMetadataWithinLimits(buffer, {
+      description: 'ZIP',
+      maxEntries: MAX_ARCHIVE_ENTRIES,
+      maxUncompressedBytes: MAX_ARCHIVE_UNCOMPRESSED_BYTES,
+      signal: token.signal,
+    });
+    const entries = metadata!.entries.map(({ name, dir, uncompressedBytes }) => ({
+      name,
+      dir,
+      size: uncompressedBytes,
+    }));
+    this.fetchState = { kind: 'loaded', entries };
+    if (this.archiveSearchQuery) this.recomputeArchiveSearch();
   }
 
   private renderEntry = (item: unknown): TemplateResult => {
@@ -417,14 +397,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     // DOM id (the canonical DOM-clobbering primitive). applyAnchor() resolves a fragment anchor
     // by matching entry.name against the loaded DATA and then, for the exact scroll target,
     // against rendered text content -- never against a DOM id -- so no id was ever needed here.
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
-      entry.size,
-      (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-      (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
-      }).format(value),
-    )}</span>`}</div>`;
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatLocalizedFileSize(entry.size, this.effectiveLocale, key => this.localize(key))}</span>`}</div>`;
   };
 
   private stopVirtualListEvent(event: Event): void {
@@ -454,7 +427,6 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   /** Keeps nested-list highlight styling in sync with the text content root. */
   private syncArchiveNestedRoot(): void {
-    const root = this.textContentRoot();
     const listRoot = this.archiveVirtualList()?.shadowRoot ?? null;
     if (listRoot && listRoot !== this.styledVirtualListRoot) {
       const existing = listRoot.querySelector('style[data-lr-archive-highlight-styles]');
@@ -468,11 +440,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         this.styledVirtualListRoot = listRoot;
       }
     }
-    if (root) {
-      for (const mark of root.querySelectorAll('mark[data-lr-highlight-tone]')) {
-        if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
-      }
-    }
+
   }
 
   private recomputeArchiveSearch(): void {

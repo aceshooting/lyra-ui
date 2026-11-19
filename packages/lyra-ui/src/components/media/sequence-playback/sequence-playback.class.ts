@@ -95,6 +95,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   @property({ type: Number, attribute: 'interval-ms' }) intervalMs = DEFAULT_INTERVAL_MS;
 
   /** Second spelling of `intervalMs`, matching `lr-carousel`'s `autoplay-interval`. */
+  // numeric-guard-exempt: alias accessor over intervalMs, which scheduleTick() normalizes with finiteDuration()
   @property({ type: Number, attribute: 'autoplay-interval', noAccessor: true })
   get autoplayInterval(): number {
     return this.intervalMs;

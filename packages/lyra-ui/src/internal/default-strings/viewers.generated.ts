@@ -95,6 +95,7 @@ export const LYRA_DEFAULT_modelViewerRotateLeft: LyraMessage = 'Rotate left';
 export const LYRA_DEFAULT_modelViewerRotateRight: LyraMessage = 'Rotate right';
 export const LYRA_DEFAULT_modelViewerRotateUp: LyraMessage = 'Rotate up';
 export const LYRA_DEFAULT_modelViewerUnsupportedFormat: LyraMessage = 'This model format is not supported.';
+export const LYRA_DEFAULT_modelViewerViewport: LyraMessage = 'Interactive model';
 export const LYRA_DEFAULT_notebookViewerCodeCell: LyraMessage = 'Code cell {index}';
 export const LYRA_DEFAULT_notebookViewerCollapseOutput: LyraMessage = 'Collapse output';
 export const LYRA_DEFAULT_notebookViewerErrorOutput: LyraMessage = 'Error';

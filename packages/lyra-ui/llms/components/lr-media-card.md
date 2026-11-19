@@ -83,8 +83,6 @@ and later MIME values restore detection.
 `LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
-When an image or video fails to load, `media-error` displays a localized message and
-`lr-render-error` reports `{ error: Error }`. Selecting another source retries playback or display.
 A media card’s `lr-media-open` detail uses `filename` and `src`, corresponding to `name` and `src`
 on an attachment chip’s `lr-preview-request`.
 
@@ -96,6 +94,8 @@ cancelable only for a safe file anchor immediately before its native download/op
 `preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
+`lr-render-error` carries `detail: { error: Error }` when an image or video fails to load. The card
+displays a localized message in `media-error` and retries when `src` changes.
 Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
 composed `FocusEvent`s whose target is the `lr-media-card` host.
 

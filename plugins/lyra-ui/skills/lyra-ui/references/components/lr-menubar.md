@@ -78,7 +78,7 @@ menubar or an ancestor and apply to every slotted menu.
 
 The `lr-menubar-item` styling hooks include `--lr-menubar-item-hover-color`, `--lr-menubar-item-active-color`.
 
-The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `menuOpen` for the current state.
+**Events:** `lr-show` and `lr-hide` fire after the item’s assigned menu changes state. Read `menuOpen` for the current state.
 
 **Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
 and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not

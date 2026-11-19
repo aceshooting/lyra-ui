@@ -1,5 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -22,10 +22,12 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import type { AgentRunActivateDetail } from '../run-events.js';
 import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { InputLimitAnnouncement } from '../../../internal/input-limit-announcement.js';
+import { RovingListController } from '../../../internal/roving-list-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardMetricUnavailable, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
@@ -98,11 +100,8 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
   };
@@ -114,25 +113,26 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
 
   static override styles = [LyraElement.styles, styles];
 
-  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
-  private limitAnnouncementInitialized = false;
-  private previouslyTruncated = false;
+  private readonly runFocus = new RovingListController(this, {
+    items: () => [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="run"]')],
+  });
+
   private projectedRunsTruncated = false;
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  constructor() {
+    super();
+    new InputLimitAnnouncement(this, {
+      limited: () => this.projectedRunsTruncated,
+      announce: () => this.limitAnnouncements.announcePolite(this.localize('ragEvalDashboardRunsLimit', undefined, {
+        count: this.formatLocaleNumber(Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500))),
+      })),
+    });
+  }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.limitAnnouncements.adopted();
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (this.limitAnnouncementInitialized && this.projectedRunsTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncements.announcePolite(this.localize('ragEvalDashboardRunsLimit', undefined, {
-        count: getNumberFormat(this.effectiveLocale).format(Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500))),
-      }));
-    }
-    this.limitAnnouncementInitialized = true;
-    this.previouslyTruncated = this.projectedRunsTruncated;
   }
 
   /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */
@@ -199,7 +199,6 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   }
   private formatMetric(metric: AgentEvaluationMetric, value = metric.value): string {
     const safe = Number.isFinite(value) ? value : 0;
-    // A small nonzero value keeps two significant digits instead of rounding to zero.
     const tiny = safe !== 0 && Math.abs(safe) < 0.01;
     const digits = (fractionDigits: number): Intl.NumberFormatOptions =>
       tiny ? { maximumSignificantDigits: 2 } : { maximumFractionDigits: fractionDigits };
@@ -236,7 +235,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     const active = this.activeMetric;
     const level = resolveHeadingLevel(this.headingLevel ?? '2');
     const runsLevel = level && String(Math.min(6, Number(level) + 1));
-    return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')}><div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('evaluationDashboardRunsLabel')}</div>${repeat(runs, (run) => run.id, (run) => {
+    return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')} @keydown=${this.runFocus.onKeyDown}><div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('evaluationDashboardRunsLabel')}</div>${repeat(runs, (run) => run.id, (run) => {
       const kind = agentStatusKind(run.status);
       const message = agentStatusMessage(run.status);
       return html`<button part="run" type="button" @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${agentStatusVariant(run.status, ((Object.prototype.hasOwnProperty.call(AGENT_STATUS_VARIANTS, kind) ? AGENT_STATUS_VARIANTS[kind] : undefined) ?? 'neutral'))}>${this.statusLabel(run.status)}</lr-badge>${message !== undefined ? html`<span part="run-status-message">${message}</span>` : nothing}${active && ownMetricValue(run, active.id) !== undefined ? html`<span>${this.formatMetric(active, ownMetricValue(run, active.id))}</span>` : nothing}</span></button>`;
@@ -277,7 +276,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
       ${this.renderRuns(runs)}
       ${this.projectedRunsTruncated
         ? html`<p part="limit" role="note">${this.localize('ragEvalDashboardRunsLimit', undefined, {
-            count: getNumberFormat(this.effectiveLocale).format(runs.length),
+            count: this.formatLocaleNumber(runs.length),
           })}</p>`
         : nothing}
     </section>`;

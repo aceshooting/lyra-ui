@@ -1003,10 +1003,6 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     e.stopPropagation();
   };
 
-  // Native blur/focus neither bubble nor cross the shadow boundary, so a host
-  // listener on <lr-tool-param-form> itself never hears them without this --
-  // mirrors <lr-tool-approval-dialog>'s/<lr-tool-select-dialog>'s identical
-  // native-input focus/blur bridge.
   private onFieldFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
   };

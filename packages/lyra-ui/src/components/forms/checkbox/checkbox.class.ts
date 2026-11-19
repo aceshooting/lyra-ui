@@ -6,8 +6,7 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
-import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
+import { CheckedControlLabelController } from '../../../internal/checked-control-label.js';
 import { tag } from '../../../internal/prefix.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -18,7 +17,6 @@ import { styles } from './checkbox.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
-import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { CheckedFormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
@@ -260,21 +258,11 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   /** Error text associated with the inner checkbox; custom markup can use the `error` slot. */
   @property({ attribute: 'error-text' }) errorText = '';
-  // Visual-only mixed state, matching native `<input type="checkbox">`
-  // semantics: it does not affect `checked`'s own value, and a user
-  // interaction (click/keyboard) clears it back to `false`, exactly like the
-  // native control does.
-  // Tracks whether the default slot carries any real (non-whitespace)
-  // content, so the label wrapper — and the gap next to the box — can
-  // collapse to nothing for an icon-only/aria-label-only checkbox instead of
-  // leaving a stray empty gap. See lr-switch's identical field for why
-  // `assignedNodes` (not `assignedElements`) is checked — the common case is
-  // a bare slotted text label, e.g. `<lr-checkbox>Accept terms</lr-checkbox>`.
   @state() private hasLabelSlot = false;
   private readonly slotPresence = new SlotPresenceController(this);
-  private readonly labelTextObserver = new AccessibleTextController(
-    this, [], () => this.recomputeHasLabelSlot(), ['slot'],
-  );
+  private readonly labelController = new CheckedControlLabelController(this, {
+    changed: present => { this.hasLabelSlot = present; },
+  });
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   // Tracked separately from `_fieldsetDisabled` -- driven by an owning
   // `<lr-checkbox-group>` propagating its own effective (explicit-or-
@@ -379,34 +367,18 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
-    this.addEventListener('slotchange', this.onLabelSlotChange);
-    if (this.hasUpdated) {
-      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
-      this.recomputeHasLabelSlot();
-    } else {
-      // Browser-only mounts still seed before their first paint. During hydration the base helper
-      // defers this browser-only light-DOM sample until the server render has been reproduced.
-      this.seedFirstRenderState(() => {
-        this.recomputeHasLabelSlot();
-      });
-    }
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.labelTextObserver.adopted();
+    this.labelController.adopted();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
   }
 
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
-    this.removeEventListener('slotchange', this.onLabelSlotChange);
     super.disconnectedCallback();
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed); // keeps a future LyraElement/mixin lifecycle hook wired in
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -510,62 +482,8 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
     }
   };
 
-  private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
-
-  private handleLabelSlotChange(event: Event): void {
-    const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    if (
-      target.getRootNode() !== this.renderRoot &&
-      !defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)
-    ) return;
-    this.labelTextObserver.bind();
-    this.recomputeHasLabelSlot();
-  }
-
-  private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
-
-  private recomputeHasLabelSlot(): void {
-    const renderRoot = this.renderRoot as ParentNode | undefined;
-    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    if (!renderRoot || !childNodes) return;
-    const slot = renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
-    const nodes: Node[] = slot
-      ? slot.assignedNodes({ flatten: true })
-      : Array.from(childNodes)
-          .filter((node) => isDefaultLabelNode(node))
-          .flatMap((node) => {
-            if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
-            const forwardingSlot = node as HTMLSlotElement;
-            return forwardingSlot.assignedNodes().length > 0
-              ? forwardingSlot.assignedNodes({ flatten: true })
-              : Array.from(forwardingSlot.childNodes);
-          });
-    this.hasLabelSlot = hasRealContent(nodes);
-  }
-
   private onBlur = (event: FocusEvent): void => {
-    // This control has no native disableable form control to force-blur (its focus target is a
-    // plain `role="checkbox"` span whose own `tabindex` alone would not do it), but the HOST is a
-    // form-associated custom element (`static formAssociated = true` + `attachInternals()`), and
-    // the browser applies its own "actually disabled" concept to those automatically -- confirmed
-    // empirically: setting the host's `disabled` content attribute, *and* an ancestor `<fieldset>`
-    // disabling it (even through an intermediate, itself-enabled fieldset), both force-blur a
-    // focused descendant inside the shadow tree, exactly like a native disableable control
-    // force-blurs itself (originally found in `<lr-input>`'s onBlur).
-    // That blur is a platform reaction, not a user interaction, and would otherwise leave the
-    // control primed to show as touched/user-invalid the instant it is re-enabled, or -- depending
-    // on exactly when in an in-flight update it lands -- risk reentering that update and tripping
-    // Lit's dev-mode "scheduled an update after an update completed" warning, all for a state flip
-    // nothing observable needed since a disabled control is barred from validation regardless.
-    //
-    // `effectiveDisabled` alone is not a reliable enough guard here: for the fieldset path the
-    // browser force-blurs the focused descendant BEFORE calling `formDisabledCallback()`
-    // (confirmed empirically), so `_fieldsetDisabled` -- and therefore `effectiveDisabled` --
-    // still reads stale/false at this exact instant. `:disabled` CSS matching for a
-    // form-associated custom element tracks the platform's own "actually disabled" concept
-    // directly (the same concept that triggers the forced blur in the first place) and is already
-    // correct by this point for both paths, so it is checked as well.
+    // Disabling a focused control can force blur before its next render.
     if (!this.liveDisabled) {
       this.setInteracted(true);
     }
@@ -618,7 +536,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
             </span>
           </span>
           <span id="checkbox-label" part="label" ?hidden=${!this.hasLabelSlot}>
-            <slot @slotchange=${this.onSlotChange}></slot>
+            <slot @slotchange=${this.labelController.onSlotChange}></slot>
           </span>
         </span>
         ${renderFormControlHintError({

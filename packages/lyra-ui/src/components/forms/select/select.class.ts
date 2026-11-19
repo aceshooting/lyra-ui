@@ -42,10 +42,19 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
-import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
+import {
+  OccurrenceQueue,
+  OptionAdornmentCache,
+  OptionCatalogMemo,
+  SelectedWriteQueue,
+  resolveMultipleSelectedWrites,
+  resolveOccurrences,
+  resolveSingleSelectedWrite,
+} from '../../../internal/option-catalog-host.js';
+import { PopupController, emitPopupEvent, outsidePressHandler } from '../../../internal/popup-controller.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
-import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isCatalogOptionAvailable, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -212,7 +221,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * matching the WAI-ARIA "select-only combobox" pattern.
  *
  * When `autoCommitSingleOption` is set and exactly one option is available
- * (neither disabled nor inert, including through an inert ancestor), the popup never
+ * (excluding disabled, hidden, inert and `aria-disabled="true"` options), the popup never
  * opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger
  * commits that sole option directly, and the trigger renders as a plain
  * `role="button"` with no chevron/`aria-haspopup`/`aria-expanded` rather than
@@ -762,28 +771,25 @@ export class LyraSelect<
     if (args[0] === undefined) this.callbackRefreshEpoch = (this.callbackRefreshEpoch ?? 0) + 1;
     super.requestUpdate(...args);
   }
-  private optionMemo = new Map<string, { inputs: readonly unknown[]; value: unknown }>();
-  private memoOption<T>(key: string, inputs: readonly unknown[], compute: () => T): T {
-    const previous = this.optionMemo.get(key);
-    if (previous && previous.inputs.length === inputs.length && previous.inputs.every((input, index) => Object.is(input, inputs[index]))) return previous.value as T;
-    const value = compute(); this.optionMemo.set(key, { inputs, value }); return value;
-  }
+  private readonly memo = new OptionCatalogMemo();
+  private readonly adornments = new OptionAdornmentCache<LyraOption>();
+
   private get selectedLabels(): string {
-    return this.memoOption('selectedLabels', [
+    return this.memo.get('selectedLabels', [
       this._selected, this.options, this._selectedOptions, this.optionsObserved,
       this.getUnknownLabel, this.loading, this.effectiveLocale, this.strings, this.callbackRefreshEpoch,
     ], () => getListFormat(this.effectiveLocale, { type: 'unit' }).format(this._selected.map((value, index) => this.labelFor(value, index))));
   }
 
   private get optionIndex() {
-    return this.memoOption('index', [this.options], () => {
+    return this.memo.get('index', [this.options], () => {
       const values = new Map<string, LyraOption>(); const positions = new Map<LyraOption, number>();
       this.options.forEach((option, index) => { positions.set(option, index); if (!values.has(option.value)) values.set(option.value, option); });
       return { values, positions, members: new Set(this.options) };
     });
   }
   private get selectedIndex() {
-    return this.memoOption('selectedIndex', [this._selectedOptions, this.options], () => {
+    return this.memo.get('selectedIndex', [this._selectedOptions, this.options], () => {
       const values = new Map<string, LyraOption>();
       for (const option of this._selectedOptions) if (!values.has(option.value)) values.set(option.value, option);
       return { values, members: new Set(this._selectedOptions) };
@@ -830,7 +836,13 @@ export class LyraSelect<
     host: this,
     popup: () => this.renderRoot.querySelector('[part="listbox"]'),
     emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
-    onPointer: (event) => this.onDocPointer(event),
+    onPointer: outsidePressHandler(this, {
+      overlay: () => this.overlayHandle,
+      dismiss: () => {
+        this.restoreFocusOnClose = false;
+        void this.hide();
+      },
+    }),
   });
   @state() private listboxHidden = true;
   /** Rows mount on first open, so a closed picker with hundreds of options stays cheap. */
@@ -856,10 +868,6 @@ export class LyraSelect<
   // Preserve the value an occurrence owned at commit time. An option's value may change before
   // its next synchronous selected write, while the committed value list still holds the old text.
   private _selectedValuesByOption = new Map<LyraOption, string>();
-  /** Cloned `start`/`end` adornment nodes for each option's listbox row, keyed by the option they
-   *  came from. Cached because `renderRows()` runs on every render pass -- mirrors lr-combobox's
-   *  identical cache; see `adornmentsFor()`. */
-  private adornmentClones = new WeakMap<LyraOption, { start?: unknown; end?: unknown; markup: string }>();
   private _multiple = false;
   private _disabled = false;
   private _required = false;
@@ -1317,7 +1325,7 @@ export class LyraSelect<
     next: string[],
     preferred: Array<LyraOption | undefined> = []
   ): void {
-    this.pendingSelectedWrites.clear();
+    this.selectedWrites.clear();
     markVetoGuardWrite(this.selectionWriteGuard);
     // Multiple-selection identity is occurrence-based. Preserve duplicate strings so two distinct
     // same-valued options survive through value, tags, restoration and FormData.
@@ -1378,38 +1386,21 @@ export class LyraSelect<
     const requested = new Set(values);
     const catalog = new Set(this.options);
     const claimed = new Set<LyraOption>();
-    type OccurrenceQueue = { options: LyraOption[]; next: number };
-    const queuesFor = (options: readonly (LyraOption | undefined)[]): Map<string, OccurrenceQueue> => {
-      const queues = new Map<string, OccurrenceQueue>();
-      for (const option of options) {
-        if (!option) continue;
-        const value = option.value;
-        if (!requested.has(value)) continue;
-        let queue = queues.get(value);
-        if (!queue) queues.set(value, (queue = { options: [], next: 0 }));
-        queue.options.push(option);
-      }
-      return queues;
-    };
-    const firstUnclaimed = (queues: Map<string, OccurrenceQueue>, value: string): LyraOption | undefined => {
-      const queue = queues.get(value);
-      if (!queue) return undefined;
-      while (queue.next < queue.options.length && claimed.has(queue.options[queue.next]!)) queue.next++;
-      return queue.options[queue.next];
-    };
-    const preferredQueues = preferred.length === values.length ? undefined : queuesFor(preferred);
-    let fallbackQueues: Map<string, OccurrenceQueue> | undefined;
+    const queue = (options: readonly (LyraOption | undefined)[]) =>
+      new OccurrenceQueue(options, option => option.value, { accept: value => requested.has(value), claimed });
+    const preferredQueue = preferred.length === values.length ? undefined : queue(preferred);
+    let fallbackQueue: OccurrenceQueue<LyraOption> | undefined;
     return values.map((value, index) => {
       // A detached, unclaimed hint still wins the preferred search and then fails membership,
       // falling back to source order. Do not discard it to expose a later preferred occurrence.
-      const hint = preferredQueues ? firstUnclaimed(preferredQueues, value) : preferred[index];
+      const hint = preferredQueue ? preferredQueue.peek(value) : preferred[index];
       const match =
         hint &&
         hint.value === value &&
         catalog.has(hint) &&
         !claimed.has(hint)
           ? hint
-          : firstUnclaimed(fallbackQueues ??= queuesFor(this.options), value);
+          : (fallbackQueue ??= queue(this.options)).peek(value);
       if (!match) return undefined;
       claimed.add(match);
       return match;
@@ -1590,7 +1581,7 @@ export class LyraSelect<
   }
 
   override disconnectedCallback(): void {
-    this.pendingSelectedWrites.clear();
+    this.selectedWrites.clear();
     markVetoGuardWrite(this.selectionWriteGuard);
     this.listboxHidden = true;
     this.releaseExternalDescription();
@@ -1649,9 +1640,7 @@ export class LyraSelect<
       .assignedElements({ flatten: true })
       .filter(isLyraOptionElement);
     this.optionsObserved = true;
-    // The option set (or an option's own adornment children) may have changed wholesale; re-clone
-    // lazily on the next render rather than serving a stale adornment -- mirrors lr-combobox.
-    this.adornmentClones = new WeakMap();
+    this.adornments.clear();
     this.reconcileActiveOption(previousActive, previousActiveRawIndex);
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
@@ -1798,9 +1787,8 @@ export class LyraSelect<
     this._selectedValuesByOption = new Map(
       this._selectedOptions.map((option) => [option, option.value])
     );
-    const chosen = new Set(this._selectedOptions);
     for (const option of this.options) {
-      option[SET_OPTION_SELECTED_FROM_OWNER](chosen.has(option));
+      option[SET_OPTION_SELECTED_FROM_OWNER](this._selectedValuesByOption.has(option));
     }
   }
 
@@ -1889,22 +1877,8 @@ export class LyraSelect<
     return navigable.length === 1 ? navigable[0] : undefined;
   }
 
-  /**
-   * The options arrow keys, type-ahead and the active-descendant index may land on. `inert` counts
-   * alongside `disabled` for the same reason it does in `<lr-menu>`'s `isNavigable()`: an inert
-   * element refuses interaction outright, so an active index pointing at one describes a row the
-   * user can neither reach nor commit. `closest('[inert]')` covers an inert ancestor, which inerts
-   * the option just as completely as the attribute on the option itself. The severity is lower here
-   * than in a menu -- this listbox keeps DOM focus on the trigger and moves only
-   * `aria-activedescendant` -- but the predicate has to agree across all four call sites or the
-   * rendered `data-active` row and the committed option can disagree.
-   */
-  private isOptionAvailable(option: LyraOption): boolean {
-    return !option.disabled && !option.inert && !option.closest('[inert]');
-  }
-
   private navigableOptions(options: readonly LyraOption[] = this.listboxOptions): LyraOption[] {
-    return this.memoOption('navigable', [options], () => options.filter((option) => this.isOptionAvailable(option)));
+    return this.memo.get('navigable', [options], () => options.filter((option) => isCatalogOptionAvailable(option, this)));
   }
 
   /**
@@ -1954,7 +1928,7 @@ export class LyraSelect<
   /** The option set the listbox renders and navigates: the authored options plus any synthetic
    *  unmatched-value rows. */
   private get optionWindow(): { rows: readonly LyraOption[]; overflow: number } {
-    return this.memoOption('window', [this.callbackRefreshEpoch, this.options, this._selected, this._selectedOptions, this.activeOption,
+    return this.memo.get('window', [this.callbackRefreshEpoch, this.options, this._selected, this._selectedOptions, this.activeOption,
       this.maxRender, this.withUnknownOption, this.loading, this.optionsObserved, this.getUnknownLabel, this.effectiveLocale, this.strings], () => {
       const unknown = this.unknownOptions;
       const all = unknown.length ? [...this.options, ...unknown] : this.options;
@@ -2022,60 +1996,21 @@ export class LyraSelect<
     this.setActiveIndex(nearestIndex, navigable);
   }
 
-  // Fired by `option.ts`'s `lr-option-change` (a MutationObserver on the
-  // option's own light-DOM content/attributes) when an already-slotted
-  // `<lr-option>` mutates its own data in place -- `collectOptions()` only
-  // re-runs on `slotchange`, which never fires for such a mutation, so
-  // without this the rendered listbox row would go stale. Reassigning (not
-  // mutating) `options` gives Lit a new array reference to diff against.
-  //
-  // The notification is sealed here rather than allowed to keep bubbling: it
-  // is a private child-to-parent refresh signal, not part of this component's
-  // event contract, and it carries the *option's* target/detail rather than
-  // the select's. Left uncontained it escapes the host and reaches consumer
-  // code as an undocumented, undiscoverable event; a consumer who needs to
-  // know the value moved already has `lr-change`/`lr-input`. A listener bound
-  // directly to the `<lr-option>` still sees it -- the option is the event
-  // target, and the target's own listeners run before this slot listener.
-  private pendingSelectedWrites = new Map<LyraOption, { selected: boolean; value: string }>();
-  private selectedWritesQueued = false;
-
-  private flushSelectedWrites(): void {
-    this.selectedWritesQueued = false;
-    const writes = [...this.pendingSelectedWrites];
-    this.pendingSelectedWrites.clear();
-    if (!this.isConnected || writes.length === 0) return;
+  private readonly selectedWrites = new SelectedWriteQueue<LyraOption>(writes => {
+    if (!this.isConnected) return;
+    const members = this.optionIndex.members;
     if (!this.multiple) {
-      let value = this._selected[0]; let option = this._selectedOptions[0];
-      for (const [candidate, write] of writes) {
-        if (!this.optionIndex.members.has(candidate)) continue;
-        if (write.selected) { value = write.value; option = candidate; }
-        else if (candidate === option) { value = undefined; option = undefined; }
-      }
+      const { value, option } = resolveSingleSelectedWrite(
+        { value: this._selected[0], option: this._selectedOptions[0] }, writes, candidate => members.has(candidate),
+      );
       this.setSelection(value === undefined ? [] : [value], option ? [option] : []);
       return;
     }
-    type Entry = { value: string; option?: LyraOption; removed?: boolean };
-    const queues = new Map<string, { options: LyraOption[]; next: number }>();
-    for (const option of this._selectedOptions) {
-      const value = this._selectedValuesByOption.get(option) ?? option.value;
-      let queue = queues.get(value); if (!queue) queues.set(value, queue = { options: [], next: 0 });
-      queue.options.push(option);
-    }
-    const entries: Entry[] = this._selected.map(value => {
-      const queue = queues.get(value); return { value, option: queue?.options[queue.next++] };
-    });
-    const byOption = new Map(entries.flatMap(entry => entry.option ? [[entry.option, entry] as const] : []));
-    for (const [option, write] of writes) {
-      if (!this.optionIndex.members.has(option)) continue;
-      const entry = byOption.get(option);
-      if (!write.selected) { if (entry) entry.removed = true; }
-      else if (entry && !entry.removed) entry.value = write.value;
-      else { const added = { value: write.value, option }; entries.push(added); byOption.set(option, added); }
-    }
-    const retained = entries.filter(entry => !entry.removed);
-    this.setSelection(retained.map(entry => entry.value), retained.map(entry => entry.option));
-  }
+    const committed = this._selectedValuesByOption;
+    const occurrences = resolveOccurrences(this._selected, committed.keys(), option => committed.get(option)!);
+    const next = resolveMultipleSelectedWrites(this._selected, occurrences, writes, option => members.has(option));
+    this.setSelection(next.values, next.occurrences);
+  });
 
   private optionRefreshPending = false;
 
@@ -2086,18 +2021,10 @@ export class LyraSelect<
       markVetoGuardWrite(this.selectionWriteGuard);
       this._valueDirty = true;
       this._restoredStateActive = false;
-      this.pendingSelectedWrites.delete(option);
-      this.pendingSelectedWrites.set(option, { selected: option.selected, value: option.value });
-      if (!this.selectedWritesQueued) {
-        this.selectedWritesQueued = true;
-        queueMicrotask(() => this.flushSelectedWrites());
-      }
+      this.selectedWrites.record(option, { selected: option.selected, value: option.value });
       return;
     }
-    if (isLyraOptionElement(option)) {
-      const cached = this.adornmentClones.get(option);
-      if (cached && cached.markup !== this.adornmentMarkup(option)) this.adornmentClones.delete(option);
-    }
+    if (isLyraOptionElement(option)) this.adornments.refresh(option);
     // Many options notify together during mounting or a catalog metadata refresh. Reconcile the
     // complete catalog once per microtask batch; live selected writes use their own batched reconciliation.
     if (this.optionRefreshPending) return;
@@ -2129,15 +2056,6 @@ export class LyraSelect<
     this.open = false;
     return settled;
   }
-  private onDocPointer = (e: PointerEvent): void => {
-    if (e.composedPath().includes(this)) return;
-    if (this.overlayHandle?.isActive()) {
-      this.overlayHandle.dismissBackdrop();
-      return;
-    }
-    this.restoreFocusOnClose = false;
-    void this.hide();
-  };
 
   private positionListbox(): void {
     this.cleanup?.();
@@ -2382,14 +2300,14 @@ export class LyraSelect<
   }
 
   private selectOption(option: LyraOption): void {
-    if (this.selectionRequestDispatching || this.effectiveDisabled || !this.isOptionAvailable(option)) return;
+    if (this.selectionRequestDispatching || this.effectiveDisabled || !isCatalogOptionAvailable(option, this)) return;
     if (this.unknownOptionCache.get(option.value) === option) {
       this.selectUnknownValue(option.value);
       return;
     }
     const value = option.value;
     const available = (liveOptions: ReadonlySet<Element>) => liveOptions.has(option) &&
-      option.value === value && this.isOptionAvailable(option);
+      option.value === value && isCatalogOptionAvailable(option, this);
     if (this.multiple) {
       const currentSlots = this.resolveOccurrenceSlots(this._selected, this._selectedOptions);
       const selectedIndex = currentSlots.indexOf(option);
@@ -2474,12 +2392,7 @@ export class LyraSelect<
       this.hasInteracted = true;
       this.reflectValidityStates();
     }
-    // A mouse click outside the element is already handled by
-    // onDocPointer/hide(), but that leaves keyboard users with no way to
-    // dismiss the listbox short of Escape -- tabbing focus away from the
-    // trigger should close it too, the same as lr-combobox's input blur. Native focus traversal is
-    // already moving to the user's chosen next stop, so this close must not ask the overlay manager
-    // to restore focus back into the select and undo that Tab/Shift+Tab movement.
+    // Tabbing away must leave focus on its new target.
     if (this.open) this.restoreFocusOnClose = false;
     void this.hide();
     relayNativeEvent(this, event);
@@ -2507,7 +2420,7 @@ export class LyraSelect<
       ? navigable[this.activeIndex]
       : this._selectedOptions[this._selectedOptions.length - 1];
     const currentIndex = navigable.indexOf(currentOption as LyraOption);
-    const labels = this.memoOption('typeAheadLabels', [navigable, this.effectiveLocale], () => {
+    const labels = this.memo.get('typeAheadLabels', [navigable, this.effectiveLocale], () => {
       const locale = this.effectiveLocale;
       return new Map(navigable.map(option => [option, foldSearchText(option.label, locale)]));
     });
@@ -2630,41 +2543,6 @@ export class LyraSelect<
     if (option) this.selectOption(option);
   };
 
-  private adornmentMarkup(option: LyraOption): string {
-    return Array.from(option.children)
-      .filter((child) => ['start', 'end', 'prefix', 'suffix'].includes(child.getAttribute('slot') ?? ''))
-      .map((child) => child.outerHTML)
-      .join('');
-  }
-
-  /**
-   * `<lr-option>` documents `start`/`end` (plus the Shoelace `prefix`/`suffix` aliases) adornment
-   * slots, but this listbox is built from its own `[part='option']` rows rather than by exposing
-   * the option elements themselves, so a slotted adornment has nowhere to land on its own. Clone it
-   * into the row instead -- mirrors lr-combobox's identical `adornmentsFor()`.
-   *
-   * `cloneNode(true)`, never `createElementNS`: the latter yields an inert, never-upgrading custom
-   * element (AGENTS.md), which would silently break the `<lr-flag>`/avatar case this exists for.
-   * Cloning also leaves the author's own subtree exactly where they put it -- moving the live node
-   * would empty their markup as a side effect of opening the listbox.
-   */
-  private adornmentsFor(option: LyraOption): { start?: unknown; end?: unknown } {
-    const cached = this.adornmentClones.get(option);
-    if (cached) return cached;
-    const cloneSlot = (selector: string): unknown => {
-      const nodes = Array.from(option.querySelectorAll<HTMLElement>(selector));
-      if (nodes.length === 0) return undefined;
-      return nodes.map((node) => node.cloneNode(true));
-    };
-    const resolved = {
-      markup: this.adornmentMarkup(option),
-      start: cloneSlot(':scope > [slot="start"], :scope > [slot="prefix"]'),
-      end: cloneSlot(':scope > [slot="end"], :scope > [slot="suffix"]'),
-    };
-    this.adornmentClones.set(option, resolved);
-    return resolved;
-  }
-
   private renderRows(
     options: readonly LyraOption[],
     activeId: string
@@ -2697,7 +2575,7 @@ export class LyraSelect<
       // A synthetic row IS the committed value, so it announces as selected even though
       // `selectedOptions` deliberately never resolves to it -- see `unknownOptions`.
       const selected = unknown || chosen.has(o);
-      const adornments = this.adornmentsFor(o);
+      const adornments = this.adornments.get(o);
       groupRows.push(
         html`<div
           part="option"
@@ -2708,7 +2586,7 @@ export class LyraSelect<
           ?data-unknown-value=${unknown}
           title=${o.title || nothing}
           aria-selected=${selected ? 'true' : 'false'}
-          aria-disabled=${this.isOptionAvailable(o) ? 'false' : 'true'}
+          aria-disabled=${isCatalogOptionAvailable(o, this) ? 'false' : 'true'}
           ?data-active=${id === activeId}
         >
           ${adornments.start

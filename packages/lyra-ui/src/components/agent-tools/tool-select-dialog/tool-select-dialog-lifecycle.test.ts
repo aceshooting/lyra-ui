@@ -52,6 +52,24 @@ it('does not re-enter the top layer when a reparented dialog closes before its u
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
+it('activates the overlay when opened just before reconnecting', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>`);
+  const parent = el.parentNode!;
+  el.remove();
+  el.open = true;
+  parent.appendChild(el);
+  await el.updateComplete;
+  await waitUntil(() => el.matches(':popover-open'));
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+
+  const closed = oneEvent(el, 'lr-close');
+  await sendKeys({ press: 'Escape' });
+  expect((await closed).detail.reason).to.equal('escape');
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  expect(document.documentElement.style.overflow).to.equal('');
+});
+
 it('does not reopen through show() when already open and ignores close() when already closed', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>`);
   const closes: Event[] = [];

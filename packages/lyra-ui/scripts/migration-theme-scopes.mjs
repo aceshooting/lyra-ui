@@ -17,7 +17,6 @@
 //    selector outside the scope list, `:host` and `::slotted()` included, is reported with file,
 //    line and selector. Every declaration of a shared output outside a scope is reported too.
 //
-// Dependency-free and filesystem-free: this module is copied beside migrate-wa.mjs into dist/cli.
 
 import { THEME_SCOPE_VOCABULARY } from './theme-scope-vocabulary.generated.mjs';
 import { readDeclarations, splitTopLevel } from './css-declarations.mjs';

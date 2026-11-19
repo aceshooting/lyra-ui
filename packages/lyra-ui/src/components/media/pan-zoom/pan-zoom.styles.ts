@@ -87,8 +87,8 @@ export const styles = css`
     --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
     --_lr-icon-button-background-hover-default: var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet));
     --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    ${iconAction}
     ${iconHitTarget}
+    ${iconAction}
     ${interactiveTransition}
     padding: revert;
   }

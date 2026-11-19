@@ -127,7 +127,7 @@ dropdown owns those root-level behaviors.
 
 Assigned `details` and `suffix` elements describe the item. The default slot supplies its name.
 
-The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `submenuOpen` for the current state.
+**Events:** `lr-show` and `lr-hide` fire after the item’s assigned menu changes state. Read `submenuOpen` for the current state.
 
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
 `menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.

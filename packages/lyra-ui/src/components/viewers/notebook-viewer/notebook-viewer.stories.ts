@@ -25,7 +25,7 @@ const NOTEBOOK = {
 };
 
 export const Default: Story = {
-  render: () => html`<lr-notebook-viewer name="analysis.ipynb" .notebook=${NOTEBOOK}></lr-notebook-viewer>`,
+  render: () => html`<lr-notebook-viewer @lr-viewer-diagnostic=${(event: CustomEvent) => console.warn('Viewer diagnostic', event.detail.diagnostic)} name="analysis.ipynb" .notebook=${NOTEBOOK}></lr-notebook-viewer>`,
 };
 
 export const Narrow320: Story = {

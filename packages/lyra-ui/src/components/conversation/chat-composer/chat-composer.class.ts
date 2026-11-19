@@ -471,8 +471,19 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (!this.effectiveDisabled) this.textareaEl?.focus();
   }
 
-  declare select: () => void;
-  declare setSelectionRange: (start: number | null, end: number | null, direction?: ChatComposerSelectionDirection) => void;
+  /** Selects all text in the native textarea. */
+  select(): void {
+    this.input?.select();
+  }
+
+  /** Sets the native textarea's selection range and optional direction. */
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction: ChatComposerSelectionDirection = 'none',
+  ): void {
+    this.input?.setSelectionRange(start, end, direction);
+  }
 
   setRangeText(replacement: string): void;
   setRangeText(
@@ -813,7 +824,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   }
 }
 
-installNativeSelectionAccessors(LyraChatComposer.prototype, host => host.input);
+installNativeSelectionAccessors(LyraChatComposer.prototype, host => host.input, { methods: false });
 
 declare global {
   interface HTMLElementTagNameMap {

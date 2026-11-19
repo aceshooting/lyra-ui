@@ -6689,6 +6689,16 @@ test('effective CEM attributes use resolved field defaults and winning subclass 
   }
 });
 
+test('the raw CEM resolves an imported shared resource size default', async () => {
+  const liveManifest = await liveGeneratedManifest();
+  const declarations = liveManifest.modules.flatMap((module) => module.declarations ?? []);
+  for (const tag of ['lr-csv-viewer', 'lr-dataset-viewer', 'lr-spreadsheet-viewer', 'lr-xml-viewer']) {
+    const component = declarations.find(({ tagName }) => tagName === tag);
+    assert.equal(component?.members.find(({ name }) => name === 'maxBytes')?.default, '26214400', tag);
+    assert.equal(component?.attributes.find(({ name }) => name === 'max-bytes')?.default, '26214400', tag);
+  }
+});
+
 test('the raw CEM projects complete effective wrapper and source-only mixin surfaces', async () => {
   const liveManifest = await liveGeneratedManifest();
   const declarations = new Map(

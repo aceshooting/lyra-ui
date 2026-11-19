@@ -223,7 +223,7 @@ describe('<lr-mutation-observer>', () => {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
       await aTimeout(0);
-      expect((el as unknown as { observer?: MutationObserver }).observer === undefined).to.be.true;
+      expect((el as unknown as { slotted: { observer?: MutationObserver } }).slotted.observer === undefined).to.be.true;
     } finally {
       el.remove();
       Object.defineProperty(frameWindow, 'MutationObserver', {
@@ -502,7 +502,7 @@ it('contains failed MutationObserver construction and one failed target while ad
       rejected = true;
     }
     expect(rejected).to.equal(false);
-    expect((el as unknown as { observer?: MutationObserver }).observer).to.equal(undefined);
+    expect((el as unknown as { slotted: { observer?: MutationObserver } }).slotted.observer).to.equal(undefined);
   } finally {
     el?.remove();
     window.MutationObserver = OriginalMutationObserver;
@@ -540,19 +540,19 @@ it('contains a throwing owner capability lookup and resumes after it is restored
     });
     let threw = false;
     try {
-      (el as unknown as { observeTargets(): void }).observeTargets();
+      (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
     } catch {
       threw = true;
     }
     expect(threw).to.equal(false);
-    expect((el as unknown as { observer?: MutationObserver }).observer).to.equal(undefined);
+    expect((el as unknown as { slotted: { observer?: MutationObserver } }).slotted.observer).to.equal(undefined);
 
     Object.defineProperty(window, 'MutationObserver', {
       configurable: true,
       writable: true,
       value: TestMutationObserver,
     });
-    (el as unknown as { observeTargets(): void }).observeTargets();
+    (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
     expect(observed.filter((entry) => entry === target).length).to.be.greaterThan(1);
   } finally {
     el?.remove();
@@ -602,7 +602,7 @@ it('contains a throwing disconnect hook across rebuild and reconnect', async () 
     throwDisconnect = true;
     let threw = false;
     try {
-      (el as unknown as { observeTargets(): void }).observeTargets();
+      (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
     } catch {
       threw = true;
     }
@@ -629,10 +629,10 @@ it('keeps its observer for a structurally equal attributeFilter and rebuilds for
     html`<lr-mutation-observer .attributeFilter=${['data-state']}><div data-state="a"></div></lr-mutation-observer>`,
   );
   await aTimeout(0);
-  const seam = el as unknown as { observeTargets: () => void };
-  const original = seam.observeTargets;
+  const seam = (el as unknown as { slotted: { rebuild: () => void } }).slotted;
+  const original = seam.rebuild;
   let rebuilds = 0;
-  seam.observeTargets = () => {
+  seam.rebuild = () => {
     rebuilds += 1;
     original();
   };

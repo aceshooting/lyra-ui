@@ -27,3 +27,30 @@ it('yields before remote XML parsing while preserving synchronous inline assignm
     else Reflect.deleteProperty(window, 'scheduler');
   }
 });
+
+it('drops the source when a queued task detaches the viewer before parsing resumes', async () => {
+  const viewer = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);
+  const originalFetch = window.fetch;
+  const scheduler = Object.getOwnPropertyDescriptor(window, 'scheduler');
+  let loads = 0;
+  viewer.addEventListener('lr-load', () => ++loads);
+  window.fetch = async () => new Response('<root/>');
+  Object.defineProperty(window, 'scheduler', { configurable: true, value: {
+    yield() {
+      const pending = Promise.resolve();
+      void pending.then(() => queueMicrotask(() => viewer.remove()));
+      return pending;
+    },
+  } });
+  try {
+    viewer.src = '/retired';
+    await waitUntil(() => !viewer.isConnected);
+    await viewer.updateComplete;
+    expect(loads).to.equal(0);
+    expect(viewer.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+  } finally {
+    window.fetch = originalFetch;
+    if (scheduler) Object.defineProperty(window, 'scheduler', scheduler);
+    else Reflect.deleteProperty(window, 'scheduler');
+  }
+});

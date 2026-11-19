@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Iikot pakanan',
   modelViewerRotateUp: 'Iikot pataas',
   modelViewerRotateDown: 'Iikot pababa',
+  modelViewerViewport: 'Interaktibong modelo',
 };
 
 registerLyraLocale('tl', strings);

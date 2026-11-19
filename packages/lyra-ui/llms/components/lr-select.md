@@ -109,10 +109,9 @@ consumer that read it as a plain string needs a narrowing step —
 
 **Single-option auto-commit.** Opt-in via `autoCommitSingleOption` (default `false` — a select always
 renders the normal combobox/listbox/chevron trigger unless enabled, matching pre-1.3.0 behavior).
-When set and exactly one option is available (neither disabled nor inert, including through an
-inert ancestor), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the
-trigger
-commits that sole option directly, and the trigger renders as a plain `role="button"` with no
+When exactly one option is available, the trigger commits it directly on click, Enter, Space,
+ArrowDown or ArrowUp. Disabled, hidden, inert and `aria-disabled="true"` options are excluded.
+The trigger renders as a plain `role="button"` with no
 chevron/`aria-haspopup`/`aria-expanded`/`aria-controls`/`aria-activedescendant` rather than a
 combobox with a permanently inert popup state — opening a one-row list to pick the only available
 choice is pure friction with no real decision behind it. It never changes `value`/validity defaults
@@ -536,9 +535,9 @@ purposes.
 - While open, live option reorders preserve the active row by option identity. Removing or
   disabling/inerting that option rehomes activity to the nearest available survivor (preferring the
   following row on a tie); removing every available option clears `aria-activedescendant`.
-- One availability rule governs keyboard navigation, type-ahead, single-option auto-commit,
-  pointer selection, and each proxy row's `aria-disabled`: an option is unavailable when it is
-  disabled, inert itself, or inside an inert ancestor. Pointer activation of such a row is a no-op.
+- Keyboard navigation, type-ahead, single-option auto-commit and pointer selection skip disabled,
+  hidden and `aria-disabled="true"` options, as well as options with explicit or inherited
+  inertness. The corresponding popup rows expose `aria-disabled="true"`.
 - The floating listbox participates in Lyra's shared nonmodal overlay stack. Its computed
   `--lr-overlay-stack-index`, Escape owner, capture-phase outside-pointer dismissal, and focus
   handoff follow the newest open overlay rather than DOM order. A single dismissal therefore closes

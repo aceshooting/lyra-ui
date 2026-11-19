@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'வலப்பக்கம் சுழற்று',
   modelViewerRotateUp: 'மேலே சுழற்று',
   modelViewerRotateDown: 'கீழே சுழற்று',
+  modelViewerViewport: 'ஊடாடும் மாதிரி',
 };
 
 registerLyraLocale('ta', strings);

@@ -28,3 +28,4 @@
 - Match drag verdict tints across file inputs and drop targets and scale rejection text with the field.
 - Synchronize iframe theme properties without enumerating standard CSS longhands.
 - Use the visible label or localized instruction to name file inputs when the host `aria-label` contains only whitespace.
+- Reduce the standalone image-viewer bundle while preserving region-anchor navigation and highlights.

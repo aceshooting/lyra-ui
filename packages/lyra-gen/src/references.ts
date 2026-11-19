@@ -1,9 +1,6 @@
+import { failure } from './result.js';
 import { isSafeKey, resolveLimits, snapshotJson } from './schema.js';
 import type { JsonValue, LyraGenLimits, LyraGenResult } from './types.js';
-
-function failure<T>(code: string, message: string): LyraGenResult<T> {
-  return { ok: false, diagnostics: [{ code, message, path: '', severity: 'error' }] };
-}
 
 /** Parse a bounded RFC 6901 pointer. Prototype paths are never addressable. */
 export function parsePointer(pointer: string): LyraGenResult<readonly string[]> {

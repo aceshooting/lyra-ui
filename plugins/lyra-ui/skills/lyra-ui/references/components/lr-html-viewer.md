@@ -37,6 +37,7 @@ label. `highlights`, `activeHighlightId`, `anchor`, and
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.

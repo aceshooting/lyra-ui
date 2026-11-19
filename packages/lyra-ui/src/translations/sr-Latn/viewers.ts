@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Rotiraj nadesno',
   modelViewerRotateUp: 'Rotiraj nagore',
   modelViewerRotateDown: 'Rotiraj nadole',
+  modelViewerViewport: 'Interaktivni model',
 };
 
 registerLyraLocale('sr-Latn', strings);

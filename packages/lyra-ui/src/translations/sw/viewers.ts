@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Zungusha kulia',
   modelViewerRotateUp: 'Zungusha juu',
   modelViewerRotateDown: 'Zungusha chini',
+  modelViewerViewport: 'Modeli shirikishi',
 };
 
 registerLyraLocale('sw', strings);

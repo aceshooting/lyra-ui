@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
+import { decodeMigrationContract, encodeMigrationContract } from './packed-migration-contract.mjs';
 import { capturePolicyWitnesses } from './capture-published-policy-witnesses.mjs';
 import { capturePublishedCompatibility } from './capture-published-compatibility.mjs';
 import { readPublishedCapture, sha256, jsonBytes, SOURCE_INPUTS } from './published-compatibility-io.mjs';
@@ -38,6 +40,24 @@ test('explicit capture verifies immutable inputs before writing and refuses repl
     assert.throws(() => capturePublishedCompatibility(options), /already exists/u);
     assert.throws(() => capturePublishedCompatibility({ ...options, output: join(root, 'bad-tag'), tag: 'lyra-ui@23.0.0' }), /identity mismatch|bind the pinned release/u);
     assert.equal(existsSync(join(root, 'bad-tag')), false);
+    const legacyContract = join(packed, 'package/dist/cli/migration-contract.json');
+    const compressed = gzipSync(readFileSync(legacyContract), { level: 9 });
+    writeFileSync(legacyContract + '.gz', compressed);
+    const repack = output => {
+      execFileSync('tar', ['-czf', tarball, '-C', packed, 'package']);
+      const updated = readFileSync(tarball);
+      return { ...options, output: join(root, output), tarballSha256: sha256(updated),
+        registryIntegrity: `sha512-${createHash('sha512').update(updated).digest('base64')}` };
+    };
+    assert.throws(() => capturePublishedCompatibility(repack('ambiguous')), /duplicate packed input/u);
+    rmSync(legacyContract);
+    const packedOptions = repack('compressed');
+    capturePublishedCompatibility(packedOptions);
+    const saved = await readPublishedCapture(packedOptions.output);
+    const member = saved.capture.inputs.find(input => input.role === 'migrationContract');
+    assert.equal(member.path, 'package/dist/cli/migration-contract.json.gz');
+    assert.equal(member.sha256, sha256(compressed));
+    assert.deepEqual(saved.publishedMigration, (await readPublishedCapture(options.output)).publishedMigration);
     const witness = { repository, facts: { policyReleaseHistory: [{ tag: options.tag, version: '22.0.0', sourceCommit: options.commit }] },
       tagObjects: { [options.tag]: options.tagObject }, output: join(root, 'witness.json.gz') };
     assert.ok(capturePolicyWitnesses(witness).bytes > 0);
@@ -45,4 +65,16 @@ test('explicit capture verifies immutable inputs before writing and refuses repl
     assert.throws(() => capturePolicyWitnesses({ ...witness, tagObjects: { [options.tag]: options.commit }, output: join(root, 'invalid-witness') }));
     assert.equal(existsSync(join(root, 'invalid-witness')), false);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('packaged contracts preserve exact JSON bytes and reject malformed or oversized gzip data', () => {
+  const text = '{"label":"Café","line":"next"}\n';
+  const bytes = encodeMigrationContract(text);
+  assert.deepEqual(bytes, encodeMigrationContract(text));
+  assert.deepEqual(decodeMigrationContract(bytes), Buffer.from(text));
+  assert.throws(() => decodeMigrationContract(bytes.subarray(0, bytes.length - 1)));
+  const oversized = Buffer.alloc(32 * 1024 * 1024 + 1);
+  assert.throws(() => encodeMigrationContract(oversized), /exceeds size limit/u);
+  assert.throws(() => decodeMigrationContract(oversized), /exceeds size limit/u);
+  assert.throws(() => decodeMigrationContract(gzipSync(oversized)), { code: 'ERR_BUFFER_TOO_LARGE' });
 });

@@ -91,7 +91,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     border-radius: var(--lr-radius);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet));
     color: inherit;
     font: inherit;
     font-size: var(--lr-font-size-sm);
@@ -99,18 +99,18 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part="attachment-button"]:hover {
-    background: color-mix(
+    background: var(--lr-email-viewer-action-hover-background, color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    ));
   }
   [part="attachment-button"]:active {
-    background: color-mix(
+    background: var(--lr-email-viewer-action-active-background, color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
   }
   [part="attachment-button"]:focus-visible {
     outline: var(--lr-focus-ring);
@@ -130,7 +130,7 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    background: var(--lr-email-viewer-action-background, var(--lr-color-surface));
     color: var(--lr-color-brand);
     font: inherit;
     font-size: var(--lr-font-size-sm);
@@ -138,14 +138,14 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part="quote-toggle"]:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-email-viewer-action-hover-background, var(--lr-color-brand-quiet));
   }
   [part="quote-toggle"]:active {
-    background: color-mix(
+    background: var(--lr-email-viewer-action-active-background, color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
   }
   [part="quote-toggle"]:focus-visible {
     outline: var(--lr-focus-ring);

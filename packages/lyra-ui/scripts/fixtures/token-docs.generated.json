@@ -3589,7 +3589,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/tool-select-dialog/tool-select-dialog.styles.ts",
         "src/components/forms/date-picker/date-picker.styles.ts",
         "src/internal/contextual-vocabulary.styles.ts"
       ]
@@ -3630,7 +3629,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/tool-param-form/tool-param-form.styles.ts",
         "src/components/conversation/message-feedback/message-feedback.styles.ts",
         "src/components/conversation/suggestion-chips/suggestion-chips.styles.ts",
         "src/components/data/pagination/pagination.styles.ts",
@@ -3850,7 +3848,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/terminal/terminal.class.ts",
         "src/components/charts/chart/lite-chart.styles.ts",
         "src/components/conversation/conversation-item/conversation-item.class.ts",
         "src/components/conversation/conversation-item/conversation-item.styles.ts",
@@ -4068,8 +4065,7 @@
         "src/components/layout/app-rail/app-rail.styles.ts",
         "src/components/layout/dock-panel/dock-panel.styles.ts",
         "src/components/layout/multi-split/multi-split.class.ts",
-        "src/components/layout/multi-split/multi-split.styles.ts",
-        "src/components/viewers/document-preview/document-preview.styles.ts"
+        "src/components/layout/multi-split/multi-split.styles.ts"
       ]
     },
     {
@@ -4443,13 +4439,7 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/conversation/model-select/model-select.styles.ts",
-        "src/components/conversation/voice-picker/voice-picker.styles.ts",
         "src/components/forms/combobox/combobox.styles.ts",
-        "src/components/forms/date-picker/date-input.styles.ts",
-        "src/components/forms/input/time-input.styles.ts",
-        "src/components/forms/locale-picker/locale-picker.styles.ts",
-        "src/components/forms/select/select.styles.ts",
         "src/components/layout/menu/menu.styles.ts",
         "src/components/overlays/overlay/overlay.styles.ts",
         "src/components/overlays/overlay/popover.class.ts",
@@ -4472,7 +4462,6 @@
       },
       "evidence": [
         "src/components/forms/date-picker/date-picker.styles.ts",
-        "src/components/layout/app-rail/app-rail-item.styles.ts",
         "src/components/layout/tab-group/tab-group.styles.ts"
       ]
     },
@@ -4492,8 +4481,7 @@
       },
       "evidence": [
         "src/components/data/pagination/pagination.styles.ts",
-        "src/components/media/avatar-group/avatar-group.styles.ts",
-        "src/components/utility/export-button/export-button.styles.ts"
+        "src/components/media/avatar-group/avatar-group.styles.ts"
       ]
     },
     {

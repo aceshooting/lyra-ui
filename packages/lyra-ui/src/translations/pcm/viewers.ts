@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Turn go right',
   modelViewerRotateUp: 'Turn go up',
   modelViewerRotateDown: 'Turn go down',
+  modelViewerViewport: 'Modél wey you fit control',
 };
 
 registerLyraLocale('pcm', strings);

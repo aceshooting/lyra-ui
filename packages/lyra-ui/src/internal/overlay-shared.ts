@@ -10,7 +10,7 @@
  * live here instead, on this library's `x-shared.ts` convention.
  */
 
-import { resolveAccessibleTrigger } from './a11y.js';
+import { resolveAccessibleTrigger } from './accessible-trigger.js';
 import { settlePopupTransition } from './anchored-overlay-runtime.js';
 import { collectComposedFocusTargets } from './focus-navigation.js';
 import type { VirtualAnchor } from './positioner.js';

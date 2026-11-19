@@ -20,6 +20,8 @@ it('yields modified Enter and submits only once for held Enter', async () => {
 
 it('returns null for every selection endpoint before the first render', () => {
   const el = document.createElement('lr-chat-composer');
+  el.select();
+  el.setSelectionRange(0, 1, 'backward');
   expect([el.selectionStart, el.selectionEnd, el.selectionDirection]).to.deep.equal([null, null, null]);
 });
 

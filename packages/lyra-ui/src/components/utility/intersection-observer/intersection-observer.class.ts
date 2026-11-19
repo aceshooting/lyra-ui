@@ -1,10 +1,10 @@
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import type { PropertyValues, TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './intersection-observer.styles.js';
-import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
+import { ownerObserverConstructor, SlottedObserverController } from '../../../internal/slotted-observer.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -132,7 +132,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   @property({ type: Boolean, reflect: true }) once = false;
 
   private readonly pendingRoot = new OwnedMutationObserver(this, () => {
-    if (this.resolveRoot()) this.observeTargets();
+    if (this.resolveRoot()) this.slotted.rebuild();
   });
 
   private resolveRoot(): Element | null {
@@ -142,9 +142,6 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     return (this.getRootNode() as Document | ShadowRoot).getElementById?.(id) ?? this.ownerDocument.getElementById(id);
   }
 
-  private observer?: IntersectionObserver;
-  private observerDocument?: Document;
-  private observerGeneration = 0;
   private onceIntersectedTargets = new WeakSet<Element>();
   private appliedClasses = new Map<Element, Set<string>>();
 
@@ -164,29 +161,9 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     }
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
-    // children, a virtualized list moving this same element instance) fires
-    // disconnectedCallback then connectedCallback synchronously with no
-    // update and no slotchange in between (the assigned-node set is
-    // unchanged by a pure reparent) -- so neither updated()'s
-    // property-change gate nor a fresh slotchange ever fires to re-arm
-    // observation. disconnectedCallback already tore the previous
-    // IntersectionObserver down, so resume it here on every reconnect after
-    // the very first (that initial case is already covered by the first
-    // render's own slotchange).
-    if (this.hasUpdated) this.scheduleAfterUpdate(this.observeTargets);
-  }
-
-  override disconnectedCallback(): void {
-    this.disconnect();
-    super.disconnectedCallback();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.disconnect();
+    this.slotted.retire();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -209,144 +186,89 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
       changed.has('root') ||
       changed.has('intersectClass') ||
       changed.has('once')
-    ) this.scheduleAfterUpdate(this.observeTargets);
+    ) this.slotted.schedule();
   }
 
-  private onSlotChange = (): void => this.observeTargets();
-
-  private disconnect(): void {
-    this.pendingRoot.clear();
-    this.observerGeneration += 1;
-    const observer = this.observer;
-    // Clear the ownership fields before crossing a consumer-controlled observer boundary. A
-    // malformed implementation can throw while resolving or invoking disconnect(), but it must
-    // not retain a current observer through a later rebuild or reconnect.
-    this.observer = undefined;
-    this.observerDocument = undefined;
-    try {
-      disconnectObserver(observer);
-    } catch {
-      // Observer implementations are optional capabilities; teardown failures fail closed.
-    }
-  }
-
-  private observeTargets = (): void => {
-    this.disconnect();
-    const ownerDocument = this.ownerDocument;
-    let IntersectionObserverCtor: typeof IntersectionObserver | undefined;
-    try {
-      IntersectionObserverCtor = ownerDocument.defaultView?.IntersectionObserver;
-    } catch {
-      // A configurable owner-window capability getter is also part of the optional boundary.
-      return;
-    }
-    const disabled = this.disabled === true;
-    const once = this.once === true;
-    const rootMarginValue = this.rootMargin;
-    const rootMargin = typeof rootMarginValue === 'string' ? rootMarginValue : '0px';
-    const threshold = normalizedThreshold(this.threshold);
-    const classValue = this.intersectClass;
-    const classes = typeof classValue === 'string'
-      ? Object.freeze(classValue.trim().split(/\s+/).filter(Boolean))
-      : Object.freeze([]);
-    this.pruneAppliedClasses(disabled ? [] : classes);
-    if (disabled || !this.isConnected || !IntersectionObserverCtor) return;
-    const root = this.resolveRoot();
-    if (!root && typeof this.root === 'string' && this.root.trim()) {
-      const options = { subtree: true, childList: true, attributes: true, attributeFilter: ['id'] };
-      const tree = this.getRootNode();
-      this.pendingRoot.observe(tree, options);
-      if (tree !== ownerDocument) this.pendingRoot.observe(ownerDocument, options);
-      return;
-    }
-    let targets: Element[];
-    try {
-      targets = slottedElementTargets(this.renderRoot).filter(
-        (target) => !once || !this.onceIntersectedTargets.has(target),
-      );
-    } catch {
-      return;
-    }
-    if (targets.length === 0) return;
-    const generation = this.observerGeneration;
-    let observer: IntersectionObserver;
-    const isCurrentObserver = (): boolean => (
-      this.observer === observer &&
-      this.observerDocument === ownerDocument &&
-      this.observerGeneration === generation &&
-      this.isConnected &&
-      this.ownerDocument === ownerDocument
-    );
-    const callback: IntersectionObserverCallback = (entries) => {
-      if (!isCurrentObserver()) return;
-      const delivered: IntersectionObserverEntry[] = [];
-      for (const { entry, target, isIntersecting } of observerEntries(entries)) {
-        if (!isCurrentObserver()) return;
-        if (once && this.onceIntersectedTargets.has(target)) continue;
-        if (once && isIntersecting) this.onceIntersectedTargets.add(target);
-        for (const token of classes) {
+  private readonly slotted: SlottedObserverController<IntersectionObserver> = new SlottedObserverController(this, {
+    schedule: (rebuild) => this.scheduleAfterUpdate(rebuild),
+    retired: () => this.pendingRoot.clear(),
+    configure: (ownerDocument) => {
+      const IntersectionObserverCtor = ownerObserverConstructor(ownerDocument, 'IntersectionObserver');
+      const disabled = this.disabled === true;
+      const once = this.once === true;
+      const rootMarginValue = this.rootMargin;
+      const rootMargin = typeof rootMarginValue === 'string' ? rootMarginValue : '0px';
+      const threshold = normalizedThreshold(this.threshold);
+      const classValue = this.intersectClass;
+      const classes = typeof classValue === 'string'
+        ? Object.freeze(classValue.trim().split(/\s+/).filter(Boolean))
+        : Object.freeze([]);
+      this.pruneAppliedClasses(disabled ? [] : classes);
+      if (disabled || !IntersectionObserverCtor) return undefined;
+      let root: Element | null = null;
+      return {
+        ready: () => {
+          root = this.resolveRoot();
+          if (root || typeof this.root !== 'string' || !this.root.trim()) return true;
+          const options = { subtree: true, childList: true, attributes: true, attributeFilter: ['id'] };
+          const tree = this.getRootNode();
+          this.pendingRoot.observe(tree, options);
+          if (tree !== ownerDocument) this.pendingRoot.observe(ownerDocument, options);
+          return false;
+        },
+        accept: (target) => !once || !this.onceIntersectedTargets.has(target),
+        create: (session) => {
+          let observer: IntersectionObserver;
+          const callback: IntersectionObserverCallback = (entries) => {
+            if (!session.current()) return;
+            const delivered: IntersectionObserverEntry[] = [];
+            for (const { entry, target, isIntersecting } of observerEntries(entries)) {
+              if (!session.current()) return;
+              if (once && this.onceIntersectedTargets.has(target)) continue;
+              if (once && isIntersecting) this.onceIntersectedTargets.add(target);
+              for (const token of classes) {
+                try {
+                  target.classList.toggle(token, isIntersecting);
+                  const applied = this.appliedClasses.get(target) ?? new Set<string>();
+                  if (isIntersecting) applied.add(token);
+                  else applied.delete(token);
+                  if (applied.size > 0) this.appliedClasses.set(target, applied);
+                  else this.appliedClasses.delete(target);
+                } catch {
+                  // A custom element's class-list boundary cannot prevent later entries from emitting.
+                }
+              }
+              delivered.push(entry);
+              this.emit('lr-intersect', { entry });
+              // An item listener may synchronously disconnect or adopt the wrapper. Stop the remainder
+              // of the native batch instead of unobserving through, or emitting from, a retired owner.
+              if (!session.current()) return;
+              if (once && isIntersecting) {
+                try {
+                  observer.unobserve(target);
+                } catch {
+                  // A failed native cleanup is contained by the next observer rebuild/disconnect.
+                }
+              }
+            }
+            if (delivered.length && session.current()) this.emit('lr-intersection', { entries: delivered });
+          };
           try {
-            target.classList.toggle(token, isIntersecting);
-            const applied = this.appliedClasses.get(target) ?? new Set<string>();
-            if (isIntersecting) applied.add(token);
-            else applied.delete(token);
-            if (applied.size > 0) this.appliedClasses.set(target, applied);
-            else this.appliedClasses.delete(target);
+            observer = new IntersectionObserverCtor(callback, { root, rootMargin, threshold });
           } catch {
-            // A custom element's class-list boundary cannot prevent later entries from emitting.
+            // Native parsing owns the root-margin grammar. A hostile constructor or invalid public
+            // options leave this update inert instead of escaping the component boundary.
+            observer = new IntersectionObserverCtor(callback, { root: null, rootMargin: '0px', threshold: 0 });
           }
-        }
-        delivered.push(entry);
-        this.emit('lr-intersect', { entry });
-        // An item listener may synchronously disconnect or adopt the wrapper. Stop the remainder
-        // of the native batch instead of unobserving through, or emitting from, a retired owner.
-        if (!isCurrentObserver()) return;
-        if (once && isIntersecting) {
-          try {
-            observer.unobserve(target);
-          } catch {
-            // A failed native cleanup is contained by the next observer rebuild/disconnect.
-          }
-        }
-      }
-      if (delivered.length && isCurrentObserver()) this.emit('lr-intersection', { entries: delivered });
-    };
-    const options: IntersectionObserverInit = {
-      root,
-      rootMargin,
-      threshold,
-    };
-    try {
-      observer = new IntersectionObserverCtor(callback, options);
-    } catch {
-      try {
-        // Native parsing owns the root-margin grammar. A hostile constructor or invalid public
-        // options leave this update inert instead of escaping the component boundary.
-        observer = new IntersectionObserverCtor(callback, {
-          root: null,
-          rootMargin: '0px',
-          threshold: 0,
-        });
-      } catch {
-        return;
-      }
-    }
-    this.observer = observer;
-    this.observerDocument = ownerDocument;
-    let observed = false;
-    for (const target of targets) {
-      try {
-        observer.observe(target);
-        observed = true;
-      } catch {
-        // A single custom/native target can reject observation without affecting later targets.
-      }
-    }
-    if (!observed) this.disconnect();
-  };
+          return observer;
+        },
+        observe: (observer, target) => observer.observe(target),
+      };
+    },
+  });
 
   override render(): TemplateResult {
-    return html`<span part="base"><slot @slotchange=${this.onSlotChange}></slot></span>`;
+    return this.slotted.renderSlot();
   }
 }
 

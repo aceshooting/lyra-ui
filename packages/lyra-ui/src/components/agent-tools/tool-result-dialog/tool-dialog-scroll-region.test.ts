@@ -54,6 +54,50 @@ describe('capped tool dialog bodies are keyboard-scrollable only while they over
   });
 });
 
+for (const [name, template] of [
+  ['result', html`<lr-tool-result-dialog open></lr-tool-result-dialog>`],
+  ['approval', html`<lr-tool-approval-dialog open></lr-tool-approval-dialog>`],
+  ['select', html`<lr-tool-select-dialog open></lr-tool-select-dialog>`],
+] as const) {
+  it(`${name} dialog observes the scroll body only while connected`, async () => {
+    const NativeResizeObserver = window.ResizeObserver;
+    const observedBodies = new Map<ResizeObserver, Element>();
+    window.ResizeObserver = class extends NativeResizeObserver {
+      override observe(target: Element, options?: ResizeObserverOptions): void {
+        if (target.getAttribute('part') === 'body') observedBodies.set(this, target);
+        super.observe(target, options);
+      }
+
+      override disconnect(): void {
+        observedBodies.delete(this);
+        super.disconnect();
+      }
+    };
+    try {
+      const el = await fixture<LyraToolResultDialog | LyraToolApprovalDialog | LyraToolSelectDialog>(template);
+      const parent = el.parentNode!;
+      const isObserved = () => [...observedBodies.values()].includes(body(el));
+      expect(isObserved(), 'initial open').to.equal(true);
+
+      el.remove();
+      expect(isObserved(), 'disconnect cleanup').to.equal(false);
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(isObserved(), 'detached update').to.equal(false);
+
+      parent.appendChild(el);
+      await el.updateComplete;
+      expect(isObserved(), 'reconnect').to.equal(true);
+      el.open = false;
+      await el.updateComplete;
+      expect(isObserved(), 'close cleanup').to.equal(false);
+    } finally {
+      for (const observer of observedBodies.keys()) observer.disconnect();
+      window.ResizeObserver = NativeResizeObserver;
+    }
+  });
+}
+
 it('keeps focus on the dialog when loading more finishes with a short replacement catalog', async () => {
   const tools = Array.from({ length: 201 }, (_, i) => ({ id: String(i), name: String(i) }));
   const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open .tools=${tools}></lr-tool-select-dialog>`);

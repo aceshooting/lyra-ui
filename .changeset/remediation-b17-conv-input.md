@@ -32,3 +32,5 @@ Widget text wraps at narrow widths. Updating one widget binding preserves unrela
 Audio visualization reuses sample buffers and limits waveform drawing to the backing canvas width.
 Set `stream-only` on push-to-talk to receive chunks without retaining a full recording in memory.
 Voice previews release their audio source on stop, failure, and disconnect.
+Model and voice pickers omit empty hint descriptions when the only supplied content uses an unsupported slot.
+Editor metadata lists the chat composer's selection operations as methods.

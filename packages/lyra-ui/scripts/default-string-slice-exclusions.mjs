@@ -55,9 +55,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
     'collapse',
     'details',
     'map',
-    'navigation',
     'open',
-    'search',
-    'select',
   ]),
 });

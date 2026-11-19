@@ -133,3 +133,18 @@ it('falls back to the localized name for a whitespace-only label', async () => {
   const name = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
   expect((name ?? '').trim()).to.not.equal('');
 });
+
+it('honors component paint and spacing tokens', async () => {
+  const el = await fixture(html`<lr-handoff-divider  style="
+    --lr-handoff-divider-bg: rgb(1, 2, 3); --lr-handoff-divider-color: rgb(4, 5, 6);
+    --lr-handoff-divider-border-color: rgb(7, 8, 9); --lr-handoff-divider-radius: 11px;
+    --lr-handoff-divider-padding-inline: 13px; --lr-handoff-divider-gap: 17px"></lr-handoff-divider>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector('[part="chip"]')!);
+  expect([style.backgroundColor, style.color, style.borderTopColor]).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)', 'rgb(7, 8, 9)']);
+  expect([style.borderTopLeftRadius, style.paddingInlineStart, getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).columnGap]).to.deep.equal(['11px', '13px', '17px']);
+});
+
+it('keeps the visible label as the accessible name when the host override contains only whitespace', async () => {
+  const el = await fixture(html`<lr-handoff-divider aria-label="   " label="Review complete"></lr-handoff-divider>`);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Review complete');
+});

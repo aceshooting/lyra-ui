@@ -126,7 +126,6 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
-- `lr-link-activate` (`detail: { href: string }`) — forwarded from built-in Markdown content.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
@@ -141,6 +140,9 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.
+
+The original `lr-link-activate` event from built-in Markdown bubbles through the workspace with
+`detail: { href: string }`.
 
 **Methods:** `finalizePendingApproval(): void` closes a vetoed approval in the built-in tool timeline
 after persistence succeeds; `revertPendingApproval(): void` releases its pending state after a failed

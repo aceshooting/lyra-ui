@@ -161,6 +161,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'تدوير لليمين',
   modelViewerRotateUp: 'تدوير للأعلى',
   modelViewerRotateDown: 'تدوير للأسفل',
+  modelViewerViewport: 'نموذج تفاعلي',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

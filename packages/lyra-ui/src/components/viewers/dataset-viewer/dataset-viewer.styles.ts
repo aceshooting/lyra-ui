@@ -11,9 +11,9 @@ export const styles = css`
     flex-direction: column;
     box-sizing: border-box;
     min-inline-size: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-dataset-viewer-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
+    border-radius: var(--lr-dataset-viewer-border-radius, var(--lr-radius));
+    background: var(--lr-dataset-viewer-background, var(--lr-color-surface));
     overflow: hidden;
   }
   [part='body'] {

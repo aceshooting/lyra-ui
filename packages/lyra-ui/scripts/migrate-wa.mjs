@@ -9,7 +9,7 @@ import {
   MIGRATION_ORIGINS,
   buildMigrationContract,
   invariant,
-  inventoryPath,
+  readMigrationInventory,
   packagedRuntime,
   readExportDeprecations,
   readRenameLedger,
@@ -661,7 +661,7 @@ export function run(argv, { compatibilityContext = null, currentExportDeprecatio
       if (options.check) return report.filesChanged > 0 || report.summary.warnings > 0 ? 1 : 0;
       return 0;
     }
-    const inventory = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+    const inventory = readMigrationInventory();
     const renameOrigin = LYRA_RENAME_ORIGINS.includes(options.origin);
     const lyraVersion = renameOrigin ? options.lyraVersion ?? detectInstalledLyraVersion() : null;
     const report = migrateFiles({

@@ -444,7 +444,7 @@ describe("lr-retrieval-trace", () => {
     const listener = oneEvent(el, "lr-toggle");
     bar.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ kind: "stage", itemId: "retrieve", expanded: true });
+    expect(ev.detail).to.deep.equal({ itemId: "retrieve", expanded: true });
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector(
       '[data-id="retrieve"] [part="evidence-toggle"]'
@@ -490,7 +490,7 @@ describe("lr-retrieval-trace", () => {
     let listener = oneEvent(el, "lr-toggle");
     toggle.click();
     let ev = await listener;
-    expect(ev.detail).to.deep.equal({ kind: "stage", itemId: "rewrite", expanded: true });
+    expect(ev.detail).to.deep.equal({ itemId: "rewrite", expanded: true });
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
     expect(body.hidden).to.be.false;
@@ -498,7 +498,7 @@ describe("lr-retrieval-trace", () => {
     listener = oneEvent(el, "lr-toggle");
     toggle.click();
     ev = await listener;
-    expect(ev.detail).to.deep.equal({ kind: "stage", itemId: "rewrite", expanded: false });
+    expect(ev.detail).to.deep.equal({ itemId: "rewrite", expanded: false });
     expect(removed).to.equal(0);
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
@@ -1021,7 +1021,7 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
     },
   ]);
   expect(leaked).to.equal(0);
-  expect(toggles).to.deep.equal([{ kind: 'chunk', itemId: 'c2', expanded: true, stageId: 'retrieve' }]);
+  expect(toggles).to.deep.equal([{ itemId: 'c2', expanded: true, stageId: 'retrieve' }]);
 });
 
 it('falls back to string conversion for non-JSON metadata scalars', async () => {
@@ -1248,4 +1248,50 @@ describe('lr-retrieval-trace owner and wrapping', () => {
     expect(text.getBoundingClientRect().width <= 201).to.equal(true);
     expect(text.scrollWidth <= text.clientWidth + 1).to.equal(true);
   });
+});
+
+it('reports first selection, chunk and stage changes once to a delegated disclosure listener', async () => {
+  const el = await fixture<LyraRetrievalTrace>(html`
+    <lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>
+  `);
+  const seen: unknown[] = [];
+  el.parentElement!.addEventListener('lr-retrieval-disclosure-change', (event) => {
+    expect([event.target === el, event.bubbles, event.composed, event.cancelable])
+      .to.deep.equal([true, true, true, false]);
+    seen.push((event as CustomEvent).detail);
+  });
+  el.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+    const id: string = detail.kind === 'chunk' ? detail.chunkId : detail.stageId;
+    expect(id).to.be.a('string');
+    expect(Object.isFrozen(detail)).to.be.true;
+  });
+
+  const waterfall = el.shadowRoot!.querySelector('lr-span-waterfall')!;
+  const bar = waterfall.shadowRoot!.querySelector<HTMLElement>('[data-id="retrieve"]')!;
+  const unrelatedSpan = document.createElement('span');
+  waterfall.append(unrelatedSpan);
+  unrelatedSpan.dispatchEvent(new CustomEvent('lr-span-select', {
+    bubbles: true, composed: true, detail: { spanId: 'rewrite' },
+  }));
+  bar.click();
+  bar.click();
+  await el.updateComplete;
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector')!;
+  inspector.size = 'm';
+  await inspector.updateComplete;
+  const unrelatedChunk = document.createElement('span');
+  inspector.append(unrelatedChunk);
+  unrelatedChunk.dispatchEvent(new CustomEvent('lr-toggle', {
+    bubbles: true, composed: true, detail: { expanded: true, itemId: 'unrelated' },
+  }));
+  inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[data-id="retrieve"] [part="evidence-toggle"]',
+  )!.click();
+
+  expect(seen).to.deep.equal([
+    { kind: 'stage', stageId: 'retrieve', expanded: true },
+    { kind: 'chunk', stageId: 'retrieve', chunkId: 'c1', expanded: true },
+    { kind: 'stage', stageId: 'retrieve', expanded: false },
+  ]);
 });

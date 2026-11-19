@@ -1,9 +1,9 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
-import { PreviewDisclosureController } from '../../../internal/preview-disclosure-controller.js';
+import { createPreviewDisclosure } from '../../../internal/preview-disclosure-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './entity-chip.styles.js';
@@ -89,48 +89,18 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   @query('[part="popover"]') private popoverEl?: HTMLElement;
 
   private readonly popoverId = nextId('entity-chip-popover');
-  /** The default slot's preview content is often bare text (no wrapping element at all), so an
-   *  element-only check never counts it, and a `[part]` always contains a literal `<slot>` child
-   *  regardless of assignment, so `:empty` never matches either. The shared controller answers the
-   *  same "does this slot carry real consumer content" question every other presence-driven
-   *  component asks, seeded before the first render and kept live afterwards. */
   private readonly slotPresence = new SlotPresenceController(this);
-  private readonly preview = (() => {
-    const preview = new PreviewDisclosureController({
-      host: this,
-      button: () => this.buttonEl,
-      panel: () => this.popoverEl,
-      hasContent: () => this.hasPreviewSlot,
-      isOpen: () => this.popoverOpen,
-      setOpen: (open) => { this.popoverOpen = open; },
-      hideDelayMs: HIDE_DELAY_MS,
-    });
-    // Slot presence refreshes first, then an empty open preview closes before render.
-    this.addController({ hostUpdate: () => preview.ensureContent() });
-    return preview;
-  })();
+  private readonly preview = createPreviewDisclosure(this, {
+    button: () => this.buttonEl,
+    panel: () => this.popoverEl,
+    hasContent: () => this.hasPreviewSlot,
+    isOpen: () => this.popoverOpen,
+    setOpen: (open) => { this.popoverOpen = open; },
+    hideDelayMs: HIDE_DELAY_MS,
+  });
 
   private get hasPreviewSlot(): boolean {
     return this.slotPresence.has();
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (changed.has('popoverOpen')) this.preview.syncOpen();
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.preview.disconnect();
-    // Reset so a reconnect (e.g. a drag-drop reparent, or a virtualized/reordering
-    // message list moving this element) re-triggers updated()'s open-driven branch --
-    // without this, popoverOpen stays true across the disconnect/reconnect and
-    // changed.has('popoverOpen') never fires again, leaving the popover rendered open
-    // with a torn-down positioner and no live position/dismissal.
   }
 
   private get accessibleLabel(): string {

@@ -27,7 +27,8 @@ import {
   migrateImmutableCollections,
 } from './migration-immutable-collections.mjs';
 import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
-import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
+import { buildMigrationRuntime } from './build-migration-runtime.mjs';
+import { MIGRATION_CONTRACT_FILE, encodeMigrationContract } from './packed-migration-contract.mjs';
 import { migrationContractText } from './migration-contract-projection.mjs';
 import {
   analyzeMigrationCoverage,
@@ -52,8 +53,8 @@ const checkedMigrationContract = migrationContractText(path.dirname(scriptDir), 
 let packagedCliDirectory;
 function packagedCli(directory) {
   if (directory) {
-    copyMigrationRuntimeModules(scriptDir, directory);
-    fs.writeFileSync(path.join(directory, 'migration-contract.json'), checkedMigrationContract);
+    buildMigrationRuntime(scriptDir, directory);
+    fs.writeFileSync(path.join(directory, MIGRATION_CONTRACT_FILE), encodeMigrationContract(checkedMigrationContract));
     return path.join(directory, 'migrate-wa.mjs');
   }
   if (!packagedCliDirectory) {

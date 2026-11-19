@@ -11,7 +11,8 @@ import {
   type TemplateResult,
 } from 'lit';
 import { property, query } from 'lit/decorators.js';
-import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
+import { resolveAccessibleTrigger } from '../../../internal/accessible-trigger.js';
 import { isAriaTrue } from '../../../internal/accessibility-visibility.js';
 import {
   acquireAriaOwnership,

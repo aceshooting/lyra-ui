@@ -2,10 +2,27 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './change-review.js';
 import type { ChangeReviewFile, LyraChangeReview } from './change-review.class.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 
 const files: readonly ChangeReviewFile[] = [{ id: 'file', path: 'src/example.ts', hunks: [{ id: 'hunk', before: 'a', after: 'b' }] }];
 
 describe('lr-change-review tokens', () => {
+  it('shows a note and announces it once when the file window is first exceeded', async () => {
+    const el = await fixture<LyraChangeReview>(html`<lr-change-review
+      .strings=${{ changeReviewLimit: 'Showing the first {count} changes.' }}></lr-change-review>`);
+    el.files = Array.from({ length: 201 }, (_, index) => ({ id: String(index), path: `file-${index}.ts`, hunks: [] }));
+    await el.updateComplete;
+    const note = el.shadowRoot!.querySelector('[part="limit"]');
+    const message = 'Showing the first 200 changes.';
+    expect(note?.getAttribute('role')).to.equal('note');
+    expect(note?.textContent).to.equal(message);
+    expect(sinkTexts().filter(text => text === message)).to.have.length(1);
+
+    el.readonly = true;
+    await el.updateComplete;
+    expect(sinkTexts().filter(text => text === message)).to.have.length(1);
+  });
+
   it('reuses file and hunk identity projections until new snapshots arrive', async () => {
     const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${files}></lr-change-review>`);
     const snapshot = el.files;

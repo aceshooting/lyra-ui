@@ -15,7 +15,7 @@ export const styles = css`
   .row {
     display: flex;
     justify-content: var(--lr-suggestion-chips-justify, flex-start);
-    gap: var(--lr-space-xs);
+    gap: var(--lr-suggestion-chips-gap, var(--lr-space-xs));
   }
   :host([wrap]) .row {
     flex-wrap: wrap;
@@ -26,12 +26,12 @@ export const styles = css`
     gap: var(--lr-space-xs);
     flex: 0 0 auto;
     max-inline-size: var(--lr-suggestion-chips-chip-max-inline-size, var(--lr-size-16rem));
-    padding-inline: var(--lr-space-m);
+    padding-inline: var(--lr-suggestion-chips-chip-padding-inline, var(--lr-space-m));
     padding-block: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    border: var(--lr-border-width-thin) solid var(--lr-suggestion-chips-chip-border-color, var(--lr-color-border));
+    border-radius: var(--lr-suggestion-chips-chip-radius, var(--lr-radius-pill));
+    background: var(--lr-suggestion-chips-chip-bg, var(--lr-color-surface));
+    color: var(--lr-suggestion-chips-chip-color, var(--lr-color-text));
     font: inherit;
     text-align: start;
     cursor: pointer;

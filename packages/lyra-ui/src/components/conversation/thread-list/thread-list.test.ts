@@ -4915,3 +4915,122 @@ it('skips a slotted conversation row inside a hidden wrapper during arrow naviga
   first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
   expect(rows[2]!.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('Last');
 });
+
+it('applies the shared icon action border to its buttons', async () => {
+  const el = await fixture<LyraThreadList>(html`
+    <lr-thread-list searchable style="--lr-icon-button-size: 43px; --lr-icon-button-border: 3px dashed rgb(12, 34, 56)"></lr-thread-list>
+  `);
+  const input = el.shadowRoot!.querySelector('input')!;
+  input.value = 'query';
+  input.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+  for (const part of ['clear-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    const style = getComputedStyle(button);
+    expect([style.minInlineSize, style.minBlockSize]).to.deep.equal(['43px', '43px']);
+    expect([style.borderTopWidth, style.borderTopStyle, style.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(12, 34, 56)']);
+  }
+});
+
+it('contains group label and adornment failures independently for each group', async () => {
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list style="block-size:400px" grouping="custom"></lr-thread-list>`);
+  el.threads = ['a', 'b', 'c'].map(id => ({ id, title: id }));
+  el.groupBy = thread => thread.id;
+  el.getGroupLabel = ({ id }) => {
+    if (id === 'a') throw new Error('unavailable label');
+    return id === 'b' ? '  ' : 'Third group';
+  };
+  el.renderGroupAdornment = ({ id }) => {
+    if (id === 'b') throw new Error('unavailable adornment');
+    return html`<span>${id}</span>`;
+  };
+  await el.updateComplete;
+  await nextFrame();
+  expect(renderedGroupLabels(el)).to.deep.equal(['a', 'b', 'Third group']);
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  expect([...list.shadowRoot!.querySelectorAll('[part~="group-adornment"]')].map(node => node.textContent?.trim())).to.deep.equal(['a', 'c']);
+  expect(renderedThreadIds(el)).to.deep.equal(['a', 'b', 'c']);
+});
+
+it('allows the exposed group icon transform to override the expanded and RTL collapsed defaults', async () => {
+  const wrapper = await fixture(html`<div><style>.themed-list::part(group-icon) { transform: scale(2); }</style>
+    <lr-thread-list data-lr-theme-scope dir="rtl" style="--lr-transition-fast:0ms" grouping="custom" .groupBy=${() => 'group'} .threads=${[{ id: 'a', title: 'Item' }]}></lr-thread-list></div>`);
+  const list = wrapper.querySelector('lr-thread-list')!;
+  await waitUntil(() => renderedGroupLabels(list).length > 0);
+  const inner = list.shadowRoot!.querySelector('lr-virtual-list')!;
+  const icon = () => inner.shadowRoot!.querySelector('[part~="group-icon"]')!;
+  expect(getComputedStyle(icon()).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  list.collapsedGroupIds = ['group'];
+  await list.updateComplete;
+  await inner.updateComplete;
+  expect(getComputedStyle(icon()).transform).to.equal('matrix(-1, 0, 0, 1, 0, 0)');
+  list.classList.add('themed-list');
+  expect(getComputedStyle(icon()).transform).to.equal('matrix(2, 0, 0, 2, 0, 0)');
+});
+
+it('updates row content for row inputs and explicit refresh without rerendering it for a list label', async () => {
+  let renders = 0;
+  let content = 'First';
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list grouping="none" .threads=${[{ id: 'id', title: 'Thread' }]}
+    .renderRowContent=${() => { renders++; return html`<span>${content}</span>`; }}></lr-thread-list>`);
+  await waitUntil(() => el.itemElement('id')?.textContent?.includes('First') === true);
+  await nextFrame();
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await list.updateComplete;
+  const count = renders;
+  el.label = 'History';
+  await el.updateComplete;
+  await list.updateComplete;
+  expect(renders).to.equal(count);
+  content = 'Updated';
+  el.requestUpdate();
+  await el.updateComplete;
+  await waitUntil(() => el.itemElement('id')?.textContent?.includes('Updated') === true);
+});
+
+it('updates a mutated excerpt without scanning the other mounted rows', async () => {
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list grouping="none"
+    .threads=${[{ id: 'a', title: 'First' }, { id: 'b', title: 'Second' }]}
+    .renderExcerpt=${() => html`Rich text`}></lr-thread-list>`);
+  await waitUntil(() => Boolean(el.itemElement('b')?.querySelector('[slot="excerpt"]')));
+  const root = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+  const select = root.querySelectorAll.bind(root);
+  let scans = 0;
+  root.querySelectorAll = (selector: string) => {
+    if (selector.includes('row-excerpt')) scans++;
+    return select(selector);
+  };
+  try {
+    const wrapper = el.itemElement('a')!.querySelector<HTMLElement>('[part="row-excerpt"]')!;
+    const text = Array.from(wrapper.childNodes).find(node => node.nodeType === Node.TEXT_NODE)! as Text;
+    text.data = '';
+    await waitUntil(() => wrapper.slot === '');
+    const added = wrapper.appendChild(document.createElement('strong'));
+    await waitUntil(() => wrapper.slot === 'excerpt');
+    added.remove();
+    await waitUntil(() => wrapper.slot === '');
+    expect(el.itemElement('b')!.querySelector('[slot="excerpt"]')?.textContent?.trim()).to.equal('Rich text');
+    const row = el.itemElement('a')!;
+    wrapper.remove();
+    wrapper.appendChild(document.createTextNode('Restored text'));
+    row.appendChild(wrapper);
+    await waitUntil(() => wrapper.slot === 'excerpt');
+    expect(scans).to.equal(0);
+  } finally {
+    Reflect.deleteProperty(root, 'querySelectorAll');
+  }
+});
+
+it('resolves whitespace names on the role owner and preserves an explicitly empty override', async () => {
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list aria-label="   " label="Inbox"
+    .strings=${{ threadListLabel: 'Localized name' }}></lr-thread-list>`);
+  const owner = () => el.shadowRoot!.querySelector('[role="region"]')!.getAttribute('aria-label');
+  expect(owner()).to.equal('Inbox');
+  el.removeAttribute('aria-label');
+  el.label = '   ';
+  await el.updateComplete;
+  expect(owner()).to.equal('Localized name');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(owner()).to.equal('');
+});

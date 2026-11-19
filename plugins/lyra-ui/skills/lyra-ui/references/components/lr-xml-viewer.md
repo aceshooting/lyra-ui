@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 27 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 27 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-xml-viewer`
+
+Action backgrounds accept `--lr-xml-viewer-action-background`, `--lr-xml-viewer-action-hover-background` and `--lr-xml-viewer-action-active-background`.
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
@@ -166,7 +168,8 @@ inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
-**Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported'`, `'denied'`, or `'failed'`.

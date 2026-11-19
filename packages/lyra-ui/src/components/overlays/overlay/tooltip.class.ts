@@ -12,8 +12,8 @@ import {
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisibilityHidden,
   nextId,
-  resolveAccessibleTrigger,
 } from '../../../internal/a11y.js';
+import { resolveAccessibleTrigger } from '../../../internal/accessible-trigger.js';
 import {
   acquireAriaOwnership,
   type AriaOwnershipLease,

@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Nach rechts drehen',
   modelViewerRotateUp: 'Nach oben drehen',
   modelViewerRotateDown: 'Nach unten drehen',
+  modelViewerViewport: 'Interaktives Modell',
 };
 
 registerLyraLocale('de', strings);

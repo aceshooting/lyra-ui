@@ -58,6 +58,19 @@ for (const [name, content] of [
   ['dataset', html`<lr-dataset-viewer .table=${{ fields: ['Name'], rows: [{ Name: 'Ada' }] }}></lr-dataset-viewer>`],
   ['workbook', html`<lr-spreadsheet-viewer .workbook=${{ sheets: [{ name: 'People', rows: [['Name'], ['Ada']] }] }}></lr-spreadsheet-viewer>`],
 ] as const) {
+  it(`uses the document scrollport only in page mode for ${name}`, async () => {
+    const el = await fixture<HTMLElement & { updateComplete: Promise<boolean> }>(content);
+    const list = () => el.shadowRoot!.querySelector<HTMLElement & { scrollElement?: HTMLElement | Window }>('lr-virtual-list')!;
+    await waitUntil(() => !!list());
+    expect(list().scrollElement === window).to.equal(false);
+    el.setAttribute('scroll-mode', 'page');
+    await el.updateComplete;
+    expect(list().scrollElement === window).to.equal(true);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="body"]')!).overflowY).to.equal('visible');
+    el.removeAttribute('scroll-mode');
+    await el.updateComplete;
+    expect(list().scrollElement === window).to.equal(false);
+  });
   it(`shrinks a short ${name} grid to the height of its rows`, async () => {
     const el = await fixture<HTMLElement>(content);
     const list = () => el.shadowRoot!.querySelector('lr-virtual-list');

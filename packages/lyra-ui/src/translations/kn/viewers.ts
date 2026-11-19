@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ಬಲಕ್ಕೆ ತಿರುಗಿಸಿ',
   modelViewerRotateUp: 'ಮೇಲಕ್ಕೆ ತಿರುಗಿಸಿ',
   modelViewerRotateDown: 'ಕೆಳಕ್ಕೆ ತಿರುಗಿಸಿ',
+  modelViewerViewport: 'ಸಂವಾದಾತ್ಮಕ ಮಾದರಿ',
 };
 
 registerLyraLocale('kn', strings);

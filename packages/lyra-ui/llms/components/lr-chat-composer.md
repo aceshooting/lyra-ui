@@ -105,7 +105,8 @@ clears the touched presentation.
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
 `setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
-disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
+disabled. Selection methods are safe to call before the textarea renders.
+`setRangeText()` synchronizes reactive/form value and auto-sizing.
 `checkValidity()`/`reportValidity()` remain inherited; `resetValidity()` clears consumer custom
 validity and recomputes the current intrinsic constraints.
 

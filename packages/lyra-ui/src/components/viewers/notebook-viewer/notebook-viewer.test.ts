@@ -5,7 +5,8 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import { sendKeys } from '@web/test-runner-commands';
 import './notebook-viewer.js';
 import type { LyraNotebookViewer } from './notebook-viewer.js';
-import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
+import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { DEFAULT_MAX_RESOURCE_BYTES, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -18,7 +19,7 @@ type SearchContract = Pick<LyraTextViewerTarget, 'search' | 'searchNext' | 'sear
 type NotebookDocument = Exclude<LyraNotebookViewer['notebook'], string | undefined>;
 
 afterEach(() => {
-  __setNotebookSanitizerForTesting(undefined);
+  __setDompurifyImporterForTesting();
 });
 
 const NOTEBOOK: NotebookDocument = {
@@ -927,9 +928,10 @@ describe('loading a notebook from src', () => {
 
 describe('rendering non-text outputs', () => {
   it('ignores an invalidated sanitizer load that rejects after a reconnect', async () => {
+    expectDevWarning('lyra-dompurify-unavailable');
     let rejectFirst!: (error: unknown) => void;
     const first = new Promise<{ sanitize(raw: string): string }>((_resolve, reject) => { rejectFirst = reject; });
-    __setNotebookSanitizerForTesting(first);
+    __setDompurifyImporterForTesting(() => Promise.resolve(first));
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
@@ -942,7 +944,7 @@ describe('rendering non-text outputs', () => {
     await aTimeout(0);
     el.remove();
     await aTimeout(0);
-    __setNotebookSanitizerForTesting({ sanitize: (raw: string) => raw });
+    __setDompurifyImporterForTesting(() => Promise.resolve({ sanitize: (raw: string) => raw }));
     let errors = 0;
     el.addEventListener('lr-render-error', () => { errors += 1; });
     document.body.append(el);
@@ -960,7 +962,7 @@ describe('rendering non-text outputs', () => {
     let resolveSecond!: (value: { sanitize(raw: string): string }) => void;
     const first = new Promise<{ sanitize(raw: string): string }>((resolve) => { resolveFirst = resolve; });
     const second = new Promise<{ sanitize(raw: string): string }>((resolve) => { resolveSecond = resolve; });
-    __setNotebookSanitizerForTesting(first);
+    __setDompurifyImporterForTesting(() => Promise.resolve(first));
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
@@ -982,7 +984,7 @@ describe('rendering non-text outputs', () => {
     el.remove();
     await aTimeout(0); // a genuine disconnect invalidates in-flight sanitization
     expect((el as unknown as { sanitizationTasks: Map<string, unknown> }).sanitizationTasks.size).to.equal(0);
-    __setNotebookSanitizerForTesting(second);
+    __setDompurifyImporterForTesting(() => Promise.resolve(second));
     document.body.append(el);
     await waitUntil(
       () => (el as unknown as { sanitizationTasks: Map<string, unknown> }).sanitizationTasks.size === 1,
@@ -1068,23 +1070,25 @@ describe('rendering non-text outputs', () => {
   });
 
   // Note: the missing-sanitizer notice is itself a <p>, so never assert `querySelector('p')` here.
-  // A *failing* chai assertion whose `actual` is a live DOM node/NodeList hangs the whole wtr
-  // session: @web/test-runner-mocha copies `err.actual`/`err.expected` verbatim into the
-  // `wtr-session-finished` message, and @web/dev-server-core's browser `sendMessage` serializes it
-  // with `stable()`, whose first statement is `structuredClone(obj)` -- which throws DataCloneError
-  // on any DOM node. The message is never sent, so the run reports `0 passed, 0 failed` only when
-  // the per-file `testsFinishTimeout` expires. Assert structured-cloneable counts/strings instead.
   it('shows a localized missing-sanitizer notice for HTML/SVG outputs when the optional dompurify peer is unavailable', async () => {
-    __setNotebookSanitizerForTesting(null);
-    const notebook = {
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
+    const notebook: NotebookDocument = {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
         cell_type: 'code', id: 'c1', source: 'x', execution_count: 1,
         outputs: [{ output_type: 'execute_result', data: { 'text/html': '<p>Safe</p>' } }],
       }],
     };
-    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.trim() !== '');
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+    const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+    el.notebook = notebook;
+    const warning = (await diagnostic).detail.diagnostic;
+    expect(warning.code).to.equal('notebook-sanitizer-unavailable');
+    expect(warning.severity).to.equal('warning');
+    expect(warning.fatal).to.equal(false);
+    expect(warning.source).to.equal('dompurify');
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"] p')?.textContent?.includes('dompurify') === true);
     const output = rowRoot(el).querySelector('[part~="output"]')!;
     // Exactly one <p> -- the notice itself. The raw `<p>Safe</p>` payload is never rendered, which
     // the textContent equality below also proves.
@@ -1092,11 +1096,28 @@ describe('rendering non-text outputs', () => {
     expect(output.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
   });
 
+  it('ends sanitizer notifications when the diagnostic listener removes the notebook', async () => {
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => { errors++; });
+    el.addEventListener('lr-viewer-diagnostic', () => el.remove(), { once: true });
+    const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+    el.notebook = { nbformat: 4, nbformat_minor: 5, cells: [{
+      cell_type: 'code', source: '', outputs: [{ output_type: 'display_data', data: { 'text/html': '<p>Chart</p>' } }],
+    }] };
+    await diagnostic;
+    expect(el.isConnected).to.equal(false);
+    expect(errors).to.equal(0);
+  });
+
   it('also announces the missing-sanitizer failure through the shared assertive live region, not just the visible notice', async () => {
     // The visible fallback is asserted above; a screen-reader user who cannot see shadow-DOM
     // content depends on this separate document-level announcement (ViewerAnnouncementController /
     // acquireAnnouncementSink) to learn the same thing.
-    __setNotebookSanitizerForTesting(null);
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
@@ -1105,7 +1126,7 @@ describe('rendering non-text outputs', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.trim() !== '');
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"] p')?.textContent?.includes('dompurify') === true);
     const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
     expect(sink?.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
   });
@@ -1114,9 +1135,9 @@ describe('rendering non-text outputs', () => {
     // ensureSanitized()'s catch branch (a thrown/rejected loadNotebookSanitizer()/sanitize() call)
     // is a distinct code path from the `!sanitizer` (peer absent) branch every other missing-peer
     // test above exercises -- neither this file nor any other exercised it before.
-    __setNotebookSanitizerForTesting({
+    __setDompurifyImporterForTesting(() => Promise.resolve({
       sanitize: () => { throw new Error('sanitizer exploded'); },
-    });
+    }));
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
@@ -1146,7 +1167,8 @@ describe('rendering non-text outputs', () => {
   });
 
   it('falls back to text/plain and emits one render error when the sanitizer peer is missing', async () => {
-    __setNotebookSanitizerForTesting(null);
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
@@ -1411,13 +1433,18 @@ describe('output collapsing', () => {
       nbformat: 4, nbformat_minor: 5,
       cells: [{ cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {}, outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText } }] }],
     };
-    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    const el = (await fixture(html`<lr-notebook-viewer .strings=${{ notebookViewerShowAllOutput: 'Show lines', notebookViewerCollapseOutput: 'Hide lines' }} .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
     const toggle = rowRoot(el).querySelector('[part="output-toggle"]') as HTMLButtonElement;
     expect((toggle) != null).to.equal(true);
+    expect(toggle.textContent?.trim()).to.equal('Show lines');
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
     toggle.click();
     await el.updateComplete;
     expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.include('line 59');
+    const expanded = rowRoot(el).querySelector('[part="output-toggle"]')!;
+    expect(expanded.textContent?.trim()).to.equal('Hide lines');
+    expect(expanded.getAttribute('aria-expanded')).to.equal('true');
   });
 
   it('gives the output toggle the icon-button minimum hit area', async () => {

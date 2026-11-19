@@ -1780,11 +1780,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private groupTopAt(index: number): number {
-    return Math.max(0, this.offsetAt(index) - this.groupHeightAt(index));
+    return isIndexedSource(this.effectiveSource)
+      ? Math.max(0, this.indexedOffsetForIndex(index) - this.groupHeightAt(index))
+      : this.offsetIndex.offsetOf(index);
   }
 
   private rowBottomAt(index: number): number {
-    return finiteAdd(this.offsetAt(index), this.rowHeightAt(index));
+    return isIndexedSource(this.effectiveSource)
+      ? finiteAdd(this.indexedOffsetForIndex(index), this.rowHeightAt(index))
+      : this.offsetIndex.offsetOf(index + 1);
   }
 
   private entryTopAt(index: number): number {
@@ -1793,6 +1797,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** First item index whose bottom edge is at/after `offset`. */
   private findIndexAtOrAfter(offset: number): number {
+    if (!isIndexedSource(this.effectiveSource)) {
+      return offset < 0 ? 0 : this.offsetIndex.indexAt(offset);
+    }
     let lo = 0;
     let hi = this.itemCount - 1;
     while (lo < hi) {
@@ -1803,8 +1810,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     return lo;
   }
 
-  /** Last item index whose top edge is at/before `offset`. */
+  /** Last item index whose entry top is strictly before `offset`. */
   private findIndexAtOrBefore(offset: number): number {
+    if (!isIndexedSource(this.effectiveSource)) return this.offsetIndex.indexBefore(offset);
     let lo = 0;
     let hi = this.itemCount - 1;
     while (lo < hi) {

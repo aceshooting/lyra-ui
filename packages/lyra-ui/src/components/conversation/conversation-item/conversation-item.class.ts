@@ -166,6 +166,7 @@ export interface LyraConversationItemEventMap {
  *   multi-line row's title against its own baseline.
  * @cssstate menu-open - Present while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened
  *   from the `actions` slot is open, e.g. `lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu`.
+ * @cssprop [--lr-conversation-item-hover-bg=color-mix(in srgb, var(--lr-color-text) 6%, transparent)] - Row background on hover or while an actions menu is open.
  * @status stable
  * @since 4.0.0
  */
@@ -183,6 +184,9 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   private readonly hostDescription = new HostDescriptionController(
     this, () => this.renderRoot.querySelector<HTMLElement>('[part~="select-button"][role="button"]'),
   );
+
+  /** Disables row selection and rename controls and discards an open rename draft. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   override adoptedCallback(): void {
     super.adoptedCallback();
@@ -276,8 +280,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
-    // willUpdate() layered under this class must still run.
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some(
         (el) => el.getAttribute('slot') === 'actions'
@@ -293,24 +296,14 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
         (el) => el.getAttribute('slot') === 'excerpt'
       );
     }
-    // `without-rename` documents that setting it can never leave a rename
-    // committable -- without this, toggling it mid-edit would strand the
-    // input mounted (and still submittable via Enter/blur) since nothing
-    // else observes `withoutRename` while `renaming` is already true.
-    if (changed.has('withoutRename') && this.withoutRename && this.renaming) {
-      this.cancelRename();
-    }
-    // A draft belongs to the conversation it was started on: a recycled row (virtual list) that is
-    // handed another conversation must not commit that draft under the new id.
-    if (changed.has('conversationId') && this.renaming && this.hasUpdated) {
+    if (this.renaming && (this.withoutRename || this.disabled || (changed.has('conversationId') && this.hasUpdated))) {
       this.cancelRename();
     }
     setCustomState(this.internals, 'menu-open', this.actionsOverlay.open);
   }
 
   protected override updated(changed: PropertyValues): void {
-    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
-    // updated() layered under this class must still run.
+    super.updated(changed);
     if (changed.has('renaming') && this.renaming) {
       // Runs after render, so the input already exists in the DOM.
       this.focusRenameInput();
@@ -342,7 +335,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   private startRename(): void {
-    if (this.withoutRename || this.renaming) return;
+    if (this.disabled || this.withoutRename || this.renaming) return;
     this.draftLabel = this.label;
     this.renaming = true;
   }
@@ -364,7 +357,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // An empty or unchanged draft has nothing meaningful to commit -- treat
     // it the same as Escape rather than firing a no-op (or blanking) rename
     // for the consumer to deal with.
-    if (!next || next === this.label) return;
+    if (this.disabled || !next || next === this.label) return;
     this.emit('lr-rename', {
       conversationId: this.conversationId,
       label: next,
@@ -380,12 +373,12 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // While renaming, `[part="select-button"]` has no role/selection semantics
     // (see the class doc) -- a click inside it (e.g. to place the caret in
     // the input) must not also select the row.
-    if (this.renaming) return;
+    if (this.disabled || this.renaming) return;
     this.select();
   };
 
   private onOptionKeyDown = (e: KeyboardEvent): void => {
-    if (this.renaming || shouldIgnoreActivationKey(e)) return;
+    if (this.disabled || this.renaming || shouldIgnoreActivationKey(e)) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       // Space would otherwise scroll the page, same as lr-checkbox/lr-switch.
       e.preventDefault();
@@ -513,7 +506,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
         <div
           part="select-button"
           role=${this.renaming ? nothing : 'button'}
-          tabindex=${this.renaming ? nothing : '0'}
+          tabindex=${this.renaming ? nothing : this.disabled ? '-1' : '0'}
+          aria-disabled=${this.disabled ? 'true' : nothing}
           aria-current=${this.renaming
             ? nothing
             : this.active
@@ -584,6 +578,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
         ${showRenameButton
           ? html`<button
               part="rename-button"
+              ?disabled=${this.disabled}
               type="button"
               aria-label=${renameLabel}
               @click=${this.onRenameButtonClick}

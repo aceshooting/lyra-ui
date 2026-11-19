@@ -89,8 +89,9 @@ stale observations from its previous stack cannot change its active/queued state
 disconnect discards managed work, so reconnecting that old region cannot resurrect an already-settled
 alert toast.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
-detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide`, `lr-close-request`, and `lr-close`. A dismissal emits cancelable `lr-hide` followed by cancelable `lr-close-request`.
+Both close events carry `detail.reason` (`close-button`, `timeout` or `programmatic`).
+The transition events bubble and compose with empty detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
 noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
 When an accepted hide removes the focused close action, focus moves to the nearest available
 composed action. A veto keeps focus in place, and a listener-selected external destination wins.

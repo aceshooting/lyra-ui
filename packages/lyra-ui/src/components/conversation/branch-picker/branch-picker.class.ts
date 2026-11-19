@@ -62,6 +62,9 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Disables both branch navigation buttons. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
   /** 0-based current branch, rendered 1-based ("2 / 5"). Controlled -- this component never writes
    *  to it itself. */
   @property({ type: Number, reflect: true }) index = 0;
@@ -94,7 +97,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     return {
       id: direction,
       get disabled() {
-        return !button() || button()!.disabled;
+        return host.disabled || !button() || button()!.disabled;
       },
       focus(options) {
         button()?.focus(options);
@@ -161,7 +164,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('index') || changed.has('count')) {
+    if (changed.has('index') || changed.has('count') || changed.has('disabled')) {
       const active = shadowFocusTarget(this);
       if (active === this.previousButtonEl) this.focusedChevron = this.previousButtonEl;
       else if (active === this.nextButtonEl) this.focusedChevron = this.nextButtonEl;
@@ -183,7 +186,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       const formatter = getNumberFormat(this.effectiveLocale);
       this.liveRegion?.announce(this.formatPosition(formatter), { force: true });
     }
-    if (changed.has('index') || changed.has('count')) {
+    if (changed.has('index') || changed.has('count') || changed.has('disabled')) {
       if (this.normalizedCount < 2) this.releaseToolbarActions();
       this.emit('lr-toolbar-actions-change');
     }
@@ -226,7 +229,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   }
 
   private requestIndex(next: number): void {
-    if (next < 0 || next > this.normalizedCount - 1 || next === this.normalizedIndex) return;
+    if (this.disabled || next < 0 || next > this.normalizedCount - 1 || next === this.normalizedIndex) return;
     this.emit('lr-branch-change', { index: next });
   }
 
@@ -247,7 +250,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
           part="previous-button"
           type="button"
           aria-label=${this.localize('branchPrevious')}
-          ?disabled=${index <= 0}
+          ?disabled=${this.disabled || index <= 0}
           @click=${() => this.requestIndex(index - 1)}
         >
           <span part="previous-glyph">${chevronIcon()}</span>
@@ -257,7 +260,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
           part="next-button"
           type="button"
           aria-label=${this.localize('branchNext')}
-          ?disabled=${index >= count - 1}
+          ?disabled=${this.disabled || index >= count - 1}
           @click=${() => this.requestIndex(index + 1)}
         >
           <span part="next-glyph">${chevronIcon()}</span>

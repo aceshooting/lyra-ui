@@ -1,6 +1,7 @@
+import { preparedDataChanged } from '../../../internal/chart-prepared-property.js';
 import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
-import { prepareChartModel, type PreparedChartSeries } from '../../charts/chart/chart-prepared-data.js';
+import { prepareSparklineSeries, type PreparedChartSeries } from '../../../internal/chart-prepared-series.js';
 import type { LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
 export type { LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -175,21 +176,13 @@ export class LyraSparkline extends LyraElement {
   /** Upper bound of the value scale (defaults to the data maximum). */
   @property({ type: Number }) max?: number;
 
-  private _preparedData: LyraPreparedSeriesData | null = null;
   /** Property-only immutable whole-source summary with exactly one series and at most 500 samples.
    * Takes precedence over values/data. Original x, full domains/counts and gap breaks are retained;
    * min/max still explicitly override the y scale. Invalid/oversized inputs fail visibly rather
    * than being sampled again. Reassign or requestUpdate after mutable descriptor changes.
    * Source readers remain host-owned and are never invoked by this component.
    */
-  @property({ attribute: false })
-  get preparedData(): LyraPreparedSeriesData | null { return this._preparedData; }
-  set preparedData(value: LyraPreparedSeriesData | null) {
-    const previous = this._preparedData;
-    this._preparedData = value;
-    this.requestUpdate('preparedData', previous);
-    if (previous === value) this.requestUpdate();
-  }
+  @property({ attribute: false, hasChanged: preparedDataChanged }) preparedData: LyraPreparedSeriesData | null = null;
   private preparedDirty = true;
   private preparedActive = false;
   private preparedInvalid = false;
@@ -202,7 +195,7 @@ export class LyraSparkline extends LyraElement {
   private refreshPrepared(): void {
     if (!this.preparedDirty) return;
     this.preparedDirty = false;
-    this.preparedActive = this._preparedData !== null;
+    this.preparedActive = this.preparedData !== null;
     this.preparedInvalid = false;
     this.preparedSeries = undefined;
     this.preparedValues = [];
@@ -210,11 +203,7 @@ export class LyraSparkline extends LyraElement {
     this.pathMemo = undefined;
     if (!this.preparedActive) return;
     try {
-      // Validate samples without chart-only separator nodes. The shared model reserves two
-      // overlay entries; adding those to this allowance keeps exactly 500 sparkline samples.
-      const model = prepareChartModel(this._preparedData, 'bar', MAX_POINTS + 2);
-      if (model.kind !== 'series' || model.series.length !== 1 || model.displayedCount > MAX_POINTS) throw new TypeError('Invalid sparkline summary');
-      this.preparedSeries = model.series[0]!;
+      this.preparedSeries = prepareSparklineSeries(this.preparedData, MAX_POINTS);
       this.preparedValues = this.preparedSeries.samples.map(point => point!.y!);
     } catch { this.preparedInvalid = true; }
   }

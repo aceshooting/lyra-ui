@@ -1,9 +1,13 @@
-import { html, type TemplateResult } from 'lit';
+import { noChange, type TemplateResult } from 'lit';
+import { unsafeStatic } from 'lit/static-html.js';
+import { tag } from '../../../internal/prefix.js';
 import { property } from 'lit/decorators.js';
 import {
   StreamingTextRuntimeBase,
   type LyraStreamingTextEventMap as StreamingTextRuntimeEventMap,
 } from './streaming-text-base.class.js';
+
+const markdownElement = unsafeStatic(tag('markdown-core'));
 
 export {
   looksLikeMarkdown,
@@ -81,6 +85,7 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * @csspart code-block-frame - Forwarded code-header group.
  * @csspart code-block-copy-success - Forwarded successful copy state.
  * @csspart code-block-copy-error - Forwarded failed copy state.
+ * @event lr-render-error - Markdown rendering failed. Detail contains the original error.
  * @event lr-copy - Passthrough successful Markdown source-copy outcome.
  * @event lr-copy-error - Passthrough failed Markdown source-copy outcome.
  * @csspart streaming-tail - The current uncommitted text during progressive streaming.
@@ -92,36 +97,7 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' }) override codeBlockHeader = false;
 
   protected override renderMarkdown(): TemplateResult {
-    // lr-markdown-core's own lr-content-settled is deliberately left unstopped here -- see the
-    // shared base's updated() comment -- so it bubbles straight out through this element.
-    // exportparts forwards lr-markdown-core's own documented part vocabulary (verified against its
-    // class JSDoc) up through this element's shadow boundary -- see this class's own @csspart list
-    // above. Every listed name is reused verbatim (no aliasing) since none collides with this
-    // element's own base/cursor parts.
-    return html`<lr-markdown-core
-      exportparts="content, heading, paragraph, list, code-block, code-block-header, code-block-language, code-block-copy, inline-code, link, table, blockquote, img, math, task-list, task-item, task-item-checked, task-checkbox, table-wrapper, code-block-frame, code-block-copy-success, code-block-copy-error, streaming-tail"
-      .content=${this.displayedContent}
-      .streaming=${this.streaming}
-      .streamingRender=${this.streamingRender}
-      .codeBlockHeader=${this.codeBlockHeader}
-      .languages=${this.markdownLanguages ?? EMPTY_LANGUAGES}
-      .tabSize=${this.tabSize}
-      .htmlMode=${this.htmlMode}
-      .withoutGfm=${this.withoutGfm}
-      .withoutImages=${this.withoutImages}
-      .linkTarget=${this.linkTarget}
-      .linkSchemes=${this.linkSchemes}
-      .internalLinkPrefix=${this.internalLinkPrefix}
-      .headingOffset=${this.headingOffset}
-      .withoutSyntaxHighlighting=${this.withoutSyntaxHighlighting}
-      .headingAnchors=${this.headingAnchors}
-      .math=${this.math}
-      .maxHeight=${this.maxHeight}
-      @lr-render-error=${this.stopOwnedEvent}
-      @lr-highlight-activate=${this.stopOwnedEvent}
-      @lr-text-select=${this.stopOwnedEvent}
-      @lr-anchor-result=${this.stopOwnedEvent}
-    ></lr-markdown-core>`;
+    return this.renderMarkdownElement(markdownElement, this.markdownLanguages ?? EMPTY_LANGUAGES, noChange);
   }
 }
 

@@ -1,8 +1,9 @@
+import { __setShikiModuleLoaderForTesting } from '../../../internal/shiki/full.js';
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import { captureDevWarnings, expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import { __setShikiModuleLoaderForTesting, loadShikiHighlighter, loadShikiLanguage } from './code-loader.js';
+import { loadShikiHighlighter, loadShikiLanguage } from './code-loader.js';
 import { __resetShikiCoreEngineForTesting, __setShikiHighlighterCoreLoaderForTesting, ensureShikiLanguageLoaded,
   loadShikiHighlighterCore, setShikiCoreEngine, type ShikiHighlighter } from './shiki-types.js';
 import './code-block.js';

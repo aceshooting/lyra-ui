@@ -1,7 +1,16 @@
+import { finiteCount } from './numbers.js';
 import { safeFetchUrl } from './safe-url.js';
 
 /** Default cap for remote resources before a viewer hands them to a parser. */
-export const DEFAULT_MAX_RESOURCE_BYTES = 25 * 1024 * 1024;
+/** Default source size limit in bytes (25 MiB). */
+export const DEFAULT_MAX_RESOURCE_BYTES = 26214400;
+export const MAX_RESOURCE_BYTES_CEILING = 250 * 1024 * 1024;
+
+/** Clamps a viewer's configurable byte budget to one byte through 250 MiB. */
+export function resolveMaxResourceBytes(value: number): number {
+  return Math.max(1, finiteCount(value, DEFAULT_MAX_RESOURCE_BYTES, MAX_RESOURCE_BYTES_CEILING));
+}
+
 /** Independent CPU/object-cardinality ceiling for hostile tiny-chunk streams. */
 export const MAX_RESOURCE_STREAM_CHUNKS = 65_536;
 export const DEFAULT_MAX_TABLE_ROWS = 10_000;

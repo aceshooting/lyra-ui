@@ -688,3 +688,13 @@ describe("keyboard-only tooltip focus", () => {
     }
   });
 });
+
+it('keeps the decorative separator with the preceding metric on a wrapped line', async () => {
+  const el = await fixture(html`<lr-usage-badge tokens-in="10" tokens-out="20" style="width:45px"></lr-usage-badge>`);
+  const first = el.shadowRoot!.querySelector('[part="tokens-in"]')!;
+  const second = el.shadowRoot!.querySelector('[part="tokens-out"]')!;
+  expect(second.getBoundingClientRect().top).to.be.greaterThan(first.getBoundingClientRect().top);
+  expect(getComputedStyle(first, '::after').content).to.include('·');
+  expect(getComputedStyle(second, '::before').content).to.equal('none');
+  expect(getComputedStyle(second, '::after').content).to.equal('none');
+});

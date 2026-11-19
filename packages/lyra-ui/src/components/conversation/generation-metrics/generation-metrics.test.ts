@@ -772,3 +772,25 @@ it("captures the final elapsed reading at the instant the run completes", async 
   await el.updateComplete;
   expect(parseElapsedSeconds(elapsedText(el))).to.be.within(7.9, 8.5);
 });
+
+it('applies the shared icon action border to its buttons', async () => {
+  const el = await fixture<LyraGenerationMetrics>(html`
+    <lr-generation-metrics status="running" style="--lr-icon-button-size: 43px; --lr-icon-button-border: 3px dashed rgb(12, 34, 56)"></lr-generation-metrics>
+  `);
+  for (const part of ['stop-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    const style = getComputedStyle(button);
+    expect([style.minInlineSize, style.minBlockSize]).to.deep.equal(['43px', '43px']);
+    expect([style.borderTopWidth, style.borderTopStyle, style.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(12, 34, 56)']);
+  }
+});
+
+it('keeps the decorative separator with the preceding metric on a wrapped line', async () => {
+  const el = await fixture(html`<lr-generation-metrics token-count="10" style="width:45px"></lr-generation-metrics>`);
+  const first = el.shadowRoot!.querySelector('[part="elapsed"]')!;
+  const second = el.shadowRoot!.querySelector('[part="tokens"]')!;
+  expect(second.getBoundingClientRect().top).to.be.greaterThan(first.getBoundingClientRect().top);
+  expect(getComputedStyle(first, '::after').content).to.include('·');
+  expect(getComputedStyle(second, '::before').content).to.equal('none');
+  expect(getComputedStyle(second, '::after').content).to.equal('none');
+});

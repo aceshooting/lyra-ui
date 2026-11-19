@@ -1,4 +1,3 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -122,38 +121,7 @@ export const styles = css`
     display: none;
   }
   [part='resume'] {
-    --_lr-stream-status-resume-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
-    --_lr-stream-status-resume-active-bg: color-mix(in oklab, var(--_lr-stream-status-resume-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    ${iconHitTarget}
+    min-inline-size: 0;
     max-inline-size: 100%;
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
   }
-
-  [part='resume']:hover:where(:not(:disabled)) {
-    background: var(--_lr-stream-status-resume-hover-bg);
-  }
-
-  [part='resume']:active:where(:not(:disabled)) {
-    background: var(--_lr-stream-status-resume-active-bg);
-  }
-
-  [part='resume']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-
-  [part='resume']:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
-  }
-
 `;

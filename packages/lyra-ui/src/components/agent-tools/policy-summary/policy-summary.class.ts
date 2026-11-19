@@ -14,7 +14,7 @@ import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryLimit, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -146,7 +146,6 @@ export class LyraPolicySummary extends LyraElement {
     details: LYRA_DEFAULT_details,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     policySummaryAllowCount: LYRA_DEFAULT_policySummaryAllowCount,
@@ -162,8 +161,6 @@ export class LyraPolicySummary extends LyraElement {
     policySummaryStateAllow: LYRA_DEFAULT_policySummaryStateAllow,
     policySummaryStateDeny: LYRA_DEFAULT_policySummaryStateDeny,
     policySummaryStateNeedsReview: LYRA_DEFAULT_policySummaryStateNeedsReview,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

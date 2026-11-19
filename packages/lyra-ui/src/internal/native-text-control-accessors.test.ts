@@ -23,6 +23,20 @@ installNativeSelectionAccessors(Host.prototype, (host) => host.field);
 installNativeInputModeAliases(Host.prototype);
 customElements.define('h3-native-text-host', Host);
 
+class MethodHost extends LitElement {
+  declare selectionStart: number | null;
+  declare selectionEnd: number | null;
+  declare selectionDirection: 'forward' | 'backward' | 'none' | null;
+  field: HTMLInputElement | null = null;
+  calls: string[] = [];
+  select(): void { this.calls.push('select'); }
+  setSelectionRange(start: number, end: number): void { this.calls.push(`range ${start}-${end}`); }
+}
+const ownSelect = MethodHost.prototype.select;
+const ownSetSelectionRange = MethodHost.prototype.setSelectionRange;
+installNativeSelectionAccessors(MethodHost.prototype, (host) => host.field, { methods: false });
+customElements.define('h3-native-text-method-host', MethodHost);
+
 describe('native text accessors', () => {
   it('reports null and ignores writes before a field exists, forwards after', async () => {
     const host = await fixture<Host>(html`<h3-native-text-host></h3-native-text-host>`);
@@ -48,13 +62,36 @@ describe('native text accessors', () => {
     input.remove();
   });
 
+  it('keeps class-declared selection methods when methods is false, forwarding only the accessors', async () => {
+    expect(MethodHost.prototype.select === ownSelect, 'select() kept').to.equal(true);
+    expect(MethodHost.prototype.setSelectionRange === ownSetSelectionRange, 'setSelectionRange() kept').to.equal(true);
+    const host = await fixture<MethodHost>(html`<h3-native-text-method-host></h3-native-text-method-host>`);
+    host.selectionEnd = 1;
+    host.selectionDirection = 'forward';
+    expect([host.selectionStart, host.selectionEnd, host.selectionDirection]).to.deep.equal([null, null, null]);
+    const input = document.createElement('input');
+    input.value = 'abcdef';
+    document.body.append(input);
+    host.field = input;
+    host.selectionStart = 1;
+    host.selectionEnd = 3;
+    host.selectionDirection = 'backward';
+    expect([input.selectionStart, input.selectionEnd, input.selectionDirection]).to.deep.equal([1, 3, 'backward']);
+    host.select();
+    host.setSelectionRange(0, 2);
+    expect(host.calls).to.deep.equal(['select', 'range 0-2']);
+    expect([input.selectionStart, input.selectionEnd]).to.deep.equal([1, 3]);
+    input.remove();
+  });
+
   it('aliases lowercase inputmode/enterkeyhint and normalizes autocorrect writes', async () => {
     const host = await fixture<Host>(html`<h3-native-text-host></h3-native-text-host>`);
     host.inputmode = 'numeric';
     host.enterkeyhint = 'go';
     expect([host.inputMode, host.enterKeyHint]).to.deep.equal(['numeric', 'go']);
     host.inputmode = null as never;
-    expect(host.inputMode).to.equal('');
+    host.enterkeyhint = null as never;
+    expect([host.inputMode, host.enterKeyHint]).to.deep.equal(['', '']);
     expect(host.autocorrectState.value).to.equal(true);
     host.autocorrectState.set('off');
     expect(host.autocorrectState.value).to.equal(false);

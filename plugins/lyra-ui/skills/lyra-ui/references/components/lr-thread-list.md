@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 45 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-thread-list`
+
+A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
 affordances. _Data mode_ (at least one valid `threads` record, or no valid records with nothing
@@ -279,7 +281,7 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
-`group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
+`group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
 the `group-header`/`group-toggle`/`group-label`/`group-adornment`/`group-icon` markup, so those parts style the real
 header row and the pinned copy alike, and the band itself is where a shadow or bottom border

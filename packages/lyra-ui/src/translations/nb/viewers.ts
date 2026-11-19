@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Roter til høyre',
   modelViewerRotateUp: 'Roter oppover',
   modelViewerRotateDown: 'Roter nedover',
+  modelViewerViewport: 'Interaktiv modell',
 };
 
 registerLyraLocale('nb', strings);

@@ -8,13 +8,13 @@ import { chevronIcon, retryIcon } from '../../../internal/icons.js';
 import { formatTimeOfDay } from '../../../internal/intl-cache.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { styles } from './chat-message.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_expandMessage } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
@@ -180,6 +180,9 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-system-bubble-radius=var(--lr-chat-message-bubble-radius, var(--lr-radius))] - Bubble radius for `message-role="system"`.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
+ * @cssprop [--lr-chat-message-retry-color=var(--lr-color-danger)] - Retry label color.
+ * @cssprop [--lr-chat-message-retry-border-color=var(--lr-color-danger)] - Retry border color.
+ * @cssprop [--lr-chat-message-retry-hover-bg=var(--lr-color-danger-quiet)] - Retry hover background and base for its pressed tint.
  * @status stable
  * @since 4.0.0
  */
@@ -200,14 +203,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     expandMessage: LYRA_DEFAULT_expandMessage,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
     promptStudioRoleUser: LYRA_DEFAULT_promptStudioRoleUser,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -281,8 +281,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  entirely-replaces-the-built-in-UI `header` slot. */
   @state() private hasFailureSlot = false;
 
-  private politeSink?: AnnouncementSink;
-  private assertiveSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   @query('[part="bubble"]') private bubbleEl?: HTMLElement;
 
   private readonly bodyId = nextId('chat-message-body');
@@ -370,8 +369,6 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.politeSink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-    this.assertiveSink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument, source: this });
     if (this.statusAtDisconnect !== undefined) {
       // Suppress only a status update queued while detached. Reparenting an
       // unchanged message must not silence its next genuine transition.
@@ -383,9 +380,6 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   override disconnectedCallback(): void {
     this.statusAtDisconnect = this.status;
     this.isMounting = true;
-    this.politeSink?.release();
-    this.assertiveSink?.release();
-    this.politeSink = this.assertiveSink = undefined;
     super.disconnectedCallback();
   }
 
@@ -424,9 +418,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
       // see the class doc's "Accessibility of `status`" paragraph. Firing this generic announcement
       // on top of that would double-announce the same failure.
       if (this.hasFailureSlot) return;
-      this.assertiveSink?.announce(this.localize('chatFailedAnnounce'));
+      this.announcements.announceAssertive(this.localize('chatFailedAnnounce'));
     } else if (previous === 'streaming' && this.status === 'sent') {
-      this.politeSink?.announce(this.localize('chatCompleteAnnounce'));
+      this.announcements.announcePolite(this.localize('chatCompleteAnnounce'));
     }
   }
 

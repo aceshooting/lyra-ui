@@ -1,3 +1,6 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { newestCollectionWindow } from '../../../internal/collection-window.js';
+import { createInputMemo } from '../../../internal/input-memo.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -13,7 +16,7 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInputLimit, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInputLimit, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel, LYRA_DEFAULT_transcriptFeedRegion, LYRA_DEFAULT_transcriptFeedWindowNotice } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_jumpToLatest } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -71,6 +74,7 @@ export interface LyraTranscriptFeedEventMap {
  *   changed stick-to-bottom. Direct `follow` assignments and calling `scrollToBottom()` directly
  *   are controlled input and do not echo an event, matching `lr-terminal`'s identical contract.
  * @csspart limit - Notice of input entries omitted by retention limits.
+ * @csspart window-notice - Localized count of earlier entries outside the render window, also available as `data-omitted`.
  * @csspart base - The scroll container.
  * @csspart log - The `role="log"` region wrapping final entries only.
  * @csspart interim-area - The wrapper around the interim (not-yet-final) entries, rendered as a sibling of `log`. Only rendered while at least one interim entry exists.
@@ -81,6 +85,12 @@ export interface LyraTranscriptFeedEventMap {
  * @csspart interim - Present (alongside `entry`) on an interim row.
  * @csspart jump-button - The "jump to latest" affordance, shown only while `follow` is `false`.
  * @csspart empty - The empty-state wrapper.
+ * @cssprop [--lr-transcript-feed-jump-bg=var(--lr-color-surface)] - Jump button background.
+ * @cssprop [--lr-transcript-feed-jump-hover-bg=var(--lr-color-brand-quiet)] - Jump button hover background.
+ * @cssprop [--lr-transcript-feed-jump-color=var(--lr-color-text)] - Jump button text color.
+ * @cssprop [--lr-transcript-feed-jump-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Jump button border.
+ * @cssprop [--lr-transcript-feed-jump-radius=var(--lr-radius-pill)] - Jump button radius.
+ * @cssprop [--lr-transcript-feed-jump-shadow=var(--lr-shadow-m)] - Jump button shadow.
  * @status stable
  * @since 4.0.0
  */
@@ -94,6 +104,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     transcriptFeedInputLimit: LYRA_DEFAULT_transcriptFeedInputLimit,
     transcriptFeedInterim: LYRA_DEFAULT_transcriptFeedInterim,
     transcriptFeedLabel: LYRA_DEFAULT_transcriptFeedLabel,
+    transcriptFeedRegion: LYRA_DEFAULT_transcriptFeedRegion,
+    transcriptFeedWindowNotice: LYRA_DEFAULT_transcriptFeedWindowNotice,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -135,11 +147,6 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   private sessionChanged = false;
   private pendingSessionBaseline = false;
 
-  /** `maxRenderedEntries`, normalized to a finite non-negative integer (falling back to the
-   *  property's own default of `500`) -- a raw `NaN` (e.g. an invalid
-   *  `max-rendered-entries` attribute) would otherwise make `maxRenderedEntries > 0` always
-   *  false, which happens to already match the "render all" fallback, but only by the same
-   *  accidental-`NaN`-comparison quirk this guard exists to remove. */
   private get effectiveMaxRenderedEntries(): number {
     return finiteCount(this.maxRenderedEntries, 500);
   }
@@ -165,14 +172,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return entries;
   }
 
-  private get renderedEntries(): LyraTranscriptEntry[] {
-    const entries = this.normalizedEntries;
-    const maxRenderedEntries = this.effectiveMaxRenderedEntries;
-    if (maxRenderedEntries > 0 && entries.length > maxRenderedEntries) {
-      return entries.slice(-maxRenderedEntries);
-    }
-    return entries;
+  private readonly windowEntries = createInputMemo(newestCollectionWindow<LyraTranscriptEntry>);
+
+  private get renderWindow() {
+    return this.windowEntries(this.normalizedEntries, this.effectiveMaxRenderedEntries);
   }
+
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.announcements.adopted();
@@ -188,8 +193,14 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     }
   }
 
+  private get windowNotice(): string {
+    const { omitted } = this.renderWindow;
+    return omitted ? this.localize('transcriptFeedWindowNotice', undefined, { count: getNumberFormat(this.effectiveLocale).format(omitted) }) : '';
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition('render-window', 'window', this.windowNotice, 'polite');
     const inputNotice = this.inputLimitMessage();
     if (!this._isFirstUpdate && inputNotice && inputNotice !== this.lastInputNotice) this.announcements.announcePolite(inputNotice);
     this.lastInputNotice = inputNotice;
@@ -205,7 +216,6 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
    *  `max-rendered-entries` cap scrolling a row out of the DOM neither suppresses its
    *  announcement nor lets it be announced a second time on the way back in. */
   private announceFinalizedEntries(): void {
-    const currentIds = new Set(this.normalizedEntries.map(entry => entry.id));
     const alreadyAnnounced = this.announcedFinalIds;
     const fresh: string[] = [];
     for (const entry of this.normalizedEntries) {
@@ -216,9 +226,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
       }
     }
     // Preserve currently retained captions and a bounded recent history for remove/re-add cycles.
-    for (const id of alreadyAnnounced) {
-      if (alreadyAnnounced.size <= 10000) break;
-      if (!currentIds.has(id)) alreadyAnnounced.delete(id);
+    if (alreadyAnnounced.size > 10000) {
+      const currentIds = new Set(this.normalizedEntries.map(entry => entry.id));
+      for (const id of alreadyAnnounced) {
+        if (alreadyAnnounced.size <= 10000) break;
+        if (!currentIds.has(id)) alreadyAnnounced.delete(id);
+      }
     }
     const establishesBaseline =
       this._isFirstUpdate || this.sessionChanged || this.pendingSessionBaseline;
@@ -308,8 +321,15 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return loss ? this.localize('transcriptFeedInputLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(loss.retained), total: getNumberFormat(this.effectiveLocale).format(loss.source) }) : '';
   }
 
+  private get logLabel(): string {
+    const fallback = this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('transcriptFeedLabel');
+    const override = this.accessibleLabel;
+    return override === '' ? '' : normalizeLabel(override) ?? fallback;
+  }
+
   override render(): TemplateResult {
-    const entries = this.renderedEntries;
+    const { items: entries, omitted } = this.renderWindow;
+    const inputLimit = this.inputLimitMessage();
     const finals = entries.filter((entry) => !entry.interim);
     const interims = entries.filter((entry) => entry.interim);
     const format = !this.withTimestamps
@@ -322,10 +342,11 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         part="base"
         role="region"
         tabindex="0"
-        aria-label=${this.accessibleLabel ?? (this.label == null ? this.localize('transcriptFeedLabel') : this.label)}
+        aria-label=${this.localize('transcriptFeedRegion')}
         @scroll=${this.onScroll}
       >
-        ${this.inputLimitMessage() ? html`<p part="limit">${this.inputLimitMessage()}</p>` : nothing}
+        ${omitted ? html`<p part="window-notice" data-omitted=${omitted}>${this.windowNotice}</p>` : nothing}
+        ${inputLimit ? html`<p part="limit">${inputLimit}</p>` : nothing}
         ${empty
           ? html`<div part="empty"><slot name="empty">${this.localize('transcriptFeedEmpty')}</slot></div>`
           : html`
@@ -333,7 +354,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
                 part="log"
                 role="log"
                 aria-live="off"
-                aria-label=${this.accessibleLabel ?? (this.label == null ? this.localize('transcriptFeedLabel') : this.label)}
+                aria-label=${this.logLabel}
               >
                 ${repeat(
                   finals,

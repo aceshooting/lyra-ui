@@ -729,7 +729,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "keyboard",
           "rtl",
           "reducedMotion",
           "visual",
@@ -761,9 +760,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard-remediation.test.ts",
+              "test": "moves the run history tab stop with the keyboard and rehomes it when runs are removed",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -864,7 +868,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -3264,8 +3267,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
-              "line": 10,
+              "file": "src/components/viewers/archive-viewer/zip-resource-guard.ts",
+              "line": 1,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3824,7 +3827,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 459,
+              "line": 458,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5176,7 +5179,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5495,7 +5498,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5638,7 +5641,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -5685,10 +5687,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -5773,7 +5775,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -6552,7 +6554,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7638,7 +7640,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-              "line": 13,
+              "line": 14,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7681,7 +7683,9 @@
           "src/components/viewers/calendar-viewer/calendar-viewer-peer-data-boundaries.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-remediation.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-scroll-region.test.ts",
-          "src/components/viewers/calendar-viewer/calendar-viewer.test.ts"
+          "src/components/viewers/calendar-viewer/calendar-viewer.test.ts",
+          "src/components/viewers/calendar-viewer/viewer-load-commit.test.ts",
+          "src/components/viewers/calendar-viewer/viewer-peer-lifecycle.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -8933,7 +8937,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9876,7 +9880,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 974,
+              "line": 976,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10459,7 +10463,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.class.ts",
-              "line": 145,
+              "line": 151,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12562,7 +12566,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2805,
+              "line": 2717,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12598,6 +12602,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/choice-catalog-availability.test.ts",
           "src/components/forms/combobox/choice-catalog-interaction.test.ts",
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
@@ -12854,7 +12859,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "keyboard",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -12897,9 +12901,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
+              "test": "uses one tab stop for expanded file rows and clamps arrow navigation at the ends",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -13005,7 +13014,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -14075,8 +14083,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/contact-viewer/contact-viewer.class.ts",
-              "line": 9,
+              "file": "src/components/viewers/contact-viewer/vcard.ts",
+              "line": 3,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15008,7 +15016,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 437,
+              "line": 430,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15462,7 +15470,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "narrowAllocation",
           "peerFailure",
           "forcedColors",
@@ -15513,9 +15520,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/csv-viewer/csv-viewer-max-height.test.ts",
+              "test": "isolates cell and heading text in RTL tables",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -15597,8 +15609,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/csv-viewer/csv-viewer.class.ts",
-              "line": 17,
+              "file": "src/components/viewers/csv-viewer/csv-viewer.test.ts",
+              "line": 18,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15623,7 +15635,6 @@
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -15646,7 +15657,8 @@
           "src/components/viewers/csv-viewer/csv-viewer-scale.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-search-load-ownership.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-yield.test.ts",
-          "src/components/viewers/csv-viewer/csv-viewer.test.ts"
+          "src/components/viewers/csv-viewer/csv-viewer.test.ts",
+          "src/components/viewers/csv-viewer/viewer-theme.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -16465,7 +16477,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
-              "line": 17,
+              "line": 18,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16504,6 +16516,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/dataset-viewer/dataset-peer-boundary.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-load-lifecycle.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-public-admission.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-remediation.test.ts",
@@ -18091,7 +18104,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-compare/document-compare.class.ts",
-              "line": 481,
+              "line": 482,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19076,7 +19089,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23596,7 +23609,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.class.ts",
-              "line": 283,
+              "line": 280,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25254,10 +25267,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/funnel/funnel.class.ts",
+              "line": 238,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -25282,7 +25301,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -25818,7 +25837,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
-              "line": 17,
+              "line": 18,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27190,7 +27209,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2826,
+              "line": 785,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27612,7 +27631,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27870,8 +27889,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/html-viewer/html-viewer.class.ts",
-              "line": 5,
+              "file": "src/components/viewers/html-viewer/dompurify-loader.test.ts",
+              "test": "uses the optional peer import when no importer is supplied",
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29822,7 +29841,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 760,
+              "line": 702,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31176,7 +31195,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31535,7 +31554,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35508,7 +35527,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions-remediation.test.ts",
-              "line": 12,
+              "line": 13,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -35583,7 +35602,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 775,
+              "line": 780,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35812,6 +35831,7 @@
           "src/components/conversation/message-feedback/message-feedback-chip-veto.test.ts",
           "src/components/conversation/message-feedback/message-feedback-detail-policy.test.ts",
           "src/components/conversation/message-feedback/message-feedback-reason-cost.test.ts",
+          "src/components/conversation/message-feedback/message-feedback-registration.test.ts",
           "src/components/conversation/message-feedback/message-feedback-remediation.test.ts",
           "src/components/conversation/message-feedback/message-feedback.test.ts"
         ],
@@ -35830,7 +35850,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "peerFailure",
           "security",
           "forcedColors",
@@ -35900,10 +35919,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -36005,7 +36024,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -36329,8 +36348,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/model-select/model-select-remediation.test.ts",
-              "test": "keeps the keyboard-active row visible and reopens on the committed row",
+              "file": "src/components/conversation/model-select/model-select-interaction.test.ts",
+              "test": "reports the exact typed draft and omits query from commit payloads",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -38463,7 +38482,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.class.ts",
-              "line": 5,
+              "line": 457,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38896,7 +38915,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2805,
+              "line": 2717,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38932,6 +38951,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/choice-catalog-availability.test.ts",
           "src/components/forms/combobox/choice-catalog-interaction.test.ts",
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
@@ -41041,7 +41061,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41341,7 +41361,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42466,7 +42486,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
-              "line": 213,
+              "line": 211,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44124,7 +44144,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48388,7 +48408,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 496,
+              "line": 501,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49557,7 +49577,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
-              "line": 213,
+              "line": 214,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49781,7 +49801,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 568,
+              "line": 591,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50925,7 +50945,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 588,
+              "line": 582,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51894,7 +51914,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-              "line": 19,
+              "line": 21,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53440,7 +53460,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 223,
+              "line": 232,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53631,7 +53651,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
-              "line": 6,
+              "line": 46,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55776,7 +55796,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "narrowAllocation",
           "visual",
@@ -55822,9 +55841,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/test-results/test-results-remediation.test.ts",
+              "test": "roves across legacy suites and keeps a tab stop when a filter removes the active name",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -55907,7 +55931,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/test-results/test-results.class.ts",
-              "line": 478,
+              "line": 479,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55931,7 +55955,6 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -56558,7 +56581,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 1010,
+              "line": 815,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56595,17 +56618,20 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/thread-list/thread-list-adoption.test.ts",
+          "src/components/conversation/thread-list/thread-list-buckets.property.test.ts",
           "src/components/conversation/thread-list/thread-list-consumer-regression.test.ts",
           "src/components/conversation/thread-list/thread-list-coverage.test.ts",
           "src/components/conversation/thread-list/thread-list-focus-ownership.test.ts",
           "src/components/conversation/thread-list/thread-list-input-limit.test.ts",
           "src/components/conversation/thread-list/thread-list-keyboard-boundaries.test.ts",
+          "src/components/conversation/thread-list/thread-list-registration.test.ts",
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list-scale.test.ts",
           "src/components/conversation/thread-list/thread-list-search-size.test.ts",
           "src/components/conversation/thread-list/thread-list-source-admission.test.ts",
           "src/components/conversation/thread-list/thread-list-source-page-clamp.test.ts",
           "src/components/conversation/thread-list/thread-list-source-scale.test.ts",
+          "src/components/conversation/thread-list/thread-list-source.property.test.ts",
           "src/components/conversation/thread-list/thread-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -62164,7 +62190,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.class.ts",
-              "line": 33,
+              "line": 34,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62889,8 +62915,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/voice-picker/voice-picker-remediation.test.ts",
-              "test": "keeps the keyboard-active row visible and reopens on the committed row",
+              "file": "src/components/conversation/voice-picker/voice-picker-interaction.test.ts",
+              "test": "reports the exact typed draft and omits query from commit payloads",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -62981,7 +63007,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 589,
+              "line": 597,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63829,7 +63855,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.class.ts",
-              "line": 21,
+              "line": 26,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -1,30 +1,27 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { splitLines } from '../../../internal/text-lines.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { bdi } from '../../../internal/bidi.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { templateContent } from 'lit/directives/template-content.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
 import {
   LyraUserFacingError,
-  readResponseArrayBuffer,
-  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
-import { getDateTimeFormat, getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/file-size.js';
-import { loadEmailDeps } from './email-loader.js';
+import { getDateTimeFormat, getListFormat } from '../../../internal/intl-cache.js';
+import { formatLocalizedFileSize } from '../../../internal/bytes.js';
+import { loadEmailDeps, type EmailDeps, type PostalMimeApi } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -33,12 +30,12 @@ import {
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
-import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
+import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_download, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_download, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -53,13 +50,19 @@ export interface LyraEmailAttachmentOpenDetail {
     content?: Blob;
   }>;
 }
+interface EmailHtml {
+  template: HTMLTemplateElement;
+  folded?: { nodes: ChildNode[]; toggles: { button: HTMLButtonElement; block: Element }[] };
+}
+
 type EmailFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; email: ParsedEmail; fromAddress?: Address; toAddresses?: readonly Address[] }
+  | { kind: 'loaded'; email: ParsedEmail; htmlBody?: EmailHtml; fromAddress?: Address; toAddresses?: readonly Address[] }
   | { kind: 'error'; message: () => string };
 
 export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-attachment-open': CustomEvent<LyraEventDetailSnapshot<LyraEmailAttachmentOpenDetail>>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
@@ -284,46 +287,40 @@ function splitTrailingQuoteBlock(text: string): { visible: string; quoted: strin
 
 const QUOTE_SELECTOR = 'blockquote[type="cite" i], div.gmail_quote, div.yahoo_quoted, div[id^="divRplyFwdMsg"]';
 
-/** Marks top-level gmail/Outlook/yahoo-shaped quote blocks in an already-sanitized HTML body as
- *  hidden and inserts a localized toggle button before each one. */
-function parseHtmlDocument(html: string, ownerDocument: Document): Document | null {
-  const DOMParserCtor = ownerDocument.defaultView?.DOMParser;
-  return DOMParserCtor ? new DOMParserCtor().parseFromString(html, 'text/html') : null;
-}
-
 function foldHtmlQuotes(
-  html: string,
-  localize: (key: string) => string,
+  body: EmailHtml,
   expandedIndices: readonly number[],
-  ownerDocument: Document,
-): string {
-  const doc = parseHtmlDocument(html, ownerDocument);
-  // Server/inert documents have no parsing realm. The body was already sanitized, so retaining it
-  // unfolded is the safe deterministic fallback until the element connects to a browser document.
-  if (!doc) return html;
-  // Message markup must not impersonate the toggles and blocks marked below.
-  for (const forged of doc.body.querySelectorAll('[data-quote-toggle], [data-quote-index], [data-email-chrome]')) {
-    forged.removeAttribute('data-quote-toggle');
-    forged.removeAttribute('data-quote-index');
-    forged.removeAttribute('data-email-chrome');
+  show: string,
+  hide: string,
+): ChildNode[] {
+  if (!body.folded) {
+    const template = body.template.cloneNode(true) as HTMLTemplateElement;
+    for (const element of template.content.querySelectorAll('[data-quote-toggle], [data-quote-index], [data-email-chrome]')) {
+      element.removeAttribute('data-quote-toggle');
+      element.removeAttribute('data-quote-index');
+      element.removeAttribute('data-email-chrome');
+    }
+    const toggles = Array.from(template.content.querySelectorAll(QUOTE_SELECTOR), (block, index) => {
+      const button = template.ownerDocument.createElement('button');
+      button.type = 'button';
+      button.setAttribute('part', 'quote-toggle');
+      button.setAttribute('data-email-chrome', 'quote-toggle');
+      button.setAttribute('data-quote-toggle', String(index));
+      block.setAttribute('part', 'quoted');
+      block.setAttribute('data-quote-index', String(index));
+      block.before(button);
+      return { button, block };
+    });
+    body.folded = { nodes: Array.from(template.content.childNodes), toggles };
   }
-  const blocks = doc.body.querySelectorAll(QUOTE_SELECTOR);
-  const expandedQuotes = new Set(expandedIndices);
-  blocks.forEach((block, index) => {
-    const expanded = expandedQuotes.has(index);
-    block.setAttribute('part', 'quoted');
-    if (!expanded) block.setAttribute('hidden', '');
-    block.setAttribute('data-quote-index', String(index));
-    const button = doc.createElement('button');
-    button.type = 'button';
-    button.setAttribute('part', 'quote-toggle');
-    button.setAttribute('data-email-chrome', 'quote-toggle');
-    button.setAttribute('aria-expanded', String(expanded));
-    button.setAttribute('data-quote-toggle', String(index));
-    button.textContent = localize(expanded ? 'emailViewerHideQuoted' : 'emailViewerShowQuoted');
-    block.before(button);
+  const expanded = new Set(expandedIndices);
+  body.folded.toggles.forEach(({ button, block }, index) => {
+    const open = expanded.has(index);
+    block.toggleAttribute('hidden', !open);
+    button.setAttribute('aria-expanded', String(open));
+    button.textContent = open ? hide : show;
   });
-  return doc.body.innerHTML;
+  return body.folded.nodes;
 }
 
 /** Sanitized message markup never contains buttons, so only Lyra's toggles match. */
@@ -356,6 +353,7 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * body. Text-quote anchors remain available across all rendered message text.
  *
  * @customElement lr-email-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing the message fails.
  * @event lr-attachment-open - An attachment button was activated. Recursively frozen `detail:
  *   { attachment: { filename, mimeType, content?: Blob } }`; read bytes with `arrayBuffer()`.
@@ -392,6 +390,9 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * @csspart quote-toggle - The show/hide-quoted-text toggle button.
  * @csspart error - The error region.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
+ * @cssprop --lr-email-viewer-action-background - Resting background of viewer actions.
+ * @cssprop --lr-email-viewer-action-hover-background - Hover background of viewer actions.
+ * @cssprop --lr-email-viewer-action-active-background - Pressed background of viewer actions.
  * @cssprop [--lr-email-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @status stable
@@ -437,10 +438,8 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
-    search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -468,14 +467,11 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       const budget = { remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits };
       const matchesQuote = (block: Element): boolean =>
         createTextQuoteIndex(scopeFromElement(block), this.effectiveLocale).search(query, budget).length > 0;
-      const { bodyHtml, bodyText } = this.fetchState.email;
-      if (bodyHtml !== null) {
-        // The parsed body is only read here, so one parse serves every search of this message.
-        if (this.searchDocument?.html !== bodyHtml) {
-          this.searchDocument = { html: bodyHtml, doc: parseHtmlDocument(bodyHtml, this.ownerDocument) };
-        }
+      const { bodyText } = this.fetchState.email;
+      const { htmlBody } = this.fetchState;
+      if (htmlBody) {
         const next = new Set(this.expandedHtmlQuoteIndices);
-        this.searchDocument.doc?.body.querySelectorAll(QUOTE_SELECTOR).forEach((block, index) => {
+        htmlBody.template.content.querySelectorAll(QUOTE_SELECTOR).forEach((block, index) => {
           if (!next.has(index) && matchesQuote(block)) next.add(index);
         });
         const expanded = [...next];
@@ -501,27 +497,30 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   override async searchNext(): Promise<boolean> { return super.searchNext(); }
   override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
   override clearSearch(): void { super.clearSearch(); }
-  private searchDocument?: { html: string; doc: Document | null };
   @state() private fetchState: EmailFetchState = { kind: 'idle' };
   @state() private textQuoteExpanded = false;
   @state() private expandedHtmlQuoteIndices: number[] = [];
-  private generation = 0;
-  private pendingTransportGeneration: number | undefined;
+  private readonly transport = new ViewerSourceController(this, {
+    retainAcrossMove: () => !this.acquiringMessage,
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      this.acquiringMessage = false;
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
+  private acquiringMessage = false;
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
-  /** Memoizes {@link foldHtmlQuotes}'s output so an unrelated re-render (any `@state`/`@property`
-   *  write that isn't `bodyHtml` or the expanded-index set -- `name`, an announcement, a locale
-   *  broadcast, ...) reuses the last folded string instead of re-parsing and re-walking the whole
-   *  sanitized body on every render. Keyed on the two toggle-label strings too: a locale/`.strings`
-   *  change alone (no `bodyHtml`/index change) still flips the "Show/Hide quoted text" button text
-   *  that {@link foldHtmlQuotes} bakes into the returned markup, so the cache must miss when either
-   *  label would render differently. */
   private foldedHtmlCache: {
-    bodyHtml: string;
-    expandedKey: string;
+    body: EmailHtml;
+    expanded: readonly number[];
     showLabel: string;
     hideLabel: string;
-    result: string;
+    result: ChildNode[];
   } | null = null;
 
   protected override textContentRoot(): Element | null {
@@ -548,7 +547,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
     const moved = this.detached.cancel();
-    if (moved && this.pendingTransportGeneration === undefined) return;
+    if (moved && !this.acquiringMessage) return;
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -556,14 +555,13 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   /** A same-task DOM move keeps the loaded message; a genuine disconnect drops load and fold state. */
   private readonly detached = new DeferredTeardown(() => {
-    this.generation++;
+    this.transport.cancel();
     this.textQuoteExpanded = false;
     this.expandedHtmlQuoteIndices = [];
     this.foldedHtmlCache = null;
   });
 
   override disconnectedCallback(): void {
-    if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.announcements.disconnect();
     this.releaseScrollRegion?.();
     this.releaseScrollRegion = undefined;
@@ -594,75 +592,42 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
   private async load(): Promise<void> {
-    const generation = ++this.generation;
-    this.pendingTransportGeneration = undefined;
-    const signal = this.beginAbortableLoad();
+    this.acquiringMessage = Boolean(this.src);
     this.lastLoadSrc = this.src;
-    if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.fetchState = { kind: 'loading' };
-    this.pendingTransportGeneration = generation;
-    let acquiringMessage = true;
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      if (!(await loadEmailDeps()).PostalMime) {
-        throw new LyraUserFacingError(
-          this.localize('emailViewerMissingParser'),
-          (localize) => localize('emailViewerMissingParser'),
-        );
-      }
-      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      const buffer = await readResponseArrayBuffer(response);
-      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
-      acquiringMessage = false;
-      const result = await this.parse(buffer, generation, fetchTarget.view);
-      if (result && this.isCurrentLoad(generation, fetchTarget.view)) {
-        this.fetchState = { kind: 'loaded', ...result };
-      }
-    } catch (error) {
-      if ((acquiringMessage && signal?.aborted) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
-    }
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
   }
 
-  private isCurrentLoad(generation: number, ownerView: Window): boolean {
-    return this.isConnected
-      && generation === this.generation
-      && this.ownerDocument.defaultView === ownerView;
-  }
-
-  private async parse(
-    buffer: ArrayBuffer,
-    generation: number,
-    ownerView: Window,
-  ): Promise<{ email: ParsedEmail; fromAddress?: Address; toAddresses?: readonly Address[] } | null> {
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
     const { PostalMime, DOMPurify } = await loadEmailDeps();
-    if (!this.isCurrentLoad(generation, ownerView)) return null;
+    if (this.transport.isStale(token)) return;
     if (!PostalMime) {
       throw new LyraUserFacingError(
         this.localize('emailViewerMissingParser'),
         (localize) => localize('emailViewerMissingParser'),
       );
     }
+    const buffer = await this.transport.readArrayBuffer(response);
+    if (this.transport.isStale(token)) return;
+    this.acquiringMessage = false;
+    const result = await this.parse(buffer, token, PostalMime, DOMPurify);
+    if (result && !this.transport.isStale(token)) {
+      this.fetchState = { kind: 'loaded', ...result };
+    }
+  }
+
+  private async parse(
+    buffer: ArrayBuffer,
+    token: ViewerSourceToken,
+    PostalMime: PostalMimeApi,
+    DOMPurify: EmailDeps['DOMPurify'],
+  ): Promise<{ email: ParsedEmail; htmlBody?: EmailHtml; fromAddress?: Address; toAddresses?: readonly Address[] } | null> {
     const rawParsed = await PostalMime.parse(buffer);
-    if (!this.isCurrentLoad(generation, ownerView)) return null;
+    if (this.transport.isStale(token)) return null;
     const parsed = normalizeParsedEmail(rawParsed);
     if (!parsed) {
       throw new LyraUserFacingError(
@@ -670,18 +635,19 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         (localize) => localize('documentPreviewFailedToLoad'),
       );
     }
-    const sanitized = parsed.html !== undefined && DOMPurify
-      ? sanitizePassiveMarkup(DOMPurify, parsed.html, this.ownerDocument, 'passive-document')
-      : '';
-    const bodyHtml = sanitized.trim() ? sanitized : null;
-    if (!this.isCurrentLoad(generation, ownerView)) return null;
+    let htmlBody: EmailHtml | undefined;
+    let bodyHtml: string | null = null;
+    if (parsed.html !== undefined && DOMPurify) {
+      const template = this.ownerDocument.createElement('template');
+      template.content.append(sanitizePassiveMarkupFragment(DOMPurify, parsed.html, this.ownerDocument, 'passive-document'));
+      const markup = template.innerHTML;
+      if (markup.trim()) {
+        bodyHtml = markup;
+        htmlBody = { template };
+      }
+    }
+    if (this.transport.isStale(token)) return null;
     if (parsed.html && !DOMPurify && !parsed.text) {
-      // An HTML-only message (no text/plain alternative) with the optional
-      // `dompurify` peer unavailable would otherwise fall through to an empty
-      // body with no diagnostic -- surface the same "install the optional
-      // peer" message the other sanitizer-dependent viewers already show
-      // (`<lr-html-viewer>`, `<lr-svg-viewer>`) instead of silently
-      // dropping the only content the message has.
       throw new LyraUserFacingError(
         this.localize('documentViewerMissingSanitizer'),
         (localize) => localize('documentViewerMissingSanitizer'),
@@ -690,6 +656,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     return {
       ...(parsed.from === undefined ? {} : { fromAddress: parsed.from }),
       toAddresses: parsed.to,
+      htmlBody,
       email: {
         from: this.formatAddress(parsed.from),
         to: this.formatAddresses(parsed.to),
@@ -744,10 +711,11 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     return html`<div part="attachments"><span part="attachments-label">${this.localize('emailViewerAttachments')}</span><ul part="attachment-list">
       ${attachments.map((attachment) => {
         const filename = attachment.filename || this.localize('emailViewerUnnamedAttachment');
+        const size = formatLocalizedFileSize(attachment.size, this.effectiveLocale, key => this.localize(key));
         return html`<li part="attachment-item"><button
           type="button"
           part="attachment-button"
-          aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename })}
+          aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: `${filename} ${size}` })}
           @click=${() => this.emit('lr-attachment-open', {
             attachment: {
               filename,
@@ -757,14 +725,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
                 : undefined,
             },
           })}
-        ><span part="attachment-name">${filename}</span><span part="attachment-size">${formatFileSize(
-          attachment.size,
-          (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-          (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
-            minimumFractionDigits: fractionDigits,
-            maximumFractionDigits: fractionDigits,
-          }).format(value),
-        )}</span></button></li>`;
+        ><span part="attachment-name">${filename}</span> <span part="attachment-size">${size}</span></button></li>`;
       })}
     </ul></div>`;
   }
@@ -792,47 +753,38 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     const block = this.renderRoot.querySelector<HTMLElement>(`[data-quote-index="${index}"]`);
     const numericIndex = Number(index);
     if (!block || !Number.isInteger(numericIndex) || numericIndex < 0) return;
-    const restoreFocus = shadowFocusTarget(this) === target;
     this.expandedHtmlQuoteIndices = this.expandedHtmlQuoteIndices.includes(numericIndex)
       ? this.expandedHtmlQuoteIndices.filter((value) => value !== numericIndex)
       : [...this.expandedHtmlQuoteIndices, numericIndex];
-    if (restoreFocus) {
-      this.scheduleAfterUpdate(() => {
-        this.renderRoot
-          .querySelector<HTMLElement>(`[data-quote-toggle="${numericIndex}"]`)
-          ?.focus();
-      });
-    }
   };
 
-  /** Cached wrapper around {@link foldHtmlQuotes} -- see {@link foldedHtmlCache}'s doc comment for
-   *  what the cache key covers and why. A cache hit skips the `DOMParser().parseFromString()` +
-   *  `QUOTE_SELECTOR` walk + `.innerHTML` re-serialization entirely, which otherwise re-ran on
-   *  every render while `fold-quotes` is on, including renders triggered by toggling a single
-   *  quote block (a `expandedHtmlQuoteIndices` write re-renders the whole component, not just the
-   *  clicked block). */
-  private getFoldedHtml(bodyHtml: string): string {
+  private getFoldedHtml(body: EmailHtml): ChildNode[] {
     const showLabel = this.localize('emailViewerShowQuoted');
     const hideLabel = this.localize('emailViewerHideQuoted');
-    const expandedKey = this.expandedHtmlQuoteIndices.join(',');
+    const expanded = this.expandedHtmlQuoteIndices;
     const cache = this.foldedHtmlCache;
     if (
       cache
-      && cache.bodyHtml === bodyHtml
-      && cache.expandedKey === expandedKey
+      && cache.body === body
+      && cache.expanded === expanded
       && cache.showLabel === showLabel
       && cache.hideLabel === hideLabel
     ) {
       return cache.result;
     }
-    const result = foldHtmlQuotes(bodyHtml, this.localize.bind(this), this.expandedHtmlQuoteIndices, this.ownerDocument);
-    this.foldedHtmlCache = { bodyHtml, expandedKey, showLabel, hideLabel, result };
+    const result = foldHtmlQuotes(body, expanded, showLabel, hideLabel);
+    this.foldedHtmlCache = { body, expanded, showLabel, hideLabel, result };
     return result;
   }
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? this.getFoldedHtml(this.fetchState.email.bodyHtml) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
+      case 'loaded': {
+        const { email, htmlBody, fromAddress, toAddresses } = this.fetchState;
+        return html`<div>${this.renderHeaders(email, fromAddress, toAddresses)}<div part="body">${htmlBody
+          ? html`<div part="body-html" @click=${this.onBodyClick}>${this.foldQuotes ? this.getFoldedHtml(htmlBody) : templateContent(htmlBody.template)}</div>`
+          : this.renderTextBody(email.bodyText ?? '')}</div></div>${this.renderAttachments(email.attachments)}`;
+      }
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeEmail') })}</p>`;

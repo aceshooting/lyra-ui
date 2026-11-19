@@ -1,3 +1,4 @@
+import { OwnedMutationObserver, OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -235,8 +236,15 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private scrollbarDragRelease?: () => void;
   private isMounting = true;
   private pendingScrollBehavior?: 'auto' | 'smooth';
-  private contentResizeObserver?: ResizeObserver;
-  private contentMutationObserver?: MutationObserver;
+  private readonly contentResizeObserver = new OwnedResizeObserver(this, () => {
+    if (this.contentSizeMeasured) this.scheduleGrowthTick();
+    this.contentSizeMeasured = true;
+  });
+  private contentSizeMeasured = false;
+  private readonly contentMutationObserver = new OwnedMutationObserver(this, records => {
+    if (this.listenedVirtualList) this.scheduleGrowthTick();
+    else this.onContentMutations(records);
+  });
   private readonly announcements = new AnnouncementSinkController(this);
   private get announcementSink(): AnnouncementSink | undefined {
     this.announcements.setExclusiveChannel(this.livePoliteness);
@@ -245,7 +253,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private get livePoliteness(): 'polite' | 'assertive' | undefined {
     return this.live === 'polite' || this.live === 'assertive' ? this.live : undefined;
   }
-  private scrollResizeObserver?: ResizeObserver;
+  private readonly scrollResizeObserver = new OwnedResizeObserver(this, () => {
+    if (this.scrollSizeMeasured && this.follow) this.performScrollToEnd('auto');
+    this.scrollSizeMeasured = true;
+  });
+  private scrollSizeMeasured = false;
   private growthFrame: OwnedAnimationFrame | null = null;
   private listenedVirtualList?: LyraVirtualList;
   private observerWindow?: Window;
@@ -942,16 +954,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const owner = this.ownerDocument.defaultView;
     const list = this.virtualListEl;
     const mode: 'virtual' | 'slotted' = list ? 'virtual' : 'slotted';
-    // `onSlotChange` calls this on *every* `slotchange`, including the very first one, which
-    // always fires once during initial mount even though `firstUpdated()` already armed things a
-    // moment earlier. A naive unconditional rebuild here would tear down and recreate the
-    // ResizeObserver(s) below on that redundant call -- and ResizeObserver guarantees an
-    // immediate callback on `observe()` reporting the target's *current* size, not just future
-    // changes, so a redundant rebuild re-triggers a follow-driven scroll-to-bottom purely from
-    // being re-observed. That's a real, observed bug: it can land asynchronously after this
-    // rebuild, undoing an unrelated scroll a host performs in between (e.g. `scrollToUnread()`
-    // right after mount). Skip the rebuild when neither the mode nor, in virtual mode, the
-    // specific list instance actually changed since the last arm.
+    // Re-observing an unchanged target delivers another size baseline.
     if (
       this.observerWindow === owner &&
       this.armedMode === mode &&
@@ -968,113 +971,21 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       this.listenedVirtualList = list;
       list.addEventListener('lr-virtual-scroll', this.onVirtualScroll);
       // Watch the spacer's style: a ResizeObserver on it would trip the list's row-measurement delivery.
-      const MutationObserverCtor = owner?.MutationObserver;
       void list.updateComplete.then(() => {
         const spacer = list.scrollContainer?.querySelector('[part="spacer"]');
-        if (!spacer || !MutationObserverCtor || generation !== this.armGeneration) return;
-        const observer = new MutationObserverCtor(() => {
-          if (this.contentMutationObserver === observer) this.scheduleGrowthTick();
-        });
-        this.contentMutationObserver = observer;
-        // Logical growth can leave the capped physical scroll extent unchanged.
-        observer.observe(spacer, { attributeFilter: ['style', 'data-item-count'] });
+        if (!spacer || generation !== this.armGeneration) return;
+        this.contentMutationObserver.observe(spacer, { attributeFilter: ['style', 'data-item-count'] });
         // Reconnect may have missed a count change while the observer was detached.
         this.requestUpdate();
         if (this.follow) this.performScrollToEnd('auto');
       });
     } else {
       const content = this.contentEl;
-      if (content) {
-        // `ResizeObserver.observe()` guarantees one callback reporting the target's *current* size
-        // before any real change happens -- useful for measuring, but wrong to treat as "content
-        // grew," since acting on it re-triggers a scroll purely from having just started watching
-        // (this was the same asynchronous-baseline case caught below for the scroll container's
-        // own observer -- see that comment for why it matters). Ignore exactly that first delivery.
-        let baselineSeen = false;
-        const ResizeObserverCtor = owner?.ResizeObserver;
-        if (ResizeObserverCtor) {
-          let observer: ResizeObserver;
-          observer = new ResizeObserverCtor(() => {
-            if (
-              !this.isConnected ||
-              this.ownerDocument.defaultView !== owner ||
-              this.contentResizeObserver !== observer
-            ) {
-              return;
-            }
-            if (!baselineSeen) {
-              baselineSeen = true;
-              return;
-            }
-            this.scheduleGrowthTick();
-          });
-          this.contentResizeObserver = observer;
-          this.contentResizeObserver.observe(content);
-        }
-      }
-      // Slotted rows live in the light DOM; slot assignment doesn't reparent them into the shadow
-      // tree, so a MutationObserver watching the shadow-side content wrapper would never see one
-      // added, removed, or reordered -- it has to watch `this` (the host) directly instead. This
-      // also catches a childList change that doesn't happen to alter the transcript's overall
-      // height (e.g. same-height rows reordered around the unread boundary), which the size-only
-      // ResizeObserver above can't. `MutationObserver.observe()` has no equivalent guaranteed-first-
-      // callback behavior, so it needs no baseline guard.
-      const MutationObserverCtor = owner?.MutationObserver;
-      if (MutationObserverCtor) {
-        let observer: MutationObserver;
-        observer = new MutationObserverCtor((records) => {
-          if (
-            !this.isConnected ||
-            this.ownerDocument.defaultView !== owner ||
-            this.contentMutationObserver !== observer
-          ) {
-            return;
-          }
-          this.onContentMutations(records);
-        });
-        this.contentMutationObserver = observer;
-        this.contentMutationObserver.observe(this, { childList: true });
-      }
+      if (content) this.contentResizeObserver.observe(content);
+      this.contentMutationObserver.observe(this, { childList: true });
     }
     const scrollEl = this.scrollEl;
-    if (scrollEl) {
-      // Same guaranteed-first-callback behavior as above, and it matters more here: this one calls
-      // `performScrollToEnd()` directly, with no rAF hop of its own, so its baseline delivery can be
-      // scheduled for a later animation frame than the content observer's (which detours through
-      // `scheduleGrowthTick()`'s own rAF) and land after a scroll performed shortly after mount --
-      // e.g. `scrollToUnread()` while `follow` is still engaged -- silently overwriting it back to
-      // the end. Without this guard that race is real, not hypothetical: the baseline callback fires
-      // unconditionally on every fresh `observe()` regardless of whether the size actually changed.
-      let baselineSeen = false;
-      const ResizeObserverCtor = owner?.ResizeObserver;
-      if (ResizeObserverCtor) {
-        let observer: ResizeObserver;
-        observer = new ResizeObserverCtor(() => {
-          if (
-            !this.isConnected ||
-            this.ownerDocument.defaultView !== owner ||
-            this.scrollResizeObserver !== observer
-          ) {
-            return;
-          }
-          if (!baselineSeen) {
-            baselineSeen = true;
-            return;
-          }
-          if (this.follow) this.performScrollToEnd('auto');
-        });
-        this.scrollResizeObserver = observer;
-        this.scrollResizeObserver.observe(scrollEl);
-      }
-    }
-    // Deferred rather than called synchronously here: this is a real DOM-layout measurement that
-    // necessarily writes reactive state (`unreadDividerTop`) reflecting it, and this method runs
-    // from inside a Lit lifecycle callback (firstUpdated()/connectedCallback()) on the initial arm
-    // -- a synchronous write there still needs a follow-up render to reflect it, which is
-    // unavoidable, but doing it inside the lifecycle callback itself needlessly trips Lit's
-    // "scheduled an update after an update completed" dev-mode notice. A microtask hop clears that
-    // callback first. Mirrors the identical pattern (and reasoning) in
-    // LyraVirtualList.attachContainerListeners()'s own initial measurement.
+    if (scrollEl) this.scrollResizeObserver.observe(scrollEl);
     queueMicrotask(() => {
       if (!this.isConnected || generation !== this.armGeneration) return;
       this.updateUnreadDividerPosition();
@@ -1083,12 +994,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   private teardownObservers(): void {
     this.clearKeyboardScrollIntent();
-    this.scrollResizeObserver?.disconnect();
-    this.scrollResizeObserver = undefined;
-    this.contentResizeObserver?.disconnect();
-    this.contentResizeObserver = undefined;
-    this.contentMutationObserver?.disconnect();
-    this.contentMutationObserver = undefined;
+    this.scrollResizeObserver.clear();
+    this.contentResizeObserver.clear();
+    this.contentMutationObserver.clear();
+    this.scrollSizeMeasured = false;
+    this.contentSizeMeasured = false;
     this.listenedVirtualList?.removeEventListener('lr-virtual-scroll', this.onVirtualScroll);
     this.listenedVirtualList = undefined;
     this.observerWindow = undefined;

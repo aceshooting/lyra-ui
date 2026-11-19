@@ -1621,3 +1621,36 @@ it("binds reveal-on-interaction to the host when the toolbar is a direct child o
     host.remove();
   }
 });
+
+it('disables every built-in action and restores its toolbar stops', async () => {
+  const el = await fixture<LyraMessageActions>(html`<lr-message-actions copy-text="Text" .controls=${['copy', 'regenerate', 'edit', 'feedback']}></lr-message-actions>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const states = () => [...base.children].filter(child => child.localName !== 'slot').map(child => child.hasAttribute('disabled'));
+  let edits = 0;
+  el.addEventListener('lr-edit', () => { edits++; });
+  el.addEventListener('lr-regenerate', () => { edits++; });
+  el.disabled = true;
+  for (const part of ['edit-button', 'regenerate-button']) base.querySelector<HTMLElement>(`[part="${part}"]`)!.click();
+  await el.updateComplete;
+  expect(states()).to.deep.equal([true, true, true, true]);
+  expect(base.querySelector('slot')!.inert).to.equal(true);
+  el.disabled = false;
+  await el.updateComplete;
+  expect(states()).to.deep.equal([false, false, false, false]);
+  for (const part of ['edit-button', 'regenerate-button']) base.querySelector<HTMLElement>(`[part="${part}"]`)!.click();
+  expect(edits).to.equal(2);
+});
+
+it('resolves whitespace names on the role owner and preserves an explicitly empty override', async () => {
+  const el = await fixture<LyraMessageActions>(html`<lr-message-actions aria-label="   " label="Inbox"
+    .strings=${{ messageActionsLabel: 'Localized name' }}></lr-message-actions>`);
+  const owner = () => el.shadowRoot!.querySelector('[role="toolbar"]')!.getAttribute('aria-label');
+  expect(owner()).to.equal('Inbox');
+  el.removeAttribute('aria-label');
+  el.label = '   ';
+  await el.updateComplete;
+  expect(owner()).to.equal('Localized name');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(owner()).to.equal('');
+});

@@ -5,13 +5,13 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --_lr-model-viewer-control-fill: var(--lr-color-surface);
-    --_lr-model-viewer-control-hover-fill: var(--lr-color-surface-raised);
-    --_lr-model-viewer-control-active-fill: color-mix(
+    --_lr-model-viewer-control-fill: var(--lr-model-viewer-action-background, var(--lr-color-surface));
+    --_lr-model-viewer-control-hover-fill: var(--lr-model-viewer-action-hover-background, var(--lr-color-surface-raised));
+    --_lr-model-viewer-control-active-fill: var(--lr-model-viewer-action-active-background, color-mix(
       in oklab,
       var(--_lr-model-viewer-control-fill),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
   }
   [part='base'] {
     container-type: inline-size;

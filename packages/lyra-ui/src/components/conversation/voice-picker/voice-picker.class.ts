@@ -1,6 +1,8 @@
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { catalogControlName, renderCatalogInput, renderCatalogLabel } from '../../../internal/catalog-picker-template.js';
+import { InputLimitAnnouncement } from '../../../internal/input-limit-announcement.js';
 import { guard } from 'lit/directives/guard.js';
-import { AutocorrectState, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState } from '../../../internal/native-text-control.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -10,7 +12,7 @@ import { LyraCatalogPickerElement } from '../catalog-picker-element.js';
 import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -53,7 +55,7 @@ type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
 
 export interface LyraVoicePickerEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-input': CustomEvent<{ value: string; inCatalog: boolean; query?: string }>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   'lr-preview-request': CustomEvent<{ voiceId: string; previewUrl?: string }>;
   'lr-preview-change': CustomEvent<{ voiceId: string | null }>;
@@ -125,7 +127,7 @@ export interface LyraVoicePickerEventMap {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
- * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-input - Reports the committed `value` and `inCatalog`. Free-text edits also include the exact draft `query`, including an empty string.
  * @event lr-change - `detail: { value: string; inCatalog: boolean }`.
  * @event {Event} change - Owner-realm native event fired alongside `lr-change`, mirroring
  *   `lr-model-select`'s native-style pair.
@@ -510,15 +512,21 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   }
 
   private readonly announcements = new AnnouncementSinkController(this);
-  private limitMounted = false;
-  private previousInputLimit = false;
-  private get inputLimited(): boolean { return publicCollectionTruncation(this, 'catalog') !== undefined; }
+
+  constructor() {
+    super();
+    new InputLimitAnnouncement(this, {
+      limited: () => this.inputLimited,
+      announce: () => this.announcements.announcePolite(this.localize('catalogPickerInputLimit')),
+    });
+  }
+
+  private get inputLimited(): boolean {
+    return publicCollectionTruncation(this, 'catalog') !== undefined;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    const limited = this.inputLimited;
-    if (this.limitMounted && limited && !this.previousInputLimit) this.announcements.announcePolite(this.localize('catalogPickerInputLimit'));
-    this.previousInputLimit = limited;
-    this.limitMounted = true;
     this.syncCatalogDescription(this.controlId);
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
@@ -783,6 +791,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
       idPrefix: 'voice-picker',
       hint: this.hint,
       errorText: this.errorText,
+      helpTextSlot: false,
       extraDescribedBy: [this.getAttribute('aria-describedby')],
     });
   }
@@ -791,16 +800,14 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     return (this.label ?? '').length > 0 || this.slotPresence.has('label');
   }
 
-  private renderLabel(): TemplateResult {
-    return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.hasVisibleLabel}
-      >${this.label}<slot name="label"></slot></label
-    >`;
-  }
-
   private renderHintError(hasError: boolean, hasHint: boolean): TemplateResult {
-    return html`
-      ${renderFormControlHintError({ idPrefix: 'voice-picker', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
-    `;
+    return renderFormControlHintError({
+      idPrefix: 'voice-picker',
+      hint: this.hint,
+      errorText: this.errorText,
+      hasHint,
+      hasError,
+    });
   }
 
   private renderPreviewButton(): TemplateResult {
@@ -830,7 +837,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     const hasLabel = this.hasVisibleLabel;
     const { hasHint, hasError, describedBy } = this.supportingState;
     return html`
-      ${this.renderLabel()}
+      ${renderCatalogLabel(this.controlId, this.label, hasLabel)}
       <div class="control-row">
         <button
           id=${this.controlId}
@@ -841,7 +848,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}
-          aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
+          aria-label=${catalogControlName(this, hasLabel, this.placeholder, this.localize('voice'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-readonly=${this.readonly ? 'true' : 'false'}
@@ -871,38 +878,25 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     const hasLabel = this.hasVisibleLabel;
     const { hasHint, hasError, describedBy } = this.supportingState;
     return html`
-      ${this.renderLabel()}
+      ${renderCatalogLabel(this.controlId, this.label, hasLabel)}
       <div class="control-row">
         <div part="combobox" @mousedown=${this.onComboMouseDown}>
           ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}
-          <input
-            id=${this.controlId}
-            part="combobox-input"
-            role="combobox"
-            aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
-            aria-expanded=${this.open ? 'true' : 'false'}
-            aria-controls=${this.listId}
-            aria-activedescendant=${activeId}
-            aria-autocomplete="list"
-            aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? 'true' : 'false'}
-            aria-readonly=${this.readonly ? 'true' : 'false'}
-            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
-            autocomplete=${this.autocomplete || nothing}
-            spellcheck=${this.spellcheck}
-            autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
-            inputmode=${this.inputMode || nothing}
-            enterkeyhint=${this.enterKeyHint || nothing}
-            .value=${this.open ? this.query : this.labelFor(this.value)}
-            .readOnly=${this.readonly}
-            placeholder=${this.placeholder}
-            ?disabled=${this.effectiveDisabled}
-            @input=${this.onInput}
-            @keydown=${this.onInputKeyDown}
-            @focus=${this.onInputFocus}
-            @blur=${this.onControlBlur}
-          />
+          ${renderCatalogInput({
+            host: this,
+            id: this.controlId,
+            listId: this.listId,
+            activeId,
+            open: this.open,
+            value: this.open ? this.query : this.labelFor(this.value),
+            name: catalogControlName(this, hasLabel, this.placeholder, this.localize('voice')),
+            describedBy,
+            invalid: hasError || (this.touched && !this.internals.validity.valid),
+            onInput: this.onInput,
+            onKeyDown: this.onInputKeyDown,
+            onFocus: this.onInputFocus,
+            onBlur: this.onControlBlur,
+          })}
           <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>
         </div>
         ${this.renderPreviewButton()}

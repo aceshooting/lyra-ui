@@ -1,17 +1,17 @@
 import { splitLines } from '../../../internal/text-lines.js';
 import { bdi } from '../../../internal/bidi.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
-import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
+import { parseContactDocument, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -22,13 +22,14 @@ import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/an
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddressLabel, LYRA_DEFAULT_contactViewerEmailLabel, LYRA_DEFAULT_contactViewerLabel, LYRA_DEFAULT_contactViewerNoContacts, LYRA_DEFAULT_contactViewerOrganization, LYRA_DEFAULT_contactViewerPhoneLabel, LYRA_DEFAULT_contactViewerTypeCell, LYRA_DEFAULT_contactViewerTypeFax, LYRA_DEFAULT_contactViewerTypeHome, LYRA_DEFAULT_contactViewerTypeInternet, LYRA_DEFAULT_contactViewerTypePreferred, LYRA_DEFAULT_contactViewerTypeVoice, LYRA_DEFAULT_contactViewerTypeWork, LYRA_DEFAULT_contactViewerTypedValue, LYRA_DEFAULT_contactViewerUnnamedContact, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeContact, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: () => string };
 export interface LyraContactViewerEventMap extends LyraTextViewerTargetEventMap {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -40,12 +41,13 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
 /**
  * Fetches a vCard document and renders one accessible card per contact. Contact names retain
  * level-three heading semantics by default; set `heading-level` from `1`–`6` to fit the surrounding
- * outline, or `none` for visual-only names. At most 250 contacts and 2 MiB of rendered contact text
+ * outline, or `none` for visual-only names. By default, at most 250 contacts and 2 MiB of rendered contact text
  * are accepted so eager DOM remains bounded while search, selection and text-quote anchors cover
  * every accepted contact. The inherited fragment path performs an exact DOM `id` lookup, but
  * generated contact cards have no fragment ids; such a jump reports `found: false`.
  *
  * @customElement lr-contact-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing the document fails.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
  *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
@@ -106,16 +108,16 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
+  /** Maximum admitted contacts (0–2,500, default 250). A larger document shows the resource-limit message. */
+  // numeric-guard-exempt: parseContactDocument bounds this limit with finiteCount before parsing.
+  @property({ type: Number, attribute: 'max-contacts' }) maxContacts = 250;
   /** Optional display name for the source document. It names `[part='base']` when host
    *  `aria-label` is absent, before the localized fallback. A non-empty host label remains on the
    *  host; an explicitly empty one is preserved on the shadow owner. */
@@ -132,14 +134,22 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
   override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: ContactFetchState = { kind: 'idle' };
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) {
       this.requestUpdate();
@@ -148,10 +158,9 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   }
 
   /** A same-task DOM move keeps the loaded document; a genuine disconnect invalidates its load. */
-  private readonly detached = new DeferredTeardown(() => { this.generation++; });
+  private readonly detached = new DeferredTeardown(() => this.transport.cancel());
 
   override disconnectedCallback(): void {
-    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -170,38 +179,21 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       this.fetchState.kind,
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
-    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (changed.has('src') || changed.has('maxContacts')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.isConnected && changed.has('fetchState') && (this.fetchState.kind === 'loaded' || this.fetchState.kind === 'empty')) this.emit('lr-load', {});
   }
 
-  private async load(): Promise<void> {
+  private load(): Promise<void> {
     this.lastLoadSrc = this.src;
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.fetchState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const source = await readResponseText(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      const contacts = parseVCards(source);
-      if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-    }
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    return this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const source = await this.transport.readText(response);
+    if (this.transport.isStale(token)) return;
+    const contacts = parseContactDocument(source, this.maxContacts);
+    this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
   }
 
   private formatList(values: string[]): string {

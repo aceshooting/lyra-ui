@@ -10,7 +10,7 @@ import "./message-feedback.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraMessageFeedback } from "./message-feedback.js";
 import type { LyraChip } from "../../overlays/chip/chip.class.js";
-import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 const reasons = [
   { id: "wrong", label: "Factually wrong" },
@@ -1691,3 +1691,57 @@ it('does not request persistence when a synchronous change listener disables the
   await el.updateComplete;
   expect(requests).to.equal(0);
 });
+
+it('applies the shared icon action border to its buttons', async () => {
+  const el = await fixture<LyraMessageFeedback>(html`
+    <lr-message-feedback  style="--lr-icon-button-size: 43px; --lr-icon-button-border: 3px dashed rgb(12, 34, 56)"></lr-message-feedback>
+  `);
+  for (const part of ['up-button','down-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    const style = getComputedStyle(button);
+    expect([style.minInlineSize, style.minBlockSize]).to.deep.equal(['43px', '43px']);
+    expect([style.borderTopWidth, style.borderTopStyle, style.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(12, 34, 56)']);
+  }
+});
+
+it('skips reasons without a visible label before resolving duplicate ids', async () => {
+  const el = await fixture<LyraMessageFeedback>(html`<lr-message-feedback .detail=${{ reasons: [
+    { id: 'missing', label: ' ' }, { id: 'retry', label: '' }, { id: 'retry', label: 'Try again' },
+  ] }}></lr-message-feedback>`);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="down-button"]')!.click();
+  await el.updateComplete;
+  expect([...el.shadowRoot!.querySelectorAll('lr-chip')].map(chip => chip.textContent?.trim())).to.deep.equal(['Try again']);
+});
+
+it('leaves no space below the thumbs while the detail panel is collapsed', async () => {
+  const el = await fixture<LyraMessageFeedback>(html`<lr-message-feedback .detail=${{ commentable: true }}></lr-message-feedback>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const thumbs = el.shadowRoot!.querySelector('[part="thumbs"]')!;
+  expect(base.getBoundingClientRect().height).to.equal(thumbs.getBoundingClientRect().height);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="down-button"]')!.click();
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+  expect(panel.getBoundingClientRect().top).to.be.greaterThan(thumbs.getBoundingClientRect().bottom);
+});
+
+for (const rating of ['up', 'down'] as const) {
+  it(`mixes the selected ${rating} thumb's pointer states from its own fill`, async () => {
+    const el = await fixture<LyraMessageFeedback>(html`<lr-message-feedback .rating=${rating}
+      style="--lr-message-feedback-up-active-bg: rgb(80, 110, 160); --lr-message-feedback-down-active-bg: rgb(80, 110, 160)"
+      ></lr-message-feedback>`);
+    const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${rating}-button"]`)!;
+    const swatch = button.appendChild(document.createElement('span'));
+    const expected = (step: string) => {
+      swatch.style.backgroundColor = `color-mix(in oklab, rgb(80, 110, 160), var(--lr-color-mix-partner) var(--lr-color-mix-${step}))`;
+      return getComputedStyle(swatch).backgroundColor;
+    };
+    try {
+      await hoverUntilMatched(button, 'selected thumb hover');
+      await waitUntil(() => getComputedStyle(button).backgroundColor === expected('hover'));
+      await sendMouse({ type: 'down', button: 'left' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === expected('active'));
+    } finally {
+      await resetMouse();
+    }
+  });
+}

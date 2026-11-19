@@ -2,7 +2,18 @@ import type {
   LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchySource, LyraHierarchyView,
   LyraSourceRangeRequest, LyraTraceSourceSummary,
 } from '../data-sources.js';
+import { getNumberFormat } from './intl-cache.js';
 import { hierarchyField } from './hierarchy-source-controller.js';
+
+/** Locale-formatted counts for a projected hierarchy, ready for the host's summary message. */
+export function hierarchySourceSummary(
+  projection: { readonly total: number; readonly rows: { readonly count: number } } | undefined,
+  locale: string,
+): { visible: string; total: string } | undefined {
+  if (!projection) return undefined;
+  const formatter = getNumberFormat(locale);
+  return { visible: formatter.format(projection.rows.count), total: formatter.format(projection.total) };
+}
 
 type Host = Pick<HTMLElement, 'ownerDocument' | 'isConnected'>;
 
@@ -128,6 +139,61 @@ export function captureHierarchySourceEffects(host: Host, control: HierarchyEffe
 /** Authority captured by {@link captureHierarchySourceEffects}. */
 export type HierarchySourceEffectSnapshot = ReturnType<typeof captureHierarchySourceEffects>;
 
+/**
+ * Authority for normalizing one provider row: the host stays connected in the same owner document,
+ * `binding()` holds, the projection, epoch and loading state are unchanged, and the accepted
+ * summary for those rows is still current. Captured when the row normalization starts.
+ */
+export function captureHierarchyRowAuthority(
+  host: Host,
+  control: Pick<HierarchyEffectState, 'epoch' | 'projection' | 'loading'>,
+  binding: () => boolean,
+  accepted: (() => boolean) | undefined,
+): () => boolean {
+  const owner = host.ownerDocument;
+  const { epoch, projection } = control;
+  const owned = () => host.isConnected && host.ownerDocument === owner && binding() &&
+    control.epoch === epoch && control.projection === projection && !control.loading;
+  return () => owned() && Boolean(accepted?.()) && owned();
+}
+
+/** Reads own data fields of one provider row, throwing `message` once `current()` is lost before or
+ *  after any read. */
+export function hierarchySourceFieldReader(
+  value: unknown,
+  current: () => boolean,
+  message: string,
+): (key: string) => unknown {
+  return (key) => {
+    if (!current()) throw new Error(message);
+    const result = hierarchyField(value, key);
+    if (!current()) throw new Error(message);
+    return result;
+  };
+}
+
+/** The epoch and key a host last asked {@link revealActiveHierarchyKey} to reveal. */
+export type HierarchyRevealMark = readonly [epoch: number, key: string];
+
+/**
+ * Reveals the host's active key once per projection epoch: after the provider settles, and only
+ * while `snapshot` keeps its binding and `activeKey()` still names the same key. Returns the mark
+ * to remember, unchanged when there is no active key or it was already requested for this epoch.
+ */
+export function revealActiveHierarchyKey(
+  control: { whenReady(): Promise<boolean>; reveal(key: string): Promise<boolean> },
+  snapshot: Pick<HierarchySourceEffectSnapshot, 'epoch' | 'bound'>,
+  activeKey: () => string | null | undefined,
+  last: HierarchyRevealMark | undefined,
+): HierarchyRevealMark | undefined {
+  const key = activeKey();
+  if (!key || (last?.[0] === snapshot.epoch && last[1] === key)) return last;
+  void control.whenReady().then((ready) => {
+    if (ready && snapshot.bound() && activeKey() === key) void control.reveal(key);
+  });
+  return [snapshot.epoch, key];
+}
+
 /** Localized text and announcement sinks for {@link applyHierarchySourceEffects}. */
 export interface HierarchySourceEffectSinks {
   errorText(): string;
@@ -136,7 +202,7 @@ export interface HierarchySourceEffectSinks {
   /** Polite announcement of a changed status. */
   announce(text: string): void;
   /** Row-observation outcome (the `source-rows` transition). */
-  rowsTransition(state: 'error' | 'ready', message: string): void;
+  rowsTransition?(state: 'error' | 'ready', message: string): void;
 }
 
 /**
@@ -158,7 +224,7 @@ export function applyHierarchySourceEffects(
     sinks.announce(status);
     if (!current()) return undefined;
   }
-  if (snapshot.rowsObserved) {
+  if (snapshot.rowsObserved && sinks.rowsTransition) {
     const message = snapshot.rowError ? sinks.errorText() : '';
     if (!current()) return undefined;
     sinks.rowsTransition(snapshot.rowError ? 'error' : 'ready', message);

@@ -1,3 +1,4 @@
+import { preparedDataChanged } from '../../../internal/chart-prepared-property.js';
 import { syncChartHeight } from './chart-surface-shared.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { isSvgElement } from '../../../internal/dom-guards.js';
@@ -475,6 +476,11 @@ export interface LyraLiteChartEventMap {
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden sampled list of plotted data points (single-series only).
  * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
+ * @cssprop [--lr-lite-chart-data-table-toggle-border-color=var(--lr-chart-data-table-toggle-border-color, var(--lr-color-border))] - Resting border color of the data-table toggle.
+ * @cssprop [--lr-lite-chart-data-table-toggle-bg=var(--lr-chart-data-table-toggle-bg, var(--lr-color-surface))] - Resting background of the data-table toggle.
+ * @cssprop [--lr-lite-chart-data-table-toggle-color=var(--lr-chart-data-table-toggle-color, var(--lr-color-text))] - Resting text color of the data-table toggle.
+ * @cssprop [--lr-lite-chart-data-table-toggle-inline-size=var(--lr-chart-data-table-toggle-inline-size, auto)] - Inline size of the data-table toggle.
+ * @cssprop [--lr-lite-chart-data-table-toggle-justify=var(--lr-chart-data-table-toggle-justify, auto)] - Grid inline alignment of the data-table toggle.
  * @cssprop [--lr-lite-chart-data-table-toggle-hover-bg=var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))] -
  *   Hover background of the `dataTableToggle` disclosure button; falls back to the chart family's
  *   shared token.
@@ -574,7 +580,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * row with source index and coordinates in its label; other series cells remain empty.
    * Reassign or explicitly requestUpdate after changing a host-authored descriptor/revision.
    */
-  @property({ attribute: false, hasChanged: () => true })
+  @property({ attribute: false, hasChanged: preparedDataChanged })
   preparedData: LyraChartPreparedData | null = null;
 
 

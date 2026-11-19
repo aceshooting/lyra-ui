@@ -2,9 +2,9 @@ import type { LyraTabularSource } from '../../../data-sources.js';
 export type { LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraTabularReadRequest, LyraSourceSearchRequest, LyraSourceSearchResult } from '../../../data-sources.js';
 /** Host-owned indexed or rectangular source for this viewer. */
 export type DatasetViewerSource = LyraTabularSource;
-import { discardBody } from '../../../internal/viewer-source-controller.js';
-import { finiteCount } from '../../../internal/numbers.js';
-import { snapshotViewerRows, ownTableValue } from '../../../internal/delimited-data.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
+import { TabularInputSnapshot, tabularInputLimits, type TabularInputLimits } from '../../../internal/tabular-viewer-target.js';
+import { parseDelimitedRecordsYielding, snapshotViewerRows, ownTableValue } from '../../../internal/delimited-data.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -12,11 +12,10 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import {
+  DEFAULT_MAX_RESOURCE_BYTES,
   isResourceLimitError,
   LyraUserFacingError,
   LyraResourceLimitError,
-  readResponseText,
-  resolveOwnerFetchTarget,
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
@@ -29,10 +28,8 @@ import {
 } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import { styles } from './dataset-viewer.styles.js';
-import { parseDelimitedRecordsYielding } from '../../../internal/delimited-data.js';
-import { LatestTask } from '../../../internal/latest-task.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
+import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight, type TableViewerScrollMode, tableViewerScrollMode } from '../table-viewer-shared.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 export type {
@@ -47,20 +44,15 @@ import {
   viewerSemanticRole,
 } from '../viewer-semantic-owner.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import { literalSetConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface DatasetTable {
   fields: string[];
   rows: Record<string, string>[];
-}
-interface DatasetParseResult {
-  table: DatasetTable | null;
-  errors: unknown[];
 }
 type DatasetFetchState =
   | { kind: 'idle' }
@@ -70,15 +62,11 @@ type DatasetFetchState =
   | { kind: 'error'; message: () => string };
 
 /** Which element scrolls when `<lr-dataset-viewer>` overflows. */
-export type DatasetViewerScrollMode = 'self' | 'page';
-
-const DATASET_VIEWER_SCROLL_MODE = literalSetConverter<DatasetViewerScrollMode>(
-  ['self', 'page'],
-  'self'
-);
+export type DatasetViewerScrollMode = TableViewerScrollMode;
 
 export interface LyraDatasetViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   /** Fired whenever the search query, match count, or active match index changes, from
@@ -116,6 +104,7 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * Remote parsing yields between admission/materialization passes; parsing itself remains synchronous.
  *
  * @customElement lr-dataset-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing fails, or the resource guard rejects the
  *   table.
  * @event lr-viewer-diagnostic - Structured, non-fatal PapaParse diagnostics when a recoverable
@@ -148,6 +137,9 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   placeholders.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error message region.
+ * @cssprop --lr-dataset-viewer-background - Background of the viewer frame.
+ * @cssprop --lr-dataset-viewer-border - Border of the viewer frame.
+ * @cssprop --lr-dataset-viewer-border-radius - Corner radius of the viewer frame.
  * @cssprop [--lr-dataset-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  *   `scrollMode='page'` deliberately ignores the cap and hands both axes to page flow so the
@@ -189,11 +181,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
@@ -220,8 +210,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     const previous = this._dataSource;
     this._dataSource = value;
     this.provider?.refresh();
-    this.loadTask?.next();
-    this.beginAbortableLoad();
+    this.transport?.cancel();
     this.requestUpdate('dataSource', previous);
   }
 
@@ -234,52 +223,43 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   @property() src = '';
 
   /** Maximum admitted rows; defaults to 10,000 and can be raised to 100,000. */
+  // numeric-guard-exempt: tabularInputLimits bounds the row count before admission.
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 10000;
   /** Maximum admitted columns; defaults to 1,000 and can be raised to 10,000. */
+  // numeric-guard-exempt: tabularInputLimits bounds the column count before admission.
   @property({ type: Number, attribute: 'max-columns' }) maxColumns = 1000;
-  /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB. */
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = 26214400;
-  private get effectiveMaxRows(): number { return Math.max(1, finiteCount(this.maxRows, 10000, 100000)); }
-  private get effectiveMaxColumns(): number { return Math.max(1, finiteCount(this.maxColumns, 1000, 10000)); }
-  private get effectiveMaxBytes(): number { return Math.max(1, finiteCount(this.maxBytes, 26214400, 262144000)); }
-  private get parseLimits(): { maxRows: number; maxColumns: number } { return { maxRows: this.effectiveMaxRows, maxColumns: this.effectiveMaxColumns }; }
-  private inputError: unknown;
-  private inputSource?: WeakRef<object>;
-  private inputLimits = '';
-  private get currentInputLimits(): string { return `${this.effectiveMaxRows}:${this.effectiveMaxColumns}:${this.effectiveMaxBytes}`; }
-  private _table: DatasetTable | undefined;
+  /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB.
+   * @default 26214400 */
+  // numeric-guard-exempt: tabularInputLimits bounds the byte budget before reading or snapshotting.
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
+  private get limits() { return tabularInputLimits(this.maxRows, this.maxColumns, this.maxBytes); }
+  private readonly input = new TabularInputSnapshot<DatasetTable>({
+    snapshot: (value, limits) => this.snapshotTable(value, limits),
+    invalid: () => ({ fields: [], rows: [] }),
+  });
+  private get parseLimits() { const { rows, columns } = this.limits; return { maxRows: rows, maxColumns: columns }; }
   /** Owned field-keyed scalar table. Takes precedence over src; undefined restores fetching.
    * Invalid or oversized inputs produce lr-render-error and the localized error state. Replace the object to refresh. */
   @property({ attribute: false, noAccessor: true })
-  get table(): DatasetTable | undefined { return this._table; }
+  get table(): DatasetTable | undefined { return this.input.value; }
   set table(value: DatasetTable | undefined) {
-    const limits = this.currentInputLimits;
-    if (limits === this.inputLimits && (value === this._table || (value !== undefined && value === this.inputSource?.deref()))) return;
-    const previous = this._table;
-    this.inputLimits = limits;
-    this.inputSource = undefined;
-    this.inputError = undefined;
-    try {
-      this._table = value === undefined ? undefined : this.snapshotTable(value);
-      if (value !== undefined) this.inputSource = new WeakRef(value);
-    }
-    catch (error) { this._table = { fields: [], rows: [] }; this.inputError = error; }
-    this.requestUpdate('table', previous);
+    const previous = this.input.value;
+    if (this.input.assign(value, this.limits)) this.requestUpdate('table', previous);
   }
-  private snapshotTable(value: DatasetTable): DatasetTable {
+  private snapshotTable(value: DatasetTable, limits: TabularInputLimits): DatasetTable {
     const budget = { cells: 0, bytes: 0 };
     const fieldsInput = ownTableValue(value, 'fields');
-    const fields = snapshotViewerRows([fieldsInput], 1, this.effectiveMaxColumns, this.effectiveMaxBytes, budget)[0]!;
+    const fields = snapshotViewerRows([fieldsInput], 1, limits.columns, limits.bytes, budget)[0]!;
     if (!fields.every(field => typeof field === 'string') || new Set(fields).size !== fields.length) throw new TypeError('Invalid table fields.');
     const records = ownTableValue(value, 'rows');
     if (!Array.isArray(records)) throw new TypeError('Invalid table rows.');
-    if (records.length > this.effectiveMaxRows || records.length * fields.length > 1000000) throw new LyraResourceLimitError();
+    if (records.length > limits.rows || records.length * fields.length > 1000000) throw new LyraResourceLimitError();
     const grid: unknown[][] = [];
     for (let index = 0; index < records.length; index++) {
       const row = ownTableValue(records, String(index));
       grid.push(fields.map(field => ownTableValue(row, field as string)));
     }
-    const rows = snapshotViewerRows(grid, this.effectiveMaxRows, this.effectiveMaxColumns, this.effectiveMaxBytes, budget).map(row => Object.freeze(Object.fromEntries(fields.map((field, index) => [field, row[index] == null ? '' : String(row[index])]))));
+    const rows = snapshotViewerRows(grid, limits.rows, limits.columns, limits.bytes, budget).map(row => Object.freeze(Object.fromEntries(fields.map((field, index) => [field, row[index] == null ? '' : String(row[index])]))));
     return Object.freeze({ fields: fields as string[], rows: Object.freeze(rows) as Record<string, string>[] });
   }
 
@@ -299,12 +279,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
    * the rows window against the page's own scroll; a wide dataset can consequently overflow its
    * host.
    */
-  @property({ reflect: true, attribute: 'scroll-mode', converter: DATASET_VIEWER_SCROLL_MODE })
+  @property({ reflect: true, attribute: 'scroll-mode', converter: tableViewerScrollMode })
   get scrollMode(): DatasetViewerScrollMode {
     return this._scrollMode;
   }
   set scrollMode(next: DatasetViewerScrollMode) {
-    const normalized = DATASET_VIEWER_SCROLL_MODE.normalizeReflected(
+    const normalized = tableViewerScrollMode.normalizeReflected(
       this,
       'scroll-mode',
       next
@@ -319,7 +299,17 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: DatasetFetchState = { kind: 'idle' };
-  private loadTask = new LatestTask();
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      if (this.src !== this.tableController.lastLoadSrc) return;
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   // @renderController TableViewerController
   private readonly tableController = new TableViewerController<{ row: number; col: number }>(this, {
     repaint: () => super.requestUpdate(),
@@ -331,7 +321,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     load: () => this.load(),
     research: (query) => this.search(query),
     jump: (match) => this.jumpToCell(match.row, match.col),
-    teardown: () => this.loadTask.next(),
+    teardown: () => this.transport.cancel(),
     pageScroll: () => this.scrollMode === 'page',
   });
 
@@ -341,7 +331,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     cancelAnchor: () => this.cancelPendingAnchor(),
     workbook: false,
     header: () => true,
-    columnLimit: () => this.effectiveMaxColumns,
+    columnLimit: () => this.limits.columns,
     locale: () => this.effectiveLocale,
     localize: key => this.localize(TABLE_VIEWER_SOURCE_MESSAGE_KEYS[key]),
     repaint: () => super.requestUpdate(),
@@ -390,21 +380,16 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     if (list && this.scrollMode === 'self') {
       list.scrollElement = this.renderRoot.querySelector<HTMLElement>('[part="body"]') ?? undefined;
     }
+    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && (this.fetchState.kind === 'loaded' || this.fetchState.kind === 'empty')) this.emit('lr-load', {});
   }
 
   private async load(): Promise<void> {
     if (this.dataSource !== undefined) return;
     this.tableController.lastLoadSrc = this.src;
-    const generation = this.loadTask.next();
-    const signal = this.beginAbortableLoad();
-    if (this._table !== undefined) {
+    if (this.input.value !== undefined) {
+      this.transport.cancel();
       try {
-        if (this.inputError) throw this.inputError;
-        if (this.inputLimits !== this.currentInputLimits) {
-          this._table = this.snapshotTable(this._table);
-          this.inputLimits = this.currentInputLimits;
-        }
-        const table = this._table;
+        const table = this.input.admitted(this.limits)!;
         this.fetchState = table.rows.length && table.fields.length ? { kind: 'loaded', table } : { kind: 'empty' };
       } catch (error) {
         this.fetchState = {
@@ -417,102 +402,27 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       }
       return;
     }
-    if (!this.src) {
-      this.fetchState = { kind: 'idle' };
-      return;
-    }
-    const src = this.src;
-    const fetchTarget = resolveOwnerFetchTarget(this, src);
-    if (!fetchTarget) {
-      const message = () => this.localize('documentPreviewUrlNotAllowed');
-      const error = new LyraUserFacingError(message());
-      this.fetchState = { kind: 'error', message };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(
-        fetchTarget.url,
-        signal ? { signal } : undefined
-      );
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      if (!response.ok)
-        throw new Error(`${response.status} ${response.statusText}`);
-      const papa = await this.requirePapa(generation);
-      if (!papa) return;
-      const source = await readResponseText(response, this.effectiveMaxBytes);
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      const parsed = await this.parse(source, generation, papa);
-      if (parsed === undefined) return;
-      if (this.isConnected && this.loadTask.isCurrent(generation)) {
-        const { table } = parsed;
-        this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
-        if (table && this.tableController.search.query) await this.search(this.tableController.search.query);
-        if (
-          parsed.errors.length &&
-          this.isConnected &&
-          this.loadTask.isCurrent(generation)
-        ) {
-          this.emit('lr-viewer-diagnostic', {
-            diagnostic: Object.freeze({
-              code: 'delimited-parse-diagnostic',
-              severity: 'warning',
-              fatal: false,
-              source: 'papaparse',
-              cause: parsed.errors,
-            } as const),
-          });
-        }
-      }
-    } catch (error) {
-      if (
-        !this.isConnected ||
-        !this.loadTask.isCurrent(generation) ||
-        signal?.aborted ||
-        this.src !== src
-      ) return;
-      this.fetchState = {
-        kind: 'error',
-        message: viewerFailureMessage(error, this.localize.bind(this)),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-    }
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
   }
 
-  /** Resolves `null` (not a thrown error) for a well-formed file that parses to zero fields/rows --
-   *  that is a distinct, non-error "empty" state, not the same failure as a missing parser library
-   *  or an oversized file, and must not be funneled into the same error chrome/assertive announcement as those
-   *  genuine failures (matching `<lr-calendar-viewer>`'s identical zero-events handling). */
-  private async requirePapa(generation: number): Promise<NonNullable<Awaited<ReturnType<typeof loadPapaParseCached>>> | undefined> {
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
     const papa = await loadPapaParseCached();
-    if (!this.isConnected || !this.loadTask.isCurrent(generation))
-      return undefined;
-    if (!papa)
-      throw new LyraUserFacingError(
-        this.localize('datasetViewerMissingParser'),
-        localize => localize('datasetViewerMissingParser')
-      );
-    return papa;
-  }
-
-  private async parse(
-    text: string,
-    generation: number,
-    papa: NonNullable<Awaited<ReturnType<typeof loadPapaParseCached>>>
-  ): Promise<DatasetParseResult | undefined> {
-    const result = await parseDelimitedRecordsYielding(papa, text, this.parseLimits, () => yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && this.loadTask.isCurrent(generation)));
-    if (!this.isConnected || !this.loadTask.isCurrent(generation)) return undefined;
-    if (!result.fields.length || !result.rows.length) {
-      return { table: null, errors: result.errors };
+    if (this.transport.isStale(token)) return;
+    if (!papa) throw new LyraUserFacingError(this.localize('datasetViewerMissingParser'), localize => localize('datasetViewerMissingParser'));
+    const source = await this.transport.readText(response, this.limits.bytes);
+    if (this.transport.isStale(token)) return;
+    const result = await parseDelimitedRecordsYielding(papa, source, this.parseLimits, () =>
+      yieldViewerTask(this.ownerDocument.defaultView, () => !this.transport.isStale(token)));
+    if (this.transport.isStale(token)) return;
+    const { fields, rows, errors } = result;
+    this.fetchState = fields.length && rows.length ? { kind: 'loaded', table: { fields, rows } } : { kind: 'empty' };
+    if (this.fetchState.kind === 'loaded' && this.tableController.search.query) await this.search(this.tableController.search.query);
+    if (errors.length && !this.transport.isStale(token)) {
+      this.emit('lr-viewer-diagnostic', {
+        diagnostic: Object.freeze({ code: 'delimited-parse-diagnostic', severity: 'warning', fatal: false, source: 'papaparse', cause: errors } as const),
+      });
     }
-    return {
-      table: { fields: result.fields, rows: result.rows },
-      errors: result.errors,
-    };
   }
 
   // -- cell highlights -----------------------------------------------------------------------------
@@ -687,7 +597,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
                 this.renderRow(row as Record<string, string>, index, fields))}
               .keyFunction=${rows.length <= 10000 ? this.virtualListKeyFunction : undefined}
               .activeItemId=${this.tableController.activeRowKey}
-              .scrollElement=${this.scrollMode === 'page' ? this.ownerDocument.defaultView ?? undefined : undefined}
+              .scrollElement=${this.tableController.scrollWindow(this.scrollMode)}
               item-role="row"
               row-index-offset="1"
               @lr-load-more=${this.stopInternalEvent}

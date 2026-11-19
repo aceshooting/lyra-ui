@@ -169,7 +169,7 @@ it('surfaces the chunk inspector lr-toggle, without the removed lr-chunk-toggle 
   for (const type of ['lr-chunk-toggle', 'lr-expand'])
     el.addEventListener(type, () => seen.push(type));
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen).to.deep.equal(['toggle:{"kind":"chunk","section":"chunks","expanded":true,"itemId":"ch1"}']);
+  expect(seen).to.deep.equal(['toggle:{"section":"chunks","expanded":true,"itemId":"ch1"}']);
 });
 
 it('forwards provenance and types to lr-provenance-panel', async () => {
@@ -442,7 +442,7 @@ it('qualifies the supporting inspector toggle once, without the removed lr-chunk
   el.addEventListener('lr-toggle', (event) => toggles.push(event.detail));
   el.addEventListener('lr-chunk-toggle', (event) => legacy.push((event as CustomEvent).detail));
   inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-  expect(toggles).to.deep.equal([{ kind: 'chunk', section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(toggles).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
   expect(legacy).to.deep.equal([]);
 });
 
@@ -475,4 +475,47 @@ it("contains the inner tab group's raw lr-tab-hide when the user switches tabs",
   } finally {
     document.removeEventListener('lr-tab-hide', onHide);
   }
+});
+
+it('delegates supporting and provenance disclosures once and keeps legacy targets', async () => {
+  const el = await populated();
+  const panel = el.shadowRoot!.querySelector('lr-provenance-panel')!;
+  const supporting = el.shadowRoot!.querySelector<LyraChunkInspector>('[part="chunk-inspector"]')!;
+  const legacy: unknown[] = [];
+  const seen: unknown[] = [];
+  el.addEventListener('lr-toggle', (event) => {
+    legacy.push({ fromPanel: event.composedPath()[0] === panel, detail: event.detail });
+  });
+  el.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+    const id: string = detail.kind === 'chunk' ? detail.chunkId : detail.section;
+    expect(id).to.be.a('string');
+  });
+  const parent = el.parentElement!;
+  parent.addEventListener('lr-retrieval-disclosure-change', (event) => {
+    seen.push({ fromDossier: event.composedPath()[0] === el, detail: (event as CustomEvent).detail });
+  });
+
+  supporting.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  panel.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!.click();
+  const nested = panel.shadowRoot!.querySelector('lr-chunk-inspector')!;
+  nested.size = 'm';
+  await nested.updateComplete;
+  nested.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  const child = document.createElement('span');
+  panel.append(child);
+  child.dispatchEvent(new CustomEvent('lr-retrieval-disclosure-change', {
+    bubbles: true, composed: true, detail: { kind: 'section', section: 'chunks', expanded: true },
+  }));
+
+  expect(seen).to.deep.equal([
+    { fromDossier: true, detail: { kind: 'chunk', section: 'chunks', chunkId: 'ch1', expanded: true, origin: 'supporting' } },
+    { fromDossier: true, detail: { kind: 'section', section: 'entities', expanded: false, origin: 'provenance' } },
+    { fromDossier: true, detail: { kind: 'chunk', section: 'chunks', chunkId: 'ch1', expanded: true, origin: 'provenance' } },
+    { fromDossier: false, detail: { kind: 'section', section: 'chunks', expanded: true } },
+  ]);
+  expect(legacy).to.deep.equal([
+    { fromPanel: false, detail: { section: 'chunks', expanded: true, itemId: 'ch1' } },
+    { fromPanel: true, detail: { section: 'entities', expanded: false } },
+    { fromPanel: true, detail: { section: 'chunks', expanded: true, itemId: 'ch1' } },
+  ]);
 });

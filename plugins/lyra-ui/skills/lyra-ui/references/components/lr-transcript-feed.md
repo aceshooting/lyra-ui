@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-transcript-feed`
+
+When `max-rendered-entries` hides earlier entries, `::part(window-notice)` displays a localized count and exposes the number in `data-omitted`. The scroll region uses `transcriptFeedRegion` for its name. The log retains its caller-supplied or localized transcript label.
+
+Customize the jump button with `--lr-transcript-feed-jump-bg`, `--lr-transcript-feed-jump-hover-bg`, `--lr-transcript-feed-jump-color`, `--lr-transcript-feed-jump-border`, `--lr-transcript-feed-jump-radius` and `--lr-transcript-feed-jump-shadow`.
 
 Live captions for an in-progress voice session: speaker-grouped entries, interim-vs-final styling
 with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with release, the same

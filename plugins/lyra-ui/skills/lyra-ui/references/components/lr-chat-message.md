@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-chat-message`
+
+Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
 
 A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,

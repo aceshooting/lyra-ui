@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-toggle` since `unreleased`; use event `@lr-retrieval-disclosure-change`; removal not before `33.0.0` — The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration.
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -57,19 +57,25 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole: the host is then the sole named owner, so neither
   the inner group nor the strip repeats it
 
-**Events:** composed child events reach the host (`composed: true`), with the direct supporting
-chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
-embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
-add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (the direct supporting-chunk
-inspector carries `{ kind: 'chunk', section: 'chunks', expanded, itemId }`; provenance-panel toggles
-pass through), and `lr-tab-show`
-(`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
-host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
-double-click or Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or
-overflow chip), and `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a
-relationship path-strip edge).
+**Events:**
+
+- `lr-entity-select` carries `{ entityId, occurrenceIndex? }` from an entity card, neighbor, community member or path node.
+- `lr-node-expand` carries `{ nodeId }` from a neighbor row.
+- `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }`.
+- `lr-tab-show` carries `{ tabId }`, where `tabId` is `relationships`, `chunks` or `provenance`.
+- `lr-entity-open` carries `{ entityId }` when a provenance chip opens.
+- `lr-drill` carries `{ communityId }` from a provenance community card.
+- `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a provenance path edge.
+- `lr-retrieval-disclosure-change` bubbles from the dossier with readonly `detail.origin`
+of `'supporting'` or `'provenance'`, plus `kind`, `section`, `expanded`, and `chunkId` for a chunk.
+Migrate from `lr-toggle` (`{ section, expanded, itemId? }`) by listening on the dossier and reading
+`origin` to identify the panel.
+
+```ts
+dossier.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.origin, detail.chunkId, detail.expanded);
+});
+```
 
 **Slots:** none.
 

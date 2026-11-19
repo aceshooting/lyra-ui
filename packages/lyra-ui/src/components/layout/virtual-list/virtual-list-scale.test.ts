@@ -77,7 +77,7 @@ it('updates only the tail offsets and retains the group prefix on row measuremen
   try {
     seam.pendingRowMeasurements.set(seam.rowIdentities[4999]!, { index: 4999, height: 60 });
     seam.applyPendingRowMeasurements(); await settle(el);
-    expect(offsets).lessThan(100); expect(prefixes).equal(0);
+    expect(offsets).at.most(15); expect(prefixes).equal(0);
     expect(el.offsetForIndex(5000) - el.offsetForIndex(4999)).equal(60);
     recordScaleMeasurement('lr-virtual-list', 'n=5000 tail measurement', { offsets, prefixes });
   } finally { seam.groupHeightAt = height; seam.recomputeGroupHeightPrefix = prefix; }

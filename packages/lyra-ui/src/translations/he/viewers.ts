@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'סיבוב ימינה',
   modelViewerRotateUp: 'סיבוב למעלה',
   modelViewerRotateDown: 'סיבוב למטה',
+  modelViewerViewport: 'מודל אינטראקטיבי',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

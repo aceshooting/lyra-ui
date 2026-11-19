@@ -74,7 +74,6 @@ and `click()` focus the drawing surface (both do nothing while disabled), and `b
 **Events:**
 
 - `lr-clear` follows the change pair when the user empties the pad with its Clear button.
-
 - `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
   pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting
   the keyboard pen also commits the stroke.

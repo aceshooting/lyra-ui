@@ -392,6 +392,19 @@
       "rationale": "The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration."
     },
     {
+      "tag": "lr-entity-dossier",
+      "kind": "event",
+      "name": "lr-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retrieval-disclosure-change",
+        "usage": "@lr-retrieval-disclosure-change"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
+    },
+    {
       "tag": "lr-map-anchor",
       "kind": "event",
       "name": "lr-close",
@@ -416,6 +429,45 @@
       },
       "removalNotBefore": "33.0.0",
       "rationale": "The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration."
+    },
+    {
+      "tag": "lr-memory-panel",
+      "kind": "event",
+      "name": "lr-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retrieval-disclosure-change",
+        "usage": "@lr-retrieval-disclosure-change"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
+    },
+    {
+      "tag": "lr-provenance-panel",
+      "kind": "event",
+      "name": "lr-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retrieval-disclosure-change",
+        "usage": "@lr-retrieval-disclosure-change"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
+    },
+    {
+      "tag": "lr-retrieval-trace",
+      "kind": "event",
+      "name": "lr-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retrieval-disclosure-change",
+        "usage": "@lr-retrieval-disclosure-change"
+      },
+      "removalNotBefore": "33.0.0",
+      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
     }
   ],
   "exportDeprecations": [],
@@ -37275,7 +37327,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "c5a9ce10aadcac517c94d89fe95d9814f12474d98d51e9142ea904820c3f590c",
+      "manifestSha256": "ac8dbc2c256e3feddb27fb4375c47e5683972474182c56fd2688a47966090e8b",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

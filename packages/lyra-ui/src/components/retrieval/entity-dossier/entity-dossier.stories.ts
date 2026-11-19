@@ -5,7 +5,7 @@ import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
-import type { LyraEntityDossierConfidence } from './entity-dossier.class.js';
+import type { LyraEntityDossierConfidence, LyraEntityDossierEventMap } from './entity-dossier.class.js';
 
 const meta: Meta = {
   title: 'Entity Dossier',
@@ -88,6 +88,8 @@ export const Default: Story = {
       expandable
       .chunks=${chunks}
       .provenance=${provenance}
+      @lr-retrieval-disclosure-change=${({ detail }: LyraEntityDossierEventMap['lr-retrieval-disclosure-change']) =>
+        console.log(detail.origin, detail.kind === 'chunk' ? detail.chunkId : detail.section, detail.expanded)}
     ></lr-entity-dossier>
   `,
 };

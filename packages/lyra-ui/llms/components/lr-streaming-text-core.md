@@ -16,6 +16,8 @@
 
 ## `lr-streaming-text-core`
 
+In Markdown mode, `lr-render-error` bubbles from the renderer with the original `{ error }` detail.
+
 A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
@@ -68,7 +70,8 @@ share one implementation.
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
 outcomes. With `internal-link-prefix` set, its intercepted links also pass through
-`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented. `lr-render-error`
+(`detail: { error: unknown }`) reports a Markdown rendering failure.
 
 **Slots:** none — content renders from `content`, not a slot.
 

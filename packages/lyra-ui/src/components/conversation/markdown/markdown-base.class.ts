@@ -20,6 +20,8 @@ import {
 } from '../../../internal/text-quote.js';
 import {
   acquireHighlightHandle,
+  paintResolvedHighlights,
+  type ResolvedHighlightRange,
   supportsCustomHighlights,
   type HighlightHandle,
 } from '../../../internal/text-highlights.js';
@@ -70,13 +72,11 @@ import {
   processPendingHighlights,
   renderMarkdownContent,
   renderMarkdownDocument,
-  repaintMarkdownHighlights,
   setCachedHighlight,
   type MarkdownHeadingItem,
   type MarkdownHtmlMode,
   type MarkdownKatexState,
   type PendingHighlight,
-  type ResolvedHighlightRange,
 } from './markdown-shared.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -882,7 +882,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   }
 
   private ensureHighlightHandle(): HighlightHandle {
-    this.highlightHandle ??= acquireHighlightHandle(this, this.ownerDocument);
+    this.highlightHandle ??= acquireHighlightHandle(this, this.ownerDocument, { part: 'highlight' });
     return this.highlightHandle;
   }
 
@@ -969,9 +969,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       return;
     }
     const index = this.markdownTextIndex(root);
-    this.resolvedHighlightRanges = repaintMarkdownHighlights({
-      locale: this.effectiveLocale,
-      root,
+    this.resolvedHighlightRanges = paintResolvedHighlights({
       handle: this.ensureHighlightHandle(),
       highlights: this.highlights,
       activeHighlightId: this.activeHighlightId,

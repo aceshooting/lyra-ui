@@ -66,6 +66,12 @@ function bookmarkIcon(): SVGTemplateResult {
  * @csspart cancel-button - Cancels, reverting to `restore-button`.
  * @cssprop [--lr-checkpoint-spin-duration=var(--lr-transition-ambient)] - Restoring-spinner
  *   timing, inheriting the shared ambient-motion token by default (stopped under reduced motion).
+ * @cssprop [--lr-checkpoint-gap=var(--lr-space-s)] - Gap between the rules and controls.
+ * @cssprop [--lr-checkpoint-button-bg=var(--lr-color-surface)] - Resting background.
+ * @cssprop [--lr-checkpoint-button-color=var(--lr-color-text)] - Resting text color.
+ * @cssprop [--lr-checkpoint-button-border-color=var(--lr-color-border)] - Resting border color.
+ * @cssprop [--lr-checkpoint-button-radius=var(--lr-radius-pill)] - Corner radius.
+ * @cssprop [--lr-checkpoint-button-padding-inline=var(--lr-space-s)] - Inline padding.
  * @status stable
  * @since 4.0.0
  */
@@ -232,60 +238,63 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   override render(): TemplateResult {
     const label = this.computedLabel;
-    const ariaLabel = this.getAttribute('aria-label') ?? label;
+    const authored = this.getAttribute('aria-label');
+    const ariaLabel = authored === '' ? '' : normalizeLabel(authored) ?? label;
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
 
     return html`
       <div part="base" role="group" aria-label=${ariaLabel}>
         <span part="line" aria-hidden="true"></span>
-        <span part="icon" aria-hidden="true">${bookmarkIcon()}</span>
-        <span part="label">${label}</span>
-        ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
-        ${!this.withoutRestore
-          ? this.confirming
-            ? html`
-                <span
-                  part="confirm-group"
-                  @keydown=${this.onConfirmGroupKeyDown}
-                  @focusout=${this.onConfirmGroupFocusOut}
-                >
-                  <span id=${this.confirmPromptId} part="confirm-prompt">${this.localize('checkpointConfirmPrompt')}</span>
-                  <button
-                    part="confirm-button"
-                    type="button"
-                    aria-describedby=${this.confirmPromptId}
-                    @click=${this.onConfirmClick}
+        <div class="checkpoint-controls">
+          <span part="icon" aria-hidden="true">${bookmarkIcon()}</span>
+          <span part="label">${label}</span>
+          ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
+          ${!this.withoutRestore
+            ? this.confirming
+              ? html`
+                  <span
+                    part="confirm-group"
+                    @keydown=${this.onConfirmGroupKeyDown}
+                    @focusout=${this.onConfirmGroupFocusOut}
                   >
-                    ${this.localize('confirm')}
-                  </button>
+                    <span id=${this.confirmPromptId} part="confirm-prompt">${this.localize('checkpointConfirmPrompt')}</span>
+                    <button
+                      part="confirm-button"
+                      type="button"
+                      aria-describedby=${this.confirmPromptId}
+                      @click=${this.onConfirmClick}
+                    >
+                      ${this.localize('confirm')}
+                    </button>
+                    <button
+                      part="cancel-button"
+                      type="button"
+                      aria-describedby=${this.confirmPromptId}
+                      @click=${this.onCancelClick}
+                    >
+                      ${this.localize('cancel')}
+                    </button>
+                  </span>
+                `
+              : html`
                   <button
-                    part="cancel-button"
+                    part="restore-button"
                     type="button"
-                    aria-describedby=${this.confirmPromptId}
-                    @click=${this.onCancelClick}
+                    aria-label=${this.restoring
+                      ? nothing
+                      : this.localize('checkpointRestoreWithContext', undefined, { label })}
+                    aria-disabled=${this.restoring ? 'true' : 'false'}
+                    @click=${this.onRestoreClick}
                   >
-                    ${this.localize('cancel')}
+                    ${this.restoring
+                      ? html`<span class="restore-spinner" aria-hidden="true">${spinnerIcon()}</span>`
+                      : nothing}
+                    ${this.restoring ? this.localize('checkpointRestoring') : this.localize('checkpointRestore')}
                   </button>
-                </span>
-              `
-            : html`
-                <button
-                  part="restore-button"
-                  type="button"
-                  aria-label=${this.restoring
-                    ? nothing
-                    : this.localize('checkpointRestoreWithContext', undefined, { label })}
-                  aria-disabled=${this.restoring ? 'true' : 'false'}
-                  @click=${this.onRestoreClick}
-                >
-                  ${this.restoring
-                    ? html`<span class="restore-spinner" aria-hidden="true">${spinnerIcon()}</span>`
-                    : nothing}
-                  ${this.restoring ? this.localize('checkpointRestoring') : this.localize('checkpointRestore')}
-                </button>
-              `
-          : nothing}
+                `
+            : nothing}
+        </div>
         <span part="line" aria-hidden="true"></span>
       </div>
       <slot></slot>

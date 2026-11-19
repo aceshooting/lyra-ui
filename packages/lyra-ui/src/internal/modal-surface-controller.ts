@@ -1,4 +1,5 @@
 import type { NativeModalCarrier } from './native-modal-carrier.js';
+import type { OverlayHandle } from './overlay-manager.js';
 import { isLibraryPromotedAndShowing, promoteToTopLayer, releaseTopLayer } from './top-layer-escape.js';
 import { observeOverlayStack } from './overlay-stack.js';
 import {
@@ -8,6 +9,15 @@ import {
 } from './deferred-focus-return.js';
 
 const presentations = new WeakMap<Document, Set<ModalSurfaceController>>();
+
+/** What a modal host hands {@linkcode ModalSurfaceController.reconnect}. */
+export interface ModalSurfaceReconnectOptions {
+  isOpen(): boolean;
+  /** The host's current overlay handle, read again after the update. */
+  overlay(): Pick<OverlayHandle, 'focusInitial' | 'isActive' | 'resume'> | undefined;
+  /** Registers a fresh overlay when the current handle is gone. */
+  activate(): void;
+}
 
 /** Keeps a modal host above sibling top-layer surfaces when no nested native carrier is needed. */
 export class ModalSurfaceController {
@@ -23,8 +33,13 @@ export class ModalSurfaceController {
   private presentationDocument?: Document;
   private activationOrder?: number;
   private closing = false;
+  private reconnectGeneration = 0;
   constructor(
-    private readonly host: HTMLElement & { readonly updateComplete: Promise<unknown> },
+    private readonly host: HTMLElement & {
+      readonly updateComplete: Promise<unknown>;
+      readonly hasUpdated: boolean;
+      requestUpdate(): void;
+    },
     private readonly carrier: NativeModalCarrier,
     private readonly surface?: () => HTMLElement | null,
   ) {}
@@ -59,6 +74,28 @@ export class ModalSurfaceController {
   disconnect(): void {
     this.hide();
     cancelDeferredFocusReturn(this.host);
+  }
+
+  /**
+   * Restores an open modal after a same-instance reconnect, which runs no update between the two
+   * callbacks. Focus returns at once because the shadow panel survives the move; the surface is
+   * presented and focused again after the next update while the host stays connected and open.
+   */
+  reconnect(options: ModalSurfaceReconnectOptions): void {
+    if (!this.host.hasUpdated || !options.isOpen()) return;
+    this.prepare();
+    this.host.requestUpdate();
+    const current = options.overlay();
+    if (current?.isActive()) current.resume();
+    else options.activate();
+    options.overlay()?.focusInitial();
+    const generation = ++this.reconnectGeneration;
+    const present = (): void => {
+      if (generation !== this.reconnectGeneration || !this.host.isConnected || !options.isOpen()) return;
+      this.show();
+      options.overlay()?.focusInitial();
+    };
+    void this.host.updateComplete.then(present, present);
   }
 
   show(): void {

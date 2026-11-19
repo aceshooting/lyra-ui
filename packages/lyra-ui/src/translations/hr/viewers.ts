@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Zakreni udesno',
   modelViewerRotateUp: 'Zakreni prema gore',
   modelViewerRotateDown: 'Zakreni prema dolje',
+  modelViewerViewport: 'Interaktivni model',
 };
 
 registerLyraLocale('hr', strings);

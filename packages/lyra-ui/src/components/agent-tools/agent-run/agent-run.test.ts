@@ -245,6 +245,68 @@ describe('model + cost summary', () => {
   });
 });
 
+describe('header layout', () => {
+  const headerMetrics = [
+    { id: 'prompt', label: 'Prompt', value: 1204 },
+    { id: 'completion', label: 'Completion', value: 312 },
+    { id: 'total', label: 'Total', value: 1516 },
+  ];
+  const longLabel = `Reading ${'the repository and every changed module '.repeat(6)}`;
+
+  async function header(width: number, label: string, dir: 'ltr' | 'rtl' = 'ltr') {
+    const run = makeRun({ model: 'gpt-4o', steps: [{ id: 'step', kind: 'tool', label, status: { kind: 'running' } }] });
+    const wrapper = await fixture(html`
+      <div dir=${dir} style=${`inline-size:${width}px`}>
+        <lr-agent-run .run=${run} .metrics=${headerMetrics}></lr-agent-run>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-agent-run') as LyraAgentRun;
+    await el.updateComplete;
+    const part = (name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+    const items = [part('model'), ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="metric"]')];
+    const tops = items.map((item) => item.getBoundingClientRect().top);
+    return {
+      header: part('header'),
+      status: part('status').getBoundingClientRect(),
+      summary: part('summary').getBoundingClientRect(),
+      label: part('current-step-label'),
+      rowSpread: Math.max(...tops) - Math.min(...tops),
+    };
+  }
+  const middle = (rect: DOMRect) => (rect.top + rect.bottom) / 2;
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`keeps a short step and the whole summary on the status row while it fits (${dir})`, async () => {
+      const { status, summary, rowSpread } = await header(800, 'Read repository', dir);
+      expect(rowSpread, 'model and metrics share one row').to.be.below(1);
+      expect(Math.abs(middle(summary) - middle(status)), 'summary beside the status').to.be.below(2);
+    });
+
+    it(`ellipsizes a long current step before moving the summary (${dir})`, async () => {
+      const { status, summary, label, rowSpread } = await header(960, longLabel, dir);
+      expect(rowSpread, 'model and metrics share one row').to.be.below(1);
+      expect(Math.abs(middle(summary) - middle(status)), 'summary beside the status').to.be.below(2);
+      expect(label.scrollWidth, 'step label truncated').to.be.greaterThan(label.clientWidth);
+    });
+
+    it(`wraps the whole summary under the status as one row when the header is too narrow (${dir})`, async () => {
+      const { status, summary, rowSpread } = await header(480, longLabel, dir);
+      expect(summary.top, 'summary below the status row').to.be.at.least(status.bottom - 1);
+      expect(rowSpread, 'model and metrics share one row').to.be.below(1);
+      const start = dir === 'ltr' ? Math.abs(summary.left - status.left) : Math.abs(summary.right - status.right);
+      expect(start, 'summary starts under the status').to.be.below(1);
+    });
+  }
+
+  it('contains the step and summary inside a 320px allocation', async () => {
+    const { header: row, status, summary, label } = await header(320, longLabel);
+    expect(row.scrollWidth).to.be.at.most(row.clientWidth + 1);
+    expect(summary.top).to.be.at.least(status.bottom - 1);
+    expect(summary.right).to.be.at.most(row.getBoundingClientRect().right + 1);
+    expect(label.scrollWidth).to.be.greaterThan(label.clientWidth);
+  });
+});
+
 describe('cancel/retry controls', () => {
   const cancelableKinds: AgentStatusKind[] = ['running', 'collecting', 'waiting-input', 'waiting-approval'];
   const nonCancelableKinds: AgentStatusKind[] = ['idle', 'queued', 'done', 'error', 'cancelled'];

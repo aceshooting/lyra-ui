@@ -438,13 +438,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         normalized.length !== current.length ||
         normalized.some((id, index) => id !== current[index])
       ) {
-        // A `sources` reassignment pruning previously-selected ids is a self-mutation of public
-        // state (`selectedSourceIds`), not just an internal normalization -- without
-        // `lr-selection-change`, a host's own external copy of `selectedSourceIds` silently diverges
-        // with no way to resync, contradicting this class's own "fired after every toggle"
-        // contract. Skipped on `selectedSourceIds` alone (an explicit controlled write already
-        // reflects the caller's own intent) and on the very first update (nothing to resync yet).
-        // Mirrors retrieval-results.class.ts's `shouldAnnounce` gate for the identical shape.
+        // A source change may prune selection that the host still holds.
         const shouldAnnounce = this.hasUpdated && changed.has('sources');
         writeNormalizedOwnedCollection(this, 'selectedSourceIds', () => {
           this.selectedSourceIds = normalized;
@@ -718,14 +712,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   override render(): TemplateResult {
-    // Not `hostAriaLabel(this)`: that helper folds a JS-only `accessibleLabel` into its own
-    // "host already has a name" answer, so testing `=== null` could never distinguish "consumer
-    // authored the host aria-label attribute" from "consumer set accessibleLabel via JS" -- and
-    // the override this component documents (below) would never be reachable. Read the DOM
-    // attribute directly instead, mirroring `node-palette.class.ts`'s `!hasAttribute()` idiom.
-    const hostLabel = this.hasAttribute('aria-label')
-      ? this.getAttribute('aria-label') ?? ''
-      : null;
+    // A JS-only accessibleLabel names the inner picker while the host attribute names the host.
+    const hostLabel = this.getAttribute('aria-label');
     const label =
       hostLabel === null
         ? this.accessibleLabel ??

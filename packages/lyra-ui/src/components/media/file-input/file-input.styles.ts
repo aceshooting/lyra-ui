@@ -184,29 +184,11 @@ export const styles = css`
       outline-offset: calc(-1 * var(--lr-border-width-medium));
     }
   }
-  /* Both selector shapes take the hook, because the pointer can be over the button itself or over
-     the pointer-events: none content stacked on it in the same grid cell -- the same pairing the
-     pressed rules below already use. */
-  :host(:not(:disabled)) [part~="file-input"]:hover {
-    border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
-  }
+  :host(:not(:disabled)) [part~="file-input"]:hover,
   :host(:not(:disabled)) .dropzone:hover [part~="file-input"] {
     border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
   }
-  :host(:not(:disabled)) [part~="file-input"]:active {
-    border-color: var(
-      --lr-file-input-dropzone-active-border-color,
-      var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand))
-    );
-    background: var(
-      --lr-file-input-dropzone-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-file-input-dropzone-fill, var(--lr-color-surface)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-  }
+  :host(:not(:disabled)) [part~="file-input"]:active,
   :host(:not(:disabled)) .dropzone:active [part~="file-input"] {
     border-color: var(
       --lr-file-input-dropzone-active-border-color,

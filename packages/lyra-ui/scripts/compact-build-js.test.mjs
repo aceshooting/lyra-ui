@@ -6,10 +6,27 @@ import fs from 'node:fs';
 import { setImmediate } from 'node:timers/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
+import { compactBuildJavaScript, compactLitStartTags, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
 
 const require = createRequire(import.meta.url);
 const esbuild = createRequire(require.resolve('@web/dev-server-esbuild'))('esbuild');
+
+const litImport = 'import {html} from "lit";';
+const template = 'export const render = v => html`<div title="保  留"\n   .value=${v}\n  @click=${v}  >  text\n  <pre> x  y </pre></div>`;';
+const expected = template.replace('\n   .value', ' .value').replace('\n  @click', ' @click').replace('  >', ' >');
+assert.equal(compactLitStartTags(litImport + template, 'test.js'), litImport + expected);
+const nestedTags = 'const result=html`<template><i\n  id="保">${html`<b    title="a   b"> x  y </b>`}</i></template><svg><path\n  d="a  b"  /></svg>`;';
+assert.equal(compactLitStartTags(litImport + nestedTags, 'nested.js'),
+  litImport + nestedTags.replace('\n  id', ' id').replace('    title', ' title').replace('\n  d', ' d').replace('  />', ' />'));
+for (const source of [
+  'import {html} from "lit/static-html.js";' + template,
+  'import {html} from "other";' + template,
+  litImport + 'export function raw(html) {return html`<div    data-x="x">  text </div>`}',
+  litImport + 'export const raw=html`<pre>literal  text</pre><!-- <div    id="x"> --><textarea><div    id="x"></textarea>`;',
+  litImport + 'export const escaped=html`<div    title="\\n">hello</div>`;',
+]) {
+  assert.equal(compactLitStartTags(source, 'test.js'), source);
+}
 
 const fixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-js-'));
 try {
@@ -171,7 +188,7 @@ const collectionFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-collec
 try {
   const internal = path.join(collectionFixture, 'internal');
   await mkdir(internal);
-  for (const name of ['collection-snapshot', 'collection-policy', 'data-descriptors']) {
+  for (const name of ['collection-snapshot', 'collection-policy', 'data-descriptors', 'object-guards']) {
     const source = await readFile(new URL(`../src/internal/${name}.ts`, import.meta.url), 'utf8');
     const emitted = await esbuild.transform(source, { loader: 'ts', format: 'esm', target: 'es2022' });
     await writeFile(path.join(internal, `${name}.js`), emitted.code);

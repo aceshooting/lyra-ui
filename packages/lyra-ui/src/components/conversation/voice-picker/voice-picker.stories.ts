@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './voice-picker.js';
-import type { LyraCatalog, LyraVoiceCatalogEntry, LyraVoicePicker } from './voice-picker.class.js';
+import type { LyraCatalog, LyraVoiceCatalogEntry, LyraVoicePicker, LyraVoicePickerEventMap } from './voice-picker.class.js';
 
 const meta: Meta = {
   title: 'Voice Picker',
@@ -85,10 +85,20 @@ export const CatalogWithIcons: Story = {
 };
 
 /** `allow-custom` keeps the catalog's suggestions but switches to the free-text combobox shape so a
- *  voice id outside the list can still be typed and committed. */
+ * voice id outside the list can still be typed and committed. Listen to `lr-input` and read
+ * `detail.query` to preview the draft before committing it. */
 export const AllowCustom: Story = {
   render: () => html`
-    <lr-voice-picker provider="elevenlabs" label="Voice" .catalog=${catalog} allow-custom></lr-voice-picker>
+    <div>
+      <lr-voice-picker provider="elevenlabs" label="Voice" .catalog=${catalog} allow-custom
+        @lr-input=${(event: LyraVoicePickerEventMap['lr-input']) => {
+          const picker = event.currentTarget as LyraVoicePicker;
+          const output = picker.nextElementSibling as HTMLOutputElement;
+          output.value = event.detail.query ?? event.detail.value;
+        }}
+      ></lr-voice-picker>
+      <output aria-label="Voice draft"></output>
+    </div>
   `,
 };
 

@@ -4,7 +4,8 @@ import { LyraElement } from '@aceshooting/lyra-ui/utilities/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { initialCatalog } from './catalog.js';
 import { validateContentProperties } from './content-policy.js';
-import { createAction, createSurfaceState, reconcileSurfaceState, setSurfaceState, validateView, restoreSnapshot as validateSnapshot, type LyraGenSnapshot, type LyraGenSurfaceState } from './runtime.js';
+import { createAction, createSurfaceState, reconcileSurfaceState, setSurfaceState, restoreSnapshot as validateSnapshot, type LyraGenSnapshot, type LyraGenSurfaceState } from './runtime.js';
+import { validateCanonicalView } from './view-admission.js';
 import { readPointer } from './references.js';
 import { resolveLimits, snapshotJson, validateSchema } from './schema.js';
 import { notifyFailureCategories, type LyraGenFailureCallback } from './diagnostics.js';
@@ -53,13 +54,9 @@ const jsonEqual = (left: unknown, right: unknown): boolean => {
   for (const key of keys) if (!Object.hasOwn(b, key) || !jsonEqual(a[key], b[key])) return false;
   return true;
 };
-const sameInputs = (previous: RenderedNode['preparedInputs'], locale: string, values: Readonly<Record<string, JsonValue>>): boolean => {
-  if (!previous || previous.locale !== locale) return false;
-  const keys = Object.keys(values);
-  if (keys.length !== Object.keys(previous.values).length) return false;
-  for (const key of keys) if (!Object.hasOwn(previous.values, key) || !jsonEqual(previous.values[key], values[key])) return false;
-  return true;
-};
+const conflictsWithRevision = (previous: LyraGenView | undefined, next: LyraGenView): boolean =>
+  previous?.surfaceId === next.surfaceId &&
+  (next.revision < previous.revision || (next.revision === previous.revision && !jsonEqual(next, previous)));
 interface PreparedNode {
   readonly record: RenderedNode;
   readonly next: RenderedNode;
@@ -101,6 +98,11 @@ const RENDER_SLICE_MS = 4;
  * @event {CustomEvent<LyraGenAction>} lr-gen-action - A validated host action request; no work is executed.
  * @event {CustomEvent<LyraGenStateChange>} lr-gen-state-change - User edit or reset proposal, including complete bound values.
  * @event {CustomEvent<{diagnostics: readonly LyraGenDiagnostic[]}>} lr-gen-error - Validation, loading, or action failure.
+ * @cssprop [--lr-gen-heading-font-size=var(--lr-font-size-lg)] - Generated heading size.
+ * @cssprop [--lr-gen-heading-font-weight=var(--lr-font-weight-semibold)] - Generated heading weight.
+ * @cssprop [--lr-gen-heading-margin=0] - Generated heading margin.
+ * @cssprop [--lr-gen-text-font-size=var(--lr-font-size-m)] - Generated paragraph size.
+ * @cssprop [--lr-gen-text-margin=0] - Generated paragraph margin.
  * @csspart surface - Generated content container.
  * @csspart loading - A pending component's localized placeholder.
  * @csspart error - A localized failure message.
@@ -236,11 +238,11 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       for (const state of this.loads.values()) if (state.status === 'error' && state.data) { state.status = 'ready'; state.data = false; }
       if (changed.has('catalog')) { this.loads.clear(); this.nodes.clear(); }
       if (!this.document) { this.accepted = undefined; this.localState = undefined; this.invalid = false; return; }
-      const result = validateView(this.document, this.catalog, { limits: this.resolvedLimits, recovery: this.recovery === 'isolate' ? 'isolate' : 'strict' });
+      const result = validateCanonicalView(this.document, this.catalog, { limits: this.resolvedLimits, recovery: this.recovery === 'isolate' ? 'isolate' : 'strict' });
       if (!result.ok) { this.rejectView(result.diagnostics); return; }
       if (result.isolated?.length && result.diagnostics.length) this.emitError(result.diagnostics);
       const previous = this.accepted;
-      if (previous && previous.surfaceId === result.value.surfaceId && (result.value.revision < previous.revision || (result.value.revision === previous.revision && !jsonEqual(result.value, previous)))) {
+      if (conflictsWithRevision(previous, result.value)) {
         this.rejectView([{ code: 'revision.conflict', path: '/revision', message: 'A view revision cannot move backwards.', severity: 'error' }]);
         return;
       }
@@ -582,7 +584,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       }
     }
     const locale = this.effectiveLocale;
-    if (!sameInputs(next.preparedInputs, locale, values)) {
+    if (next.preparedInputs?.locale !== locale || !jsonEqual(next.preparedInputs.values, values)) {
       for (const [propertyName, value] of Object.entries(values)) {
         const schema = definition.properties[propertyName];
         if (!schema || !validateSchema(value, schema, this.resolvedLimits).ok) {
@@ -798,7 +800,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     if (!restored.ok) return restored;
     const previous = this.accepted;
     const next = restored.value.view;
-    if (previous && previous.surfaceId === next.surfaceId && (next.revision < previous.revision || (next.revision === previous.revision && !jsonEqual(next, previous)))) return { ok: false, diagnostics: [{ code: 'revision.conflict', path: '/revision', message: 'A snapshot cannot replace an existing revision with different content.', severity: 'error' }] };
+    if (conflictsWithRevision(previous, next)) return { ok: false, diagnostics: [{ code: 'revision.conflict', path: '/revision', message: 'A snapshot cannot replace an existing revision with different content.', severity: 'error' }] };
     this.snapshotRestore = { snapshot: restored.value, catalog: this.catalog };
     this.document = restored.value.view;
     this.bindingState = restored.value.state.values;

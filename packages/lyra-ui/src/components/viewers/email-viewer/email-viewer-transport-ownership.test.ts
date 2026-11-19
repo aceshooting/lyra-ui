@@ -1,8 +1,13 @@
+import { setEmailDeps } from './fixtures/email-deps.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import type { LyraEmailViewer } from './email-viewer.js';
 import './email-viewer.js';
-import { __setEmailDepsForTesting, type PostalMessageApi } from './email-loader.js';
+import { type PostalMessageApi } from './email-loader.js';
+
+expectDevWarning('lyra-dompurify-unavailable');
+expectDevWarning('lyra-email-viewer-postal-mime-unavailable');
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -54,12 +59,12 @@ function assertCurrent(element: LyraEmailViewer): void {
 describe('lr-email-viewer transport ownership', () => {
   const originalFetch = window.fetch;
   beforeEach(() => {
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: { parse: async buffer => ({ text: new TextDecoder().decode(buffer) }) },
       DOMPurify: undefined,
     });
   });
-  afterEach(() => { fixtureCleanup(); window.fetch = originalFetch; __setEmailDepsForTesting(undefined); });
+  afterEach(() => { fixtureCleanup(); window.fetch = originalFetch; setEmailDeps(undefined); });
   async function mount() {
     const element = await fixture<LyraEmailViewer>(html`<lr-email-viewer
       .strings=${{ documentPreviewFailedToLoad: 'Document transport unavailable' }}></lr-email-viewer>`);
@@ -149,7 +154,7 @@ describe('lr-email-viewer transport ownership', () => {
     const pending = deferred<PostalMessageApi>();
     let fetches = 0, parses = 0;
     window.fetch = async () => { fetches++; return new Response(documentText(true)); };
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: { parse: () => { parses++; return pending.promise; } },
       DOMPurify: undefined,
     });

@@ -9,12 +9,19 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-chart` (core)
+
+The chart, lite-chart and box-plot data-table buttons share the resting style hooks
+`--lr-chart-data-table-toggle-border-color`, `--lr-chart-data-table-toggle-bg`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size` and
+`--lr-chart-data-table-toggle-justify` (grid `justify-self`). Lite-chart and box-plot
+accept the same suffixes under their own component prefix, which takes precedence.
+
 
 Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-histogram`;
 `lr-lite-chart` and `lr-box-plot` are independent implementations. It supports both a simplified

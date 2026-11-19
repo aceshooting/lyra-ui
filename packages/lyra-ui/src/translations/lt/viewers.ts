@@ -155,6 +155,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Sukti dešinėn',
   modelViewerRotateUp: 'Sukti aukštyn',
   modelViewerRotateDown: 'Sukti žemyn',
+  modelViewerViewport: 'Interaktyvus modelis',
 };
 
 registerLyraLocale('lt', strings);

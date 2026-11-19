@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Περιστροφή δεξιά',
   modelViewerRotateUp: 'Περιστροφή πάνω',
   modelViewerRotateDown: 'Περιστροφή κάτω',
+  modelViewerViewport: 'Διαδραστικό μοντέλο',
 };
 
 registerLyraLocale('el', strings);

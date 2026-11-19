@@ -5,6 +5,7 @@ import './diff-view.js';
 it('declines oversized diff highlighting before calling the tokenizer', () => {
   const el = document.createElement('lr-diff-view'); let calls = 0;
   const seam = el as unknown as { tokenizeLines(highlighter: unknown, text: string, language: string): string[] | null };
+  expect(seam.tokenizeLines({ codeToHtml() { calls++; return ''; } }, '', 'json')).to.deep.equal([]);
   seam.tokenizeLines({ codeToHtml() { calls++; return ''; } }, 'x'.repeat(8193), 'json');
   expect(calls).equal(0);
   recordScaleMeasurement('lr-diff-view', 'n=8193 highlight admission', { calls });

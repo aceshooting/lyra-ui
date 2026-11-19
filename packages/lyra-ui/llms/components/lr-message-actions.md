@@ -16,6 +16,8 @@
 
 ## `lr-message-actions`
 
+Set `disabled` to disable all built-in controls and make slotted actions inert.
+
 The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in built-ins (copy /
 regenerate / edit / feedback) that emit intent events, plus a default slot for custom controls (e.g.
 a slotted `lr-branch-picker`). `role="toolbar"` with WAI-ARIA APG roving-tabindex; ArrowLeft/

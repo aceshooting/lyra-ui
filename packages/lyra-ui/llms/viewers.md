@@ -603,6 +603,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lr-email-viewer`
 
+Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-viewer-action-hover-background` and `--lr-email-viewer-action-active-background`.
+
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
 remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
@@ -611,6 +613,7 @@ attachment row is a real `<button>` that emits `lr-attachment-open` with an immu
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
 `URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
+The attachment action’s accessible name includes the visible filename and formatted size.
 An attachment with no filename uses the localized `emailViewerUnnamedAttachment` fallback
 (`"Unnamed attachment"` in English) for its visible name, open-button accessible name, and
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
@@ -652,6 +655,7 @@ reports `found: false`; text-quote anchors use the rendered message body.
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
@@ -692,6 +696,8 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 
 ## `lr-calendar-viewer`
 
+`max-events` limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
 remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
@@ -715,6 +721,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
@@ -741,9 +748,7 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
-capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
-the DOM so search, selection and text-quote anchors remain truthful without the former 10,000-event
-eager tree.
+bounded by `max-events` and 2 MiB of rendered event text. Search, selection and text-quote anchors cover every accepted event.
 
 ## `lr-archive-viewer`
 
@@ -779,7 +784,8 @@ independently addressable through the fragment/anchor API. `search()`/`searchNex
 navigating search matches (and the resulting active-row highlight) correctly reaches every
 duplicate-named entry, not just the first.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
 navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
 (`detail: { text, anchor, rects }`) for a selection contained within one
@@ -983,7 +989,8 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
 **Events:**
 
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
-- `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
+- `lr-slide-change` carries `{ index, count }` when the active slide changes.
+- `lr-page-change` carries `{ page, pageCount }` when `page` changes while a presentation is shown.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
   every load so a rail can discard same-count replacement thumbnails without inferring identity
@@ -1008,9 +1015,7 @@ highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**Events (additive):** `lr-page-change` — `detail: { page, pageCount }`, fired when `page` changes
-while a presentation is shown (the same shape `<lr-pdf-viewer>` emits); `lr-slide-change` is
-unchanged. A whitespace-only `label` or `name` is ignored for the region name; an explicit
+A whitespace-only `label` or `name` is ignored for the region name; an explicit
 `label=""` still clears it. The scrollable `container` becomes a named, keyboard-focusable region
 while its content overflows.
 
@@ -1065,6 +1070,8 @@ types are `LyraViewerDiagnostic`, `LyraViewerDiagnosticCode`, `LyraViewerDiagnos
 
 ## `lr-svg-viewer`
 
+Action backgrounds accept `--lr-svg-viewer-action-background`, `--lr-svg-viewer-action-hover-background` and `--lr-svg-viewer-action-active-background`.
+
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
 removes author `<style>`/`style`, SVG animation elements, and external
@@ -1110,7 +1117,8 @@ when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnega
 carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
 timers) rather than failing immediately.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
 or a `scrollToAnchor()` call is applied, whether or not a match was found. `lr-text-select` is not
@@ -1178,6 +1186,7 @@ label. `highlights`, `activeHighlightId`, `anchor`, and
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.
@@ -1208,6 +1217,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
 
 ## `lr-dataset-viewer`
+
+Set `--lr-dataset-viewer-background`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-border-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
 
 Fetches tab-, pipe-, or delimiter-separated text, or reads a host-owned `dataSource`, and renders a
 virtualized, accessible table (a `role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
@@ -1325,7 +1336,8 @@ value, ordered row then column (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
@@ -1377,15 +1389,15 @@ each parse pass remains synchronous.
 
 ## `lr-contact-viewer`
 
+`max-contacts` limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
 `.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
 but never rendered — the card's heading uses `FN` (falling back to a localized "unnamed contact"
 label when `FN` is absent).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
-contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
-text-quote anchorable without a 10,000-card eager DOM tree.
+`documentPreviewResourceTooLarge` message instead of the contacts. The viewer applies `max-contacts` and a 2 MiB ceiling on rendered contact text. Search and text-quote anchors cover every accepted contact.
 
 **Properties:** `src: string = ''`, `name: string = ''`,
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
@@ -1403,6 +1415,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for contact conten
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
@@ -1638,6 +1651,10 @@ prevents stale page/text/region work from scrolling or reporting success.
 
 ## `lr-spreadsheet-viewer`
 
+Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
+
+`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+
 Fetches `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer, or reads a host-owned
 `dataSource`. Multiple worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
 
@@ -1750,7 +1767,8 @@ query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/s
 matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
 matches, and painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
@@ -1810,6 +1828,10 @@ archive admission before SheetJS parsing, and between sheet projections; each pa
 pass remains synchronous.
 
 ## `lr-csv-viewer`
+
+Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
+
+`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
 virtualizes body rows.
@@ -1915,7 +1937,8 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
@@ -2266,8 +2289,10 @@ matches.
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
 `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`, including
-canonical source reset and effective-locale re-evaluation. `lr-render-error` —
-`detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
+canonical source reset and effective-locale re-evaluation. When an HTML or SVG output cannot be sanitized,
+`lr-viewer-diagnostic` reports `notebook-sanitizer-unavailable` with `fatal: false`. Other notebook
+output stays readable. The existing `lr-render-error` event carries `detail: { error }` for sanitizer,
+fetch, parse and validation failures. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
 
@@ -2341,6 +2366,8 @@ PNG/JPEG outputs use their `text/plain` representation as alt text, falling back
 code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the same fallback.
 
 ## `lr-xml-viewer`
+
+Action backgrounds accept `--lr-xml-viewer-action-background`, `--lr-xml-viewer-action-hover-background` and `--lr-xml-viewer-action-active-background`.
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
@@ -2492,7 +2519,8 @@ inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
-**Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported'`, `'denied'`, or `'failed'`.
@@ -2722,6 +2750,8 @@ fragment jump reports `found: false`. Use a text-quote anchor for serialized met
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-viewer-diagnostic` reports `geojson-map-unavailable` with `fatal: false` when the JSON preview replaces the map.
 - `lr-render-error` — `detail: { error }` — fetch, parse, shape-validation, or missing-map capability
   failure. A missing optional MapLibre peer also keeps the serialized metadata fallback visible.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
@@ -3358,6 +3388,12 @@ These named interfaces and helper signatures are available to typed integrations
 
 ## `lr-model-viewer`
 
+Action backgrounds accept `--lr-model-viewer-action-background`, `--lr-model-viewer-action-hover-background` and `--lr-model-viewer-action-active-background`.
+
+The interactive viewport has a separate accessible name, supplied by `modelViewerViewport` (“Interactive model” in English).
+
+Listen for `lr-render-error` for source and format failures. The viewer also emits `lr-engine-fallback` when a source, format, engine or WebGL failure leaves the alternative visible.
+
 A bounded, static 3D model and point-cloud preview for glTF, GLB, STL, OBJ, PLY, XYZ and PCD files.
 It renders with the model engine of the optional `@aceshooting/lyra-3d` companion (`pnpm add
 @aceshooting/lyra-3d`), loaded through a lazy `import('@aceshooting/lyra-3d/model')`, and only for a
@@ -3422,9 +3458,8 @@ including the companion import after a failed load. The failed-state button call
 - `lr-camera-change` — `detail: { camera: LyraModelCamera }`. The user moved the camera with a
   pointer, a key or a toolbar button (the fit button included). Assigning `camera`, `fit()` and the
   automatic fit are silent.
-- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. WebGL stopped rendering
-  and the text alternative remains; `reason` is `'unavailable'` (companion missing or incompatible),
-  `'unsupported'` (no WebGL2, or an unsupported format), `'context-lost'` or `'error'`. A lost
+- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. The text alternative remains visible after a source or rendering failure; `reason` is `'unavailable'` (companion missing or incompatible),
+  `'unsupported'` (unsupported file format or WebGL2 unavailable), `'context-lost'` or `'error'`. A lost
   context keeps its engine so a restored context resumes rendering.
 
 All four events bubble, are composed and are not cancelable. Hover and picking are intentionally

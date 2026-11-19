@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-toggle` since `unreleased`; use event `@lr-retrieval-disclosure-change`; removal not before `33.0.0` — The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration.
 - **Optional peers** none
 - **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -55,13 +55,22 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `evidence-toggle` and `evidence-body` padding; `m` and larger keep the full padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
-**Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-toggle` (`{ kind: 'stage', expanded, itemId }` for a stage's evidence panel,
-either from its own button or the first timeline selection, or
-`{ kind: 'chunk', expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
-discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
-expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
-explicit stage identity.
+**Events:**
+
+- `lr-stage-select` carries `{ stageId }` when a timeline bar is activated.
+- `lr-stage-chunk-action` carries `{ stageId, action: 'open', chunkId, sourceId, anchor? }` for opening a chunk or
+  `{ stageId, action: 'expand', chunkId, expanded }` for a disclosure.
+- `lr-retrieval-disclosure-change` bubbles from the trace with readonly `detail.kind`,
+`stageId` and `expanded`. It covers the evidence button, timeline selection that expands a stage,
+and disclosures of nested chunks, which also carry `chunkId`. Migrate from `lr-toggle`
+(`{ expanded, itemId, stageId? }`) by narrowing on `detail.kind`.
+
+```ts
+trace.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.stageId, detail.chunkId, detail.expanded);
+  else console.log(detail.stageId, detail.expanded);
+});
+```
 
 **Slots:** none.
 

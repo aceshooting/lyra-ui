@@ -112,3 +112,25 @@ it('keeps one parsed JSON object per output across row re-renders', async () => 
   const second = (list.shadowRoot!.querySelector('lr-json-viewer') as unknown as { data: unknown }).data;
   expect(first === second).to.equal(true);
 });
+
+it('reuses sanitized output without joining markup chunks on a row repaint', async () => {
+  const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+    nbformat: 4, nbformat_minor: 5, cells: [{ cell_type: 'code', source: 'x',
+      outputs: [{ output_type: 'display_data', data: { 'text/html': ['<b>chunk', 'ed</b>'] } }] }],
+  }}></lr-notebook-viewer>`);
+  const root = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+  await waitUntil(() => root.querySelector('b')?.textContent === 'chunked');
+  const join = Array.prototype.join;
+  let joins = 0;
+  Array.prototype.join = function (separator?: string) {
+    if (this[0] === '<b>chunk') joins++;
+    return join.call(this, separator);
+  };
+  try {
+    el.requestUpdate();
+    await el.updateComplete;
+    await (el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
+    expect(root.querySelector('b')?.textContent).to.equal('chunked');
+    expect(joins).to.equal(0);
+  } finally { Array.prototype.join = join; }
+});

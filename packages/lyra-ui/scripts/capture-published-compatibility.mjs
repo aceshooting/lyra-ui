@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util';
 import { isMainModule } from './is-main-module.mjs';
 import { compatibilityExportCandidates, extractPublishedCompatibility, publishedExportSurface } from './published-compatibility.mjs';
 import { inspectExportContract } from './component-metadata.mjs';
-import { SOURCE_INPUTS, PACKED_INPUTS, sha256, jsonBytes, encodeEvidence, parseGitTree, validatePublishedCapture } from './published-compatibility-io.mjs';
+import { SOURCE_INPUTS, packedInputsFor, sha256, jsonBytes, encodeEvidence, parseGitTree, validatePublishedCapture } from './published-compatibility-io.mjs';
 
 /** Explicit read-only capture of already verified immutable publication inputs. Never fetches. */
 export function capturePublishedCompatibility({ repository, tag, tagObject, commit, tarball, tarballSha256, registryIntegrity, output }) {
@@ -42,7 +42,7 @@ export function capturePublishedCompatibility({ repository, tag, tagObject, comm
     const path = `packages/lyra-ui/${relative}`; const blob = sourceBlob(path);
     save('source', role, path, blob.bytes, blob.oid);
   }
-  for (const [role, path] of Object.entries(PACKED_INPUTS)) {
+  for (const [role, path] of Object.entries(packedInputsFor(members))) {
     if (members.filter(member => member === path).length !== 1) throw new Error(`Missing or duplicate packed input ${path}`);
     save('packed', role, path, execFileSync('tar', ['-xOzf', resolve(tarball), '--', path], { maxBuffer: 32 * 1024 * 1024 }));
   }

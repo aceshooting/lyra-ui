@@ -47,8 +47,9 @@ test('expansion identity rules are boundary failures in both modes', () => {
   const wrongRoot = catalogWith(node => ({ ...twoStats(node), id: 'other' }));
   const wrongChild = catalogWith(node => ({ id: node.id, type: 'row', children: [{ id: 'x', type: 'text' }] }));
   const nonObject = catalogWith(() => null as unknown as LyraGenNode);
+  const nonJson = catalogWith(() => new Date(0) as unknown as LyraGenNode);
   const reexpands = catalogWith(node => ({ id: node.id, type: 'kpi', props: { count: 1 } }));
-  for (const catalog of [wrongRoot, wrongChild, nonObject, reexpands]) for (const recovery of ['strict', 'isolate'] as const) {
+  for (const catalog of [wrongRoot, wrongChild, nonObject, nonJson, reexpands]) for (const recovery of ['strict', 'isolate'] as const) {
     const result = validateView(view({ id: 'a', type: 'text', text: 'x' }, kpi()), catalog, { recovery });
     assert.equal(result.ok, false);
     assert.equal(result.diagnostics[0]!.code, 'block.expansion');

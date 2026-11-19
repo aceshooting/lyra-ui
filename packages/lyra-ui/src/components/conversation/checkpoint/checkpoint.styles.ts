@@ -7,14 +7,21 @@ export const styles = css`
   }
   [part='base'] {
     display: flex;
+    align-items: center;
+    gap: var(--lr-checkpoint-gap, var(--lr-space-s));
+    inline-size: 100%;
+  }
+  .checkpoint-controls {
+    display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-s);
-    inline-size: 100%;
+    justify-content: center;
+    gap: inherit;
+    min-inline-size: 0;
   }
   [part='line'] {
     flex: 1 1 auto;
-    min-inline-size: var(--lr-size-1rem);
+    min-inline-size: 0;
     block-size: var(--lr-border-width-thin);
     background: var(--lr-color-border-subtle);
   }
@@ -43,11 +50,11 @@ export const styles = css`
     gap: var(--lr-size-0-35em);
     flex: 0 0 auto;
     box-sizing: border-box;
-    padding: var(--lr-size-0-25rem) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    padding: var(--lr-size-0-25rem) var(--lr-checkpoint-button-padding-inline, var(--lr-space-s));
+    border: var(--lr-border-width-thin) solid var(--lr-checkpoint-button-border-color, var(--lr-color-border));
+    border-radius: var(--lr-checkpoint-button-radius, var(--lr-radius-pill));
+    background: var(--lr-checkpoint-button-bg, var(--lr-color-surface));
+    color: var(--lr-checkpoint-button-color, var(--lr-color-text));
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
@@ -82,6 +89,7 @@ export const styles = css`
     animation: var(--_lr-motion-animation, lr-checkpoint-spin var(--lr-checkpoint-spin-duration, var(--lr-transition-ambient)) infinite);
   }
   [part='confirm-group'] {
+    max-inline-size: 100%;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -118,9 +126,12 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   [part='cancel-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-color-surface-raised);
   }
-  [part='confirm-button']:active, [part='cancel-button']:active {
+  [part='cancel-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='confirm-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   @keyframes lr-checkpoint-spin {

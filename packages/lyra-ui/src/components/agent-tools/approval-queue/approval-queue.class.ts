@@ -94,7 +94,7 @@ export interface LyraApprovalQueueEventMap {
  * @customElement lr-approval-queue
  * @event lr-approval-open - A review was opened, with detail.invocationId.
  * @event lr-approval-select - A request was selected. `detail: { invocationId }`.
- * @event lr-approval-decision-request - A request was approved or denied. `detail: { invocationId,
+ * @event lr-approval-decision-request - Cancelable approval or denial proposal. `detail: { invocationId,
  *   approved, args?, waitUntil }`. Call `waitUntil(promise)` during dispatch to defer settlement.
  *   Preventing the event keeps the nested dialog pending until the host
  *   resolves the request or calls `finalizePendingApproval()`/`revertPendingApproval()`.

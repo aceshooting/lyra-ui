@@ -1,6 +1,9 @@
 import { expect } from '@open-wc/testing';
 import type { LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchySource, LyraHierarchyView, LyraTraceSourceSummary } from '../data-sources.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary } from './hierarchy-summary-source.js';
+import {
+  applyHierarchySourceEffects, captureHierarchyRowAuthority, captureHierarchySourceEffects, createHierarchySummarySource,
+  hierarchySourceSummary, hierarchySourceFieldReader, revealActiveHierarchyKey, traceSourceSummary, type HierarchyRevealMark,
+} from './hierarchy-summary-source.js';
 
 type Row = LyraHierarchyRow<string>;
 type Source = LyraHierarchySource<string, LyraHierarchyQuery, LyraTraceSourceSummary>;
@@ -26,6 +29,13 @@ function fixture(rows: LyraHierarchyView<Row> = {
     query: { search: '', hiddenKinds: [] }, state: null, action: { type: 'reset' } });
   return { host, binding, source, rows, wrapper, project, accepted };
 }
+
+it('formats visible and total counts in the requested locale when a projection is present', () => {
+  expect(hierarchySourceSummary(undefined, 'de')).to.equal(undefined);
+  expect(hierarchySourceSummary({ total: 10_000, rows: { count: 5000 } }, 'de')).to.deep.equal({
+    total: '10.000', visible: '5.000',
+  });
+});
 
 describe('hierarchy summary source', () => {
   it('captures each projection binding separately and leaves optional capabilities unforwarded', async () => {
@@ -222,5 +232,93 @@ describe('applyHierarchySourceEffects', () => {
     const snapshot = captureHierarchySourceEffects({ ownerDocument: document, isConnected: false }, stale.control, () => true);
     expect(applyHierarchySourceEffects(snapshot, stale.sinks, undefined)).to.equal(undefined);
     expect(stale.log).to.deep.equal([]);
+  });
+});
+
+describe('captureHierarchyRowAuthority', () => {
+  it('stays current only while the host, binding, projection, epoch, loading state and accepted summary hold', () => {
+    const host = { ownerDocument: document, isConnected: true };
+    const control = { epoch: 1, projection: {} as unknown, loading: false };
+    let binding = true;
+    let accepted = true;
+    const current = captureHierarchyRowAuthority(host, control, () => binding, () => accepted);
+    expect(current()).to.equal(true);
+    const cases: [string, () => () => void][] = [
+      ['disconnected', () => { host.isConnected = false; return () => { host.isConnected = true; }; }],
+      ['adopted', () => { host.ownerDocument = document.implementation.createHTMLDocument(); return () => { host.ownerDocument = document; }; }],
+      ['rebound', () => { binding = false; return () => { binding = true; }; }],
+      ['new epoch', () => { control.epoch++; return () => { control.epoch--; }; }],
+      ['new projection', () => { const old = control.projection; control.projection = {}; return () => { control.projection = old; }; }],
+      ['loading', () => { control.loading = true; return () => { control.loading = false; }; }],
+      ['stale summary', () => { accepted = false; return () => { accepted = true; }; }],
+    ];
+    for (const [label, lose] of cases) {
+      const restore = lose();
+      expect(current(), label).to.equal(false);
+      restore();
+      expect(current(), `${label} restored`).to.equal(true);
+    }
+    expect(captureHierarchyRowAuthority(host, control, () => true, undefined)()).to.equal(false);
+  });
+});
+
+describe('hierarchySourceFieldReader', () => {
+  it('reads own data fields and throws the host message once authority is lost around a read', () => {
+    const row = { id: 'one' };
+    let live = true;
+    const field = hierarchySourceFieldReader(row, () => live, 'Row source changed');
+    expect(field('id')).to.equal('one');
+    expect(field('missing')).to.equal(undefined);
+    live = false;
+    expect(() => field('id')).to.throw('Row source changed');
+    let checks = 0;
+    const lostDuringRead = hierarchySourceFieldReader(row, () => ++checks === 1, 'Row source changed');
+    expect(() => lostDuringRead('id')).to.throw('Row source changed');
+    expect(checks).to.equal(2);
+    expect(() => hierarchySourceFieldReader({ get id() { return 'x'; } }, () => true, 'changed')('id')).to.throw(TypeError);
+  });
+});
+
+describe('revealActiveHierarchyKey', () => {
+  function setup() {
+    const log: string[] = [];
+    const state = { ready: true, bound: true, active: 'a' as string | null };
+    const control = {
+      whenReady: () => { log.push('ready?'); return Promise.resolve(state.ready); },
+      reveal: (key: string) => { log.push(`reveal:${key}`); return Promise.resolve(true); },
+    };
+    const snapshot = { epoch: 3, bound: () => state.bound };
+    return { log, state, reveal: (last?: HierarchyRevealMark) => revealActiveHierarchyKey(control, snapshot, () => state.active, last) };
+  }
+  const settled = () => new Promise<void>((resolve) => setTimeout(resolve));
+
+  it('reveals the active key once per epoch after the provider settles', async () => {
+    const { log, reveal } = setup();
+    const mark = reveal();
+    expect(mark).to.deep.equal([3, 'a']);
+    expect(reveal(mark) === mark).to.equal(true);
+    await settled();
+    expect(log).to.deep.equal(['ready?', 'reveal:a']);
+    const other: HierarchyRevealMark = [2, 'a'];
+    expect(reveal(other)).to.deep.equal([3, 'a']);
+  });
+
+  it('keeps the previous mark without an active key and skips a superseded reveal', async () => {
+    for (const lose of ['inactive', 'unready', 'unbound', 'retargeted'] as const) {
+      const { log, state, reveal } = setup();
+      if (lose === 'inactive') {
+        state.active = null;
+        const last: HierarchyRevealMark = [1, 'z'];
+        expect(reveal(last) === last).to.equal(true);
+        expect(log).to.deep.equal([]);
+        continue;
+      }
+      if (lose === 'unready') state.ready = false;
+      reveal();
+      if (lose === 'unbound') state.bound = false;
+      if (lose === 'retargeted') state.active = 'b';
+      await settled();
+      expect(log, lose).to.deep.equal(['ready?']);
+    }
   });
 });

@@ -21,7 +21,7 @@ import { styles } from './research-progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ResearchStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'incomplete';
@@ -101,7 +101,6 @@ export class LyraResearchProgress extends LyraElement {
     details: LYRA_DEFAULT_details,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     researchProgressEmpty: LYRA_DEFAULT_researchProgressEmpty,
     researchProgressLabel: LYRA_DEFAULT_researchProgressLabel,
@@ -111,8 +110,6 @@ export class LyraResearchProgress extends LyraElement {
     researchProgressStatusFailed: LYRA_DEFAULT_researchProgressStatusFailed,
     researchProgressStatusPending: LYRA_DEFAULT_researchProgressStatusPending,
     researchProgressStatusRunning: LYRA_DEFAULT_researchProgressStatusRunning,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusUnknown: LYRA_DEFAULT_statusUnknown,
   };

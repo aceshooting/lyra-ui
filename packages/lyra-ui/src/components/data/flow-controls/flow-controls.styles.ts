@@ -41,8 +41,8 @@ export const styles = css`
     --_lr-icon-button-color-default: var(--lr-color-text);
     --_lr-flow-controls-hover-bg: var(--lr-flow-controls-hover-bg, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)));
     --_lr-flow-controls-active-bg: var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')});
-    ${iconAction}
     ${iconHitTarget}
+    ${iconAction}
     transition: background-color var(--lr-transition-fast);
   }
   :where([part='base'] button):hover:where(:not(:disabled)) {

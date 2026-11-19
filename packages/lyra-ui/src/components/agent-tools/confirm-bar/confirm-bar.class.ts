@@ -525,25 +525,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     return typeof target === 'function' ? target() : target;
   }
 
-  /**
-   * The terminal focus handoff: the host's named return target when it names one that can really
-   * take focus right now, else the always-present `[part="status"]` -- unconditional, exactly as
-   * the `[part="status"]` move it replaces always was, because the control the user just activated
-   * is about to unmount and the handoff cannot wait to be sure that control held focus.
-   *
-   * `returnFocusTo` accepts a thunk precisely so a host can name a control it has not re-created
-   * yet -- the class doc's motivating case: a host swaps this bar back out for the control it
-   * replaced, and every supported host framework does that asynchronously relative to this
-   * synchronous handoff. Resolving the thunk only here would therefore always find that control
-   * missing, which is the whole defect this guards against. When the immediate resolution fails
-   * (null, disconnected, `inert`, or otherwise not focusable) and `returnFocusTo` is itself a
-   * function, `deferComposedFocusRepair()` re-resolves it once the host has had a real chance to
-   * react, and moves focus there only if it has since appeared and nothing else has claimed focus
-   * in the meantime. A plain element value is never retried: it names something that either
-   * already exists or never will, so the single synchronous resolution above is already the final
-   * answer, and every previously-working synchronous case (an immediately-resolving thunk or a
-   * live element) returns before scheduling anything.
-   */
+  // Focus the status when the opener is unavailable. A callback can find an opener
+  // recreated by the host after the decision.
   private handOffDecidedFocus(): void {
     const target = this.resolvedReturnFocusTarget();
     if (target && focusFirstAvailable([target])) return;
@@ -559,11 +542,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     if (changed.has('decision') && changed.get('decision') !== undefined && decision != null) {
       const key = decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
       this.liveRegion?.announce(this.localize(key), { force: true });
-      // Ordered after the announcement, and in `updated()` so the decided `[part="status"]` is
-      // already in the DOM: the whole point is that a host can unmount the bar on this signal
-      // without first having to know that both of those already happened. The same
-      // `changed.get('decision') !== undefined` guard the announcement uses keeps a decision
-      // supplied in the initial markup silent -- nothing settled, it simply started decided.
+      // A listener can remove the bar as soon as settlement fires.
       this.emit('lr-decision-settled', { decision });
     }
   }

@@ -1,5 +1,6 @@
 // Migration contract validation, projection, and adjacent runtime data discovery.
 import fs from 'node:fs';
+import { MIGRATION_CONTRACT_FILE, decodeMigrationContract } from './packed-migration-contract.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -21,11 +22,18 @@ import {
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.resolve(scriptDir, '..');
-const packagedInventoryPath = path.join(scriptDir, 'migration-contract.json');
+const compressedInventoryPath = path.join(scriptDir, MIGRATION_CONTRACT_FILE);
+const packagedInventoryPath = fs.existsSync(compressedInventoryPath) ? compressedInventoryPath : path.join(scriptDir, 'migration-contract.json');
 export const packagedRuntime = fs.existsSync(packagedInventoryPath);
-export const inventoryPath = packagedRuntime
+const inventoryPath = packagedRuntime
   ? packagedInventoryPath
   : path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
+export function readMigrationInventory() {
+  const bytes = fs.readFileSync(inventoryPath);
+  const json = inventoryPath === compressedInventoryPath ? decodeMigrationContract(bytes) : bytes;
+  return JSON.parse(json.toString('utf8'));
+}
+
 const renameLedgerPath = path.join(packageDir, 'scripts', 'fixtures', 'lyra-renames.json');
 export const MIGRATION_RUNTIME_SCHEMA_VERSION = 3;
 

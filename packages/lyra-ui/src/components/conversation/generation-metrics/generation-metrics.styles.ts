@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -35,54 +35,28 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  /* Segments are joined with a middot rather than a flex gap plus a separator element, so a
-     segment that does not render (tokens and throughput are optional -- see the class doc) leaves
-     no dangling double gap; the dot only ever precedes a segment that is present. */
-  [part='tokens']::before,
-  [part='throughput']::before {
+  :is([part='elapsed'], [part='tokens']):has(+ :is([part='tokens'], [part='throughput']))::after {
     content: '·' / '';
     margin-inline: var(--lr-size-0-4em);
     opacity: 0.6;
   }
 
+  ${iconActionStyles("[part='stop-button']", {
+    color: 'var(--lr-color-text)',
+    hoverBackground: 'var(--lr-icon-button-bg, var(--lr-color-surface))',
+    hoverColor: 'var(--lr-color-brand)',
+    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg, var(--lr-color-surface)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-brand))',
+    background: 'var(--lr-color-surface)',
+  })}
   [part='stop-button'] {
-    font: inherit;
+    --_lr-icon-button-radius-default: 50%;
+    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
+    --_lr-icon-button-border-hover-default: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    --_lr-icon-button-border-active-default: var(--_lr-icon-button-border-hover-default);
     flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* Meets the shared minimum tappable size (--lr-icon-button-size). It was previously capped
-       below the floor at 1.75rem/28px for a compact inline look, but nothing in the readout row
-       requires that, so the full 40px floor applies directly rather than via invisible hit-slop.
-       */
-    ${iconHitTarget}
     margin-inline-start: var(--lr-space-s);
-    padding: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: 50%;
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast),
-      color var(--lr-transition-fast);
-  }
-  [part='stop-button']:hover {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-  }
-  /* Hover recolors the chrome only; the press also fills the disc, mixing its resting surface
-     toward the text color, so pressed escalates hover instead of replacing it with an unrelated
-     color. */
-  [part='stop-button']:active {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-  }
-  [part='stop-button']:focus-visible {
-    ${focusRing}
   }
   [part='stop-button'] svg {
     display: block;

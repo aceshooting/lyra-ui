@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-message-parts`
+
+Set `label` to name the message-part group. A host `aria-label` takes precedence. An explicit empty value suppresses the default name. When `max-rendered-parts` hides earlier parts, `::part(window-notice)` displays a localized count and exposes the number in `data-omitted`. The Resume control accepts the shared `--lr-button-*` tokens and exposes the operable button through `::part(resume)`.
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.

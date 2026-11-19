@@ -448,17 +448,8 @@ peer's `resize()` when that allocation changes.
 
 The base reports the engine's loading state through `aria-busy`. An application can set
 `aria-busy` on the host independently. Removing that attribute resumes the loading-state mirror.
-The cancel button emits cancelable `lr-map-pick-cancel-request` and, after turning off pick mode,
-`lr-map-pick-cancel`. Both carry frozen `{ source: 'control' }`. Assigning `pickMode` stays silent.
-Globe and terrain controls emit cancelable `lr-map-projection-change-request` and
-`lr-map-terrain-change-request` with the same details as their respective change events.
-Vetoing or assigning the corresponding property during a request suppresses the default change.
 Read the settled `center` and `zoom` after an initial URL restoration or a limit clamp. Those
 initialization and constraint writes are silent.
-
-The slot anchor emits cancelable `lr-map-anchor-close-request` with frozen `{ reason }` for its close
-button, Escape, or `closeAnchor()`. A veto preserves placement and focus. The existing
-`lr-map-anchor-close` reports an accepted dismissal.
 
 Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (default 0.2),
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
@@ -1835,7 +1826,10 @@ mapEl.addEventListener('lr-map-move', () => {
 });
 ```
 
-**Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
+**Events:** `lr-map-pick-cancel-request` and `lr-map-pick-cancel` carry frozen `{ source: 'control' }`. The cancel button emits the cancelable request before leaving pick mode and the latter event after the change. Assigning `pickMode` stays silent.
+- `lr-map-projection-change-request` and `lr-map-terrain-change-request` are cancelable and share the details of their corresponding change events. A veto or a property assignment from a request listener suppresses the default change.
+- `lr-map-anchor-close-request` carries frozen `{ reason }` when the slotted anchor is dismissed with the close button, Escape or `closeAnchor()`. Vetoing the request preserves placement and focus.
+- `lr-map-load` (fired once, after the underlying map's own `'load'`),
 `lr-map-legend-toggle-request` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
 hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
 proposed hidden set in the order it would be committed, with the array detached and frozen so a
@@ -2864,14 +2858,13 @@ with a development warning while it is open, and `focusContent()` returns `false
   close button. Returns `false` while the panel is hidden or not yet placed, when it is inert, or when
   nothing in it can take focus. It never queues focus.
 
-Child anchor events bubble across shadow boundaries with a frozen `LyraMapAnchorCloseDetail`.
-Its `reason` is `api`, `close-button` or `escape`.
+**Events:**
 
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
+- `lr-close-request` and `lr-close` are deprecated aliases. A veto through either request preserves the anchor.
 
-The deprecated aliases `lr-close-request` and `lr-close` remain available. A veto through either request
-preserves the anchor. The map's slot anchor emits `lr-map-anchor-close`.
+The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.
@@ -3641,9 +3634,6 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
 
-A failed image renders a localized message in the `error` part, announces the failure, and emits
-`lr-render-error` with `{ error: Error }`.
-
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
@@ -3656,9 +3646,10 @@ container does not claim toolbar arrow-key navigation.
 `focus(options?)`, `blur()`, and `click()` forward to the scrollable `viewport`, which is the
 component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
-**Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
-relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`).
+**Events:** `lr-zoom-change` carries `detail: { zoom }`. `lr-render-error` carries
+`detail: { error: Error }` when an image fails to load. The frame displays and announces a
+localized failure message. The viewport relays `focus` and `blur` once as bubbling, composed
+native `FocusEvent`s from the owner realm, preserving `relatedTarget`.
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, `reset`, and `error` (the localized message shown in place of an image that
 failed to load). The
@@ -4033,8 +4024,6 @@ and later MIME values restore detection.
 `LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
-When an image or video fails to load, `media-error` displays a localized message and
-`lr-render-error` reports `{ error: Error }`. Selecting another source retries playback or display.
 A media card’s `lr-media-open` detail uses `filename` and `src`, corresponding to `name` and `src`
 on an attachment chip’s `lr-preview-request`.
 
@@ -4046,6 +4035,8 @@ cancelable only for a safe file anchor immediately before its native download/op
 `preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
+`lr-render-error` carries `detail: { error: Error }` when an image or video fails to load. The card
+displays a localized message in `media-error` and retries when `src` changes.
 Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
 composed `FocusEvent`s whose target is the `lr-media-card` host.
 

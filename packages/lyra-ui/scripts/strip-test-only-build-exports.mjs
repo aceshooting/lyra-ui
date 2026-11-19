@@ -5,12 +5,15 @@ import { parseSync } from 'oxc-parser';
 // These private implementation helpers remain importable by source tests. They have no production
 // importer, so their declarations and runtime bodies need not be emitted into the public package.
 const TEST_ONLY_EXPORTS = Object.freeze({
+  'components/viewers/ebook-viewer/ebook-loader': ['__setEpubJsForTesting'],
+  'components/viewers/pptx-viewer/pptx-loader': ['__setPptxRendererForTesting'],
   'internal/aria-controls': ['describeElement', 'undescribeElement'],
   'internal/converters': ['trueDefaultBooleanFromAttributeConverter'],
   'internal/deprecated-aliases': ['invertAlias'],
   'internal/delimited-data': ['parseDelimitedGrid', 'parseDelimitedRecords'],
   'internal/papaparse-loader': ['loadPapaParse'],
   'internal/dompurify-loader': ['__setDompurifyImporterForTesting'],
+  'internal/shiki/full': ['__setShikiModuleLoaderForTesting'],
   'internal/resource-loader': ['assertTableSize'],
   'theme/theme': ['applyLyraThemeBootstrapForTesting'],
   'internal/text-quote': ['resolveTextQuote', 'findTextQuoteMatches'],

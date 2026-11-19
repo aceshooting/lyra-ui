@@ -158,6 +158,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Dawwar lejn il-lemin',
   modelViewerRotateUp: 'Dawwar ’il fuq',
   modelViewerRotateDown: 'Dawwar ’l isfel',
+  modelViewerViewport: 'Mudell interattiv',
 };
 
 registerLyraLocale('mt', strings);

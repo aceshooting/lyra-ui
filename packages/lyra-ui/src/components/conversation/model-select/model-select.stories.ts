@@ -107,6 +107,7 @@ export const SlottedLabel: Story = {
 /**
  * `allow-custom` keeps the catalog's suggestions but switches the control to
  * the text-input shape so a value outside the list can still be typed and committed.
+ * Listen to `lr-input` and read `detail.query` to preview the draft before committing it.
  */
 export const AllowCustomWithCatalog: Story = {
   render: () => html`

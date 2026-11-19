@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ଡାହାଣକୁ ଘୁରାନ୍ତୁ',
   modelViewerRotateUp: 'ଉପରକୁ ଘୁରାନ୍ତୁ',
   modelViewerRotateDown: 'ତଳକୁ ଘୁରାନ୍ତୁ',
+  modelViewerViewport: 'ଇଣ୍ଟରାକ୍ଟିଭ୍ ମଡେଲ୍',
 };
 
 registerLyraLocale('or', strings);

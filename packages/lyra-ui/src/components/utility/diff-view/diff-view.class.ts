@@ -40,7 +40,6 @@ import { ViewerAnnouncementController } from '../../viewers/viewer-announcements
 import { commonAffix, computeLineDiff, pairOpsForSplit, type LyraDiffOp, type LyraDiffSplitRow } from './diff-line-diff.js';
 import {
   loadShikiHighlighterCore,
-  SHIKI_THEMES,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
   type ShikiLanguageLoader,
@@ -48,11 +47,12 @@ import {
   SHIKI_SOURCE_MAX_CODE_UNITS,
   resolvedShikiLanguages,
   ensureShikiLanguageLoaded,
-} from '../../conversation/code-block/shiki-types.js';
+} from '../../../internal/shiki/core.js';
+import { tokenizeToLines } from '../../../internal/shiki/tokenize.js';
 import { styles } from './diff-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewHighlightLimit, LYRA_DEFAULT_diffViewLabel, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -261,11 +261,9 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     remove: LYRA_DEFAULT_remove,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
@@ -630,29 +628,8 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     );
   }
 
-  /** Tokenizes `text` as one document (so multi-line tokens survive) and splits shiki's own
-   *  rendered `.line` spans back into a per-source-line HTML array, normalized to exactly
-   *  `splitLines(text).length` entries -- shiki's own trailing-newline handling can otherwise be
-   *  off by one relative to a plain split. MUST use the same `splitLines` as the diff at
-   *  `willUpdate` above: if this counted lines differently (e.g. plain `split('\n')` while the diff
-   *  normalizes CRLF), every CRLF document would misindex `highlightedOldLines`/`-NewLines`. */
   private tokenizeLines(hl: ShikiHighlighterCore, text: string, lang: string): string[] | null {
-    if (text.length > SHIKI_SOURCE_MAX_CODE_UNITS) return null;
-    try {
-      const html = hl.codeToHtml(text, { lang, themes: SHIKI_THEMES });
-      const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
-      if (!DOMParserCtor) return null;
-      const doc = new DOMParserCtor().parseFromString(html, 'text/html');
-      const lines = Array.from(doc.querySelectorAll('code > .line')).map((line) => line.innerHTML);
-      const expected = splitLines(text).length;
-      while (lines.length > expected) lines.pop();
-      while (lines.length < expected) lines.push('');
-      return lines;
-    } catch {
-      // Malformed input for this grammar, or any other shiki-internal failure -- fall back to
-      // plain text rather than a blank diff.
-      return null;
-    }
+    return text === '' ? [] : tokenizeToLines(hl, text, lang, this.ownerDocument);
   }
 
   /** Computes which `equal` ops a fold marker should hide, keyed by object identity (not array

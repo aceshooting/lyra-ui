@@ -1,6 +1,6 @@
 import type { MessagePart } from '@aceshooting/lyra-ui/ai';
 import { createIslandParser, type IslandParser, type IslandResult } from './islands.js';
-import { validateView } from './runtime.js';
+import { validateCanonicalView } from './view-admission.js';
 import { snapshotJson } from './schema.js';
 import type { MarkupOptions } from './parser.js';
 import type { JsonValue, LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenNode, LyraGenRecoveryMode, LyraGenValidationResult, LyraGenView } from './types.js';
@@ -313,7 +313,7 @@ export class LyraGenChatController {
     const previousRoot = this.admittedRoots.get(partId) ?? previous?.document?.root;
     const changed = previous?.document && previousRoot && !sameTree(previousRoot, root);
     const revision = refresh && changed ? previous!.document!.revision + 1 : previous?.document?.revision ?? raw.revision;
-    const admitted = validateView({ ...raw, root, revision }, this.options.catalog, this.validation());
+    const admitted = validateCanonicalView({ ...raw, root, revision }, this.options.catalog, this.validation());
     const island: LyraGenChatIsland = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: raw.surfaceId,
       status: admitted.ok ? 'ready' : 'error', fallback: admitted.ok ? '' : this.options.strings.invalid,
       ...(this.options.provenance ? { provenance: this.options.provenance } : {}),
@@ -353,7 +353,7 @@ export class LyraGenChatController {
       if (part.closed && part.result.status === 'complete' && part.result.view) {
         let checked = this.parsedViews.get(part.result.view);
         if (!checked) {
-          checked = validateView(part.result.view, this.options.catalog, this.validation());
+          checked = validateCanonicalView(part.result.view, this.options.catalog, this.validation());
           this.parsedViews.set(part.result.view, checked);
         }
         const old = this.rawViews.get(partId);

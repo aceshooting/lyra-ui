@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Balusa na mobali',
   modelViewerRotateUp: 'Balusa na likolo',
   modelViewerRotateDown: 'Balusa na nse',
+  modelViewerViewport: 'Modɛlɛ oyo okoki kobalola',
 };
 
 registerLyraLocale('ln', strings);

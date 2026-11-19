@@ -211,11 +211,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private readonly description = new HostDescriptionController(this, () => this.baseEl ?? null);
   private cleanupPositioner?: () => void;
   private tooltipOverlay?: OverlayHandle;
-  // Hover and focus are tracked as independent "keep it open" reasons --
-  // mirrors lr-citation-badge's identical hovering/focused pair for the
-  // same hover/focus preview-popover pattern -- so releasing one (e.g. the
-  // pointer leaving while the chip still has keyboard focus) doesn't close a
-  // tooltip the other modality is still holding open.
+  // Either hover or keyboard focus can hold the preview open.
   private hovering = false;
   private focused = false;
   /** Any focus on the trigger describes it, whether or not keyboard focus opened the tooltip. */
@@ -261,13 +257,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
             placement: 'top-start',
             strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
           });
-          // Registers with the shared topmost-overlay stack (internal/overlay-manager.ts) so
-          // Escape defers to a genuinely topmost overlay opened above this tooltip, instead of
-          // this preview always winning regardless of stacking order -- mirrors
-          // <lr-tooltip>'s activateTooltipOverlay() and <lr-usage-badge>'s
-          // activateUsageBadgeOverlay(), which reuses this same tooltip contract wholesale.
-          // Nonmodal/non-trapping: this tooltip is always `inert` and never owns focus of its
-          // own.
           this.tooltipOverlay = activateNonmodalOverlay({
             host: this,
             panel: () => tooltip,
@@ -285,12 +274,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.cleanupPositioner = undefined;
     this.tooltipOverlay?.deactivate({ restoreFocus: false });
     this.tooltipOverlay = undefined;
-    // Reset so a reconnect (e.g. a drag-drop reparent or a list re-render
-    // that detaches and reattaches this node) re-triggers `updated()`'s
-    // `tooltipOpen`-driven branch -- without this, `tooltipOpen` stays
-    // `true` across the disconnect/reconnect and `changed.has('tooltipOpen')`
-    // never fires again, leaving the tooltip rendered open at a stale,
-    // frozen position with no live positioner attached.
+    // Reconnect must start with a closed preview because its positioner is gone.
     this.tooltipOpen = false;
     this.hovering = false;
     this.focused = false;
@@ -301,10 +285,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.hasDetailSlot = this.hasPreviewNodes(
       (e.target as HTMLSlotElement).assignedNodes({ flatten: true })
     );
-    // The slot can be emptied out from under an already-open tooltip (e.g. a
-    // consumer clearing streamed/async preview content) -- nothing left to
-    // show, so don't leave an empty tooltip floating open regardless of
-    // whether hover/focus is still active.
     if (!this.hasDetailSlot) this.hideTooltip();
   };
 
@@ -313,14 +293,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.tooltipOpen = true;
   }
 
-  // Called both as the actual (unconditional) close -- from onDetailSlotChange
-  // and the shared overlay stack's Escape route, where the tooltip must close regardless of
-  // hover/focus state -- and from onMouseLeave/onBlur once each has already
-  // confirmed the *other* modality isn't still holding the tooltip open. The
-  // default slot is enforced as an inert, read-only preview (raw args, a
-  // short snippet), not an interactive surface meant to retain focus/hover of
-  // its own, so there's no "did the pointer move into the tooltip itself"
-  // check needed beyond the hovering/focused pair.
   private hideTooltip(): void {
     if (!this.tooltipOpen) return;
     this.tooltipOpen = false;

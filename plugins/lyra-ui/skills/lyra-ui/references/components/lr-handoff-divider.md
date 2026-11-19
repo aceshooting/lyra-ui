@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-handoff-divider`
+
+Customize the appearance with `--lr-handoff-divider-gap`, `--lr-handoff-divider-bg`, `--lr-handoff-divider-color`, `--lr-handoff-divider-border-color`, `--lr-handoff-divider-radius` and `--lr-handoff-divider-padding-inline`.
 
 A labeled semantic separator marking control transfer between agents in a transcript ("Transferred
 to Research Agent"), with an optional agent avatar. Purely presentational: no events, no

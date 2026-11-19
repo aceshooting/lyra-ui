@@ -9,12 +9,18 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-model-viewer`
+
+Action backgrounds accept `--lr-model-viewer-action-background`, `--lr-model-viewer-action-hover-background` and `--lr-model-viewer-action-active-background`.
+
+The interactive viewport has a separate accessible name, supplied by `modelViewerViewport` (“Interactive model” in English).
+
+Listen for `lr-render-error` for source and format failures. The viewer also emits `lr-engine-fallback` when a source, format, engine or WebGL failure leaves the alternative visible.
 
 A bounded, static 3D model and point-cloud preview for glTF, GLB, STL, OBJ, PLY, XYZ and PCD files.
 It renders with the model engine of the optional `@aceshooting/lyra-3d` companion (`pnpm add
@@ -80,9 +86,8 @@ including the companion import after a failed load. The failed-state button call
 - `lr-camera-change` — `detail: { camera: LyraModelCamera }`. The user moved the camera with a
   pointer, a key or a toolbar button (the fit button included). Assigning `camera`, `fit()` and the
   automatic fit are silent.
-- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. WebGL stopped rendering
-  and the text alternative remains; `reason` is `'unavailable'` (companion missing or incompatible),
-  `'unsupported'` (no WebGL2, or an unsupported format), `'context-lost'` or `'error'`. A lost
+- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. The text alternative remains visible after a source or rendering failure; `reason` is `'unavailable'` (companion missing or incompatible),
+  `'unsupported'` (unsupported file format or WebGL2 unavailable), `'context-lost'` or `'error'`. A lost
   context keeps its engine so a restored context resumes rendering.
 
 All four events bubble, are composed and are not cancelable. Hover and picking are intentionally

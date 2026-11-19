@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Forgatás jobbra',
   modelViewerRotateUp: 'Forgatás felfelé',
   modelViewerRotateDown: 'Forgatás lefelé',
+  modelViewerViewport: 'Interaktív modell',
 };
 
 registerLyraLocale('hu', strings);

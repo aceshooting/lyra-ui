@@ -161,6 +161,12 @@ describe('owned observers', () => {
     expect(readIntersecting(null, el)).to.be.undefined;
     const hostile = { get target(): never { throw new Error('x'); } };
     expect(readIntersecting([hostile, { target: el, isIntersecting: true }], el)).to.equal(true);
+    expect(readIntersecting([{ target: el, isIntersecting: true }, { target: el, isIntersecting: false }], el)).to.equal(false);
+    expect(readIntersecting([{ target: el, isIntersecting: false }, { target: el, isIntersecting: 'yes' }, hostile], el)).to.equal(false);
+    expect(readIntersecting([{ target: other, isIntersecting: true }, 7, null], el)).to.be.undefined;
+    const revoked = Proxy.revocable([{ target: el, isIntersecting: true }], {});
+    revoked.revoke();
+    expect(readIntersecting(revoked.proxy, el)).to.be.undefined;
     expect(readInlineSize({ contentBoxSize: [{ inlineSize: 12 }], contentRect: { width: 3 } })).to.equal(12);
     expect(readInlineSize({ contentRect: { width: 3 } })).to.equal(3);
     expect(readInlineSize({ contentRect: { width: Number.NaN } })).to.be.undefined;
@@ -267,9 +273,11 @@ describe('observer controllers', () => {
       fake.instances[0]!.cb([{ target: host, isIntersecting: true }]);
       fake.instances[0]!.cb([{ target: host, isIntersecting: false }]);
       expect(events).to.deep.equal([[true, false], [false, true]]);
+      fake.instances[0]!.cb([{ target: host, isIntersecting: false }, { target: host, isIntersecting: true }]);
+      expect(gate.visible).to.be.true;
       host.remove();
       fake.instances[0]!.cb([{ target: host, isIntersecting: true }]);
-      expect(events).to.have.length(2);
+      expect(events).to.have.length(3);
       document.body.append(host);
       expect(fake.instances).to.have.length(2);
       expect(gate.known).to.be.false;

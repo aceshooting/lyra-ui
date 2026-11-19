@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Rotește la dreapta',
   modelViewerRotateUp: 'Rotește în sus',
   modelViewerRotateDown: 'Rotește în jos',
+  modelViewerViewport: 'Model interactiv',
 };
 
 registerLyraLocale('ro', strings);

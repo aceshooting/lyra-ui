@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-csv-viewer`
+
+Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
+
+`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
 virtualizes body rows.
@@ -120,7 +124,8 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+`lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,

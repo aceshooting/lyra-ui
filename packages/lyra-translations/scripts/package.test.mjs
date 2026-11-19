@@ -155,3 +155,39 @@ test('reports the first offending catalog in name order and writes nothing after
   assert.throws(() => buildTranslations({ source, target }), /a\.js imports outside the catalog tree: \.\.\/\.\.\/a-outside\.js/u);
   for (const file of ['a.js', 'm.js', 'z.js', 'side-effect-only.d.ts']) assert.equal(existsSync(join(target, file)), false, file);
 });
+
+test('packs repeated catalog keys while preserving registration arguments and their order', async context => {
+  const strings = Object.fromEntries(Array.from({ length: 50 }, (_, i) => [
+    'documentEditorParagraph' + i, ['Open', 'Écrire « {name} »', 'Line\n"two"', ''][i % 4],
+  ]));
+  const entries = Object.entries(strings).map(([key, value]) => key + ':' + JSON.stringify(value));
+  const { source, target } = assemblyFixture(context);
+  const runtime = 'import{registerLyraLocale}from"../../internal/localization-runtime.js";';
+  async function assemble(properties) {
+    const catalog = runtime + 'const strings={' + properties.join(',') + '};registerLyraLocale("fr",strings,{dir:"ltr"});';
+    writeFileSync(join(source, 'fr.js'), catalog);
+    buildTranslations({ source, target });
+    const output = readFileSync(join(target, 'fr.js'), 'utf8');
+    const stub = output.replace('import{registerLyraLocale}from"@aceshooting/lyra-ui/localization.js";',
+      'export let call;const registerLyraLocale=(...args)=>{call=args};');
+    const { call } = await import('data:text/javascript;base64,' + Buffer.from(stub).toString('base64'));
+    return { output, call, original: retargetCatalogImports(catalog) };
+  }
+  for (const lastValue of ['"Open"', '"left|right"', "'single quoted'", '"\\x41"']) {
+    const { call, output, original } = await assemble([...entries, 'documentEditorParagraphLast:' + lastValue]);
+    assert.ok(Buffer.byteLength(output) < Buffer.byteLength(original));
+    assert.equal(call[0], 'fr');
+    assert.deepEqual(Object.entries(call[1]).slice(0, -1), Object.entries(strings));
+    assert.equal(call[1].documentEditorParagraphLast,
+      { '"Open"': 'Open', '"left|right"': 'left|right', "'single quoted'": 'single quoted', '"\\x41"': 'A' }[lastValue]);
+    assert.deepEqual(call[2], { dir: 'ltr' });
+  }
+  const mixed = Array.from({ length: 250 }, (_, i) => (i % 2 ? 'first' : 'second') + i + ':"Open"');
+  const { call, output, original } = await assemble(mixed);
+  assert.ok(Buffer.byteLength(output) < Buffer.byteLength(original));
+  assert.deepEqual(Object.entries(call[1]), mixed.map(property => [property.split(':')[0], 'Open']));
+  for (const properties of [[], ['short:"small"'], ['plural:{one:"a",other:"b"}']]) {
+    const { output, original } = await assemble(properties);
+    assert.equal(output, original);
+  }
+});

@@ -16,6 +16,8 @@
 
 ## `lr-stream-status`
 
+The interrupted state’s Resume control accepts the shared `--lr-button-*` tokens and exposes the operable button through `::part(resume)`.
+
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
 host drives `connectionState` for `idle`/`connecting`/`streaming`/`interrupted`, and calls the imperative

@@ -7,9 +7,9 @@
 - Retrieval results restore focus when Load more becomes a spinner and announce provider errors.
 - Chunk inspector and retrieval compare keep focus rings inside clipped rows.
 - Retrieval compare includes `chunkId` and `sourceId` in `lr-chunk-select`, and page buttons share hover and press treatments.
-- Retrieval trace, provenance panel, memory panel and entity dossier include `detail.kind` in their `lr-toggle` events. Use it to distinguish stage, section, memory and chunk disclosures.
+- Retrieval trace, provenance panel, memory panel and entity dossier add `lr-retrieval-disclosure-change` and deprecate `lr-toggle`. Switch listeners to the new event and read `detail.kind` and the owning stage, section, memory or dossier panel.
 - Chunk inspector gives standalone multi-row lists one row-action Tab stop and supports arrow navigation across virtualized rows.
-- Memory panel gives short-term actions one Tab stop, and Add buttons name the item being promoted. Customize the name through `memoryPanelAddAccessibleName` with `{action}` and `{label}`.
+- Memory panel gives short-term actions one Tab stop. When several Add buttons are present, each accessible name includes the memory text. Scope exact-name selectors to a row or use the full action-plus-item name.
 - Retrieval status changes are announced after reconnect, during provider reloads and when selection reaches its limit.
 - Knowledge base keeps its internal table's page and sort events inside when no data source is set. Move legacy listeners to the table or use provider mode for public sort events. Knowledge-base admin and entity dossier also contain nested events.
 - Per-item toggles and card actions include the item's visible label or title in their accessible names.

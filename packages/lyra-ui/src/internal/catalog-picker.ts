@@ -155,7 +155,7 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
   isReadonly: () => boolean;
   locale: () => string;
   searchableFields: (entry: T) => readonly string[];
-  emitInput: (detail: CatalogPickerChangeDetail) => void;
+  emitInput: (detail: CatalogPickerChangeDetail & { query?: string }) => void;
   emitChange: (detail: CatalogPickerChangeDetail) => void;
   onValueChange: (value: string, oldValue: string) => void;
   onDefaultValueChange: (value: string, oldValue: string) => void;
@@ -678,10 +678,12 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       event.stopPropagation();
       return;
     }
-    this.setQuery(input.value);
+    const query = input.value;
+    const value = this._value;
+    const detail = { value, inCatalog: this.indexesFor(this.normalizedCatalog).has(value), query };
+    this.setQuery(query);
     this.setActiveIndex(-1);
     this.show();
-    const detail = { value: this._value, inCatalog: this.indexesFor(this.normalizedCatalog).has(this._value) };
     relayNativeEvent(this.host, event);
     this.options.emitInput(detail);
   }

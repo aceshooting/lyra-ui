@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'ডানে ঘোরান',
   modelViewerRotateUp: 'উপরে ঘোরান',
   modelViewerRotateDown: 'নিচে ঘোরান',
+  modelViewerViewport: 'ইন্টার‌্যাক্টিভ মডেল',
 };
 
 registerLyraLocale('bn', strings);

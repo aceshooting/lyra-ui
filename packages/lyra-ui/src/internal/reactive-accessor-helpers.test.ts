@@ -92,4 +92,12 @@ describe('isLiveDisabled', () => {
     expect(el.effectiveDisabled).to.equal(false);
     expect(isLiveDisabled(el)).to.equal(true);
   });
+
+  it('answers from own state alone on a host without matches()', () => {
+    const el = document.createElement('h3-accessor-host') as Host;
+    Object.defineProperty(el, 'matches', { configurable: true, value: undefined });
+    expect(isLiveDisabled(el)).to.equal(false);
+    el.setAttribute('disabled', '');
+    expect(isLiveDisabled(el)).to.equal(true);
+  });
 });

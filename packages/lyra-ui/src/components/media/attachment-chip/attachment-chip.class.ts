@@ -23,11 +23,11 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from './file-size.js';
+import { formatLocalizedFileSize } from '../../../internal/bytes.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
@@ -223,11 +223,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -544,21 +541,13 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   override render(): TemplateResult {
     const name = this.effectiveName;
-    // Only routed through `this.localize()` when left at its hardcoded
-    // default -- an explicit `untitled-label` override always wins verbatim,
-    // matching `removeLabel`/`retryLabel` below.
     const untitledLabel =
       this.untitledLabel ?? this.localize('attachmentUntitledFile');
     const displayName = name || untitledLabel;
     const sizeText =
       this.effectiveSize !== undefined
-        ? formatFileSize(
-            this.effectiveSize,
-            (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-            localizedNumberLabel(this.effectiveLocale)
-          )
+        ? formatLocalizedFileSize(this.effectiveSize, this.effectiveLocale, (key) => this.localize(key))
         : '';
-    // Same override-wins-verbatim rule as `untitledLabel` above.
     const uploadFailedLabel = this.localizedUploadFailedLabel;
     const progressPercent = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,

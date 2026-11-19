@@ -5,11 +5,13 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { parseProgram, visitAst } from './lib/ast.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const requireFromPackage = createRequire(path.join(packageDir, 'package.json'));
 const requireFromLoaderHost = createRequire(requireFromPackage.resolve('@web/dev-server-esbuild'));
 const esbuild = requireFromLoaderHost('esbuild');
+const { parseFragment } = createRequire(requireFromPackage.resolve('@lit-labs/ssr'))('parse5');
 
 // These self-contained functions are serialized with Function#toString for the pre-paint script.
 // Compact their local bindings before the ordinary module pass. A script transform (no module
@@ -127,6 +129,67 @@ async function javascriptFiles(directory) {
   return nested.flat();
 }
 
+/** Keep text nodes and attribute values verbatim. Only the HTML parser identifies tag boundaries. */
+export function compactLitStartTags(source, filename) {
+  if (!source.includes('html`')) return source;
+  const program = parseProgram(filename, source);
+  const binding = program.body.flatMap(node =>
+    node.type === 'ImportDeclaration' && ['lit', 'lit-html'].includes(node.source.value)
+      ? node.specifiers : []).find(specifier =>
+    specifier.type === 'ImportSpecifier' && specifier.imported.name === 'html' && specifier.local.name === 'html');
+  if (!binding) return source;
+
+  const templates = [];
+  const references = new Set();
+  const tagUses = new Set([binding.imported.start, binding.local.start]);
+  visitAst(program, node => {
+    if (node.type === 'Identifier' && node.name === 'html') references.add(node.start);
+    if (node.type === 'TaggedTemplateExpression' && node.tag.type === 'Identifier' && node.tag.name === 'html') {
+      templates.push(node.quasi);
+      tagUses.add(node.tag.start);
+    }
+  });
+  // A different lexical binding may read raw template strings. Skip ambiguous modules.
+  if ([...references].some(offset => !tagUses.has(offset))) return source;
+
+  const edits = new Map();
+  for (const { quasis } of templates) {
+    if (quasis.some(chunk => chunk.value.raw !== chunk.value.cooked)) continue;
+    let markup = '';
+    const spans = quasis.map((chunk, index) => {
+      if (index > 0) markup += 'lr-binding-' + index;
+      const start = markup.length;
+      markup += chunk.value.raw;
+      return { start, end: markup.length, sourceStart: chunk.start };
+    });
+    function compactBefore(offset) {
+      const span = spans.find(({ start, end }) => offset >= start && offset <= end);
+      if (!span) return;
+      let start = offset;
+      while (start > span.start && /[\t\n\f\r ]/u.test(markup[start - 1])) start--;
+      if (offset - start > 1) {
+        edits.set(span.sourceStart + start - span.start, span.sourceStart + offset - span.start);
+      }
+    }
+    function visitElement(node) {
+      const tag = node.sourceCodeLocation?.startTag;
+      if (tag) {
+        for (const location of Object.values(tag.attrs ?? {})) compactBefore(location.startOffset);
+        const close = tag.endOffset - 1;
+        if (markup[close] === '>') compactBefore(markup[close - 1] === '/' ? close - 1 : close);
+      }
+      for (const child of node.childNodes ?? []) visitElement(child);
+      if (node.content) visitElement(node.content);
+    }
+    visitElement(parseFragment(markup, { sourceCodeLocationInfo: true }));
+  }
+  // Nested templates have disjoint quasis, but visit order is independent of source offsets.
+  for (const [start, end] of [...edits].sort((left, right) => right[0] - left[0])) {
+    source = source.slice(0, start) + ' ' + source.slice(end);
+  }
+  return source;
+}
+
 /** Compacts shipped JavaScript while preserving exported bindings and class/function `.name`.
  * Serialized bootstrap locals are shortened; module bindings keep their names without runtime
  * name setters that would prevent consumer tree-shaking. Declaration documentation
@@ -167,7 +230,7 @@ export async function compactBuildJavaScript(directory) {
     // entirely once asked to minify whitespace, since it exports nothing -- silently turning a
     // real (if inert) ES module into a 0-byte non-module file. Restore the marker whenever a
     // non-empty source would otherwise compact to nothing.
-    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : restorePureAnnotations(result.code, path.relative(directory, file));
+    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : restorePureAnnotations(compactLitStartTags(result.code, file), path.relative(directory, file));
     afterBytes += Buffer.byteLength(code);
     await writeFile(file, code);
   }));

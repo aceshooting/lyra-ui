@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Gara mirgaatti naannessi',
   modelViewerRotateUp: 'Gara olitti naannessi',
   modelViewerRotateDown: 'Gara gadiitti naannessi',
+  modelViewerViewport: 'Moodela naannessuu dandeessu',
 };
 
 registerLyraLocale('om', strings);

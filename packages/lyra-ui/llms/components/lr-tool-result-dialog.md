@@ -73,7 +73,10 @@ reason string so every dismissal path funnels through the same event.
 `<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
 target-filtering guard. `lr-maximize-change-request` (cancelable, `detail:
 { readonly maximized: boolean }`, the would-be new `maximized` state) fired when the header's
-maximize/restore toggle is clicked, before `maximized` changes; `preventDefault()` vetoes the toggle.
+maximize/restore toggle is clicked, before `maximized` changes. `preventDefault()` vetoes the toggle.
+`lr-after-maximize-change` (`detail: { readonly maximized: boolean }`) reports the committed toggle
+after the update. `lr-request-close` is cancelable before user dismissal. Its `detail.source` is
+`'escape'`, `'backdrop'`, or `'close-button'`, and `preventDefault()` keeps the dialog open.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —

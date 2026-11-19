@@ -1,4 +1,3 @@
-import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 import type { ComplexAttributeConverter } from 'lit';
 
@@ -19,8 +18,6 @@ const NUMBER_TYPES = ['currency', 'decimal', 'percent'] as const;
 const NUMBER_NOTATIONS = ['standard', 'compact', 'scientific', 'engineering'] as const;
 const CURRENCY_DISPLAYS = ['symbol', 'narrowSymbol', 'code', 'name'] as const;
 const DISPLAY_STYLES = ['long', 'short', 'narrow'] as const;
-const BYTE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'petabyte'] as const;
-const BIT_UNITS = ['bit', 'kilobit', 'megabit', 'gigabit', 'terabit', 'petabit'] as const;
 const DATE_STYLES = ['full', 'long', 'medium', 'short'] as const;
 const DATE_TEXT_STYLES = ['narrow', 'short', 'long'] as const;
 const DATE_NUMERIC_STYLES = ['numeric', '2-digit'] as const;
@@ -138,65 +135,7 @@ export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFor
   return options;
 }
 
-export interface ByteFormatResult {
-  index: number;
-  amount: number;
-  options: Intl.NumberFormatOptions;
-}
-
-/** Scales a byte/bit quantity using a finite decimal step and builds its validated unit options. */
-export function byteFormat(
-  value: number,
-  unit: LyraFormatBytesUnit,
-  display: LyraFormatDisplay,
-  unitStep: number,
-  decimals: number,
-): ByteFormatResult {
-  const safeUnit = closedValue(unit, ['byte', 'bit'] as const, 'byte');
-  const units = safeUnit === 'bit' ? BIT_UNITS : BYTE_UNITS;
-  const safeStep = safeByteUnitStep(unitStep);
-  const index = byteUnitIndex(value, unitStep, units.length);
-  return {
-    index,
-    amount: value / safeStep ** index,
-    options: {
-      style: 'unit',
-      unit: units[index],
-      unitDisplay: closedValue(display, DISPLAY_STYLES, 'short'),
-      maximumFractionDigits: finiteInteger(decimals, 1, 0, 10),
-    },
-  };
-}
-
-/** Number of rungs in either byte/bit unit ladder (`byte`..`petabyte` / `bit`..`petabit`). Both
- * ladders are the same length, so one constant covers either family. */
-const BYTE_SCALE_UNIT_COUNT = BYTE_UNITS.length;
-
-/** Normalizes a byte/bit unit-ladder step: non-finite or `<= 1` input falls back to the historical
- * 1000-based (decimal) ladder. Shared by {@link byteFormat} and `utilities/format.ts`'s
- * `formatBytes()`, which needs the same normalized step to build an exact `bigint` divisor. */
-export function safeByteUnitStep(unitStep: number): number {
-  const step = finiteRange(unitStep, 1000, 1);
-  return step > 1 ? step : 1000;
-}
-
-/**
- * Selects the byte/bit unit-ladder index for a magnitude and step. Shared by {@link byteFormat}
- * and `utilities/format.ts`'s `formatBytes()`, so a `bigint`/decimal-string input too large for
- * `number` still lands on the same unit its `Number(...)`-approximated magnitude would pick — the
- * approximation only ever affects which unit *name* is chosen at an extreme boundary, never the
- * exact digits `formatBytes()` goes on to compute with `bigint` division.
- */
-export function byteUnitIndex(value: number, unitStep: number, unitCount: number = BYTE_SCALE_UNIT_COUNT): number {
-  const safeStep = safeByteUnitStep(unitStep);
-  const magnitude = Math.abs(value);
-  // Compare directly against the same divisors used for scaling. Logarithms can round
-  // both an exact boundary and its nearest neighbors to the wrong side of a rung.
-  for (let index = unitCount - 1; index > 0; index--) {
-    if (magnitude >= safeStep ** index) return index;
-  }
-  return 0;
-}
+export { byteFormat, byteUnitIndex, safeByteUnitStep, type ByteFormatResult } from '../../../internal/bytes.js';
 
 /** Builds runtime-safe options for `Intl.RelativeTimeFormat`. */
 export function relativeTimeFormatOptions(

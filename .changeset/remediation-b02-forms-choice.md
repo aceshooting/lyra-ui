@@ -33,3 +33,6 @@
 - Combobox suggestions with equal values toggle independently and keep their own labels and payloads. Use `FormData#getAll()` to read repeated submitted values.
 - Sliders reserve room for endpoint hit targets and remove inactive value bubbles from layout. The vertical track length includes the endpoint reserve.
 - Slider thumbs, checkboxes and switches follow the shared interaction transition.
+- Select and combobox skip hidden and ARIA-disabled options and update their open rows when option availability changes.
+- Reselecting a combobox option after editing its value updates the submitted value in place, including among duplicates.
+- The custom elements manifest identifies the combobox text selection methods so editor tooling can offer their signatures.

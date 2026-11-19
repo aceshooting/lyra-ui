@@ -26,6 +26,12 @@ import { LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent } from '..
  * @csspart chip - The visual (`aria-hidden`) chip wrapping the avatar and label.
  * @csspart avatar - Wrapper around the `avatar` slot. Only shown while the slot has content.
  * @csspart label - The computed label text.
+ * @cssprop [--lr-handoff-divider-gap=var(--lr-space-s)] - Gap between items.
+ * @cssprop [--lr-handoff-divider-bg=var(--lr-color-surface-raised)] - Resting background.
+ * @cssprop [--lr-handoff-divider-color=var(--lr-color-text-quiet)] - Resting text color.
+ * @cssprop [--lr-handoff-divider-border-color=var(--lr-color-border-subtle)] - Resting border color.
+ * @cssprop [--lr-handoff-divider-radius=var(--lr-radius-pill)] - Corner radius.
+ * @cssprop [--lr-handoff-divider-padding-inline=var(--lr-space-s)] - Inline padding.
  * @status stable
  * @since 4.0.0
  */
@@ -85,7 +91,8 @@ export class LyraHandoffDivider extends LyraElement {
 
   override render(): TemplateResult {
     const label = this.computedLabel;
-    const ariaLabel = this.getAttribute('aria-label') ?? label;
+    const authored = this.getAttribute('aria-label');
+    const ariaLabel = authored === '' ? '' : normalizeLabel(authored) ?? label;
     return html`
       <div part="base" role="separator" aria-orientation="horizontal" aria-label=${ariaLabel}>
         <span part="line" aria-hidden="true"></span>

@@ -3,7 +3,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
-import { formatISO } from '../../forms/date-picker/calendar-core.js';
+import { formatISO } from '../../../internal/calendar-core.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

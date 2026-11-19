@@ -1,5 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -14,12 +14,14 @@ import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { InputLimitAnnouncement } from '../../../internal/input-limit-announcement.js';
+import { RovingListController } from '../../../internal/roving-list-controller.js';
 import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardFilesLimit, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Visual chrome for `<lr-commit-card>`'s root — the library's shared container-frame vocabulary. */
@@ -153,10 +155,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -165,20 +164,20 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   static override styles = [LyraElement.styles, srOnly, styles, agentActionButtonStyles];
 
-  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
-  private limitAnnouncementInitialized = false;
-  private previouslyTruncated = false;
+  private readonly fileFocus = new RovingListController(this, {
+    items: () => [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="file"]')],
+  });
 
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    const truncated = this.filesExpanded && this.normalizedFiles.length > MAX_RENDERED_FILES;
-    if (this.limitAnnouncementInitialized && truncated && !this.previouslyTruncated) {
-      this.limitAnnouncements.announcePolite(this.localize('commitCardFilesLimit', undefined, {
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  constructor() {
+    super();
+    new InputLimitAnnouncement(this, {
+      limited: () => this.filesExpanded && this.normalizedFiles.length > MAX_RENDERED_FILES,
+      announce: () => this.limitAnnouncements.announcePolite(this.localize('commitCardFilesLimit', undefined, {
         count: this.formatLocaleNumber(MAX_RENDERED_FILES),
-      }));
-    }
-    this.limitAnnouncementInitialized = true;
-    this.previouslyTruncated = truncated;
+      })),
+    });
   }
 
   @property() hash = '';
@@ -255,8 +254,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.limitAnnouncements.adopted();
-    // Adoption can occur while already disconnected, so retire the exact window that owns the
-    // timer even when no further disconnected callback is delivered.
+    // A detached adoption has no subsequent disconnect to retire the timer.
     this.copyFeedback.reset();
   }
 
@@ -320,6 +318,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
         part="base"
         role=${overallSemanticRole(this, 'group') ?? nothing}
         aria-label=${overallSemanticLabel(this, this.localize('commitCardLabel')) ?? nothing}
+        @keydown=${this.fileFocus.onKeyDown}
       >
         <div part="subject">${this.subject}</div>
         ${this.body ? html`<div part="body">${this.body}</div>` : nothing}

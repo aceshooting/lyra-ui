@@ -360,3 +360,7 @@ export const MenuOpenState: Story = {
     </nav>
   `,
 };
+
+export const Disabled: Story = {
+  render: () => html`<lr-conversation-item disabled conversation-id="history" label="Archived discussion"></lr-conversation-item>`,
+};

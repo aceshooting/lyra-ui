@@ -67,14 +67,13 @@ with a development warning while it is open, and `focusContent()` returns `false
   close button. Returns `false` while the panel is hidden or not yet placed, when it is inert, or when
   nothing in it can take focus. It never queues focus.
 
-Child anchor events bubble across shadow boundaries with a frozen `LyraMapAnchorCloseDetail`.
-Its `reason` is `api`, `close-button` or `escape`.
+**Events:**
 
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
+- `lr-close-request` and `lr-close` are deprecated aliases. A veto through either request preserves the anchor.
 
-The deprecated aliases `lr-close-request` and `lr-close` remain available. A veto through either request
-preserves the anchor. The map's slot anchor emits `lr-map-anchor-close`.
+The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.

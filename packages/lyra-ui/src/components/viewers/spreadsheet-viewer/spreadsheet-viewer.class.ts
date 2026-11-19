@@ -1,10 +1,11 @@
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import type { LyraWorkbookSource } from '../../../data-sources.js';
 export type { LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraTabularReadRequest, LyraSourceSearchRequest, LyraSourceSearchResult, LyraWorkbookHit } from '../../../data-sources.js';
 /** Host-owned indexed or rectangular source for this viewer. */
 export type SpreadsheetViewerSource = LyraWorkbookSource;
-import { finiteCount } from '../../../internal/numbers.js';
+import { TabularInputSnapshot, tabularInputLimits, type TabularInputLimits } from '../../../internal/tabular-viewer-target.js';
 import { snapshotViewerRows, ownTableValue } from '../../../internal/delimited-data.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -15,15 +16,14 @@ import { tag } from '../../../internal/prefix.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   assertTableDimensions,
+  DEFAULT_MAX_RESOURCE_BYTES,
   isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
-  readResponseArrayBuffer,
-  resolveOwnerFetchTarget,
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
+import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight, type TableViewerScrollMode, tableViewerScrollMode } from '../table-viewer-shared.js';
 import { delimitedColumnCount } from '../../../internal/delimited-data.js';
 import {
   DocumentAnchorTarget,
@@ -43,7 +43,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_spreadsheetViewerLabel, LYRA_DEFAULT_spreadsheetViewerUnavailable } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -86,6 +86,7 @@ function cell(value: unknown, locale: string): string {
 
 export interface LyraSpreadsheetViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
@@ -121,6 +122,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * Remote parsing yields between admission/materialization passes; parsing itself remains synchronous.
  *
  * @customElement lr-spreadsheet-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing fails.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { highlightId }`.
@@ -147,6 +149,10 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   placeholders.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
  * @csspart error - The error message region.
+ * @cssprop --lr-spreadsheet-viewer-background - Background of the viewer frame.
+ * @cssprop --lr-spreadsheet-viewer-border - Border of the viewer frame.
+ * @cssprop --lr-spreadsheet-viewer-border-radius - Corner radius of the viewer frame.
+ * @cssprop --lr-spreadsheet-viewer-header-row-bg - Background of the column headings.
  * @cssprop [--lr-spreadsheet-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight changes a private warning-color default; an inherited
  *   or direct public value remains authoritative.
@@ -183,11 +189,9 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
     spreadsheetViewerLabel: LYRA_DEFAULT_spreadsheetViewerLabel,
     spreadsheetViewerUnavailable: LYRA_DEFAULT_spreadsheetViewerUnavailable,
@@ -211,8 +215,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     const previous = this._dataSource;
     this._dataSource = value;
     this.provider?.refresh();
-    this.generation++;
-    this.beginAbortableLoad();
+    this.transport.cancel();
     this.requestUpdate('dataSource', previous);
   }
 
@@ -225,38 +228,29 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   @property() src = '';
 
   /** Maximum admitted rows; defaults to 10,000 and can be raised to 100,000. */
+  // numeric-guard-exempt: tabularInputLimits bounds the row count before admission.
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 10000;
   /** Maximum admitted columns; defaults to 1,000 and can be raised to 10,000. */
+  // numeric-guard-exempt: tabularInputLimits bounds the column count before admission.
   @property({ type: Number, attribute: 'max-columns' }) maxColumns = 1000;
-  /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB. */
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = 26214400;
-  private get effectiveMaxRows(): number { return Math.max(1, finiteCount(this.maxRows, 10000, 100000)); }
-  private get effectiveMaxColumns(): number { return Math.max(1, finiteCount(this.maxColumns, 1000, 10000)); }
-  private get effectiveMaxBytes(): number { return Math.max(1, finiteCount(this.maxBytes, 26214400, 262144000)); }
-  private inputError: unknown;
-  private inputSource?: WeakRef<object>;
-  private inputLimits = '';
-  private get currentInputLimits(): string { return `${this.effectiveMaxRows}:${this.effectiveMaxColumns}:${this.effectiveMaxBytes}`; }
-  private _workbook: SpreadsheetViewerWorkbook | undefined;
+  /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB.
+   * @default 26214400 */
+  // numeric-guard-exempt: tabularInputLimits bounds the byte budget before reading or snapshotting.
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
+  private get limits() { return tabularInputLimits(this.maxRows, this.maxColumns, this.maxBytes); }
+  private readonly input = new TabularInputSnapshot<SpreadsheetViewerWorkbook>({
+    snapshot: (value, limits) => this.snapshotWorkbook(value, limits),
+    invalid: () => ({ sheets: [] }),
+  });
   /** Owned parsed workbook of scalar-cell grids. Takes precedence over src; undefined restores fetching.
    * At most 256 sheets and 1,000,000 aggregate cells are accepted. Invalid input reports lr-render-error. */
   @property({ attribute: false, noAccessor: true })
-  get workbook(): SpreadsheetViewerWorkbook | undefined { return this._workbook; }
+  get workbook(): SpreadsheetViewerWorkbook | undefined { return this.input.value; }
   set workbook(value: SpreadsheetViewerWorkbook | undefined) {
-    const limits = this.currentInputLimits;
-    if (limits === this.inputLimits && (value === this._workbook || (value !== undefined && value === this.inputSource?.deref()))) return;
-    const previous = this._workbook;
-    this.inputLimits = limits;
-    this.inputSource = undefined;
-    this.inputError = undefined;
-    try {
-      this._workbook = value === undefined ? undefined : this.snapshotWorkbook(value);
-      if (value !== undefined) this.inputSource = new WeakRef(value);
-    }
-    catch (error) { this._workbook = { sheets: [] }; this.inputError = error; }
-    this.requestUpdate('workbook', previous);
+    const previous = this.input.value;
+    if (this.input.assign(value, this.limits)) this.requestUpdate('workbook', previous);
   }
-  private snapshotWorkbook(value: SpreadsheetViewerWorkbook): SpreadsheetViewerWorkbook {
+  private snapshotWorkbook(value: SpreadsheetViewerWorkbook, limits: TabularInputLimits): SpreadsheetViewerWorkbook {
     const source = ownTableValue(value, 'sheets');
     if (!Array.isArray(source)) throw new TypeError('Invalid workbook sheets.');
     if (source.length > MAX_SPREADSHEET_SHEETS) throw new LyraResourceLimitError();
@@ -267,10 +261,10 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       const sheet = ownTableValue(source, String(index));
       const name = ownTableValue(sheet, 'name');
       if (typeof name !== 'string') throw new TypeError('Invalid sheet name.');
-      if (name.length > this.effectiveMaxBytes - budget.bytes) throw new LyraResourceLimitError();
+      if (name.length > limits.bytes - budget.bytes) throw new LyraResourceLimitError();
       budget.bytes += encoder.encode(name).byteLength;
-      if (budget.bytes > this.effectiveMaxBytes) throw new LyraResourceLimitError();
-      const rows = snapshotViewerRows(ownTableValue(sheet, 'rows'), this.effectiveMaxRows, this.effectiveMaxColumns, this.effectiveMaxBytes, budget);
+      if (budget.bytes > limits.bytes) throw new LyraResourceLimitError();
+      const rows = snapshotViewerRows(ownTableValue(sheet, 'rows'), limits.rows, limits.columns, limits.bytes, budget);
       sheets.push(Object.freeze({ name, rows }));
     }
     return Object.freeze({ sheets: Object.freeze(sheets) as SpreadsheetViewerWorkbook['sheets'] });
@@ -280,6 +274,16 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   @property() name = '';
   /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+
+  private _scrollMode: TableViewerScrollMode = 'self';
+  /** Select the viewer's scrollport (default) or use the page for both axes. */
+  @property({ reflect: true, attribute: 'scroll-mode', converter: tableViewerScrollMode })
+  get scrollMode(): TableViewerScrollMode { return this._scrollMode; }
+  set scrollMode(value: TableViewerScrollMode) {
+    const previous = this._scrollMode;
+    this._scrollMode = tableViewerScrollMode.normalizeReflected(this, 'scroll-mode', value);
+    this.requestUpdate('scrollMode', previous);
+  }
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
@@ -291,7 +295,17 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   @state() private activeSheetIndex = 0;
   /** The sheet that owns `table.activeRowKey`, the row last scrolled into view. */
   @state() private activeRowSheet = 0;
-  private generation = 0;
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      if (this.src !== this.table.lastLoadSrc) return;
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private loadLibrary: () => Promise<SheetJsApi | null> = loadSheetJsCached;
   // @renderController TableViewerController
   private readonly table = new TableViewerController<{ sheetIndex: number; row: number; col: number }>(this, {
@@ -300,13 +314,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     emitActivate: (highlightId) => this.emit('lr-highlight-activate', { highlightId }),
     localize: (key, fallback, values) => this.localize(key, fallback, values),
     locale: () => this.effectiveLocale,
+    pageScroll: () => this.scrollMode === 'page',
     schedule: (callback, key) => this.scheduleAfterUpdate(callback, key),
     load: () => this.load(),
     research: (query) => this.search(query),
     jump: (match) => this.jumpToCell(match.sheetIndex, match.row, match.col),
     // A genuine disconnect drops the grid (the query survives and re-runs after the reload).
     teardown: () => {
-      this.generation++;
+      this.transport.cancel();
       this.fetchState = { kind: 'idle' };
       this.table.activeRowKey = '';
       this.activeSheetIndex = 0;
@@ -323,8 +338,9 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         event.stopPropagation(); select(Number(event.detail.name.slice(7)));
       }}>${names.map((name, index) => html`<lr-tab panel=${`source-${index}`}>${name}</lr-tab><lr-tab-panel name=${`source-${index}`}></lr-tab-panel>`)}</lr-tab-group>`,
     header: () => true,
-    columnLimit: () => this.effectiveMaxColumns,
+    columnLimit: () => this.limits.columns,
     locale: () => this.effectiveLocale,
+    pageScroll: () => this.scrollMode === 'page',
     localize: key => this.localize(TABLE_VIEWER_SOURCE_MESSAGE_KEYS[key]),
     repaint: () => super.requestUpdate(),
     error: error => {
@@ -367,21 +383,16 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.table.updated(changed, this.fetchState);
+    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
   private async load(): Promise<void> {
     if (this.dataSource !== undefined) return;
     this.table.lastLoadSrc = this.src;
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    if (this._workbook !== undefined) {
+    if (this.input.value !== undefined) {
+      this.transport.cancel();
       try {
-        if (this.inputError) throw this.inputError;
-        if (this.inputLimits !== this.currentInputLimits) {
-          this._workbook = this.snapshotWorkbook(this._workbook);
-          this.inputLimits = this.currentInputLimits;
-        }
-        const workbook = this._workbook;
+        const workbook = this.input.admitted(this.limits)!;
         this.fetchState = { kind: 'loaded', sheets: workbook.sheets.map(sheet => ({ ...sheet, body: sheet.rows.slice(1), columns: delimitedColumnCount(sheet.rows) })) };
       } catch (error) {
         this.fetchState = {
@@ -394,122 +405,87 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       }
       return;
     }
-    if (!this.src) {
-      this.fetchState = { kind: 'idle' };
-      return;
-    }
-    const src = this.src;
-    const fetchTarget = resolveOwnerFetchTarget(this, src);
-    if (!fetchTarget) {
-      const message = () => this.localize('documentPreviewUrlNotAllowed');
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const library = await this.loadLibrary();
+    if (this.transport.isStale(token)) return;
+    if (!library) {
+      const message = () => this.localize('spreadsheetViewerUnavailable');
       const error = new LyraUserFacingError(message());
       this.fetchState = { kind: 'error', message };
       this.emit('lr-render-error', { error });
       return;
     }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(
-        fetchTarget.url,
-        signal ? { signal } : undefined
+    const source = await this.transport.readArrayBuffer(response, this.limits.bytes);
+    if (this.transport.isStale(token)) return;
+    await assertXlsxArchiveWithinLimits(source, undefined, undefined, {
+      signal: token.signal,
+      maxRows: this.limits.rows,
+    });
+    await yieldViewerTask(this.ownerDocument.defaultView, () => !this.transport.isStale(token));
+    if (this.transport.isStale(token)) return;
+    const workbook = library.read(source, {
+      type: 'array',
+      cellDates: true,
+      cellNF: true,
+      // Past this many rows SheetJS clamps a sheet's declared range to its parsed cells.
+      sheetRows: this.limits.rows + 1,
+    });
+    if (this.transport.isStale(token)) return;
+    const sheetNames = workbook.SheetNames;
+    if (
+      !Array.isArray(sheetNames) ||
+      !sheetNames.every((name) => typeof name === 'string')
+    ) {
+      throw new Error('The xlsx peer returned a malformed workbook.');
+    }
+    if (sheetNames.length > MAX_SPREADSHEET_SHEETS) {
+      throw new LyraResourceLimitError(
+        'The spreadsheet contains too many sheets.'
       );
-      if (!this.isConnected || generation !== this.generation) return;
-      if (!response.ok)
-        throw new Error(`${response.status} ${response.statusText}`);
-      const library = await this.loadLibrary();
-      if (!this.isConnected || generation !== this.generation) return;
-      if (!library) {
-        const message = () => this.localize('spreadsheetViewerUnavailable');
-        const error = new LyraUserFacingError(message());
-        this.fetchState = { kind: 'error', message };
-        this.emit('lr-render-error', { error });
-        return;
-      }
-      const source = await readResponseArrayBuffer(response, this.effectiveMaxBytes);
-      if (!this.isConnected || generation !== this.generation) return;
-      await assertXlsxArchiveWithinLimits(source, undefined, undefined, {
-        signal,
-        maxRows: this.effectiveMaxRows,
-      });
-      await yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && generation === this.generation);
-      if (!this.isConnected || generation !== this.generation) return;
-      const workbook = library.read(source, {
-        type: 'array',
-        cellDates: true,
-        cellNF: true,
-        // Past this many rows SheetJS clamps a sheet's declared range to its parsed cells.
-        sheetRows: this.effectiveMaxRows + 1,
-      });
-      if (!this.isConnected || generation !== this.generation) return;
-      const sheetNames = workbook.SheetNames;
-      if (
-        !Array.isArray(sheetNames) ||
-        !sheetNames.every((name) => typeof name === 'string')
-      ) {
-        throw new Error('The xlsx peer returned a malformed workbook.');
-      }
-      if (sheetNames.length > MAX_SPREADSHEET_SHEETS) {
+    }
+    const sheets: SpreadsheetSheet[] = [];
+    let totalCells = 0;
+    for (const name of sheetNames) {
+      await yieldViewerTask(this.ownerDocument.defaultView, () => !this.transport.isStale(token));
+      const sheet = (workbook.Sheets[name] ?? {}) as Record<string, unknown>;
+      // `sheet_to_json` visits every cell of the declared range, so bound that range first.
+      const range = parseCellRange(String(sheet['!ref'] ?? 'A1'));
+      if (!range) throw new Error('The xlsx peer returned a malformed workbook.');
+      const rowCount = range.endRow - range.startRow + 1;
+      const columnCount = range.endCol - range.startCol + 1;
+      assertTableDimensions(rowCount, columnCount, this.limits.rows, this.limits.columns);
+      totalCells += rowCount * columnCount;
+      if (totalCells > MAX_SPREADSHEET_CELLS) {
         throw new LyraResourceLimitError(
-          'The spreadsheet contains too many sheets.'
+          'The spreadsheet contains too many expanded cells.'
         );
       }
-      const sheets: SpreadsheetSheet[] = [];
-      let totalCells = 0;
-      for (const name of sheetNames) {
-        await yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && generation === this.generation);
-        const sheet = (workbook.Sheets[name] ?? {}) as Record<string, unknown>;
-        // `sheet_to_json` visits every cell of the declared range, so bound that range first.
-        const range = parseCellRange(String(sheet['!ref'] ?? 'A1'));
-        if (!range) throw new Error('The xlsx peer returned a malformed workbook.');
-        const rowCount = range.endRow - range.startRow + 1;
-        const columnCount = range.endCol - range.startCol + 1;
-        assertTableDimensions(rowCount, columnCount, this.effectiveMaxRows, this.effectiveMaxColumns);
-        totalCells += rowCount * columnCount;
-        if (totalCells > MAX_SPREADSHEET_CELLS) {
-          throw new LyraResourceLimitError(
-            'The spreadsheet contains too many expanded cells.'
-          );
+      // Formatted numbers render as the workbook shows them; General numbers stay numeric.
+      for (const value of Object.values(sheet)) {
+        const formatted = value as { t?: unknown; z?: unknown; w?: unknown; v?: unknown };
+        if (formatted.t === 'n' && formatted.z !== undefined && formatted.z !== 'General' && typeof formatted.w === 'string') {
+          formatted.t = 's';
+          formatted.v = formatted.w;
         }
-        // Formatted numbers render as the workbook shows them; General numbers stay numeric.
-        for (const value of Object.values(sheet)) {
-          const formatted = value as { t?: unknown; z?: unknown; w?: unknown; v?: unknown };
-          if (formatted.t === 'n' && formatted.z !== undefined && formatted.z !== 'General' && typeof formatted.w === 'string') {
-            formatted.t = 's';
-            formatted.v = formatted.w;
-          }
-        }
-        const rows = library.utils.sheet_to_json(sheet, {
-          header: 1,
-          UTC: true,
-        }) as unknown[][];
-        sheets.push({
-          name,
-          rows,
-          body: rows.slice(1),
-          columns: delimitedColumnCount(rows),
-        });
       }
-      if (this.isConnected && generation === this.generation) {
-        this.fetchState = { kind: 'loaded', sheets };
-        if (this.table.search.query) await this.search(this.table.search.query);
-      }
-    } catch (error) {
-      if (
-        !this.isConnected ||
-        generation !== this.generation ||
-        signal?.aborted ||
-        this.src !== src
-      ) return;
-      this.fetchState = {
-        kind: 'error',
-        message: isResourceLimitError(error)
-          ? () => this.localize('documentPreviewResourceTooLarge')
-          : () => this.localize('documentPreviewFailedToLoad'),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
+      const rows = library.utils.sheet_to_json(sheet, {
+        header: 1,
+        UTC: true,
+      }) as unknown[][];
+      sheets.push({
+        name,
+        rows,
+        body: rows.slice(1),
+        columns: delimitedColumnCount(rows),
+      });
+    }
+    if (!this.transport.isStale(token)) {
+      this.fetchState = { kind: 'loaded', sheets };
+      if (this.table.search.query) await this.search(this.table.search.query);
     }
   }
 
@@ -582,6 +558,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
         data-sheet-index=${index}
         .items=${guard([sheet.body], () => sheet.body.length <= 10000 ? sheet.body : nothing)}
+        .scrollElement=${this.table.scrollWindow(this.scrollMode)}
         .source=${this.table.indexedSource(sheet.body)}
         .renderItem=${this.table.rowRenderer(sheet, [this.table.columnWindow(sheet.name, count).columns, this.activeHighlightId, this.strings], (row: unknown, bodyIndex: number) =>
           this.renderRow(

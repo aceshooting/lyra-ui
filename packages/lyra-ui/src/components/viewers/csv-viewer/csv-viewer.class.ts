@@ -1,9 +1,10 @@
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import type { LyraTabularSource } from '../../../data-sources.js';
 export type { LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraTabularReadRequest, LyraSourceSearchRequest, LyraSourceSearchResult } from '../../../data-sources.js';
 /** Host-owned indexed or rectangular source for this viewer. */
 export type CsvViewerSource = LyraTabularSource;
-import { discardBody } from '../../../internal/viewer-source-controller.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
+import { TabularInputSnapshot, tabularInputLimits } from '../../../internal/tabular-viewer-target.js';
 import { snapshotViewerRows } from '../../../internal/delimited-data.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -12,14 +13,13 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import {
+  DEFAULT_MAX_RESOURCE_BYTES,
   isResourceLimitError,
   LyraUserFacingError,
-  readResponseText,
-  resolveOwnerFetchTarget,
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
-import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
+import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight, type TableViewerScrollMode, tableViewerScrollMode } from '../table-viewer-shared.js';
 import {
   DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
@@ -36,7 +36,6 @@ import {
   delimitedColumnCount as columns,
   parseDelimitedGridYielding,
 } from '../../../internal/delimited-data.js';
-import { LatestTask } from '../../../internal/latest-task.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 export type {
@@ -53,7 +52,7 @@ import {
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -79,6 +78,7 @@ function indexKeyFunction(_item: unknown, index: number): number {
 
 export interface LyraCsvViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   /** Fired whenever the search query, match count, or active match index changes, from
@@ -113,6 +113,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * Remote parsing yields between admission/materialization passes; parsing itself remains synchronous.
  *
  * @customElement lr-csv-viewer
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, or the
  *   bounded parse exceeds a resource ceiling.
  * @event lr-viewer-diagnostic - Structured, non-fatal PapaParse diagnostics when a partial grid
@@ -141,6 +142,10 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   and annotation message through separate `{value}` and `{label}` placeholders.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error message region.
+ * @cssprop --lr-csv-viewer-background - Background of the viewer frame.
+ * @cssprop --lr-csv-viewer-border - Border of the viewer frame.
+ * @cssprop --lr-csv-viewer-border-radius - Corner radius of the viewer frame.
+ * @cssprop --lr-csv-viewer-header-row-bg - Background of the column headings.
  * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
  *   cell. The active highlight changes a private warning-color default; an inherited or direct
  *   public value remains authoritative.
@@ -175,11 +180,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
@@ -207,8 +210,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const previous = this._dataSource;
     this._dataSource = value;
     this.provider?.refresh();
-    this.loadTask?.next();
-    this.beginAbortableLoad();
+    this.transport?.cancel();
     this.requestUpdate('dataSource', previous);
   }
 
@@ -221,37 +223,28 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   @property() src = '';
 
   /** Maximum admitted rows; defaults to 10,000 and can be raised to 100,000. */
+  // numeric-guard-exempt: tabularInputLimits bounds the row count before admission.
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 10000;
   /** Maximum admitted columns; defaults to 1,000 and can be raised to 10,000. */
+  // numeric-guard-exempt: tabularInputLimits bounds the column count before admission.
   @property({ type: Number, attribute: 'max-columns' }) maxColumns = 1000;
-  /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB. */
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = 26214400;
-  private get effectiveMaxRows(): number { return Math.max(1, finiteCount(this.maxRows, 10000, 100000)); }
-  private get effectiveMaxColumns(): number { return Math.max(1, finiteCount(this.maxColumns, 1000, 10000)); }
-  private get effectiveMaxBytes(): number { return Math.max(1, finiteCount(this.maxBytes, 26214400, 262144000)); }
-  private get parseLimits(): { maxRows: number; maxColumns: number } { return { maxRows: this.effectiveMaxRows, maxColumns: this.effectiveMaxColumns }; }
-  private inputError: unknown;
-  private inputSource?: WeakRef<object>;
-  private inputLimits = '';
-  private get currentInputLimits(): string { return `${this.effectiveMaxRows}:${this.effectiveMaxColumns}:${this.effectiveMaxBytes}`; }
-  private _rows: unknown[][] | undefined;
+  /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB.
+   * @default 26214400 */
+  // numeric-guard-exempt: tabularInputLimits bounds the byte budget before reading or snapshotting.
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
+  private get limits() { return tabularInputLimits(this.maxRows, this.maxColumns, this.maxBytes); }
+  private readonly input = new TabularInputSnapshot<unknown[][]>({
+    snapshot: (value, limits) => snapshotViewerRows(value, limits.rows, limits.columns, limits.bytes),
+    invalid: () => [],
+  });
+  private get parseLimits() { const { rows, columns } = this.limits; return { maxRows: rows, maxColumns: columns }; }
   /** Owned scalar-cell grid, including its header. Takes precedence over src; undefined restores fetching.
    * Invalid or oversized inputs produce lr-render-error and the localized error state. Replace the array to refresh. */
   @property({ attribute: false, noAccessor: true })
-  get rows(): unknown[][] | undefined { return this._rows; }
+  get rows(): unknown[][] | undefined { return this.input.value; }
   set rows(value: unknown[][] | undefined) {
-    const limits = this.currentInputLimits;
-    if (limits === this.inputLimits && (value === this._rows || (value !== undefined && value === this.inputSource?.deref()))) return;
-    const previous = this._rows;
-    this.inputLimits = limits;
-    this.inputSource = undefined;
-    this.inputError = undefined;
-    try {
-      this._rows = value === undefined ? undefined : snapshotViewerRows(value, this.effectiveMaxRows, this.effectiveMaxColumns, this.effectiveMaxBytes);
-      if (value !== undefined) this.inputSource = new WeakRef(value);
-    }
-    catch (error) { this._rows = []; this.inputError = error; }
-    this.requestUpdate('rows', previous);
+    const previous = this.input.value;
+    if (this.input.assign(value, this.limits)) this.requestUpdate('rows', previous);
   }
 
   /** Source filename or display name used on the shadow viewer owner when host `aria-label` is
@@ -275,11 +268,31 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
+  private _scrollMode: TableViewerScrollMode = 'self';
+  /** Select the viewer's scrollport (default) or use the page for both axes. */
+  @property({ reflect: true, attribute: 'scroll-mode', converter: tableViewerScrollMode })
+  get scrollMode(): TableViewerScrollMode { return this._scrollMode; }
+  set scrollMode(value: TableViewerScrollMode) {
+    const previous = this._scrollMode;
+    this._scrollMode = tableViewerScrollMode.normalizeReflected(this, 'scroll-mode', value);
+    this.requestUpdate('scrollMode', previous);
+  }
+
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: CsvState = { kind: 'idle' };
-  private loadTask = new LatestTask();
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      if (this.src !== this.table.lastLoadSrc) return;
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.fetchState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this)) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
   // @renderController TableViewerController
   private readonly table = new TableViewerController<{ row: number; col: number }>(this, {
@@ -288,11 +301,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     emitActivate: (highlightId) => this.emit('lr-highlight-activate', { highlightId }),
     localize: (key, fallback, values) => this.localize(key, fallback, values),
     locale: () => this.effectiveLocale,
+    pageScroll: () => this.scrollMode === 'page',
     schedule: (callback, key) => this.scheduleAfterUpdate(callback, key),
     load: () => this.load(),
     research: (query) => this.search(query),
     jump: (match) => this.jumpToCell(match.row, match.col),
-    teardown: () => this.loadTask.next(),
+    teardown: () => this.transport.cancel(),
   });
 
   // @renderController TableViewerSourceController
@@ -301,8 +315,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     cancelAnchor: () => this.cancelPendingAnchor(),
     workbook: false,
     header: () => !this.withoutHeaderRow,
-    columnLimit: () => this.effectiveMaxColumns,
+    columnLimit: () => this.limits.columns,
     locale: () => this.effectiveLocale,
+    pageScroll: () => this.scrollMode === 'page',
     localize: key => this.localize(TABLE_VIEWER_SOURCE_MESSAGE_KEYS[key]),
     repaint: () => super.requestUpdate(),
     error: error => {
@@ -344,21 +359,16 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.table.updated(changed, this.fetchState);
+    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
   private async load(): Promise<void> {
     if (this.dataSource !== undefined) return;
     this.table.lastLoadSrc = this.src;
-    const generation = this.loadTask.next();
-    const signal = this.beginAbortableLoad();
-    if (this._rows !== undefined) {
+    if (this.input.value !== undefined) {
+      this.transport.cancel();
       try {
-        if (this.inputError) throw this.inputError;
-        if (this.inputLimits !== this.currentInputLimits) {
-          this._rows = snapshotViewerRows(this._rows, this.effectiveMaxRows, this.effectiveMaxColumns, this.effectiveMaxBytes);
-          this.inputLimits = this.currentInputLimits;
-        }
-        const rows = this._rows;
+        const rows = this.input.admitted(this.limits)!;
         this.fetchState = { kind: 'loaded', rows };
       } catch (error) {
         this.fetchState = {
@@ -371,72 +381,37 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       }
       return;
     }
-    if (!this.src) {
-      this.fetchState = { kind: 'idle' };
-      return;
-    }
-    const src = this.src;
-    const fetchTarget = resolveOwnerFetchTarget(this, src);
-    if (!fetchTarget) {
-      const message = () => this.localize('documentPreviewUrlNotAllowed');
+    this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const library = await this.loadLibrary();
+    if (this.transport.isStale(token)) return;
+    if (!library) {
+      const message = () => this.localize('csvViewerUnavailable');
       const error = new LyraUserFacingError(message());
       this.fetchState = { kind: 'error', message };
       this.emit('lr-render-error', { error });
       return;
     }
-    this.fetchState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(
-        fetchTarget.url,
-        signal ? { signal } : undefined
-      );
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      if (!response.ok)
-        throw new Error(`${response.status} ${response.statusText}`);
-      const library = await this.loadLibrary();
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      if (!library) {
-        const message = () => this.localize('csvViewerUnavailable');
-        const error = new LyraUserFacingError(message());
-        this.fetchState = { kind: 'error', message };
-        this.emit('lr-render-error', { error });
-        return;
-      }
-      const source = await readResponseText(response, this.effectiveMaxBytes);
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      const result = await parseDelimitedGridYielding(library, source, this.parseLimits, () => yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && this.loadTask.isCurrent(generation)));
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      this.fetchState = { kind: 'loaded', rows: result.data };
-      if (this.table.search.query) await this.search(this.table.search.query);
-      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      if (result.errors.length) {
-        this.emit('lr-viewer-diagnostic', {
-          diagnostic: Object.freeze({
-            code: 'delimited-parse-diagnostic',
-            severity: 'warning',
-            fatal: false,
-            source: 'papaparse',
-            cause: result.errors,
-          } as const),
-        });
-      }
-    } catch (error) {
-      if (
-        !this.isConnected ||
-        !this.loadTask.isCurrent(generation) ||
-        signal?.aborted ||
-        this.src !== src
-      ) return;
-      this.fetchState = {
-        kind: 'error',
-        message: isResourceLimitError(error)
-          ? () => this.localize('documentPreviewResourceTooLarge')
-          : () => this.localize('documentPreviewFailedToLoad'),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
+    const source = await this.transport.readText(response, this.limits.bytes);
+    if (this.transport.isStale(token)) return;
+    const result = await parseDelimitedGridYielding(library, source, this.parseLimits, () => yieldViewerTask(this.ownerDocument.defaultView, () => !this.transport.isStale(token)));
+    if (this.transport.isStale(token)) return;
+    this.fetchState = { kind: 'loaded', rows: result.data };
+    if (this.table.search.query) await this.search(this.table.search.query);
+    if (this.transport.isStale(token)) return;
+    if (result.errors.length) {
+      this.emit('lr-viewer-diagnostic', {
+        diagnostic: Object.freeze({
+          code: 'delimited-parse-diagnostic',
+          severity: 'warning',
+          fatal: false,
+          source: 'papaparse',
+          cause: result.errors,
+        } as const),
+      });
     }
   }
 
@@ -640,6 +615,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
             part="rows"
             exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
             .items=${body.length <= 10000 ? body : nothing}
+            .scrollElement=${this.table.scrollWindow(this.scrollMode)}
             .source=${this.table.indexedSource(body)}
             .renderItem=${renderItem}
             .keyFunction=${body.length <= 10000 ? indexKeyFunction : undefined}

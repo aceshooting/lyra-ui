@@ -1,10 +1,12 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './commit-card.js';
 import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 async function settleClipboard(el: LyraCommitCard): Promise<void> {
   await Promise.resolve();
@@ -20,6 +22,23 @@ expectLocaleFallback('ar-EG', [
   'commitCardHideFiles',
 ]);
 describe('lr-commit-card', () => {
+  it('uses one tab stop for expanded file rows and clamps arrow navigation at the ends', async () => {
+    const files = ['a.ts', 'b.ts'].map(path => ({ path, additions: 1, deletions: 0 }));
+    const el = await fixture<LyraCommitCard>(html`<lr-commit-card files-expanded .files=${files}></lr-commit-card>`);
+    const root = el.shadowRoot!;
+    const [first, last] = [...root.querySelectorAll<HTMLButtonElement>('[part="file"]')];
+    expect([first!.tabIndex, last!.tabIndex]).to.deep.equal([0, -1]);
+
+    await focusByKeyboard(first!);
+    await sendKeys({ press: 'ArrowDown' });
+    expect(root.activeElement === last).to.equal(true);
+    expect([first!.tabIndex, last!.tabIndex]).to.deep.equal([-1, 0]);
+    await sendKeys({ press: 'ArrowDown' });
+    expect(root.activeElement === last).to.equal(true);
+    await sendKeys({ press: 'Home' });
+    expect(root.activeElement === first).to.equal(true);
+  });
+
   it('caps expanded file rows and explains the omitted tail', async () => {
     const files: CommitFileChange[] = Array.from({ length: 501 }, (_, index) => ({
       path: `src/file-${index}.ts`, additions: 1, deletions: 0,

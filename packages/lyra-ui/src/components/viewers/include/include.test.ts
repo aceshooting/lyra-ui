@@ -3,7 +3,8 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './include.js';
 import type { LyraInclude } from './include.js';
-import { __setHtmlSanitizerForTesting } from '../html-viewer/dompurify-loader.js';
+import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 import {
   __clearIncludeResourceCacheForTesting,
@@ -56,7 +57,7 @@ describe('lr-include', () => {
   });
 
   afterEach(() => {
-    __setHtmlSanitizerForTesting(undefined);
+    __setDompurifyImporterForTesting();
     __clearIncludeResourceCacheForTesting();
   });
 
@@ -434,7 +435,8 @@ describe('lr-include', () => {
   });
 
   it('emits lr-include-error with reason missing-sanitizer and writes nothing when the optional dompurify peer is unavailable', async () => {
-    __setHtmlSanitizerForTesting(null);
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
     try {
@@ -983,7 +985,8 @@ describe('lr-include', () => {
   });
 
   it('reports missing-sanitizer for a same-page source when dompurify is unavailable', async () => {
-    __setHtmlSanitizerForTesting(null);
+    expectDevWarning('lyra-dompurify-unavailable');
+    __setDompurifyImporterForTesting(() => Promise.resolve(null));
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
         <p id="same-page-missing-sanitizer-source">Safe</p>
@@ -1022,7 +1025,7 @@ describe('lr-include', () => {
         throw new Error('sanitizer exploded');
       },
     };
-    __setHtmlSanitizerForTesting(throwingSanitizer);
+    __setDompurifyImporterForTesting(() => Promise.resolve(throwingSanitizer));
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
         <p id="sanitizer-throws-source">Safe</p>

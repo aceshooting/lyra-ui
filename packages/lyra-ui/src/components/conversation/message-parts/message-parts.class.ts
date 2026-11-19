@@ -1,3 +1,6 @@
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { newestCollectionWindow } from '../../../internal/collection-window.js';
+import { createInputMemo } from '../../../internal/input-memo.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { isolateText } from '../../../internal/bidi.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
@@ -39,7 +42,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from '../../../internal/widget-default-registry.js';
 import type { LyraWidgetTypeRegistry } from '../../../internal/widget-type-registry.js';
@@ -50,7 +53,7 @@ import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_messagePartsWindowNotice, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -267,6 +270,7 @@ export interface LyraMessagePartsEventMap
  * @event lr-search-change - Passthrough from rendered JSON content.
  * @event lr-widget-action - Passthrough from a rendered declarative widget.
  * @event lr-widget-state-change - Passthrough from a rendered controlled widget.
+ * @csspart window-notice - Localized count of earlier parts outside the render window, also available as `data-omitted`.
  * @csspart base - The ordered message-part list.
  * @csspart part - Every rendered part wrapper.
  * @csspart part-streaming - Additional part name on a streaming part.
@@ -309,6 +313,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     messagePartError: LYRA_DEFAULT_messagePartError,
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
     messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
+    messagePartsWindowNotice: LYRA_DEFAULT_messagePartsWindowNotice,
     retry: LYRA_DEFAULT_retry,
     streamInterrupted: LYRA_DEFAULT_streamInterrupted,
     streamResume: LYRA_DEFAULT_streamResume,
@@ -328,6 +333,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   /** Ordered message content. */
   @property({ attribute: false }) parts: readonly MessagePart[] = [];
+
+  /** Accessible group name. An empty label suppresses the fallback. Host aria-label takes precedence. */
+  @property() label?: string;
 
   /** Disables built-in retry and resume requests. Custom-rendered controls remain host-owned. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -403,6 +411,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  tool-call/tool-result parts), where unbounded live DOM can visibly stall the main thread. */
   @property({ type: Number, attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
 
+  private readonly citationRanks = new Map<string, number>();
   private readonly widgetDocuments = new Map<string, LyraWidgetDocument>();
   private readonly rendererLoads = new Map<PartRenderer, Promise<void>>();
   private readonly failedRendererLoads = new Set<PartRenderer>();
@@ -422,6 +431,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return false;
   }
 
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.rendererLoads.get('button');
+    return complete;
+  }
+
   private rendererFallback(name: PartRenderer): TemplateResult {
     return html`<span aria-busy=${this.failedRendererLoads.has(name) ? 'false' : 'true'}
       >${this.failedRendererLoads.has(name) ? this.localize('messagePartError') : this.localize('loading')}</span>`;
@@ -439,17 +454,11 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** First tool-call's projected `redactedFields` per invocation id; only non-empty entries. */
   private redactionByInvocation = new Map<string, readonly unknown[]>();
   private redactionMemo = new WeakMap<MessagePart, RedactedToolDetail>();
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
   private suppressNextErrorAnnouncement = true;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
     if (this.hasUpdated) {
       // A reconnect snapshots the current parts as history. This covers a parts write queued while
       // detached and prevents DOM reparenting from turning old errors into fresh alerts.
@@ -461,14 +470,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.widgetDocuments.clear();
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
   }
 
-  private get effectiveParts(): readonly MessagePart[] {
+  private readonly projectParts = createInputMemo((parts: readonly MessagePart[]) => {
     const seen = new Set<string>();
-    return this.parts.filter((part) => {
+    return parts.filter((part) => {
       const id = part?.id;
       if (!isNonBlankIdentity(id) || seen.has(id)) return false;
       if (part.type === 'tool-call' && !isRecord(part.invocation)) return false;
@@ -477,29 +484,31 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       seen.add(id);
       return true;
     });
+  });
+
+  private get effectiveParts(): readonly MessagePart[] {
+    return this.projectParts(this.parts);
   }
 
-  /** `maxRenderedParts`, normalized to a finite non-negative integer (falling back to the
-   *  property's own default of `0`) -- a raw `NaN` (e.g. an invalid `max-rendered-parts`
-   *  attribute) would otherwise make `maxRenderedParts > 0` always false, which happens to already
-   *  match the "render all" fallback, but only by the same accidental-`NaN`-comparison quirk this
-   *  guard exists to remove. */
-  private get effectiveMaxRenderedParts(): number {
-    return finiteCount(this.maxRenderedParts, 0);
-  }
+  private readonly windowParts = createInputMemo(newestCollectionWindow<MessagePart>);
 
-  /** `effectiveParts`, windowed to the newest `effectiveMaxRenderedParts` entries when that cap is
-   *  positive. Never affects citation numbering -- ranks are always derived from the full
-   *  `effectiveParts` sequence before this window is applied. */
-  private get renderedParts(): readonly MessagePart[] {
-    const parts = this.effectiveParts;
-    const max = this.effectiveMaxRenderedParts;
-    return max > 0 && parts.length > max ? parts.slice(-max) : parts;
+  private get renderWindow() {
+    return this.windowParts(this.effectiveParts, finiteCount(this.maxRenderedParts, 0));
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if ((changed.has('parts') || changed.has('maxRenderedParts')) && this.widgetDocuments.size) {
+      const widgetIds = new Set(this.renderWindow.items.filter(part => part.type === 'data' && part.widget).map(part => part.id));
+      for (const id of this.widgetDocuments.keys()) {
+        if (!widgetIds.has(id)) this.widgetDocuments.delete(id);
+      }
+    }
     if (!changed.has('parts') && this.hasUpdated) return;
+    this.citationRanks.clear();
+    for (const part of this.effectiveParts) {
+      if (part.type === 'citation') this.citationRanks.set(part.id, this.citationRanks.size + 1);
+    }
     this.redactionByInvocation = this.projectRedactions();
     if (!changed.has('parts')) return;
     const current = this.effectiveParts.filter((part) => part.type === 'error');
@@ -512,7 +521,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     if (this.hasUpdated && !this.suppressNextErrorAnnouncement) {
       for (const part of current) {
         if (!this.knownErrorIds.has(part.id)) {
-          this.errorAnnouncementSink?.announce(part.message || this.localize('messagePartError'));
+          this.announcements.announceAssertive(part.message || this.localize('messagePartError'));
         }
       }
     }
@@ -550,8 +559,14 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return detail;
   }
 
+  private get windowNotice(): string {
+    const { omitted } = this.renderWindow;
+    return omitted ? this.localize('messagePartsWindowNotice', undefined, { count: getNumberFormat(this.effectiveLocale).format(omitted) }) : '';
+  }
+
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
+    this.announcements.transition('render-window', 'window', this.windowNotice, 'polite');
     this.suppressNextErrorAnnouncement = false;
   }
 
@@ -765,14 +780,14 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   private requestRetry(part: MessagePart): void {
-    const current = this.renderedParts.find(candidate => candidate.id === part.id);
+    const current = this.renderWindow.items.find(candidate => candidate.id === part.id);
     if (this.disabled || current !== part) return;
     this.emit('lr-part-retry', { part });
   }
 
   private resumeDispatching = false;
   private requestResume(part: MessagePart): void {
-    const current = this.renderedParts.find(candidate => candidate.id === part.id);
+    const current = this.renderWindow.items.find(candidate => candidate.id === part.id);
     if (this.resumeDispatching || this.disabled || current !== part || part.state !== 'interrupted' || part.interruption?.resumable !== true) return;
     this.resumeDispatching = true;
     try {
@@ -784,10 +799,15 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   private renderInterruption(part: MessagePart): TemplateResult | typeof nothing {
     if (part.state !== 'interrupted') return nothing;
+    let resume: TemplateResult | typeof nothing = nothing;
+    if (part.interruption?.resumable === true) {
+      resume = this.rendererReady('button')
+        ? html`<lr-button part="resume" exportparts="base:resume" size="s" variant="neutral" type="button"
+            wrap ?disabled=${this.disabled} @click=${() => this.requestResume(part)}>${this.localize('streamResume')}</lr-button>`
+        : this.rendererFallback('button');
+    }
     return html`<div part="interruption"><span>${this.localize('streamInterrupted')}</span>${part.interruption?.reason
-      ? html`<span>${part.interruption.reason}</span>` : nothing}${part.interruption?.resumable === true
-      ? html`<button part="resume" type="button" ?disabled=${this.disabled}
-          @click=${() => this.requestResume(part)}>${this.localize('streamResume')}</button>` : nothing}</div>`;
+      ? html`<span>${part.interruption.reason}</span>` : nothing}${resume}</div>`;
   }
 
   private renderOne(
@@ -803,21 +823,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   override render(): TemplateResult {
-    const authoredLabel = this.getAttribute('aria-label');
+    const authoredLabel = this.getAttribute('aria-label') ?? this.label;
     const label = authoredLabel === '' ? '' : normalizeLabel(authoredLabel) ?? this.localize('messagePartsLabel');
-    // Ranks are derived from the FULL sequence, before any rendering window is applied, so a
-    // citation's number stays stable even once an earlier citation rolls out of view.
-    const allParts = this.effectiveParts;
-    const citationRanks = new Map<string, number>();
-    let citationRank = 0;
-    for (const part of allParts) {
-      if (part.type === 'citation') citationRanks.set(part.id, ++citationRank);
-    }
-    const parts = this.renderedParts;
-    const widgetIds = new Set(parts.filter(part => part.type === 'data' && part.widget).map(part => part.id));
-    for (const id of this.widgetDocuments.keys()) {
-      if (!widgetIds.has(id)) this.widgetDocuments.delete(id);
-    }
+    const { items: parts, omitted } = this.renderWindow;
     // One `renderPart` call per rendered part, in order, before anything renders: block display
     // needs to know which parts are custom before it can pair calls with results.
     const custom = new Map<string, unknown>();
@@ -835,10 +843,11 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     }
     const pairing = this.toolDisplay === 'block' ? this.pairTools(parts, custom) : undefined;
     return html`<div part="base" role="group" aria-label=${label}>
+      ${omitted ? html`<p part="window-notice" data-omitted=${omitted}>${this.windowNotice}</p>` : nothing}
       ${repeat(
         parts,
         (part) => part.id,
-        (part) => this.renderOne(part, citationRanks.get(part.id) ?? 0, custom, pairing)
+        (part) => this.renderOne(part, this.citationRanks.get(part.id) ?? 0, custom, pairing)
       )}
     </div>`;
   }

@@ -26,6 +26,20 @@ it('orders internal error and hint descriptions in both editing modes', async ()
   }
 });
 
+it('keeps the hint hidden when only an unsupported help-text slot is supplied', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-model-select']>(html`<lr-model-select
+    .catalog=${[{ id: 'a', label: 'Alpha' }]}>
+    <span slot="help-text">Unassigned help</span>
+  </lr-model-select>`);
+  for (const allowCustom of [false, true]) {
+    el.allowCustom = allowCustom;
+    await el.updateComplete;
+    const control = el.shadowRoot!.querySelector('[role="combobox"]')!;
+    expect(control.getAttribute('aria-describedby')).to.equal(null);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!.hidden).to.equal(true);
+  }
+});
+
 it('reports the typed query while preserving the committed value', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-model-select']>(html`<lr-model-select allow-custom value="old"></lr-model-select>`);
   const details: unknown[] = [];
@@ -34,6 +48,47 @@ it('reports the typed query while preserving the committed value', async () => {
   el.input!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   expect(details).to.deep.equal([{ value: 'old', inCatalog: false, query: 'New draft' }]);
   expect(el.value).to.equal('old');
+});
+
+it('snapshots an empty draft before native input listeners can reenter', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-model-select']>(html`<lr-model-select allow-custom value="a"
+    .catalog=${[{ id: 'a', label: 'Alpha' }]}></lr-model-select>`);
+  const field = el.shadowRoot!.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+  const events: unknown[] = [];
+  el.addEventListener('input', () => {
+    events.push('input');
+    el.value = 'replacement';
+    el.open = false;
+  }, { once: true });
+  el.addEventListener('lr-input', event => events.push(event.detail));
+
+  field.value = '';
+  field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+
+  expect(events).to.deep.equal(['input', { value: 'a', inCatalog: true, query: '' }]);
+  expect(el.value).to.equal('replacement');
+});
+
+it('reports the exact typed draft and omits query from commit payloads', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-model-select']>(html`<lr-model-select allow-custom value="old"></lr-model-select>`);
+  const field = el.shadowRoot!.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+  const events: unknown[] = [];
+  el.addEventListener('input', () => events.push('input'));
+  el.addEventListener('lr-input', event => events.push(event.detail));
+  el.addEventListener('change', () => events.push('change'));
+  el.addEventListener('lr-change', event => events.push(event.detail));
+
+  field.value = '  New draft  ';
+  field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  expect(el.value).to.equal('old');
+  field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+
+  expect(el.value).to.equal('New draft');
+  expect(events).to.deep.equal([
+    'input', { value: 'old', inCatalog: false, query: '  New draft  ' },
+    'input', { value: 'New draft', inCatalog: false },
+    'change', { value: 'New draft', inCatalog: false },
+  ]);
 });
 
 it('themes the hover and pressed backgrounds independently', async () => {

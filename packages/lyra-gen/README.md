@@ -72,6 +72,26 @@ Catalog roles such as `text`, `input` and `chart` map to trusted tags. Generated
 are catalog roles, not arbitrary element names. Each node needs a unique explicit `id`. Structured
 properties use JSON values and are validated against the selected role's schema.
 
+### Generated typography and component parts
+
+Generated headings and paragraphs use the Lyra typography scale and have zero margins. Set
+`--lr-gen-heading-font-size`, `--lr-gen-heading-font-weight`, `--lr-gen-heading-margin`,
+`--lr-gen-text-font-size` or `--lr-gen-text-margin` on the view to override these defaults.
+
+A host can adopt its own stylesheet into the view's open shadow root. Select the generated role
+with `data-gen-type` and the underlying component's documented part with `::part()`. The same
+rules apply after asynchronous loading or replacement of a generated component.
+
+```js
+await view.updateComplete;
+const theme = new CSSStyleSheet();
+theme.replaceSync(`
+  [data-gen-type="chart"]::part(data-table-toggle) { justify-self: end; }
+  [data-gen-type="card"]::part(base) { border-radius: var(--lr-radius); }
+`);
+view.shadowRoot.adoptedStyleSheets = [...view.shadowRoot.adoptedStyleSheets, theme];
+```
+
 ## Generate with a selected catalog
 
 ```ts
@@ -121,6 +141,16 @@ or property is skipped; the selector never broadens the catalog or grants an act
 The versioned source reuses reviewed catalog examples. `createExampleAblation()` pairs an empty
 example set with the selected set and marks its configuration `measured: false`; real validity,
 token and latency effects remain unmeasured until the host runs an approved campaign.
+
+### Normalize misplaced properties
+
+Pass `{ normalize: true }` to `validateView(input, catalog, options)` or
+`createJsonViewStream({ catalog, normalize: true })` to move misplaced catalog-declared node
+members into `props`. On a role without text content, a string `text` moves into the first
+available declared `caption` or `description` property, including an empty string destination.
+Each move produces a `node.normalized` warning at the original JSON Pointer, subject to the
+diagnostic limit. Existing conflicting properties, unknown members and invalid values still
+fail ordinary validation. The input stays intact. Strict placement is the default.
 
 ## Parse restricted Lyra Markup
 

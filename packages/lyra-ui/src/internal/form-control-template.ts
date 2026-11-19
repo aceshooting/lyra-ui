@@ -28,6 +28,11 @@ export interface FormControlSupportingInput {
   errorText?: string | null;
   /** Reserves hint space even when empty (`with-hint`). */
   withHint?: boolean;
+  /**
+   * Whether the control renders the `help-text` compatibility slot. Pass `false` when it does
+   * not, so content assigned to that unrendered slot cannot reveal an empty hint. Default `true`.
+   */
+  helpTextSlot?: boolean;
   /** Extra ids appended after hint/error, for controls with their own description. */
   extraDescribedBy?: readonly (string | false | null | undefined)[];
 }
@@ -48,7 +53,7 @@ export interface FormControlSupportingState {
  * template's DOM order, so reading order and description order agree.
  */
 export function formControlSupportingState(o: FormControlSupportingInput): FormControlSupportingState {
-  const hasHint = o.presence.has('hint') || o.presence.has('help-text')
+  const hasHint = o.presence.has('hint') || (o.helpTextSlot !== false && o.presence.has('help-text'))
     || (o.hint ?? '').length > 0 || (o.helpText ?? '').length > 0 || o.withHint === true;
   const hasError = o.presence.has('error') || (o.errorText ?? '').length > 0;
   const hintId = `${o.idPrefix}-hint`;

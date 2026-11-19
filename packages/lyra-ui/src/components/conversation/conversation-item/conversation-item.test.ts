@@ -1,7 +1,7 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./conversation-item.js";
 import type {
   LyraConversationItem,
@@ -1950,4 +1950,60 @@ it('restores the native autocorrect default when an explicit on hint is removed'
   el.removeAttribute('autocorrect');
   await el.updateComplete;
   expect(input.hasAttribute('autocorrect')).to.equal(false);
+});
+
+it('applies the shared icon action border to its buttons', async () => {
+  const el = await fixture<LyraConversationItem>(html`
+    <lr-conversation-item  style="--lr-icon-button-size: 43px; --lr-icon-button-border: 3px dashed rgb(12, 34, 56)"></lr-conversation-item>
+  `);
+  for (const part of ['rename-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    const style = getComputedStyle(button);
+    expect([style.minInlineSize, style.minBlockSize]).to.deep.equal(['43px', '43px']);
+    expect([style.borderTopWidth, style.borderTopStyle, style.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(12, 34, 56)']);
+  }
+});
+
+it('disables selecting and renaming the row, including an edit already in progress', async () => {
+  const el = await fixture<LyraConversationItem>(html`<lr-conversation-item label="Original"></lr-conversation-item>`);
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="select-button"]')!;
+  const rename = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="rename-button"]')!;
+  const events: string[] = [];
+  for (const event of ['lr-select', 'lr-rename']) el.addEventListener(event, () => { events.push(event); });
+  rename().click();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input')!;
+  input.value = 'Edited';
+  input.dispatchEvent(new Event('input'));
+  el.disabled = true;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+  await el.updateComplete;
+  expect(row.getAttribute('aria-disabled')).to.equal('true');
+  expect(row.tabIndex).to.equal(-1);
+  expect(rename().disabled).to.equal(true);
+  row.click();
+  row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+  rename().dispatchEvent(new MouseEvent('click'));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('input') === null).to.equal(true);
+  el.disabled = false;
+  await el.updateComplete;
+  row.click();
+  expect(events).to.deep.equal(['lr-select']);
+  rename().click();
+  await el.updateComplete;
+  el.disabled = true;
+  await el.updateComplete;
+  expect(rename().disabled).to.equal(true);
+});
+
+it('uses the component hover token on its action surface', async () => {
+  const el = await fixture(html`<lr-conversation-item  style="--lr-conversation-item-hover-bg: rgb(11, 22, 33)"></lr-conversation-item>`);
+  const target = el.shadowRoot!.querySelector('[part~="base"]')!;
+  try {
+    await hoverUntilMatched(target, 'action surface hover');
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(11, 22, 33)');
+  } finally {
+    await resetMouse();
+  }
 });

@@ -596,6 +596,8 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 
 ## `lr-chat-message`
 
+Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
+
 A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,
 a `<lr-markdown>`, a custom template, anything) and this component only supplies the surrounding
@@ -1023,7 +1025,8 @@ clears the touched presentation.
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
 `setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
-disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
+disabled. Selection methods are safe to call before the textarea renders.
+`setRangeText()` synchronizes reactive/form value and auto-sizing.
 `checkValidity()`/`reportValidity()` remain inherited; `resetValidity()` clears consumer custom
 validity and recomputes the current intrinsic constraints.
 
@@ -1158,6 +1161,8 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 ---
 
 ## `lr-stream-status`
+
+The interrupted state’s Resume control accepts the shared `--lr-button-*` tokens and exposes the operable button through `::part(resume)`.
 
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
@@ -1298,6 +1303,10 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
 ---
 
 ## `lr-conversation-item`
+
+Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
+
+Customize the appearance with `--lr-conversation-item-hover-bg`.
 
 A selectable row representing one chat session in a history sidebar list. Usable standalone or as the
 `renderItem()` payload of `<lr-virtual-list>`; has no dependency on that (or any) other component.
@@ -1494,7 +1503,10 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 
 `--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
 
-While typing, `lr-input` includes the draft string in `detail.query`. Its `value` and `inCatalog` fields describe the committed selection. Enter commits the draft. Escape or leaving the control dismisses it. Picking the current model closes the list without emitting a change.
+While typing, `lr-input` includes the exact draft string in `detail.query`, including an empty string.
+Its `value` and `inCatalog` fields describe the committed selection. Enter commits the active enabled
+suggestion or the trimmed draft. Escape or leaving the control dismisses the draft. Picking the
+current model closes the list without emitting a change.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -1668,7 +1680,8 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Events:**
 
-- `lr-input` (`detail: { value: string }`) — typed value edit notification.
+- `lr-input` (`detail: { value: string; inCatalog: boolean; query?: string }`) — reports the
+  committed value. Free-text edits include the exact draft in `query`. Commit events omit `query`.
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
@@ -1813,6 +1826,8 @@ listbox along with the other floating surfaces.
 
 ## `lr-streaming-text`
 
+In Markdown mode, `lr-render-error` bubbles from the renderer with the original `{ error }` detail.
+
 A token-coalescing incremental text renderer for streaming assistant output, with an optional
 blinking cursor and auto-detected Markdown rendering. First-party invention (no Web Awesome
 equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
@@ -1905,7 +1920,8 @@ renders into its own shadow root and a plain light-DOM `MutationObserver` on the
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
 outcomes. With `internal-link-prefix` set, its intercepted links also pass through
-`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented. `lr-render-error`
+(`detail: { error: unknown }`) reports a Markdown rendering failure.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -2004,6 +2020,8 @@ outcome, bubbling and composed.
 
 ## `lr-streaming-text-core`
 
+In Markdown mode, `lr-render-error` bubbles from the renderer with the original `{ error }` detail.
+
 A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
@@ -2056,7 +2074,8 @@ share one implementation.
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
 outcomes. With `internal-link-prefix` set, its intercepted links also pass through
-`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented. `lr-render-error`
+(`detail: { error: unknown }`) reports a Markdown rendering failure.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -2790,6 +2809,8 @@ to the shared duration, while reduced-motion ambient output remains static.
 
 ## `lr-branch-picker`
 
+Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
+
 The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it
 never mutates its own `index` — the same contract `<lr-pagination>` already establishes for
 `page`. The host listens for `lr-branch-change`, swaps the displayed branch content, and applies
@@ -2816,6 +2837,8 @@ provider's logical toolbar actions change availability or order.
 arrow without restyling the button), and `position` (the visible "2 / 5" text).
 
 ## `lr-message-actions`
+
+Set `disabled` to disable all built-in controls and make slotted actions inert.
 
 The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in built-ins (copy /
 regenerate / edit / feedback) that emit intent events, plus a default slot for custom controls (e.g.
@@ -2900,6 +2923,8 @@ media rule then floors the rendered hit area at 2.75rem/44px regardless of how f
 override lowered it, so the shrink is safe on a touch device.
 
 ## `lr-message-feedback`
+
+The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
 
 Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
 chips + a free-text comment) that opens as a disclosure directly below the thumbs. Emits; never
@@ -3110,6 +3135,10 @@ recording-state hooks exist.
 
 ## `lr-transcript-feed`
 
+When `max-rendered-entries` hides earlier entries, `::part(window-notice)` displays a localized count and exposes the number in `data-omitted`. The scroll region uses `transcriptFeedRegion` for its name. The log retains its caller-supplied or localized transcript label.
+
+Customize the jump button with `--lr-transcript-feed-jump-bg`, `--lr-transcript-feed-jump-hover-bg`, `--lr-transcript-feed-jump-color`, `--lr-transcript-feed-jump-border`, `--lr-transcript-feed-jump-radius` and `--lr-transcript-feed-jump-shadow`.
+
 Live captions for an in-progress voice session: speaker-grouped entries, interim-vs-final styling
 with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with release, the same
 `follow`/`lr-follow-change` contract `<lr-terminal>` uses. Live captions only — recorded-media
@@ -3167,6 +3196,8 @@ interim entry exists), `jump-button` (shown only while `follow` is `false`), `em
 (input-loss notice).
 
 ## `lr-handoff-divider`
+
+Customize the appearance with `--lr-handoff-divider-gap`, `--lr-handoff-divider-bg`, `--lr-handoff-divider-color`, `--lr-handoff-divider-border-color`, `--lr-handoff-divider-radius` and `--lr-handoff-divider-padding-inline`.
 
 A labeled semantic separator marking control transfer between agents in a transcript ("Transferred
 to Research Agent"), with an optional agent avatar. Purely presentational: no events, no
@@ -3282,6 +3313,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a follow-state change
+caused by scrolling or activating the jump-to-latest button.
+
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
 list owns its spacing). `--lr-chat-viewport-gap` (default `0`) — block-direction gap between slotted
@@ -3336,6 +3370,10 @@ inline style) still wins over the built-in one.
 ```
 
 ## `lr-suggestion-chips`
+
+Set `disabled` to disable the entire row. Re-enabling it restores the availability of each suggestion.
+
+Customize the appearance with `--lr-suggestion-chips-gap`, `--lr-suggestion-chips-chip-bg`, `--lr-suggestion-chips-chip-color`, `--lr-suggestion-chips-chip-border-color`, `--lr-suggestion-chips-chip-radius` and `--lr-suggestion-chips-chip-padding-inline`.
 
 Starter prompts (empty thread) and follow-up suggestions (after a response) as a horizontally
 scrollable chip row; activation hands the prompt to the host, which decides whether to compose it
@@ -3423,6 +3461,8 @@ Vector icons per chip, by name or by slot:
 ```
 
 ## `lr-thread-list`
+
+A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
 affordances. _Data mode_ (at least one valid `threads` record, or no valid records with nothing
@@ -3687,7 +3727,7 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
-`group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
+`group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
 the `group-header`/`group-toggle`/`group-label`/`group-adornment`/`group-icon` markup, so those parts style the real
 header row and the pinned copy alike, and the band itself is where a shadow or bottom border
@@ -3823,6 +3863,8 @@ Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): threa
 pane driving `activeConversationId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.
 
 ## `lr-checkpoint`
+
+Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`.
 
 An inline conversation restore point: a labeled marker between messages whose Restore affordance
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores
@@ -4261,7 +4303,10 @@ mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`
 `input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
 before the input renders.
 
-**Events:** `lr-input` — typed value edit notification with `detail: { value }`.
+**Events:** `lr-input` (`detail: { value: string; inCatalog: boolean; query?: string }`) — reports
+the committed value. Free-text edits include the exact draft in `query`, including an empty string.
+Commit events omit `query`. Enter commits the active enabled suggestion or the trimmed draft.
+Escape or leaving the control dismisses the draft.
 `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
@@ -4495,7 +4540,6 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
-- `lr-link-activate` (`detail: { href: string }`) — forwarded from built-in Markdown content.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
@@ -4510,6 +4554,9 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.
+
+The original `lr-link-activate` event from built-in Markdown bubbles through the workspace with
+`detail: { href: string }`.
 
 **Methods:** `finalizePendingApproval(): void` closes a vetoed approval in the built-in tool timeline
 after persistence succeeds; `revertPendingApproval(): void` releases its pending state after a failed
@@ -4581,6 +4628,8 @@ wins over the shadow stylesheet regardless of specificity.
 reflected) forwards to each message's `lr-message-parts`. The legacy message text route is unchanged.
 
 ## `lr-message-parts`
+
+Set `label` to name the message-part group. A host `aria-label` takes precedence. An explicit empty value suppresses the default name. When `max-rendered-parts` hides earlier parts, `::part(window-notice)` displays a localized count and exposes the number in `data-omitted`. The Resume control accepts the shared `--lr-button-*` tokens and exposes the operable button through `::part(resume)`.
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.

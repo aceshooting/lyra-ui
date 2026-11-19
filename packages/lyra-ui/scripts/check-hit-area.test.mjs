@@ -308,6 +308,24 @@ assert.ok(checkStaticHitAreaFixture(compactIconClass, [
 assert.equal(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('../../../internal/interactive-control.styles.js', './interactive-control.styles.js')]).errors.length, 0,
   'internal styles resolve the same imported hit-target declaration');
 
+const sharedIconAction = `
+import { iconActionStyles as action } from '../../../internal/icon-action.styles.js';
+export const styles = css\`
+  \${action(":where([part='toggle'], [part='close'])", { color: 'red' })}
+\`;
+`;
+assert.equal(checkStaticHitAreaFixture(compactIconClass, [sharedIconAction]).errors.length, 0,
+  'a shared icon action with a literal selector contributes both minimum dimensions');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [
+  sharedIconAction.replace('internal/icon-action.styles.js', 'unrelated.styles.js'),
+]).errors.length > 0, 'an unrelated function with the same name cannot authorize the floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [
+  sharedIconAction.replace(/":where\([^"]+\)"/, 'dynamicSelector'),
+]).errors.length > 0, 'a dynamic selector does not prove the floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [
+  sharedIconAction + `[part='toggle'] { min-block-size: 1px; }`,
+]).errors.length > 0, 'a later undersized declaration still fails the shared recipe');
+
 
 const adoptedActionClass = `
   import { actionStyles as actions } from '../shared/action.styles.js';

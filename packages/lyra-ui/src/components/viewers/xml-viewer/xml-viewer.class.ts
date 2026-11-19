@@ -1,6 +1,9 @@
+import { hasHierarchySourceCopy, hierarchyCopyScope, HierarchySourceCopyController, HierarchySourceSearchController } from '../../../internal/hierarchy-source-search.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
+import { KeyedCopyFeedback } from '../../../internal/record-copy-feedback.js';
+import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
@@ -17,23 +20,22 @@ import type {
   LyraHighlight,
 } from '../document-viewer/anchors.js';
 import {
+  DEFAULT_MAX_RESOURCE_BYTES,
+  resolveMaxResourceBytes,
   isResourceLimitError,
-  readResponseText,
   LyraResourceLimitError,
   LyraUserFacingError,
-  resolveOwnerFetchTarget,
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode, LyraSourceSearchResult } from '../../../data-sources.js';
-import { HierarchySourceController, hierarchyField, type HierarchyCapabilityResult } from '../../../internal/hierarchy-source-controller.js';
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode } from '../../../data-sources.js';
+import { HierarchySourceController, hierarchyField } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 export type XmlViewerTreeSource = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
 const INSPECTION_KINDS = new Set(['object', 'array', 'scalar', 'element', 'attribute', 'text', 'comment', 'processing-instruction']);
-type SourceHits = Extract<HierarchyCapabilityResult<LyraSourceSearchResult<{ readonly key: string }>>, { status: 'ready' }>;
 
 import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -42,8 +44,6 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import {
   writeClipboardText,
-  clipboardFailureReason,
-  type LyraClipboardWriteOutcome,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
@@ -144,7 +144,7 @@ class XmlDoctypeError extends Error {
 
 /** Rejects resource amplification before constructing a document. Quoted attributes and
  * comment/CDATA payloads are skipped as units, so markup-looking text cannot inflate the count. */
-function preflightXml(raw: string, maxBytes = 26214400, maxNodes = MAX_NODES): void {
+function preflightXml(raw: string, maxBytes = DEFAULT_MAX_RESOURCE_BYTES, maxNodes = MAX_NODES): void {
   if (raw.length > maxBytes || new TextEncoder().encode(raw).byteLength > maxBytes) throw new LyraResourceLimitError();
   let nodes = 1; // The Document itself participates in the post-parse node ceiling.
   let depth = 0;
@@ -260,6 +260,7 @@ export interface LyraXmlViewerEventMap {
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
+  'lr-load': CustomEvent<Record<string, never>>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
@@ -331,6 +332,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   query, matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code
  *   units, scans at most 4,000,000 tag/attribute/text code units, and retains at most 10,000
  *   matches; a false `matchCountExact` makes `matchCount` a lower bound after any ceiling.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-render-error - Fired when fetching or parsing the document fails, including a
  *   parse error or exceeding the node cap. `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -366,6 +368,9 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   element row; emits `lr-highlight-activate`.
  * @csspart error - The error region.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
+ * @cssprop --lr-xml-viewer-action-background - Resting background of viewer actions.
+ * @cssprop --lr-xml-viewer-action-hover-background - Hover background of viewer actions.
+ * @cssprop --lr-xml-viewer-action-active-background - Pressed background of viewer actions.
  * @cssprop [--lr-xml-viewer-active-attribute-color=var(--lr-color-brand)] - Outline color of the
  *   `[part="attribute"]` an attribute-addressing `node-path` anchor resolved to.
  * @cssprop [--lr-xml-viewer-tag-color=var(--lr-color-brand)] - Text color of `[part="tag"]`, an
@@ -444,27 +449,45 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 50000;
   /** Maximum displayed tree rows, from 1 to 50,000; invalid values use 5,000. */
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 5000;
-  /** Maximum UTF-8 input bytes, from 1 to 262,144,000; invalid values use 26,214,400. */
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = 26214400;
+  /** Maximum UTF-8 input bytes, from 1 to 262,144,000; invalid values use 26,214,400.
+   * @default 26214400 */
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
   private _treeSource?: XmlViewerTreeSource;
   private sourceMode = false;
-  private sourceSearchDirty = true;
-  private sourceSearchIntent = 0;
-  private sourceCopyIntent = 0;
-  private sourceNavigationIntent = 0;
   private sourceAnchorTask?: object;
-  private sourceSearchTask: Promise<number> = Promise.resolve(0);
-  private sourceHits?: SourceHits;
-  private sourceHitKeys = new Set<string>();
-  private sourceSearchExact = true;
-  private sourceSearchUnavailable = false;
   private sourceBinding?: { source: XmlViewerTreeSource | undefined; query: string; locale: string };
   private sourceAnnouncement?: string;
+  private lastSourceStatus?: string;
   private readonly hierarchy = new HierarchySourceController<LyraInspectionNode>(this, {
     normalize: (value, key) => this.normalizeSourceNode(value, key),
     onChange: () => this.requestUpdate('sourceState', null), accepted: () => {},
     payload: { maxUnits: 2_000_000, maxRowUnits: 327_702,
       unitsOf: node => node.name.length + node.path.length + (node.value?.length ?? 0) + node.kind.length },
+  });
+
+  private readonly sourceSearch = new HierarchySourceSearchController({
+    host: this,
+    control: this.hierarchy,
+    source: () => this.treeSource,
+    query: () => this.searchQuery,
+    revealFirst: true,
+    beforeStep: () => { this.sourceAnchorTask = undefined; this.cancelPendingAnchor(); },
+    cursor: () => this.activeSearchIndex,
+    setCursor: (index) => { this.activeSearchIndex = index; },
+    changed: () => this.requestUpdate('sourceSearchResult', null),
+    emitChange: () => this.emitSearchChange(),
+  });
+  private readonly sourceCopy = new HierarchySourceCopyController({
+    host: this,
+    control: this.hierarchy,
+    source: () => this.treeSource,
+    sinks: {
+      clearFeedback: () => this.resetCopyFeedback(),
+      feedback: (key, ok) => this.copyFeedback.show(key, ok),
+      message: (ok) => this.localize(ok ? 'copied' : 'copyFailed'),
+      announce: (message) => this.announcements.announce(message),
+      emit: (name, detail) => this.emit(name, detail),
+    },
   });
 
   /** Whole-source inspection provider. Takes display precedence over xml/src; maxNodes, maxRows and expandDepth
@@ -477,8 +500,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const previous = this._treeSource;
     this._treeSource = value;
     this.cancelPendingAnchor();
-    this.generation++;
-    this.beginAbortableLoad();
+    this.transport.cancel();
     this.invalidateSourceSearch();
     this.syncSource(true);
     this.requestUpdate('treeSource', previous);
@@ -487,7 +509,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** Reveals and focuses an exact provider key; compact keys can address arbitrarily deep nodes.
    * Resolves false when absent, superseded, or no provider is active. */
   revealSourceKey(key: string): Promise<boolean> {
-    this.sourceNavigationIntent++;
+    this.sourceSearch.supersedeSteps();
     this.sourceAnchorTask = undefined;
     this.cancelPendingAnchor();
     return this.treeSource === undefined ? Promise.resolve(false) : this.hierarchy.reveal(key);
@@ -517,51 +539,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     return Object.freeze({ name, path, kind: kind as LyraInspectionNode['kind'], ...(text === undefined ? {} : { value: text as string }) });
   }
   private invalidateSourceSearch(): void {
-    this.sourceSearchIntent = (this.sourceSearchIntent ?? 0) + 1;
-    this.sourceCopyIntent = (this.sourceCopyIntent ?? 0) + 1;
-    this.sourceNavigationIntent = (this.sourceNavigationIntent ?? 0) + 1;
+    this.sourceSearch?.invalidate();
+    this.sourceCopy?.invalidate();
     this.sourceAnchorTask = undefined;
-    this.sourceHits = undefined; this.sourceHitKeys?.clear();
-    this.sourceSearchExact = true; this.sourceSearchUnavailable = false; this.sourceSearchDirty = true;
     if (this.activeSearchIndex !== undefined && (this._treeSource !== undefined || this.sourceMode)) this.activeSearchIndex = -1;
     if (this.copyFeedback !== undefined) this.resetCopyFeedback();
-  }
-  private async searchSource(): Promise<number> {
-    this.sourceSearchDirty = false;
-    const intent = this.sourceSearchIntent;
-    const provider = this.treeSource;
-    const query = this.searchQuery ?? '';
-    if (!query) {
-      this.hierarchy.cancelSearch();
-      if (this.hasUpdated) this.emitSearchChange();
-      return 0;
-    }
-    const result = await this.hierarchy.search();
-    if (intent !== this.sourceSearchIntent || provider !== this.treeSource || !this.isConnected) return 0;
-    if (result.status === 'stale' || (result.status === 'ready' && !result.isCurrent())) return 0;
-    this.sourceHits = result.status === 'ready' ? result : undefined;
-    this.sourceHitKeys = new Set(this.sourceHits?.value.hits.map(hit => hit.key) ?? []);
-    this.sourceSearchExact = result.status === 'ready' && result.value.exhaustive;
-    this.sourceSearchUnavailable = result.status !== 'ready';
-    this.activeSearchIndex = this.sourceHitKeys.size ? 0 : -1;
-    this.requestUpdate('sourceSearchResult', null);
-    this.emitSearchChange();
-    if (this.sourceHits?.isCurrent() && this.activeSearchIndex >= 0) await this.hierarchy.reveal(this.sourceHits.value.hits[0]!.key);
-    await this.updateComplete;
-    return intent === this.sourceSearchIntent ? this.sourceHitKeys.size : 0;
-  }
-  private async stepSourceSearch(direction: 1 | -1): Promise<boolean> {
-    const navigation = ++this.sourceNavigationIntent;
-    this.sourceAnchorTask = undefined;
-    this.cancelPendingAnchor();
-    const hits = this.sourceHits;
-    if (!hits?.isCurrent() || !hits.value.hits.length) return false;
-    const size = hits.value.hits.length;
-    this.activeSearchIndex = this.activeSearchIndex < 0 ? (direction === 1 ? 0 : size - 1) : (this.activeSearchIndex + direction + size) % size;
-    const found = await this.hierarchy.reveal(hits.value.hits[this.activeSearchIndex]!.key);
-    if (!found || navigation !== this.sourceNavigationIntent || !hits.isCurrent() || this.sourceHits !== hits) return false;
-    this.emitSearchChange();
-    return found;
   }
   private sourceSummary(): string {
     const projection = this.hierarchy.projection;
@@ -570,62 +552,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       total: getNumberFormat(this.effectiveLocale).format(projection.total),
     }) : '';
   }
-  private hasSourceCopy(): boolean {
-    const source = this.treeSource;
-    try { const available = typeof source?.copy === 'function'; return source === this.treeSource && available; }
-    catch { return false; }
-  }
-  private async copySource(key: string | null, scope: 'node' | 'subtree' | 'document'): Promise<void> {
-    const source = this.treeSource;
-    const epoch = this.hierarchy.epoch;
-    const owner = this.ownerDocument;
-    const intent = ++this.sourceCopyIntent;
-    const current = () => this.treeSource === source && this.hierarchy.epoch === epoch && this.ownerDocument === owner &&
-      this.isConnected && intent === this.sourceCopyIntent;
-    this.resetCopyFeedback();
-    const result = await this.hierarchy.copy(key, scope, this.effectiveMaxBytes);
-    if (!current() || result.status === 'stale') return;
-    const feedback = key ?? 'document';
-    if (result.status !== 'ready') {
-      this.showSourceCopyFeedback(feedback, false);
-      const message = this.localize('copyFailed');
-      if (current()) this.announcements.announce(message);
-      return;
-    }
-    const accepted = () => current() && result.isCurrent();
-    if (!accepted()) return;
-    let outcome: LyraClipboardWriteOutcome;
-    try {
-      const clipboard = owner.defaultView?.navigator.clipboard;
-      const write = clipboard?.writeText;
-      if (!accepted()) return;
-      if (typeof write !== 'function') {
-        outcome = Object.freeze({ ok: false, text: result.value, reason: 'unsupported', error: new Error('Clipboard is unavailable') });
-      } else {
-        await write.call(clipboard, result.value);
-        outcome = Object.freeze({ ok: true, text: result.value });
-      }
-    } catch (error) {
-      outcome = Object.freeze({ ok: false, text: result.value, reason: clipboardFailureReason(error), error });
-    }
-    if (!accepted()) return;
-    this.showSourceCopyFeedback(feedback, outcome.ok);
-    if (!outcome.ok) {
-      const message = this.localize('copyFailed');
-      if (!accepted()) return;
-      this.announcements.announce(message);
-      if (!accepted()) return;
-      this.emit('lr-error');
-      if (accepted()) this.emit('lr-copy-error', outcome);
-    } else {
-      const message = this.localize('copied');
-      if (!accepted()) return;
-      this.announcements.announce(message);
-      if (accepted()) this.emit('lr-copy', outcome);
-    }
-  }
   private sourceCopyButton(node?: LyraInspectionNode): TemplateResult | typeof nothing {
-    if (!this.copyable || !this.hasSourceCopy()) return nothing;
+    if (!this.copyable || !hasHierarchySourceCopy(() => this.treeSource)) return nothing;
     const source = this.treeSource;
     const epoch = this.hierarchy.epoch;
     const key = node?.path ?? null;
@@ -638,16 +566,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         const button = event.currentTarget as HTMLButtonElement;
         if (button.isConnected && button.getRootNode() === this.renderRoot && !this.hierarchy.loading &&
           projection === this.hierarchy.projection && source === this.treeSource && epoch === this.hierarchy.epoch)
-          void this.copySource(key, node ? node.kind === 'object' || node.kind === 'array' || node.kind === 'element' ? 'subtree' : 'node' : 'document');
+          void this.sourceCopy.copy(key, hierarchyCopyScope(node?.kind), this.effectiveMaxBytes, key ?? 'document');
       }}>${this.copyButtonLabel(key ?? 'document', this.localize('copy'))}</button>`;
   }
-  private showSourceCopyFeedback(key: string, success: boolean): void {
-    const owner = this.ownerDocument.defaultView;
-    if (owner) this.showCopyFeedback(key, success ? 'success' : 'error', this.copyGeneration, owner);
-  }
   private renderSourceNode(node: LyraInspectionNode): TemplateResult {
-    const match = this.sourceHits?.isCurrent() && this.sourceHitKeys.has(node.path);
-    const active = this.sourceHits?.value.hits[this.activeSearchIndex]?.key === node.path;
+    const match = this.sourceSearch.isMatch(node.path);
+    const active = this.sourceSearch.isActive(node.path);
     const highlight = this.renderedHighlights.get(node.path);
     const source = this.treeSource;
     const epoch = this.hierarchy.epoch;
@@ -671,25 +595,25 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         }}>${highlight.highlight.label || this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}</button>` : nothing}`;
   }
   private renderSource(): TemplateResult {
-    const partial = !this.sourceSearchExact && Boolean(this.searchQuery);
-    const count = this.sourceHitKeys.size;
+    const partial = !this.sourceSearch.exact && Boolean(this.searchQuery);
+    const count = this.sourceSearch.count;
     this.renderedHighlights = this.resolveHighlights();
     return html`<div class="source-shell" style=${styleMap({ '--lr-xml-viewer-max-height': sanitizeCssLength(this.maxHeight) ?? 'var(--lr-size-20rem)' })}>
-      ${this.copyable && this.hasSourceCopy() ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
+      ${this.copyable && hasHierarchySourceCopy(() => this.treeSource) ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
       ${hierarchySourceView(this.hierarchy, {
         label: hostAriaLabel(this) ?? (this.name || this.localize('xmlViewerLabel')), rtl: this.effectiveDirection === 'rtl', multiple: false,
         loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
         retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
         name: node => node.name, content: node => this.renderSourceNode(node), select: () => {},
       })}
-      ${partial ? html`<div part="search-status">${this.sourceSearchUnavailable ? this.localize('sourceSearchUnavailable') :
+      ${partial ? html`<div part="search-status">${this.sourceSearch.unavailable ? this.localize('sourceSearchUnavailable') :
         this.localize('viewerSearchMatchCount', undefined, { count: `≥${getNumberFormat(this.effectiveLocale).format(count)}`, pluralCount: count })}</div>` : nothing}
     </div>`;
   }
 
   private get effectiveMaxNodes(): number { return Math.max(1, finiteCount(this.maxNodes, MAX_NODES, 500000)); }
   private get effectiveMaxRows(): number { return Math.max(1, finiteCount(this.maxRows, MAX_RENDERED_ROWS, 50000)); }
-  private get effectiveMaxBytes(): number { return Math.max(1, finiteCount(this.maxBytes, 26214400, 262144000)); }
+  private get effectiveMaxBytes(): number { return resolveMaxResourceBytes(this.maxBytes); }
 
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */
   @property() src = '';
@@ -759,7 +683,17 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private searchState: SearchState = EMPTY_SEARCH;
   private lastSearchLocale = '';
   private pendingSearchStateEvent = false;
-  private generation = 0;
+  private get generation(): number { return this.transport.generation; }
+  private readonly transport = new ViewerSourceController(this, {
+    load: (response, token) => this.readDocument(response, token),
+    onError: error => {
+      const failure = error instanceof ViewerSourceUrlNotAllowedError
+        ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+        : error;
+      this.xmlState = { kind: 'error', message: viewerFailureMessage(failure, this.localize.bind(this), () => this.localize(error instanceof XmlDoctypeError ? 'xmlViewerParseError' : 'documentPreviewFailedToLoad')) };
+      this.emit('lr-render-error', { error: failure });
+    },
+  });
   private explicitRefresh = 0;
   private highlightDeps?: unknown[];
   private treeMemo?: { deps: unknown[]; template: TemplateResult };
@@ -768,6 +702,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private cursorElements: (Element | undefined)[] = [];
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    // Feedback repaints must preserve the current provider and its clipboard request.
+    if (!args.length && this.copyFeedback && this.copyFeedback.state !== this.previousFeedback) {
+      this.previousFeedback = this.copyFeedback.state;
+      super.requestUpdate();
+      return;
+    }
     if (this._treeSource !== undefined && args[0] === undefined) { this.invalidateSourceSearch(); this.syncSource(true); }
     if (args[0] === undefined) this.explicitRefresh = (this.explicitRefresh ?? 0) + 1;
     super.requestUpdate(...args);
@@ -788,9 +728,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   private readonly announcements = new ViewerAnnouncementController(this);
-  @state() private copyFeedback: { key: string; status: 'success' | 'error' } | null = null;
+  private readonly copyFeedback = new KeyedCopyFeedback(this);
+  private previousFeedback: KeyedCopyFeedback['state'] = null;
   private copyGeneration = 0;
-  private copyTimer?: { owner: Window; handle: number; generation: number };
 
   /** `expandDepth`, normalized to a finite non-negative integer when set -- `undefined`
    *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
@@ -809,7 +749,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       this.sourceMode = true;
       this.treeMemo = undefined;
       if ((changed.has('maxNodes') || changed.has('maxBytes')) && this._xml !== undefined) this.parseInline(this._xml);
-      if (this.sourceSearchDirty) this.sourceSearchTask = this.searchSource();
+      this.sourceSearch.schedule();
       return;
     }
     this.sourceMode = false;
@@ -838,15 +778,21 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     super.updated(changed);
     if (this.treeSource !== undefined) {
       const source = this.treeSource;
-      const epoch = this.hierarchy.epoch;
       const binding = this.sourceBinding;
-      const owner = this.ownerDocument;
-      const current = () => this.isConnected && this.ownerDocument === owner && source === this.treeSource &&
-        epoch === this.hierarchy.epoch && binding === this.sourceBinding;
-      const error = this.hierarchy.error || this.hierarchy.rowError;
-      const message = error ? this.localize('treeSourceError') : this.hierarchy.loading ? this.localize('loading') : this.sourceSummary();
-      if (!current()) return;
-      this.announcements.transition('source', error ? 'error' : this.hierarchy.loading ? 'loading' : 'loaded', message);
+      const snapshot = captureHierarchySourceEffects(this, this.hierarchy,
+        () => source === this.treeSource && binding === this.sourceBinding);
+      const { current } = snapshot;
+      const error = snapshot.error || snapshot.rowError;
+      const message = applyHierarchySourceEffects({ ...snapshot, error }, {
+        errorText: () => this.localize('treeSourceError'),
+        loadingText: () => this.localize('loading'),
+        summary: () => this.sourceSummary(),
+        announce: text => { if (!error && !snapshot.loading) this.announcements.announcePolite(text); },
+        rowsTransition: (state, text) => this.announcements.transition('source-rows', state, text),
+      }, this.lastSourceStatus);
+      if (message === undefined) return;
+      this.lastSourceStatus = message;
+      if (!snapshot.rowError) this.announcements.transition('source', error ? 'error' : snapshot.loading ? 'loading' : 'loaded', message);
       if (!current()) return;
       if (error && this.sourceAnnouncement !== message) this.emit('lr-render-error', { error });
       if (current()) this.sourceAnnouncement = error ? message : undefined;
@@ -867,6 +813,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       this.pendingSearchStateEvent = false;
       this.emitSearchChange();
     }
+    if (this.isConnected && changed.has('xmlState') && this.xmlState.kind === 'loaded') this.emit('lr-load', {});
   }
 
   private readonly detached = new DeferredTeardown(() => this.releaseDetachedDocument());
@@ -875,6 +822,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     super.connectedCallback();
     this.announcements.connect();
     this.sourceBinding = undefined;
+    this.lastSourceStatus = undefined;
     this.requestUpdate('sourceReconnect', null);
     this.renderRoot.addEventListener('click', this.cancelSourceAnchor, true);
     this.renderRoot.addEventListener('keydown', this.cancelSourceAnchor, true);
@@ -890,7 +838,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private readonly cancelSourceAnchor = (): void => {
     if (this.treeSource === undefined) return;
     this.cancelPendingAnchor();
-    this.sourceNavigationIntent++;
+    this.sourceSearch.supersedeSteps();
     if (this.sourceAnchorTask) {
       this.sourceAnchorTask = undefined;
       this.hierarchy.cancelPending();
@@ -898,9 +846,10 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   };
 
   override disconnectedCallback(): void {
-    if (this.xmlState.kind === 'loading') this.generation++;
+    if (this.xmlState.kind === 'loading') this.transport.cancel();
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
+    this.lastSourceStatus = undefined;
     this.renderRoot.removeEventListener('click', this.cancelSourceAnchor, true);
     this.renderRoot.removeEventListener('keydown', this.cancelSourceAnchor, true);
     this.announcements.disconnect();
@@ -910,8 +859,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   private releaseDetachedDocument(): void {
-    this.generation++;
-    this.beginAbortableLoad();
+    this.transport.cancel();
     if (this._xml === undefined) this.xmlState = { kind: 'idle' };
   }
 
@@ -919,6 +867,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     super.adoptedCallback();
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
+    this.lastSourceStatus = undefined;
     this.hierarchy.adopted();
     this.detached.flush(); // a move into another document reloads there
     this.announcements.adopted();
@@ -926,7 +875,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   private parseInline(raw: string): void {
-    const generation = ++this.generation;
+    this.transport.cancel();
+    const generation = this.transport.generation;
     this.pendingSearchStateEvent ||= this.resetSearchForSourceReplacement();
     try {
       this.setDoc(parseXmlDocument(raw, this.ownerDocument, this.effectiveMaxBytes, this.effectiveMaxNodes), generation);
@@ -942,51 +892,19 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   private async loadFromSrc(): Promise<void> {
-    // Re-checked here (not just by updated()'s scheduling guard) -- this call is deferred via
-    // scheduleAfterUpdate(), so a synchronous `xml` assignment arriving after it was scheduled
-    // but before it actually runs must still win; otherwise this stale src-fetch attempt would
-    // overwrite the freshly-parsed inline document's `loaded` state back to `idle`.
     if (this.treeSource !== undefined || this._xml !== undefined) return;
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
     this.pendingSearchStateEvent ||= this.resetSearchForSourceReplacement();
-    if (!this.src) {
-      this.xmlState = { kind: 'idle' };
-      return;
-    }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.xmlState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
-    this.xmlState = { kind: 'loading' };
-    let response: Response | undefined;
-    try {
-      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const text = await readResponseText(response, this.effectiveMaxBytes);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      preflightXml(text, this.effectiveMaxBytes, this.effectiveMaxNodes);
-      await yieldViewerTask(this.ownerDocument.defaultView, () => !signal?.aborted && this.isConnected && generation === this.generation);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.setDoc(parseXmlDocument(text, this.ownerDocument, this.effectiveMaxBytes, this.effectiveMaxNodes, true), generation);
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.xmlState = {
-        kind: 'error',
-        message: error instanceof XmlDoctypeError
-          ? () => this.localize('xmlViewerParseError')
-          : isResourceLimitError(error)
-            ? () => this.localize('documentPreviewResourceTooLarge')
-            : () => this.localize('documentPreviewFailedToLoad'),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      discardBody(response);
-    }
+    this.xmlState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    await this.transport.begin(this.src);
+  }
+
+  private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const text = await this.transport.readText(response, this.effectiveMaxBytes);
+    if (this.transport.isStale(token)) return;
+    preflightXml(text, this.effectiveMaxBytes, this.effectiveMaxNodes);
+    await yieldViewerTask(this.ownerDocument.defaultView, () => !this.transport.isStale(token));
+    if (this.transport.isStale(token)) return;
+    this.setDoc(parseXmlDocument(text, this.ownerDocument, this.effectiveMaxBytes, this.effectiveMaxNodes, true), token.generation);
   }
 
   private resetSearchForSourceReplacement(): boolean {
@@ -1048,6 +966,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const locale = this.effectiveLocale;
     const boundedQuery = boundedViewerSearchQuery(this.searchQuery, locale);
     const query = boundedQuery.needle;
+    if (!query && !this.expandedOverrides.size && boundedQuery.accepted) return EMPTY_SEARCH;
     const budget = new ViewerSearchWorkBudget();
     const matches = new Set<string>();
     const tagMatches = new Set<string>();
@@ -1058,17 +977,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const ordered: string[] = [];
     let matchCountExact = boundedQuery.accepted;
 
-    const markAncestors = (path: PathSegment[]): void => {
-      for (let i = path.length - 1; i >= 0; i--) {
-        const key = JSON.stringify(path.slice(0, i));
-        if (forceExpand.has(key)) break;
-        forceExpand.add(key);
-      }
-    };
-
-    const walk = (el: Element, path: PathSegment[]): void => {
-      const pathKey = JSON.stringify(path);
-      paths.add(pathKey);
+    const ancestors: string[] = [];
+    const walk = (el: Element, pathKey: string): void => {
+      if (this.expandedOverrides.size) paths.add(pathKey);
       if (query && matchCountExact) {
         let hit = false;
         if (budget.includes(el.tagName, query, locale)) {
@@ -1109,14 +1020,21 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
             // Reveals the match itself, not just its ancestors -- a text match specifically is
             // gated behind its own element's expand state (see the SearchState.forceExpand doc).
             forceExpand.add(pathKey);
-            markAncestors(path);
+            for (let i = ancestors.length - 1; i >= 0; i--) {
+              const ancestor = ancestors[i]!;
+              if (forceExpand.has(ancestor)) break;
+              forceExpand.add(ancestor);
+            }
           }
         }
       }
-      elementChildren(el).forEach((child, i) => walk(child, [...path, i]));
+      ancestors.push(pathKey);
+      const prefix = pathKey === '[]' ? '[' : pathKey.slice(0, -1) + ',';
+      elementChildren(el).forEach((child, i) => walk(child, `${prefix}${i}]`));
+      ancestors.pop();
     };
 
-    if (doc.documentElement) walk(doc.documentElement, []);
+    if (doc.documentElement) walk(doc.documentElement, '[]');
     return { matches, tagMatches, attrMatches, textMatches, forceExpand, paths, ordered, matchCountExact };
   }
 
@@ -1255,10 +1173,10 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       this.searchQuery = query;
       this.invalidateSourceSearch();
       this.syncSource();
-      const intent = this.sourceSearchIntent;
+      const intent = this.sourceSearch.generation;
       this.requestUpdate('sourceSearchIntent', null);
       await this.updateComplete;
-      return intent === this.sourceSearchIntent ? this.sourceSearchTask : 0;
+      return intent === this.sourceSearch.generation ? this.sourceSearch.task : 0;
     }
     this.searchQuery = query;
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;
@@ -1274,7 +1192,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
    *  `LyraTextViewerTarget` search contract declares, so a find-in-page host can drive every
    *  searchable component through one typed surface. */
   async searchNext(): Promise<boolean> {
-    if (this.treeSource !== undefined) return this.stepSourceSearch(1);
+    if (this.treeSource !== undefined) return this.sourceSearch.step(1);
     if (!this.searchState.ordered.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchState.ordered.length;
     this.emitSearchChange();
@@ -1285,7 +1203,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
    *  active match moved, `false` when there are no matches. */
   async searchPrevious(): Promise<boolean> {
-    if (this.treeSource !== undefined) return this.stepSourceSearch(-1);
+    if (this.treeSource !== undefined) return this.sourceSearch.step(-1);
     if (!this.searchState.ordered.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchState.ordered.length) % this.searchState.ordered.length;
     this.emitSearchChange();
@@ -1332,8 +1250,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private emitSearchChange(): void {
     this.emit('lr-search-change', {
       query: this.searchQuery,
-      matchCount: this.treeSource !== undefined ? this.sourceHitKeys.size : this.searchState.ordered.length,
-      matchCountExact: this.treeSource !== undefined ? this.sourceSearchExact : this.searchState.matchCountExact,
+      matchCount: this.treeSource !== undefined ? this.sourceSearch.count : this.searchState.ordered.length,
+      matchCountExact: this.treeSource !== undefined ? this.sourceSearch.exact : this.searchState.matchCountExact,
       activeIndex: this.activeSearchIndex,
     });
   }
@@ -1353,48 +1271,16 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     return true;
   }
 
-  private cancelCopyTimer(): void {
-    const timer = this.copyTimer;
-    this.copyTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
-  }
-
   private resetCopyFeedback(): void {
     this.copyGeneration++;
-    this.cancelCopyTimer();
-    this.copyFeedback = null;
-  }
-
-  private showCopyFeedback(
-    key: string,
-    status: 'success' | 'error',
-    generation: number,
-    owner: Window,
-  ): void {
-    this.copyFeedback = { key, status };
-    this.cancelCopyTimer();
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.copyTimer?.owner !== owner
-        || this.copyTimer.handle !== handle
-        || this.copyTimer.generation !== generation
-        || generation !== this.copyGeneration
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== owner
-      ) return;
-      this.copyTimer = undefined;
-      this.copyFeedback = null;
-    }, COPY_FEEDBACK_MS);
-    this.copyTimer = { owner, handle, generation };
+    this.copyFeedback.clear();
   }
 
   private async copyText(text: string, key: string): Promise<void> {
     if (this.treeSource !== undefined) return;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const generation = ++this.copyGeneration;
-    this.cancelCopyTimer();
-    this.copyFeedback = null;
+    this.copyFeedback.clear();
     const outcome = await writeClipboardText(owner, text);
     if (
       !owner
@@ -1403,11 +1289,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       || this.ownerDocument.defaultView !== owner
     ) return;
     if (outcome.ok) {
-      this.showCopyFeedback(key, 'success', generation, owner);
+      this.copyFeedback.show(key, true);
       this.emit('lr-copy', outcome);
       return;
     }
-    this.showCopyFeedback(key, 'error', generation, owner);
+    this.copyFeedback.show(key, false);
     const { src, xml } = this;
     this.emit('lr-error');
     if (this.isConnected && generation === this.copyGeneration && this.ownerDocument.defaultView === owner
@@ -1429,12 +1315,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   private copyButtonLabel(key: string, rest: string): string {
-    const feedback = this.copyFeedback?.key === key ? this.copyFeedback.status : undefined;
-    return feedback === 'success'
-      ? this.localize('copied')
-      : feedback === 'error'
-        ? this.localize('copyFailed')
-        : rest;
+    const feedback = this.copyFeedback.for(key);
+    return feedback ? this.localize(feedback.ok ? 'copied' : 'copyFailed') : rest;
   }
 
   private renderCopyButton(
@@ -1577,7 +1459,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   private renderLoadedTree(doc: Document): TemplateResult {
     const deps = [doc, this.searchState, this.expandedOverrides, this.expandDepth, this.copyable,
-      this.copyFeedback, this.renderedHighlights, this.activeHighlightId, this.strings,
+      this.copyFeedback.state, this.renderedHighlights, this.activeHighlightId, this.strings,
       this.effectiveLocale, lyraLocaleCatalogVersion(this.effectiveLocale), this.explicitRefresh, this.effectiveMaxRows];
     if (this.treeMemo && deps.every((value, index) => value === this.treeMemo!.deps[index])) return this.treeMemo.template;
     this.nodeElements.clear();

@@ -21,6 +21,8 @@ to a diff view.
 An expanded commit renders its first 500 files and shows `[part="limit"]` when more exist;
 the diffstat and fold count still reflect the full file list.
 
+The file rows share one Tab stop. ArrowUp, ArrowDown, Home and End move between files.
+
 Removing the `message` attribute clears the displayed subject and body; the property retains the
 normal `null` readback of a removed string attribute.
 

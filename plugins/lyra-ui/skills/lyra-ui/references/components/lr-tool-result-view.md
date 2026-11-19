@@ -62,7 +62,8 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 **Events:** `lr-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lr-json-viewer>`, whether because no renderer matched, a candidate
 renderer's `matches()` predicate threw during dispatch, a renderer's `load()` rejected, or its
-`render()` threw.
+`render()` threw. `lr-status-change` (`detail: { status: ToolStatus }`) reports a committed
+status change with its normalized status.
 
 **Slots:** none.
 

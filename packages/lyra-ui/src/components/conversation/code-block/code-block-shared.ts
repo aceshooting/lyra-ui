@@ -3,7 +3,7 @@ import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../int
 import { RecordCopyFeedback, type CopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
-import { SHIKI_SOURCE_MAX_CODE_UNITS } from './shiki-types.js';
+import { highlightToHtml } from '../../../internal/shiki/tokenize.js';
 /**
  * Everything `<lr-code-block>` and `<lr-code-block-core>` render and compute identically:
  * localized label helpers, line addressing (`highlight-lines`/`highlights` parsing, line counting,
@@ -31,13 +31,10 @@ import { chevronIcon, copyIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import {
-  boundedSelectionRects,
-  boundedSelectionText,
-} from '../../../internal/text-selection.js';
+import { observeTextSelection } from '../../../internal/text-selection-observer.js';
+import { ref } from 'lit/directives/ref.js';
 import {
   normalizeShikiLanguage,
-  SHIKI_THEMES,
   type ShikiHighlighterCore,
 } from './shiki-types.js';
 import type { ShikiTransformer } from './shiki-types.js';
@@ -336,52 +333,7 @@ interface CodeBlockSelection {
   readonly rects: readonly TextSelectRect[];
 }
 
-/** Anchors the current selection to the `line-range` it spans. `null` whenever there's nothing to
- *  report: no selection, a collapsed/whitespace-only one, or endpoints outside any `[data-line]`. */
-function codeBlockSelectionAnchor(
-  shadowRoot: ShadowRoot | null
-): CodeBlockSelection | null {
-  if (!shadowRoot) return null;
-  const ownerDocument = shadowRoot.ownerDocument;
-  const globalSelection = ownerDocument.defaultView?.getSelection() as
-    | (Selection & {
-        getComposedRanges?: (options: {
-          shadowRoots: ShadowRoot[];
-        }) => StaticRange[];
-      })
-    | null
-    | undefined;
-  let range: Range | null = null;
-  // WebKit and Chromium retarget a native shadow-tree selection's legacy Range to the document
-  // boundary. The composed-range API preserves the real endpoints; Firefox's legacy Range remains
-  // the fallback, as does Chromium's non-standard ShadowRoot.getSelection().
-  if (globalSelection?.getComposedRanges) {
-    const [composed] = globalSelection.getComposedRanges({
-      shadowRoots: [shadowRoot],
-    });
-    if (
-      composed &&
-      (composed.startContainer !== composed.endContainer ||
-        composed.startOffset !== composed.endOffset)
-    ) {
-      range = ownerDocument.createRange();
-      range.setStart(composed.startContainer, composed.startOffset);
-      range.setEnd(composed.endContainer, composed.endOffset);
-    }
-  }
-  // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib.
-  const shadowSelection = (
-    shadowRoot as unknown as { getSelection?: () => Selection | null }
-  ).getSelection?.();
-  const selection = shadowSelection ?? globalSelection;
-  if (!range) {
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0)
-      return null;
-    range = selection.getRangeAt(0);
-  }
-  if (!shadowRoot.contains(range.commonAncestorContainer)) return null;
-  const text = boundedSelectionText(range);
-  if (!text) return null;
+function codeBlockLineAnchor(range: Range): LyraAnchor | null {
   const lineOf = (node: Node): number | null => {
     const el =
       node.nodeType === Node.ELEMENT_NODE
@@ -394,15 +346,7 @@ function codeBlockSelectionAnchor(
   const start = lineOf(range.startContainer);
   const end = lineOf(range.endContainer);
   if (start === null || end === null) return null;
-  return {
-    text,
-    anchor: {
-      kind: 'line-range',
-      start: Math.min(start, end),
-      end: Math.max(start, end),
-    },
-    rects: boundedSelectionRects(range),
-  };
+  return { kind: 'line-range', start: Math.min(start, end), end: Math.max(start, end) };
 }
 
 /** Every property whose change invalidates the cached `highlightedHtml`. */
@@ -470,17 +414,7 @@ export function tokenizeCodeBlock(
   hl: ShikiHighlighterCore,
   options: CodeBlockTokenizeOptions
 ): string | null {
-  if (options.code.length > SHIKI_SOURCE_MAX_CODE_UNITS) return null;
-  try {
-    const markup = hl.codeToHtml(options.code, {
-      lang: options.lang,
-      themes: SHIKI_THEMES,
-      transformers: [codeBlockLineTransformer(options)],
-    });
-    return typeof markup === 'string' ? markup : null;
-  } catch {
-    return null;
-  }
+  return highlightToHtml(hl, options.code, options.lang, [codeBlockLineTransformer(options)]);
 }
 
 export function parseHighlightLines(
@@ -802,7 +736,7 @@ export interface CodeBlockShellOptions {
   renderPlainCode: () => TemplateResult;
   onToggle: () => void;
   onCopy: () => void;
-  onBodyMouseUp: (e: MouseEvent) => void;
+  bindSelectionBody: (body: Element | undefined) => void;
   onBodyClick: (e: MouseEvent) => void;
   onBodyKeyDown: (e: KeyboardEvent) => void;
   onBodyFocusIn: (e: FocusEvent) => void;
@@ -870,7 +804,7 @@ export function renderCodeBlockShell(
           const safeMaxHeight = sanitizeCssLength(options.maxHeight);
           return safeMaxHeight ? styleMap({ '--lr-code-block-max-height': safeMaxHeight }) : nothing;
         })()}
-          @mouseup=${options.onBodyMouseUp}
+          ${ref(options.bindSelectionBody)}
           @click=${options.onBodyClick}
           @keydown=${options.onBodyKeyDown}
           @focusin=${options.onBodyFocusIn}
@@ -1039,11 +973,14 @@ export class CodeBlockInteractionController {
     if (line !== null) this.setFocusedLine(line);
   };
 
-  /** Anchors a text selection ending inside `[part="body"]` to the `line-range` it spans, so a
-   *  host can persist or otherwise act on it. Fires nothing when there's no active selection. */
-  onBodyMouseUp = (): void => {
-    const selection = codeBlockSelectionAnchor(this.options.host.shadowRoot);
-    if (selection) this.options.emitTextSelect(selection);
+  private releaseSelection?: () => void;
+
+  readonly bindSelectionBody = (body: Element | undefined): void => {
+    this.releaseSelection?.();
+    this.releaseSelection = body && observeTextSelection(this.options.host, body, (range, text, rects) => {
+      const anchor = codeBlockLineAnchor(range);
+      if (anchor) this.options.emitTextSelect({ text, anchor, rects });
+    }, undefined, { mouseup: true, legacyFallback: true });
   };
 
 }

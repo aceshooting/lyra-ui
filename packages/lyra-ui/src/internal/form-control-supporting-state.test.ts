@@ -20,6 +20,14 @@ describe('formControlSupportingState', () => {
     expect(state).to.deep.include({ hasHint: true, hasError: false, hintId: 'p-hint', errorId: 'p-error', describedBy: 'p-hint x' });
     expect(formControlSupportingState({ idPrefix: 'p', presence: presence(), withHint: true }).hasHint).to.equal(true);
   });
+
+  it('ignores a help-text slot the control does not render when helpTextSlot is false', () => {
+    const base = { idPrefix: 'p', presence: presence('help-text') };
+    expect(formControlSupportingState({ ...base, helpTextSlot: false })).to.deep.include({ hasHint: false, describedBy: undefined });
+    expect(formControlSupportingState({ ...base, helpTextSlot: true }).describedBy).to.equal('p-hint');
+    expect(formControlSupportingState({ ...base, presence: presence('help-text', 'hint'), helpTextSlot: false }).hasHint).to.equal(true);
+    expect(formControlSupportingState({ ...base, helpText: 'Help', helpTextSlot: false }).hasHint).to.equal(true);
+  });
 });
 
 describe('FormControlController.reportValidity', () => {

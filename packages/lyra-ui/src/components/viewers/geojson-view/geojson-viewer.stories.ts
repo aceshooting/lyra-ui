@@ -27,7 +27,7 @@ const narrowSample = {
 const narrowSrc = `data:application/geo+json,${encodeURIComponent(JSON.stringify(narrowSample))}`;
 
 export const Default: Story = {
-  render: () => html`<lr-geojson-viewer src=${src} name="zones.geojson"></lr-geojson-viewer>`,
+  render: () => html`<lr-geojson-viewer @lr-viewer-diagnostic=${(event: CustomEvent) => console.warn('Viewer diagnostic', event.detail.diagnostic)} src=${src} name="zones.geojson"></lr-geojson-viewer>`,
 };
 
 export const Empty: Story = { render: () => html`<lr-geojson-viewer></lr-geojson-viewer>` };

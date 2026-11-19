@@ -1,8 +1,8 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
-import { PreviewDisclosureController } from '../../../internal/preview-disclosure-controller.js';
+import { createPreviewDisclosure } from '../../../internal/preview-disclosure-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -211,39 +211,17 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // A rendered slot is never empty because the slot node itself is present;
   // the shared controller also counts bare, non-whitespace text content.
   private readonly slotPresence = new SlotPresenceController(this);
-  private readonly preview = (() => {
-    const preview = new PreviewDisclosureController({
-      host: this,
-      button: () => this.buttonEl,
-      panel: () => this.popoverEl,
-      hasContent: () => this.hasPreviewSlot,
-      isOpen: () => this.popoverOpen,
-      setOpen: (open) => { this.popoverOpen = open; },
-      hideDelayMs: HIDE_DELAY_MS,
-    });
-    // Slot presence refreshes first, then an empty open preview closes before render.
-    this.addController({ hostUpdate: () => preview.ensureContent() });
-    return preview;
-  })();
+  private readonly preview = createPreviewDisclosure(this, {
+    button: () => this.buttonEl,
+    panel: () => this.popoverEl,
+    hasContent: () => this.hasPreviewSlot,
+    isOpen: () => this.popoverOpen,
+    setOpen: (open) => { this.popoverOpen = open; },
+    hideDelayMs: HIDE_DELAY_MS,
+  });
 
   private get hasPreviewSlot(): boolean {
     return this.slotPresence.has();
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (changed.has('popoverOpen')) this.preview.syncOpen();
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.preview.disconnect();
-    // Reset transient state so reconnecting a reparented or virtualized element re-arms its
-    // positioner and does not preserve stale hover/keyboard-focus ownership.
   }
 
   private get accessibleLabel(): string {
@@ -266,12 +244,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    // Space normally activates a <button> the same as Enter, but this
-    // component gives the two keys distinct meanings (Enter = activate,
-    // Space = open) — so Space's native click-on-keyup must be preempted
-    // here (preventDefault on keydown suppresses it) rather than left to
-    // fire alongside this. Enter deliberately gets no such handling: its
-    // native immediate click already reaches onClick below.
+    // Suppress the native click because Space opens the source without activating the badge.
     if (e.key === ' ' && !shouldIgnoreActivationKey(e) && e.target === this.buttonEl) {
       e.preventDefault();
       this.emitOpen();

@@ -155,6 +155,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Zavrti v desno',
   modelViewerRotateUp: 'Zavrti navzgor',
   modelViewerRotateDown: 'Zavrti navzdol',
+  modelViewerViewport: 'Interaktivni model',
 };
 
 registerLyraLocale('sl', strings);

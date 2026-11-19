@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'چرخش به راست',
   modelViewerRotateUp: 'چرخش به بالا',
   modelViewerRotateDown: 'چرخش به پایین',
+  modelViewerViewport: 'مدل تعاملی',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

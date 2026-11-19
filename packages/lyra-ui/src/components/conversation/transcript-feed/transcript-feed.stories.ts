@@ -153,3 +153,7 @@ export const Narrow320: Story = {
 export const RetainedTail: Story = {
   render: () => html`<lr-transcript-feed .entries=${Array.from({length:10001}, (_, i) => ({id:`caption-${i}`, text:`Caption ${i + 1}`}))}></lr-transcript-feed>`,
 };
+
+export const WindowedCaptions: Story = {
+  render: () => html`<lr-transcript-feed max-rendered-entries="2" .entries=${entries}></lr-transcript-feed>`,
+};

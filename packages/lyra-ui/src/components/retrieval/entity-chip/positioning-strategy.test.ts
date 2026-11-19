@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import './entity-chip.js';
 import type { LyraEntityChip } from './entity-chip.js';
 
@@ -9,6 +10,7 @@ function popover(el: LyraEntityChip): HTMLElement {
 }
 
 async function openPopover(wrapper: HTMLElement): Promise<LyraEntityChip> {
+  await loadAnchoredOverlayRuntime();
   const el = wrapper.querySelector('lr-entity-chip') as LyraEntityChip;
   // The subject is positioning, not focus modality, so the ungated hover path opens it.
   (el.shadowRoot!.querySelector('.wrapper') as HTMLElement).dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));

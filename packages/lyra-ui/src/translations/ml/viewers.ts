@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'വലത്തേക്ക് തിരിക്കുക',
   modelViewerRotateUp: 'മുകളിലേക്ക് തിരിക്കുക',
   modelViewerRotateDown: 'താഴേക്ക് തിരിക്കുക',
+  modelViewerViewport: 'ഇന്ററാക്ടീവ് മോഡൽ',
 };
 
 registerLyraLocale('ml', strings);

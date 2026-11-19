@@ -99,7 +99,7 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
+**Events:** User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
 `badInput`, including after blur. Erasing its last visible segment commits the empty value and
 fires `change` once. Entering a complete time also fires `change`.
 The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.

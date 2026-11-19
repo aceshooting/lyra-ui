@@ -42,3 +42,7 @@ export const Narrow320px: Story = {
     </div>
   `,
 };
+
+export const Disabled: Story = {
+  render: () => html`<lr-branch-picker disabled index="1" count="3"></lr-branch-picker>`,
+};

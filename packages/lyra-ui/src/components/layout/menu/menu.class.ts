@@ -22,7 +22,8 @@ import { collectInitialSlotAssignment } from '../../../internal/initial-slot-col
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
+import { resolveAccessibleTrigger } from '../../../internal/accessible-trigger.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import {
   collectFocusableElements,

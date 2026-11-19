@@ -149,6 +149,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Tụgharịa aka nri',
   modelViewerRotateUp: 'Tụgharịa n’elu',
   modelViewerRotateDown: 'Tụgharịa n’ala',
+  modelViewerViewport: 'Ụdị ị nwere ike ijikwa',
 };
 
 registerLyraLocale('ig', strings);

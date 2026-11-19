@@ -449,19 +449,12 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           this.overlay?.deactivate();
           this.overlay = undefined;
         }, () => !this.open);
-        // Otherwise a long-lived instance reopens still showing whatever
-        // search filter/collapsed-category state the previous session left
-        // behind, rather than the fresh, unfiltered list a reopen implies.
         this.query = '';
         this.renderedToolLimit = MAX_RENDERED_TOOLS;
       }
     }
   }
 
-  // Runs after render (not willUpdate) so [part="panel"] and its contents
-  // have already landed in the DOM before the focus call below can rely on
-  // them -- mirrors lr-dialog's/lr-tool-result-dialog's identical
-  // ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncBodyRegion(changed.has('tools') || changed.has('query') || changed.has('renderedToolLimit'));
@@ -483,19 +476,11 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated && this.open) {
-      this.modalSurface.prepare();
-      this.requestUpdate();
-      this.activateOverlay();
-      // The shadow panel survives a same-document reparent, so restore focus before the pending
-      // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
-      this.overlay?.focusInitial();
-      this.scheduleAfterUpdate(() => {
-        if (!this.open) return;
-        this.modalSurface.show();
-        this.overlay?.focusInitial();
-      }, 'modal-reconnect');
-    }
+    this.modalSurface.reconnect({
+      isOpen: () => this.open,
+      overlay: () => this.overlay,
+      activate: () => this.activateOverlay(),
+    });
   }
 
   override disconnectedCallback(): void {
@@ -513,7 +498,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   /** Keeps the capped, scrolling body keyboard-scrollable (and named) only while it overflows. */
   private syncBodyRegion(rearm = false): void {
-    const body = this.open ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
+    const body = this.open && this.isConnected
+      ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
     const name = body ? resolveAccessibleName(this, this.accessibleLabel, this.label, this.localize('selectTools')) : undefined;
     if (!rearm && body === this.bodyRegionEl && name === this.bodyRegionName) return;
     this.disposeBodyRegion?.();

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-toggle` since `unreleased`; use event `@lr-retrieval-disclosure-change`; removal not before `33.0.0` — The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration.
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -54,8 +54,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
 Short-term Add and Remove actions share one Tab stop. Inline arrows switch between the two actions,
 and Up/Down and Home/End move between rows within the current column. Long-term Remove actions share
 one Tab stop and use the same row keys. Expand buttons remain reachable by Tab.
-The Add button's accessible name begins with the visible `memoryPanelAdd` label and includes the
-item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{label}`.
+A sole promotion button uses the visible `memoryPanelAdd` label as its accessible name. When
+several promotion buttons are present, each name starts with that label and includes the item's
+text. Repeated or visually blank text adds a row number using `memoryPanelAddPosition` with
+`{index}`. `memoryPanelAddWithContext` with `{label}` continues to supply the accessible
+description. Scope exact-name queries to the memory row or match the full action-plus-item name.
 
 **Events:**
 
@@ -65,14 +68,21 @@ item text. The `memoryPanelAddAccessibleName` message receives `{action}` and `{
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-toggle` carries `{ kind: 'memory', expanded, itemId, memoryId, scope }` for a memory item's
-  own disclosure. Nested provenance toggles retain their `kind` and `section` and add the owning
-  `memoryId` and `scope`.
+- `lr-retrieval-disclosure-change` bubbles from the memory panel with readonly `kind`, `expanded`,
+  `memoryId` and `scope`. A nested provenance disclosure includes `section`, plus `chunkId` when
+  `kind` is `'chunk'`. Migrate from `lr-toggle` by narrowing on `detail.kind` and reading
+  `memoryId` and `scope` for the owning row.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
+
+```ts
+memoryPanel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
+  if (detail.kind === 'chunk') console.log(detail.scope, detail.memoryId, detail.chunkId);
+});
+```
 
 **Slots:** none.
 

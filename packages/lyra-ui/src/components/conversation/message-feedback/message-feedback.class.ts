@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
@@ -163,13 +164,12 @@ function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
       idDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
       labelDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       labelDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof idDescriptor.value !== 'string' ||
-      typeof labelDescriptor.value !== 'string'
+      typeof idDescriptor.value !== 'string'
     )
       continue;
     const id = idDescriptor.value;
-    const label = labelDescriptor.value;
-    if (id.trim().length === 0 || seen.has(id)) continue;
+    const label = normalizeLabel(labelDescriptor.value);
+    if (!label || id.trim().length === 0 || seen.has(id)) continue;
     seen.add(id);
     reasons.push(Object.freeze({ id, label }));
   }
@@ -517,8 +517,17 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     }
   }
 
+  private chipRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.chipRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (this.detailReasons.length) this.chipRegistration ??= import('../../overlays/chip/chip.js');
     if (changed.has('disabled') || changed.has('pending')) {
       this.emit('lr-toolbar-actions-change');
     }

@@ -3,7 +3,6 @@ import { state } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import {
   DocumentAnchorTarget,
-  prioritizedHighlightCandidates,
   type LyraAnchorTarget,
   type DocumentAnchorTargetHooks,
   type LyraAnchorTargetEventMap,
@@ -16,7 +15,6 @@ import {
   rangesFromTextQuoteMatches,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
-  TEXT_QUOTE_PAINT_LIMIT,
   type TextQuoteIndex,
   type TextQuoteMatch,
   type TextQuoteMatches,
@@ -24,6 +22,8 @@ import {
 } from './text-quote.js';
 import {
   acquireHighlightHandle,
+  paintHighlightTones,
+  resolveHighlightRanges,
   supportsCustomHighlights,
   type HighlightHandle,
 } from './text-highlights.js';
@@ -87,9 +87,6 @@ export type { TextViewerTargetHooks };
  *  bounds painting independently of the quote engine's 10,000 retained-match ceiling;
  *  `matchCountExact=false` makes a capped `matchCount` an explicit lower bound. */
 const SEARCH_PAINT_WINDOW = 200;
-/** Host-supplied text quotes painted at once. The active quote is always retained inside the cap. */
-const HIGHLIGHT_PAINT_LIMIT = TEXT_QUOTE_PAINT_LIMIT;
-
 function boundedFragmentTarget(root: Element, id: string): Element | null {
   if (root.id === id) return root;
   const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
@@ -106,15 +103,18 @@ export function TextViewerTarget<
   T extends InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
 >(
   Base: T,
+  highlightPart?: string,
 ): T & InternalMixinConstructor<LyraTextViewerTarget & TextViewerTargetHooks & { renderAnchorLiveRegion(): unknown }>;
 /** Public, declaration-safe mixin signature. */
 export function TextViewerTarget<
   T extends PublicConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
 >(
   Base: T,
+  highlightPart?: string,
 ): MixedConstructor<T, LyraTextViewerTarget & TextViewerTargetHooks & { renderAnchorLiveRegion(): unknown }>;
 export function TextViewerTarget(
   Base: InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
+  highlightPart?: string,
 ): InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap> & LyraTextViewerTarget & {
   renderAnchorLiveRegion(): unknown;
 }> {
@@ -572,7 +572,7 @@ export function TextViewerTarget(
         this.searchHandle = undefined;
         return;
       }
-      this.searchHandle ??= acquireHighlightHandle(this, this.ownerDocument);
+      this.searchHandle ??= acquireHighlightHandle(this, this.ownerDocument, { part: highlightPart });
       if (
         this.lastPaintRoot === root &&
         this.lastPaintMappingGeneration === this.observedNodeMappingGeneration &&
@@ -582,55 +582,18 @@ export function TextViewerTarget(
         this.lastPaintSearchActiveIndex === this.searchActiveIndex &&
         this.lastPaintHandle === this.searchHandle
       ) return;
-      const rangesByTone = new Map<LyraHighlightTone, Range[]>();
-      const add = (tone: LyraHighlightTone, range: Range | null): void => {
-        if (!range) return;
-        const ranges = rangesByTone.get(tone) ?? [];
-        ranges.push(range);
-        rangesByTone.set(tone, ranges);
-      };
-      type TextHighlight = Omit<LyraHighlight, 'anchor'> & {
-        anchor: Extract<LyraAnchor, { kind: 'text-quote' }>;
-      };
-      const isTextHighlight = (highlight: LyraHighlight): highlight is TextHighlight =>
-        highlight.anchor.kind === 'text-quote';
-      const highlightsToPaint: TextHighlight[] = [];
-      let activeHighlight: TextHighlight | undefined;
-      for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
-        if (!isTextHighlight(highlight)) continue;
-        highlightsToPaint.push(highlight);
-        if (highlight.id === this.activeHighlightId) activeHighlight = highlight;
-      }
-
       const searchGenerationIsCurrent = this.lastSearchGeneration === this.observedContentGeneration;
-      const needsScope = highlightsToPaint.length > 0 ||
-        (searchGenerationIsCurrent && this.searchMatches.length > 0);
-      const index = needsScope ? this.cachedTextIndex(root) : null;
-      const highlightBudget = index?.createWorkBudget();
-      let activeHostRange: Range | null = null;
-      const resolvedHighlights: Array<{ highlight: TextHighlight; match: TextQuoteMatch }> = [];
-      for (const highlight of highlightsToPaint) {
-        if (resolvedHighlights.length >= HIGHLIGHT_PAINT_LIMIT) break;
-        const match = index?.resolve(highlight.anchor, highlightBudget);
-        if (match) resolvedHighlights.push({ highlight, match });
-      }
-      const highlightRanges = index
-        ? rangesFromTextQuoteMatches(index.scope, resolvedHighlights.map(({ match }) => match))
-        : [];
-      let highlighted = 0;
-      for (let position = 0; position < resolvedHighlights.length; position++) {
-        const { highlight } = resolvedHighlights[position]!;
-        const range = highlightRanges[position] ?? null;
-        add(highlight.tone ?? 'accent', range);
-        if (range) highlighted++;
-        if (highlight === activeHighlight) activeHostRange = range;
-      }
-      this.highlightedRangeCount = highlighted;
+      const hasTextHighlight = this.highlights.some(highlight => highlight.anchor.kind === 'text-quote');
+      const resolved = hasTextHighlight
+        ? resolveHighlightRanges(this.cachedTextIndex(root), this.highlights, this.activeHighlightId)
+        : { ranges: [], active: null };
+      const ranges: Array<{ tone: LyraHighlightTone; range: Range }> = [...resolved.ranges];
+      this.highlightedRangeCount = ranges.length;
       // Materialize only a bounded window around the active match. Everything outside it is off
       // screen by construction (the viewport can't show 800 matches at once), and each Range
       // handed to the Highlight API is retained live for as long as it is painted.
       const scope = searchGenerationIsCurrent && this.searchMatches.length > 0
-        ? (index?.scope ?? this.cachedTextScope(root))
+        ? this.cachedTextScope(root)
         : null;
       let painted = 0;
       let activeSearchRange: Range | null = null;
@@ -641,16 +604,14 @@ export function TextViewerTarget(
           const { index: matchIndex } = window[position]!;
           const range = searchRanges[position] ?? null;
           if (range) {
-            add('accent', range);
+            ranges.push({ tone: 'accent', range });
             painted++;
             if (matchIndex === this.searchActiveIndex) activeSearchRange = range;
           }
         }
       }
       this.paintedRangeCount = painted;
-      const tones: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
-      for (const tone of tones) this.searchHandle.setRanges(tone, rangesByTone.get(tone) ?? []);
-      this.searchHandle.setActive(activeHostRange ?? activeSearchRange);
+      paintHighlightTones(this.searchHandle, ranges, resolved.active ?? activeSearchRange);
       this.discardFallbackNodeCache();
       this.lastPaintRoot = root;
       this.lastPaintMappingGeneration = this.observedNodeMappingGeneration;

@@ -243,8 +243,6 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 
 The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
 
-A dismissal emits cancelable `lr-hide`, then cancelable `lr-close-request`. The committed `lr-close` and the request carry `detail.reason` as `close-button`, `timeout`, or `programmatic`.
-
 A single notification.
 
 **Properties:**
@@ -260,7 +258,9 @@ A single notification.
 DOM. `toastItemElement: HTMLElement | null` exposes the live `[part="toast-item"]` surface (or
 `null` before rendering) and remains the same node across ordinary updates/reconnection.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-show` and `lr-hide` are the
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`, `lr-close-request`, and `lr-close`. A dismissal emits cancelable `lr-hide` followed by cancelable `lr-close-request`.
+Both close events carry `detail.reason` (`close-button`, `timeout` or `programmatic`).
+`lr-show` and `lr-hide` are the
 cancelable before-transition veto points. The item stays hidden and inert throughout `lr-show`;
 vetoing its initial request releases it from the region without an after-event or timer. Re-entering
 the same show/hide request from its own before-event coalesces onto that request, so the outer veto
@@ -2910,8 +2910,9 @@ stale observations from its previous stack cannot change its active/queued state
 disconnect discards managed work, so reconnecting that old region cannot resurrect an already-settled
 alert toast.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
-detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide`, `lr-close-request`, and `lr-close`. A dismissal emits cancelable `lr-hide` followed by cancelable `lr-close-request`.
+Both close events carry `detail.reason` (`close-button`, `timeout` or `programmatic`).
+The transition events bubble and compose with empty detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
 noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
 When an accepted hide removes the focused close action, focus moves to the nearest available
 composed action. A veto keeps focus in place, and a listener-selected external destination wins.

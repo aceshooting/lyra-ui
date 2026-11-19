@@ -11,9 +11,7 @@
 // codemod, the deprecated alias metadata and the generated migration reference from drifting apart.
 // Already removed events use retiredEvents instead: the coverage gate checks published policy
 // history separately, while this module validates their absence and current replacement surface.
-//
-// This module is copied beside migrate-wa.mjs into dist/cli, so it stays dependency-free and never
-// reads the filesystem itself.
+
 
 const LYRA_RENAME_LEDGER_SCHEMA_VERSION = 1;
 

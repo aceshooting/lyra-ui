@@ -16,6 +16,8 @@
 
 ## `lr-calendar-viewer`
 
+`max-events` limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
 remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
@@ -39,6 +41,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Events:**
 
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
@@ -65,6 +68,4 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
-capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
-the DOM so search, selection and text-quote anchors remain truthful without the former 10,000-event
-eager tree.
+bounded by `max-events` and 2 MiB of rendered event text. Search, selection and text-quote anchors cover every accepted event.

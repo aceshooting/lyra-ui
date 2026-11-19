@@ -34,3 +34,13 @@ describe('lr-csv-viewer max-height', () => {
     if (body) expect(body.scrollHeight).to.be.at.most(body.clientHeight + 1);
   });
 });
+
+it('isolates cell and heading text in RTL tables', async () => {
+  const el = await mount(2, '20rem');
+  el.dir = 'rtl';
+  const list = el.shadowRoot!.querySelector('[part="rows"]')!;
+  const header = el.shadowRoot!.querySelector('[role="columnheader"] bdi');
+  const cell = list.shadowRoot!.querySelector('[role="cell"] bdi');
+  expect(header?.getAttribute('dir')).to.equal('auto');
+  expect(cell?.getAttribute('dir')).to.equal('auto');
+});

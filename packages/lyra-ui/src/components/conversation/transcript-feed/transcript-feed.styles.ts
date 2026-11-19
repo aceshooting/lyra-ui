@@ -23,7 +23,7 @@ export const styles = [
     }
     [part='base']:focus-visible {
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-      outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+      outline-offset: calc(-1 * max(var(--lr-focus-ring-offset), var(--lr-focus-ring-width)));
     }
     [part='log'],
     [part='interim-area'] {
@@ -93,25 +93,32 @@ export const styles = [
       position: absolute;
       inset-block-end: var(--lr-space-s);
       inset-inline-end: var(--lr-space-s);
+      max-inline-size: calc(100% - 2 * var(--lr-space-s));
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       padding: var(--lr-space-2xs) var(--lr-space-s);
       ${iconHitTarget}
-      border: var(--lr-border-width-thin) solid var(--lr-color-border);
-      border-radius: var(--lr-radius-pill);
-      background: var(--lr-color-surface);
-      color: var(--lr-color-text);
+      border: var(--lr-transcript-feed-jump-border, var(--lr-border-width-thin) solid var(--lr-color-border));
+      border-radius: var(--lr-transcript-feed-jump-radius, var(--lr-radius-pill));
+      background: var(--lr-transcript-feed-jump-bg, var(--lr-color-surface));
+      color: var(--lr-transcript-feed-jump-color, var(--lr-color-text));
       cursor: pointer;
       /* Overlay step, matching lr-chat-viewport's jump pill: it floats over the feed, not in it. */
-      box-shadow: var(--lr-shadow-m);
+      box-shadow: var(--lr-transcript-feed-jump-shadow, var(--lr-shadow-m));
       transition: background-color var(--lr-transition-fast);
     }
     [part='jump-button']:focus-visible {
       ${focusRing}
     }
     [part='jump-button']:hover {
-      background: var(--lr-color-brand-quiet);
+      background: var(--lr-transcript-feed-jump-hover-bg, var(--lr-color-brand-quiet));
     }
     [part='jump-button']:active {
-      background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+      background: color-mix(in oklab, var(--lr-transcript-feed-jump-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [part='jump-button'] { transition: none; }
     }
     [part='limit'] {
       margin: 0;

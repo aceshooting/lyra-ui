@@ -155,6 +155,7 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Otočit doprava',
   modelViewerRotateUp: 'Otočit nahoru',
   modelViewerRotateDown: 'Otočit dolů',
+  modelViewerViewport: 'Interaktivní model',
 };
 
 registerLyraLocale('cs', strings);

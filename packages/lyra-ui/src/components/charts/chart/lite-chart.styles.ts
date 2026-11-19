@@ -210,6 +210,13 @@ export const styles = css`
   }
   ${chartLegendPositionStyles('notice', false)}
   ${chartLegendPositionStyles('notice', true)}
+  [part='data-table-toggle'] {
+    --_lr-chart-toggle-border-color: var(--lr-lite-chart-data-table-toggle-border-color);
+    --_lr-chart-toggle-bg: var(--lr-lite-chart-data-table-toggle-bg);
+    --_lr-chart-toggle-color: var(--lr-lite-chart-data-table-toggle-color);
+    --_lr-chart-toggle-inline-size: var(--lr-lite-chart-data-table-toggle-inline-size);
+    --_lr-chart-toggle-justify: var(--lr-lite-chart-data-table-toggle-justify);
+  }
   [part='data-table-toggle']:hover {
     background: var(
       --lr-lite-chart-data-table-toggle-hover-bg,

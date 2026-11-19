@@ -1,7 +1,12 @@
+import { setEmailDeps } from './fixtures/email-deps.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './email-viewer.js';
 import type { LyraEmailViewer } from './email-viewer.js';
-import { __setEmailDepsForTesting, type EmailDeps } from './email-loader.js';
+import { type EmailDeps } from './email-loader.js';
+
+expectDevWarning('lyra-dompurify-unavailable');
+expectDevWarning('lyra-email-viewer-postal-mime-unavailable');
 
 const EML = ['Subject: Stub', 'Content-Type: text/plain; charset=utf-8', '', 'ignored', ''].join('\r\n');
 
@@ -18,7 +23,7 @@ function stubFetch(): () => void {
 }
 
 async function mountWith(deps: EmailDeps, selector: string): Promise<{ el: LyraEmailViewer; restore: () => void }> {
-  __setEmailDepsForTesting(deps);
+  setEmailDeps(deps);
   const restore = stubFetch();
   const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
   await waitUntil(() => el.shadowRoot!.querySelector(selector) !== null, `${selector} never rendered`, { timeout: 5000 });
@@ -30,7 +35,7 @@ function parserReturning(value: unknown): EmailDeps {
 }
 
 describe('lr-email-viewer parser results', () => {
-  afterEach(() => __setEmailDepsForTesting(undefined));
+  afterEach(() => setEmailDeps(undefined));
 
   it('shows the localized missing-parser error when the postal-mime peer is unavailable', async () => {
     const { el, restore } = await mountWith({ PostalMime: undefined, DOMPurify: undefined }, '[part="error"]');
@@ -96,7 +101,7 @@ describe('lr-email-viewer parser results', () => {
   it('discards a parse that settles after the viewer was disconnected', async () => {
     let settle!: (value: unknown) => void;
     let parseCalls = 0;
-    __setEmailDepsForTesting({
+    setEmailDeps({
       PostalMime: {
         parse: () => {
           parseCalls += 1;
@@ -125,7 +130,7 @@ describe('lr-email-viewer parser results', () => {
   for (const stage of ['response', 'body'] as const) {
     it(`never parses a message whose ${stage} settles after the viewer was disconnected`, async () => {
       let parses = 0;
-      __setEmailDepsForTesting({
+      setEmailDeps({
         PostalMime: { parse: () => { parses += 1; return Promise.resolve({ text: 'Too late.' } as never); } },
         DOMPurify: undefined,
       });
@@ -160,4 +165,22 @@ describe('lr-email-viewer parser results', () => {
       }
     });
   }
+});
+
+it('discards a message if applying its sanitizer detaches the viewer', async () => {
+  const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
+  const restoreFetch = stubFetch();
+  let loads = 0;
+  el.addEventListener('lr-load', () => ++loads);
+  setEmailDeps({
+    PostalMime: { parse: async () => ({ html: '<p>Retired message</p>' }) },
+    DOMPurify: { sanitize() { el.remove(); return ''; } },
+  });
+  try {
+    el.src = '/retired-message.eml';
+    await waitUntil(() => !el.isConnected);
+    await el.updateComplete;
+    expect(loads).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="headers"]').length).to.equal(0);
+  } finally { setEmailDeps(undefined); restoreFetch(); }
 });

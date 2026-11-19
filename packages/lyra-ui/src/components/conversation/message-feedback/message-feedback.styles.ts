@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -9,86 +10,47 @@ export const styles = css`
   [part="base"] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-xs);
   }
   [part="thumbs"] {
     display: flex;
     gap: var(--lr-space-2xs);
   }
-  [part="up-button"],
-  [part="down-button"] {
-    /* Compact glyph, shared minimum target size on the interactive box -- the same padded-hit-box
-       pattern as lr-code-block's/lr-json-viewer's [part='toggle']. */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  ${iconActionStyles(":where([part='up-button'], [part='down-button'])", {
+    color: 'var(--lr-color-text-quiet)',
+    hoverBackground: 'var(--lr-color-surface-raised)',
+    hoverColor: 'var(--lr-color-text)',
+    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+  })}
+  :where([part='up-button'], [part='down-button']) {
+    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid transparent;
+    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
+    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
     inline-size: var(--lr-size-1-75rem);
     block-size: var(--lr-size-1-75rem);
-    ${iconHitTarget}
-    padding: 0;
-    font: inherit;
-    border: var(--lr-border-width-thin) solid transparent;
-    border-radius: var(--lr-icon-button-radius, var(--lr-radius));
-    background: var(--lr-icon-button-bg, transparent);
-    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
-    cursor: pointer;
   }
-  /* Authored state qualifiers stay low-weight and composable; consumer-part precedence is verified
-     from rendered computed style, not from selector arithmetic. */
-  :where([part="up-button"]):hover:where(:not(:disabled)),
-  :where([part="down-button"]):hover:where(:not(:disabled)) {
-    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
-    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
+  [part='up-button']:where([aria-pressed='true']) {
+    --_lr-thumb-selected-bg: var(--lr-message-feedback-up-active-bg, var(--lr-color-success-quiet));
+    --_lr-thumb-selected-color: var(--lr-message-feedback-up-active-color, var(--lr-color-success));
+    --_lr-thumb-selected-border: var(--lr-message-feedback-up-active-border, var(--lr-color-success));
   }
-  :where([part="up-button"]):active:where(:not(:disabled)),
-  :where([part="down-button"]):active:where(:not(:disabled)) {
-    background: var(
-      --lr-icon-button-bg-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
+  [part='down-button']:where([aria-pressed='true']) {
+    --_lr-thumb-selected-bg: var(--lr-message-feedback-down-active-bg, var(--lr-color-danger-quiet));
+    --_lr-thumb-selected-color: var(--lr-message-feedback-down-active-color, var(--lr-color-danger));
+    --_lr-thumb-selected-border: var(--lr-message-feedback-down-active-border, var(--lr-color-danger));
   }
-  [part="up-button"]:focus-visible,
-  [part="down-button"]:focus-visible {
-    ${focusRing}
+  [aria-pressed='true'],
+  [aria-pressed='true']:not(:disabled):hover,
+  [aria-pressed='true']:not(:disabled):active {
+    background: var(--_lr-thumb-selected-bg);
+    color: var(--_lr-thumb-selected-color);
+    border-color: var(--_lr-thumb-selected-border);
   }
-  /* Never color-alone: the icon swaps to a filled glyph in lockstep with aria-pressed, and these
-     color/background/border rules are additive emphasis on that shape change. */
-  /* Inline var() fallbacks, not :host-declared properties: a :host declaration would shadow a
-     value set on the element or an ancestor. ::part(up-button)[aria-pressed='true'] is invalid CSS
-     -- Shadow Parts forbids an attribute selector after ::part() -- so retinting the pressed state
-     used to mean hijacking the shared --lr-color-success/-danger tokens and repainting every
-     surface reading them. Unset, each falls back to the token the rule already used. */
-  [part="up-button"][aria-pressed="true"] {
-    color: var(--lr-message-feedback-up-active-color, var(--lr-color-success));
-    background: var(
-      --lr-message-feedback-up-active-bg,
-      var(--lr-color-success-quiet)
-    );
-    border-color: var(
-      --lr-message-feedback-up-active-border,
-      var(--lr-color-success)
-    );
+  [aria-pressed='true']:not(:disabled):hover {
+    background: var(--lr-icon-button-bg-hover, color-mix(in oklab, var(--_lr-thumb-selected-bg), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
-  [part="down-button"][aria-pressed="true"] {
-    color: var(--lr-message-feedback-down-active-color, var(--lr-color-danger));
-    background: var(
-      --lr-message-feedback-down-active-bg,
-      var(--lr-color-danger-quiet)
-    );
-    border-color: var(
-      --lr-message-feedback-down-active-border,
-      var(--lr-color-danger)
-    );
-  }
-  [part="up-button"]:disabled,
-  [part="down-button"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+  [aria-pressed='true']:not(:disabled):active {
+    background: var(--lr-icon-button-bg-active, color-mix(in oklab, var(--_lr-thumb-selected-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* A 0fr/1fr grid row animates the disclosure's block size without measuring content;
      min-block-size: 0 on the inner wrapper plus overflow: hidden here stops collapsed content
@@ -104,6 +66,7 @@ export const styles = css`
       border-width var(--lr-transition-base);
   }
   [part="panel"]:where([data-open]) {
+    margin-block-start: var(--lr-space-xs);
     grid-template-rows: 1fr;
     border-width: var(--lr-border-width-thin);
   }

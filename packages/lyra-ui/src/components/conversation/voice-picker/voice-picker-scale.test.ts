@@ -2,6 +2,7 @@ import '../../../translations/fr/shared.js';
 import '../../../translations/fr/conversation.js';
 import { registerLyraLocale, resolveLyraString } from '../../../localization.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LyraVoicePicker } from './voice-picker.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
@@ -57,6 +58,10 @@ it('bounds catalog admission to 1,024 rows before normalization', async () => {
   await el.updateComplete;
   expect(el.catalog!.length).to.equal(1024);
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Catalog limit');
+  await waitUntil(() => sinkTexts().includes('Catalog limit'));
+  el.label = 'Catalog label';
+  await el.updateComplete;
+  expect(sinkTexts().filter(text => text === 'Catalog limit')).to.have.lengthOf(1);
   el.catalog = []; await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
 });

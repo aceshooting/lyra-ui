@@ -1,6 +1,7 @@
+import { PanoramaPropertyState } from '../../../internal/media-panorama-host.js';
 import { panoramaStyles } from '../../../internal/media-panorama.styles.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
-import { PanoramaController, PANORAMA_PROJECTION, PANORAMA_DEFAULT_CAMERA, normalizePanoramaCamera, snapshotPanoramaHotspots, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
+import { PanoramaController, PANORAMA_PROJECTION, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
 export type { LyraMediaProjection, LyraPanoramaCamera, LyraPanoramaHotspot, LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -234,6 +235,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   private panoramaRevision = 0;
+  private readonly panoramaProps = new PanoramaPropertyState(this, () => this.panorama?.invalidate());
   // @renderController PanoramaController
   private readonly panorama = new PanoramaController(this, {
     changed: () => this.scheduleAfterUpdate(() => super.requestUpdate('panoramaState', undefined, { hasChanged: () => true }), 'panorama-state'),
@@ -243,58 +245,28 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     fallback: detail => this.emit('lr-engine-fallback', detail),
     pick: detail => this.emit('lr-panorama-hotspot-select', detail),
     camera: camera => {
-      const old = this._panoramaCamera; this._panoramaCamera = camera;
-      this.requestUpdate('panoramaCamera', old);
+      this.panoramaProps.adoptCamera(camera);
       this.emit('lr-panorama-camera-change', { camera });
     },
   });
-  private _projection: LyraMediaProjection = 'flat';
   /** Flat media by default. Equirectangular rendering also requires engine="webgl". */
   @property({ converter: PANORAMA_PROJECTION, noAccessor: true })
-  get projection(): LyraMediaProjection { return this._projection; }
-  set projection(value: LyraMediaProjection) {
-    const next = PANORAMA_PROJECTION.normalize(value), old = this._projection;
-    if (next === old) return;
-    this._projection = next; this.panorama?.invalidate(); this.requestUpdate('projection', old);
-  }
-  private _engine: Engine3dPreference = 'builtin';
+  get projection(): LyraMediaProjection { return this.panoramaProps.projection; }
+  set projection(value: LyraMediaProjection) { this.panoramaProps.setProjection(value); }
   /** Preferred panorama renderer; the builtin flat view never downloads a companion. */
   @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
-  get engine(): Engine3dPreference { return this._engine; }
-  set engine(value: Engine3dPreference) {
-    const next = ENGINE_3D_PREFERENCE.normalize(value), old = this._engine;
-    if (next === old) return;
-    this._engine = next; this.panorama?.invalidate(); this.requestUpdate('engine', old);
-  }
-  private _panoramaCamera: LyraPanoramaCamera = PANORAMA_DEFAULT_CAMERA;
-  private panoramaCameraRevision = 0;
+  get engine(): Engine3dPreference { return this.panoramaProps.engine; }
+  set engine(value: Engine3dPreference) { this.panoramaProps.setEngine(value); }
   /** Camera yaw/pitch in radians and vertical fieldOfView in degrees (20–100). Authored writes are silent. */
   @property({ attribute: false, noAccessor: true })
-  get panoramaCamera(): LyraPanoramaCamera { return this._panoramaCamera; }
-  set panoramaCamera(value: LyraPanoramaCamera) {
-    const revision = ++this.panoramaCameraRevision;
-    const next = normalizePanoramaCamera(value), old = this._panoramaCamera;
-    if (revision !== this.panoramaCameraRevision) return;
-    if (next.yaw === old.yaw && next.pitch === old.pitch && next.fieldOfView === old.fieldOfView) return;
-    this._panoramaCamera = next; this.requestUpdate('panoramaCamera', old);
-  }
-  private _hotspots: readonly LyraPanoramaHotspot[] = Object.freeze([]);
-  private hotspotSource: unknown = this._hotspots;
-  private hotspotRevision = 0;
+  get panoramaCamera(): LyraPanoramaCamera { return this.panoramaProps.camera; }
+  set panoramaCamera(value: LyraPanoramaCamera) { this.panoramaProps.setCamera(value); }
   /** Bounded clone-owned hotspot snapshot. First valid unique ID wins; reassign after changes.
    * Angles are radians, pitch is within ±π/2, and invalid rows are omitted. */
   @property({ attribute: false, noAccessor: true })
-  get hotspots(): readonly LyraPanoramaHotspot[] { return this._hotspots; }
-  set hotspots(value: readonly LyraPanoramaHotspot[]) {
-    if (value === this.hotspotSource || value === this._hotspots) return;
-    const old = this._hotspots; this.hotspotSource = value;
-    const revision = ++this.hotspotRevision;
-    const next = snapshotPanoramaHotspots(value, this.ownerDocument?.defaultView ?? null);
-    if (revision !== this.hotspotRevision) return;
-    this._hotspots = next;
-    this.panorama?.invalidate(); this.requestUpdate('hotspots', old);
-  }
-  private get panoramaEnabled(): boolean { return this.projection === 'equirectangular' && this.engine === 'webgl'; }
+  get hotspots(): readonly LyraPanoramaHotspot[] { return this.panoramaProps.hotspots; }
+  set hotspots(value: readonly LyraPanoramaHotspot[]) { this.panoramaProps.setHotspots(value); }
+  private get panoramaEnabled(): boolean { return this.panoramaProps.enabled; }
 
   private synchronizingCurrentTime = false;
   private currentTimeFromMedia = false;

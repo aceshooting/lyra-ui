@@ -90,6 +90,15 @@ describe('<lr-intersection-observer>', () => {
       expect(target.classList.contains('visible')).to.be.true;
       expect(latest?.unobserved.length).to.equal(1);
       expect(latest?.unobserved[0] === target).to.equal(true);
+
+      let staleEvents = 0;
+      el.addEventListener('lr-intersection', () => { staleEvents++; });
+      const reentrant = {
+        get target() { el.remove(); return target; },
+        isIntersecting: true,
+      } as IntersectionObserverEntry;
+      latest!.callback([reentrant], {} as IntersectionObserver);
+      expect(staleEvents).to.equal(0);
     } finally {
       window.IntersectionObserver = OriginalIntersectionObserver;
     }
@@ -198,13 +207,17 @@ describe('<lr-intersection-observer>', () => {
     await el.updateComplete;
     await aTimeout(0);
 
-    expect((el as unknown as { observer?: IntersectionObserver }).observer).to.exist;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer).to.exist;
+    el.rootMargin = null as unknown as string;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect((el as unknown as { slotted: { observer: IntersectionObserver } }).slotted.observer.rootMargin).to.include('0px');
   });
 
   it('re-observes slotted content when the default slot changes, via the inline @slotchange binding on the shadow <slot>', async () => {
     const el = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>Observed</div></lr-intersection-observer>`);
     await el.updateComplete;
-    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'initial slotted content should be observed').to.exist;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer, 'initial slotted content should be observed').to.exist;
 
     const extra = document.createElement('span');
     extra.textContent = 'More';
@@ -213,7 +226,7 @@ describe('<lr-intersection-observer>', () => {
     // observeTargets -- a host-level slotchange listener never fires here.
     await aTimeout(0);
 
-    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should survive a slot change').to.exist;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer, 'observer should survive a slot change').to.exist;
   });
 
   it('does not create a dangling observer when a property change re-observe is still queued at disconnect', async () => {
@@ -226,7 +239,7 @@ describe('<lr-intersection-observer>', () => {
     el.remove();
     await aTimeout(0);
 
-    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'no observer should have been created post-disconnect').to.be.undefined;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer, 'no observer should have been created post-disconnect').to.be.undefined;
 
     parent.append(el);
   });
@@ -235,16 +248,16 @@ describe('<lr-intersection-observer>', () => {
     const el = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>Observed</div></lr-intersection-observer>`);
     const parent = el.parentElement!;
     await aTimeout(0);
-    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should exist after the initial connect').to.exist;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer, 'observer should exist after the initial connect').to.exist;
 
     // A pure reparent -- no property change, and the slot's assigned-node set
     // is unchanged, so slotchange never fires either.
     el.remove();
-    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should be torn down on disconnect').to.be.undefined;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer, 'observer should be torn down on disconnect').to.be.undefined;
 
     parent.append(el);
     await aTimeout(0);
-    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should be re-armed on reconnect').to.exist;
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer, 'observer should be re-armed on reconnect').to.exist;
   });
 
   it('uses the adopted owner constructor, accepts a foreign root, and rejects stale callbacks', async () => {
@@ -377,7 +390,7 @@ describe('<lr-intersection-observer>', () => {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
       await aTimeout(0);
-      expect((el as unknown as { observer?: IntersectionObserver }).observer === undefined).to.be.true;
+      expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer === undefined).to.be.true;
     } finally {
       el.remove();
       Object.defineProperty(frameWindow, 'IntersectionObserver', {
@@ -481,7 +494,7 @@ it('contains failed IntersectionObserver construction and one failed target whil
       rejected = true;
     }
     expect(rejected).to.equal(false);
-    expect((el as unknown as { observer?: IntersectionObserver }).observer).to.equal(undefined);
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer).to.equal(undefined);
   } finally {
     el?.remove();
     window.IntersectionObserver = OriginalIntersectionObserver;
@@ -520,19 +533,19 @@ it('contains a throwing owner capability lookup and resumes after it is restored
     });
     let threw = false;
     try {
-      (el as unknown as { observeTargets(): void }).observeTargets();
+      (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
     } catch {
       threw = true;
     }
     expect(threw).to.equal(false);
-    expect((el as unknown as { observer?: IntersectionObserver }).observer).to.equal(undefined);
+    expect((el as unknown as { slotted: { observer?: IntersectionObserver } }).slotted.observer).to.equal(undefined);
 
     Object.defineProperty(window, 'IntersectionObserver', {
       configurable: true,
       writable: true,
       value: TestIntersectionObserver,
     });
-    (el as unknown as { observeTargets(): void }).observeTargets();
+    (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
     expect(observed.filter((entry) => entry === target).length).to.be.greaterThan(1);
   } finally {
     el?.remove();
@@ -583,7 +596,7 @@ it('contains a throwing disconnect hook across rebuild and reconnect', async () 
     throwDisconnect = true;
     let threw = false;
     try {
-      (el as unknown as { observeTargets(): void }).observeTargets();
+      (el as unknown as { slotted: { rebuild(): void } }).slotted.rebuild();
     } catch {
       threw = true;
     }

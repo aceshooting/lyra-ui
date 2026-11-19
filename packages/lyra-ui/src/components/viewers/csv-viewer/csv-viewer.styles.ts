@@ -7,6 +7,14 @@ export const styles = css`
     min-inline-size: 0;
   }
   ${delimitedGridStyles(css`var(--lr-csv-viewer-max-height, none)`)}
+  [part='base'] {
+    background: var(--lr-csv-viewer-background, transparent);
+    border: var(--lr-csv-viewer-border, none);
+    border-radius: var(--lr-csv-viewer-border-radius, 0);
+  }
+  [part='header-row'] {
+    background: var(--lr-csv-viewer-header-row-bg, var(--lr-color-surface));
+  }
   ${tableCellHighlightStyles({
     color: css`var(--lr-csv-viewer-highlight-color, var(--_lr-csv-viewer-highlight-color, var(--lr-color-brand)))`,
     padding: css`var(--lr-space-2xs) var(--lr-space-xs)`,
@@ -22,6 +30,16 @@ export const styles = css`
     block-size: auto;
     max-block-size: var(--lr-csv-viewer-max-height, var(--lr-size-20rem));
     min-block-size: 0;
+  }
+  :host([scroll-mode='page']) :is([part='body'], [part='sheet']),
+  :host([scroll-mode='page']) [part='rows']::part(base) {
+    max-block-size: none;
+    overflow: visible;
+  }
+  :host([scroll-mode='page']) [part='header-row'] {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--lr-layer-content);
   }
   .empty-note,
   [part='error'] {

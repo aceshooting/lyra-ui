@@ -45,7 +45,7 @@ export const styles = css`
 
   ${chartLegendPositionStyles('warning')}
 
-  [part='data-table'] button {
+  [part='data-table-button'] {
     font: inherit;
     color: inherit;
     border: 0;
@@ -56,16 +56,16 @@ export const styles = css`
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
-  [part='data-table'] button:hover {
+  [part='data-table-button']:hover {
     background: var(--lr-chart-data-table-button-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part='data-table'] button:active {
+  [part='data-table-button']:active {
     background: var(
       --lr-chart-data-table-button-active-bg,
       color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
   }
-  [part='data-table'] button:focus-visible {
+  [part='data-table-button']:focus-visible {
     ${focusRing}
   }
   [part='center'] {
