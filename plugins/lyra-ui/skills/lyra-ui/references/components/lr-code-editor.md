@@ -17,7 +17,7 @@
 ## `lr-code-editor`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
-`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+`--lr-form-control-label-color`.
 
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content

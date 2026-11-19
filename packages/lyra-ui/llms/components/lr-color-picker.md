@@ -17,7 +17,7 @@
 ## `lr-color-picker`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
-`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+`--lr-form-control-label-color`.
 
 A form-associated colour picker with label, hint and error chrome: a compact swatch trigger that
 opens a popover holding a saturation/brightness grid, a hue slider, an optional alpha slider, a text

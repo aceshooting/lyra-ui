@@ -17,7 +17,7 @@
 ## `lr-rubric-form`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
-`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+`--lr-form-control-label-color`.
 
 A configurable annotation rubric (LangSmith annotation-queue style): score, category, and
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each

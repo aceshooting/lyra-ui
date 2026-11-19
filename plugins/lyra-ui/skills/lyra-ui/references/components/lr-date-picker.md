@@ -18,7 +18,7 @@
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
 Style the `lr-date-input` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
-`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+`--lr-form-control-label-color`.
 
 Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Both
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or

@@ -3176,7 +3176,6 @@
         "src/components/forms/swatch-picker/swatch-picker.class.ts",
         "src/components/forms/swatch-picker/swatch-picker.styles.ts",
         "src/components/forms/time-range/time-range.styles.ts",
-        "src/components/layout/segmented/segmented.styles.ts",
         "src/components/layout/stepper/stepper.styles.ts",
         "src/components/media/avatar/avatar.styles.ts",
         "src/components/media/avatar-group/avatar-group.styles.ts",

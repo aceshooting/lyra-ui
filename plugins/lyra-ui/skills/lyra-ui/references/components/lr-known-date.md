@@ -18,7 +18,6 @@
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
-See [shared label typography](../forms.md#field-and-group-label-typography).
 
 A form-associated control for a date the user already knows (a birthdate, a passport expiry),
 collected as three plain day/month/year number fields in the locale's natural order rather than a

@@ -88,8 +88,15 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
       if (!range) {
         assert.equal((await editor(page, id).evaluate(element => element.focusEditor())).ok, true);
         await page.keyboard.type('K');
+        // A previous revision can already include the toolbar edit while native typing is queued.
+        await page.waitForFunction(id => {
+          const found = document.getElementById(id).find('BeKfore');
+          return found.ok && found.value.matches.length === 1;
+        }, id);
+      } else {
+        await page.waitForFunction(({ id, revision }) => document.getElementById(id).snapshot().revision.value > revision,
+          { id, revision: original.revision.value });
       }
-      await page.waitForFunction(id => document.getElementById(id).snapshot().revision.value > 0, id);
       const saved = await saveEditor(page, id);
       const paragraphs = await page.evaluate(xml => {
         const namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';

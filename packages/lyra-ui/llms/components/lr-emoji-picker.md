@@ -17,7 +17,7 @@
 ## `lr-emoji-picker`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
-`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+`--lr-form-control-label-color`.
 
 A searchable, keyboard-navigable, form-associated emoji picker. `groups` is fully consumer-suppliable
 — the component ships no emoji data of its own — in the same "zero/optional-peer dependency" spirit

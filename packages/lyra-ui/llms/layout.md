@@ -1816,7 +1816,6 @@ or any ancestor to retheme only the hover or pressed move affordance.
 
 Caption typography accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
-See [shared label typography](forms.md#field-and-group-label-typography).
 
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
