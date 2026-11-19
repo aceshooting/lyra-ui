@@ -154,8 +154,8 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @csspart base - The outer wrapper; retained alias for `form-control`.
  * @csspart form-control - The outer wrapper; shared form-control alias for `base`.
  * @csspart label - The field label; retained alias for `form-control-label`.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The field label; shared form-control alias for `label`.
@@ -491,9 +491,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     super.value = nextValue;
     if (this.control) this.control.value = nextValue;
     this.touched = true;
+    this.segmentEditPendingChange = true;
     dispatchNativeInputEvent(this, { data, inputType });
     this.emit('lr-input', { value: nextValue });
-    this.segmentEditPendingChange = true;
     this.completeIfTransition(previousFilled);
     this.requestUpdate();
   }
@@ -636,6 +636,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   /** Clear the code (`input`, `change`, `lr-clear`); inert while blank, disabled or readonly. */
   clear(): void {
     if (!this.value || this.effectiveDisabled || this.readonly) return;
+    this.segmentEditPendingChange = false;
     this.value = '';
     if (this.control) this.control.value = '';
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
@@ -657,6 +658,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     reason: 'autocomplete' | 'restore',
   ): void {
     this.autosubmitToken += 1;
+    this.segmentEditPendingChange = false;
     super.formStateRestoreCallback(state, reason);
   }
 

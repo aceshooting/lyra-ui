@@ -6,7 +6,7 @@ export const formControlChrome = css`
   [part~='form-control-label'] {
     display: block;
     margin-block-end: var(--lr-space-xs);
-    ${formControlLabelTypography}
+    ${formControlLabelTypography()}
   }
   [part~='form-control-label'][hidden] { display: none; }
   ${formControlSupportingText}

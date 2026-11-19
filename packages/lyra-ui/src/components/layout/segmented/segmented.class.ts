@@ -119,10 +119,10 @@ function snapshotSegmentedItems(
  * @slot label - Field caption; assigned content replaces the `label` property fallback.
  * @slot hint - Supporting text; assigned content replaces the `hint` property fallback.
  * @csspart form-control - The outer caption, track and hint wrapper.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for segment text.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The noninteractive field caption, visually hidden by default.
  * @csspart hint - Supporting text referenced by the radiogroup when supplied.
  * @csspart base - The `role="radiogroup"` root and horizontal scroll owner.

@@ -532,34 +532,24 @@ cell, holding `grandTotal`, is a `footer-cell` instead, matching every other foo
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `filter-clear`
 (clears the filter field, replacing the native search-cancel glyph the component resets; rendered
-only while it has a value), `loading` (under
-`loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
-visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
-affordance; the part has no live-region role in either appearance),
-`skeleton` (each canonical `shape="rect"` `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
-and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
-geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
-look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
+only while it has a value), `loading` (visible spinner wrapper in spinner mode; visually hidden
+`aria-hidden` announcement mirror in skeleton mode, with no live role in either mode),
+`skeleton` (each `<lr-skeleton shape="rect">` placeholder; rows reuse the ordinary
+`row`/`cell`/`row-total-cell` parts and geometry. Example: `::part(skeleton) { --lr-skeleton-h: 2em; }`),
 `pagination` (the pager host; re-exported as `pagination-summary`,
 `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
 `pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`,
 `cell-content` (the block wrapper around a body cell's resting content, rendered only for a column
 defining `cellPart(row)`, which also carries every name that callback returns), `group-row`, `group-cell`, and `resize-handle` (the focusable column
-separator, with a finite explicit ARIA maximum even when no CSS `maxWidth` was supplied). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
-host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
-`empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
-no-rows states return the empty element as the shadow root's own root, with no `[part='base']`
-wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
-one — and that `empty` disappears entirely once the `empty` slot is filled. `error` — the built-in
-`<lr-empty>` host rendered in the row body while `error` is set. Unlike `[part='empty']`'s no-rows
-branches, its surrounding `<thead>`, filter, and pagination stay mounted rather than being replaced
-along with it. It re-exports that element's own inner parts as `error-base`, `error-icon`,
-`error-heading`, `error-description`, and `error-actions` (which wraps `retry-button`, the built-in
-retry control). `error-row` — the single full-width `<tr>` replacing the row content while `error`
-is set; `error-cell` — the `<td>` inside it, spanning every column, that holds the failed-load
-content. Both exist only in the in-grid branch: when `columns` is empty there is no grid to keep
-mounted, so the failed-load content renders standalone and neither part is present (`error` and its
-re-exported inner parts still are).
+separator with an explicit finite ARIA maximum even without a CSS `maxWidth`). The built-in
+`empty` `<lr-empty>` host exports `empty-base`, `empty-icon`, `empty-heading`, `empty-description`,
+and `empty-actions`. The no-columns and no-rows branches place it directly in the shadow root;
+`::part(base)` applies only to the filtered-empty branch. Filling the `empty` slot removes those
+parts. While `error` is set, the built-in failed-load `error` host exports `error-base`,
+`error-icon`, `error-heading`, `error-description`, and `error-actions`, which contains the
+`retry-button`. With columns present, `error-row` and `error-cell` are the full-width body
+`<tr>` and its spanning `<td>`, and the header, filter, and pager stay mounted. Without columns,
+the error host and its inner parts render standalone.
 
 - `scrollMode: 'self' | 'page' | 'auto' = 'self'` (attribute `scroll-mode`, reflected) — which element
   scrolls when the table overflows. `'self'` makes `[part="base"]` the scroll container, which is

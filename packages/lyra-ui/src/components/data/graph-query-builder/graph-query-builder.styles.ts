@@ -15,7 +15,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
   [part~='label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`inherit` })}
   }
   [part='hint'],
   [part='error'] {

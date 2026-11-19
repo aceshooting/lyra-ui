@@ -17,7 +17,8 @@
 ## `lr-rag-eval-dashboard`
 
 Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
-and run history. The host computes metrics and owns evaluation execution.
+and run history. The host computes metrics and owns evaluation execution. Metric cards show
+localized no-data text if no run in the current slice provides a finite measurement.
 
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`

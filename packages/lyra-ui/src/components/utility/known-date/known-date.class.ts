@@ -174,8 +174,8 @@ function addCompatibilityDetail<T extends Event>(
  * @csspart form-control - The outer wrapper. It is the same node as `base` and `known-date`.
  * @csspart fieldset - The `<fieldset>` grouping the three fields.
  * @csspart legend - The `<legend>` element.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for the date fields.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label wrapper inside the legend.

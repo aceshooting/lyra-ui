@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { collectionSupport, writeNormalizedOwnedCollection } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -572,6 +573,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   private onTreeKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     const rows = this.visibleRows();
     if (rows.length === 0) return;
     const currentIndex = Math.max(
@@ -628,7 +630,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       case 'Enter':
       case ' ':
         e.preventDefault();
-        this.toggleEntry(current.entry);
+        if (!e.repeat) this.toggleEntry(current.entry);
         break;
       default:
         return;

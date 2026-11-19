@@ -7553,6 +7553,9 @@ to receive a `string`.
 
 ## The validity alias is cancelable in 8.0.0
 
+`IntrinsicValidityMessage` is the TypeScript type for an intrinsic validation message. It accepts
+a string or a function that supplies the message in the current locale.
+
 Every form-associated control emits `lr-invalid` (no detail, bubbling, composed) as the alias of the
 native, non-bubbling `invalid` event. In 8.0.0 that alias is **cancelable**, and its cancellation is
 forwarded to the native event that produced it:
@@ -7612,9 +7615,9 @@ library: `llms/shared.md` → "The required-field marker".
 ## Field and group label typography
 
 Set `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, or
-`--lr-form-control-label-color` on a control or a containing form. Field and group labels
-follow the control’s size tier by default. Their default weight and color come from
-`--lr-font-weight-semibold` and `--lr-color-text`.
+`--lr-form-control-label-color` on a control or a containing form. These tokens override the label’s component defaults. For example, an input label uses
+`--lr-font-size-md-sm`, while checkbox-group and radio-group labels follow their control’s size tier.
+Set the three tokens on a form to give its field and group labels the same typography.
 
 ## Hiding the label visually: `label-display`
 
@@ -7681,6 +7684,9 @@ contract is maintained once at its owning destination.
 <a id="popup-selection-keyboard"></a>
 
 ## `lr-combobox` / `lr-option`
+
+Style the `lr-combobox` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
 
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
@@ -8462,6 +8468,9 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 ## `lr-select`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 Floating form-control panels follow the [shared surface treatment](./llms/shared/styles-and-tokens.md).
@@ -9018,6 +9027,9 @@ purposes.
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
+Style the `lr-date-input` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Both
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
@@ -9544,6 +9556,9 @@ and `dateTimeFormat(locale, options)`.
 ---
 
 ## `lr-textarea`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -10347,6 +10362,9 @@ them leaves rendering unchanged.
 
 ## `lr-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`,
@@ -10798,6 +10816,9 @@ first field's, referenced here by id.
 
 ## `lr-number-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
@@ -10986,6 +11007,9 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 <a id="date-and-time-controls"></a>
 
 ## `lr-time-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -11183,6 +11207,9 @@ ancestor to change every unset time input beneath it.
 
 ## `lr-native-time-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 The Lyra 7 browser-native time field preserved under an explicit tag. It shares the input
@@ -11270,6 +11297,9 @@ entry for the flush and cancellation rules.
 ---
 
 ## `lr-phone-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -12556,6 +12586,9 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
@@ -13088,6 +13121,9 @@ the only one of the set worth setting on this tag.
 
 ## `lr-otp-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
 
@@ -13299,9 +13335,12 @@ control cannot be edited and restores the current intrinsic result when editing 
 
 ## `lr-radio-group`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Place supplementary controls in `slot="toolbar"` between the group label and its options.
-Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
-Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+The `toolbar` CSS part styles the wrapper. Toolbar controls are independent of option selection.
+Set `labelDisplay` to `hidden` (or `label-display="hidden"`) to visually hide the group label while preserving its accessible name.
 
 A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
 focus and select the next enabled radio, whatever the orientation: Down/Right select the next
@@ -13366,7 +13405,7 @@ child validity owner.
 
 **Slots:** default radios, `label`, `hint`, `help-text` (Shoelace hint alias), `error`.
 
-**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `radios` /
+**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `toolbar`, `radios` /
 `form-control-input` / `button-group` / `button-group__base`, `hint` /
 `form-control-help-text`, and `error`.
 
@@ -13394,9 +13433,12 @@ fieldset disablement, so the group behaves like one native control.
 
 ## `lr-checkbox-group`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Place supplementary controls in `slot="toolbar"` between the group label and its options.
-Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
-Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+The `toolbar` CSS part styles the wrapper. Toolbar controls are independent of option selection.
+Set `labelDisplay` to `hidden` (or `label-display="hidden"`) to visually hide the group label while preserving its accessible name.
 
 Long group labels, hints, errors, and horizontal option labels wrap within the host in both logical
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
@@ -13425,7 +13467,9 @@ Awesome's unset-default behavior.
 **Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
 alongside slotted hint/error content, like every other group.
 **Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
-`lr-change`; all four carry `{ value: string[] }`. The owned child's corresponding events are
+`lr-change`. The native `input` and `change` are plain `Event` objects. Both `lr-input` and
+`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings.
+The owned child's corresponding events are
 consumed at the group boundary, so an ancestor does not receive a second, differently shaped
 sequence.
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
@@ -13458,7 +13502,7 @@ incorrectly mark every child checkbox required.
 The fieldset exposes explicit stateful `aria-invalid`: visible property/slotted error chrome makes
 it `"true"` immediately; otherwise only interacted intrinsic/custom invalidity does so, and the
 valid/pristine state is explicitly `"false"`.
-**CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
+**CSS parts:** `form-control`, `form-control-label`, `toolbar`, `options` / `form-control-input`, `hint`,
 `error`.
 **Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
 dims `form-control-label`, `hint` and `error` to `--lr-opacity-disabled`. The dimming is keyed off
@@ -13508,6 +13552,9 @@ a `.value=${...}` binding on first render) is applied once they arrive.
   `['on']` cannot identify which default-valued occurrence was intended.
 
 ## `lr-token-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -13698,6 +13745,9 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 
 ## `lr-code-editor`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
 (320px)` story covers both boundaries together.
@@ -13838,6 +13888,9 @@ declaration to retheme every internal scroll container in the library, including
 **Additional API surface:** `click()` activates the internal editing surface.
 
 ## `lr-color-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A form-associated colour picker with label, hint and error chrome: a compact swatch trigger that
 opens a popover holding a saturation/brightness grid, a hue slider, an optional alpha slider, a text
@@ -14176,6 +14229,9 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 
 ## `lr-emoji-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 A searchable, keyboard-navigable, form-associated emoji picker. `groups` is fully consumer-suppliable
 — the component ships no emoji data of its own — in the same "zero/optional-peer dependency" spirit
 as `<lr-lite-chart>`/`<lr-heatmap>`; an optional convenience auto-loader fetches a default set on
@@ -14378,6 +14434,9 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 
 ## `lr-rubric-form`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 A configurable annotation rubric (LangSmith annotation-queue style): score, category, and
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
@@ -14497,6 +14556,9 @@ and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-
 the same library-wide token every other disabled control reads.
 
 ## `lr-locale-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -15306,6 +15368,9 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
 
 ## `lr-currency-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
@@ -15476,6 +15541,9 @@ const displayedAmount = convertCurrency(100, 'EUR', 'USD', snapshot);
 
 ## `lr-country-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated country/territory selector with localized names and decorative emoji flags.
@@ -15581,6 +15649,9 @@ the catalog property. Shared form-control and surface tokens apply, including RT
 
 ## `lr-time-zone-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated identifier selector. Import
@@ -15628,6 +15699,9 @@ Defaults and form/editing methods follow the
 ```
 
 ## `lr-unit-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
@@ -15723,6 +15797,9 @@ and skip invalid or duplicate rows. Pass the application's locale explicitly.
   identifier when `Intl` cannot format it. It never converts a measurement.
 
 ## `lr-signature-pad`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a
@@ -16392,20 +16469,14 @@ trigger. Resize separators are focusable and expose finite `aria-valuemin`, `ari
 a gesture rolls it back, and column drops require the current grid's owned drag token plus current
 source/target capability.
 
-The four pager navigation controls each wrap their glyph in an icon part — `first-icon`,
-`previous-icon`, `next-icon`, `last-icon` — rendered as real chevron SVGs rather than literal
-`«`/`‹`/`›`/`»` text, so they mirror under `dir="rtl"` instead of pointing the wrong way. `first-icon`
-and `last-icon` hold two overlapping chevrons so the pair reads as one doubled glyph. This matches
-`<lr-pagination>`'s identical treatment; style the glyph through the icon part and the control
-through `first-button`/`previous-button`/`next-button`/`last-button` (or the shared `pager-button`).
+The `first-icon`, `previous-icon`, `next-icon`, and `last-icon` parts contain RTL-mirroring
+SVG chevrons, with two overlapping chevrons at each endpoint to match `lr-pagination`. Style
+the buttons through `first-button`, `previous-button`, `next-button`, `last-button`, or the shared
+`pager-button`.
 
-`[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
-announcement — a styling and inspection surface, with no live-region role of its own. The
-announcement itself goes to the library's shared **light-DOM** polite region, appended to the
-consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
-shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
-document-level region rather than `::part(live-region)`; the part still tells you what the grid
-last announced.
+`[part="live-region"]` is a visually hidden, `aria-hidden` mirror of the last polite announcement
+for styling and inspection. Check delivery on the shared light-DOM region in `<body>`, marked
+`data-lr-live-region="polite"`. Shadow-root live regions are unreliable in JAWS with Firefox.
 
 Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
 localized loading text to that shared polite sink, including repeated loading cycles. The visible
@@ -16990,34 +17061,24 @@ cell, holding `grandTotal`, is a `footer-cell` instead, matching every other foo
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `filter-clear`
 (clears the filter field, replacing the native search-cancel glyph the component resets; rendered
-only while it has a value), `loading` (under
-`loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
-visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
-affordance; the part has no live-region role in either appearance),
-`skeleton` (each canonical `shape="rect"` `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
-and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
-geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
-look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
+only while it has a value), `loading` (visible spinner wrapper in spinner mode; visually hidden
+`aria-hidden` announcement mirror in skeleton mode, with no live role in either mode),
+`skeleton` (each `<lr-skeleton shape="rect">` placeholder; rows reuse the ordinary
+`row`/`cell`/`row-total-cell` parts and geometry. Example: `::part(skeleton) { --lr-skeleton-h: 2em; }`),
 `pagination` (the pager host; re-exported as `pagination-summary`,
 `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
 `pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`,
 `cell-content` (the block wrapper around a body cell's resting content, rendered only for a column
 defining `cellPart(row)`, which also carries every name that callback returns), `group-row`, `group-cell`, and `resize-handle` (the focusable column
-separator, with a finite explicit ARIA maximum even when no CSS `maxWidth` was supplied). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
-host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
-`empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
-no-rows states return the empty element as the shadow root's own root, with no `[part='base']`
-wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
-one — and that `empty` disappears entirely once the `empty` slot is filled. `error` — the built-in
-`<lr-empty>` host rendered in the row body while `error` is set. Unlike `[part='empty']`'s no-rows
-branches, its surrounding `<thead>`, filter, and pagination stay mounted rather than being replaced
-along with it. It re-exports that element's own inner parts as `error-base`, `error-icon`,
-`error-heading`, `error-description`, and `error-actions` (which wraps `retry-button`, the built-in
-retry control). `error-row` — the single full-width `<tr>` replacing the row content while `error`
-is set; `error-cell` — the `<td>` inside it, spanning every column, that holds the failed-load
-content. Both exist only in the in-grid branch: when `columns` is empty there is no grid to keep
-mounted, so the failed-load content renders standalone and neither part is present (`error` and its
-re-exported inner parts still are).
+separator with an explicit finite ARIA maximum even without a CSS `maxWidth`). The built-in
+`empty` `<lr-empty>` host exports `empty-base`, `empty-icon`, `empty-heading`, `empty-description`,
+and `empty-actions`. The no-columns and no-rows branches place it directly in the shadow root;
+`::part(base)` applies only to the filtered-empty branch. Filling the `empty` slot removes those
+parts. While `error` is set, the built-in failed-load `error` host exports `error-base`,
+`error-icon`, `error-heading`, `error-description`, and `error-actions`, which contains the
+`retry-button`. With columns present, `error-row` and `error-cell` are the full-width body
+`<tr>` and its spanning `<td>`, and the header, filter, and pager stay mounted. Without columns,
+the error host and its inner parts render standalone.
 
 - `scrollMode: 'self' | 'page' | 'auto' = 'self'` (attribute `scroll-mode`, reflected) — which element
   scrolls when the table overflows. `'self'` makes `[part="base"]` the scroll container, which is
@@ -20117,7 +20178,8 @@ The canvas's button cluster: zoom in/out, fit, and interaction lock, so every fl
 same affordances without hosts rebuilding them. Manipulates only view state, never `nodes`/`edges` —
 no editing commands live here. Zoom-in/out disabled state reads the canvas snapshot's effective
 finite, sorted bounds, so invalid or reversed raw `minZoom`/`maxZoom` values cannot disable an
-otherwise available direction.
+otherwise available direction. When a focused zoom button reaches its limit, focus moves to
+the opposite zoom button or to Fit if both directions are disabled.
 
 **Properties:**
 
@@ -21043,6 +21105,10 @@ row activation opens the document. Listen for the document-library events above;
 emits one documented host contract without also leaking a composed child event.
 
 ## `lr-graph-query-builder`
+
+Use `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color` to theme field labels.
+See [shared label typography](./llms/forms.md#field-and-group-label-typography).
 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
@@ -23721,6 +23787,10 @@ or any ancestor to retheme only the hover or pressed move affordance.
 ---
 
 ## `lr-segmented`
+
+Caption typography accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](./llms/forms.md#field-and-group-label-typography).
 
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
@@ -31888,7 +31958,8 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 **Events:** `lr-export-request` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one; the rows a
 non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
-inside the listener still reaches it, and `getRows` is consulted at the same point),
+inside the listener still reaches it, and `getRows` is consulted at the same point. Removing
+the export button during the request retires that download),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
 unknown }`, fires when a built-in export cannot be serialized or downloaded; the same failure is
@@ -33643,6 +33714,10 @@ without calling their conversion hooks.
 
 ## `lr-known-date`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](./llms/forms.md#field-and-group-label-typography).
+
 A form-associated control for a date the user already knows (a birthdate, a passport expiry),
 collected as three plain day/month/year number fields in the locale's natural order rather than a
 calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is always canonical ISO
@@ -33919,8 +33994,6 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
 
 **Known gotchas:**
 
-- There is no next/previous/shuffle action; the only built-in control is the autoplay pause/resume
-  button. Selection changes via autoplay or `randomize()`.
 - Autoplay is suppressed entirely under `prefers-reduced-motion: reduce`, and whenever the eligible
   pool has fewer than 2 children. The preference is re-observed live, not just read once.
 - `fade-left`/`fade-right` are physical-direction transforms (upstream naming), deliberately **not**
@@ -37278,6 +37351,10 @@ layout tree, and the zone's script can load after first paint:
 ---
 
 ## `lr-file-input`
+
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](./llms/forms.md#field-and-group-label-typography).
 
 A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
 no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
@@ -48345,6 +48422,10 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 
 ## `lr-model-select`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](./llms/forms.md#field-and-group-label-typography).
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 The model list follows the [shared surface treatment](./llms/shared/styles-and-tokens.md);
@@ -50937,6 +51018,10 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
+
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](./llms/forms.md#field-and-group-label-typography).
 
 Visible `error-text` or slotted error content sets `aria-invalid="true"` on the current trigger
 or free-text input while preserving the native validity of its value.
@@ -61400,7 +61485,8 @@ import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";
 ## `lr-rag-eval-dashboard`
 
 Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
-and run history. The host computes metrics and owns evaluation execution.
+and run history. The host computes metrics and owns evaluation execution. Metric cards show
+localized no-data text if no run in the current slice provides a finite measurement.
 
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`

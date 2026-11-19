@@ -29,7 +29,7 @@ import {
 } from '../../../internal/numbers.js';
 import { clampSteppedValue } from '../../../internal/step-value.js';
 import { styles } from './slider.styles.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
@@ -168,8 +168,7 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @csspart base - Compatibility name on the interactive track row; use `slider`.
  * @csspart slider - Interactive track row. It is the same node as `base`.
  * @csspart form-control - Shoelace-compatible name on the same interactive row.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Shoelace-compatible name on the visible label.
@@ -1451,7 +1450,7 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   private formatValue(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
+    return formatChartValue(value, this.effectiveLocale, undefined, 20);
   }
 
   /** One value, or both handles joined by an en dash. Caller formatting is opt-in;

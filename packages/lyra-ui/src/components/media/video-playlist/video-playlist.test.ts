@@ -464,6 +464,28 @@ describe('lr-video-playlist public contract', () => {
     expect(secondEvent.detail.video!.tracks[0]!.label).to.equal('English');
   });
 
+  it('completes navigation and emits after the incoming video source is removed', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="First"></lr-video>
+        <lr-video title="Second" src="https://example.test/removed.mp4" preload="none"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [first, second] = childVideos(el);
+    const changes: LyraVideoPlaylistChangeDetail[] = [];
+    el.addEventListener('lr-video-change', event => changes.push(event.detail));
+    second!.removeAttribute('src');
+    el.goTo(1);
+    await el.updateComplete;
+
+    expect(second!.src).to.equal('');
+    expect(first!.hidden).to.be.true;
+    expect(second!.hidden).to.be.false;
+    expect(changes).to.have.length(1);
+    expect(changes[0]?.currentIndex).to.equal(1);
+    expect(changes[0]?.video?.sources).to.deep.equal([]);
+  });
+
   it('emits for goTo(current), while invalid and boundary navigation are inert', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>

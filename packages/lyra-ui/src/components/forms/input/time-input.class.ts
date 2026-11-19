@@ -239,10 +239,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @slot footer - Replaces the default Now footer action.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-input - The row containing segments and actions.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The wrap-safe label wrapper; unbroken localized text stays within
  *   the host allocation.
  * @csspart label - Compatibility alias for `form-control-label` on the same node.

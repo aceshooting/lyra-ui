@@ -2227,7 +2227,7 @@ it('republishes a child lr-input as the group lr-input carrying the aggregate va
   (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
   expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
   expect(seen.every(({ target }) => target === el)).to.be.true;
-  expect(seen[1]!.detail).to.deep.equal({ value: ['a'] });
+  expect(seen.map(({ detail }) => detail)).to.deep.equal([undefined, { value: ['a'] }, undefined, { value: ['a'] }]);
 });
 
 it('reconciles a bulk of direct child writes without re-querying the catalog per checkbox', async () => {

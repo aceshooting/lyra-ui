@@ -35,7 +35,7 @@ export const styles = css`
   }
   /* The sibling label rule; the column gap already supplies 2xs of the xs spacing. */
   [part~='label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
     margin-block-end: calc(var(--lr-space-xs) - var(--lr-space-2xs));
     overflow-wrap: anywhere;
   }

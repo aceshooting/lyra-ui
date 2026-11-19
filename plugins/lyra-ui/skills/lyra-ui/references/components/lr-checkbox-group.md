@@ -17,9 +17,12 @@
 
 ## `lr-checkbox-group`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Place supplementary controls in `slot="toolbar"` between the group label and its options.
-Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
-Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+The `toolbar` CSS part styles the wrapper. Toolbar controls are independent of option selection.
+Set `labelDisplay` to `hidden` (or `label-display="hidden"`) to visually hide the group label while preserving its accessible name.
 
 Long group labels, hints, errors, and horizontal option labels wrap within the host in both logical
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
@@ -48,7 +51,9 @@ Awesome's unset-default behavior.
 **Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
 alongside slotted hint/error content, like every other group.
 **Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
-`lr-change`; all four carry `{ value: string[] }`. The owned child's corresponding events are
+`lr-change`. The native `input` and `change` are plain `Event` objects. Both `lr-input` and
+`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings.
+The owned child's corresponding events are
 consumed at the group boundary, so an ancestor does not receive a second, differently shaped
 sequence.
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
@@ -81,7 +86,7 @@ incorrectly mark every child checkbox required.
 The fieldset exposes explicit stateful `aria-invalid`: visible property/slotted error chrome makes
 it `"true"` immediately; otherwise only interacted intrinsic/custom invalidity does so, and the
 valid/pristine state is explicitly `"false"`.
-**CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
+**CSS parts:** `form-control`, `form-control-label`, `toolbar`, `options` / `form-control-input`, `hint`,
 `error`.
 **Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
 dims `form-control-label`, `hint` and `error` to `--lr-opacity-disabled`. The dimming is keyed off

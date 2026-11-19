@@ -1,4 +1,6 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../flow-canvas/flow-canvas.js';
 import './flow-controls.js';
@@ -661,4 +663,49 @@ it('normalizes an unsupported orientation property to vertical and reflects it',
   await el.updateComplete;
   expect(el.orientation).to.equal('vertical');
   expect(el.getAttribute('orientation')).to.equal('vertical');
+});
+
+for (const [direction, opposite] of [['zoom-in', 'zoom-out'], ['zoom-out', 'zoom-in']] as const) {
+  it(`moves focus to ${opposite} when ${direction} reaches its limit`, async () => {
+    const canvas = await fixture<LyraFlowCanvas>(html`
+      <lr-flow-canvas min-zoom="0.9" max-zoom="1.1" .nodes=${nodes}>
+        <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+      </lr-flow-canvas>
+    `);
+    const controls = canvas.querySelector<LyraFlowControls>('lr-flow-controls')!;
+    await controls.updateComplete;
+    const button = (part: string) => controls.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!;
+    const active = button(direction);
+    await nextFrame();
+    canvas.setViewport({ x: 0, y: 0, zoom: 1 });
+    await waitUntil(() => !active.disabled && !button(opposite).disabled);
+    await focusByKeyboard(active);
+    await sendKeys({ press: 'Space' });
+    await waitUntil(() => active.disabled, 'the companion updated after reaching the zoom limit');
+    expect(controls.shadowRoot!.activeElement === button(opposite)).to.equal(true);
+  });
+}
+
+it('leaves focus where a consumer moves it before the limit snapshot arrives', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-flow-canvas max-zoom="1.1" .nodes=${nodes}>
+        <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+      </lr-flow-canvas>
+      <button type="button">Outside</button>
+    </div>
+  `);
+  const controls = wrapper.querySelector<LyraFlowControls>('lr-flow-controls')!;
+  const outside = wrapper.querySelector('button')!;
+  const canvas = wrapper.querySelector<LyraFlowCanvas>('lr-flow-canvas')!;
+  await controls.updateComplete;
+  await nextFrame();
+  canvas.setViewport({ x: 0, y: 0, zoom: 1 });
+  const zoomIn = controls.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in"]')!;
+  await waitUntil(() => !zoomIn.disabled);
+  await focusByKeyboard(zoomIn);
+  controls.addEventListener('click', () => outside.focus(), { capture: true, once: true });
+  await sendKeys({ press: 'Enter' });
+  await waitUntil(() => zoomIn.disabled);
+  expect(document.activeElement === outside).to.equal(true);
 });

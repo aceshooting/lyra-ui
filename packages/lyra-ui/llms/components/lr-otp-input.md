@@ -16,6 +16,9 @@
 
 ## `lr-otp-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
 

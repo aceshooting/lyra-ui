@@ -42,3 +42,31 @@ it('hands arguments that cannot be serialized to the dialog unchanged', async ()
   await el.updateComplete;
   expect((dialog.args as { budget: bigint }).budget).to.equal(10n);
 });
+
+for (const action of ['approve', 'deny']) {
+  it(`rejects the rendered ${action} control as soon as the host resolves the selected request`, async () => {
+    const call = { id: 'call', toolName: 'read', args: {} };
+    const queue = await fixture<LyraApprovalQueue>(html`<lr-approval-queue selected-invocation-id="call" open .requests=${[call]}></lr-approval-queue>`);
+    const dialog = queue.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+    await dialog.updateComplete;
+    const decisions: boolean[] = [], closes: string[] = [];
+    queue.addEventListener('lr-approval-decision-request', event => { decisions.push(event.detail.approved); });
+    queue.addEventListener('lr-approval-close', event => { closes.push(event.detail.reason); });
+    queue.requests = [{ ...call, status: 'denied' }];
+    dialog.shadowRoot!.querySelector<HTMLElement>(`[part="${action}-button"]`)!.click();
+    await queue.updateComplete;
+    expect(decisions).to.deep.equal([]);
+    expect(closes).to.deep.equal(['request-invalidated']);
+  });
+}
+
+it('rejects selection through a retired row before the host update renders', async () => {
+  const call = { id: 'call', toolName: 'read', args: {} };
+  const queue = await fixture<LyraApprovalQueue>(html`<lr-approval-queue .requests=${[call]}></lr-approval-queue>`);
+  let selections = 0;
+  queue.addEventListener('lr-approval-select', () => { selections++; });
+  queue.requests = [{ ...call, status: 'denied' }];
+  queue.shadowRoot!.querySelector<HTMLButtonElement>('[part="request"]')!.click();
+  expect(selections).to.equal(0);
+  expect(queue.selectedInvocationId).to.equal(null);
+});

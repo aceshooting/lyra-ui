@@ -256,9 +256,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, base, error and hint.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
- * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=inherit] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label.
  * @csspart base - The wrapper around the search input and grid.
@@ -401,6 +400,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // in flight for), so a later locale change can trigger exactly one reload of the built-in data
   // without re-fetching on every unrelated re-render or reconnect at the same locale.
   private builtInGroupsLocale?: string;
+  private pendingGroupsLoad?: symbol;
   /** The third state `groups` alone cannot express: the optional `emoji-picker-element-data` peer
    *  was consulted and did not resolve, as opposed to "not loaded yet" or "loaded, and empty".
    *  `'missing'`: the peer is not installed (nothing to retry); `'failed'`: it did not load. */
@@ -508,24 +508,15 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  locale, so this is safe to call from both `connectedCallback()` and every `updated()` cycle:
    *  a later `effectiveLocale` change re-triggers exactly one reload of the built-in data. */
   private loadBuiltInGroups(): void {
-    if (this.groupsWereSet) return;
+    if (!this.isConnected || this.groupsWereSet) return;
     const locale = this.effectiveLocale;
     if (this.builtInGroupsLocale === locale) return;
     this.builtInGroupsLocale = locale;
-    const ownerDocument = this.ownerDocument;
-    const generation = this.ownerRealmGeneration;
+    const request = this.pendingGroupsLoad = Symbol();
     void this.loadGroups(locale).then((loaded) => {
-      if (
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        this.groupsWereSet ||
-        // Superseded by a later locale change already tracked under a different key -- discard
-        // this now-stale result rather than flashing an older locale's data back in.
-        this.builtInGroupsLocale !== locale
-      ) {
-        return;
-      }
+      if (this.pendingGroupsLoad !== request) return;
+      this.pendingGroupsLoad = undefined;
+      if (this.groupsWereSet) return;
       if (!Array.isArray(loaded)) {
         // Fail closed and SAY so. Leaving `groups` at its `[]` default rendered the picker's
         // ordinary "no emoji found" state -- byte-identical to a genuine zero-match search and to
@@ -1256,6 +1247,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private resetOwnerRealmResources(): void {
     this.ownerRealmGeneration += 1;
+    if (this.pendingGroupsLoad) {
+      this.pendingGroupsLoad = undefined;
+      this.builtInGroupsLocale = undefined;
+    }
     this.pendingGridFocus = undefined;
     this.resetGridObserver();
     // The probe node itself stays in the shadow root (it is re-observed on reconnect); only the

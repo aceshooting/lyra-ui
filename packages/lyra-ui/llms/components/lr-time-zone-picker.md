@@ -16,6 +16,9 @@
 
 ## `lr-time-zone-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated identifier selector. Import

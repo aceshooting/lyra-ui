@@ -1697,3 +1697,20 @@ describe('with-remove', () => {
     expect(el.shadowRoot!.querySelector('[part="remove-button"]') === null).to.equal(true);
   });
 });
+
+for (const [transition, rebind] of [
+  ['disables it', (chip: LyraChip) => { chip.disabled = true; }],
+  ['rebinds its value', (chip: LyraChip) => { chip.value = 'replacement'; }],
+] as const) {
+  it(`retires a toggle when its request listener ${transition}`, async () => {
+    const chip = await fixture<LyraChip>(html`<lr-chip toggleable value="original">Filter</lr-chip>`);
+    let changes = 0;
+    chip.addEventListener('lr-chip-change', () => { changes += 1; });
+    chip.addEventListener('lr-chip-toggle-request', () => rebind(chip));
+
+    chip.click();
+
+    expect(chip.selected).to.equal(false);
+    expect(changes).to.equal(0);
+  });
+}

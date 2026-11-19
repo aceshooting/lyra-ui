@@ -332,6 +332,26 @@ it('keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight e
   ]);
 });
 
+it('commits one source selection per Space or Enter press', async () => {
+  const el = await fixture<LyraSourcePicker>(html`
+    <lr-source-picker .sources=${[{ id: 'leaf', label: 'Leaf' }]}></lr-source-picker>
+  `);
+  const leaf = el.shadowRoot!.querySelector('[role="treeitem"]')!;
+  const selected: string[][] = [];
+  el.addEventListener('lr-selection-change', event => {
+    el.selectedSourceIds = [...event.detail.selectedSourceIds];
+    selected.push([...el.selectedSourceIds]);
+  });
+  for (const key of [' ', 'Enter']) {
+    for (const repeat of [false, true, true]) {
+      const press = new KeyboardEvent('keydown', { key, repeat, bubbles: true, cancelable: true });
+      leaf.dispatchEvent(press);
+      expect(press.defaultPrevented).to.equal(true);
+    }
+  }
+  expect(selected).to.deep.equal([['leaf'], []]);
+});
+
 it('keyboard: the shared select-all checkbox toggles with Space and leaves Enter to the form', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
@@ -753,6 +773,14 @@ it('keyboard: ArrowLeft collapses an expanded, focused folder', async () => {
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(
     4
   );
+
+  const reserved = new KeyboardEvent('keydown', {
+    key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true,
+  });
+  tree.dispatchEvent(reserved);
+  await el.updateComplete;
+  expect(reserved.defaultPrevented).to.equal(false);
+  expect(tree.querySelector('[role="treeitem"]')!.getAttribute('aria-expanded')).to.equal('true');
 
   tree.dispatchEvent(
     new KeyboardEvent('keydown', {

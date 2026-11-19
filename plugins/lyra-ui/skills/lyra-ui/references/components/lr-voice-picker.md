@@ -16,6 +16,10 @@
 
 ## `lr-voice-picker`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](../forms.md#field-and-group-label-typography).
+
 Visible `error-text` or slotted error content sets `aria-invalid="true"` on the current trigger
 or free-text input while preserving the native validity of its value.
 

@@ -1266,3 +1266,23 @@ it('keeps number-first formatted readout, tooltip and range ends in reading orde
   const range = slider.shadowRoot!.querySelector('[part="value"]')!;
   expect(paintsHeadFirst(range, '-3', 1)).to.equal(true);
 });
+
+it('keeps tiny unstepped values distinct from zero in visible and accessible text', async () => {
+  const slider = await fixture<LyraSlider>(html`<lr-slider
+    with-value lang="ar-EG" step="any" min="0" max="1e-19" value="1.25e-21"
+  ></lr-slider>`);
+  const root = slider.shadowRoot!;
+  const thumb = root.querySelector('[part="thumb"]')!;
+  const readout = root.querySelector('[part="value"]')!;
+  const tiny = new Intl.NumberFormat('ar-EG', { notation: 'scientific', maximumSignificantDigits: 3 }).format(1.25e-21);
+  expect(slider.valueAsNumber).to.equal(1.25e-21);
+  expect(thumb.getAttribute('aria-valuenow')).to.equal('1.25e-21');
+  expect(readout.textContent).to.equal(tiny);
+  expect(thumb.getAttribute('aria-valuetext')).to.equal(tiny);
+
+  slider.value = 0;
+  await slider.updateComplete;
+  const zero = new Intl.NumberFormat('ar-EG').format(0);
+  expect(readout.textContent).to.equal(zero);
+  expect(thumb.getAttribute('aria-valuetext')).to.equal(zero);
+});

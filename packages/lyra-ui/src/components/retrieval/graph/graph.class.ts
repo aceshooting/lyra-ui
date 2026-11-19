@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 export type { LyraGraphNodeRenderContext, LyraGraphNodeMesh, LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
@@ -889,6 +890,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onSourceRowKey(event: KeyboardEvent): void {
+    if (shouldIgnoreNavigationKey(event)) return;
     const rows = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')];
     const index = rows.indexOf(event.currentTarget as HTMLButtonElement);
     const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
@@ -4972,6 +4974,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
       return;
     }
+    if (shouldIgnoreNavigationKey(e)) return;
     const count = this.graphItemCount();
     if (!count) return;
     const rtl = isRtl(this);

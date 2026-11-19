@@ -16,6 +16,7 @@ import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { styles } from './approval-queue.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import type { ApprovalAction, ApprovalDecision } from '../approval-state.js';
+import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -33,6 +34,28 @@ export type ApprovalRequestStatus = 'pending' | ApprovalDecision;
 const MAX_RENDERED_REQUESTS = 500;
 
 const normalizedRequestCache = new WeakMap<object, ToolApprovalRequest[]>();
+
+/** Compare only the selected request's owned snapshots. Repeated references can expand a small
+ * graph exponentially. Stop after 50,000 entries and containers or 256 nested levels. */
+function sameApprovalArgs(previous: unknown, next: unknown): boolean {
+  let remaining = 50_000;
+  function equal(left: unknown, right: unknown, depth: number): boolean {
+    if (left === right) return true;
+    if (depth > 256 || !left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
+    if (Array.isArray(left) || Array.isArray(right)) {
+      if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    } else if (!isPlainDataRecord(left) || !isPlainDataRecord(right)) return false;
+    const keys = Object.keys(left);
+    remaining -= keys.length + 1;
+    if (remaining < 0 || keys.length !== Object.keys(right).length) return false;
+    return keys.every(key => {
+      const before = Object.getOwnPropertyDescriptor(left, key);
+      const after = Object.getOwnPropertyDescriptor(right, key);
+      return before && after && 'value' in before && 'value' in after && equal(before.value, after.value, depth + 1);
+    });
+  }
+  return equal(previous, next, 0);
+}
 
 /** A host-owned tool call waiting for or carrying a human approval decision. */
 export interface ToolApprovalRequest {
@@ -57,8 +80,9 @@ export interface LyraApprovalQueueEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
- * An open request whose arguments are unchanged keeps its draft and pending decision across new
- * arrays. A resolved decision is announced, and focus lost with it moves to the next pending row.
+ * Equivalent JSON arguments keep an open draft and pending decision across new arrays, including
+ * reordered object keys. A comparison exceeding 50,000 entries and containers or 256 nested levels
+ * starts a fresh draft. A resolved decision is announced, and focus lost with it moves to the next pending row.
  *
  * @customElement lr-approval-queue
  * @event lr-approval-select - A request was selected. `detail: { invocationId }`.
@@ -178,20 +202,17 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     return normalized;
   }
 
-  private dialogArgs?: { readonly id: string; readonly json: string; readonly args: unknown };
+  private dialogArgs?: { readonly request: ToolApprovalRequest; readonly args: unknown };
 
   /** Re-cloned but equal arguments keep their identity, so the dialog keeps its draft. */
   private stableDialogArgs(request: ToolApprovalRequest): unknown {
-    let json = '';
-    try {
-      json = JSON.stringify(request.args) ?? '';
-    } catch {
-      // Not comparable: treat it as a new proposal.
-    }
     const previous = this.dialogArgs;
-    if (json && previous?.id === request.id && previous.json === json) return previous.args;
-    this.dialogArgs = { id: request.id, json, args: request.args };
-    return request.args;
+    if (previous?.request === request) return previous.args;
+    const args = previous?.request.id === request.id && sameApprovalArgs(previous.args, request.args)
+      ? previous.args
+      : request.args;
+    this.dialogArgs = { request, args };
+    return args;
   }
 
   private get normalizedRequests(): ToolApprovalRequest[] {
@@ -278,37 +299,30 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   }
 
   private select(request: ToolApprovalRequest): void {
-    if ((request.status ?? 'pending') !== 'pending') return;
+    const current = this.normalizedRequests.find(item => item.id === request.id);
+    if (!current || (current.status ?? 'pending') !== 'pending') return;
     this.selectedInvocationId = request.id;
     this.open = true;
     this.emit('lr-approval-select', { invocationId: request.id });
   }
 
   private decisionDispatching = false;
-  private onApprove(request: ToolApprovalRequest, event: CustomEvent<{ args: unknown }>): void {
+  private onDecision(request: ToolApprovalRequest, event: CustomEvent<{ args: unknown } | null>): void {
+    event.stopPropagation();
     if (this.decisionDispatching) return;
-    this.decisionDispatching = true;
-    try {
-      event.stopPropagation();
-      if ((request.status ?? 'pending') !== 'pending') return;
-      this.decidedInvocationIds.add(request.id);
-      const translated = this.emitApprovalDecisionRequest({ invocationId: request.id, approved: true, args: event.detail.args });
-      if (translated.defaultPrevented) event.preventDefault();
-
-    } finally {
-      this.decisionDispatching = false;
+    const current = this.selectedRequest;
+    if (!this.open || !current || current.id !== request.id || (current.status ?? 'pending') !== 'pending' ||
+        current.toolName !== request.toolName || (current !== request && !sameApprovalArgs(current.args, request.args))) {
+      event.preventDefault();
+      return;
     }
-  }
-
-  private onDeny(request: ToolApprovalRequest, event: CustomEvent<null>): void {
-    if (this.decisionDispatching) return;
     this.decisionDispatching = true;
     try {
-      event.stopPropagation();
-      if ((request.status ?? 'pending') !== 'pending') return;
       this.decidedInvocationIds.add(request.id);
-      const translated = this.emitApprovalDecisionRequest({ invocationId: request.id, approved: false });
-      if (translated.defaultPrevented) event.preventDefault();
+      const detail = event.type === 'lr-approve-request'
+        ? { invocationId: request.id, approved: true, args: event.detail?.args }
+        : { invocationId: request.id, approved: false };
+      if (this.emitApprovalDecisionRequest(detail).defaultPrevented) event.preventDefault();
     } finally {
       this.decisionDispatching = false;
     }
@@ -331,14 +345,14 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     this.emit('lr-approval-close', { invocationId: request.id, reason: event.detail.reason });
   }
 
-  private renderRequest(request: ToolApprovalRequest): TemplateResult {
+  private renderRequest(request: ToolApprovalRequest, index: number): TemplateResult {
     const status = request.status ?? 'pending';
     // The badge is the only place the resolved decision (approved/denied) is rendered, but the
     // button already carries an explicit `aria-label`, which -- per the accessible-name
     // computation -- excludes the badge's own text from the name. `aria-describedby` back onto
     // the badge keeps that decision reachable to assistive tech without touching the localized
     // `approvalQueueOpen` message itself.
-    const statusId = `approval-queue-status-${request.id}`;
+    const statusId = `approval-queue-status-${index}`;
     return html`<div role="listitem"><button
       part="request"
       type="button"
@@ -367,7 +381,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
         <span part="count" tabindex="-1">${this.localize('approvalQueuePendingCount', undefined, { count: this.formatCount(pendingCount) })}</span>
       </div>
       ${requests.length > 0
-        ? html`<div part="list" role="list">${repeat(requests.slice(0, MAX_RENDERED_REQUESTS), (item) => item.id, (item) => this.renderRequest(item))}</div>`
+        ? html`<div part="list" role="list">${repeat(requests.slice(0, MAX_RENDERED_REQUESTS), (item) => item.id, (item, index) => this.renderRequest(item, index))}</div>`
         : html`<p part="empty">${this.localize('approvalQueueEmpty')}</p>`}
       ${truncated
         ? html`<p part="limit">${this.localize('approvalQueueLimit', undefined, {
@@ -382,8 +396,8 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
               .toolName=${request.toolName}
               .args=${this.stableDialogArgs(request)}
               .readonly=${this.readonly}
-              @lr-approve-request=${(event: CustomEvent<{ args: unknown }>) => this.onApprove(request, event)}
-              @lr-deny-request=${(event: CustomEvent<null>) => this.onDeny(request, event)}
+              @lr-approve-request=${(event: CustomEvent<{ args: unknown }>) => this.onDecision(request, event)}
+              @lr-deny-request=${(event: CustomEvent<null>) => this.onDecision(request, event)}
               @lr-close=${(event: CustomEvent<{ reason: ToolApprovalDialogCloseReason }>) => this.onClose(request, event)}
             ></lr-tool-approval-dialog>`,
           )

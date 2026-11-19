@@ -3006,6 +3006,9 @@ function declarationContractBump(before, after, baseline, current) {
     }
     return bump;
   };
+  const frameworkMap = 'subpath-export:./framework-types:LyraComponentTypeMap:contract';
+  const isFrameworkMap = baseline?.contracts?.[baseline.entries[frameworkMap]?.value] === before
+    && current?.contracts?.[current.entries[frameworkMap]?.value] === after;
   ({ before, after } = alignPropertyAccess(before ?? {}, after ?? {}));
   after = alignCompatibleCallables(before, after, baseline, current);
   let bump = 'none';
@@ -3016,6 +3019,13 @@ function declarationContractBump(before, after, baseline, current) {
     if (!beforeEntry) bump = maxBump(bump, 'minor');
     else if (!afterEntry) return finish('major');
     else if (!sameValue(beforeEntry.value, afterEntry.value)) {
+      // The generated map uses never for a component with no CSS custom property names.
+      if (isFrameworkMap && /^:property:lr-[a-z0-9-]+:property:cssNames:type$/.test(id)
+        && beforeEntry.value === 'never' && typeof afterEntry.value === 'string'
+        && [...typeAtoms(afterEntry.value)].every(atom => /^'--lr-[a-z0-9-]+'$/.test(atom))) {
+        bump = maxBump(bump, 'minor');
+        continue;
+      }
       bump = maxBump(
         bump,
         changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current),

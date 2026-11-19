@@ -82,3 +82,28 @@ describe('lr-budget-meter heading', () => {
     expect(heading(el) === null).to.equal(true);
   });
 });
+
+it('keeps sub-cent amounts distinct in the visible total and accessible meter', async () => {
+  const el = await fixture<LyraBudgetMeter>(html`<lr-budget-meter
+    lang="en-US" used="0.001" limit="0.004" unit="USD"
+  ></lr-budget-meter>`);
+  const root = el.shadowRoot!;
+  const value = root.querySelector('[part="value"]')!;
+  const meter = root.querySelector('[part="meter"]')!;
+  expect(value.textContent).to.equal('0.001 of 0.004 USD');
+  expect(meter.getAttribute('aria-valuetext')).to.equal(value.textContent);
+  expect(meter.getAttribute('aria-valuenow')).to.equal('0.001');
+  expect(meter.getAttribute('aria-valuemax')).to.equal('0.004');
+  expect(root.querySelector('[part="percent"]')?.textContent).to.contain('25%');
+
+  el.used = 0;
+  await el.updateComplete;
+  expect(value.textContent).to.equal('0 of 0.004 USD');
+  expect(meter.getAttribute('aria-valuetext')).to.equal(value.textContent);
+
+  el.used = 0.125;
+  el.limit = 1;
+  await el.updateComplete;
+  expect(value.textContent).to.equal('0.13 of 1 USD');
+  expect(meter.getAttribute('aria-valuetext')).to.equal(value.textContent);
+});

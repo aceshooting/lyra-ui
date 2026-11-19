@@ -453,7 +453,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private sourceMode = false;
   private sourceSearchDirty = true;
   private sourceSearchIntent = 0;
-  private sourceCopyIntent = 0;
+  private copyIntent = 0;
   private sourceNavigationIntent = 0;
   private sourceSearchTask: Promise<number> = Promise.resolve(0);
   private sourceHits?: SourceHits;
@@ -514,7 +514,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
   private invalidateSourceSearch(): void {
     this.sourceSearchIntent = (this.sourceSearchIntent ?? 0) + 1;
-    this.sourceCopyIntent = (this.sourceCopyIntent ?? 0) + 1;
+    this.copyIntent = (this.copyIntent ?? 0) + 1;
     this.sourceNavigationIntent = (this.sourceNavigationIntent ?? 0) + 1;
     this.sourceHits = undefined; this.sourceHitKeys?.clear();
     this.sourceSearchExact = true; this.sourceSearchUnavailable = false; this.sourceSearchDirty = true;
@@ -570,9 +570,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const source = this.treeSource;
     const epoch = this.hierarchy.epoch;
     const owner = this.ownerDocument;
-    const intent = ++this.sourceCopyIntent;
+    const intent = ++this.copyIntent;
     const current = () => this.treeSource === source && this.hierarchy.epoch === epoch && this.ownerDocument === owner &&
-      this.isConnected && intent === this.sourceCopyIntent;
+      this.isConnected && intent === this.copyIntent;
     this.clearCopyFeedback();
     const result = await this.hierarchy.copy(key, scope, 25 * 1024 * 1024);
     if (!current() || result.status === 'stale') return;
@@ -599,21 +599,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     } catch (error) {
       outcome = Object.freeze({ ok: false, text: result.value, reason: clipboardFailureReason(error), error });
     }
-    if (!accepted()) return;
-    this.showCopyFeedback(feedback, outcome.ok);
-    if (!outcome.ok) {
-      const message = this.localize('copyFailed');
-      if (!accepted()) return;
-      this.searchAnnouncementSink?.announce(message);
-      if (!accepted()) return;
-      this.emit('lr-error');
-      if (accepted()) this.emit('lr-copy-error', outcome);
-    } else {
-      const message = this.localize('copied');
-      if (!accepted()) return;
-      this.searchAnnouncementSink?.announce(message);
-      if (accepted()) this.emit('lr-copy', outcome);
-    }
+    this.reportCopyOutcome(feedback, outcome, accepted);
   }
   private sourceCopyButton(node?: LyraInspectionNode): TemplateResult | typeof nothing {
     if (!this.copyable || !this.hasSourceCopy()) return nothing;
@@ -820,10 +806,18 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.expandedOverrides = next;
   }
 
-  private reportCopyFailure(outcome: LyraClipboardWriteFailure, current: () => boolean = () => true): void {
-    this.searchAnnouncementSink?.announce(this.localize('copyFailed'));
-    if (current()) this.emit('lr-error');
-    if (current()) this.emit('lr-copy-error', outcome);
+  private reportCopyOutcome(key: string, outcome: LyraClipboardWriteOutcome, current: () => boolean): void {
+    if (!current()) return;
+    this.showCopyFeedback(key, outcome.ok);
+    const message = outcome.ok ? this.localize('copied') : this.localize('copyFailed');
+    if (!current()) return;
+    this.searchAnnouncementSink?.announce(message);
+    if (!current()) return;
+    if (outcome.ok) this.emit('lr-copy', outcome);
+    else {
+      this.emit('lr-error');
+      if (current()) this.emit('lr-copy-error', outcome);
+    }
   }
 
   private clearCopyFeedback(): void {
@@ -837,8 +831,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const owner = this.ownerDocument.defaultView;
     if (!owner) return;
     this.clearCopyFeedback();
-    this.copyFeedback = { key, ok };
-    this.copyFeedbackTimer = { owner, handle: owner.setTimeout(() => this.clearCopyFeedback(), COPY_CONFIRM_MS) };
+    const feedback = { key, ok };
+    this.copyFeedback = feedback;
+    this.copyFeedbackTimer = { owner, handle: owner.setTimeout(() => {
+      if (this.copyFeedback === feedback) this.clearCopyFeedback();
+    }, COPY_CONFIRM_MS) };
   }
 
   private copyLabel(key: string, rest: string): string {
@@ -848,16 +845,15 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   private async copy(value: JsonSnapshotValue, key: string): Promise<void> {
     if (this.treeSource !== undefined) return;
-    const sourceIntent = this.sourceCopyIntent;
-    const current = () => this.treeSource === undefined && sourceIntent === this.sourceCopyIntent;
+    const intent = ++this.copyIntent;
+    const current = () => this.treeSource === undefined && intent === this.copyIntent;
     this.clearCopyFeedback();
     let text = '';
     try {
       text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
     } catch (error) {
       if (this.isConnected && current()) {
-        this.showCopyFeedback(key, false);
-        this.reportCopyFailure(Object.freeze({ ok: false, text, reason: 'failed', error }), current);
+        this.reportCopyOutcome(key, Object.freeze({ ok: false, text, reason: 'failed', error }), current);
       }
       return;
     }
@@ -865,13 +861,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const outcome = await writeClipboardText(owner, text);
     if (!current() || !this.isConnected || this.ownerDocument.defaultView !== owner) return;
-    this.showCopyFeedback(key, outcome.ok);
-    if (!outcome.ok) {
-      this.reportCopyFailure(outcome, current);
-      return;
-    }
-    this.searchAnnouncementSink?.announce(this.localize('copied'));
-    this.emit('lr-copy', outcome);
+    this.reportCopyOutcome(key, outcome, current);
   }
 
   /**
@@ -1207,6 +1197,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.sourceMode = false;
     if (wasSource) { this.sourceAnnouncement = undefined; this.invalidateSourceSearch(); }
     if (wasSource || !this.hasUpdated || changed.has('data') || changed.has('maxNodes')) {
+      this.copyIntent++;
+      this.clearCopyFeedback();
       const snapshot = snapshotJsonData(this.data, this.effectiveMaxNodes);
       this.dataSnapshot = snapshot.value;
       this.dataSnapshotTruncated = snapshot.truncated;

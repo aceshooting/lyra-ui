@@ -457,16 +457,18 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   };
 
   private onToggleClick = (): void => {
-    if (this.disabled) return;
-    const selected = !this.selected;
+    if (this.disabled || !this.toggleable || this.removable) return;
+    const { value, selected } = this;
+    const connected = this.isConnected;
     const request = this.emit(
       'lr-chip-toggle-request',
-      { value: this.value, selected },
+      { value, selected: !selected },
       { cancelable: true }
     );
-    if (request.defaultPrevented) return;
-    this.selected = selected;
-    this.emit('lr-chip-change', { value: this.value, selected });
+    if (request.defaultPrevented || this.disabled || !this.toggleable || this.removable ||
+        this.isConnected !== connected || this.value !== value || this.selected !== selected) return;
+    this.selected = !selected;
+    this.emit('lr-chip-change', { value, selected: !selected });
   };
 
   private get primaryControl(): HTMLButtonElement | null {

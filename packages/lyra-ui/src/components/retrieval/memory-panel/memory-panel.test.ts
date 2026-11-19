@@ -705,6 +705,24 @@ describe('lr-memory-panel', () => {
   });
 
   describe('keyboard focus across the confirmation step', () => {
+    for (const action of ['add', 'remove', 'forget-all'] as const) {
+      it(`respects external focus chosen by the ${action} completion listener`, async () => {
+        const el = await populated();
+        const outside = await fixture<HTMLButtonElement>(html`<button>Next task</button>`);
+        const initiator = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${action}-button"]`)!;
+        await focusByKeyboard(initiator);
+        initiator.click();
+        await settleFocus(el);
+        const bar = el.shadowRoot!.querySelector('lr-confirm-bar')!;
+        expect(composedContains(bar, deepActiveElement(document))).to.equal(true);
+        const completion = action === 'forget-all' ? 'lr-forget' : `lr-${action}`;
+        el.addEventListener(completion, () => outside.focus(), { once: true });
+        bar.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+        await settleFocus(el);
+        expect(deepActiveElement(document) === outside).to.equal(true);
+      });
+    }
+
     it('moves focus into the confirmation when a focused remove action is activated', async () => {
       const el = await populated();
       const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
@@ -760,16 +778,16 @@ describe('lr-memory-panel', () => {
       expect(composedContains(bar, deepActiveElement(document))).to.be.true;
     });
 
-    it('returns focus to the row when the confirmation is denied from the keyboard', async () => {
+    it('returns focus to the remove action when the confirmation is denied from the keyboard', async () => {
       const el = await populated();
       const row = el.shadowRoot!.querySelector(
         '[part="item"][data-id="s1"]'
       ) as HTMLElement;
-      const remove = row.querySelector(
+      const initiator = row.querySelector(
         '[part="remove-button"]'
       ) as HTMLButtonElement;
-      remove.focus();
-      remove.click();
+      await focusByKeyboard(initiator);
+      initiator.click();
       await el.updateComplete;
       const bar = await readyConfirmBar(row);
       await settleFocus(el);
@@ -783,19 +801,19 @@ describe('lr-memory-panel', () => {
         0
       );
       expect(deepActiveElement(document)?.localName).to.not.equal('body');
-      expect(composedContains(row, deepActiveElement(document))).to.be.true;
+      expect(deepActiveElement(document) === row.querySelector('[part="remove-button"]')).to.be.true;
     });
 
-    it('cancels the confirmation on Escape and returns focus to the row', async () => {
+    it('cancels the confirmation on Escape and returns focus to the add action', async () => {
       const el = await populated();
       const row = el.shadowRoot!.querySelector(
         '[part="item"][data-id="s1"]'
       ) as HTMLElement;
-      const remove = row.querySelector(
-        '[part="remove-button"]'
+      const initiator = row.querySelector(
+        '[part="add-button"]'
       ) as HTMLButtonElement;
-      remove.focus();
-      remove.click();
+      await focusByKeyboard(initiator);
+      initiator.click();
       await el.updateComplete;
       await readyConfirmBar(row);
       await settleFocus(el);
@@ -816,7 +834,7 @@ describe('lr-memory-panel', () => {
         0
       );
       expect(deepActiveElement(document)?.localName).to.not.equal('body');
-      expect(composedContains(row, deepActiveElement(document))).to.be.true;
+      expect(deepActiveElement(document) === row.querySelector('[part="add-button"]')).to.be.true;
     });
 
     it('cancels the "forget all" confirmation on Escape and returns focus to its control', async () => {

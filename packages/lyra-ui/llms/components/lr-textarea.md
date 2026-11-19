@@ -16,6 +16,9 @@
 
 ## `lr-textarea`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 A multiline plain-text input primitive, form-associated (participates in native `<form>`

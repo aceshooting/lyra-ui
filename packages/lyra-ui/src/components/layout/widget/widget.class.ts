@@ -678,12 +678,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     );
   }
 
-  private setActiveView = (viewId: string): void => {
-    if (viewId !== this.activeViewId) {
+  private setActiveView = (viewId: string, views: readonly LyraWidgetView[]): void => {
+    const current = () => this.isConnected && this.views === views;
+    if (!current()) return;
+    const previous = this.activeViewId;
+    if (viewId !== previous) {
       const request = this.emit('lr-view-request', { viewId }, { cancelable: true });
-      if (request.defaultPrevented) return;
+      if (request.defaultPrevented || !current() || this.activeViewId !== previous) return;
       this.activeViewId = viewId;
       this.emit('lr-view-change', { viewId });
+      if (!current() || this.activeViewId !== viewId) return;
     }
     // Every accepted toggle activation reports, including the re-pick of the active view that
     // `lr-view-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
@@ -819,7 +823,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                     data-view-id=${view.viewId}
                     aria-pressed=${view.viewId === this.activeViewId ? 'true' : 'false'}
                     aria-label=${hasLabel ? nothing : view.ariaLabel || view.viewId}
-                    @click=${() => this.setActiveView(view.viewId)}
+                    @click=${() => this.setActiveView(view.viewId, views)}
                   >
                     ${view.icon
                       ? renderInertPresentation(view.icon, { part: 'view-icon' })

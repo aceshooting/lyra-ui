@@ -182,6 +182,14 @@ it('rolls the view to the next month when ArrowDown moves focus past the bottom 
   await el.updateComplete;
   const aug7 = el.shadowRoot!.querySelector('[data-date="2026-08-07"]') as HTMLElement;
   aug7.focus();
+  const reserved = new KeyboardEvent('keydown', {
+    key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true,
+  });
+  aug7.dispatchEvent(reserved);
+  await el.updateComplete;
+  expect(reserved.defaultPrevented).to.equal(false);
+  expect(el.shadowRoot!.activeElement === aug7).to.equal(true);
+
   aug7.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
 

@@ -3541,7 +3541,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1401,
+              "line": 1428,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6783,7 +6783,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/budget-meter/budget-meter.class.ts",
-              "line": 105,
+              "line": 106,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12233,7 +12233,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1250,
+              "line": 1249,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22509,10 +22509,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/utility/export-button/export-button.class.ts",
+              "line": 832,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -22537,7 +22543,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -23779,7 +23785,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "keyboard",
           "rtl",
           "reducedMotion",
           "narrowAllocation",
@@ -23818,9 +23823,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/flow-controls/flow-controls.test.ts",
+              "test": "moves focus to ${opposite} when ${direction} reaches its limit",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -23916,7 +23926,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
@@ -26424,7 +26433,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 992,
+              "line": 991,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29694,7 +29703,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 752,
+              "line": 738,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47539,7 +47548,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 1090,
+              "line": 1105,
               "kind": "320px allocation test signal"
             }
           ]
@@ -50130,7 +50139,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 815,
+              "line": 814,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50687,7 +50696,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 563,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

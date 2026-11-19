@@ -2474,3 +2474,21 @@ test('ignoring declaration comments preserves real member and literal breaking c
     );
   }
 });
+
+test('classifies the first generated CSS names as additive for framework consumers', () => {
+  const snapshot = (type, field = 'cssNames') => normalizePublicApi({
+    packageJson: { name: 'sample', version: '1.0.0', exports: { './framework-types': './dist/framework-types.js' } },
+    manifest: { modules: [] },
+    declarations: { files: { 'dist/framework-types.d.ts': [
+      `export interface LyraComponentTypeMap { 'lr-sample': { ${field}: ${type} } }`,
+      "export type Consumer = LyraComponentTypeMap['lr-sample'];",
+    ].join('\n') }, packageFiles: ['dist/framework-types.js', 'dist/framework-types.d.ts'] },
+  });
+  const compare = (before, after, field) => diffPublicApi(snapshot(before, field), snapshot(after, field));
+  const first = compare('never', "'--lr-label' | '--lr-size'");
+  assert.equal(first.find(change => change.id.endsWith(':Consumer:dependencies'))?.bump, 'minor');
+  assert.equal(minimumRequiredBump(first), 'minor');
+  assert.equal(minimumRequiredBump(compare("'--lr-size'", 'never')), 'major');
+  assert.equal(minimumRequiredBump(compare('never', 'string')), 'major');
+  assert.equal(minimumRequiredBump(compare('never', "'--lr-size'", 'result')), 'major');
+});

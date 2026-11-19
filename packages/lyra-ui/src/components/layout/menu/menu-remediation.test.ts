@@ -238,3 +238,22 @@ describe('submenu pointer handling', () => {
     expect(calls).to.equal(1);
   });
 });
+
+it('refreshes the menu description when a referenced element appears or is replaced', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div><lr-menu aria-describedby="menu-late-help" label="Actions"></lr-menu></div>
+  `);
+  const menu = wrapper.querySelector('lr-menu')!;
+  const list = menu.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!;
+  const first = document.createElement('p');
+  first.id = 'menu-late-help';
+  wrapper.append(first);
+  await waitUntil(() => list.ariaDescribedByElements?.[0] === first);
+
+  const second = first.cloneNode() as HTMLElement;
+  first.replaceWith(second);
+  await waitUntil(() => list.ariaDescribedByElements?.[0] === second);
+
+  second.remove();
+  await waitUntil(() => (list.ariaDescribedByElements?.length ?? 0) === 0);
+});

@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 19 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-emoji-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A searchable, keyboard-navigable, form-associated emoji picker. `groups` is fully consumer-suppliable
 — the component ships no emoji data of its own — in the same "zero/optional-peer dependency" spirit

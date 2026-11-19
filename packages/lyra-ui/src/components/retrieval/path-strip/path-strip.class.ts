@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -167,9 +168,11 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     }, 'restore-path-focus');
   }
 
-  private activate(index: number): void {
-    const occurrence = this.pathOccurrences[index];
+  private activate(index: number, path = this.pathOccurrences): void {
+    if (path !== this.pathOccurrences) return;
+    const occurrence = path[index];
     if (!occurrence) return;
+    this.activeIndex = index;
     const el = occurrence.element;
     if (el.kind === 'node') {
       this.emit('lr-entity-select', {
@@ -178,8 +181,8 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       });
       return;
     }
-    const source = this.pathOccurrences[index - 1]?.element;
-    const target = this.pathOccurrences[index + 1]?.element;
+    const source = path[index - 1]?.element;
+    const target = path[index + 1]?.element;
     this.emit('lr-relation-activate', {
       relation: el.relation,
       sourceNodeId: source?.kind === 'node' ? source.node.id : undefined,
@@ -229,6 +232,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     const count = this.pathOccurrences.length;
     if (count === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
@@ -249,15 +253,12 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     this.focusIndex(next);
   };
 
-  private renderNode(node: LyraEntity, index: number): TemplateResult {
+  private renderNode(node: LyraEntity, index: number, activate: () => void): TemplateResult {
     return html`<button
       part="node"
       type="button"
       tabindex=${this.activeIndex === index ? '0' : '-1'}
-      @click=${() => {
-        this.activeIndex = index;
-        this.activate(index);
-      }}
+      @click=${activate}
       @focus=${() => this.onElementFocus(index)}
     >
       ${node.label || node.id}
@@ -266,7 +267,8 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   private renderEdge(
     el: Extract<LyraPathElement, { kind: 'edge' }>,
-    index: number
+    index: number,
+    activate: () => void,
   ): TemplateResult {
     const rtl = isRtl(this);
     const glyph = el.directed
@@ -286,10 +288,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         part="relation"
         type="button"
         tabindex=${this.activeIndex === index ? '0' : '-1'}
-        @click=${() => {
-          this.activeIndex = index;
-          this.activate(index);
-        }}
+        @click=${activate}
         @focus=${() => this.onElementFocus(index)}
       >
         ${el.relation}
@@ -319,14 +318,17 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         part="base"
         role=${role ?? nothing}
         aria-label=${label ?? nothing}
-        @keydown=${this.onKeyDown}
+        @keydown=${(event: KeyboardEvent) => {
+          if (path === this.pathOccurrences) this.onKeyDown(event);
+        }}
       >
         <lr-scroller orientation="horizontal" controls>
-          ${path.map((occurrence, i) =>
-            occurrence.element.kind === 'node'
-              ? this.renderNode(occurrence.element.node, i)
-              : this.renderEdge(occurrence.element, i)
-          )}
+          ${path.map(({ element }, i) => {
+            const activate = (): void => this.activate(i, path);
+            return element.kind === 'node'
+              ? this.renderNode(element.node, i, activate)
+              : this.renderEdge(element, i, activate);
+          })}
         </lr-scroller>
         <div class="sr-only" aria-hidden="true">${this.liveText}</div>
       </div>

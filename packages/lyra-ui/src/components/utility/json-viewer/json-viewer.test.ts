@@ -2042,3 +2042,35 @@ for (const [outcome, writeText, expected] of [
     }
   });
 }
+
+it('keeps feedback on the latest in-memory copy when the previous write rejects', async () => {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const pending: Array<{ resolve: () => void; reject: () => void }> = [];
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => new Promise<void>((resolve, reject) => pending.push({ resolve, reject })) },
+  });
+  try {
+    const el = await withData({ name: 'first' });
+    el.copyable = true;
+    await el.updateComplete;
+    const toolbar = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="copy-button"]')!;
+    const events: string[] = [];
+    for (const type of ['lr-copy', 'lr-error', 'lr-copy-error']) el.addEventListener(type, () => events.push(type));
+    toolbar().click();
+    el.data = { name: 'next' };
+    await el.updateComplete;
+    toolbar().click();
+    expect(pending.length).to.equal(2);
+    pending[1]!.resolve();
+    await waitUntil(() => toolbar().textContent!.trim() === 'Copied!');
+    pending[0]!.reject();
+    await nextFrames();
+    expect(events).to.deep.equal(['lr-copy']);
+    expect(toolbar().getAttribute('aria-label')).to.equal('Copied!');
+    expect(document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent).to.contain('Copied!');
+  } finally {
+    if (original) Object.defineProperty(navigator, 'clipboard', original);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});

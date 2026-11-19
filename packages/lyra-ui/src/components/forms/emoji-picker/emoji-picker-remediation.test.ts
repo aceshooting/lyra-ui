@@ -502,3 +502,28 @@ describe('emoji-picker load failure recovery', () => {
     expect(loads).to.equal(2);
   });
 });
+
+it('restarts a pending locale load on reconnect and keeps its settled result', async () => {
+  const el = document.createElement('lr-emoji-picker');
+  const loads: Array<(groups: EmojiPickerGroup[] | null) => void> = [];
+  (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups =
+    () => new Promise(resolve => loads.push(resolve));
+  let failures = 0;
+  el.addEventListener('lr-load-error', () => failures++);
+  mounted.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  el.remove();
+  document.body.append(el);
+  expect(loads.length).to.equal(2);
+  loads[1]!(samples);
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="emoji"]')?.getAttribute('aria-label') === 'grinning face');
+  loads[0]!(null);
+  await Promise.resolve();
+  expect(failures).to.equal(0);
+  expect(el.groups).to.deep.equal(samples);
+  el.remove();
+  document.body.append(el);
+  await el.updateComplete;
+  expect(loads.length).to.equal(2);
+});

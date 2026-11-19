@@ -2192,3 +2192,31 @@ it('keeps an icon-only trigger square and named when its slotted glyph changes',
   expect(trigger.getAttribute('aria-label')).to.equal(null);
   expect(trigger.textContent?.trim()).to.equal('Download data');
 });
+
+for (const [format, reconnect] of [['csv', false], ['json', false], ['csv', true]] as const) {
+  it(`retires a ${format} export when its request listener ${reconnect ? 'removes and reconnects' : 'removes'} the button`, async () => {
+    const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${[format]}></lr-export-button>`);
+    const parent = el.parentNode!;
+    const observed: string[] = [];
+    el.getRows = () => { observed.push('rows'); return rows; };
+    el.addEventListener('lr-export-request', () => {
+      el.remove();
+      if (reconnect) parent.appendChild(el);
+    }, { once: true });
+    el.addEventListener('lr-export-complete', () => observed.push('complete'));
+    el.addEventListener('lr-export-error', () => observed.push('error'));
+
+    const createObjectURL = URL.createObjectURL;
+    URL.createObjectURL = () => {
+      observed.push('download');
+      throw new Error('An obsolete export must not create a download');
+    };
+    try {
+      el.click();
+      expect(observed).to.deep.equal([]);
+      expect(el.isConnected).to.equal(reconnect);
+    } finally {
+      URL.createObjectURL = createObjectURL;
+    }
+  });
+}

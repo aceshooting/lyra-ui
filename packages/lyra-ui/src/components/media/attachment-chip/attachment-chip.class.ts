@@ -258,10 +258,10 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   /** Stable domain identity carried by attachment action events. */
   /** Stable action identity. Empty or whitespace-only values use the documented fallback. */
-  @property({ attribute: 'attachment-id' }) attachmentId = '';
+  @property({ attribute: 'attachment-id', useDefault: true }) attachmentId = '';
 
   /** MIME type, used only while `file` is unset. */
-  @property({ attribute: 'mime-type' }) mimeType = '';
+  @property({ attribute: 'mime-type', useDefault: true }) mimeType = '';
 
   /** Thumbnail image URL. Rendered whenever present and safe, also while `file` is set: it then
    *  replaces the blob URL a `File`'s own image thumbnail would otherwise use (see the class doc),

@@ -294,20 +294,14 @@ trigger. Resize separators are focusable and expose finite `aria-valuemin`, `ari
 a gesture rolls it back, and column drops require the current grid's owned drag token plus current
 source/target capability.
 
-The four pager navigation controls each wrap their glyph in an icon part — `first-icon`,
-`previous-icon`, `next-icon`, `last-icon` — rendered as real chevron SVGs rather than literal
-`«`/`‹`/`›`/`»` text, so they mirror under `dir="rtl"` instead of pointing the wrong way. `first-icon`
-and `last-icon` hold two overlapping chevrons so the pair reads as one doubled glyph. This matches
-`<lr-pagination>`'s identical treatment; style the glyph through the icon part and the control
-through `first-button`/`previous-button`/`next-button`/`last-button` (or the shared `pager-button`).
+The `first-icon`, `previous-icon`, `next-icon`, and `last-icon` parts contain RTL-mirroring
+SVG chevrons, with two overlapping chevrons at each endpoint to match `lr-pagination`. Style
+the buttons through `first-button`, `previous-button`, `next-button`, `last-button`, or the shared
+`pager-button`.
 
-`[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
-announcement — a styling and inspection surface, with no live-region role of its own. The
-announcement itself goes to the library's shared **light-DOM** polite region, appended to the
-consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
-shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
-document-level region rather than `::part(live-region)`; the part still tells you what the grid
-last announced.
+`[part="live-region"]` is a visually hidden, `aria-hidden` mirror of the last polite announcement
+for styling and inspection. Check delivery on the shared light-DOM region in `<body>`, marked
+`data-lr-live-region="polite"`. Shadow-root live regions are unreliable in JAWS with Firefox.
 
 Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
 localized loading text to that shared polite sink, including repeated loading cycles. The visible

@@ -32,7 +32,7 @@ export const styles = css`
   }
 
   [part~='form-control-label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography()}
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;

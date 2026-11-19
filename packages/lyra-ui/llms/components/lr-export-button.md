@@ -90,7 +90,8 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 **Events:** `lr-export-request` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one; the rows a
 non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
-inside the listener still reaches it, and `getRows` is consulted at the same point),
+inside the listener still reaches it, and `getRows` is consulted at the same point. Removing
+the export button during the request retires that download),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
 unknown }`, fires when a built-in export cannot be serialized or downloaded; the same failure is

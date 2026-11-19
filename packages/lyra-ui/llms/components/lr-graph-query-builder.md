@@ -9,12 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 28 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-graph-query-builder`
+
+Use `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color` to theme field labels.
+See [shared label typography](../forms.md#field-and-group-label-typography).
 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.

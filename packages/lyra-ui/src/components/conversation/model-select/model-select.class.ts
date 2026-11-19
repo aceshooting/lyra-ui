@@ -122,10 +122,10 @@ export interface LyraModelSelectEventMap {
  * before the user has done anything is hostile.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The complete label, control, hint, error, and listbox frame.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for trigger and combobox text.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
  * @csspart combobox - The text-input container (free-text mode's positioning anchor).

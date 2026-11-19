@@ -1,6 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import '../components/forms/input/input.js';
 import '../components/forms/input/number-input.js';
+import '../components/forms/input/time-input.js';
+import '../components/forms/color-picker/color-picker.js';
 import '../components/forms/radio/radio-group.js';
 import '../components/forms/select/select.js';
 import '../components/forms/code-editor/code-editor.js';
@@ -104,7 +106,7 @@ describe('the shared required marker', () => {
 });
 
 describe('field and group label typography', () => {
-  it('matches field and group labels at every size and accepts ancestor overrides', async () => {
+  it('preserves field and group defaults at every size and accepts ancestor overrides', async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div>
         <lr-input label="Name"></lr-input>
@@ -114,6 +116,8 @@ describe('field and group label typography', () => {
         <lr-number-input label="Count"></lr-number-input>
         <lr-code-editor label="Code"></lr-code-editor>
         <lr-otp-input label="Passcode"></lr-otp-input>
+        <lr-time-input label="Time"></lr-time-input>
+        <lr-color-picker label="Color"></lr-color-picker>
       </div>
     `);
     const controls = [...wrapper.children];
@@ -122,10 +126,16 @@ describe('field and group label typography', () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
       for (const control of controls) control.setAttribute('size', size);
       const sizes = labels.map(label => getComputedStyle(label).fontSize);
-      expect(new Set(sizes).size, size).to.equal(1);
-      fontSizes.push(sizes[0]!);
+      expect(sizes[1], size).to.equal(sizes[2]);
+      fontSizes.push(sizes[1]!);
+      for (const index of [0, 3, 4, 6, 7, 8]) {
+        controls[index]!.setAttribute('style', '--lr-font-size-md-sm: 13px');
+        expect(getComputedStyle(labels[index]!).fontSize, controls[index]!.localName).to.equal('13px');
+      }
+      expect(sizes[5]).to.equal(getComputedStyle(labels[5]!.parentElement!).fontSize);
     }
     expect(fontSizes[0]).not.to.equal(fontSizes.at(-1));
+    expect(getComputedStyle(labels[8]!).fontWeight).to.equal(getComputedStyle(labels[8]!.parentElement!).fontWeight);
     wrapper.style.cssText = '--lr-form-control-label-font-size: 19px; --lr-form-control-label-font-weight: 800; --lr-form-control-label-color: rgb(11, 22, 33)';
     for (const label of labels) {
       const style = getComputedStyle(label);

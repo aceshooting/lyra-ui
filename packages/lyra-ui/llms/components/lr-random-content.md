@@ -98,8 +98,6 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
 
 **Known gotchas:**
 
-- There is no next/previous/shuffle action; the only built-in control is the autoplay pause/resume
-  button. Selection changes via autoplay or `randomize()`.
 - Autoplay is suppressed entirely under `prefers-reduced-motion: reduce`, and whenever the eligible
   pool has fewer than 2 children. The preference is re-observed live, not just read once.
 - `fade-left`/`fade-right` are physical-direction transforms (upstream naming), deliberately **not**

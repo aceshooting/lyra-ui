@@ -27,7 +27,7 @@ export const styles = css`
   /* The rendered legend's real part is "form-control-label" (checkbox-group.class.ts's render()),
      not "label" -- this must match it exactly or the rule is dead code. */
   [part~="form-control-label"] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`var(--lr-form-control-font-size)`, color: css`var(--lr-color-text)` })}
   }
   ${formControlLabelDisplay}
   ${formControlRequiredMarker}

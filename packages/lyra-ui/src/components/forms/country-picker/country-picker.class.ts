@@ -35,9 +35,9 @@ function normalizeCountry(value: unknown): string {
  * @slot hint - Custom field guidance.
  * @slot error - Custom validation guidance.
  * @csspart form-control - The field wrapper.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The field label.
  * @csspart select-trigger - The visible trigger or filter frame.
  * @csspart select-display-input - The committed name or optional filter input.

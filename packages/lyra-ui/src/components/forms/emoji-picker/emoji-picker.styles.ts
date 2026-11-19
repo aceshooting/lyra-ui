@@ -64,7 +64,7 @@ export const styles = css`
     gap: var(--lr-emoji-picker-control-gap, var(--_lr-emoji-picker-control-gap-default));
   }
   [part='form-control-label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)`, weight: css`inherit` })}
   }
   /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
      tracked by SlotPresenceController and reflected as the hidden attribute. */

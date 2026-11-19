@@ -75,7 +75,7 @@ export const styles = css`
   }
 
   [part='form-control-label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
     display: block;
     margin-block-end: var(--lr-space-xs);
   }

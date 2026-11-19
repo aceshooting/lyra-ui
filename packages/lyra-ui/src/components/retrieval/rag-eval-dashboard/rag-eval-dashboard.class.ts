@@ -24,7 +24,7 @@ import {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardInputLimit, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices, LYRA_DEFAULT_ragEvalDashboardSlicesLimit } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_ragEvalDashboardRunsLimit } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_noData, LYRA_DEFAULT_ragEvalDashboardRunsLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraRagEvaluationMetricCategory =
@@ -66,7 +66,8 @@ const MAX_SLICE_CONTROLS = 500;
  * per-metric trends, evaluation slices, and run history. It displays host-computed metrics and
  * never executes datasets, retrieval, judges, or model calls. A controlled `slice` absent from
  * the current runs is preserved and renders an explicit localized unavailable-filter state;
- * the component never silently switches it to All.
+ * the component never silently switches it to All. Metric cards show localized no-data text
+ * when no matching run contains a finite measurement.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -116,6 +117,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    noData: LYRA_DEFAULT_noData,
     ragEvalDashboardAllSlices: LYRA_DEFAULT_ragEvalDashboardAllSlices,
     ragEvalDashboardEmpty: LYRA_DEFAULT_ragEvalDashboardEmpty,
     ragEvalDashboardInputLimit: LYRA_DEFAULT_ragEvalDashboardInputLimit,
@@ -294,16 +296,16 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     metric: LyraRagEvaluationMetric,
     raw: number | undefined
   ): string {
-    const value = Number.isFinite(raw) ? (raw as number) : 0;
+    if (raw === undefined || !Number.isFinite(raw)) return this.localize('noData');
     if (metric.format === 'percent') {
       return getNumberFormat(this.effectiveLocale, {
         style: 'percent',
         maximumFractionDigits: 1,
-      }).format(finiteRange(value, 0, 0, 1));
+      }).format(finiteRange(raw, 0, 0, 1));
     }
     return getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 3,
-    }).format(value);
+    }).format(raw);
   }
 
   private latestValue(

@@ -17,6 +17,9 @@
 
 ## `lr-combobox` / `lr-option`
 
+Style the `lr-combobox` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
 single/multiple value and option synchronization.

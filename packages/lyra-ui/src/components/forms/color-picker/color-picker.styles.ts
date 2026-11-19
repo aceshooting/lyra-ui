@@ -88,7 +88,7 @@ export const styles = css`
     gap: var(--lr-color-picker-gap, var(--_lr-color-picker-gap));
   }
   [part~="label"] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)`, weight: css`inherit` })}
   }
   /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
      tracked in JS (hasLabel/hasHint/hasError) and reflected via hidden; otherwise the required

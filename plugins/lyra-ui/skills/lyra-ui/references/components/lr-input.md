@@ -16,6 +16,9 @@
 
 ## `lr-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`,

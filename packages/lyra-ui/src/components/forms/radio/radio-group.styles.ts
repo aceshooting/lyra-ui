@@ -18,7 +18,7 @@ export const groupStyles = css`
     gap: var(--lr-radio-group-row-gap, var(--_lr-radio-group-row-gap));
   }
   [part~="label"] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`var(--lr-form-control-font-size)`, color: css`var(--lr-color-text)` })}
   }
   [part~="label"][hidden],
   [part~="hint"][hidden],

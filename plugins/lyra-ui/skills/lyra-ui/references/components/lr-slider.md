@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 26 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-slider`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the

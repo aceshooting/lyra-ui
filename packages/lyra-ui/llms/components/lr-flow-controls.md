@@ -20,7 +20,8 @@ The canvas's button cluster: zoom in/out, fit, and interaction lock, so every fl
 same affordances without hosts rebuilding them. Manipulates only view state, never `nodes`/`edges` —
 no editing commands live here. Zoom-in/out disabled state reads the canvas snapshot's effective
 finite, sorted bounds, so invalid or reversed raw `minZoom`/`maxZoom` values cannot disable an
-otherwise available direction.
+otherwise available direction. When a focused zoom button reaches its limit, focus moves to
+the opposite zoom button or to Fit if both directions are disabled.
 
 **Properties:**
 

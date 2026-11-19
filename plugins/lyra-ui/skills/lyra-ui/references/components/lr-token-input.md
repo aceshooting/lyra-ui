@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-token-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 

@@ -474,6 +474,14 @@ it('keyboard: ArrowLeft moves to the previous sibling, Home/End jump to the firs
   await el.updateComplete;
   expect(focusedId()).to.equal('rag');
 
+  const reserved = new KeyboardEvent('keydown', {
+    key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true,
+  });
+  svg.dispatchEvent(reserved);
+  await el.updateComplete;
+  expect(reserved.defaultPrevented).to.equal(false);
+  expect(focusedId()).to.equal('rag');
+
   svg.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'ArrowLeft',

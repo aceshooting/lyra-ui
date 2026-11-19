@@ -163,6 +163,22 @@ it("defaults to showing the stop button while running when without-stop is absen
   expect(absent.shadowRoot!.querySelector('[part="stop-button"]')).to.exist;
 });
 
+for (const [reason, invalidate] of [
+  ['generation completes', (el: LyraGenerationMetrics) => { el.status = 'complete'; }],
+  ['Stop is hidden', (el: LyraGenerationMetrics) => { el.withoutStop = true; }],
+  ['the element disconnects', (el: LyraGenerationMetrics) => el.remove()],
+] as const) {
+  it(`rejects Stop when ${reason} during the click capture phase`, async () => {
+    const el = await fixture<LyraGenerationMetrics>(html`<lr-generation-metrics status="running"></lr-generation-metrics>`);
+    const stop = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="stop-button"]')!;
+    let events = 0;
+    el.addEventListener('lr-stop', () => { events++; });
+    el.addEventListener('click', () => invalidate(el), { capture: true, once: true });
+    stop.click();
+    expect(events).to.equal(0);
+  });
+}
+
 it("emits lr-stop (no detail) when the built-in stop button is clicked", async () => {
   const el = (await fixture(
     html`<lr-generation-metrics status="running"></lr-generation-metrics>`

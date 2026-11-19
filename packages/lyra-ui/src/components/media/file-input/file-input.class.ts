@@ -179,10 +179,10 @@ export interface LyraFileInputEventMap {
  *   the slotted content while remaining its sibling in the accessibility tree so arbitrary slotted
  *   controls are never nested in it.
  * @csspart form-control - The complete label, dropzone, selected-file, error, and hint frame.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for the field label and filenames.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-file-input-font-size, var(--lr-form-control-font-size))] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The form-control label.
  * @csspart hint - The form-control hint.
  * @csspart error - The visible validation message or authored error content.

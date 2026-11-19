@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
@@ -604,6 +605,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     if (this.treeSource !== undefined) {
       if (!this.sourceDiagramCurrent()) return;
       const row = this.sourceDiagramRows.get(this.focusedId ?? '') ?? this.sourceDiagramRows.values().next().value;

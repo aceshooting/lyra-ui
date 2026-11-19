@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-color-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A form-associated colour picker with label, hint and error chrome: a compact swatch trigger that
 opens a popover holding a saturation/brightness grid, a hue slider, an optional alpha slider, a text

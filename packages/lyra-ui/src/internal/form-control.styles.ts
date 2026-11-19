@@ -118,14 +118,17 @@ export const formControlLabelDisplay = css`
 `;
 
 /** Label typography shared by native field labels, legends and named group labels. */
-export const formControlLabelTypography = css`
-  color: var(--lr-form-control-label-color, var(--lr-color-text));
-  font-size: var(
-    --lr-form-control-label-font-size,
-    var(--_lr-form-control-label-font-size, var(--lr-form-control-font-size, var(--lr-font-size-m)))
-  );
-  font-weight: var(--lr-form-control-label-font-weight, var(--lr-font-weight-semibold));
-`;
+export function formControlLabelTypography({
+  size = css`var(--lr-font-size-md-sm)`,
+  weight = css`var(--lr-font-weight-semibold)`,
+  color = css`inherit`,
+} = {}) {
+  return css`
+    font-size: var(--lr-form-control-label-font-size, ${size});
+    font-weight: var(--lr-form-control-label-font-weight, ${weight});
+    color: var(--lr-form-control-label-color, ${color});
+  `;
+}
 
 /** Allow form chrome to shrink and wrap within its allocated inline space. */
 export const formControlTextWrap = css`

@@ -74,6 +74,33 @@ it('defaults to status="pending", a remove button, and empty independent props',
   expect(el.file).to.be.undefined;
 });
 
+it('restores the default remove ID after removing attachment-id', async () => {
+  const el = await fixture<LyraAttachmentChip>(html`<lr-attachment-chip></lr-attachment-chip>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+  const ids: string[] = [];
+  el.addEventListener('lr-remove', event => ids.push(event.detail.attachmentId));
+  button.click();
+  el.setAttribute('attachment-id', 'authored-id');
+  button.click();
+  el.removeAttribute('attachment-id');
+  button.click();
+  expect(el.attachmentId).to.equal('');
+  expect(ids[0]).to.be.a('string').and.not.equal('');
+  expect(ids).to.deep.equal([ids[0], 'authored-id', ids[0]]);
+});
+
+it('restores thumbnail metadata on removal of mime-type', async () => {
+  const el = await fixture<LyraAttachmentChip>(html`
+    <lr-attachment-chip size="s" thumbnail-only mime-type="image/png" name="Photo"></lr-attachment-chip>
+  `);
+  const meta = el.shadowRoot!.querySelector<HTMLElement>('[part="meta"]')!;
+  expect(meta.hidden).to.be.true;
+  el.removeAttribute('mime-type');
+  await el.updateComplete;
+  expect(el.mimeType).to.equal('');
+  expect(meta.hidden).to.be.false;
+});
+
 it('keeps the granular chip registration free of viewer registrations', async () => {
   await fixture(html`<lr-attachment-chip></lr-attachment-chip>`);
   expect(customElements.get('lr-document-viewer')).to.equal(undefined);

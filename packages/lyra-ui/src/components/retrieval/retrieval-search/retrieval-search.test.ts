@@ -365,6 +365,21 @@ describe('loading / cancellation', () => {
     expect((searchEv.detail as RetrievalQuery).text).to.equal('second');
   });
 
+  it('supersedes once per Enter press and ignores held Enter repeats', async () => {
+    const el = await fixture<LyraRetrievalSearch>(html`
+      <lr-retrieval-search loading query="replacement"></lr-retrieval-search>
+    `);
+    const actions: string[] = [];
+    el.addEventListener('lr-cancel', event => actions.push(event.detail.reason ?? 'cancel'));
+    el.addEventListener('lr-search', event => actions.push(event.detail.text));
+    for (const repeat of [false, true, true, false]) {
+      const press = enterKeydown({ repeat });
+      queryInputOf(el).dispatchEvent(press);
+      expect(press.defaultPrevented).to.equal(true);
+    }
+    expect(actions).to.deep.equal(['superseded', 'replacement', 'superseded', 'replacement']);
+  });
+
   for (const lifecycle of ['removes', 'reconnects'] as const) {
     it(`retires supersession when its cancel listener synchronously ${lifecycle} the search control`, async () => {
       const host = await fixture(html`

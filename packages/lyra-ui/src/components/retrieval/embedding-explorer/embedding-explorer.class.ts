@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
 import { LARGE_DATA_PAGE_SIZE, largeDataPage, validatePointColumns, typedColumnIssueMessage, type LyraPointColumns, type TypedColumnIssue } from '../../../internal/typed-columns.js';
@@ -636,6 +637,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     index: number,
     current: () => boolean = () => true
   ): void {
+    if (shouldIgnoreNavigationKey(event)) return;
     const points = this.renderedPoints;
     const total = this.enhanced ? this.rows?.count ?? 0 : points.length + (this.source ? this.spatial.result?.bins.length ?? 0 : 0);
     if (event.key === 'Enter' || event.key === ' ') {

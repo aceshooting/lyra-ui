@@ -20,6 +20,9 @@ to receive a `string`.
 
 ## The validity alias is cancelable in 8.0.0
 
+`IntrinsicValidityMessage` is the TypeScript type for an intrinsic validation message. It accepts
+a string or a function that supplies the message in the current locale.
+
 Every form-associated control emits `lr-invalid` (no detail, bubbling, composed) as the alias of the
 native, non-bubbling `invalid` event. In 8.0.0 that alias is **cancelable**, and its cancellation is
 forwarded to the native event that produced it:
@@ -79,9 +82,9 @@ library: `llms/shared.md` → "The required-field marker".
 ## Field and group label typography
 
 Set `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, or
-`--lr-form-control-label-color` on a control or a containing form. Field and group labels
-follow the control’s size tier by default. Their default weight and color come from
-`--lr-font-weight-semibold` and `--lr-color-text`.
+`--lr-form-control-label-color` on a control or a containing form. These tokens override the label’s component defaults. For example, an input label uses
+`--lr-font-size-md-sm`, while checkbox-group and radio-group labels follow their control’s size tier.
+Set the three tokens on a form to give its field and group labels the same typography.
 
 ## Hiding the label visually: `label-display`
 
@@ -148,6 +151,9 @@ contract is maintained once at its owning destination.
 <a id="popup-selection-keyboard"></a>
 
 ## `lr-combobox` / `lr-option`
+
+Style the `lr-combobox` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
 
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
@@ -929,6 +935,9 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 ## `lr-select`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 Floating form-control panels follow the [shared surface treatment](shared/styles-and-tokens.md).
@@ -1485,6 +1494,9 @@ purposes.
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
+Style the `lr-date-input` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Both
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
@@ -2011,6 +2023,9 @@ and `dateTimeFormat(locale, options)`.
 ---
 
 ## `lr-textarea`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -2814,6 +2829,9 @@ them leaves rendering unchanged.
 
 ## `lr-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`,
@@ -3265,6 +3283,9 @@ first field's, referenced here by id.
 
 ## `lr-number-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
@@ -3453,6 +3474,9 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 <a id="date-and-time-controls"></a>
 
 ## `lr-time-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -3650,6 +3674,9 @@ ancestor to change every unset time input beneath it.
 
 ## `lr-native-time-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 The Lyra 7 browser-native time field preserved under an explicit tag. It shares the input
@@ -3737,6 +3764,9 @@ entry for the flush and cancellation rules.
 ---
 
 ## `lr-phone-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -5023,6 +5053,9 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
@@ -5555,6 +5588,9 @@ the only one of the set worth setting on this tag.
 
 ## `lr-otp-input`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
 
@@ -5766,9 +5802,12 @@ control cannot be edited and restores the current intrinsic result when editing 
 
 ## `lr-radio-group`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Place supplementary controls in `slot="toolbar"` between the group label and its options.
-Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
-Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+The `toolbar` CSS part styles the wrapper. Toolbar controls are independent of option selection.
+Set `labelDisplay` to `hidden` (or `label-display="hidden"`) to visually hide the group label while preserving its accessible name.
 
 A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
 focus and select the next enabled radio, whatever the orientation: Down/Right select the next
@@ -5833,7 +5872,7 @@ child validity owner.
 
 **Slots:** default radios, `label`, `hint`, `help-text` (Shoelace hint alias), `error`.
 
-**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `radios` /
+**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `toolbar`, `radios` /
 `form-control-input` / `button-group` / `button-group__base`, `hint` /
 `form-control-help-text`, and `error`.
 
@@ -5861,9 +5900,12 @@ fieldset disablement, so the group behaves like one native control.
 
 ## `lr-checkbox-group`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Place supplementary controls in `slot="toolbar"` between the group label and its options.
-Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
-Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+The `toolbar` CSS part styles the wrapper. Toolbar controls are independent of option selection.
+Set `labelDisplay` to `hidden` (or `label-display="hidden"`) to visually hide the group label while preserving its accessible name.
 
 Long group labels, hints, errors, and horizontal option labels wrap within the host in both logical
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
@@ -5892,7 +5934,9 @@ Awesome's unset-default behavior.
 **Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
 alongside slotted hint/error content, like every other group.
 **Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
-`lr-change`; all four carry `{ value: string[] }`. The owned child's corresponding events are
+`lr-change`. The native `input` and `change` are plain `Event` objects. Both `lr-input` and
+`lr-change` carry the aggregate selection in `detail.value` as a frozen array of strings.
+The owned child's corresponding events are
 consumed at the group boundary, so an ancestor does not receive a second, differently shaped
 sequence.
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
@@ -5925,7 +5969,7 @@ incorrectly mark every child checkbox required.
 The fieldset exposes explicit stateful `aria-invalid`: visible property/slotted error chrome makes
 it `"true"` immediately; otherwise only interacted intrinsic/custom invalidity does so, and the
 valid/pristine state is explicitly `"false"`.
-**CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
+**CSS parts:** `form-control`, `form-control-label`, `toolbar`, `options` / `form-control-input`, `hint`,
 `error`.
 **Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
 dims `form-control-label`, `hint` and `error` to `--lr-opacity-disabled`. The dimming is keyed off
@@ -5975,6 +6019,9 @@ a `.value=${...}` binding on first render) is applied once they arrive.
   `['on']` cannot identify which default-valued occurrence was intended.
 
 ## `lr-token-input`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -6165,6 +6212,9 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 
 ## `lr-code-editor`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
 (320px)` story covers both boundaries together.
@@ -6305,6 +6355,9 @@ declaration to retheme every internal scroll container in the library, including
 **Additional API surface:** `click()` activates the internal editing surface.
 
 ## `lr-color-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A form-associated colour picker with label, hint and error chrome: a compact swatch trigger that
 opens a popover holding a saturation/brightness grid, a hue slider, an optional alpha slider, a text
@@ -6643,6 +6696,9 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 
 ## `lr-emoji-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 A searchable, keyboard-navigable, form-associated emoji picker. `groups` is fully consumer-suppliable
 — the component ships no emoji data of its own — in the same "zero/optional-peer dependency" spirit
 as `<lr-lite-chart>`/`<lr-heatmap>`; an optional convenience auto-loader fetches a default set on
@@ -6845,6 +6901,9 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 
 ## `lr-rubric-form`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 A configurable annotation rubric (LangSmith annotation-queue style): score, category, and
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
@@ -6964,6 +7023,9 @@ and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-
 the same library-wide token every other disabled control reads.
 
 ## `lr-locale-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -7773,6 +7835,9 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
 
 ## `lr-currency-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
@@ -7943,6 +8008,9 @@ const displayedAmount = convertCurrency(100, 'EUR', 'USD', snapshot);
 
 ## `lr-country-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated country/territory selector with localized names and decorative emoji flags.
@@ -8048,6 +8116,9 @@ the catalog property. Shared form-control and surface tokens apply, including RT
 
 ## `lr-time-zone-picker`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
+
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated identifier selector. Import
@@ -8095,6 +8166,9 @@ Defaults and form/editing methods follow the
 ```
 
 ## `lr-unit-picker`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
@@ -8190,6 +8264,9 @@ and skip invalid or duplicate rows. Pass the application's locale explicitly.
   identifier when `Intl` cannot format it. It never converts a measurement.
 
 ## `lr-signature-pad`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a

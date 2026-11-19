@@ -146,10 +146,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @slot show-password-icon - Replaces the glyph shown while the password is hidden.
  * @slot hide-password-icon - Replaces the glyph shown while the password is visible.
  * @csspart form-control - The outer wrapper around label, input, error and hint.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart base - Compatibility name for the control row; use `input-wrapper`.

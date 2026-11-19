@@ -19,7 +19,7 @@ import type {
   LyraProvenancePanelEventMap,
 } from '../provenance-panel/provenance-panel.class.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
-import type { ConfirmBarVariant } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
+import type { ConfirmBarVariant, LyraConfirmBar } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../provenance-panel/provenance-panel.class.js';
 import '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -28,6 +28,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { applyComposedFocusRepair, captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -238,7 +239,7 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * Focus follows the confirmation rather than being dropped: activating an action replaces the
  * button that had focus, so focus moves into the freshly rendered `lr-confirm-bar` (its Deny
  * control -- the safe action -- or the bar's own status element) instead of falling back to
- * `<body>`. Resolving or cancelling hands focus back: to the row for a per-item decision, to the
+ * `<body>`. Resolving or cancelling hands focus back: to the initiating action for a surviving item, to the
  * "Forget all" control for the bulk one. Escape while the confirmation holds focus cancels it
  * exactly like Deny -- no event, same focus return -- and does not propagate, so an enclosing
  * dialog or popover still sees its own Escape when no confirmation is open.
@@ -475,13 +476,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
       else this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
-    this.refocusItem(pending.scope, pending.index);
+    this.itemFocusTarget(pending.scope, pending.index)?.focus();
   }
 
   private captureControlledFocus(changed: PropertyValues<this>): void {
     if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
     const active = shadowFocusTarget(this) as HTMLElement | null;
-    if (!active) return;
+    if (!active || (!this.pending && active.localName === tag('confirm-bar'))) return;
 
     const row = active.closest<HTMLElement>('[part="item"]');
     if (row) {
@@ -661,18 +662,31 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (this.pending !== before) event.stopPropagation();
   }
 
-  private refocusItem(scope: MemoryScope, index: number): void {
-    void this.updateComplete.then(() => {
-      const rows = [
-        ...this.renderRoot.querySelectorAll<HTMLElement>(
-          `[part="section"][data-scope="${scope}"] [part="item"]`
-        ),
-      ];
-      const target =
-        rows[Math.min(index, rows.length - 1)] ??
-        this.renderRoot.querySelector<HTMLElement>('[part="item"]') ??
-        this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-      target?.focus();
+  private itemFocusTarget(scope: MemoryScope, index: number, pending?: ItemPending): HTMLElement | null {
+    const rows = this.renderRoot.querySelectorAll<HTMLElement>(
+      `[part="section"][data-scope="${scope}"] [part="item"]`,
+    );
+    if (pending) {
+      const currentIndex = this.memoriesForScope(scope).findIndex(item => item.source === pending.item.source);
+      const action = rows[currentIndex]?.querySelector<HTMLElement>(`[part="${pending.kind}-button"]`);
+      if (action) return action;
+    }
+    return rows[Math.min(index, rows.length - 1)] ??
+      this.renderRoot.querySelector<HTMLElement>('[part="item"]') ??
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+  }
+
+  private takeBarDecision(event: CustomEvent, approved: boolean): void {
+    event.stopPropagation();
+    // The panel owns the return handoff. A synchronous decision tells the bar it can skip its own.
+    (event.currentTarget as LyraConfirmBar).decision = approved ? 'approved' : 'denied';
+  }
+
+  private restoreConfirmationFocus(target: () => HTMLElement | null): void {
+    const bar = this.renderRoot.querySelector<HTMLElement>(tag('confirm-bar'));
+    const repair = bar && captureComposedFocusRepair(bar, bar);
+    if (repair) void this.updateComplete.then(() => {
+      if (!this.pending) applyComposedFocusRepair(repair, target);
     });
   }
 
@@ -682,11 +696,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     const index = items.indexOf(p.item);
     if (index < 0) return;
     this.pending = null;
+    this.restoreConfirmationFocus(() => this.itemFocusTarget(p.scope, index, p));
     if (approved) {
       if (p.kind === 'add') this.emit('lr-add', { memory: p.item.source });
       else this.emit('lr-remove', { memoryId: p.item.id, scope: p.scope });
     }
-    this.refocusItem(p.scope, index);
   }
 
   private resolveForgetAllDecision(
@@ -695,13 +709,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   ): void {
     if (this.pending !== pending || this.longTerm !== pending.longTerm) return;
     this.pending = null;
+    this.restoreConfirmationFocus(() => this.renderRoot.querySelector<HTMLElement>('[part="forget-all-button"]') ??
+      this.renderRoot.querySelector<HTMLElement>('[part="item"]') ?? this.renderRoot.querySelector<HTMLElement>('[part="base"]'));
     if (approved) this.emit('lr-forget');
-    void this.updateComplete.then(() => {
-      (
-        (this.renderRoot.querySelector('[part="forget-all-button"]') ??
-          this.renderRoot.querySelector('[part="item"]')) as HTMLElement | null
-      )?.focus();
-    });
   }
 
   private renderConfidence(
@@ -724,11 +734,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         @keydown=${(e: KeyboardEvent) =>
           this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
         @lr-approve-request=${(e: CustomEvent) => {
-          e.stopPropagation();
+          this.takeBarDecision(e, true);
           this.resolveItemDecision(p, true);
         }}
         @lr-deny-request=${(e: CustomEvent) => {
-          e.stopPropagation();
+          this.takeBarDecision(e, false);
           this.resolveItemDecision(p, false);
         }}
         @lr-decision-settled=${(e: CustomEvent) => e.stopPropagation()}
@@ -859,11 +869,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
               this.resolveForgetAllDecision(forgetPending, false)
             )}
         @lr-approve-request=${(e: CustomEvent) => {
-            e.stopPropagation();
+            this.takeBarDecision(e, true);
             this.resolveForgetAllDecision(forgetPending, true);
           }}
         @lr-deny-request=${(e: CustomEvent) => {
-            e.stopPropagation();
+            this.takeBarDecision(e, false);
             this.resolveForgetAllDecision(forgetPending, false);
           }}
           @lr-decision-settled=${(e: CustomEvent) => e.stopPropagation()}

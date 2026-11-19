@@ -226,11 +226,11 @@ export class LyraQrCode extends LyraElement {
 
   /** Upstream-compatible foreground-module color. A non-empty value takes precedence over host
    * `color` and `--lr-qr-code-fill`. */
-  @property() fill = '';
+  @property({ useDefault: true }) fill = '';
 
   /** Upstream-compatible canvas-background color. A non-empty value takes precedence over host
    * `background-color` and `--lr-qr-code-bg`. */
-  @property() background = '';
+  @property({ useDefault: true }) background = '';
 
   /** Safe media URL for an optional centered logo/image. */
   @property() image: string | null = null;

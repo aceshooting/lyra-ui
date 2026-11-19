@@ -3062,6 +3062,10 @@ layout tree, and the zone's script can load after first paint:
 
 ## `lr-file-input`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](forms.md#field-and-group-label-typography).
+
 A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
 no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 

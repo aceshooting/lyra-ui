@@ -1465,6 +1465,10 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 
 ## `lr-model-select`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](forms.md#field-and-group-label-typography).
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 The model list follows the [shared surface treatment](shared/styles-and-tokens.md);
@@ -4057,6 +4061,10 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
+
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](forms.md#field-and-group-label-typography).
 
 Visible `error-text` or slotted error content sets `aria-invalid="true"` on the current trigger
 or free-text input while preserving the native validity of its value.

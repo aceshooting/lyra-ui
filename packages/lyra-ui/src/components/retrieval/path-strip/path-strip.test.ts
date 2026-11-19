@@ -195,6 +195,20 @@ it('has one roving tab stop across every element, moving forward with ArrowRight
   expect(controls().map((c) => c.tabIndex)).to.deep.equal([-1, 0, -1]);
 });
 
+it('leaves modified arrows to the browser and keeps the current path step', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  const first = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="node"]')!;
+  for (const modifier of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+    const arrow = new KeyboardEvent('keydown', {
+      key: 'ArrowRight', bubbles: true, cancelable: true, ...modifier,
+    });
+    first.dispatchEvent(arrow);
+    await el.updateComplete;
+    expect(arrow.defaultPrevented).to.equal(false);
+    expect(first.tabIndex).to.equal(0);
+  }
+});
+
 it('uses the adopted owner window reduced-motion preference when revealing a roving item', async () => {
   const frame = document.createElement('iframe');
   document.body.append(frame);
@@ -592,4 +606,20 @@ it('renders the empty state for a runtime path value that is not an array, and i
   const event = new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true, cancelable: true });
   (base ?? el.shadowRoot!.firstElementChild!).dispatchEvent(event);
   expect(event.defaultPrevented).to.equal(false);
+});
+
+it('rejects a click on a retired node when capture replaces its path', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  const node = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="node"]')!;
+  const events: string[] = [];
+  el.addEventListener('lr-entity-select', () => events.push('node'));
+  el.addEventListener('lr-relation-activate', () => events.push('relation'));
+  el.addEventListener('click', () => { el.path = path.slice(1); }, { capture: true, once: true });
+
+  node.click();
+  expect(events).to.deep.equal([]);
+
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="relation"]')!.click();
+  expect(events).to.deep.equal(['relation']);
 });

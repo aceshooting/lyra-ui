@@ -146,7 +146,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    * positions against the nearest positioned ancestor, so the popup scrolls away with the content
    * it belongs to. Defaults to `absolute`.
    */
-  @property({ reflect: true }) strategy: PlaceStrategy = 'absolute';
+  @property({ reflect: true, converter: declaredDefaultConverter('absolute') }) strategy: PlaceStrategy = 'absolute';
 
   /** Distance from the anchor along the placement axis, in pixels. */
   @property({ type: Number }) distance = 0;

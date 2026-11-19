@@ -71,6 +71,26 @@ it('renders latest metric cards, a selected trend, and filters runs by slice', a
   ]);
 });
 
+it('distinguishes missing measurements from recorded numeric or percent zero', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      locale="en-US"
+      metric-id="groundedness"
+      .metrics=${[...metrics, { id: 'coverage', label: 'Coverage', category: 'generation', format: 'percent' }]}
+      .runs=${[{ id: 'run', label: 'Partial run', metrics: { mrr: 0, coverage: 0 } }]}
+    ></lr-rag-eval-dashboard>
+  `);
+  const stats = () => [...el.shadowRoot!.querySelectorAll('lr-stat')].map((stat) => stat.value);
+  expect(stats()).to.deep.equal(['0', 'No data', '0%']);
+  const chart = el.shadowRoot!.querySelector('lr-lite-chart')!;
+  expect(chart.datasets).to.deep.equal([{ label: 'Groundedness', data: [null] }]);
+  expect(el.shadowRoot!.querySelector('[part="run"]')?.textContent?.trim()).to.equal('Partial run');
+
+  el.strings = { noData: 'Unmeasured' };
+  await el.updateComplete;
+  expect(stats()).to.deep.equal(['0', 'Unmeasured', '0%']);
+});
+
 it('renders each required metric category as visible card metadata', async () => {
   const el = await fixture<LyraRagEvalDashboard>(html`
     <lr-rag-eval-dashboard
@@ -408,7 +428,7 @@ it('normalizes non-array collections and non-finite metric values', async () => 
     ></lr-rag-eval-dashboard>
   `)) as LyraRagEvalDashboard;
   const stat = el.shadowRoot!.querySelector('lr-stat') as LyraStat;
-  expect(stat.value).to.equal('0');
+  expect(stat.value).to.equal('No data');
   expect(
     el.shadowRoot!.querySelector('[part="run"]')!.querySelectorAll('span')
       .length

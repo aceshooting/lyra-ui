@@ -704,6 +704,13 @@ describe('coverage: private-helper direct branches', () => {
   it('an unhandled key on a node/link falls through onGraphKeyDown without moving the roving tab stop', async () => {
     const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    const reserved = new KeyboardEvent('keydown', {
+      key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true,
+    });
+    nodeEl.dispatchEvent(reserved);
+    await el.updateComplete;
+    expect(reserved.defaultPrevented).to.equal(false);
+    expect(nodeEl.getAttribute('tabindex')).to.equal('0');
     nodeEl.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true })
     );

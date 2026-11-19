@@ -254,6 +254,39 @@ it('toggles maximized and emits lr-maximize-change-request when the maximize but
   expect(el.hasAttribute('maximized')).to.be.false;
 });
 
+for (const veto of [false, true]) {
+  it(`coalesces a repeated maximize request when the listener ${veto ? 'vetoes' : 'accepts'} it`, async () => {
+    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open></lr-tool-result-dialog>`);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="maximize-button"]')!;
+    const requests: boolean[] = [];
+    el.addEventListener('lr-maximize-change-request', event => requests.push(event.detail.maximized));
+    el.addEventListener('lr-maximize-change-request', event => {
+      toggle.click();
+      if (veto) event.preventDefault();
+    }, { once: true });
+    toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    expect(requests).to.deep.equal([true]);
+    expect(el.maximized).to.equal(!veto);
+    toggle.click();
+    expect(requests).to.deep.equal([true, veto]);
+    expect(el.maximized).to.equal(veto);
+  });
+}
+
+it('honors a newer restore requested during maximize preflight', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open></lr-tool-result-dialog>`);
+  const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="maximize-button"]')!;
+  const requests: boolean[] = [];
+  el.addEventListener('lr-maximize-change-request', event => requests.push(event.detail.maximized));
+  el.addEventListener('lr-maximize-change-request', () => {
+    el.maximized = true;
+    toggle.click();
+  }, { once: true });
+  toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  expect(requests).to.deep.equal([true, false]);
+  expect(el.maximized).to.equal(false);
+});
+
 it('lets a host veto the maximize toggle via preventDefault, leaving maximized unchanged', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,

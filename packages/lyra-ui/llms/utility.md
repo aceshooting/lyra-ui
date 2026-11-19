@@ -74,7 +74,8 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 **Events:** `lr-export-request` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one; the rows a
 non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
-inside the listener still reaches it, and `getRows` is consulted at the same point),
+inside the listener still reaches it, and `getRows` is consulted at the same point. Removing
+the export button during the request retires that download),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
 unknown }`, fires when a built-in export cannot be serialized or downloaded; the same failure is
@@ -1830,6 +1831,10 @@ without calling their conversion hooks.
 
 ## `lr-known-date`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](forms.md#field-and-group-label-typography).
+
 A form-associated control for a date the user already knows (a birthdate, a passport expiry),
 collected as three plain day/month/year number fields in the locale's natural order rather than a
 calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is always canonical ISO
@@ -2106,8 +2111,6 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
 
 **Known gotchas:**
 
-- There is no next/previous/shuffle action; the only built-in control is the autoplay pause/resume
-  button. Selection changes via autoplay or `randomize()`.
 - Autoplay is suppressed entirely under `prefers-reduced-motion: reduce`, and whenever the eligible
   pool has fewer than 2 children. The preference is re-observed live, not just read once.
 - `fade-left`/`fade-right` are physical-direction transforms (upstream naming), deliberately **not**

@@ -143,8 +143,7 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
  * @csspart form-control - The outer form-control wrapper.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label.

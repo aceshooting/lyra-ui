@@ -219,6 +219,14 @@ describe('lr-embedding-explorer', () => {
     );
     expect((await selectEvent).detail.point.id).to.equal('a');
 
+    const reserved = new KeyboardEvent('keydown', {
+      key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true,
+    });
+    rendered()[0]!.dispatchEvent(reserved);
+    await el.updateComplete;
+    expect(reserved.defaultPrevented).to.equal(false);
+    expect(rendered().map(point => point.getAttribute('tabindex'))).to.deep.equal(['0', '-1']);
+
     rendered()[0]!.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
     );

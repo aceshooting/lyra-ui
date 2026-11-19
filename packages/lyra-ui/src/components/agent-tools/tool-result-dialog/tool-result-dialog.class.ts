@@ -352,11 +352,17 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     this.close('close-button');
   };
 
+  private pendingMaximized?: boolean;
   private toggleMaximized = (): void => {
     const next = !this.maximized;
-    const request = this.emit('lr-maximize-change-request', Object.freeze({ maximized: next }), { cancelable: true });
-    if (request.defaultPrevented) return;
-    this.maximized = next;
+    if (this.pendingMaximized === next) return;
+    this.pendingMaximized = next;
+    try {
+      const request = this.emit('lr-maximize-change-request', Object.freeze({ maximized: next }), { cancelable: true });
+      if (!request.defaultPrevented && this.pendingMaximized === next) this.maximized = next;
+    } finally {
+      this.pendingMaximized = undefined;
+    }
   };
 
   private activateOverlay(): void {

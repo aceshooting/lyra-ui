@@ -598,6 +598,18 @@ describe('positioning strategy', () => {
     expect(getComputedStyle(popupOf(el)).position).to.equal('absolute');
   });
 
+  it('restores absolute positioning when the fixed strategy is removed', async () => {
+    const el = await fixture<LyraPopup>(html`
+      <lr-popup active strategy="fixed"><button slot="anchor">A</button><div>C</div></lr-popup>
+    `);
+    await settle(el);
+    expect(getComputedStyle(popupOf(el)).position).to.equal('fixed');
+    el.removeAttribute('strategy');
+    await settle(el);
+    expect(el.strategy).to.equal('absolute');
+    expect(getComputedStyle(popupOf(el)).position).to.equal('absolute');
+  });
+
   it('places against the offset parent under strategy="absolute"', async () => {
     const wrapper = await fixture(html`
       <div style="position: relative; margin-block-start: 120px;">

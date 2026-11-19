@@ -825,15 +825,17 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   private doExport(formatOption: LyraExportFormatOption): void {
-    if (this.disabled || this.loading) return;
+    if (!this.isConnected || this.disabled || this.loading) return;
+    const generation = this.connectionGeneration;
     this.closeMenu();
     this.triggerEl?.focus();
+    if (generation !== this.connectionGeneration) return;
     // A fresh attempt clears any earlier failure's visible/announced state, whether or not this
     // attempt reaches the try block below.
     this.exportFailed = false;
     const format = this.formatId(formatOption);
     const request = this.emit('lr-export-request', Object.freeze({ format }), { cancelable: true });
-    if (request.defaultPrevented) return;
+    if (request.defaultPrevented || generation !== this.connectionGeneration) return;
 
     if (format !== 'csv' && format !== 'json') {
       // Custom formats are intentionally handler-only: Lyra owns the menu and
@@ -845,23 +847,21 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       // after the veto point, so both a late `.rows` assignment from an `lr-export-request` listener and a
       // `getRows` callback see the same "collected at download time" contract.
       const rows = this.rowsToExport();
-      if (format === 'csv') {
-        downloadBlob(
-          buildCsv(rows, this.effectiveColumns(rows), { bom: this.bom }),
-          `${this.filename}.csv`,
-          'text/csv;charset=utf-8;',
-          this.ownerDocument,
-        );
-      } else {
-        downloadBlob(
-          JSON.stringify(this.rowsForExport(rows), null, 2),
-          `${this.filename}.json`,
-          'application/json',
-          this.ownerDocument,
-        );
-      }
+      if (generation !== this.connectionGeneration) return;
+      const csv = format === 'csv';
+      const contents = csv
+        ? buildCsv(rows, this.effectiveColumns(rows), { bom: this.bom })
+        : JSON.stringify(this.rowsForExport(rows), null, 2);
+      if (generation !== this.connectionGeneration) return;
+      downloadBlob(
+        contents,
+        `${this.filename}.${format}`,
+        csv ? 'text/csv;charset=utf-8;' : 'application/json',
+        this.ownerDocument,
+      );
       this.emit('lr-export-complete', Object.freeze({ format }));
     } catch (error) {
+      if (generation !== this.connectionGeneration) return;
       this.exportFailed = true;
       this.sink?.announce(this.localize('statusError'));
       this.emit('lr-export-error', Object.freeze({ format, error }));

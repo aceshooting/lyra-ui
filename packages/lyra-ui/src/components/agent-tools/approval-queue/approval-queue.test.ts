@@ -159,6 +159,26 @@ describe('lr-approval-queue', () => {
     expect(dialog.shadowRoot!.querySelector('[part="args-editor"]') == null).to.be.true;
   });
 
+  it('keeps edits across reordered JSON record keys and retires them when array order changes', async () => {
+    const call = { id: 'call', toolName: 'tool', args: { values: [1, 2], options: { a: 1, b: 2 } } };
+    const queue = await fixture<LyraApprovalQueue>(html`<lr-approval-queue selected-invocation-id="call" open .requests=${[call]}></lr-approval-queue>`);
+    const dialog = queue.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+    await dialog.updateComplete;
+    dialog.shadowRoot!.querySelector<HTMLElement>('[part="edit-button"]')!.click();
+    await dialog.updateComplete;
+    const editor = dialog.shadowRoot!.querySelector<HTMLTextAreaElement>('textarea')!;
+    editor.value = '{"draft":true}';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    queue.requests = [{ ...call, args: { options: { b: 2, a: 1 }, values: [1, 2] } }];
+    await queue.updateComplete;
+    await dialog.updateComplete;
+    expect(dialog.shadowRoot!.querySelector('textarea')?.value).to.equal('{"draft":true}');
+    queue.requests = [{ ...call, args: { ...call.args, values: [2, 1] } }];
+    await queue.updateComplete;
+    await dialog.updateComplete;
+    expect(dialog.shadowRoot!.querySelector('textarea') === null).to.equal(true);
+  });
+
   it('moves focus to the next pending row and announces the outcome once a decided request resolves', async () => {
     const queue: ToolApprovalRequest[] = [
       { id: 'call-1', toolName: 'web_search', args: { query: 'first' } },
@@ -712,21 +732,20 @@ it('normalizes duplicate request ids first-wins before selection and dialog look
   expect(rows[0]!.textContent).not.to.contain('later_tool');
 });
 
-it("exposes a resolved request's decision to assistive tech via aria-describedby on the row button", async () => {
+it('describes each resolved request with its own status when caller IDs contain whitespace', async () => {
   const el = await fixture<LyraApprovalQueue>(html`
     <lr-approval-queue .requests=${[
-      { id: 'call-1', toolName: 'web_search', args: {}, status: 'approved' },
+      { id: 'call Alpha', toolName: 'web_search', args: {}, status: 'approved' },
+      { id: 'call', toolName: 'read_file', args: {}, status: 'denied' },
     ]}></lr-approval-queue>
   `);
-  const button = el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement;
-  const describedByIds = (button.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
-  expect(describedByIds.length, 'button must reference a description').to.be.greaterThan(0);
-  const described = describedByIds
-    .map((id) => el.shadowRoot!.getElementById(id))
-    .filter((node): node is HTMLElement => node !== null);
-  expect(described.length, 'the referenced id must resolve to a real element').to.be.greaterThan(0);
-  const describedText = described.map((node) => node.textContent ?? '').join(' ');
-  expect(describedText).to.contain('Approved');
+  const rows = el.shadowRoot!.querySelectorAll('[part="request"]');
+  const descriptions = [...rows].map(row => {
+    const id = row.getAttribute('aria-describedby')!;
+    expect(id).to.match(/^\S+$/);
+    return el.shadowRoot!.getElementById(id)?.textContent;
+  });
+  expect(descriptions).to.deep.equal(['Approved', 'Denied']);
 });
 
 it('caps rendered request rows at the render ceiling and shows a localized limit notice', async () => {

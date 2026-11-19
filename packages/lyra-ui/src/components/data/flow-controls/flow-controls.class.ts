@@ -1,6 +1,8 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -151,6 +153,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
   @state() private canvasReadonly = false;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
+  private focusedZoom?: HTMLButtonElement;
   private readonly companionController = new FlowCanvasCompanionController<FlowCanvasLike>(
     this,
     isFlowCanvasLike,
@@ -182,6 +185,22 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
     if (this.hasUpdated && changed.has('for')) {
       this.companionController.targetIdChanged();
     }
+    if (changed.has('atMaxZoom') || changed.has('atMinZoom')) {
+      const active = shadowFocusTarget(this);
+      const part = active?.getAttribute('part');
+      if ((part === 'zoom-in' && this.atMaxZoom) || (part === 'zoom-out' && this.atMinZoom)) {
+        this.focusedZoom = active as HTMLButtonElement;
+      }
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const focused = this.focusedZoom;
+    this.focusedZoom = undefined;
+    if (focused) repairUnavailableControlFocus(focused, [
+      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="zoom-in"], [part="zoom-out"], [part="fit"]'),
+    ]);
   }
 
   private attachCanvas(canvas: FlowCanvasLike | null): void {

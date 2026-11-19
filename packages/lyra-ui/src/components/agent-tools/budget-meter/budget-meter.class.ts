@@ -1,6 +1,7 @@
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -126,9 +127,13 @@ export class LyraBudgetMeter extends LyraElement {
     const coherent = current();
     const finalUsed = coherent ? used : this.safeUsed;
     const finalLimit = coherent ? limit : this.safeLimit;
-    const numberFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
-    let usedText = numberFormat.format(finalUsed);
-    let limitText = numberFormat.format(finalLimit);
+    const finalLocale = this.effectiveLocale;
+    const numberFormat = getNumberFormat(finalLocale, { maximumFractionDigits: 2 });
+    const formatQuantity = (value: number): string => value > 0 && value < 0.01
+      ? formatChartValue(value, finalLocale, numberFormat, 2)
+      : numberFormat.format(value);
+    let usedText = formatQuantity(finalUsed);
+    let limitText = formatQuantity(finalLimit);
     if (coherent && valid(formattedUsed) && valid(formattedLimit)) {
       usedText = formattedUsed;
       limitText = formattedLimit;

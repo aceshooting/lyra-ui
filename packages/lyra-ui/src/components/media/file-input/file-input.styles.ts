@@ -64,8 +64,7 @@ export const styles = css`
        host height with labels, selected files and feedback before growing the dropzone. */
   }
   [part~="form-control-label"] {
-    --_lr-form-control-label-font-size: var(--lr-file-input-font-size, var(--_lr-file-input-font-size));
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`var(--lr-file-input-font-size, var(--_lr-file-input-font-size))` })}
     display: block;
     min-inline-size: 0;
     margin-block-end: var(--lr-space-xs);

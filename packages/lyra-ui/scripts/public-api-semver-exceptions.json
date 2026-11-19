@@ -1,3 +1,284 @@
 {
-  "exceptions": []
+  "exceptions": [
+    {
+      "changeId": "cem:lr-chart-3d:attribute:engine:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'builtin'",
+      "reason": "The published lr-chart-3d accessor already defaults to 'builtin'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-chart-3d:attribute:type:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'scatter'",
+      "reason": "The published lr-chart-3d accessor already defaults to 'scatter'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-chart-3d:member:field:engine:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'builtin'",
+      "reason": "The published lr-chart-3d accessor already defaults to 'builtin'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-chart-3d:member:field:type:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'scatter'",
+      "reason": "The published lr-chart-3d accessor already defaults to 'scatter'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:attribute:autocorrect:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "false",
+      "reason": "The published lr-code-editor accessor already defaults to false. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:attribute:maxlength:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "undefined",
+      "reason": "The published lr-code-editor accessor already defaults to undefined. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:attribute:minlength:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "undefined",
+      "reason": "The published lr-code-editor accessor already defaults to undefined. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:attribute:rows:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "4",
+      "reason": "The published lr-code-editor accessor already defaults to 4. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:attribute:tab-size:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "2",
+      "reason": "The published lr-code-editor accessor already defaults to 2. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:attribute:wrap:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'off'",
+      "reason": "The published lr-code-editor accessor already defaults to 'off'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:member:field:autocorrect:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "false",
+      "reason": "The published lr-code-editor accessor already defaults to false. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:member:field:maxlength:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "undefined",
+      "reason": "The published lr-code-editor accessor already defaults to undefined. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:member:field:minlength:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "undefined",
+      "reason": "The published lr-code-editor accessor already defaults to undefined. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:member:field:rows:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "4",
+      "reason": "The published lr-code-editor accessor already defaults to 4. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:member:field:tabSize:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "2",
+      "reason": "The published lr-code-editor accessor already defaults to 2. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-code-editor:member:field:wrap:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'off'",
+      "reason": "The published lr-code-editor accessor already defaults to 'off'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-document-compare:attribute:diff-layout:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'unified'",
+      "reason": "The published lr-document-compare accessor already defaults to 'unified'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-document-compare:attribute:language:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "''",
+      "reason": "The published lr-document-compare accessor already defaults to ''. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-document-compare:attribute:view:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'diff'",
+      "reason": "The published lr-document-compare accessor already defaults to 'diff'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-document-compare:member:field:diffLayout:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'unified'",
+      "reason": "The published lr-document-compare accessor already defaults to 'unified'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-document-compare:member:field:language:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "''",
+      "reason": "The published lr-document-compare accessor already defaults to ''. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-document-compare:member:field:view:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'diff'",
+      "reason": "The published lr-document-compare accessor already defaults to 'diff'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-graph:attribute:engine:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'builtin'",
+      "reason": "The published lr-graph accessor already defaults to 'builtin'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-graph:attribute:layout:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'force'",
+      "reason": "The published lr-graph accessor already defaults to 'force'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-graph:attribute:view:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'2d'",
+      "reason": "The published lr-graph accessor already defaults to '2d'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-graph:member:field:engine:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'builtin'",
+      "reason": "The published lr-graph accessor already defaults to 'builtin'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-graph:member:field:layout:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'force'",
+      "reason": "The published lr-graph accessor already defaults to 'force'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "cem:lr-graph:member:field:view:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "'2d'",
+      "reason": "The published lr-graph accessor already defaults to '2d'. The manifest now documents that runtime value.",
+      "reviewer": "Codex",
+      "reviewedOn": "2026-11-19"
+    }
+  ]
 }

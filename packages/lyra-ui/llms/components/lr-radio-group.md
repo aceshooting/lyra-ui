@@ -17,9 +17,12 @@
 
 ## `lr-radio-group`
 
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`. [Field and group label typography](#field-and-group-label-typography)
+
 Place supplementary controls in `slot="toolbar"` between the group label and its options.
-Style the wrapper with `::part(toolbar)`. Toolbar controls are independent of option selection.
-Set `label-display="hidden"` to visually hide the group label while preserving its accessible name.
+The `toolbar` CSS part styles the wrapper. Toolbar controls are independent of option selection.
+Set `labelDisplay` to `hidden` (or `label-display="hidden"`) to visually hide the group label while preserving its accessible name.
 
 A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
 focus and select the next enabled radio, whatever the orientation: Down/Right select the next
@@ -84,7 +87,7 @@ child validity owner.
 
 **Slots:** default radios, `label`, `hint`, `help-text` (Shoelace hint alias), `error`.
 
-**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `radios` /
+**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `toolbar`, `radios` /
 `form-control-input` / `button-group` / `button-group__base`, `hint` /
 `form-control-help-text`, and `error`.
 

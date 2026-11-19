@@ -933,6 +933,7 @@ export type {
   LyraMessageKey,
 } from './localization.js';
 export type { CheckedFormAssociatedInterface, FormAssociatedInterface } from './internal/form-associated.js';
+export type { IntrinsicValidityMessage } from './internal/anchored-validity.js';
 export type {
   LyraFormValidator,
   LyraFormValidatorResult,

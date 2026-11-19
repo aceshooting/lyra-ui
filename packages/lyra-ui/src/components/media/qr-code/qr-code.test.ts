@@ -944,6 +944,37 @@ describe('lr-qr-code', () => {
     expect(getComputedStyle(el).backgroundColor).to.not.equal('rgb(0, 255, 0)');
   });
 
+  it('restores the themed paint after removing fill and background', async () => {
+    const el = await fixture<LyraQrCode>(html`
+      <lr-qr-code size="90" fill="#ff0000" background="#00ff00"
+        style="color: rgb(0, 0, 255); background-color: rgb(255, 255, 255)"></lr-qr-code>
+    `);
+    installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
+    el.value = 'hello';
+    await waitForInitialPaint(el);
+    const canvas = el.canvas;
+    const ctx = canvas.getContext('2d')!;
+    const darkCenter = Math.round(canvas.width * 0.75);
+    const lightCenter = Math.round(canvas.width * 0.25);
+    const pixel = (center: number) => [...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)];
+    expect(pixel(darkCenter)).to.deep.equal([255, 0, 0]);
+    expect(pixel(lightCenter)).to.deep.equal([0, 255, 0]);
+
+    el.removeAttribute('fill');
+    await el.updateComplete;
+    expect(el.fill).to.equal('');
+    await waitUntil(() => pixel(darkCenter)[2] === 255);
+    expect(pixel(darkCenter)).to.deep.equal([0, 0, 255]);
+    expect(pixel(lightCenter)).to.deep.equal([0, 255, 0]);
+
+    el.removeAttribute('background');
+    await el.updateComplete;
+    expect(el.background).to.equal('');
+    await waitUntil(() => pixel(lightCenter)[0] === 255);
+    expect(pixel(lightCenter)).to.deep.equal([255, 255, 255]);
+    expect(pixel(darkCenter)).to.deep.equal([0, 0, 255]);
+  });
+
   it('safely draws a centered embedded image with background, coverage, and padding', async () => {
     let correction = '';
     const el = (await fixture(html`

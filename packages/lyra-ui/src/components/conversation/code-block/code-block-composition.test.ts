@@ -1,8 +1,9 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { defineCE, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { adoptedClipboardProbe } from '../../../../test/contracts/adopted-clipboard.js';
 import { sendKeys } from '@web/test-runner-commands';
 import './code-block.js';
 import './code-block-core.js';
-import type { LyraCodeBlock } from './code-block.class.js';
+import { LyraCodeBlock } from './code-block.class.js';
 
 const ANCESTOR_TOKENS =
   '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
@@ -14,6 +15,29 @@ function copyButton(el: Element): HTMLElement {
 function nativeControl(el: Element): HTMLButtonElement {
   return copyButton(el).shadowRoot!.querySelector<HTMLButtonElement>('[part~="button"]')!;
 }
+
+it('renders subclass-written clipboard feedback and resets it through the interaction controller', async () => {
+  class FeedbackBlock extends LyraCodeBlock {
+    showFailure(): void {
+      this.justCopied = false;
+      this.copyFailed = true;
+    }
+
+    resetFeedback(): void {
+      this.interactions.cancelCopyTimer();
+      this.interactions.disconnect();
+    }
+  }
+  const name = defineCE(FeedbackBlock);
+  const el = await fixture<FeedbackBlock>(`<${name} filename="demo.ts"></${name}>`);
+  el.strings = { copyFailed: 'Copy unavailable' };
+  el.showFailure();
+  await el.updateComplete;
+  expect(copyButton(el).textContent?.trim()).to.equal('Copy unavailable');
+  el.resetFeedback();
+  await el.updateComplete;
+  expect(copyButton(el).textContent?.trim()).to.equal('Copy');
+});
 
 for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
   describe(`${tag}: composed copy lr-icon-button`, () => {
@@ -78,6 +102,21 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
         copyButton(el).getAttribute('aria-label'),
         'the localized name survives the icon appearance'
       ).to.equal('Copy code');
+    });
+
+    it('retires copy confirmation when the success listener removes the host', async () => {
+      const el = await mount();
+      const probe = adoptedClipboardProbe(1500);
+      try {
+        probe.frameDocument.body.append(probe.frameDocument.adoptNode(el));
+        el.addEventListener('lr-copy', () => el.remove(), { once: true });
+        copyButton(el).click();
+        await waitUntil(() => !el.isConnected);
+        expect(probe.frameWrites).to.deep.equal(['const a = 1;']);
+        expect(probe.confirmationHandle === undefined || probe.cancelled.includes(probe.confirmationHandle)).to.equal(true);
+      } finally {
+        probe.close();
+      }
     });
 
     it('copies on Enter from the actually focused control', async () => {

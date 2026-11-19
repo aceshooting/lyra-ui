@@ -382,7 +382,7 @@ export const styles = css`
     overflow-wrap: break-word;
   }
   [part~="label"] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
   }
   [part="references"] {
     font-size: var(--lr-font-size-sm);

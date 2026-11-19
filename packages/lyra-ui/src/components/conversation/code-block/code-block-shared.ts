@@ -1,9 +1,11 @@
+import { RecordCopyFeedback } from '../../../internal/record-copy-feedback.js';
+import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS } from './shiki-types.js';
 /**
  * Everything `<lr-code-block>` and `<lr-code-block-core>` render and compute identically:
  * localized label helpers, line addressing (`highlight-lines`/`highlights` parsing, line counting,
  * `line-range` anchor scrolling), the gutter's roving-tabindex keyboard contract, selection
- * anchoring, clipboard writes, the shiki transformer plus the `codeToHtml()` call around it, and
+ * anchoring, the shiki transformer plus the `codeToHtml()` call around it, and
  * the header/body templates themselves.
  *
  * The two components differ in exactly one axis -- *which* shiki loader they reach for (the full
@@ -32,11 +34,6 @@ import {
   boundedSelectionText,
 } from '../../../internal/text-quote.js';
 import {
-  writeClipboardText,
-  type LyraClipboardWriteFailure,
-  type LyraClipboardWriteSuccess,
-} from '../../../internal/clipboard.js';
-import {
   normalizeShikiLanguage,
   SHIKI_THEMES,
   type ShikiHighlighterCore,
@@ -47,7 +44,6 @@ import type {
   LyraHighlight,
   TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { resolveIsDarkTheme } from './shiki-dark-theme.js';
 
 const INVALID_HIGHLIGHT_LINES_WARNING_KEY = 'lyra-code-block-invalid-highlight-lines';
@@ -116,9 +112,6 @@ function addBoundedLineRange(
   );
   for (let line = low; line <= high; line++) lines.add(line);
 }
-
-/** How long the copy button's confirmation state lasts before reverting. */
-const CODE_BLOCK_COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 
 /** One-based line count of `code`, the upper bound every line-addressing helper below clamps to.
  *  A trailing newline still yields the (empty) line after it, matching the rendered line count. */
@@ -928,9 +921,7 @@ interface CodeBlockInteractionHost extends HTMLElement {
   collapsed: boolean;
 }
 
-/** The reactive writes and event emissions the controller cannot perform itself: each component
- *  keeps `justCopied`/`isDarkTheme` as its own `@state()` and retains the focused line
- *  and its own typed `emit()`, and hands those in as callbacks. */
+/** Reactive writes and typed events supplied by the code-block host. */
 export interface CodeBlockInteractionOptions {
   host: CodeBlockInteractionHost;
   setFocusedLine: (line: number) => void;
@@ -946,22 +937,8 @@ export interface CodeBlockInteractionOptions {
   emitTextSelect: (selection: CodeBlockSelection) => void;
 }
 
-/**
- * Every interaction behavior `<lr-code-block>` and `<lr-code-block-core>` implement identically:
- * the gutter's roving-tabindex focus and keyboard contract, the pointer/keyboard/focus handlers on
- * `[part="body"]`, selection anchoring, the copy button and its confirmation timer, the
- * collapse/expand toggle, and the dark-theme watcher's lifecycle.
- *
- * These lived as line-for-line duplicates on both classes, which is exactly the drift this module
- * exists to prevent -- and had already bitten this pair once before (`renderPlainCode()`). The
- * controller owns the two purely-internal bits of bookkeeping outright (the copy timer and the
- * theme-watcher teardown, neither of which reaches either template); the three values that *are*
- * rendered stay as each component's own `@state()`, written through the callbacks above so Lit
- * still sees them change.
- */
+/** Owns gutter navigation, selection, collapse and theme interactions for both code blocks. */
 export class CodeBlockInteractionController {
-  private copyTimer?: { owner: Window; handle: number };
-  private copyGeneration = 0;
   private lineButtons = new Map<number, HTMLElement>();
   private lineSource?: Element | null;
   private focusedLine = 1;
@@ -978,31 +955,35 @@ export class CodeBlockInteractionController {
     return localizationChanged || codeBlockNeedsHighlightResync(changed);
   }
 
-  constructor(private readonly options: CodeBlockInteractionOptions) {}
+  private readonly feedback: RecordCopyFeedback;
+
+  constructor(private readonly options: CodeBlockInteractionOptions) {
+    this.feedback = new RecordCopyFeedback(options.host, () => options.host.code ?? '', outcome => {
+      if (outcome.ok) options.emitCopy(outcome);
+      else {
+        options.emitError();
+        options.emitCopyError(outcome);
+      }
+    }, status => {
+      options.setJustCopied(status === 'success');
+      options.setCopyFailed(status === 'error');
+    });
+  }
+
+  copy = (): Promise<void> => this.feedback.write(this.options.host.code ?? '');
+
+  cancelCopyTimer(): void {
+    this.feedback.cancelTimer();
+  }
+
+  disconnect(): void {
+    this.feedback.reset();
+  }
+
 
   /** Re-resolves token colors after an imperative CSSOM/adopted-stylesheet theme change. */
   refreshTheme(): void {
     this.options.setDarkTheme(resolveIsDarkTheme(this.options.host));
-  }
-
-  /** Retires an in-flight copy-confirmation timer against the window that scheduled it. */
-  cancelCopyTimer(): void {
-    const timer = this.copyTimer;
-    this.copyTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
-  }
-
-  /** Invalidates pending writes and feedback when the host disconnects or changes owner. */
-  disconnect(): void {
-    this.copyGeneration++;
-    this.cancelCopyTimer();
-    this.options.setJustCopied(false);
-    this.options.setCopyFailed(false);
-  }
-
-  private setCopyStatus(status: 'rest' | 'success' | 'error'): void {
-    this.options.setJustCopied(status === 'success');
-    this.options.setCopyFailed(status === 'error');
   }
 
   /** Moves the roving tab stop to `line`, both in the component's state and on the rendered
@@ -1096,45 +1077,6 @@ export class CodeBlockInteractionController {
     if (selection) this.options.emitTextSelect(selection);
   };
 
-  copy = async (): Promise<void> => {
-    const { host } = this.options;
-    const owner = host.isConnected ? host.ownerDocument.defaultView : null;
-    const text = host.code ?? '';
-    const generation = ++this.copyGeneration;
-    this.cancelCopyTimer();
-    this.setCopyStatus('rest');
-    const outcome = await writeClipboardText(owner, text);
-    if (
-      !owner ||
-      !host.isConnected ||
-      host.ownerDocument.defaultView !== owner ||
-      generation !== this.copyGeneration
-    )
-      return;
-    if (!outcome.ok) {
-      this.setCopyStatus('error');
-      this.options.emitError();
-      this.options.emitCopyError(outcome);
-    } else {
-      this.options.emitCopy(outcome);
-      this.setCopyStatus('success');
-    }
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.copyTimer?.owner !== owner ||
-        this.copyTimer.handle !== handle ||
-        !host.isConnected ||
-        host.ownerDocument.defaultView !== owner ||
-        generation !== this.copyGeneration
-      )
-        return;
-      this.copyTimer = undefined;
-      this.setCopyStatus('rest');
-    }, CODE_BLOCK_COPY_CONFIRM_MS);
-    this.copyTimer = { owner, handle };
-  };
-
   toggleCollapsed = (): void => {
     const { host } = this.options;
     const collapsed = !host.collapsed;
@@ -1147,8 +1089,7 @@ export class CodeBlockInteractionController {
 /** The reactive write {@linkcode CodeBlockHeaderActionsController} cannot perform itself: each
  *  component keeps `hasHeaderActions` as its own `@state()` (it reaches the shared render
  *  options this module's `renderCodeBlockShell()` accepts) and hands the setter in as a
- *  callback, the same shape `CodeBlockInteractionOptions` uses for `focusedLine`/`justCopied`/
- *  etc. */
+ *  callback, like the focused-line setter in `CodeBlockInteractionOptions`. */
 export interface CodeBlockHeaderActionsOptions {
   host: HTMLElement;
   setHasHeaderActions: (value: boolean) => void;

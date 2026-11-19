@@ -84,7 +84,7 @@ export const styles = css`
     gap: var(--lr-token-input-gap, var(--_lr-token-input-gap));
   }
   [part="form-control-label"] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
   }
   /* The required marker comes from the one shared sheet (internal/form-control.styles.ts), keeping
      its glyph, colour and spacing consumer-settable. The rule below hides the older hand-rolled

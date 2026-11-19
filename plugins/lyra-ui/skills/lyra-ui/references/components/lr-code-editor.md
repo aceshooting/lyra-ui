@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-code-editor`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content

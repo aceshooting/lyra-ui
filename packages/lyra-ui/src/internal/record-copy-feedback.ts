@@ -2,6 +2,8 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { writeClipboardText, type LyraClipboardWriteOutcome } from './clipboard.js';
 import { COPY_FEEDBACK_MS } from './copy-feedback.js';
 
+type CopyStatus = 'rest' | 'success' | 'error';
+
 interface CopyRequest {
   owner: Window;
   source: string | number;
@@ -10,15 +12,16 @@ interface CopyRequest {
 
 /** Clipboard feedback owned by a displayed record and its browsing context. */
 export class RecordCopyFeedback implements ReactiveController {
-  status: 'rest' | 'success' | 'error' = 'rest';
+  status: CopyStatus = 'rest';
   private current?: CopyRequest;
 
   constructor(
-    private readonly host: HTMLElement & ReactiveControllerHost,
+    private readonly host: HTMLElement & Partial<ReactiveControllerHost>,
     private readonly source: () => string | number,
     private readonly settled: (outcome: LyraClipboardWriteOutcome) => void,
+    private readonly statusChanged?: (status: CopyStatus) => void,
   ) {
-    host.addController(this);
+    host.addController?.(this);
   }
 
   hostUpdate(): void {
@@ -29,14 +32,25 @@ export class RecordCopyFeedback implements ReactiveController {
     this.reset();
   }
 
-  reset(): void {
+  cancelTimer(): void {
     const current = this.current;
-    this.current = undefined;
-    if (current?.timer !== undefined) current.owner.clearTimeout(current.timer);
-    if (this.status !== 'rest') {
-      this.status = 'rest';
-      this.host.requestUpdate();
+    if (current?.timer !== undefined) {
+      current.owner.clearTimeout(current.timer);
+      delete current.timer;
     }
+  }
+
+  reset(): void {
+    this.cancelTimer();
+    this.current = undefined;
+    this.setStatus('rest');
+  }
+
+  private setStatus(status: CopyStatus): void {
+    this.statusChanged?.(status);
+    if (this.status === status) return;
+    this.status = status;
+    this.host.requestUpdate?.();
   }
 
   async write(text: string): Promise<void> {
@@ -48,8 +62,7 @@ export class RecordCopyFeedback implements ReactiveController {
     const outcome = await writeClipboardText(owner, text);
     if (this.current !== request || !this.host.isConnected || this.host.ownerDocument.defaultView !== owner ||
       this.source() !== request.source) return;
-    this.status = outcome.ok ? 'success' : 'error';
-    this.host.requestUpdate();
+    this.setStatus(outcome.ok ? 'success' : 'error');
     request.timer = owner.setTimeout(() => {
       if (this.current === request) this.reset();
     }, COPY_FEEDBACK_MS);

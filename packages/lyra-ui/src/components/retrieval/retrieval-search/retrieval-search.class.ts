@@ -453,7 +453,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     // Mirrors <lr-chat-composer>'s identical guard.
     if (e.isComposing || e.keyCode === 229) return;
     e.preventDefault();
-    this.submit();
+    if (!e.repeat) this.submit();
   };
 
   private onModeChange = (e: CustomEvent<{ value: string }>): void => {

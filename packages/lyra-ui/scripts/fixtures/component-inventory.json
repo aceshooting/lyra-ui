@@ -25288,7 +25288,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-form-control-font-size)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -29205,11 +29205,6 @@
             "default": "none"
           },
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -29219,7 +29214,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -30521,11 +30516,6 @@
             "default": "none"
           },
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -30535,13 +30525,13 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-weight-semibold)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -32404,13 +32394,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -38215,13 +38205,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -39522,13 +39512,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -43874,13 +43864,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -55604,11 +55594,6 @@
             "default": "none"
           },
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -55618,13 +55603,13 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-weight-semibold)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -60044,7 +60029,7 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
@@ -67130,21 +67115,16 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -74746,13 +74726,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -78614,7 +78594,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -82447,13 +82427,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -91286,13 +91266,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -94492,13 +94472,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -98212,13 +98192,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -99834,7 +99814,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -104589,11 +104569,6 @@
             "default": "none"
           },
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -104603,7 +104578,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -116412,7 +116387,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-form-control-font-size)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -122646,11 +122621,6 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -122660,7 +122630,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -124656,13 +124626,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -125983,13 +125953,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -127699,21 +127669,16 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -129148,11 +129113,6 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -129162,7 +129122,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -142577,13 +142537,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -145100,13 +145060,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -146904,13 +146864,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -149635,11 +149595,6 @@
             "default": "none"
           },
           {
-            "name": "--lr-form-control-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -149649,7 +149604,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -157538,13 +157493,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -160506,13 +160461,13 @@
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-form-control-font-size, var(--lr-font-size-m))"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",

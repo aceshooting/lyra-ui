@@ -573,10 +573,10 @@ export type LyraComboboxSourceErrorEvent =
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
+ * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
- * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Compatibility wrapper around the visible label content.
  * @csspart form-control-input - Compatibility wrapper around the editable control.

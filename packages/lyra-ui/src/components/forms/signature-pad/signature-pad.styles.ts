@@ -9,7 +9,7 @@ export const styles = css`
   }
 
   [part='form-control-label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography()}
     margin-block-end: var(--lr-space-xs);
   }
   ${formControlRequiredMarker}

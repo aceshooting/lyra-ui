@@ -20,6 +20,10 @@ Restore documented defaults when formatter, alert, tooltip, spinner, keycap, and
 
 Keep menu and result focus on surviving choices, and reconcile radio and checkbox submission with native form behavior. Prevent superseded overlays, viewers, and charts from acting on replacement targets. Restore cluster legends for spatial embeddings and scale extreme coordinates. Keep breadcrumb separators synced with visible items and preserve literal early ISO years in calendar and thread views.
 
+Keep export, widget, chip, path, approval, and stop actions tied to the item and state that initiated them. Recover emoji loading after reconnection, ignore superseded copy feedback, and preserve argument drafts when record keys arrive in a different order. Refresh menu descriptions as their references change, return focus to the memory confirmation trigger, and move focus to an available zoom control at its limit.
+
+Suppress duplicate OTP commits and repeated keyboard activation. Let browser-modified arrows through data and retrieval navigation, restore popup strategy and optional media defaults after attribute removal, and distinguish small nonzero values and unmeasured metrics. Correct the published checkbox group event and random-content action references.
+
 Split independently used form and control styles so standalone imports carry less CSS. Build optional look-mode aliases on first use. Reuse owned response storage for exact-fit reads.
 
 The new control surfaces and lifecycle handling add several KiB gzip to full registration. The largest standalone entry is the agent workspace, which composes the updated composer, message, viewport, and tool timeline. Richer dialog descriptions and group labels account for additional shared accessibility code. The affected bundle ceilings advance to measured 64-byte boundaries.

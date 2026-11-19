@@ -42,7 +42,7 @@ import {
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { tag } from '../../../internal/prefix.js';
 import { activeElementIn, isUsableActiveElement, safeDeepActiveElement } from '../../../internal/active-element.js';
-import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import './menu-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -293,6 +293,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // Initial assignment is collected from `firstUpdated()` as well; see
   // `collectInitialSlotAssignment` for the shared timing contract.
   @query('slot:not([name])') private itemsSlot?: HTMLSlotElement;
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part~="list"]'),
+  );
 
   private cleanup?: DeferredOperationHandle;
   private presentationPositioned = false;
@@ -466,12 +469,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never
-    // reaches `[part="list"]`'s own `role="menu"` (which owns the accessible description) unless
-    // it is explicitly reflected there. Mirrors lr-checkbox's/lr-flow-minimap's identical
-    // `syncAriaDescribedByElements` use.
-    const list = this.renderRoot.querySelector<HTMLElement>('[part~="list"]') ?? undefined;
-    syncAriaDescribedByElements(this, list, this.getAttribute('aria-describedby'));
     if (
       changed.has('presentationOpen') ||
       changed.has('dropdownOpen') ||
@@ -595,6 +592,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
     this.presentationPositioned = true;
     this.focusRoving(focus);
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
   }
 
   override disconnectedCallback(): void {

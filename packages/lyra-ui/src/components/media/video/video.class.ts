@@ -399,7 +399,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Native preload policy. */
   @property() preload: LyraVideoPreload = 'metadata';
   /** Direct video URL. Executable schemes fail closed. */
-  @property() src = '';
+  @property({ useDefault: true }) src = '';
   /** URL of a WebVTT thumbnail file. Reads are byte- and cue-capped. */
   @property() thumbnails = '';
   /** Video title and accessible-name context. */

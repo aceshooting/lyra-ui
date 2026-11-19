@@ -30,7 +30,7 @@ export const styles = css`
   }
 
   [part~='aggregate-label'] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
   }
 
   [part~='aggregate-hint'] {

@@ -16,6 +16,10 @@
 
 ## `lr-model-select`
 
+The field label accepts `--lr-form-control-label-font-size`,
+`--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
+See [shared label typography](../forms.md#field-and-group-label-typography).
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 The model list follows the [shared surface treatment](../shared/styles-and-tokens.md);

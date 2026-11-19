@@ -1547,6 +1547,39 @@ it('clear() empties the value with input, change, then lr-clear, and leaves focu
   expect(order, 'a blank field has nothing to clear').to.have.lengthOf(3);
 });
 
+for (const reentrant of [false, true]) {
+  for (const action of ['clear', 'restore'] as const) {
+    it(`retires an uncommitted key edit on ${action} ${reentrant ? 'from the input listener' : 'before blur'}`, async () => {
+      const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code"></lr-otp-input>`);
+      await focusByKeyboard(controlOf(el));
+      let nativeChanges = 0;
+      const changes: string[] = [];
+      el.addEventListener('change', () => { nativeChanges++; });
+      el.addEventListener('lr-change', event => changes.push(event.detail.value));
+      const replace = () => {
+        if (action === 'clear') el.clear();
+        else el.formStateRestoreCallback('456', 'restore');
+      };
+
+      if (reentrant) el.addEventListener('lr-input', replace, { once: true });
+      key(el, '1');
+      if (!reentrant) replace();
+      await el.updateComplete;
+      controlOf(el).blur();
+      expect(el.value).to.equal(action === 'clear' ? '' : '456');
+      expect(changes).to.deep.equal(action === 'clear' ? [''] : []);
+      expect(nativeChanges).to.equal(changes.length);
+
+      await focusByKeyboard(controlOf(el));
+      el.setSelectionRange(el.value.length, el.value.length);
+      key(el, '7');
+      controlOf(el).blur();
+      expect(changes.at(-1)).to.equal(action === 'clear' ? '7' : '4567');
+      expect(nativeChanges).to.equal(action === 'clear' ? 2 : 1);
+    });
+  }
+}
+
 it('does not emit lr-clear when user editing clears the last entered character', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code"></lr-otp-input>`);
   await type(el, '1');

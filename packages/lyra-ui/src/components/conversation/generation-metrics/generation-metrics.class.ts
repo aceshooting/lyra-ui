@@ -164,7 +164,7 @@ const GENERATION_METRICS_STATUS = {
  * any other icon-only button in this library.
  *
  * @customElement lr-generation-metrics
- * @event lr-stop - The built-in Stop button was clicked. No detail payload.
+ * @event lr-stop - The built-in Stop button was activated while enabled and running. No detail payload.
  * @csspart base - The root inline layout container; takes focus from a focused Stop button that unmounts.
  * @csspart elapsed - The elapsed-time segment, e.g. `"12.3s"`. Always rendered (reads `"0.0s"` while idle).
  * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
@@ -388,6 +388,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   }
 
   private onStopClick = (): void => {
+    if (!this.isConnected || this.withoutStop || this.status !== 'running') return;
     this.emit('lr-stop', null);
   };
 

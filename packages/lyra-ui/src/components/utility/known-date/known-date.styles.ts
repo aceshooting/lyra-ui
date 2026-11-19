@@ -71,7 +71,7 @@ export const styles = css`
   }
 
   [part="legend"] {
-    ${formControlLabelTypography}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
     display: block;
     padding: 0;
     margin-block-end: var(--lr-space-xs);

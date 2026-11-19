@@ -3322,6 +3322,39 @@ describe("lr-widget view activation event", () => {
       (toggle) => (toggle as HTMLElement).dataset["viewId"] === viewId
     ) as HTMLButtonElement;
 
+  for (const replacement of ['views', 'selection'] as const) {
+    it(`retires a requested view when the listener replaces the ${replacement}`, async () => {
+      const el = await widgetWithViews();
+      el.views = [...el.views, { viewId: 'details', label: 'Details' }];
+      await el.updateComplete;
+      const changed: string[] = [];
+      const activated: string[] = [];
+      el.addEventListener('lr-view-change', event => changed.push(event.detail.viewId));
+      el.addEventListener('lr-activate', event => activated.push(event.detail.value));
+      el.addEventListener('lr-view-request', () => {
+        if (replacement === 'views') el.views = el.views.filter(view => view.viewId !== 'table');
+        else el.activeViewId = 'details';
+      }, { once: true });
+      toggleFor(el, 'table').click();
+      await el.updateComplete;
+      expect(el.activeViewId).to.equal(replacement === 'views' ? 'chart' : 'details');
+      expect(changed).to.deep.equal([]);
+      expect(activated).to.deep.equal([]);
+      toggleFor(el, el.activeViewId).click();
+      expect(activated).to.deep.equal([el.activeViewId]);
+    });
+  }
+
+  it('retires the activation notification if a change listener selects another view', async () => {
+    const el = await widgetWithViews();
+    const activated: string[] = [];
+    el.addEventListener('lr-activate', event => activated.push(event.detail.value));
+    el.addEventListener('lr-view-change', () => { el.activeViewId = 'chart'; }, { once: true });
+    toggleFor(el, 'table').click();
+    expect(el.activeViewId).to.equal('chart');
+    expect(activated).to.deep.equal([]);
+  });
+
   it("fires lr-activate without lr-view-change when the active view toggle is clicked again", async () => {
     const el = await widgetWithViews();
     expect(el.activeViewId).to.equal("chart");

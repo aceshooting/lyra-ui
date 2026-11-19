@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -304,6 +305,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
    *  month, mirroring how `changeMonth()` already updates `viewDate`, guarantees the new grid
    *  always contains it. */
   private onDayKeyDown(event: KeyboardEvent, date: Date): void {
+    if (shouldIgnoreNavigationKey(event)) return;
     const rtl = this.effectiveDirection === 'rtl';
     const year = date.getFullYear();
     const month = date.getMonth();

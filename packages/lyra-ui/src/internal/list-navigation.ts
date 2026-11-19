@@ -11,10 +11,14 @@ export interface ListMoveOptions {
   backwardFromMissing?: 'first' | 'last';
 }
 
+/** Navigation yields to composition and to browser or system shortcuts. */
+export function shouldIgnoreNavigationKey(event: KeyboardEvent): boolean {
+  return event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey;
+}
+
 /** Resolves a list's next index without owning its focus, selection, or activation policy. */
 export function resolveListMove(event: KeyboardEvent | string, options: ListMoveOptions): number | null {
-  if (typeof event !== 'string' &&
-      (event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey)) return null;
+  if (typeof event !== 'string' && shouldIgnoreNavigationKey(event)) return null;
   const key = typeof event === 'string' ? event : event.key;
   const { count, current, orientation, direction = 'ltr', wrap = true } = options;
   if (!Number.isSafeInteger(count) || count <= 0) return null;

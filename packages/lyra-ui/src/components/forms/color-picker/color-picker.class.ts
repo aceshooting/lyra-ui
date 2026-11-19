@@ -316,9 +316,8 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart base - Permanent compatibility name on the same field wrapper as `color-picker`.
  * @csspart color-picker - The field wrapper. It is the same node as `base` and `form-control`.
  * @csspart form-control - The field wrapper. It is the same node as `base` and `color-picker`.
- * @cssprop [--lr-form-control-font-size] - Size-tier font size used by the field label.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size, var(--lr-font-size-m))] - Font size of the field label.
- * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-weight=inherit] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The label. It also carries the `label` compatibility name.
  * @csspart label - Permanent compatibility name on the same label as `form-control-label`.

@@ -482,6 +482,12 @@ for (const dir of ['ltr', 'rtl'] as const) it(`moves source row focus with Arrow
   expect(active()).to.equal('node:1');
   press(forward, 'node:1');
   expect(active()).to.equal('node:2');
+  const reserved = new KeyboardEvent('keydown', {
+    key: backward, altKey: true, bubbles: true, cancelable: true,
+  });
+  row(graph, 'node:2')!.dispatchEvent(reserved);
+  expect(reserved.defaultPrevented).to.equal(false);
+  expect(active()).to.equal('node:2');
   press(backward, 'node:2');
   expect(active()).to.equal('node:1');
   press('ArrowUp', 'node:1');

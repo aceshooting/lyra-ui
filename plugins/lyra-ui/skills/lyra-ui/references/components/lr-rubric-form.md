@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-rubric-form`
+
+Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
+`--lr-form-control-label-color`. [Field and group label typography](#field-and-group-label-typography)
 
 A configurable annotation rubric (LangSmith annotation-queue style): score, category, and
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
