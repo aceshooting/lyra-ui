@@ -11,7 +11,10 @@ describe('linked attribution properties', () => {
       template.innerHTML = result.controls.get('attribution')!.options['customAttribution'] as string;
       expect(template.content.querySelectorAll('a').length).to.equal(1);
       const anchor = template.content.querySelector('a')!;
-      expect(anchor.textContent).to.equal(label.replaceAll('\r\n', '\n').replaceAll('\r', '\n').replaceAll('\0', '\ufffd'));
+      // The label is trimmed and a blank one falls back to the URL hostname; the HTML parser then
+      // normalizes newlines and NUL exactly as it does for any text node.
+      const shown = label.trim() || 'example.com';
+      expect(anchor.textContent).to.equal(shown.replaceAll('\r\n', '\n').replaceAll('\r', '\n').replaceAll('\0', '\ufffd'));
       expect(anchor.children.length).to.equal(0); expect(anchor.rel).to.equal('noopener noreferrer');
     }), propertyRuns());
   });

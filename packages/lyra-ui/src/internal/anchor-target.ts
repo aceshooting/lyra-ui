@@ -246,11 +246,13 @@ export function observeTextSelection(
   host: Element,
   contentRoot: Element,
   onSelect: (range: Range, text: string, rects: ReturnType<typeof boundedSelectionRects>) => void,
-  shadowRoots: readonly ShadowRoot[] = textSelectionShadowRoots(host, contentRoot),
+  shadowRoots: () => readonly ShadowRoot[] = () => textSelectionShadowRoots(host, contentRoot),
 ): () => void {
   let reported: readonly [Node, number, Node, number] | undefined;
   const onSelectionEnd = (): void => {
-    const range = selectionRange(host, shadowRoots);
+    // Resolved per event: the content root can be re-parented into another shadow tree (a
+    // virtualized list re-rendering its rows) after binding, and a stale root list misses the range.
+    const range = selectionRange(host, shadowRoots());
     if (!range || !containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer)) {
       reported = undefined;
       return;
@@ -267,7 +269,7 @@ export function observeTextSelection(
   };
   contentRoot.addEventListener('pointerup', onSelectionEnd);
   contentRoot.addEventListener('keyup', onSelectionEnd);
-  const unsubscribe = subscribeSelectionEnd(contentRoot.ownerDocument, contentRoot, shadowRoots, onSelectionEnd);
+  const unsubscribe = subscribeSelectionEnd(contentRoot.ownerDocument, contentRoot, shadowRoots(), onSelectionEnd);
   return () => {
     contentRoot.removeEventListener('pointerup', onSelectionEnd);
     contentRoot.removeEventListener('keyup', onSelectionEnd);
@@ -583,7 +585,7 @@ export function DocumentAnchorTarget(
           const anchor = this.computeSelectionAnchor(range, text);
           this.emit('lr-text-select', { text, anchor, rects });
         },
-        this.selectionShadowRoots(contentRoot),
+        () => this.selectionShadowRoots(contentRoot),
       );
     }
 

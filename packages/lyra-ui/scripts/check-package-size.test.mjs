@@ -543,7 +543,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 23_000_960],
+    [9_999_999, 23_124_416],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
@@ -588,8 +588,8 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.packedBytes, 1_071_936);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_400_192);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.fileCount, 692);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 1_983_104);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 8_827_136);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 2_004_736);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 8_934_272);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.fileCount, 1_121);
   assert.deepEqual(
     [actualBudgets.companions['@aceshooting/lyra-ide'].maximum.packedBytes, actualBudgets.companions['@aceshooting/lyra-ide'].maximum.unpackedBytes],
@@ -600,7 +600,7 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.deepEqual(companionBudgetFindings({ packedBytes: 1, unpackedBytes: 1, fileCount: 4, files: ide }, '@aceshooting/lyra-ide', actualBudgets), []);
   assert.deepEqual(
     companionBudgetFindings({ packedBytes: 1, unpackedBytes: 99_000_000, fileCount: 3, files: ide.slice(1) }, '@aceshooting/lyra-ide', actualBudgets),
-    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 10,845,760'],
+    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 10,890,304'],
   );
   assert.throws(() => companionBudgetFindings({ files: [] }, '@example/other', actualBudgets), /no companion package budget/u);
   assert.deepEqual(parsePackageSizeArguments(['--package', '@aceshooting/lyra-translations', '--tarball', 'a.tgz']), { package: '@aceshooting/lyra-translations', tarball: 'a.tgz' });

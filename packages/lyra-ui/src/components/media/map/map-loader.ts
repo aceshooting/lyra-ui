@@ -253,7 +253,8 @@ function isMaplibreModule(candidate: unknown): candidate is MaplibreModule {
   return missingMaplibreCapability(candidate) === undefined;
 }
 
-/** The shared loader owns retry policy. A fulfilled inspection can also describe an incompatible peer. */
+/** The shared loader owns retry policy. A fulfilled inspection can also describe an incompatible peer.
+ *  @internal */
 export function createMapEngineLoader<T>(
   peer: string,
   importer: () => Promise<unknown>,

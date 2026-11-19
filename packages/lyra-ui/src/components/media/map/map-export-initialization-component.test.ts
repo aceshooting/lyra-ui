@@ -202,7 +202,9 @@ describe('lr-map initialization and current-frame export', () => {
     try { blob = await element.exportImage(); }
     finally { CanvasRenderingContext2D.prototype.fillText = fillText; }
     const size = await dimensions(blob);
-    expect(painted.join('')).to.include('Provider credit'); expect(painted.join('')).to.include('Resolved TileJSON credit');
+    // The footer wraps at whitespace and trims each line, so rejoin the painted lines with a space.
+    const footer = painted.join(' ').replace(/\s+/gu, ' ');
+    expect(footer).to.include('Provider credit'); expect(footer).to.include('Resolved TileJSON credit');
     expect(blob.type).to.equal('image/png'); expect(size.width).to.equal(192); expect(size.height).to.be.greaterThan(96);
     expect(peer.repaintCount).to.equal(1); expect(peer.styleReads - reads).to.equal(1);
     const bitmap = await createImageBitmap(blob), canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;

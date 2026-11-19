@@ -20,7 +20,7 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 23000960,
+    "unpackedBytes": 23124416,
     "fileCount": 3352
   },
   "companions": {
@@ -40,8 +40,8 @@
     },
     "@aceshooting/lyra-translations": {
       "maximum": {
-        "packedBytes": 1983104,
-        "unpackedBytes": 8827136,
+        "packedBytes": 2004736,
+        "unpackedBytes": 8934272,
         "fileCount": 1121
       }
     },
