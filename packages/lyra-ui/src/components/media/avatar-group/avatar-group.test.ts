@@ -1100,3 +1100,25 @@ it('moves into another document before its first render without throwing', async
     frame.remove();
   }
 });
+
+it('does not rescan the group after its own avatar attribute writes', async () => {
+  const el = await fixture<LyraAvatarGroup>(html`<lr-avatar-group>
+    <lr-avatar></lr-avatar><lr-avatar></lr-avatar>
+  </lr-avatar-group>`);
+  await el.updateComplete;
+  const first = el.querySelector('lr-avatar')!;
+  await waitUntil(() => first.hasAttribute('size'));
+  await new Promise<void>(resolve => setTimeout(resolve, 0));
+  const reads = el as unknown as { recomputeWindow(): void };
+  const recompute = reads.recomputeWindow.bind(el);
+  let passes = 0;
+  reads.recomputeWindow = () => { passes++; recompute(); };
+  el.size = 'large';
+  await el.updateComplete;
+  await new Promise<void>(resolve => setTimeout(resolve, 0));
+  expect(first.getAttribute('size')).to.equal('large');
+  expect(passes).to.equal(0);
+  first.hidden = true;
+  await waitUntil(() => passes > 0);
+  expect(first.hidden).to.equal(true);
+});

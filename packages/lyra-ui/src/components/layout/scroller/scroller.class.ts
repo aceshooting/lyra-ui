@@ -1,3 +1,5 @@
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -6,11 +8,28 @@ import { finiteRange } from '../../../internal/numbers.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './scroller.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { scrollEdgePosition } from '../../../internal/scroll-overflow.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
+const CONTAINED_KEYS = new Set([
+  'Enter',
+  ' ',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+]);
 
 export interface LyraScrollerEventMap {
   'lr-scroll': CustomEvent<{
@@ -42,6 +61,8 @@ export interface LyraScrollerEventMap {
  * @csspart control - Shared part on both `previous` and `next`.
  * @csspart previous-glyph - The chevron glyph inside `previous`, mirrored under RTL.
  * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
+ * @cssprop [--lr-scroller-gap=var(--lr-space-s)] - Space between scrolled items.
+ * @cssprop [--lr-scroller-controls-gap=var(--lr-space-xs)] - Space between the viewport and controls.
  * @cssprop [--lr-scroller-control-hover-bg=var(--lr-color-brand-quiet)] - Previous/next hover fill.
  * @cssprop [--lr-scroller-control-active-bg=color-mix(in oklab, var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Previous/next pressed fill.
  * @cssprop [--lr-scroller-control-size=var(--lr-size-2rem)] - Control size.
@@ -86,25 +107,23 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   withoutShadow = false;
   @property({ type: Number, attribute: 'scroll-step' }) scrollStep = 0;
   @property() label = '';
+  /** Accessible name of the scroll viewport. A present host aria-label takes precedence. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private atStart = false;
   @state() private atEnd = false;
   @state() private measured = false;
   @query('[part="viewport"]') private viewport?: HTMLElement;
   @query('[part="content"]') private content?: HTMLElement;
-  private resizeObserver?: ResizeObserver;
-  private resizeObserverDocument?: Document;
+  private readonly resizeObserver = new OwnedResizeObserver(this, () => this.updateEdges());
+  private readonly scrollFrame = new OwnedFrame(this);
   private ownerRealmGeneration = 0;
   private edgeUpdatePending = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.resizeObserver.resume();
     this.armResizeObserver();
-    // A reconnect (move in the DOM) re-creates the observer above but the shadow-root content
-    // survives across disconnect/reconnect (Lit doesn't tear it down) -- re-observe the viewport
-    // here too when it already exists. `firstUpdated()` only ever runs once, on the very first
-    // render, so it can't be relied on for a reconnect; on the very first connect `this.viewport`
-    // (a `@query`) isn't resolved yet, so `firstUpdated()` below still does that initial observe.
   }
 
   override firstUpdated(changed: PropertyValues): void {
@@ -124,45 +143,17 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   }
 
   private armResizeObserver(): void {
-    const ownerDocument = this.ownerDocument;
     if (!this.isConnected) return;
-    if (this.resizeObserver && this.resizeObserverDocument === ownerDocument) {
-      if (this.viewport) this.resizeObserver.observe(this.viewport);
-      if (this.content) this.resizeObserver.observe(this.content);
-      return;
-    }
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.resizeObserverDocument = undefined;
-    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
-    if (!ResizeObserverCtor) return;
-    const generation = this.ownerRealmGeneration;
-    const observer = new ResizeObserverCtor(() => {
-      if (
-        this.resizeObserver !== observer ||
-        this.resizeObserverDocument !== ownerDocument ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.updateEdges();
-    });
-    this.resizeObserver = observer;
-    this.resizeObserverDocument = ownerDocument;
-    observer.observe(this);
-    if (this.viewport) observer.observe(this.viewport);
-    if (this.content) observer.observe(this.content);
+    this.resizeObserver.observe(this);
+    if (this.viewport) this.resizeObserver.observe(this.viewport);
+    if (this.content) this.resizeObserver.observe(this.content);
   }
 
   private resetOwnerRealmWork(): void {
     this.ownerRealmGeneration += 1;
     this.edgeUpdatePending = false;
-    this.cancelScrollFrame();
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.resizeObserverDocument = undefined;
+    this.scrollFrame.cancel();
+    this.resizeObserver.disconnect();
     this.measured = false;
   }
 
@@ -208,19 +199,14 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
         scrollTop: 0,
       };
     const horizontal = this.orientation === 'horizontal';
-    const max = horizontal
-      ? Math.max(0, viewport.scrollWidth - viewport.clientWidth)
-      : Math.max(0, viewport.scrollHeight - viewport.clientHeight);
-    const position = horizontal ? viewport.scrollLeft : viewport.scrollTop;
-    const rtl = horizontal && this.effectiveDirection === 'rtl';
-    // Per the CSSOM View spec (what every browser this library targets actually implements),
-    // scrollLeft in RTL runs 0 (inline-start) down to -max (inline-end) -- not the legacy WebKit
-    // convention of max down to 0. Negating (rather than `max - position`) normalizes it back to the
-    // same "distance from inline-start" the LTR branch already computes.
-    const startPosition = rtl ? -position : position;
+    const { atStart, atEnd } = scrollEdgePosition(
+      viewport,
+      horizontal,
+      horizontal && this.effectiveDirection === 'rtl'
+    );
     return {
-      scrollStart: startPosition <= 1,
-      scrollEnd: startPosition >= max - 1,
+      scrollStart: atStart,
+      scrollEnd: atEnd,
       scrollLeft: viewport.scrollLeft,
       scrollTop: viewport.scrollTop,
     };
@@ -240,46 +226,25 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     if (changed || emitForPositionChange) this.emit('lr-scroll', detail);
   }
 
-  // Coalesce to one edge read + one `lr-scroll` dispatch per animation frame. Native `scroll`
-  // events fire far faster than that during a trackpad/touch fling, and each tick otherwise cost a
-  // full scrollWidth/clientWidth/scrollLeft layout read plus a CustomEvent dispatch.
-  // Realm-guarded like every other deferred callback here: a scroller adopted into (or removed
-  // from) another document drops the pending frame instead of reading a stale viewport.
-  private scrollFrame?: number;
-  private scrollFrameWindow?: Window;
-
-  private cancelScrollFrame(): void {
-    if (this.scrollFrame !== undefined) this.scrollFrameWindow?.cancelAnimationFrame(this.scrollFrame);
-    this.scrollFrame = undefined;
-    this.scrollFrameWindow = undefined;
-  }
-
+  // One edge read and one `lr-scroll` dispatch per animation frame, however fast `scroll` fires.
   private onScroll = (): void => {
-    if (this.scrollFrame !== undefined) return;
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow || !this.isConnected) return;
-    const generation = this.ownerRealmGeneration;
-    const handle = ownerWindow.requestAnimationFrame(() => {
-      if (
-        this.scrollFrame !== handle ||
-        this.scrollFrameWindow !== ownerWindow ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.scrollFrame = undefined;
-      this.scrollFrameWindow = undefined;
-      this.syncEdges(true);
-    });
-    this.scrollFrame = handle;
-    this.scrollFrameWindow = ownerWindow;
+    if (this.scrollFrame.pending) return;
+    this.scrollFrame.schedule(() => this.syncEdges(true));
+  };
+
+  /** Keys that move or activate the scroller's own viewport and buttons stay inside it, so an
+   *  ancestor's roving or activation handler never mistakes them for its own. */
+  private onBaseKeyDown = (event: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(event) || event.shiftKey || !CONTAINED_KEYS.has(event.key)) return;
+    const origin = event.composedPath()[0];
+    if (isElementNode(origin) && origin.getRootNode() === this.renderRoot &&
+      (origin === this.viewport || origin.matches('button[part~="control"]'))) {
+      event.stopPropagation();
+    }
   };
 
   private onSlotChange = (): void => {
-    if (this.content) this.resizeObserver?.observe(this.content);
+    if (this.content) this.resizeObserver.observe(this.content);
     this.scheduleEdgeUpdate();
   };
 
@@ -327,10 +292,10 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   override render(): TemplateResult {
     const label =
-      this.getAttribute('aria-label') ??
+      hostAriaLabel(this) ??
       (this.label || this.localize('scrollerLabel'));
     const vertical = this.orientation === 'vertical';
-    return html`<div part="base">
+    return html`<div part="base" @keydown=${this.onBaseKeyDown}>
       ${this.controls
         ? html`<button
             part="control previous"

@@ -97,6 +97,8 @@ export const formControlSupportingText = css`
   [part~='hint'], [part~='error'] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part~='hint'] { color: var(--lr-color-text-quiet); }
   [part~='error'] { color: var(--lr-color-danger); }

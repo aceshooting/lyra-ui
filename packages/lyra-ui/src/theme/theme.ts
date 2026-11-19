@@ -7,7 +7,11 @@
  * therefore carries no `package.json#sideEffects` entry, so bundlers may drop it when unused.
  */
 
+import { readCanvasRgba } from '../internal/canvas-color.js';
+import { readOwnDataValue } from '../internal/data-descriptors.js';
+import { contrastRatio, type Rgb } from '../internal/color-math.js';
 import { devWarnOnce, litDevWarnings } from '../internal/dev-warning.js';
+import { LOOK_SLOTTED_INPUTS as STYLE_SLOTTED } from '../internal/portable-look-inputs.js';
 import type { LyraThemeTokenName, LyraThemeTokens, LyraThemeTokenValue } from '../internal/theme-token-types.js';
 import { readStyleOwnership, type StyleOwnership } from './style-ownership.js';
 import { resolveStyleStartup } from './startup-resolution.js';
@@ -52,7 +56,6 @@ export type LyraThemeAccent =
   | { readonly [role in LyraThemeSemanticRole]?: LyraThemeAccentValue };
 
 type ResolvedThemeMode = 'light' | 'dark';
-type Rgb = readonly [red: number, green: number, blue: number];
 
 // The theme-token grammar. scripts/fixtures/theme-token-grammar.json is the single source of these
 // constants; this is one of its two literal copies in this file (the bootstrap carries the other,
@@ -186,7 +189,7 @@ function normalizeTokens(raw: unknown): LyraThemeTokens | null {
     let kept = 0;
     for (const name of names) {
       if (!isLyraThemeTokenName(name)) continue;
-      const value = ownField(raw, name);
+      const value = readOwnDataValue(raw, name);
       if (typeof value === 'string') {
         const normalized = normalizeTokenBranch(value);
         if (normalized === null) continue;
@@ -199,8 +202,8 @@ function normalizeTokens(raw: unknown): LyraThemeTokens | null {
       const hasLight = Object.prototype.hasOwnProperty.call(value, 'light');
       const hasDark = Object.prototype.hasOwnProperty.call(value, 'dark');
       if ((!hasLight && !hasDark) || keys.some((key) => key !== 'light' && key !== 'dark')) continue;
-      const light = normalizeTokenBranch(ownField(value, 'light'));
-      const dark = normalizeTokenBranch(ownField(value, 'dark'));
+      const light = normalizeTokenBranch(readOwnDataValue(value, 'light'));
+      const dark = normalizeTokenBranch(readOwnDataValue(value, 'dark'));
       if (light === null && dark === null) continue;
       result[name] = Object.freeze({ light, dark });
       kept += 1;
@@ -324,29 +327,14 @@ export function accentsEqual(left: LyraThemeAccent, right: LyraThemeAccent): boo
 
 function parseResolvedRgb(value: string, background: Rgb, owner: Document = document): Rgb | null {
   if (!normalizeColor(value, owner)) return null;
-  try {
-    const canvas = owner.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
-    canvas.width = 1;
-    canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) return null;
-    context.clearRect(0, 0, 1, 1);
-    context.fillStyle = value;
-    context.fillRect(0, 0, 1, 1);
-    const channels = context.getImageData(0, 0, 1, 1).data;
-    const red = channels[0] ?? 0;
-    const green = channels[1] ?? 0;
-    const blue = channels[2] ?? 0;
-    const alphaByte = channels[3] ?? 0;
-    const alpha = alphaByte / 255;
-    return [
-      Math.round(red * alpha + background[0] * (1 - alpha)),
-      Math.round(green * alpha + background[1] * (1 - alpha)),
-      Math.round(blue * alpha + background[2] * (1 - alpha)),
-    ];
-  } catch {
-    return null;
-  }
+  const color = readCanvasRgba(owner, value);
+  if (!color) return null;
+  const alpha = color[3];
+  return [
+    Math.round(color[0] * alpha + background[0] * (1 - alpha)),
+    Math.round(color[1] * alpha + background[1] * (1 - alpha)),
+    Math.round(color[2] * alpha + background[2] * (1 - alpha)),
+  ];
 }
 
 function hexRgb(color: string): Rgb {
@@ -363,24 +351,6 @@ function mixRgb(base: Rgb, color: Rgb, colorWeight: number): Rgb {
 
 function serializeRgb(color: Rgb): string {
   return `rgb(${color.join(' ')})`;
-}
-
-function relativeLuminance(color: Rgb): number {
-  const linearize = (channel: number): number => {
-    const normalized = channel / 255;
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  };
-  return linearize(color[0]) * 0.2126
-    + linearize(color[1]) * 0.7152
-    + linearize(color[2]) * 0.0722;
-}
-
-function contrastRatio(left: Rgb, right: Rgb): number {
-  const a = relativeLuminance(left);
-  const b = relativeLuminance(right);
-  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
 function contrastForeground(fill: Rgb): Rgb {
@@ -756,6 +726,7 @@ function applyStoredThemeBeforePaint() {
     const mix = (base: number[], foreground: number[], weight: number) =>
       base.map((channel, index) =>
         Math.round(channel * (1 - weight) + foreground[index]! * weight));
+    // Serialized into the pre-paint adapter, so it cannot reference module imports.
     const luminance = (rgb: number[]) => {
       const linear = rgb.map((channel) => {
         const normalized = channel / 255;
@@ -1207,144 +1178,6 @@ const STYLE_DEFAULTS = Object.freeze({
   'mode': 'system',
   'accent': 'emerald',
 } as const);
-const STYLE_SLOTTED: readonly string[] = [
-  '--lr-theme-color-border-strong',
-  '--lr-theme-color-brand-border-loud',
-  '--lr-theme-color-brand-border-normal',
-  '--lr-theme-color-brand-border-quiet',
-  '--lr-theme-color-brand-fill-loud',
-  '--lr-theme-color-brand-fill-normal',
-  '--lr-theme-color-brand-fill-quiet',
-  '--lr-theme-color-brand-on-loud',
-  '--lr-theme-color-brand-on-normal',
-  '--lr-theme-color-brand-on-quiet',
-  '--lr-theme-color-chart-1',
-  '--lr-theme-color-chart-2',
-  '--lr-theme-color-chart-3',
-  '--lr-theme-color-chart-4',
-  '--lr-theme-color-chart-5',
-  '--lr-theme-color-chart-6',
-  '--lr-theme-color-chart-7',
-  '--lr-theme-color-chart-8',
-  '--lr-theme-color-chart-diverging-1',
-  '--lr-theme-color-chart-diverging-2',
-  '--lr-theme-color-chart-diverging-3',
-  '--lr-theme-color-chart-sequential-1',
-  '--lr-theme-color-chart-sequential-2',
-  '--lr-theme-color-chart-sequential-3',
-  '--lr-theme-color-danger-border-loud',
-  '--lr-theme-color-danger-border-normal',
-  '--lr-theme-color-danger-border-quiet',
-  '--lr-theme-color-danger-fill-loud',
-  '--lr-theme-color-danger-fill-normal',
-  '--lr-theme-color-danger-fill-quiet',
-  '--lr-theme-color-danger-on-loud',
-  '--lr-theme-color-danger-on-normal',
-  '--lr-theme-color-danger-on-quiet',
-  '--lr-theme-color-focus',
-  '--lr-theme-color-mix-partner',
-  '--lr-theme-color-neutral-border-loud',
-  '--lr-theme-color-neutral-border-normal',
-  '--lr-theme-color-neutral-border-quiet',
-  '--lr-theme-color-neutral-fill-loud',
-  '--lr-theme-color-neutral-fill-normal',
-  '--lr-theme-color-neutral-fill-quiet',
-  '--lr-theme-color-neutral-on-loud',
-  '--lr-theme-color-neutral-on-normal',
-  '--lr-theme-color-neutral-on-quiet',
-  '--lr-theme-color-no-data',
-  '--lr-theme-color-on-strong-overlay',
-  '--lr-theme-color-overlay',
-  '--lr-theme-color-overlay-strong',
-  '--lr-theme-color-success-border-loud',
-  '--lr-theme-color-success-border-normal',
-  '--lr-theme-color-success-border-quiet',
-  '--lr-theme-color-success-fill-loud',
-  '--lr-theme-color-success-fill-normal',
-  '--lr-theme-color-success-fill-quiet',
-  '--lr-theme-color-success-on-loud',
-  '--lr-theme-color-success-on-normal',
-  '--lr-theme-color-success-on-quiet',
-  '--lr-theme-color-surface-border',
-  '--lr-theme-color-surface-border-subtle',
-  '--lr-theme-color-surface-container',
-  '--lr-theme-color-surface-container-high',
-  '--lr-theme-color-surface-container-highest',
-  '--lr-theme-color-surface-container-low',
-  '--lr-theme-color-surface-container-lowest',
-  '--lr-theme-color-surface-default',
-  '--lr-theme-color-surface-overlay',
-  '--lr-theme-color-surface-raised',
-  '--lr-theme-color-text-normal',
-  '--lr-theme-color-text-quiet',
-  '--lr-theme-color-warning-border-loud',
-  '--lr-theme-color-warning-border-normal',
-  '--lr-theme-color-warning-border-quiet',
-  '--lr-theme-color-warning-fill-loud',
-  '--lr-theme-color-warning-fill-normal',
-  '--lr-theme-color-warning-fill-quiet',
-  '--lr-theme-color-warning-on-loud',
-  '--lr-theme-color-warning-on-normal',
-  '--lr-theme-color-warning-on-quiet',
-  '--lr-theme-form-control-height-2xs',
-  '--lr-theme-form-control-height-l',
-  '--lr-theme-form-control-height-m',
-  '--lr-theme-form-control-height-s',
-  '--lr-theme-form-control-height-xl',
-  '--lr-theme-form-control-height-xs',
-  '--lr-theme-graph-cat-1',
-  '--lr-theme-graph-cat-2',
-  '--lr-theme-graph-cat-3',
-  '--lr-theme-graph-cat-4',
-  '--lr-theme-graph-cat-5',
-  '--lr-theme-graph-cat-6',
-  '--lr-theme-graph-cat-7',
-  '--lr-theme-graph-cat-8',
-  '--lr-theme-icon-button-size',
-  '--lr-theme-shadow-l',
-  '--lr-theme-shadow-m',
-  '--lr-theme-shadow-s',
-  '--lr-theme-shadow-xl',
-  '--lr-theme-shadow-xs',
-  '--lr-theme-space-2xl',
-  '--lr-theme-space-2xs',
-  '--lr-theme-space-l',
-  '--lr-theme-space-m',
-  '--lr-theme-space-s',
-  '--lr-theme-space-xs',
-  '--lr-theme-terminal-bg-black',
-  '--lr-theme-terminal-bg-blue',
-  '--lr-theme-terminal-bg-bright-black',
-  '--lr-theme-terminal-bg-bright-blue',
-  '--lr-theme-terminal-bg-bright-cyan',
-  '--lr-theme-terminal-bg-bright-green',
-  '--lr-theme-terminal-bg-bright-magenta',
-  '--lr-theme-terminal-bg-bright-red',
-  '--lr-theme-terminal-bg-bright-white',
-  '--lr-theme-terminal-bg-bright-yellow',
-  '--lr-theme-terminal-bg-cyan',
-  '--lr-theme-terminal-bg-green',
-  '--lr-theme-terminal-bg-magenta',
-  '--lr-theme-terminal-bg-red',
-  '--lr-theme-terminal-bg-white',
-  '--lr-theme-terminal-bg-yellow',
-  '--lr-theme-terminal-color-black',
-  '--lr-theme-terminal-color-blue',
-  '--lr-theme-terminal-color-bright-black',
-  '--lr-theme-terminal-color-bright-blue',
-  '--lr-theme-terminal-color-bright-cyan',
-  '--lr-theme-terminal-color-bright-green',
-  '--lr-theme-terminal-color-bright-magenta',
-  '--lr-theme-terminal-color-bright-red',
-  '--lr-theme-terminal-color-bright-white',
-  '--lr-theme-terminal-color-bright-yellow',
-  '--lr-theme-terminal-color-cyan',
-  '--lr-theme-terminal-color-green',
-  '--lr-theme-terminal-color-magenta',
-  '--lr-theme-terminal-color-red',
-  '--lr-theme-terminal-color-white',
-  '--lr-theme-terminal-color-yellow',
-];
 const STYLE_DENSITY: readonly string[] = [
   '--lr-theme-space-2xs',
   '--lr-theme-space-xs',
@@ -1478,10 +1311,6 @@ const styleOwnershipFallback = new WeakMap<Element, StyleOwnership>();
 const detachedStyleOwnership = new WeakMap<Element, { source: unknown; ownership: StyleOwnership }>();
 const scopeModes = new WeakMap<Element, () => void>();
 
-function ownField(value: object, key: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-}
 function styleId(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 64 && LOOK_ID.test(value);
 }
@@ -1506,8 +1335,8 @@ function styleTokens(value: unknown): LyraThemeTokens | null {
 
 /** Validates and freezes a look definition; it does not register an id or install CSS. */
 export function defineLyraLook<const Look extends LyraLook>(look: Look): Readonly<Look> {
-  if (!look || !styleId(ownField(look, 'id')) || look.id === 'custom') throw new TypeError('Invalid look id');
-  const raw = ownField(look, 'tokens');
+  if (!look || !styleId(readOwnDataValue(look, 'id')) || look.id === 'custom') throw new TypeError('Invalid look id');
+  const raw = readOwnDataValue(look, 'tokens');
   if (!isPlainRecord(raw) || Object.keys(raw).length > TOKEN_ENTRY_MAX) throw new TypeError('Invalid look tokens');
   for (const [name, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(raw))) {
     if (!('value' in descriptor)) throw new TypeError(`Look inputs must be data properties: ${name}`);
@@ -1543,20 +1372,20 @@ function styleColor(value: unknown, browserColors = false): string | null {
 function styleColorPair(value: unknown): LyraAccentBackground {
   if (typeof value === 'string') return styleColor(value);
   if (!isPlainRecord(value)) return null;
-  const light = styleColor(ownField(value, 'light'));
-  const dark = styleColor(ownField(value, 'dark'));
+  const light = styleColor(readOwnDataValue(value, 'light'));
+  const dark = styleColor(readOwnDataValue(value, 'dark'));
   return light || dark ? Object.freeze({ light, dark }) : null;
 }
 function styleAccent(value: unknown): LyraThemeAccent {
   if (typeof value === 'string') return styleColor(value);
   if (!isPlainRecord(value)) return null;
-  const entries = SEMANTIC_ROLES.filter(role => Object.hasOwn(value, role)).map(role => [role, styleColorPair(ownField(value, role))]);
+  const entries = SEMANTIC_ROLES.filter(role => Object.hasOwn(value, role)).map(role => [role, styleColorPair(readOwnDataValue(value, role))]);
   return entries.length ? Object.freeze(Object.fromEntries(entries)) : null;
 }
 function normalizeStyleChoices(raw: unknown, base: StyleState): StyleState {
   const next = { ...base };
   if (!isPlainRecord(raw)) return next;
-  const look = ownField(raw, 'look');
+  const look = readOwnDataValue(raw, 'look');
   if (look !== undefined) {
     next.look = DEFAULT_STYLE.look; next.tokens = null;
     if (styleId(look)) next.look = look;
@@ -1568,20 +1397,20 @@ function normalizeStyleChoices(raw: unknown, base: StyleState): StyleState {
       } catch { /* Invalid runtime definitions reset only the look axis. */ }
     }
   }
-  const surface = ownField(raw, 'surface');
+  const surface = readOwnDataValue(raw, 'surface');
   if (surface !== undefined) next.surface = surface === 'glass' || surface === 'solid' ? surface : DEFAULT_STYLE.surface;
-  const density = ownField(raw, 'density');
+  const density = readOwnDataValue(raw, 'density');
   if (density !== undefined) next.density = density === 'comfortable' || density === 'compact' || density === 'touch' ? density : DEFAULT_STYLE.density;
-  const mode = ownField(raw, 'mode');
+  const mode = readOwnDataValue(raw, 'mode');
   if (mode !== undefined) next.mode = mode === 'light' || mode === 'dark' || mode === 'system' || mode === 'unset' ? mode : DEFAULT_STYLE.mode;
-  const accent = ownField(raw, 'accent');
+  const accent = readOwnDataValue(raw, 'accent');
   if (accent !== undefined) {
     next.accentName = typeof accent === 'string' && Object.hasOwn(STYLE_GEMSTONES, accent) ? accent as LyraAccentName : null;
     next.accent = next.accentName ? STYLE_GEMSTONES[next.accentName]! : styleAccent(accent);
   }
-  const background = ownField(raw, 'accentBackground');
+  const background = readOwnDataValue(raw, 'accentBackground');
   if (background !== undefined) next.accentBackground = styleColorPair(background);
-  const overrides = ownField(raw, 'overrides');
+  const overrides = readOwnDataValue(raw, 'overrides');
   if (overrides !== undefined) next.overrides = styleTokens(overrides);
   return next;
 }
@@ -1590,19 +1419,19 @@ function styleFromRecord(value: unknown, browserColors = false): StyleState {
     input => styleColor(input, browserColors) ?? undefined,
     styleTokenAllowed, STYLE_GEMSTONES);
   const state = normalizeStyleChoices({
-    look: ownField(record, 'look'), mode: ownField(record, 'mode'), density: ownField(record, 'density'),
-    surface: ownField(record, 'treatment'), overrides: ownField(record, 'overrides'), accentBackground: ownField(record, 'surface'),
+    look: readOwnDataValue(record, 'look'), mode: readOwnDataValue(record, 'mode'), density: readOwnDataValue(record, 'density'),
+    surface: readOwnDataValue(record, 'treatment'), overrides: readOwnDataValue(record, 'overrides'), accentBackground: readOwnDataValue(record, 'surface'),
   }, { ...DEFAULT_STYLE });
   // Legacy CSS keywords stay colors; only accentName selects the named palette.
-  state.accent = styleAccent(ownField(record, 'accent'));
-  const accentName = ownField(record, 'accentName');
+  state.accent = styleAccent(readOwnDataValue(record, 'accent'));
+  const accentName = readOwnDataValue(record, 'accentName');
   state.accentName = null;
   if (typeof accentName === 'string' && Object.hasOwn(STYLE_GEMSTONES, accentName)) {
     state.accentName = accentName as LyraAccentName;
     state.accent = STYLE_GEMSTONES[accentName]!;
   }
-  state.tokens = normalizeTokens(ownField(record, 'tokens'));
-  if (state.tokens && !styleId(ownField(record, 'look'))) state.look = 'custom';
+  state.tokens = normalizeTokens(readOwnDataValue(record, 'tokens'));
+  if (state.tokens && !styleId(readOwnDataValue(record, 'look'))) state.look = 'custom';
   return state;
 }
 function styleRecord(state: StyleState): Record<string, unknown> {
@@ -2062,7 +1891,7 @@ export function applyLyraStyleScope(element: Element, choices: LyraStyleScopeCho
   scopeModes.get(element)?.(); scopeModes.delete(element);
   if (choices === null) { writeStyleAttributes(element, {}); writeStyleProperties(element, new Map()); return; }
   const state = normalizeStyleChoices(choices, { ...DEFAULT_STYLE });
-  const fields = new Set(STYLE_FIELDS.filter(field => ownField(choices, field) !== undefined));
+  const fields = new Set(STYLE_FIELDS.filter(field => readOwnDataValue(choices, field) !== undefined));
   applyStyleState(element, state, fields);
   if (choices.mode === 'system') scopeModes.set(element, attachStyleMode(element, node => applyStyleState(node, state, fields)));
 }

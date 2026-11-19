@@ -1,3 +1,4 @@
+import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { BUILDER_CHILD_EVENTS, containShadowChildEvent } from '../../../internal/child-event-containment.js';
 import { boundedRecordString, normalizeLabeledOptions } from '../../../internal/record-normalize.js';
@@ -6,7 +7,7 @@ import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
@@ -17,8 +18,14 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_queryBuilderAddCondition, LYRA_DEFAULT_queryBuilderBooleanFalse, LYRA_DEFAULT_queryBuilderBooleanTrue, LYRA_DEFAULT_queryBuilderCombinatorAnd, LYRA_DEFAULT_queryBuilderCombinatorLabel, LYRA_DEFAULT_queryBuilderCombinatorOr, LYRA_DEFAULT_queryBuilderEmpty, LYRA_DEFAULT_queryBuilderFieldLabel, LYRA_DEFAULT_queryBuilderFieldPlaceholder, LYRA_DEFAULT_queryBuilderLabel, LYRA_DEFAULT_queryBuilderNoFields, LYRA_DEFAULT_queryBuilderOperatorAfter, LYRA_DEFAULT_queryBuilderOperatorBefore, LYRA_DEFAULT_queryBuilderOperatorContains, LYRA_DEFAULT_queryBuilderOperatorEndsWith, LYRA_DEFAULT_queryBuilderOperatorEquals, LYRA_DEFAULT_queryBuilderOperatorGreaterThan, LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorIn, LYRA_DEFAULT_queryBuilderOperatorIsEmpty, LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty, LYRA_DEFAULT_queryBuilderOperatorLabel, LYRA_DEFAULT_queryBuilderOperatorLessThan, LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorNotEquals, LYRA_DEFAULT_queryBuilderOperatorNotIn, LYRA_DEFAULT_queryBuilderOperatorOnOrAfter, LYRA_DEFAULT_queryBuilderOperatorOnOrBefore, LYRA_DEFAULT_queryBuilderOperatorPlaceholder, LYRA_DEFAULT_queryBuilderOperatorStartsWith, LYRA_DEFAULT_queryBuilderRemoveCondition, LYRA_DEFAULT_queryBuilderValueLabel, LYRA_DEFAULT_queryBuilderValuePlaceholder } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_queryBuilderAddCondition, LYRA_DEFAULT_queryBuilderBooleanFalse, LYRA_DEFAULT_queryBuilderBooleanTrue, LYRA_DEFAULT_queryBuilderCombinatorAnd, LYRA_DEFAULT_queryBuilderCombinatorLabel, LYRA_DEFAULT_queryBuilderCombinatorOr, LYRA_DEFAULT_queryBuilderConditionAdded, LYRA_DEFAULT_queryBuilderConditionInvalid, LYRA_DEFAULT_queryBuilderConditionRemoved, LYRA_DEFAULT_queryBuilderEmpty, LYRA_DEFAULT_queryBuilderFieldLabel, LYRA_DEFAULT_queryBuilderFieldPlaceholder, LYRA_DEFAULT_queryBuilderLabel, LYRA_DEFAULT_queryBuilderNoFields, LYRA_DEFAULT_queryBuilderOperatorAfter, LYRA_DEFAULT_queryBuilderOperatorBefore, LYRA_DEFAULT_queryBuilderOperatorContains, LYRA_DEFAULT_queryBuilderOperatorEndsWith, LYRA_DEFAULT_queryBuilderOperatorEquals, LYRA_DEFAULT_queryBuilderOperatorGreaterThan, LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorIn, LYRA_DEFAULT_queryBuilderOperatorIsEmpty, LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty, LYRA_DEFAULT_queryBuilderOperatorLabel, LYRA_DEFAULT_queryBuilderOperatorLessThan, LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorNotEquals, LYRA_DEFAULT_queryBuilderOperatorNotIn, LYRA_DEFAULT_queryBuilderOperatorOnOrAfter, LYRA_DEFAULT_queryBuilderOperatorOnOrBefore, LYRA_DEFAULT_queryBuilderOperatorPlaceholder, LYRA_DEFAULT_queryBuilderOperatorStartsWith, LYRA_DEFAULT_queryBuilderRemoveCondition, LYRA_DEFAULT_queryBuilderRowControlName, LYRA_DEFAULT_queryBuilderValueLabel, LYRA_DEFAULT_queryBuilderValuePlaceholder } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** Events the owned pickers raise beyond the shared list; none is part of this component's contract. */
+const OWNED_CONTROL_EVENTS = Object.freeze([
+  'lr-change-request', 'lr-create', 'lr-retry-request', 'lr-source-error', 'lr-chip-change', 'lr-overflow-toggle',
+]);
 
 
 /** The kind of value a `ConditionBuilderField` holds — drives which existing sibling control
@@ -183,16 +190,6 @@ const OPERATORS = new Set<ConditionBuilderOperator>([
   'isEmpty', 'isNotEmpty',
 ]);
 
-/** Read an own data property without invoking a consumer-provided getter. */
-function ownValue(record: object, key: string): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function boundedString(value: unknown): string {
   return boundedRecordString(value, MAX_TEXT);
 }
@@ -222,25 +219,25 @@ function normalizeFields(value: unknown): readonly ConditionBuilderField[] {
   const result: ConditionBuilderField[] = [];
   for (const candidate of value.slice(0, MAX_FIELDS)) {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const name = boundedString(ownValue(candidate, 'name'));
-    const type = ownValue(candidate, 'type');
+    const name = boundedString(readOwnDataValue(candidate, 'name'));
+    const type = readOwnDataValue(candidate, 'type');
     if (name.trim().length === 0 || names.has(name) || !FIELD_TYPES.has(type as ConditionBuilderFieldType)) continue;
     names.add(name);
-    const label = boundedString(ownValue(candidate, 'label'));
-    const placeholder = boundedString(ownValue(candidate, 'placeholder'));
-    const options = normalizeOptions(ownValue(candidate, 'options'));
-    const operators = normalizeOperators(ownValue(candidate, 'operators'));
+    const label = boundedString(readOwnDataValue(candidate, 'label'));
+    const placeholder = boundedString(readOwnDataValue(candidate, 'placeholder'));
+    const options = normalizeOptions(readOwnDataValue(candidate, 'options'));
+    const operators = normalizeOperators(readOwnDataValue(candidate, 'operators'));
     const min = type === 'number'
-      ? optionalFiniteNumber(ownValue(candidate, 'min'))
+      ? optionalFiniteNumber(readOwnDataValue(candidate, 'min'))
       : type === 'date'
-        ? boundedString(ownValue(candidate, 'min')) || undefined
+        ? boundedString(readOwnDataValue(candidate, 'min')) || undefined
         : undefined;
     const max = type === 'number'
-      ? optionalFiniteNumber(ownValue(candidate, 'max'))
+      ? optionalFiniteNumber(readOwnDataValue(candidate, 'max'))
       : type === 'date'
-        ? boundedString(ownValue(candidate, 'max')) || undefined
+        ? boundedString(readOwnDataValue(candidate, 'max')) || undefined
         : undefined;
-    const step = type === 'number' ? optionalFiniteNumber(ownValue(candidate, 'step'), true) : undefined;
+    const step = type === 'number' ? optionalFiniteNumber(readOwnDataValue(candidate, 'step'), true) : undefined;
     result.push(Object.freeze({
       name,
       type: type as ConditionBuilderFieldType,
@@ -268,22 +265,22 @@ function normalizeConditionValue(value: unknown): ConditionBuilderCondition['val
 
 function normalizeConditionBuilderValue(value: unknown): ConditionBuilderValue {
   const record = value !== null && typeof value === 'object' && !Array.isArray(value) ? value : EMPTY_VALUE;
-  const combinator = ownValue(record, 'combinator') === 'or' ? 'or' : 'and';
-  const source = ownValue(record, 'conditions');
+  const combinator = readOwnDataValue(record, 'combinator') === 'or' ? 'or' : 'and';
+  const source = readOwnDataValue(record, 'conditions');
   const conditions: ConditionBuilderCondition[] = [];
   const ids = new Set<string>();
   if (Array.isArray(source)) {
     for (const candidate of source.slice(0, MAX_CONDITIONS)) {
       if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-      const id = boundedString(ownValue(candidate, 'id'));
+      const id = boundedString(readOwnDataValue(candidate, 'id'));
       if (id.trim().length === 0 || ids.has(id)) continue;
       ids.add(id);
-      const field = boundedString(ownValue(candidate, 'field'));
-      const rawOperator = ownValue(candidate, 'operator');
+      const field = boundedString(readOwnDataValue(candidate, 'field'));
+      const rawOperator = readOwnDataValue(candidate, 'operator');
       const operator = rawOperator === '' || OPERATORS.has(rawOperator as ConditionBuilderOperator)
         ? rawOperator as ConditionBuilderOperator | ''
         : '';
-      const normalizedValue = normalizeConditionValue(ownValue(candidate, 'value'));
+      const normalizedValue = normalizeConditionValue(readOwnDataValue(candidate, 'value'));
       conditions.push(Object.freeze({
         id,
         field,
@@ -370,12 +367,23 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
     queryBuilderAddCondition: LYRA_DEFAULT_queryBuilderAddCondition,
     queryBuilderBooleanFalse: LYRA_DEFAULT_queryBuilderBooleanFalse,
     queryBuilderBooleanTrue: LYRA_DEFAULT_queryBuilderBooleanTrue,
     queryBuilderCombinatorAnd: LYRA_DEFAULT_queryBuilderCombinatorAnd,
     queryBuilderCombinatorLabel: LYRA_DEFAULT_queryBuilderCombinatorLabel,
     queryBuilderCombinatorOr: LYRA_DEFAULT_queryBuilderCombinatorOr,
+    queryBuilderConditionAdded: LYRA_DEFAULT_queryBuilderConditionAdded,
+    queryBuilderConditionInvalid: LYRA_DEFAULT_queryBuilderConditionInvalid,
+    queryBuilderConditionRemoved: LYRA_DEFAULT_queryBuilderConditionRemoved,
     queryBuilderEmpty: LYRA_DEFAULT_queryBuilderEmpty,
     queryBuilderFieldLabel: LYRA_DEFAULT_queryBuilderFieldLabel,
     queryBuilderFieldPlaceholder: LYRA_DEFAULT_queryBuilderFieldPlaceholder,
@@ -401,8 +409,11 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     queryBuilderOperatorPlaceholder: LYRA_DEFAULT_queryBuilderOperatorPlaceholder,
     queryBuilderOperatorStartsWith: LYRA_DEFAULT_queryBuilderOperatorStartsWith,
     queryBuilderRemoveCondition: LYRA_DEFAULT_queryBuilderRemoveCondition,
+    queryBuilderRowControlName: LYRA_DEFAULT_queryBuilderRowControlName,
     queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
     queryBuilderValuePlaceholder: LYRA_DEFAULT_queryBuilderValuePlaceholder,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -603,6 +614,9 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     });
     this.commit({ ...this._value, conditions: [...this._value.conditions, condition] });
     this.emit('lr-add-condition', Object.freeze({ condition }));
+    this.announcements.announcePolite(this.localize('queryBuilderConditionAdded', undefined, {
+      index: this.formatLocaleNumber(this._value.conditions.length),
+    }));
   }
 
   private conditionElement(id: string): HTMLElement | null {
@@ -636,6 +650,9 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     const conditions = this._value.conditions.filter((c) => c.id !== id);
     this.commit({ ...this._value, conditions });
     this.emit('lr-remove-condition', Object.freeze({ conditionId: id }));
+    this.announcements.announcePolite(this.localize('queryBuilderConditionRemoved', undefined, {
+      count: this.formatLocaleNumber(this._value.conditions.length),
+    }));
   }
 
   private setCombinator(combinator: ConditionBuilderCombinator): void {
@@ -670,7 +687,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     const root = super.createRenderRoot();
-    for (const type of BUILDER_CHILD_EVENTS) root.addEventListener(type, containShadowChildEvent);
+    for (const type of [...BUILDER_CHILD_EVENTS, ...OWNED_CONTROL_EVENTS]) root.addEventListener(type, containShadowChildEvent);
     return root;
   }
 
@@ -701,8 +718,25 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     `;
   }
 
-  private renderValueControl(condition: ConditionBuilderCondition, field: ConditionBuilderField | undefined): TemplateResult {
-    const valueLabel = this.localize('queryBuilderValueLabel');
+  private issueText(index: number): string {
+    return this.localize('queryBuilderConditionInvalid', undefined, { index: this.formatLocaleNumber(index + 1) });
+  }
+
+  private rowControlName(key: 'queryBuilderFieldLabel' | 'queryBuilderOperatorLabel' | 'queryBuilderValueLabel', index: number): string {
+    return this.localize('queryBuilderRowControlName', undefined, {
+      name: this.localize(key),
+      index: this.formatLocaleNumber(index + 1),
+    });
+  }
+
+  private renderValueControl(
+    condition: ConditionBuilderCondition,
+    field: ConditionBuilderField | undefined,
+    index: number,
+    validationCode?: ConditionBuilderValidationIssueCode,
+  ): TemplateResult {
+    const valueLabel = this.rowControlName('queryBuilderValueLabel', index);
+    const valueError = validationCode === 'value-type' || validationCode === 'operator-arity' ? this.issueText(index) : nothing;
     if (!field || condition.operator === '' || isUnaryOperator(condition.operator)) {
       return html`<span part="value" class="value-placeholder" aria-hidden="true"></span>`;
     }
@@ -714,6 +748,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           size="s"
           multiple
           aria-label=${valueLabel}
+          error-text=${valueError}
           .value=${selected}
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
@@ -732,6 +767,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           part="value"
           size="s"
           aria-label=${valueLabel}
+          error-text=${valueError}
           placeholder=${this.localize('queryBuilderValuePlaceholder')}
           .value=${current}
           ?disabled=${this.disabled}
@@ -752,6 +788,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           part="value"
           size="s"
           aria-label=${valueLabel}
+          error-text=${valueError}
           .value=${current}
           .min=${typeof field.min === 'string' ? field.min : ''}
           .max=${typeof field.max === 'string' ? field.max : ''}
@@ -770,6 +807,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           part="value"
           size="s"
           aria-label=${valueLabel}
+          error-text=${valueError}
           placeholder=${this.localize('queryBuilderValuePlaceholder')}
           .value=${current}
           ?disabled=${this.disabled}
@@ -790,6 +828,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           type="number"
           size="s"
           aria-label=${valueLabel}
+          error-text=${valueError}
           .value=${current}
           .min=${typeof field.min === 'number' ? field.min : undefined}
           .max=${typeof field.max === 'number' ? field.max : undefined}
@@ -815,6 +854,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         size="s"
         placeholder=${field.placeholder ?? ''}
         aria-label=${valueLabel}
+          error-text=${valueError}
         .value=${current}
         ?disabled=${this.disabled}
         @lr-input=${(event: Event) =>
@@ -843,7 +883,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         <lr-select
           part="field-select"
           size="s"
-          aria-label=${this.localize('queryBuilderFieldLabel')}
+          aria-label=${this.rowControlName('queryBuilderFieldLabel', index)}
+          error-text=${validationCode === 'field-unavailable' ? this.issueText(index) : nothing}
           placeholder=${this.localize('queryBuilderFieldPlaceholder')}
           .value=${condition.field}
           ?disabled=${this.disabled}
@@ -858,7 +899,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         <lr-select
           part="operator-select"
           size="s"
-          aria-label=${this.localize('queryBuilderOperatorLabel')}
+          aria-label=${this.rowControlName('queryBuilderOperatorLabel', index)}
+          error-text=${validationCode === 'operator-not-allowed' ? this.issueText(index) : nothing}
           placeholder=${this.localize('queryBuilderOperatorPlaceholder')}
           .value=${condition.operator}
           ?disabled=${this.disabled || !field}
@@ -870,17 +912,24 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           ${operators.map((op) => html`<lr-option value=${op}>${this.operatorLabel(op, field?.type)}</lr-option>`)}
         </lr-select>
 
-        ${this.renderValueControl(condition, field)}
+        ${this.renderValueControl(condition, field, index, validationCode)}
 
         <lr-icon-button
           part="remove-button"
           icon="trash"
-          aria-label=${this.localize('queryBuilderRemoveCondition', undefined, { index: this.formatCount(index + 1) })}
+          aria-label=${this.localize('queryBuilderRemoveCondition', undefined, { index: this.formatLocaleNumber(index + 1) })}
           ?disabled=${this.disabled}
           @click=${(event: Event) => this.consumeChildEvent(event, () => this.removeCondition(condition.id))}
         ></lr-icon-button>
       </div>
     `;
+  }
+
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   override render(): TemplateResult {
@@ -919,12 +968,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
             `}
       </div>
     `;
-  }
-  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
-   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
-   *  sentence. Route every user-facing number through the effective locale instead. */
-  private formatCount(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
   }
 }
 

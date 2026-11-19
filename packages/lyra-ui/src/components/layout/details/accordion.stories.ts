@@ -67,6 +67,8 @@ export const ThemedAppearancesAndStates: StoryObj = {
       style="
         display: grid;
         gap: var(--lr-space-s);
+        --lr-accordion-radius: var(--lr-radius-pill);
+        --lr-accordion-item-font-size: var(--lr-form-control-font-size);
         --lr-accordion-outlined-bg: ${storyColor('surface')};
         --lr-accordion-outlined-border-color: ${storyColor('border')};
         --lr-accordion-filled-bg: ${storyColor('successQuiet')};

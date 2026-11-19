@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,6 +40,7 @@ and freezing, and the minimap adds no provider query or second normalization. A 
 while world framing and unlocked viewport controls remain usable. Accepted empty bins are a
 successful empty overview and do not show the unavailable state.
 
+The minimap mirrors both SVG layers when its target canvas is horizontal and right-to-left, including when connected by `for`.
 The immutable overview layer is reused by identity across viewport-only snapshots. Map clicks,
 viewport drag, wheel zoom and physical arrow keys use the same exact source-world inverse
 mapping, including RTL and zero-axis display fallback. A change in world coordinate values
@@ -73,7 +74,9 @@ exact visible view rectangle), `viewport-hit-area` (the transparent draggable/fo
 latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`), plus the shared
+`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-flow-minimap-active-bg` (pressed fill, mixed from the hover
+fill by default), plus the shared
 `--lr-flow-status-color` and the explicit palette hooks
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
 `--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and

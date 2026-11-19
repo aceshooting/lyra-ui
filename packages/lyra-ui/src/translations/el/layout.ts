@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Διαφάνειες καρουζέλ',
   carouselGoTo: 'Μετάβαση στη διαφάνεια {index}',
+  carouselPauseRotation: 'Παύση περιστροφής',
+  carouselResumeRotation: 'Συνέχιση περιστροφής',
   scrollerLabel: 'Περιεχόμενο με δυνατότητα κύλισης',
   scrollPrevious: 'Κύλιση προς τα πίσω',
   scrollNext: 'Κύλιση προς τα εμπρός',

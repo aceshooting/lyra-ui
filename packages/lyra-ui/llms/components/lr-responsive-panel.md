@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,6 +79,12 @@ the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value �
 
 **CSS parts:** `base`, `backdrop`, `panel`, `header`, `body`, `footer` (`backdrop` is only rendered
 in the overlay presentation).
+
+The docked frame accepts `--lr-responsive-panel-bg`, `--lr-responsive-panel-docked-radius` and
+`--lr-responsive-panel-docked-border-color`. Set `--lr-responsive-panel-padding` to override
+header, body and footer padding, and `--lr-responsive-panel-gap` for the footer action gap.
+The overlay dialog accepts a programmatic `accessibleLabel` and references the host's
+`aria-describedby` targets. Writing `open` in a close-request listener resolves the request.
 
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
 `var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),

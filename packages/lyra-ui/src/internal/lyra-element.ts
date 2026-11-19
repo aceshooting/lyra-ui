@@ -375,6 +375,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   /** Locale of the last `localize()`; its catalog version is captured when it can next matter. */
   private lastLocalizedLocale?: string;
   private pendingLoadController?: AbortController;
+  private pendingLoadInterrupted = false;
   /** Callbacks scheduled during the current update cycle, keyed so that two callers with
    *  *different* purposes each keep a slot. A single boolean here meant the second caller in a
    *  cycle was silently dropped. */
@@ -528,9 +529,14 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       for (const [key, callback] of deferred)
         this.scheduleAfterUpdate(callback, key);
     }
+    if (this.pendingLoadInterrupted) {
+      this.pendingLoadInterrupted = false;
+      this.resumeInterruptedLoad();
+    }
   }
 
   override disconnectedCallback(): void {
+    if (this.pendingLoadController) this.pendingLoadInterrupted = true;
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
     // While connected the locale subscription re-renders on catalog changes; from here on only a
@@ -736,10 +742,22 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return typeof Node === 'undefined' || this.hydratingServerShadow === true;
   }
 
+  /**
+   * Called on reconnect when a disconnect aborted a load that had not yet been settled with
+   * `endAbortableLoad()`. Override to restart that load; the default does nothing.
+   */
+  protected resumeInterruptedLoad(): void {}
+
+  /** Marks the load behind `signal` as finished so a later disconnect does not count it as interrupted. */
+  protected endAbortableLoad(signal: AbortSignal | undefined): void {
+    if (signal && this.pendingLoadController?.signal === signal) this.pendingLoadController = undefined;
+  }
+
   /** Starts a component-owned cancellable load and aborts the previous one. */
   protected beginAbortableLoad(): AbortSignal | undefined {
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
+    this.pendingLoadInterrupted = false;
     const AbortControllerCtor = this.ownerDocument?.defaultView?.AbortController;
     if (!AbortControllerCtor) return undefined;
     this.pendingLoadController = new AbortControllerCtor();

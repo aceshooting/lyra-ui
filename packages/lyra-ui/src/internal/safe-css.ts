@@ -119,6 +119,9 @@ export function sanitizeCssInset(value: unknown): string | undefined {
 
 export type SafeCssResize = 'none' | 'both' | 'horizontal' | 'vertical';
 
+/** Resize vocabulary of a resizable text surface: the native CSS values plus `auto` (grow to content). */
+export type LyraTextResize = SafeCssResize | 'auto';
+
 /** Narrows an untrusted runtime value to the native CSS `resize` vocabulary. */
 export function sanitizeCssResize(
   value: unknown,

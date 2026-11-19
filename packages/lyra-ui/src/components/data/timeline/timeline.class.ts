@@ -1,3 +1,4 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -312,8 +313,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   private readonly numberedItems = new Set<LyraTimelineItem>();
   private clusterMeasurementFrame?: number;
   private clusterMeasurementView?: Window;
-  private timeExtentFrame?: number;
-  private timeExtentView?: Window;
+  private readonly timeExtentFrame = new OwnedFrame(this);
   private focusRepairGeneration = 0;
   private cachedTimelineItems?: LyraTimelineItem[];
   private readonly timePositionedItems = new Set<LyraTimelineItem>();
@@ -356,6 +356,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       this.scheduleAfterUpdate(
         () => {
           this.applyTimeScale();
+          this.syncItemObservations();
           this.syncOrdinals();
         },
         'timeline-clusters'
@@ -365,7 +366,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   override disconnectedCallback(): void {
     this.cancelClusterMeasurement();
-    this.cancelTimeExtentMeasurement();
+    this.timeExtentFrame.cancel();
     this.focusRepairGeneration += 1;
     this.restoreClusterPresentation();
     this.restoreClusterVisibility();
@@ -784,15 +785,8 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   /** Absolute time items do not contribute intrinsic height. Measure their layout boxes and
    * lane offsets after layout; target-specific resize notifications invalidate only changed geometry. */
   private scheduleTimeExtentMeasurement(): void {
-    const view = this.ownerDocument?.defaultView;
-    if (!view) return;
-    if (this.timeExtentFrame !== undefined && this.timeExtentView === view) return;
-    this.cancelTimeExtentMeasurement();
-    this.timeExtentView = view;
-    this.timeExtentFrame = view.requestAnimationFrame(() => {
-      this.timeExtentFrame = undefined;
-      this.timeExtentView = undefined;
-      if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
+    if (this.timeExtentFrame.pending) return;
+    this.timeExtentFrame.schedule(() => {
       const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
       if (!base) return;
       // The latest vertical item sits at 100%, below the axis: reserve its overhang after the base.
@@ -898,14 +892,6 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       this.timeGeometryObserver?.observe(item);
       this.geometryObservedItems.add(item);
     }
-  }
-
-  private cancelTimeExtentMeasurement(): void {
-    if (this.timeExtentFrame !== undefined && this.timeExtentView) {
-      this.timeExtentView.cancelAnimationFrame(this.timeExtentFrame);
-    }
-    this.timeExtentFrame = undefined;
-    this.timeExtentView = undefined;
   }
 
   /** Coalesces ResizeObserver-driven membership writes into the next owner-realm frame. Updating

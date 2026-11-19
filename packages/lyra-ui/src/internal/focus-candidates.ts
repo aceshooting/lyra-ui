@@ -1,4 +1,4 @@
-import { isAriaTrue } from './accessibility-visibility.js';
+import { isAriaTrue } from './aria-values.js';
 import { isSvgElement } from './dom-guards.js';
 
 /** Ancestor steps searched for the `<map>` that makes an `<area href>` a navigation target. */

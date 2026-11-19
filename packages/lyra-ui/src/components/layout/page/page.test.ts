@@ -1027,34 +1027,21 @@ it('disconnects and re-arms its allocation observer across reconnect', async () 
 
 it('uses and tears down the window resize fallback when ResizeObserver is unavailable', async () => {
   const originalResizeObserver = window.ResizeObserver;
-  let width = 900;
   Reflect.set(window, 'ResizeObserver', undefined);
   try {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
-    page.getBoundingClientRect = () =>
-      ({
-        top: 0,
-        right: width,
-        bottom: 100,
-        left: 0,
-        width,
-        height: 100,
-        x: 0,
-        y: 0,
-        toJSON() {},
-      } as DOMRect);
-
+    page.style.inlineSize = '900px';
     page.mobileBreakpoint = '700px';
     await page.updateComplete;
     expect(page.view).to.equal('desktop');
 
-    width = 320;
+    page.style.inlineSize = '320px';
     window.dispatchEvent(new Event('resize'));
     await page.updateComplete;
     expect(page.view).to.equal('mobile');
 
     page.remove();
-    width = 900;
+    page.style.inlineSize = '900px';
     window.dispatchEvent(new Event('resize'));
     await nextFrame();
     expect(page.view).to.equal('mobile');

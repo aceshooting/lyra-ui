@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { copyFile, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -223,4 +223,4 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
   });
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await buildEngine();
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) await buildEngine();

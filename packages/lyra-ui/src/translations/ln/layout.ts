@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Ba slide ya carousel',
   carouselGoTo: 'Kende na lokasa {index}',
+  carouselPauseRotation: 'Tia kobalusa na kimya',
+  carouselResumeRotation: 'Kobaluka lisusu',
   scrollerLabel: 'Makambo oyo ekoki kotambwisama',
   scrollPrevious: 'Kende na nsima',
   scrollNext: 'Kende liboso',

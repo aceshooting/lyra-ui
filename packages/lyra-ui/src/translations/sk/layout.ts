@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Snímky karuselu',
   carouselGoTo: 'Prejsť na snímku {index}',
+  carouselPauseRotation: 'Pozastaviť rotáciu',
+  carouselResumeRotation: 'Obnoviť rotáciu',
   scrollerLabel: 'Posúvateľný obsah',
   scrollPrevious: 'Posunúť dozadu',
   scrollNext: 'Posunúť dopredu',

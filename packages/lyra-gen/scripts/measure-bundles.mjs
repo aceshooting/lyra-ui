@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import { readFile, writeFile, open, mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 const packageDirectory = fileURLToPath(new URL('..', import.meta.url));
@@ -241,7 +242,7 @@ function validationFailureReason(error) {
   return `${match[1]}: ${match[2]}${match[3] ? `/${match[3]}` : ''}`;
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   await main().catch(error => {
     const reason = validationFailureReason(error);
     console.error(reason ? `Bundle validation failed: ${reason}`

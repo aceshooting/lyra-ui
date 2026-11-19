@@ -1,6 +1,6 @@
 // Copies the editor data lyra-ui generates (`pnpm generate-editor-data`, `pnpm manifest`) into this
 // package so the published tarball carries exactly what the same commit's lyra-ui build produced.
-import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +29,6 @@ export function syncIdeData({ from = uiDir, to = packageDir } = {}) {
   return IDE_DATA_FILES.length;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   console.log(`Editor data copied from lyra-ui: ${syncIdeData()} files.`);
 }

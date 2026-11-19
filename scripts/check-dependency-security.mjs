@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { readFile, readdir, realpath, lstat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const SHEETJS_INTEGRITY = 'sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==';
@@ -246,6 +247,6 @@ async function main() {
   console.log(`Dependency security: ${result.unmitigated} unmitigated advisories; ${result.patched} verified locally patched advisories (registry reports retained).`);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   main().catch((error) => { console.error(error.message); process.exitCode = 1; });
 }

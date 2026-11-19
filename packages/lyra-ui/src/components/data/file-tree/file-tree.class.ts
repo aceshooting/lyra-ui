@@ -1,4 +1,7 @@
+import { optionalSizeConverter, writeOptionalSize, type LyraSize } from '../../../internal/variants.js';
+import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
@@ -54,13 +57,12 @@ function boundedArrayShape(value: unknown): {
 } {
   try {
     if (!Array.isArray(value)) return { isArray: false, length: 0, truncated: false };
-    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
-    const valid = typeof length === 'number' && Number.isSafeInteger(length) && length >= 0;
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return { isArray: false, length: 0, truncated: true };
     return {
       isArray: true,
-      length: valid ? Math.min(length, MAX_FILE_TREE_NODES) : 0,
-      truncated: valid && length > MAX_FILE_TREE_NODES,
+      length: Math.min(length, MAX_FILE_TREE_NODES),
+      truncated: length > MAX_FILE_TREE_NODES,
     };
   } catch {
     return { isArray: false, length: 0, truncated: true };
@@ -445,6 +447,20 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   private get effectiveMaxNodes(): number {
     return Math.max(1, Math.min(10000, finiteCount(this.maxNodes, 1000)));
   }
+  private _size?: LyraSize;
+
+  /** Optional row density, forwarded to the composed `<lr-tree>` (`2xs`, `xs`, `s`, `m`, `l`, `xl`
+   *  and the `small`, `medium`, `large` aliases). Omitting it keeps the original row geometry. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    writeOptionalSize(this, this._size, next, (size) => {
+      this._size = size;
+    });
+  }
+
   /** Accessible-name override for the internal `<lr-tree>`; falls back to the localized default
    *  when unset. An explicitly empty string renders as an empty label rather than falling back. */
   @property() label?: string;
@@ -477,7 +493,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     }
   }
 
-  private toTreeItem(node: FileTreeNode): LyraTreeNodeData {
+  private rowBadges(node: FileTreeNode): TreeBadge[] {
     const badges: TreeBadge[] = [];
     if (node.gitStatus) {
       badges.push({
@@ -486,13 +502,28 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
         label: this.localize(GIT_STATUS_KEY[node.gitStatus]),
       });
     }
-    const hasDiff = node.additions !== undefined || node.deletions !== undefined;
-    const description = hasDiff
+    return badges;
+  }
+
+  private rowDescription(node: FileTreeNode): string | undefined {
+    return node.additions !== undefined || node.deletions !== undefined
       ? this.localize('fileTreeDiffSummary', undefined, {
-          additions: getNumberFormat(this.effectiveLocale).format(node.additions ?? 0),
-          deletions: getNumberFormat(this.effectiveLocale).format(node.deletions ?? 0),
+          additions: this.formatLocaleNumber(node.additions ?? 0),
+          deletions: this.formatLocaleNumber(node.deletions ?? 0),
         })
       : undefined;
+  }
+
+  /** Source-row name: the display name followed by the visible diff summary and status labels. */
+  private rowName(node: FileTreeNode): string {
+    return [node.name || node.path, this.rowDescription(node), ...this.rowBadges(node).map((badge) => badge.label)]
+      .filter((text) => text?.trim())
+      .join(' ');
+  }
+
+  private toTreeItem(node: FileTreeNode): LyraTreeNodeData {
+    const badges = this.rowBadges(node);
+    const description = this.rowDescription(node);
     let children: LyraTreeNodeData[] | undefined;
     // An unloaded directory uses the inner tree's own lazy lifecycle (busy state, one request per
     // expansion, stale-response rejection). Over the row budget, a collapsed loaded directory is
@@ -753,27 +784,40 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     void this.renderRoot?.querySelector<LyraTree>(tag('tree'))?.collapseAll();
   }
 
+  private hostTreeLabel(): string | null {
+    const raw = this.getAttribute('aria-label');
+    return raw === '' ? '' : normalizeLabel(raw) ?? null;
+  }
+
+  private treeLabel(): string {
+    const host = this.hostTreeLabel();
+    if (host !== null) return host;
+    const own = this.label;
+    return own === '' ? '' : normalizeLabel(own) ?? this.localize('fileTreeLabel');
+  }
+
   override render(): TemplateResult {
     if (this.treeSource !== undefined) return hierarchySourceView(this.hierarchy, {
-      label: this.getAttribute('aria-label') ?? this.label ?? this.localize('fileTreeLabel'), rtl: this.effectiveDirection === 'rtl', multiple: false,
+      label: this.treeLabel(), rtl: this.effectiveDirection === 'rtl', multiple: false,
       loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
       retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
-      name: value => value.name || value.path, content: value => { const display = this.toTreeItem(value); return html`${display.icon ?? nothing}${display.label}${display.description}${display.badges?.map(badge => html`<span aria-label=${badge.label || nothing}>${badge.text}</span>`)}`; },
+      name: value => this.rowName(value), content: value => { const display = this.toTreeItem(value); return html`${display.icon ?? nothing}${display.label}${display.description}${display.badges?.map(badge => html`<span aria-label=${normalizeLabel(badge.label) ?? nothing}>${badge.text}</span>`)}`; },
       select: (row: LyraHierarchyRow<FileTreeNode>) => { void this.hierarchy.project({ type: 'select', key: row.key, selected: true, scope: 'item' }, true, row); },
     });
 
-    const hostLabel = this.getAttribute('aria-label');
     return html`
       <div part="base">
         <lr-tree
           .maxNodes=${this.effectiveMaxNodes}
+          .size=${this.size}
           .data=${this.treeItems}
-          label=${hostLabel ?? (this.label == null ? this.localize('fileTreeLabel') : this.label)}
+          label=${this.treeLabel()}
           @lr-node-select=${this.onNodeSelect}
           @lr-node-toggle=${this.onNodeToggle}
           @lr-lazy-load=${this.onLazyLoad}
           @lr-lazy-change=${this.stopInnerEvent}
           @lr-selection-change=${this.stopInnerEvent}
+          @lr-bulk-toggle=${this.stopInnerEvent}
           @lr-expand=${this.stopInnerEvent}
           @lr-after-expand=${this.stopInnerEvent}
           @lr-collapse=${this.stopInnerEvent}

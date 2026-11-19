@@ -3,9 +3,10 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFile, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { packedManifest } from './packed-tarball-input.mjs';
 import { runtimePeerVersions, UI_PACKAGE } from './fixtures/runtime-singleton/contract.mjs';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixtureSource = join(here, 'fixtures/runtime-singleton');
@@ -115,7 +116,7 @@ async function commandRun(command, args, cwd, label) {
   });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isMainModule(import.meta.url)) {
   const [workspace, uiTarball, expectedSha256, modes = 'all', browsers = 'chromium'] = process.argv.slice(2);
   if (!workspace || !uiTarball || !expectedSha256) {
     throw new Error('Usage: node scripts/packed-runtime-singleton-consumer.mjs <existing-scratch-directory> <ui.tgz> <sha256> [all|raw|canonical] [chromium,firefox,webkit]');

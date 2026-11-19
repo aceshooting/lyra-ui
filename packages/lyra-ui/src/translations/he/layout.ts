@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'שקופיות הקרוסלה',
   carouselGoTo: 'עבור לשקופית {index}',
+  carouselPauseRotation: 'השהה את הסיבוב',
+  carouselResumeRotation: 'המשך את הסיבוב',
   scrollerLabel: 'תוכן שניתן לגלול',
   scrollPrevious: 'גלול אחורה',
   scrollNext: 'גלול קדימה',

@@ -1,3 +1,5 @@
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
+import { readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
@@ -12,11 +14,11 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -44,7 +46,7 @@ import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES } from './tree-types.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_treeDefaultLabel, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_treeNodeMoved, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -94,22 +96,8 @@ type MutableTreeNodeData = {
   accessibleLabel?: string;
 };
 
-function ownValue(record: object, key: PropertyKey): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function arrayLength(value: unknown): number {
-  if (!Array.isArray(value)) return 0;
-  try {
-    return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.trunc(value.length)));
-  } catch {
-    return 0;
-  }
+  return Array.isArray(value) ? readOwnArrayLength(value) ?? 0 : 0;
 }
 
 function normalizeBadges(value: unknown): { badges?: readonly TreeBadge[]; truncated: boolean } {
@@ -117,16 +105,16 @@ function normalizeBadges(value: unknown): { badges?: readonly TreeBadge[]; trunc
   const badges: TreeBadge[] = [];
   const length = arrayLength(value);
   for (let index = 0; index < Math.min(length, TREE_BADGE_LIMIT); index++) {
-    const raw = ownValue(value, String(index));
+    const raw = readOwnDataValue(value, String(index));
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
-    const text = ownValue(raw, 'text');
+    const text = readOwnDataValue(raw, 'text');
     if (typeof text !== 'string') continue;
-    const rawTone = ownValue(raw, 'tone');
+    const rawTone = readOwnDataValue(raw, 'tone');
     const tone =
       rawTone === 'brand' || rawTone === 'success' || rawTone === 'warning' || rawTone === 'danger'
         ? rawTone
         : 'neutral';
-    const rawLabel = ownValue(raw, 'label');
+    const rawLabel = readOwnDataValue(raw, 'label');
     badges.push(Object.freeze({ text, tone, ...(typeof rawLabel === 'string' ? { label: rawLabel } : {}) }));
   }
   return { badges: Object.freeze(badges), truncated: length > TREE_BADGE_LIMIT };
@@ -240,7 +228,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
       limitReached = accepted >= limit;
       break;
     }
-    const raw = ownValue(job.source, String(job.index++));
+    const raw = readOwnDataValue(job.source, String(job.index++));
     inspected++;
     if (inspected === TREE_MAX_INSPECTED_POSITIONS) truncated = true;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -248,8 +236,8 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
       identityFilteredCollections.add(job.target);
       continue;
     }
-    const id = ownValue(raw, 'id');
-    const label = ownValue(raw, 'label');
+    const id = readOwnDataValue(raw, 'id');
+    const label = readOwnDataValue(raw, 'label');
     if (
       typeof id !== 'string' ||
       id.trim() === '' ||
@@ -263,21 +251,21 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
     seenIds.add(id);
 
     const node: MutableTreeNodeData = { id, label };
-    const selected = ownValue(raw, 'selected');
-    const expanded = ownValue(raw, 'expanded');
-    const disabled = ownValue(raw, 'disabled');
-    const lazy = ownValue(raw, 'lazy');
+    const selected = readOwnDataValue(raw, 'selected');
+    const expanded = readOwnDataValue(raw, 'expanded');
+    const disabled = readOwnDataValue(raw, 'disabled');
+    const lazy = readOwnDataValue(raw, 'lazy');
     if (typeof selected === 'boolean') node.selected = selected;
     if (typeof expanded === 'boolean') node.expanded = expanded;
     if (typeof disabled === 'boolean') node.disabled = disabled;
     if (typeof lazy === 'boolean') node.lazy = lazy;
-    const icon = ownValue(raw, 'icon');
+    const icon = readOwnDataValue(raw, 'icon');
     if (icon !== undefined) node.icon = icon;
-    const description = ownValue(raw, 'description');
+    const description = readOwnDataValue(raw, 'description');
     if (typeof description === 'string') node.description = description;
-    const accessibleLabel = ownValue(raw, 'accessibleLabel');
+    const accessibleLabel = readOwnDataValue(raw, 'accessibleLabel');
     if (typeof accessibleLabel === 'string') node.accessibleLabel = accessibleLabel;
-    const normalizedBadges = normalizeBadges(ownValue(raw, 'badges'));
+    const normalizedBadges = normalizeBadges(readOwnDataValue(raw, 'badges'));
     if (normalizedBadges.badges?.length) node.badges = normalizedBadges.badges;
     truncated ||= normalizedBadges.truncated;
 
@@ -287,7 +275,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
     created.push(node);
     accepted++;
 
-    const rawChildren = ownValue(raw, 'children');
+    const rawChildren = readOwnDataValue(raw, 'children');
     const childCount = arrayLength(rawChildren);
     if (childCount === 0) continue;
     declaredChildrenAtPath.set(path, childCount);
@@ -473,6 +461,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
     retry: LYRA_DEFAULT_retry,
+    treeDefaultLabel: LYRA_DEFAULT_treeDefaultLabel,
     treeLimit: LYRA_DEFAULT_treeLimit,
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
     treeSourceError: LYRA_DEFAULT_treeSourceError,
@@ -500,11 +489,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (size) => {
+      this._size = size;
+    });
   }
 
   private _treeSource: TreeSource | undefined = undefined;
@@ -566,8 +553,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private sourceSummary(): string {
     const projection = this.hierarchy.projection;
     return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
+      visible: this.formatLocaleNumber(projection.rows.count),
+      total: this.formatLocaleNumber(projection.total),
     }) : '';
   }
 
@@ -627,7 +614,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   /**
    * Accessible-name fallback for the internal `role="tree"` element. A host `aria-label` wins by
    * attribute presence, including when explicitly empty; `label` is used only when that attribute
-   * is absent. External `aria-labelledby` idrefs are not forwarded across the shadow boundary.
+   * is absent or whitespace. A whitespace-only name falls back to the localized tree name. External `aria-labelledby` idrefs are not forwarded across the shadow boundary.
    */
   @property() label = '';
   /** Maximum object-model nodes, from 1 to 10000; invalid or unset values use 1000.
@@ -1307,7 +1294,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     this.hierarchy.update(this.treeSource, this.effectiveLocale);
     if (this.treeSource !== undefined) {
       if (!this.sourceMode) {
-        this.sourceMode = true; this.resetChildObserver();
+        this.sourceMode = true; this.childObserver.clear();
         this.pendingFocusId = null; this.pendingReorder = undefined; this.selectionBeforeRefresh = undefined;
         this.syncRequested = false; this.syncGeneration++; this.syncRunning = false; this.syncTask = undefined;
         for (const node of this.nodeElements) if (this.generatedNodes.has(node)) node.remove();
@@ -1371,7 +1358,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    if (hostAriaLabel(this) == null && !this.label) {
+    if (this.treeAccessibleName() === undefined) {
       devWarnOnce(
         'lyra-tree-missing-accessible-name',
         '<lr-tree> has no accessible name: set `label` or a host `aria-label`.'
@@ -1536,9 +1523,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  `refreshAuthoredItems()` is what un-strands it. Subtree observation also catches nested
    *  `selected`/`disabled`/`lazy` changes because those affect the tree-owned selection engine;
    *  each item still owns its own child-slot reconciliation. */
-  private childObserver?: MutationObserver;
-  private childObserverDocument?: Document;
-  private childObserverGeneration = 0;
+  private readonly childObserver = new OwnedMutationObserver(this, records => this.onChildMutations(records));
 
   /** Climbs from a (possibly deeply nested) `<lr-tree-item>` to whichever `<lr-tree-item>` is a
    *  direct child of this tree -- the same membership `nodeElements`' `:scope >` query recognizes
@@ -1592,28 +1577,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   }
 
   private armChildObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected || this.treeSource !== undefined) return;
-    if (this.childObserver && this.childObserverDocument === ownerDocument) return;
-    this.resetChildObserver();
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.childObserverGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (
-        this.childObserver !== observer ||
-        this.childObserverDocument !== ownerDocument ||
-        this.childObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onChildMutations(records);
-    });
-    this.childObserver = observer;
-    this.childObserverDocument = ownerDocument;
-    observer.observe(this, {
+    if (!this.isConnected || this.treeSource !== undefined || this.childObserver.active) return;
+    this.childObserver.observe(this, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -1631,20 +1596,13 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     this.bulkExpansionGeneration++;
     this.pendingReorder = undefined;
     this.activeNode = undefined;
-    this.resetChildObserver();
+    this.childObserver.clear();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.hierarchy.adopted();
-    this.resetChildObserver();
-  }
-
-  private resetChildObserver(): void {
-    this.childObserverGeneration += 1;
-    this.childObserver?.disconnect();
-    this.childObserver = undefined;
-    this.childObserverDocument = undefined;
+    this.childObserver.clear();
   }
 
   /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-item>` elements and removes ones no longer present in `data`. */
@@ -1887,8 +1845,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     this.liveRegion?.announce(
       this.localize('treeNodeMoved', undefined, {
         label: pending.node.nodeLabel,
-        index: this.formatCount(found.index + 1),
-        total: this.formatCount(found.siblings.length),
+        index: this.formatLocaleNumber(found.index + 1),
+        total: this.formatLocaleNumber(found.siblings.length),
       }),
       // A discrete, user-initiated action: never coalesce it behind the
       // announcer's throttle window the way streaming status text is.
@@ -1929,14 +1887,24 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     if (parentId !== pending.toParentNodeId || location.index !== pending.toIndex ||
         location.siblings[anchorIndex] !== anchor) return;
     this.liveRegion?.announce(this.localize('treeNodeMoved', undefined, {
-      label: node.nodeLabel, index: this.formatCount(location.index + 1), total: this.formatCount(location.siblings.length),
+      label: node.nodeLabel, index: this.formatLocaleNumber(location.index + 1), total: this.formatLocaleNumber(location.siblings.length),
     }), { force: true });
+  }
+
+  /** The host's own name (an explicit empty one is the documented opt-out), else the trimmed `label`. */
+  private treeAccessibleName(): string | undefined {
+    const authored = hostAriaLabel(this);
+    if (authored === '') return '';
+    const name = resolveAccessibleName(this, this.label);
+    if (name || !(authored || this.label)) return name;
+    return this.localize('treeDefaultLabel');
   }
 
   private onTreeKeyDown = (e: KeyboardEvent): void => {
     // A control inside an item's label owns its own keys; the item host itself is the boundary.
     const itemTag = tag('tree-item');
     if (fromInteractiveDescendant(e, (target) => (target as Partial<Element>).localName === itemTag)) return;
+    if (e.altKey || e.isComposing || e.keyCode === 229) return;
     const visible = this.visibleNodeElements();
     if (visible.length === 0) return;
     // `nodeId` resolves in both child models -- see `focusNode()`.
@@ -1952,9 +1920,6 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       this.requestReorder(current, e.key === 'ArrowDown' ? 1 : -1);
       return;
     }
-    // Alt+Arrow is browser back/forward (and Alt+Home the home page) on Windows and Linux: leave
-    // every Alt-modified key to the platform. Ctrl/Cmd keep navigating, as documented.
-    if (e.altKey) return;
     // Expand/step-in and collapse/step-out are physical-direction actions --
     // swap which arrow key does which in RTL, matching split.ts/time-range.ts.
     const rtl = this.effectiveDirection === 'rtl';
@@ -2135,12 +2100,12 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   override render(): TemplateResult {
     if (this.treeSource !== undefined) return hierarchySourceView(this.hierarchy, {
-      label: hostAriaLabel(this) ?? this.label, rtl: this.effectiveDirection === 'rtl', multiple: this.selection === 'multiple' || this.selection === 'leaf-multiple',
+      label: this.treeAccessibleName() ?? '', rtl: this.effectiveDirection === 'rtl', multiple: this.selection === 'multiple' || this.selection === 'leaf-multiple',
       loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
       retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
-      name: value => value.accessibleLabel || [value.label, value.description,
+      name: value => normalizeLabel(value.accessibleLabel) ?? ([value.label, value.description,
         ...(value.badges ?? []).map(badge => badge.label?.trim() ? badge.label : badge.text),
-      ].filter(text => text?.trim()).join(' ') || value.id,
+      ].filter(text => text?.trim()).join(' ') || value.id),
       content: value => html`${value.icon ?? nothing}${value.label}${value.description ? html` <span>${value.description}</span>` : nothing}${value.badges?.map(badge => html` <span role=${badge.label?.trim() ? 'img' : nothing} aria-label=${badge.label?.trim() ? badge.label : nothing}>${badge.text}</span>`)}`,
       select: (row: LyraHierarchyRow<LyraTreeNodeData>) => { if ((this.selection === 'leaf' || this.selection === 'leaf-multiple') && row.childCount > 0) return;
         const multiple = this.selection === 'multiple' || this.selection === 'leaf-multiple';
@@ -2152,7 +2117,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       <div
         part="base tree"
         role="tree"
-        aria-label=${hostAriaLabel(this) ?? (this.label || nothing)}
+        aria-label=${this.treeAccessibleName() ?? nothing}
         aria-multiselectable=${String(this.selection === 'multiple' || this.selection === 'leaf-multiple')}
         @pointerdown=${this.pointerOrder.start}
         @focusin=${this.onTreeFocusIn}
@@ -2170,17 +2135,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       </div>
       ${this._limitReached
         ? html`<div part="limit">${this.localize('treeLimit', undefined, {
-            count: this.formatCount(this.effectiveMaxNodes),
+            count: this.formatLocaleNumber(this.effectiveMaxNodes),
           })}</div>`
         : nothing}
       ${this.reorderable || this.pointerReorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;
-  }
-  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
-   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
-   *  sentence. Route every user-facing number through the effective locale instead. */
-  private formatCount(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
   }
 }
 

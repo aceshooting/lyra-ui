@@ -163,6 +163,7 @@ export const MultipleSlidesPerView: Story = {
 };
 
 export const LoopingAutoplay: Story = {
+  name: 'Looping autoplay with pause and resume',
   render: () => html`<lr-carousel
     loop
     autoplay
@@ -227,7 +228,7 @@ export const ThemedIndicator: Story = {
     navigation
     pagination
     aria-label="Product previews"
-    style="--lr-carousel-indicator-current-bg: ${storyColor(
+    style="--lr-carousel-gap: var(--lr-space-l); --lr-carousel-controls-gap: var(--lr-space-m); --lr-carousel-indicator-current-border-width: var(--lr-border-width-thick); --lr-carousel-indicator-current-bg: ${storyColor(
       'successQuiet',
     )}; --lr-carousel-indicator-current-border-color: ${storyColor(
       'success',

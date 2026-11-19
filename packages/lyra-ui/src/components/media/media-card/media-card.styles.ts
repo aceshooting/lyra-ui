@@ -48,11 +48,10 @@ export const styles = css`
   a[part="base"]:not([aria-disabled="true"]):hover {
     border-color: var(--lr-color-brand);
   }
-  /* Pressed deepens both the border the hover rule tints and the card's own fill. Under
-     frame="plain" the later, higher-specificity chrome reset still wins -- that mode opts out of
-     card chrome, pressed included. */
-  button[part="base"]:not(:disabled):active,
-  a[part="base"]:not([aria-disabled="true"]):active {
+  /* Pressed deepens both the border the hover rule tints and the card's own fill; frame="plain"
+     opts out of card chrome, pressed included. */
+  :host(:not([frame="plain"])) button[part="base"]:not(:disabled):active,
+  :host(:not([frame="plain"])) a[part="base"]:not([aria-disabled="true"]):active {
     border-color: var(
       --lr-media-card-active-border-color,
       color-mix(
@@ -117,6 +116,12 @@ export const styles = css`
       var(--_lr-media-card-max-height)
     );
     object-fit: contain;
+  }
+  [part="media-error"] {
+    display: block;
+    padding: var(--lr-space-m);
+    color: var(--lr-color-text);
+    overflow-wrap: anywhere;
   }
   video[part="media"] {
     display: block;

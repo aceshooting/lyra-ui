@@ -1,8 +1,12 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { bdi } from '../../../internal/bidi.js';
+import { KeyedCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   writeClipboardText,
@@ -11,7 +15,7 @@ import {
 } from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListLimit, LYRA_DEFAULT_envListReveal } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -52,11 +56,15 @@ export interface LyraEnvListEventMap {
  * @csspart value - The value text itself; carries `data-masked`.
  * @csspart reveal-button - The per-row reveal/hide toggle, omitted while `without-reveal` is set.
  * @csspart copy-button - The per-row copy button, omitted while `without-copy-button` is set.
+ * @csspart limit - Localized notice shown when `entries` exceeds the 10,000-entry ceiling.
  * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a revealed
  *   entry's reveal button, and the base its hover/press mixes from.
  * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a revealed
  *   entry's reveal button. Restyling that state otherwise requires overriding the library-wide
  *   brand tokens, since an attribute selector cannot follow `::part()`.
+ * @cssprop [--lr-env-list-button-hover-bg=var(--lr-color-brand-quiet)] - Reveal/copy button fill while
+ *   hovered; the pressed fill mixes from it.
+ * @cssprop [--lr-env-list-button-active-bg] - Reveal/copy button fill while pressed.
  * @status stable
  * @since 4.0.0
  */
@@ -71,6 +79,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     envListCopy: LYRA_DEFAULT_envListCopy,
     envListHide: LYRA_DEFAULT_envListHide,
     envListLabel: LYRA_DEFAULT_envListLabel,
+    envListLimit: LYRA_DEFAULT_envListLimit,
     envListReveal: LYRA_DEFAULT_envListReveal,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     noData: LYRA_DEFAULT_noData,
@@ -81,6 +90,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   private _entries: readonly EnvEntry[] = [];
   private entriesSource?: unknown;
+  private omittedEntryCount = 0;
 
   /** Clone-owned readonly name/value entries to render, in order, bounded to the first 10,000
    * source entries. Malformed records, blank names, and later duplicate names are skipped; the
@@ -93,6 +103,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     const previous = this._entries;
     const next: EnvEntry[] = [];
     const seen = new Set<string>();
+    this.omittedEntryCount = Array.isArray(value) ? Math.max(0, value.length - MAX_ENV_ENTRIES) : 0;
     if (Array.isArray(value)) {
       for (const candidate of value.slice(0, MAX_ENV_ENTRIES)) {
         try {
@@ -129,6 +140,8 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   @state() private revealed = new Map<string, boolean>();
 
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private readonly copyFeedback = new KeyedCopyFeedback(this);
+  private droppedReveals: string[] = [];
 
   override adoptedCallback(): void {
     super.adoptedCallback();
@@ -138,7 +151,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('withoutReveal') && this.withoutReveal && this.revealed.size > 0) {
-      this.revealed = new Map();
+      this.dropReveals(new Map());
     }
     if (changed.has('entries')) {
       // Carry a row's reveal state forward only when that row's position still holds
@@ -152,8 +165,23 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
         const wasRevealed = this.revealed.get(entry.name);
         if (wasRevealed !== undefined) next.set(entry.name, wasRevealed);
       });
-      this.revealed = next;
+      this.dropReveals(next);
     }
+  }
+
+  private dropReveals(next: Map<string, boolean>): void {
+    for (const [name, isRevealed] of this.revealed) {
+      if (isRevealed && next.get(name) !== true) this.droppedReveals.push(name);
+    }
+    this.revealed = next;
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const dropped = this.droppedReveals;
+    if (dropped.length === 0) return;
+    this.droppedReveals = [];
+    for (const envName of dropped) this.emit('lr-reveal-change', Object.freeze({ envName, revealed: false }));
   }
 
   private toggleReveal(envName: string): void {
@@ -169,21 +197,24 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const outcome = await writeClipboardText(owner, text);
     if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
-    if (outcome.ok) {
-      this.announcements.announcePolite(this.localize('copied'));
-      this.emit('lr-copy', outcome);
-      return;
-    }
-    this.announcements.announcePolite(this.localize('copyFailed'));
-    this.emit('lr-error');
-    this.emit('lr-copy-error', outcome);
+    this.copyFeedback.show(entry.name, outcome.ok);
+    reportCopyOutcome(
+      {
+        emit: (name, detail) => {
+          if (name === 'lr-copy') this.emit('lr-copy', detail as LyraClipboardWriteSuccess);
+          else if (name === 'lr-error') this.emit('lr-error');
+          else this.emit('lr-copy-error', detail as LyraClipboardWriteFailure);
+        },
+        announce: (ok) => this.announcements.announcePolite(this.localize(ok ? 'copied' : 'copyFailed')),
+      },
+      outcome,
+    );
   }
 
   private get accessibleLabel(): string {
-    return (
-      hostAriaLabel(this)?.trim() ??
-      (this.label == null ? this.localize('envListLabel') : this.label)
-    );
+    const host = hostAriaLabel(this);
+    if (host === '') return '';
+    return normalizeLabel(host) ?? (this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('envListLabel'));
   }
 
   override render(): TemplateResult {
@@ -200,8 +231,9 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
           const secret = entry.secret ?? true;
           const isRevealed = this.revealed.get(entry.name) ?? false;
           const masked = secret && !isRevealed;
+          const feedback = this.copyFeedback.for(entry.name);
           return html`
-            <dt part="name">${entry.name}</dt>
+            <dt part="name">${bdi(entry.name)}</dt>
             <dd part="value-cell">
               <span part="value" data-masked=${masked ? 'true' : 'false'}>
                 ${masked
@@ -209,7 +241,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
                       <span class="sr-only">${this.localize('envListValueHidden')}</span>
                       <span aria-hidden="true">${MASK}</span>
                     `
-                  : entry.value}
+                  : bdi(entry.value)}
               </span>
               ${!this.withoutReveal && secret
                 ? html`<button
@@ -228,15 +260,22 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
                     part="copy-button"
                     type="button"
                     aria-label=${this.localize('envListCopy', undefined, { name: entry.name })}
+                    data-copy-state=${ifDefined(feedback ? (feedback.ok ? 'copied' : 'failed') : undefined)}
                     @click=${() => void this.copy(entry)}
                   >
-                    ${this.localize('copy')}
+                    ${feedback ? this.localize(feedback.ok ? 'copied' : 'copyFailed') : this.localize('copy')}
                   </button>`
                 : nothing}
             </dd>
           `;
         })}
       </dl>
+      ${this.omittedEntryCount > 0
+        ? html`<p part="limit" role="note">${this.localize('envListLimit', undefined, {
+            count: this.formatLocaleNumber(MAX_ENV_ENTRIES),
+            omitted: this.formatLocaleNumber(this.omittedEntryCount),
+          })}</p>`
+        : nothing}
     `;
   }
 }

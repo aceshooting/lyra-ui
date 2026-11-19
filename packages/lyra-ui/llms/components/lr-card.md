@@ -108,6 +108,10 @@ meant for slotted content, and it owns the card's `:focus-visible` ring), `media
 hidden entirely when empty), `body` (wrapper around the default slot), `footer` (wrapper around the
 `footer` and `footer-actions` slots, hidden entirely when both are empty).
 
+The actionable button and linked anchor receive the host's `aria-describedby` references.
+Canceling the native click suppresses card activation. Keyboard focus rings sit inside the card,
+and an actionable accent stripe keeps its configured color on hover.
+
 **Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
 gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`
 (default `var(--lr-color-border-subtle)`), `--border-radius`, and `--border-width` control the outer

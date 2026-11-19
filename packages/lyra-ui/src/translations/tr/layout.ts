@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Karusel slaytları',
   carouselGoTo: '{index}. slayta git',
+  carouselPauseRotation: 'Döndürmeyi duraklat',
+  carouselResumeRotation: 'Döndürmeyi sürdür',
   scrollerLabel: 'Kaydırılabilir içerik',
   scrollPrevious: 'Geri kaydır',
   scrollNext: 'İleri kaydır',

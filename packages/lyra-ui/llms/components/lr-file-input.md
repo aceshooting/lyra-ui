@@ -16,6 +16,8 @@
 
 ## `lr-file-input`
 
+Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions.
+
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
 
@@ -43,8 +45,7 @@ height for that content and the dropzone's minimum size.
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count; real drag events alone own the drag session and its
-  accept/reject state.
+  updates the selected-file count. Drag events update `dragging`. Assigning either getter in strict mode throws a `TypeError`.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -152,11 +153,14 @@ height for that content and the dropzone's minimum size.
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
+Every completed selection announces its outcome, including consecutive selections of the same count.
+The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
+messages accept localized plural forms selected with the numeric count.
+
 **Events:** a user selection or removal emits native bubbling/composed `input`, `lr-input`,
 native `change`, then `lr-change`; the typed pair carries `{ value: readonly File[] }` with a frozen
-snapshot of the current files and preserves each File identity. Programmatic `files` writes are
-silent (the event pairs still fire while `nonRetaining` is set,
-even though `files` itself is not written in that mode). `lr-files` (`detail:
+snapshot of the retained files. In `nonRetaining` mode, `value` contains the accepted batch. Each
+`File` retains its identity. Programmatic `files` writes are silent. `lr-files` (`detail:
 LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
 rejected-file records, plus `remainingFiles`/`remainingTotalSize` reporting the allowance still left
 under `maxFiles`/`maxTotalSize` after this batch (`null` while that limit is unset), fired on both
@@ -173,7 +177,8 @@ complete selection atomically; lifecycle cancellation and supersession stay sile
 fire when the semantic dropzone (the actual keyboard-focusable element, not the hidden native
 `<input>`) gains/loses focus. `lr-invalid` is the bubbling/composed alias of native invalidity.
 
-Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
+The first 20 rejections appear in `[part="rejection"]`. The localized `fileInputRejectionsMore`
+message reports the remaining count, and `lr-files` carries every rejection. Each visible row names
 the file and the reason via one of eight locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one

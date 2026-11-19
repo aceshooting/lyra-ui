@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'ပုံလှည့်ပြကွက် ဆလိုက်များ',
   carouselGoTo: 'ဆလိုက် {index} သို့ သွားရန်',
+  carouselPauseRotation: 'လည်ပတ်မှုကို ခေတ္တရပ်ပါ',
+  carouselResumeRotation: 'လည်ပတ်မှုကို ဆက်လုပ်ပါ',
   scrollerLabel: 'ရွှေ့ကြည့်နိုင်သော အကြောင်းအရာ',
   scrollPrevious: 'နောက်ပြန်ရွှေ့ရန်',
   scrollNext: 'ရှေ့သို့ရွှေ့ရန်',

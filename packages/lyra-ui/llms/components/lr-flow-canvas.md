@@ -128,6 +128,8 @@ entries, global `total`, explicit `coverage: 'complete' | 'neighborhood' | 'aggr
 bounds; an optional value position must agree. Position/world rectangle endpoints stay within ±1,000,000,
 with nonnegative world dimensions and finite endpoints. Scene edge keys/endpoints must match
 value IDs and resolve to nodes in that scene. Missing positions never trigger local auto-layout.
+The record navigator announces changes to loading, errors and query results. A search or incident-edge scope shows the matching record count.
+Endpoint actions identify the edge, the node and whether it is the source or target.
 The same revision must keep world bounds and global totals consistent. `source-coverage` reports
 shown versus global counts, rather than suggesting every record is drawn.
 

@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './image-viewer.js';
 import { LyraImageViewer } from './image-viewer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -269,4 +270,99 @@ describe('declarative anchor', () => {
     expect(results, 'identical anchor re-commits are not new requests').to.deep.equal([{ found: true }]);
     expect(await el.scrollToAnchor(anchor)).to.equal(true);
   });
+});
+
+describe('image navigation and highlight feedback', () => {
+  it('ignores IME-composing and Ctrl-modified keys on the annotation wrapper and the highlights', async () => {
+    const el = await loadedViewer();
+    const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="image-wrapper"]')!;
+    const press = (init: KeyboardEventInit, target: HTMLElement = wrapper): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init });
+      target.dispatchEvent(event);
+      return event;
+    };
+    expect(press({ isComposing: true }).defaultPrevented).to.equal(false);
+    expect(press({ ctrlKey: true }).defaultPrevented).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') === null).to.equal(true);
+    expect(press({}).defaultPrevented).to.equal(true);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') !== null).to.equal(true);
+  });
+
+  it('does not emit view-change events for attributes present at first render', async () => {
+    const seen: string[] = [];
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer fit="width" rotation="90"
+      @lr-fit-change=${() => seen.push('fit')} @lr-rotation-change=${() => seen.push('rotation')}></lr-image-viewer>`);
+    await el.updateComplete;
+    expect(seen).to.deep.equal([]);
+    el.rotation = 180;
+    await el.updateComplete;
+    expect(seen).to.deep.equal(['rotation']);
+  });
+
+  it('does not emit view-change events for properties written before the first render', async () => {
+    const seen: string[] = [];
+    const el = document.createElement('lr-image-viewer') as LyraImageViewer;
+    el.addEventListener('lr-fit-change', () => seen.push('fit'));
+    el.addEventListener('lr-rotation-change', () => seen.push('rotation'));
+    el.fit = 'width';
+    el.rotation = 90;
+    document.body.append(el);
+    await el.updateComplete;
+    el.remove();
+    expect(seen).to.deep.equal([]);
+  });
+
+  it('announces how many highlights are shown once the render cap is exceeded', async () => {
+    const highlights = Array.from({ length: 205 }, (_, index) => ({
+      id: `h${index}`, anchor: { kind: 'region' as const, rect: { x: 1, y: 1, width: 2, height: 2 } },
+    }));
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${imageSrc} .highlights=${highlights}></lr-image-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-layer"]') !== null);
+    await waitUntil(
+      () => [...document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}]`)].some((sink) => sink.textContent?.includes('Showing 200 of 205 highlights.')),
+      'limit notice', { timeout: 2000 },
+    );
+  });
+
+  it('keeps the label of a highlight on the image top edge inside the image', async () => {
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${imageSrc} style="inline-size: 320px; block-size: 240px"
+      .highlights=${[{ id: 'top', label: 'Top edge', anchor: { kind: 'region', rect: { x: 10, y: 0, width: 30, height: 30 } } }]}></lr-image-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-label"]') !== null);
+    await paint();
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight-label"]')!;
+    const box = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight"]')!;
+    expect(label.getBoundingClientRect().top >= box.getBoundingClientRect().top - 0.5).to.equal(true);
+  });
+});
+
+it('eases hover and press paint on the toolbar controls', async () => {
+  const el = await fixture<LyraImageViewer>(html`<lr-image-viewer data-lr-theme-scope></lr-image-viewer>`);
+  for (const part of ['rotate-button', 'fit-control', 'annotate-toggle']) {
+    const property = getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`)!).transitionProperty;
+    expect(property.includes('background-color'), `${part} transition: ${property}`).to.equal(true);
+  }
+});
+
+it('applies shared icon action tokens to the native toolbar control', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-image-viewer style="--lr-icon-button-border: 3px solid rgb(11, 22, 33); --lr-icon-button-bg: rgb(21, 31, 41); --lr-icon-button-radius: 9px"></lr-image-viewer>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector('[part="rotate-button"]')!);
+  expect(style.borderTopColor).to.equal('rgb(11, 22, 33)');
+  expect(style.borderTopWidth).to.equal('3px');
+  expect(style.backgroundColor).to.equal('rgb(21, 31, 41)');
+  expect(style.borderTopLeftRadius).to.equal('9px');
+});
+
+it('keeps modified arrows and repeated Enter from acting on annotations', async () => {
+  const el = await loadedViewer();
+  el.highlights = [...el.highlights, { ...el.highlights[0]!, id: 'second' }];
+  await el.updateComplete;
+  const highlight = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight"]')!;
+  const arrow = new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, cancelable: true });
+  highlight.dispatchEvent(arrow);
+  expect(arrow.defaultPrevented).to.equal(false);
+  const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="image-wrapper"]')!;
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', repeat: true, cancelable: true });
+  wrapper.dispatchEvent(enter);
+  expect(enter.defaultPrevented).to.equal(false);
 });

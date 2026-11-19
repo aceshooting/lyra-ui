@@ -1,4 +1,5 @@
-import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // publication-verifier:start
 export async function verifyNpmPublication({ tag, tarball, expectedSha256, timeoutMs = 1200000, retryMs = 30000, requestTimeoutMs = 30000 },
@@ -108,7 +109,7 @@ export async function verifyNpmPublication({ tag, tarball, expectedSha256, timeo
 }
 // publication-verifier:end
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   try {
     const result = await verifyNpmPublication({ tag: process.env.TAG, tarball: process.env.TARBALL, expectedSha256: process.env.EXPECTED_SHA256 });
     console.log(`npm serves ${result.packageName}@${result.version} with the released bytes and integrity.`);

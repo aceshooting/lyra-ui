@@ -60,6 +60,13 @@ it('reads a programmatic accessibleLabel while preserving authored attribute pre
   host.removeAttribute('aria-label');
   host.accessibleLabel = '';
   expect(hostAriaLabel(host), 'an unset compatibility property leaves computed fallbacks available').to.equal(null);
+
+  host.setAttribute('aria-label', '   ');
+  expect(hostAriaLabel(host), 'a whitespace-only attribute is not an opt-out').to.equal(null);
+
+  host.removeAttribute('aria-label');
+  host.accessibleLabel = ' \t ';
+  expect(hostAriaLabel(host), 'a whitespace-only property leaves computed fallbacks available').to.equal(null);
 });
 
 it('does not invoke an unrelated computed accessibleLabel getter', () => {

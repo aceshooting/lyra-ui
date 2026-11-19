@@ -497,3 +497,19 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     });
   }
 });
+
+it('keeps a settled declarative lazy branch expanded when its tree moves', async () => {
+  const el = await fixture<LyraTree>(html`<lr-tree label="Files"><lr-tree-item lazy label="Folder"></lr-tree-item></lr-tree>`);
+  const branch = el.querySelector('lr-tree-item')!;
+  branch.expand();
+  const child = document.createElement('lr-tree-item');
+  child.label = 'File';
+  branch.append(child);
+  await waitUntil(() => branch.expanded && !branch.loading);
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await branch.updateComplete;
+  expect(branch.expanded).to.equal(true);
+  expect(branch.getAttribute('aria-expanded')).to.equal('true');
+});

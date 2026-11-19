@@ -108,6 +108,7 @@ export const Populated: Story = {
       style="max-width: 40rem"
       .relationshipTypeOptions=${relationshipTypeOptions}
       .nodeTypeOptions=${nodeTypeOptions}
+      heading-level="2"
       .savedQueries=${savedQueries}
       .value=${populatedValue}
       @lr-query-run-request=${(e: CustomEvent<GraphQueryRunDetail>) => console.log('run requested', e.detail)}

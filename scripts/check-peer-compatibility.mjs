@@ -28,9 +28,10 @@ import {
   sep,
   win32 as pathWin32,
 } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import { parseNvmrcVersion } from './check-node-version.mjs';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
 const packageRoot = join(repositoryRoot, 'packages', 'lyra-ui');
@@ -4789,7 +4790,7 @@ async function main() {
   });
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+const isMain = isMainModule(import.meta.url);
 /**
  * Strips environment-variable VALUES out of text bound for the log. A fatal error here can carry
  * an env-derived path (this script resolves Windows executables by walking `PATH`), and on CI the

@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Àwọn sáídì kárọ́sẹ́lì',
   carouselGoTo: 'Lọ sí sáídì {index}',
+  carouselPauseRotation: 'Da yiyi duro',
+  carouselResumeRotation: 'Tẹsiwaju yiyi',
   scrollerLabel: 'Àkóónú tí a lè yí kiri',
   scrollPrevious: 'Yí sí ẹ̀yìn',
   scrollNext: 'Yí síwájú',

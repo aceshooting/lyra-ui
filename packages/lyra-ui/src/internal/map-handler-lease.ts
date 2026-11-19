@@ -1,6 +1,6 @@
 import { getInheritedPropertyDescriptor, isObjectValue } from './data-descriptors.js';
 
-export type MapHandlerLeaseIssue = 'unavailable' | 'stale' | 'peer-error' | 'reentrant';
+type MapHandlerLeaseIssue = 'unavailable' | 'stale' | 'peer-error' | 'reentrant';
 export interface MapHandlerLeaseContext { readonly current: () => boolean; }
 export interface MapHandlerLease {
   readonly accepted: boolean;

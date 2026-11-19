@@ -247,6 +247,17 @@ export const styles = css`
     max-inline-size: 100%;
   }
 
+  :host(:not([disable-sticky~="menu"])) [part~="menu"] {
+    background: var(--lr-page-menu-bg, var(--lr-color-surface));
+  }
+  :host(:not([disable-sticky~="aside"])) [part~="aside"] {
+    background: var(--lr-page-aside-bg, var(--lr-color-surface));
+  }
+  [part~="aside"][hidden],
+  [part~="footer"][hidden] {
+    display: none;
+  }
+
   :host(:not([disable-sticky~="menu"])) [part~="menu"],
   :host(:not([disable-sticky~="aside"])) [part~="aside"] {
     position: sticky;

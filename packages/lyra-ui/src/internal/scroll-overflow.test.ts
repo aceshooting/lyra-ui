@@ -195,6 +195,86 @@ describe('ScrollOverflowController', () => {
     }
   });
 
+  it('re-enrolls extra observed elements after a disconnect and reconnect', async () => {
+    const track = await makeTrack('400px');
+    const child = document.createElement('span');
+    track.append(child);
+    const host = makeHost();
+    const resize = installResizeObserverStub(window);
+    try {
+      const controller = new ScrollOverflowController(host, () => track);
+      host.connect();
+      controller.observeExtra([child]);
+      host.disconnect();
+      host.connect();
+      const latest = resize.records[resize.records.length - 1]!;
+      expect(resize.records.length).to.equal(2);
+      expect(latest.observed.includes(child)).to.equal(true);
+    } finally {
+      host.disconnect();
+      resize.restore();
+    }
+  });
+
+  it('enrolls extras handed over before the first observer exists', async () => {
+    const track = await makeTrack('400px');
+    const child = document.createElement('span');
+    track.append(child);
+    const host = makeHost();
+    const resize = installResizeObserverStub(window);
+    try {
+      const controller = new ScrollOverflowController(host, () => track);
+      controller.observeExtra([child]);
+      host.connect();
+      expect(resize.records[0]!.observed.includes(child)).to.equal(true);
+    } finally {
+      host.disconnect();
+      resize.restore();
+    }
+  });
+
+  it('observes each extra element once however often observeExtra repeats it', async () => {
+    const track = await makeTrack('400px');
+    const children = [document.createElement('span'), document.createElement('span')];
+    track.append(...children);
+    const host = makeHost();
+    const resize = installResizeObserverStub(window);
+    try {
+      const controller = new ScrollOverflowController(host, () => track);
+      host.connect();
+      for (let pass = 0; pass < 3; pass += 1) {
+        controller.observeExtra(children);
+        host.update();
+      }
+      const observedChildren = resize.records[0]!.observed.filter((element) => element !== track);
+      expect(observedChildren.length).to.equal(2);
+    } finally {
+      host.disconnect();
+      resize.restore();
+    }
+  });
+
+  it('stops observing an extra element once it leaves the document', async () => {
+    const track = await makeTrack('400px');
+    const child = document.createElement('span');
+    track.append(child);
+    const host = makeHost();
+    const resize = installResizeObserverStub(window);
+    try {
+      const controller = new ScrollOverflowController(host, () => track);
+      host.connect();
+      controller.observeExtra([child]);
+      child.remove();
+      controller.observeExtra([]);
+      host.disconnect();
+      host.connect();
+      expect(resize.records[1]!.observed.includes(child)).to.equal(false);
+    } finally {
+      host.disconnect();
+      resize.restore();
+    }
+  });
+
   it('uses the observed element owner constructor and replaces it across adoption with stale callbacks inert', async () => {
     const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = frame.contentDocument;

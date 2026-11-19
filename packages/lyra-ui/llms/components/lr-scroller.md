@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,6 +47,11 @@ vertical scroller. Before the first client measurement, both cues are hidden and
 controls are disabled, so server-rendered markup never advertises a false scroll direction. A control
 that has focus when it reaches its edge and disables hands focus to the viewport rather than
 dropping it to `<body>`.
+
+Set `accessibleLabel` or the host `aria-label` to name the viewport. The viewport and its
+buttons keep unmodified navigation keys within the scroller. The scroller leaves key events from
+slotted controls available to the application. Set `--lr-scroller-gap` for the space between
+content items and `--lr-scroller-controls-gap` for the space around the viewport.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`

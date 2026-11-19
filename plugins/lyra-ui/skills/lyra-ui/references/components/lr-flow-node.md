@@ -36,7 +36,8 @@ owns none of that.
   standalone card in a document outline. Invalid untyped values use level 3; nothing is exposed
   while `heading` is empty
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
-- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
+- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set. A
+  nonblank node heading is included in its localized accessible name.
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
@@ -50,7 +51,7 @@ owns none of that.
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
   (a record rejected for an unreadable optional label does not reserve its ID);
-  reassign a collection after changes
+  reassign a collection after changes. An empty collection removes its handle gutter.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 

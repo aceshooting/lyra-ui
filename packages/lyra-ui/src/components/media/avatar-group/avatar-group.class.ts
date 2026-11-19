@@ -170,7 +170,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   // `collectInitialSlotAssignment`'s own doc.
   @query('slot:not([name])') private avatarsSlot?: HTMLSlotElement;
   private assignedAvatars: readonly LyraAvatar[] = Object.freeze([]);
-  private observedAvatars: readonly LyraAvatar[] = Object.freeze([]);
+  private readonly observedAvatars = new Set<LyraAvatar>();
   private avatarObserver?: MutationObserver;
   private avatarObserverWindow?: Window;
   private readonly defaultOwnership = new Map<
@@ -329,7 +329,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   private connectAvatarObserver(avatars: readonly LyraAvatar[]): void {
     const ownerWindow = this.ownerDocument.defaultView;
     if (!ownerWindow) return;
-    const identitiesChanged = !this.sameAvatars(this.observedAvatars, avatars);
+    const identitiesChanged = avatars.length !== this.observedAvatars.size || avatars.some(avatar => !this.observedAvatars.has(avatar));
     if (
       !identitiesChanged &&
       this.avatarObserverWindow === ownerWindow &&
@@ -337,7 +337,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     )
       return;
     this.disconnectAvatarObserver();
-    this.observedAvatars = Object.freeze([...avatars]);
+    for (const avatar of avatars) this.observedAvatars.add(avatar);
     this.avatarObserverWindow = ownerWindow;
     const observer = new ownerWindow.MutationObserver((records) => {
       if (
@@ -346,23 +346,22 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
         this.ownerDocument.defaultView !== ownerWindow
       )
         return;
+      let externalChange = false;
       for (const record of records) {
-        const attribute =
-          record.attributeName as AvatarPresentationAttribute | null;
-        if (
-          !attribute ||
-          (attribute !== 'size' &&
-            attribute !== 'shape' &&
-            attribute !== 'variant') ||
-          !this.isAvatar(record.target as Element)
-        )
+        const attribute = record.attributeName;
+        if (attribute === 'inert' || attribute === 'hidden') {
+          externalChange = true;
           continue;
+        }
+        if (attribute !== 'size' && attribute !== 'shape' && attribute !== 'variant') continue;
         const avatar = record.target as LyraAvatar;
         if (this.consumeOwnedAttributeWrite(avatar, attribute)) continue;
+        externalChange = true;
         const ownership = this.defaultOwnership.get(avatar);
         ownership?.delete(attribute);
         if (ownership?.size === 0) this.defaultOwnership.delete(avatar);
       }
+      if (!externalChange) return;
       this.applyGroupDefaults();
       this.recomputeWindow();
       this.applyVisibilityMarkers();
@@ -382,14 +381,14 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
       this.pendingOwnedAttributeWrites.delete(avatar);
     this.avatarObserver = undefined;
     this.avatarObserverWindow = undefined;
-    this.observedAvatars = Object.freeze([]);
+    this.observedAvatars.clear();
   }
 
   private markOwnedAttributeWrite(
     avatar: LyraAvatar,
     attribute: AvatarPresentationAttribute
   ): void {
-    if (!this.avatarObserver || !this.observedAvatars.includes(avatar)) return;
+    if (!this.avatarObserver || !this.observedAvatars.has(avatar)) return;
     let writes = this.pendingOwnedAttributeWrites.get(avatar);
     if (!writes) {
       writes = new Map();

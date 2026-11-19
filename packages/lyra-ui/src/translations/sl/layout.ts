@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Diapozitivi vrtiljaka',
   carouselGoTo: 'Pojdi na diapozitiv {index}',
+  carouselPauseRotation: 'Ustavi vrtenje',
+  carouselResumeRotation: 'Nadaljuj vrtenje',
   scrollerLabel: 'Drsna vsebina',
   scrollPrevious: 'Pomakni nazaj',
   scrollNext: 'Pomakni naprej',

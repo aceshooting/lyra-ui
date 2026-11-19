@@ -1,5 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { isAriaTrue } from './accessibility-visibility.js';
+import { isAriaTrue } from './aria-values.js';
 import { deepActiveElementIn } from './active-element.js';
 import { hasFocusExcludingAttributes, styleExcludesFocusSubtree } from './focus-candidates.js';
 import { firstFormControlFocusTarget } from './form-control-focus-target.js';

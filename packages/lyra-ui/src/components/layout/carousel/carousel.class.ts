@@ -1,7 +1,9 @@
+import { layoutScale } from '../../../internal/layout-scale.js';
+import { nextId } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -19,7 +21,10 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
-import { composedContains } from '../../../internal/overlay-manager.js';
+import { composedContains } from '../../../internal/composed-tree.js';
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { armClickSuppression, capturePointer, consumeSuppressedClick, releasePointer } from '../../../internal/pointer-capture.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -28,7 +33,7 @@ import { styles } from './carousel.styles.js';
 import type { LyraCarouselItem } from './carousel-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselPauseRotation, LYRA_DEFAULT_carouselResumeRotation, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -136,6 +141,7 @@ export interface LyraCarouselEventMap {
  *   navigation leaves descendant editors and interactive controls in charge of their own keys.
  * @csspart track - Lyra extension wrapping the slotted slides and eligible inert loop snapshots.
  * @csspart controls - Lyra extension wrapping enabled navigation and pagination.
+ * @csspart autoplay-button - Pauses or resumes automatic rotation.
  * @csspart navigation - The previous/next navigation wrapper.
  * @csspart navigation-button - Shared navigation button part.
  * @csspart navigation-button-previous - Previous navigation button.
@@ -149,6 +155,9 @@ export interface LyraCarouselEventMap {
  * @csspart pagination-item-active - The active pagination button.
  * @csspart pagination-item--active - Shoelace name for the active pagination button.
  * @csspart indicator-dot - Compact visible dot inside a pagination button.
+ * @cssprop [--lr-carousel-gap=var(--lr-space-s)] - Space between viewport and controls.
+ * @cssprop [--lr-carousel-controls-gap=var(--lr-space-s)] - Control spacing, defaulting to the control row and allocation.
+ * @cssprop [--lr-carousel-indicator-current-border-width=var(--lr-border-width-thick)] - Border width of the current indicator.
  * @cssprop [--aspect-ratio=16/9] - Aspect ratio inherited by each slide.
  * @cssprop --scroll-hint - Logical padding that reveals the nearest adjacent slides.
  * @cssprop [--slide-gap=var(--lr-space-m)] - Gap between slides.
@@ -186,6 +195,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     carouselGoTo: LYRA_DEFAULT_carouselGoTo,
     carouselIndicators: LYRA_DEFAULT_carouselIndicators,
     carouselLabel: LYRA_DEFAULT_carouselLabel,
+    carouselPauseRotation: LYRA_DEFAULT_carouselPauseRotation,
+    carouselResumeRotation: LYRA_DEFAULT_carouselResumeRotation,
     carouselSlide: LYRA_DEFAULT_carouselSlide,
     carouselSlideAnnouncement: LYRA_DEFAULT_carouselSlideAnnouncement,
     carouselSlideAnnouncementSeparator: LYRA_DEFAULT_carouselSlideAnnouncementSeparator,
@@ -217,10 +228,25 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.setCurrentSlideState(value);
   }
 
+  /** Wraps around at either end instead of stopping at the first and last page.
+   * @default false */
   @property({ type: Boolean, reflect: true }) loop = false;
+  /** Advances automatically; pauses on hover, focus, dragging, hidden documents and reduced motion.
+   * @default false */
   @property({ type: Boolean, reflect: true }) autoplay = false;
-  @property({ type: Number, attribute: 'autoplay-interval', useDefault: true })
+  /** Milliseconds between automatic advances, at least 1000; an empty attribute restores the default.
+   * @default 3000 */
+  @property({
+    attribute: 'autoplay-interval',
+    useDefault: true,
+    converter: {
+      fromAttribute: (value: string | null): number =>
+        Number(value?.trim() || 3000),
+    },
+  })
   autoplayInterval = 3000;
+  /** Whether previous and next buttons are rendered.
+   * @default false */
   @property({ type: Boolean, reflect: true }) navigation = false;
 
   /** Whether page indicators are rendered.
@@ -233,10 +259,18 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.setPaginationState(Boolean(value));
   }
 
+  /** Scroll axis of the slides.
+   * @default 'horizontal' */
   @property({ useDefault: true }) orientation: LyraCarouselOrientation = 'horizontal';
+  /** Lets a mouse drag scroll the slides.
+   * @default false */
   @property({ type: Boolean, attribute: 'mouse-dragging', reflect: true })
   mouseDragging = false;
+  /** Slides visible at once.
+   * @default 1 */
   @property({ type: Number, attribute: 'slides-per-page', useDefault: true }) slidesPerPage = 1;
+  /** Slides advanced by one previous or next step.
+   * @default 1 */
   @property({ type: Number, attribute: 'slides-per-move', useDefault: true }) slidesPerMove = 1;
   /** Live count of assigned slides.
    * @default 0 */
@@ -280,6 +314,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private loopSide?: 'before' | 'after';
   private loopClonesDirty = true;
   private pointerInteracting = false;
+  @state() private rotationPaused = false;
   private focusInteracting = false;
   /** Whether a menu or popover opened from slide content is open -- it keeps autoplay paused. */
   private readonly slideOverlay = new SlottedOverlayController(this, () =>
@@ -290,16 +325,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private dragStartCoordinate = 0;
   private dragStartScroll = 0;
   private dragMoved = false;
-  private suppressClick = false;
-  private clickTimer?: number;
-  private clickTimerWindow?: Window;
+  private readonly gestureKey = nextId('carousel-gesture');
+  private releaseClickSuppression?: () => void;
   private announcementSink?: AnnouncementSink;
   private announcementsArmed = false;
   private changeOrigin: CarouselChangeOrigin = 'manual';
   private manualPending = false;
-  private observer?: MutationObserver;
-  private observerDocument?: Document;
-  private observerGeneration = 0;
   private lastFocusedSlide?: HTMLElement;
   private focusedNavButton?: HTMLButtonElement;
   private readonly passiveTakeOver = { handleEvent: () => this.takeOverViewport(), passive: true };
@@ -338,7 +369,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   override connectedCallback(): void {
     // Attribute reaction order follows author order. Make the canonical Lyra spelling win on the
     // initial dual-spelling case regardless of how the two attributes were ordered in markup.
-    if (this.hasAttribute('current-slide')) {
+    if (!this.hasUpdated && this.hasAttribute('current-slide')) {
       this.currentSlide = finiteInteger(Number(this.getAttribute('current-slide') ?? 0), 0);
     }
     super.connectedCallback();
@@ -373,8 +404,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.cancelDrag(false);
     this.stopAutoplay();
     this.cancelScrollSettle();
-    this.cancelClickSuppression();
-    this.suppressClick = false;
+    this.releaseClickSuppression?.();
+    this.releaseClickSuppression = undefined;
     this.pointerInteracting = false;
     this.focusInteracting = false;
     this.hasAlignedOnce = false;
@@ -386,62 +417,57 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.onVisibilityChange
     );
     this.visibilityDocument = undefined;
-    this.resetSlideContentObserver();
+    this.contentObserver.clear();
     this.restoreSlides();
     this.lastFocusedSlide = undefined;
     super.disconnectedCallback();
   }
 
-  private armSlideContentObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor || !this.isConnected) return;
-    this.resetSlideContentObserver();
-    const generation = this.observerGeneration;
-    const observer = new MutationObserverCtor((records) => {
+  private readonly contentObserver = new OwnedMutationObserver(this, (records) =>
+    this.onContentMutation(records)
+  );
+
+  private onContentMutation(records: MutationRecord[]): void {
+    const snapshotChanged = records.some((record) => {
+      if (record.target === this) return record.type !== 'attributes';
       if (
-        this.observer !== observer ||
-        this.observerDocument !== ownerDocument ||
-        this.observerGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
+        record.type !== 'attributes' ||
+        !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(record.attributeName ?? '')
       ) {
-        return;
+        return this.loop;
       }
-      const snapshotChanged = records.some((record) => {
-        if (record.target === this) return record.type !== 'attributes';
-        if (
-          record.type !== 'attributes' ||
-          !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(record.attributeName ?? '')
-        ) {
-          return this.loop;
-        }
-        const slide = record.target as HTMLElement;
-        const snapshot = this.snapshots.get(slide);
-        return snapshot
-          ? this.adoptChanges(slide, snapshot)
-          : false;
-      });
-      if (!snapshotChanged) return;
-      if (this.loop) this.loopClonesDirty = true;
-      this.syncSlides();
-      this.requestUpdate();
+      const slide = record.target as HTMLElement;
+      const snapshot = this.snapshots.get(slide);
+      return snapshot ? this.adoptChanges(slide, snapshot) : false;
     });
-    this.observer = observer;
-    this.observerDocument = ownerDocument;
-    observer.observe(this, {
-      attributes: true,
-      characterData: true,
-      childList: true,
-      subtree: true,
-    });
+    if (!snapshotChanged) return;
+    if (this.loop) this.loopClonesDirty = true;
+    this.syncSlides();
+    this.requestUpdate();
   }
 
-  private resetSlideContentObserver(): void {
-    this.observerGeneration += 1;
-    this.observer?.disconnect();
-    this.observer = undefined;
-    this.observerDocument = undefined;
+  /** Looping clones copy slide content, so only `loop` needs the unfiltered subtree. */
+  private armSlideContentObserver(): void {
+    this.contentObserver.clear();
+    if (!this.isConnected) return;
+    if (this.loop) {
+      this.contentObserver.observe(this, {
+        attributes: true,
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
+      return;
+    }
+    this.contentObserver.observe(this, { childList: true });
+    for (const slide of this.snapshots.keys()) this.observeSlideAttributes(slide);
+  }
+
+  private observeSlideAttributes(slide: HTMLElement): void {
+    this.contentObserver.observe(slide, {
+      attributes: true,
+      attributeFilter: [...CAROUSEL_MANAGED_SLIDE_ATTRIBUTES],
+    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -508,6 +534,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       const enabled = this.focusedNavButton.parentElement!.querySelector<HTMLElement>('button:not(:disabled)');
       (enabled ?? this.viewport)?.focus();
     }
+    if (changed.has('loop') && this.hasUpdated) this.armSlideContentObserver();
     this.syncSlides();
     if (
       this.loopClonesDirty ||
@@ -519,6 +546,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.loopClonesDirty = false;
     }
     if (
+      changed.has('rotationPaused') ||
       changed.has('autoplay') ||
       changed.has('autoplayInterval') ||
       changed.has('loop') ||
@@ -730,6 +758,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private syncSlides(): void {
     const slides = this.slideElements();
     const assigned = new Set(slides);
+    let removedSlide = false;
     for (const [slide, snapshot] of this.snapshots) {
       if (this.adoptChanges(slide, snapshot)) {
         this.loopClonesDirty = true;
@@ -737,8 +766,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       if (!assigned.has(slide)) {
         this.restoreSlide(slide, snapshot);
         this.snapshots.delete(slide);
+        removedSlide = true;
       }
     }
+    if (removedSlide && !this.loop) this.armSlideContentObserver();
     const current = this.normalizedIndex(slides.length);
     if (this.currentSlide !== current) {
       // Reached when a light-DOM mutation (a slide removed, or made inert/hidden) shrinks the
@@ -756,7 +787,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     slides.forEach((slide, slideIndex) => {
       const existing = this.snapshots.get(slide);
       const snapshot = existing ?? this.snapshotSlide(slide);
-      if (!existing) this.snapshots.set(slide, snapshot);
+      if (!existing) {
+        this.snapshots.set(slide, snapshot);
+        if (!this.loop) this.observeSlideAttributes(slide);
+      }
 
       if (slide.localName === tag('carousel-item')) {
         this.restoreAttribute(slide, 'role', snapshot.role ?? 'group');
@@ -1019,6 +1053,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       !this.isConnected ||
       !view ||
       !this.autoplay ||
+      this.rotationPaused ||
       this.reduceMotion ||
       this.pointerInteracting ||
       this.focusInteracting ||
@@ -1054,12 +1089,13 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const viewportRect = viewport.getBoundingClientRect();
     const slideRect = slide.getBoundingClientRect();
     const padding = this.scrollPaddingStart();
+    const scale = layoutScale(viewport);
     if (this.effectiveOrientation() === 'vertical') {
-      return slideRect.top - (viewportRect.top + padding);
+      return (slideRect.top - viewportRect.top - padding) / scale.y;
     }
     return this.effectiveDirection === 'rtl'
-      ? slideRect.right - (viewportRect.right - padding)
-      : slideRect.left - (viewportRect.left + padding);
+      ? (slideRect.right - viewportRect.right + padding) / scale.x
+      : (slideRect.left - viewportRect.left - padding) / scale.x;
   }
 
   private scrollByAxis(
@@ -1288,11 +1324,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         : viewport.scrollLeft;
     this.dragMoved = false;
     viewport.setAttribute('data-dragging', '');
-    try {
-      viewport.setPointerCapture(event.pointerId);
-    } catch {
-      // The pointer may already have ended in a synthetic or cross-document dispatch.
-    }
+    capturePointer(viewport, event.pointerId);
     this.restartAutoplay();
   };
 
@@ -1337,27 +1369,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.dragPointerId = undefined;
     this.dragMoved = false;
     viewport?.removeAttribute('data-dragging');
-    if (viewport?.hasPointerCapture(pointerId)) {
-      try {
-        viewport.releasePointerCapture(pointerId);
-      } catch {
-        // Pointer capture can disappear between the check and release.
-      }
-    }
+    if (viewport) releasePointer(viewport, pointerId);
     if (moved) {
-      this.suppressClick = true;
-      this.cancelClickSuppression();
+      this.releaseClickSuppression?.();
       const view = this.ownerDocument.defaultView;
-      if (!view) {
-        this.suppressClick = false;
-      } else {
-        this.clickTimerWindow = view;
-        this.clickTimer = view.setTimeout(() => {
-          this.suppressClick = false;
-          this.clickTimer = undefined;
-          this.clickTimerWindow = undefined;
-        }, 0);
-      }
+      this.releaseClickSuppression = view ? armClickSuppression(view, this.gestureKey) : undefined;
     }
     if (canceled && viewport) {
       const active = this.slideElements()[this.normalizedIndex()];
@@ -1372,14 +1388,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
     if (!this.matches(':hover')) this.pointerInteracting = false;
     this.restartAutoplay();
-  }
-
-  private cancelClickSuppression(): void {
-    if (this.clickTimer !== undefined) {
-      this.clickTimerWindow?.clearTimeout(this.clickTimer);
-    }
-    this.clickTimer = undefined;
-    this.clickTimerWindow = undefined;
   }
 
   private cancelDrag(realign: boolean): void {
@@ -1400,13 +1408,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportClick = (event: MouseEvent): void => {
-    if (!this.suppressClick) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
+    consumeSuppressedClick(event, this.gestureKey);
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (shouldIgnoreNavigationKey(event) || event.shiftKey) return;
     if (this.targetsInteractiveContent(event, true)) return;
     const vertical = this.effectiveOrientation() === 'vertical';
     const rtl = this.effectiveDirection === 'rtl';
@@ -1450,6 +1456,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         );
     const hasNavigation =
       this.navigation && count > this.pageSize(count);
+    const hasRotationControl = this.autoplay && count > this.pageSize(count);
     const hasPagination = this.pagination && pageTargets.length > 1;
     const label = this.hostAccessibleLabel ?? this.localize('carouselLabel');
     const numberFormat = getNumberFormat(this.effectiveLocale);
@@ -1497,8 +1504,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
           <span class="loop-clones" data-clone-set="after"></span>
         </div>
       </div>
-      ${hasNavigation || hasPagination
+      ${hasRotationControl || hasNavigation || hasPagination
         ? html`<div part="controls">
+            ${hasRotationControl
+              ? html`<button
+                  part="autoplay-button"
+                  type="button"
+                  @click=${() => { this.rotationPaused = !this.rotationPaused; }}
+                >${this.rotationPaused ? this.localize('carouselResumeRotation') : this.localize('carouselPauseRotation')}</button>`
+              : nothing}
             ${hasNavigation
               ? html`<div part="navigation">
                   <button

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,10 @@ Scrollable inspection surface for slotted DOM or one image, with bounded zoom an
 panning. This is the compatibility destination for Lyra's former `lr-zoomable-frame` behavior:
 existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom` (and the class
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
+
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
 
 **Properties:**
 
@@ -36,6 +40,9 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
   `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
+
+A failed image renders a localized message in the `error` part, announces the failure, and emits
+`lr-render-error` with `{ error: Error }`.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the

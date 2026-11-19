@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Hotunan mai juyawa',
   carouselGoTo: 'Je zuwa hoto {index}',
+  carouselPauseRotation: 'Dakatar da juyawa',
+  carouselResumeRotation: 'Ci gaba da juyawa',
   scrollerLabel: 'Abun ciki da ake iya gungurawa',
   scrollPrevious: 'Gungura baya',
   scrollNext: 'Gungura gaba',

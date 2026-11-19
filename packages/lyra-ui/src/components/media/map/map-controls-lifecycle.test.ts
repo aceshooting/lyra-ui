@@ -260,6 +260,28 @@ describe('map controls lifecycle', () => {
     } finally { manager.dispose(); wrapper.remove(); }
   });
 
+  it('moves a control even when its shadow root cannot report focus', async () => {
+    const h = harness();
+    const host = document.createElement('div'), shadow = host.attachShadow({ mode: 'open' });
+    const first = document.createElement('div'), second = document.createElement('div');
+    shadow.append(first, second);
+    document.body.append(host);
+    Object.defineProperty(shadow, 'activeElement', { get() { throw new Error('Focus unavailable'); } });
+    const button = document.createElement('button');
+    const manager = new MapControlsLifecycle(async () => class extends Control { onAdd() { return button; } });
+    const map = {
+      addControl(control: MapManagedControl) { first.append(control.onAdd!()); },
+      removeControl() { button.remove(); },
+      controlContainer: (position: string) => position === 'top-right' ? first : second,
+    };
+    try {
+      await manager.sync(map, options({ navigation: { position: 'top-right' } }), h.context);
+      await manager.sync(map, options({ navigation: { position: 'bottom-left' } }), h.context);
+      expect(h.failures).to.deep.equal([]);
+      expect(button.parentNode === second).to.equal(true);
+    } finally { manager.dispose(); host.remove(); }
+  });
+
   it('does not move an owned root after a corner callback retires the generation', async () => {
     const h = harness(); const first = document.createElement('div'), next = document.createElement('div');
     let cancel = false;

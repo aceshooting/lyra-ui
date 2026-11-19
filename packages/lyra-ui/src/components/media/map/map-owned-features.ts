@@ -29,9 +29,15 @@ export interface MapOwnedFeatureContext {
   /** The current basemap layers that `styleOverrides` selectors match against. */
   readonly styleLayers?: () => readonly LyraMapStyleLayer[];
 }
-interface CachedImage { readonly key: string; readonly image: PreparedMapImage; }
+interface CachedImage { readonly descriptor: LyraMapImage; readonly image: PreparedMapImage; }
 function aborted(): never { throw new DOMException('Map resource work was cancelled.', 'AbortError'); }
-const imageKey = (descriptor: LyraMapImage): string => JSON.stringify(descriptor);
+/** Field-wise comparison of admitted descriptors; it never serializes the inline SVG markup. */
+function sameImage(left: LyraMapImage, right: LyraMapImage): boolean {
+  const a = left.source, b = right.source;
+  return left.id === right.id && left.width === right.width && left.height === right.height &&
+    left.pixelRatio === right.pixelRatio && (left.sdf === true) === (right.sdf === true) &&
+    (a.kind === 'svg' ? b.kind === 'svg' && a.markup === b.markup : b.kind === 'url' && a.url === b.url);
+}
 
 /** Compare admitted data only; native canvas handles match by identity. */
 function sameSnapshot(left: unknown, right: unknown): boolean {
@@ -93,7 +99,8 @@ export function overlayPaintText(overlays: unknown): string {
 
 /** Image fetching, sanitizing and rasterizing load only once admitted images need preparing. */
 const prepareOnDemand: typeof prepareMapImages = async (value, context, services) =>
-  (loadMapImageRuntime.loaded ?? await loadMapImageRuntime()).prepareMapImages(value, context, services);
+  (loadMapImageRuntime.loaded ?? await loadMapImageRuntime()).prepareMapImages(value,
+    { ...context, fetchController: new AbortController() }, services);
 
 /** Coordinates admitted resources and portable image preparation for one component owner. */
 export class MapOwnedFeatures {
@@ -216,7 +223,7 @@ export class MapOwnedFeatures {
       const desired = new Map<string, CachedImage>();
       const changed = images.images.filter(descriptor => {
         const cached = this.cache.get(descriptor.id);
-        if (cached?.key === imageKey(descriptor) && cached.image.image) { desired.set(descriptor.id, cached); return false; }
+        if (cached !== undefined && sameImage(cached.descriptor, descriptor) && cached.image.image) { desired.set(descriptor.id, cached); return false; }
         return true;
       });
       if (changed.length > 0) {
@@ -227,7 +234,7 @@ export class MapOwnedFeatures {
         for (let index = 0; index < changed.length; index += 1) {
           const descriptor = changed[index]!; const image = prepared.images[index];
           if (!image || image.id !== descriptor.id) failed();
-          desired.set(descriptor.id, { key: imageKey(descriptor), image });
+          desired.set(descriptor.id, { descriptor, image });
         }
       }
       // Older injected preparers without accounting are conservatively charged a whole batch.

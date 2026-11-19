@@ -78,6 +78,8 @@ export class MapDrawingController {
   /** The pointer coordinate a rubber-band segment runs to, while drawing. */
   private previewPoint?: LyraMapDrawingPoint;
   private previewFrame?: number;
+  /** The window that scheduled `previewFrame`; the element may be adopted into another before the frame is cancelled. */
+  private previewView?: Window;
   /** The style generation the temporary resources were last rendered for. */
   private resourceStyle?: number;
   private keyCleanup?: () => void;
@@ -210,6 +212,7 @@ export class MapDrawingController {
 
   cancel(reason: LyraMapDrawingCancelReason, keepMode: boolean, armedMode: LyraMapDrawingMode): boolean {
     const session = this.session;
+    if (reason === 'cancel' && session && this.dispatchingState && this.completing === session) return false;
     if (!session && armedMode !== 'line' && armedMode !== 'polygon') { if (this.editAdmission) this.editCancelled = true; return false; }
     const state = session ? session.snapshot().phase !== 'cancelled' ? session.cancel().state : undefined
       : armedMode === 'line' || armedMode === 'polygon' ? new MapDrawing(armedMode).cancel().state : undefined;
@@ -357,14 +360,14 @@ export class MapDrawingController {
     this.previewPoint = next;
     if (this.previewFrame !== undefined) return;
     const view = this.host.element.ownerDocument.defaultView;
-    const render = (): void => { this.previewFrame = undefined; if (this.session) this.renderResources(); };
+    const render = (): void => { this.previewFrame = undefined; this.previewView = undefined; if (this.session) this.renderResources(); };
     if (!view || typeof view.requestAnimationFrame !== 'function') { render(); return; }
-    this.previewFrame = view.requestAnimationFrame(render);
+    this.previewFrame = view.requestAnimationFrame(render); this.previewView = view;
   }
 
   private clearPreview(render = true): void {
-    if (this.previewFrame !== undefined) this.host.element.ownerDocument.defaultView?.cancelAnimationFrame(this.previewFrame);
-    this.previewFrame = undefined;
+    if (this.previewFrame !== undefined) this.previewView?.cancelAnimationFrame(this.previewFrame);
+    this.previewFrame = undefined; this.previewView = undefined;
     const had = this.previewPoint !== undefined; this.previewPoint = undefined;
     if (had && render && this.session) this.renderResources();
   }

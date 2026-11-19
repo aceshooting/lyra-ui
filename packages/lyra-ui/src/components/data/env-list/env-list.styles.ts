@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -53,6 +53,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
+    ${iconHitTarget}
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
@@ -63,10 +64,10 @@ export const styles = css`
   }
   [part='reveal-button']:hover,
   [part='copy-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='reveal-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-env-list-button-active-bg, color-mix(in oklab, var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='reveal-button']:focus-visible,
   [part='copy-button']:focus-visible {
@@ -98,6 +99,11 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='copy-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-env-list-button-active-bg, color-mix(in oklab, var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+  }
+  [part='limit'] {
+    margin: var(--lr-space-s) 0 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
 `;

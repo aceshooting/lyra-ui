@@ -171,7 +171,8 @@ from that event to correlate a response with the current request.
   to leaves. Partially-selected branches expose `indeterminate`
 - `label: string = ''` — accessible-name fallback for the tree; `role="tree"` lives on an internal
   `[part="base"]` element. A host `aria-label` takes precedence by attribute presence, including an
-  explicit empty string; removing it restores the `label` fallback. External `aria-labelledby`
+  explicit empty string. Removing it restores the `label` fallback. A whitespace-only name uses
+  the localized tree name when no other name is available. External `aria-labelledby`
   idrefs are not forwarded across the shadow boundary.
 - `size: LyraSize | undefined` — optional row density for object data and declarative items.
   Accepts `2xs`, `xs`, `s`, `m`, `l`, `xl` and the `small`, `medium`, `large` aliases.

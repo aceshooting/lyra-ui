@@ -22,6 +22,8 @@ Use `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
 
+`headingLevel` (attribute `heading-level`, default `3`) sets the level of the saved-queries heading; `none` renders plain text.
+
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
 and saved-query updates continue normally. Each edit updates the query once and emits
 `input`/`lr-input` and `change`/`lr-change` on commits, with the complete

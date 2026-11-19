@@ -235,7 +235,7 @@ export const ThemedViewToggle: Story = {
   },
   render: () => html`
     <div
-      style="max-width: 28rem; --lr-widget-view-toggle-active-bg: ${storyColor(
+      style="max-width: 28rem; --lr-widget-radius: var(--lr-radius-container); --lr-widget-header-padding: var(--lr-space-l); --lr-widget-view-toggle-active-bg: ${storyColor(
         'successQuiet',
       )}; --lr-widget-view-toggle-active-color: ${storyColor('success')}; --lr-widget-view-toggle-active-border-color: ${storyColor(
         'success',

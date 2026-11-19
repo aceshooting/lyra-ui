@@ -40,6 +40,28 @@ class Demo extends LyraElement {
 }
 customElements.define(tag("demo-base"), Demo);
 
+class ResumableLoadDemo extends LyraElement {
+  resumed = 0;
+  signal: AbortSignal | undefined;
+
+  startLoad(): void {
+    this.signal = this.beginAbortableLoad();
+  }
+
+  finishLoad(): void {
+    this.endAbortableLoad(this.signal);
+  }
+
+  protected override resumeInterruptedLoad(): void {
+    this.resumed += 1;
+  }
+
+  override render() {
+    return html`<span>resumable</span>`;
+  }
+}
+customElements.define(tag('demo-resumable-load'), ResumableLoadDemo);
+
 class StyledDemo extends LyraElement {
   static override styles = [
     LyraElement.styles,
@@ -2923,5 +2945,35 @@ describe('LyraElement per-instance and per-call work', () => {
       Object.defineProperty(globalThis, 'Node', descriptor);
     }
     expect(seeded).to.equal(false);
+  });
+});
+
+describe('LyraElement interrupted loads', () => {
+  const connectedDemo = async (): Promise<ResumableLoadDemo> =>
+    fixture<ResumableLoadDemo>(html`<lr-demo-resumable-load></lr-demo-resumable-load>`);
+
+  it('resumes a load that a same-task DOM move interrupted', async () => {
+    const el = await connectedDemo();
+    const parent = el.parentNode!;
+    el.startLoad();
+    el.remove();
+    expect(el.signal?.aborted).to.equal(true);
+    parent.append(el);
+    expect(el.resumed).to.equal(1);
+    el.remove();
+    parent.append(el);
+    expect(el.resumed, 'the interruption is consumed by the first reconnect').to.equal(1);
+  });
+
+  it('does not resume a load that already finished or was never started', async () => {
+    const el = await connectedDemo();
+    const parent = el.parentNode!;
+    el.remove();
+    parent.append(el);
+    el.startLoad();
+    el.finishLoad();
+    el.remove();
+    parent.append(el);
+    expect(el.resumed).to.equal(0);
   });
 });

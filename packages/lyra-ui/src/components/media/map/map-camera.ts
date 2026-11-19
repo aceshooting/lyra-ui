@@ -14,8 +14,8 @@ export interface LyraMapCameraOptions {
   readonly bearing?: number;
   /** Pitch in degrees, clamped into `[0, 85]`. */
   readonly pitch?: number;
-  /** Animation length in milliseconds for `flyTo()` and `easeTo()`; a negative or non-finite value
-   *  uses the engine's own default. Ignored by `jumpTo()` and under `prefers-reduced-motion`. */
+  /** Animation length in milliseconds for `flyTo()` and `easeTo()`, capped at 60000; a negative or
+   *  non-finite value uses the engine's own default. Ignored by `jumpTo()` and under `prefers-reduced-motion`. */
   readonly duration?: number;
 }
 
@@ -27,6 +27,8 @@ export interface MapCameraTarget {
   readonly pitch?: number;
   readonly duration?: number;
 }
+
+const MAX_CAMERA_DURATION_MS = 60_000;
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -56,7 +58,7 @@ export function normalizeCameraOptions(options: unknown, zoomLimits: readonly [n
     target.bearing === undefined &&
     target.pitch === undefined
   ) return undefined;
-  if (isFiniteNumber(source['duration']) && source['duration'] >= 0) target.duration = source['duration'];
+  if (isFiniteNumber(source['duration']) && source['duration'] >= 0) target.duration = finiteRange(source['duration'], 0, 0, MAX_CAMERA_DURATION_MS);
   return Object.freeze(target);
 }
 

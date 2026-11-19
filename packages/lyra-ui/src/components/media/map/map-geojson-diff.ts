@@ -4,15 +4,8 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import type { MapLibreGeoJsonDiff } from './map-loader.js';
-
-function isRuntimeRecord(value: unknown): value is object {
-  try {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
 
 function isRuntimeArray(value: unknown): value is readonly unknown[] {
   try {
@@ -101,7 +94,7 @@ function projectedGeoJsonOwnValue(
   value: object,
   key: PropertyKey,
   budget: GeoJsonProjectionBudget,
-): unknown | typeof MISSING_OWN_DATA_DESCRIPTOR | typeof INVALID_GEOJSON_PROJECTION_VALUE {
+): unknown {
   if (!spendGeoJsonProjectionWork(budget)) return INVALID_GEOJSON_PROJECTION_VALUE;
   const descriptor = ownDataValue(value, key);
   if (isUnsafeDescriptor(descriptor)) return INVALID_GEOJSON_PROJECTION_VALUE;
@@ -142,7 +135,7 @@ function projectGeoJsonComparableValue(
   value: unknown,
   budget: GeoJsonProjectionBudget,
   depth = 0,
-): unknown | typeof INVALID_GEOJSON_PROJECTION_VALUE {
+): unknown {
   if (!spendGeoJsonProjectionWork(budget) || depth > GEOJSON_PROJECTION_DEPTH_LIMIT)
     return INVALID_GEOJSON_PROJECTION_VALUE;
   if (
@@ -232,7 +225,7 @@ function projectGeoJsonProperties(
   budget: GeoJsonProjectionBudget,
 ): ReadonlyMap<string, unknown> | undefined {
   if (value === null || value === undefined) return EMPTY_CANONICAL_GEOJSON_PROPERTIES;
-  if (!isRuntimeRecord(value)) return undefined;
+  if (!isSafeNonArrayObject(value)) return undefined;
   const output = new Map<string, unknown>();
   try {
     for (const key in value) {
@@ -255,7 +248,7 @@ function projectGeoJsonFeature(
   readonly diagnostic: CanonicalGeoJsonDiagnosticFeature;
   readonly feature: CanonicalGeoJsonFeature | undefined;
 } | undefined {
-  if (!isRuntimeRecord(value)) return undefined;
+  if (!isSafeNonArrayObject(value)) return undefined;
   const type = projectedGeoJsonOwnValue(value, 'type', budget);
   const id = projectedGeoJsonOwnValue(value, 'id', budget);
   const geometry = projectedGeoJsonOwnValue(value, 'geometry', budget);
@@ -300,7 +293,7 @@ function projectGeoJsonFeature(
     feature: Object.freeze({
       id,
       index,
-      feature: value as Feature,
+      feature: value as unknown as Feature,
       geometryIdentity: geometry,
       bboxIdentity: bbox,
       geometry: comparableGeometry,
@@ -316,7 +309,7 @@ function projectGeoJsonFeature(
  */
 export function projectGeoJson(value: unknown, comparableValues = new WeakMap<object, unknown>()): CanonicalGeoJsonProjection {
   try {
-    if (!isRuntimeRecord(value)) return Object.freeze({ ...EMPTY_CANONICAL_GEOJSON_PROJECTION });
+    if (!isSafeNonArrayObject(value)) return Object.freeze({ ...EMPTY_CANONICAL_GEOJSON_PROJECTION });
     const budget: GeoJsonProjectionBudget = {
       remaining: GEOJSON_DIFF_VALUE_LIMIT,
       seen: comparableValues,
@@ -545,7 +538,7 @@ const admittedGeoJson = new WeakMap<object, CanonicalGeoJsonProjection>();
 
 /** Reuse admitted immutable GeoJSON, or reproject it after an explicit mutable-source refresh. */
 export function projectAdmittedGeoJson(value: unknown, refresh = false): CanonicalGeoJsonProjection {
-  if (!isRuntimeRecord(value)) return projectGeoJson(value);
+  if (!isSafeNonArrayObject(value)) return projectGeoJson(value);
   if (refresh) admittedComparableValues = new WeakMap();
   let projection = refresh ? undefined : admittedGeoJson.get(value);
   if (!projection) admittedGeoJson.set(value, (projection = projectGeoJson(value, admittedComparableValues)));

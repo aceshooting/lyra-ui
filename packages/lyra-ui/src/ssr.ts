@@ -2,6 +2,7 @@ import {
   ROOT_BARREL_OPTIONAL_PEER_TAGS,
   ROOT_BARREL_TAGS,
 } from './internal/root-registration-allowlist.js';
+import { escapeHtml } from './internal/escape-html.js';
 import { tag } from './internal/prefix.js';
 
 /** How a Lyra component participates in the initial server response. */
@@ -646,14 +647,6 @@ export function getLyraSsrMode(tagName: string): LyraSsrMode | undefined {
   return allTagSet.has(tagName) ? 'render-and-hydrate' : undefined;
 }
 
-function escapeAttribute(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
-}
-
 /**
  * An `@lit-labs/ssr`-compatible renderer for the explicit client-render tier.
  * Put it before Lit's renderer so browser-dependent constructors are not invoked on the server.
@@ -700,7 +693,7 @@ export class LyraSsrFallbackRenderer {
 
   renderAttributes(): string[] {
     return [...this.attributes].map(([name, value]) =>
-      value === '' ? ` ${name}` : ` ${name}="${escapeAttribute(value)}"`,
+      value === '' ? ` ${name}` : ` ${name}="${escapeHtml(value)}"`,
     );
   }
 }

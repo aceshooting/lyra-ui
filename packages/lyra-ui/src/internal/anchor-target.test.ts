@@ -7,6 +7,7 @@ import {
   DocumentAnchorTarget,
   HIGHLIGHT_CANDIDATE_LIMIT,
   HIGHLIGHT_SNAPSHOT_LIMIT,
+  observeTextSelection,
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from './anchor-target.js';
@@ -891,3 +892,70 @@ for (const documentSelection of ['missing', 'empty', 'collapsed', 'outside'] as 
     }
   });
 }
+
+describe('observeTextSelection', () => {
+  const setup = async () => {
+    const page = await fixture<HTMLElement>(
+      litHtml`<div><p id="inside">selected inside the content</p><p id="outside">selected elsewhere on the page</p></div>`,
+    );
+    const inside = page.querySelector<HTMLElement>('#inside')!;
+    const outside = page.querySelector<HTMLElement>('#outside')!;
+    const texts: string[] = [];
+    const release = observeTextSelection(page, inside, (_range, text) => texts.push(text));
+    const select = (node: Node): void => {
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      selection.addRange(range);
+    };
+    return { inside, outside, texts, release, select };
+  };
+
+  it('reports a selection ending inside the content once, and not again while unchanged', async () => {
+    const { inside, texts, release, select } = await setup();
+    try {
+      select(inside);
+      inside.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      inside.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      expect(texts.join('|')).to.equal('selected inside the content');
+    } finally {
+      release();
+      window.getSelection()!.removeAllRanges();
+    }
+  });
+
+  it('ignores a selection made elsewhere on the page when the pointer is released over the content', async () => {
+    const { inside, outside, texts, release, select } = await setup();
+    try {
+      select(outside);
+      inside.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      expect(texts.length).to.equal(0);
+    } finally {
+      release();
+      window.getSelection()!.removeAllRanges();
+    }
+  });
+
+  it('does not report a selection that holds only whitespace', async () => {
+    const { inside, texts, release, select } = await setup();
+    try {
+      inside.textContent = '   ';
+      select(inside);
+      inside.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      expect(texts.length).to.equal(0);
+    } finally {
+      release();
+      window.getSelection()!.removeAllRanges();
+    }
+  });
+
+  it('stops reporting once released', async () => {
+    const { inside, texts, release, select } = await setup();
+    release();
+    select(inside);
+    inside.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    window.getSelection()!.removeAllRanges();
+    expect(texts.length).to.equal(0);
+  });
+});

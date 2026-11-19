@@ -126,3 +126,13 @@ it('keeps the focused control on its own condition when the host drops an earlie
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement === control && control.isConnected).to.equal(true);
 });
+
+it('contains the owned pickers\' request and overflow events', async () => {
+  const { el } = await everyKindBuilder();
+  const leaked: string[] = [];
+  const names = ['lr-change-request', 'lr-create', 'lr-retry-request', 'lr-source-error', 'lr-chip-change', 'lr-overflow-toggle'];
+  for (const name of names) el.addEventListener(name, () => leaked.push(name));
+  const inner = valueControl(el, 'enum');
+  for (const name of names) inner.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, cancelable: true }));
+  expect(leaked).to.deep.equal([]);
+});

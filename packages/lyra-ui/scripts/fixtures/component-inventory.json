@@ -1777,6 +1777,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-accordion-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-container)"
           }
         ],
         "cssStates": [],
@@ -1864,6 +1870,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "outlined"
+          },
+          {
+            "name": "aria-describedby",
+            "property": "hostDescribedBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "disabled",
@@ -2095,6 +2111,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-raised)"
+          },
+          {
+            "name": "--lr-accordion-item-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-font-size)"
           },
           {
             "name": "--lr-accordion-item-hide-duration",
@@ -9635,6 +9657,26 @@
             "default": false
           },
           {
+            "name": "held-file-count",
+            "property": "heldFileCount",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "held-total-size",
+            "property": "heldTotalSize",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -9643,6 +9685,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "max-file-size",
+            "property": "maxFileSize",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "max-files",
+            "property": "maxFiles",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "max-total-size",
+            "property": "maxTotalSize",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "multiple",
@@ -9686,6 +9758,16 @@
             "default": ""
           },
           {
+            "name": "allowedMimeTypes",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "EMPTY_MIME_TYPES"
+          },
+          {
             "name": "appearance",
             "attribute": "appearance",
             "type": "LyraAppearance",
@@ -9725,6 +9807,36 @@
             "default": false
           },
           {
+            "name": "forbiddenMimeTypes",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "EMPTY_MIME_TYPES"
+          },
+          {
+            "name": "heldFileCount",
+            "attribute": "held-file-count",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "heldTotalSize",
+            "attribute": "held-total-size",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -9733,6 +9845,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "maxFiles",
+            "attribute": "max-files",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "maxFileSize",
+            "attribute": "max-file-size",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "maxTotalSize",
+            "attribute": "max-total-size",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "multiple",
@@ -18700,6 +18842,16 @@
             "default": null
           },
           {
+            "name": "aria-describedby",
+            "property": "hostDescribedBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -19480,6 +19632,10 @@
         ],
         "parts": [
           {
+            "name": "autoplay-button",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -19560,6 +19716,18 @@
             "default": "16/9"
           },
           {
+            "name": "--lr-carousel-controls-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-carousel-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
             "name": "--lr-carousel-indicator-current-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -19570,6 +19738,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-carousel-indicator-current-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thick)"
           },
           {
             "name": "--lr-carousel-navigation-active-bg",
@@ -40005,6 +40179,12 @@
             "default": "var(--lr-shadow-m)"
           },
           {
+            "name": "--lr-dashboard-grid-resize-handle-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-strong)"
+          },
+          {
             "name": "--lr-dashboard-grid-resize-handle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -45558,6 +45738,26 @@
             "default": "outlined"
           },
           {
+            "name": "aria-describedby",
+            "property": "hostDescribedBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -45629,6 +45829,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "appearance",
             "attribute": "appearance",
@@ -52375,6 +52585,12 @@
             "default": "var(--lr-space-l)"
           },
           {
+            "name": "--lr-drop-zone-overlay-z-index",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-layer-dropdown)"
+          },
+          {
             "name": "--lr-drop-zone-radius",
             "deprecated": null,
             "hasDefault": true,
@@ -57074,6 +57290,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "name",
             "deprecated": null
           },
@@ -57091,6 +57311,17 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-env-list-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-env-list-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
           {
             "name": "--lr-env-list-reveal-active-bg",
             "deprecated": null,
@@ -60242,32 +60473,7 @@
         ],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [
-          {
-            "module": "src/components/media/file-input/file-input.class.ts",
-            "name": "DEFAULT_MAX_FILE_SIZE_BYTES",
-            "kind": "variable",
-            "type": "unknown",
-            "readonly": false,
-            "deprecated": null
-          },
-          {
-            "module": "src/components/media/file-input/file-input.class.ts",
-            "name": "DEFAULT_MAX_FILES",
-            "kind": "variable",
-            "type": "number",
-            "readonly": false,
-            "deprecated": null
-          },
-          {
-            "module": "src/components/media/file-input/file-input.class.ts",
-            "name": "DEFAULT_MAX_TOTAL_SIZE_BYTES",
-            "kind": "variable",
-            "type": "unknown",
-            "readonly": false,
-            "deprecated": null
-          }
-        ],
+        "moduleExports": [],
         "form": {
           "associated": true,
           "properties": [
@@ -60382,6 +60588,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -60441,6 +60656,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "treeSource",
@@ -62245,6 +62469,16 @@
             "default": "card"
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -62294,6 +62528,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "card"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -62545,10 +62789,21 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-flow-minimap-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-flow-minimap-block-size",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-8rem)"
+          },
+          {
+            "name": "--lr-flow-minimap-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-flow-minimap-inline-size",
@@ -66667,6 +66922,16 @@
             "default": null
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
+          },
+          {
             "name": "hint",
             "property": "hint",
             "type": "string",
@@ -66772,6 +67037,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "hint",
@@ -72073,10 +72348,34 @@
             "default": "var(--lr-icon-button-size)"
           },
           {
+            "name": "--lr-image-comparer-divider-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-image-comparer-divider-width",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--divider-width, var(--lr-size-1px))"
+          },
+          {
+            "name": "--lr-image-comparer-handle-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-image-comparer-handle-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-image-comparer-handle-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-image-comparer-handle-size",
@@ -79273,6 +79572,11 @@
           },
           {
             "name": "--lr-lightbox-overlay-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-lightbox-status-color",
             "deprecated": null,
             "hasDefault": false
           }
@@ -87024,6 +87328,12 @@
             "type": "CustomEvent<LyraMediaCardOpenDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-render-error",
+            "type": "CustomEvent<{ error: Error }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -87041,6 +87351,10 @@
           },
           {
             "name": "media",
+            "deprecated": null
+          },
+          {
+            "name": "media-error",
             "deprecated": null
           },
           {
@@ -100292,7 +100606,7 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "| string | null",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -100388,6 +100702,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "disableNavigationToggle",
             "attribute": "disable-navigation-toggle",
@@ -100632,6 +100956,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-page-aside-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-page-aside-width",
             "deprecated": null,
             "hasDefault": true,
@@ -100666,6 +100996,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "1fr"
+          },
+          {
+            "name": "--lr-page-menu-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-page-menu-width",
@@ -102263,6 +102599,12 @@
             "composed": true
           },
           {
+            "name": "lr-render-error",
+            "type": "CustomEvent<{ error: Error }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-zoom-change",
             "type": "CustomEvent<{ zoom: number }>",
             "cancelable": "never",
@@ -102280,6 +102622,10 @@
           },
           {
             "name": "controls",
+            "deprecated": null
+          },
+          {
+            "name": "error",
             "deprecated": null
           },
           {
@@ -119857,9 +120203,19 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-describedby",
+            "property": "hostDescribedBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "| string | null",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -119927,6 +120283,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "effectiveMode",
             "attribute": null,
@@ -120058,6 +120424,30 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-responsive-panel-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-responsive-panel-docked-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-responsive-panel-docked-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-container)"
+          },
+          {
+            "name": "--lr-responsive-panel-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
             "name": "--lr-responsive-panel-overlay-color",
             "deprecated": null,
             "hasDefault": true,
@@ -120074,6 +120464,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-responsive-panel-padding",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-responsive-panel-sheet-max-block-size",
@@ -124086,6 +124481,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "controls",
             "property": "controls",
             "type": "boolean",
@@ -124157,6 +124562,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "controls",
             "attribute": "controls",
@@ -124302,6 +124717,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-2rem)"
+          },
+          {
+            "name": "--lr-scroller-controls-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-scroller-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-scroller-hover-outline-color",
@@ -161053,6 +161480,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-describedby",
+            "property": "hostDescribedBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -161472,6 +161909,24 @@
             "default": 0
           },
           {
+            "name": "--lr-widget-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-widget-body-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-widget-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
             "name": "--lr-widget-collapse-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -161502,10 +161957,28 @@
             "default": "max(var(--lr-space-l), var(--lr-safe-area-top)) max(var(--lr-space-l), var(--lr-safe-area-inline-end)) max(var(--lr-space-l), var(--lr-safe-area-bottom)) max(var(--lr-space-l), var(--lr-safe-area-inline-start))"
           },
           {
+            "name": "--lr-widget-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-widget-header-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s) var(--lr-space-m)"
+          },
+          {
             "name": "--lr-widget-overlay-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-overlay)"
+          },
+          {
+            "name": "--lr-widget-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-widget-view-toggle-active-bg",

@@ -193,7 +193,7 @@ export function prioritizedHighlightCandidates<T extends LyraHighlight>(
   return ordinary;
 }
 
-function selectionRange(root: LyraElement, shadowRoots: readonly ShadowRoot[]): Range | null {
+function selectionRange(root: Element, shadowRoots: readonly ShadowRoot[]): Range | null {
   const document = root.ownerDocument;
   const view = document.defaultView;
   const globalSelection = (view?.getSelection() ?? null) as
@@ -225,6 +225,54 @@ function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
       : current.parentNode;
   }
   return false;
+}
+
+/** Shadow roots through which a selection inside `contentRoot` must be read for `host`. */
+function textSelectionShadowRoots(host: Element, contentRoot: Element): ShadowRoot[] {
+  const ShadowRootCtor = contentRoot.ownerDocument.defaultView?.ShadowRoot;
+  if (!ShadowRootCtor) return [];
+  const roots = [host.shadowRoot, contentRoot.getRootNode()];
+  return roots.filter((root, index): root is ShadowRoot =>
+    root instanceof ShadowRootCtor && roots.indexOf(root) === index);
+}
+
+/**
+ * Calls `onSelect` once for each non-collapsed selection that ends inside `contentRoot` (after the
+ * pointer that drags it is released, or after a keyboard/touch change settles). A selection
+ * elsewhere on the page never reports, and an unchanged range is not reported twice. Returns the
+ * function that removes every listener.
+ */
+export function observeTextSelection(
+  host: Element,
+  contentRoot: Element,
+  onSelect: (range: Range, text: string, rects: ReturnType<typeof boundedSelectionRects>) => void,
+  shadowRoots: readonly ShadowRoot[] = textSelectionShadowRoots(host, contentRoot),
+): () => void {
+  let reported: readonly [Node, number, Node, number] | undefined;
+  const onSelectionEnd = (): void => {
+    const range = selectionRange(host, shadowRoots);
+    if (!range || !containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer)) {
+      reported = undefined;
+      return;
+    }
+    if (
+      reported &&
+      reported[0] === range.startContainer && reported[1] === range.startOffset &&
+      reported[2] === range.endContainer && reported[3] === range.endOffset
+    ) return;
+    const text = boundedSelectionText(range);
+    if (!text) return;
+    reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
+    onSelect(range, text, boundedSelectionRects(range));
+  };
+  contentRoot.addEventListener('pointerup', onSelectionEnd);
+  contentRoot.addEventListener('keyup', onSelectionEnd);
+  const unsubscribe = subscribeSelectionEnd(contentRoot.ownerDocument, contentRoot, shadowRoots, onSelectionEnd);
+  return () => {
+    contentRoot.removeEventListener('pointerup', onSelectionEnd);
+    contentRoot.removeEventListener('keyup', onSelectionEnd);
+    unsubscribe();
+  };
 }
 
 /**
@@ -523,50 +571,20 @@ export function DocumentAnchorTarget(
      *  where `Selection.getComposedRanges()` exists, `ShadowRoot.getSelection()` next, else
      *  `document.getSelection()`. Collapsed selections never fire. */
     protected selectionShadowRoots(contentRoot: Element): ShadowRoot[] {
-      const view = contentRoot.ownerDocument.defaultView;
-      const ShadowRootCtor = view?.ShadowRoot;
-      if (!ShadowRootCtor) return [];
-      const roots = [this.shadowRoot, contentRoot.getRootNode()];
-      return roots.filter((root, index): root is ShadowRoot =>
-        root instanceof ShadowRootCtor && roots.indexOf(root) === index);
+      return textSelectionShadowRoots(this, contentRoot);
     }
 
     protected bindTextSelection(contentRoot: Element): void {
       this.unbindTextSelection();
-      const document = contentRoot.ownerDocument;
-      // A drag fires `selectionchange` continuously, and its release is followed by a pointerup and
-      // possibly a trailing `selectionchange`; a keyup such as Ctrl+C changes nothing. Ignore changes
-      // while the primary pointer is down, and report a range only when it differs from the last one.
-      let reported: readonly [Node, number, Node, number] | undefined;
-
-      const onSelectionEnd = (): void => {
-        const range = selectionRange(this, this.selectionShadowRoots(contentRoot));
-        if (!range || !containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer)) {
-          reported = undefined;
-          return;
-        }
-        if (
-          reported &&
-          reported[0] === range.startContainer && reported[1] === range.startOffset &&
-          reported[2] === range.endContainer && reported[3] === range.endOffset
-        ) return;
-        const text = boundedSelectionText(range);
-        if (!text) return;
-        reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
-        const anchor = this.computeSelectionAnchor(range, text);
-        const rects = boundedSelectionRects(range);
-        this.emit('lr-text-select', { text, anchor, rects });
-      };
-
-      contentRoot.addEventListener('pointerup', onSelectionEnd);
-      contentRoot.addEventListener('keyup', onSelectionEnd);
-      const unsubscribe = subscribeSelectionEnd(document, contentRoot, this.selectionShadowRoots(contentRoot), onSelectionEnd);
-
-      this.selectionCleanup = () => {
-        contentRoot.removeEventListener('pointerup', onSelectionEnd);
-        contentRoot.removeEventListener('keyup', onSelectionEnd);
-        unsubscribe();
-      };
+      this.selectionCleanup = observeTextSelection(
+        this,
+        contentRoot,
+        (range, text, rects) => {
+          const anchor = this.computeSelectionAnchor(range, text);
+          this.emit('lr-text-select', { text, anchor, rects });
+        },
+        this.selectionShadowRoots(contentRoot),
+      );
     }
 
     /** Removes the current selection-root listeners without requiring the host to disconnect. */

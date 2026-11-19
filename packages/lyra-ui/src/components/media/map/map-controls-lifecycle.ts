@@ -1,5 +1,5 @@
 import type { MapSceneControlActivation, MapSceneControlContext } from './map-scene-controls.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { moveKeepingFocus } from './map-control-chrome.js';
 import { mapGeolocationErrorCode, type LyraMapGeolocationErrorCode, type MapOwnedControlKind, type LyraMapControlPosition,
   type NormalizedMapControlOptions } from './map-control-options.js';
 
@@ -127,23 +127,12 @@ export class MapControlsLifecycle {
           const before = entries.slice(index + 1).find(next => next.root?.parentNode === parent)?.root ?? null;
           const root = entry.root;
           if (root.parentNode === parent && (before ? root.nextSibling === before : root.nextSibling === null)) continue;
-          const tree = root.getRootNode() as Document | ShadowRoot;
-          const active = tree.activeElement;
-          const focus = active instanceof HTMLElement && root.contains(active) ? active : undefined;
           if (generation !== this.generation || !this.current(entry)) return;
-          const document = root.ownerDocument;
-          let focusTransferred = false;
-          const trackFocus = (): void => { focusTransferred = true; };
-          if (focus) document.addEventListener('focus', trackFocus, true);
-          try { parent.insertBefore(root, before); }
-          finally { if (focus) document.removeEventListener('focus', trackFocus, true); }
+          const restore = moveKeepingFocus(root, () => {
+            if (generation === this.generation && this.current(entry)) parent.insertBefore(root, before);
+          });
           if (generation !== this.generation || !this.current(entry)) return;
-          const remaining = deepActiveElementIn(document);
-          const lostFocus = remaining === null || remaining === document.body || remaining === document.documentElement;
-          // Repair only removal-induced loss; a callback's new focus target takes precedence.
-          if (focus?.isConnected && root.contains(focus) && focus.ownerDocument === document && !focusTransferred && lostFocus) {
-            focus.focus({ preventScroll: true });
-          }
+          restore();
           if (generation !== this.generation || !this.current(entry)) return;
         } catch {
           if (generation === this.generation && this.current(entry)) {

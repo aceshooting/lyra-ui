@@ -622,6 +622,22 @@ it('uses only CSS logical properties in both stylesheets (no left/right/margin-*
   }
 });
 
+it('mirrors a horizontal timeline under dir="rtl"', async () => {
+  const order = async (dir: 'ltr' | 'rtl'): Promise<boolean> => {
+    const el = (await fixture(html`
+      <lr-timeline dir=${dir} orientation="horizontal" style="inline-size: 600px">
+        <lr-timeline-item>First</lr-timeline-item>
+        <lr-timeline-item>Second</lr-timeline-item>
+        <lr-timeline-item>Third</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    const [first, last] = [el.querySelector('lr-timeline-item:first-child')!, el.querySelector('lr-timeline-item:last-child')!];
+    return first.getBoundingClientRect().left < last.getBoundingClientRect().left;
+  };
+  expect(await order('ltr')).to.equal(true);
+  expect(await order('rtl')).to.equal(false);
+});
+
 describe('scale="time"', () => {
   // Deliberately uneven: two events days apart, the third decades later. Under the default flow
   // layout all three look equidistant, which is the reported defect.

@@ -16,7 +16,7 @@ it('keeps thumbnail reconciliation linear while retaining, replacing and retirin
   let control: LyraFileInput | undefined;
   try {
     control = await fixture<LyraFileInput>(html`<lr-file-input multiple label="Images"></lr-file-input>`);
-    const files = Array.from({ length: 128 }, (_, index) => new File(['image'], `image-${index}.png`, { type: 'image/png' }));
+    const files = Array.from({ length: 40 }, (_, index) => new File(['image'], `image-${index}.png`, { type: 'image/png' }));
     control.files = files;
     await control.updateComplete;
     expect(control.shadowRoot!.querySelectorAll('[part="file-image"]').length).to.equal(files.length);

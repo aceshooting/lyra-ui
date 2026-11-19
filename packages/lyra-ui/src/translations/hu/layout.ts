@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Karusszel diái',
   carouselGoTo: 'Ugrás a diára: {index}',
+  carouselPauseRotation: 'Forgatás szüneteltetése',
+  carouselResumeRotation: 'Forgatás folytatása',
   scrollerLabel: 'Görgethető tartalom',
   scrollPrevious: 'Görgetés vissza',
   scrollNext: 'Görgetés előre',

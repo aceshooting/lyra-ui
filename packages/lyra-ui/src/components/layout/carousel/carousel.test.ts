@@ -3208,7 +3208,7 @@ describe("carousel drag completion", () => {
     drag(141);
     // wait-reason: negative assertion, the 0ms suppression timer must be cancelled rather than leaked
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
-    expect((el as unknown as { suppressClick: boolean }).suppressClick).to.be.false;
+    expect(viewport.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))).to.equal(true);
   });
 
   it("finishes an in-progress drag when the carousel disconnects mid-gesture", async () => {
@@ -3518,9 +3518,9 @@ it("falls back to no reduced-motion query and an inline timer-less scheduler in 
       new PointerEvent("pointerup", { pointerId: 170, pointerType: "mouse", bubbles: true })
     );
     expect(
-      (el as unknown as { suppressClick: boolean }).suppressClick,
-      "with no window to schedule the reset, it must happen inline"
-    ).to.be.false;
+      viewport.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
+      "without a window a new click is accepted immediately"
+    ).to.equal(true);
   } finally {
     el.remove();
     parent.append(el);

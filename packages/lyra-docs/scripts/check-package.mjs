@@ -32,9 +32,12 @@ assert.equal(manifest.private, undefined, 'The Docs package must be publishable'
 assert.equal(manifest.type, 'module');
 assert.equal(manifest.engines.node, '>=22');
 assert.equal(manifest.packageManager, JSON.parse(read('package.json')).packageManager);
-assert.deepEqual(manifest.sideEffects, [
-  './dist/docx/editor.js', './src/docx/editor.ts', './dist/docx/editor.css',
-]);
+// The side-effect set is derived from the exports map; the source twin of the registration entry
+// stays so workspace source resolution (tests, Storybook) is not tree-shaken away.
+const editorEntry = manifest.exports['./docx/editor'].default;
+const editorSourceTwin = editorEntry.replace('./dist/', './src/').replace(/\.js$/u, '.ts');
+assert(existsSync(path.join(packageRoot, editorSourceTwin)), `Missing ${editorSourceTwin}`);
+assert.deepEqual(manifest.sideEffects, [editorEntry, editorSourceTwin, manifest.exports['./docx/editor.css']]);
 assert.deepEqual(manifest.publishConfig, { access: 'public' });
 assert.equal(manifest.repository.directory, 'packages/lyra-docs');
 assert.equal(manifest.scripts.prepack, 'pnpm --filter @aceshooting/lyra-ui build && pnpm build');

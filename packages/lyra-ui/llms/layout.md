@@ -1,3 +1,4 @@
+
 ## `lr-multi-split`
 
 The floating drawer enters the browser top layer within the split's allocation. An intrinsically
@@ -601,6 +602,11 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   a `storageKey` there is no persistence and storage is never touched — listen for
   `lr-toggle` and persist the state yourself.
 
+The fullscreen dialog receives the host's `aria-describedby` references. A fullscreen request
+listener can resolve the request by writing `fullscreen` synchronously. When observing a widget
+that contains another view switcher, check `event.target === widget` before reading the widget's
+`lr-view-change` detail.
+
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
 built-in toggle. Call `preventDefault()` on the request to leave `collapsed` and any persisted state
@@ -654,6 +660,11 @@ overflow is measured, not assumed: a row that fits is left unmasked.
 Forced-colors mode disables those decorative masks while retaining the native scroll owners. The
 body is the block-axis scroll owner whenever the widget receives a constrained height, so the
 header remains fixed while deep body content scrolls.
+
+For the docked frame, `--lr-widget-bg`, `--lr-widget-border-color` and `--lr-widget-radius`
+control the fill, border and corners. `--lr-widget-header-padding`, `--lr-widget-body-padding`
+and `--lr-widget-gap` override the size tier's padding and header gap. The selected view has a
+visible outline in forced colors. Collapsing a body that held focus returns focus to its toggle.
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
@@ -774,7 +785,10 @@ slide itself; they do not change the active slide or move focus away from it.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
   carousel or while a dropdown, popover, context menu or picker panel (`lr-select`, `lr-combobox`,
   `lr-color-picker`, `lr-date-input`, `lr-time-input`) inside a slide is open, and remains off
-  under `prefers-reduced-motion: reduce`.
+  under `prefers-reduced-motion: reduce`. A multi-page autoplay carousel also displays an
+  `autoplay-button`. Pausing with this button lasts until the reader resumes rotation.
+  Override `carouselPauseRotation` and `carouselResumeRotation` to localize the button text.
+  An empty or whitespace-only `autoplay-interval` uses the 3000 ms default.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons; a focused one that disables itself at the first or last page hands focus to the other
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
@@ -874,7 +888,10 @@ active aliases `pagination-item-active` / `pagination-item--active`, and `indica
 (logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions
 `--lr-carousel-indicator-current-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-carousel-indicator-current-border-color` (default `var(--lr-color-brand)`) color only the
-active `indicator-dot`. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
+active `indicator-dot`. Its thicker border distinguishes the current page on hover and in
+forced colors. Set `--lr-carousel-indicator-current-border-width` to adjust the thickness.
+`--lr-carousel-gap` sets the space below the viewport and `--lr-carousel-controls-gap` sets
+spacing within and between control rows. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
 overrides the basis computed from `slidesPerPage`; prefer the property for normal multi-slide
 layouts because it also updates paging and accessibility state.
 Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,
@@ -1015,6 +1032,11 @@ vertical scroller. Before the first client measurement, both cues are hidden and
 controls are disabled, so server-rendered markup never advertises a false scroll direction. A control
 that has focus when it reaches its edge and disables hands focus to the viewport rather than
 dropping it to `<body>`.
+
+Set `accessibleLabel` or the host `aria-label` to name the viewport. The viewport and its
+buttons keep unmodified navigation keys within the scroller. The scroller leaves key events from
+slotted controls available to the application. Set `--lr-scroller-gap` for the space between
+content items and `--lr-scroller-controls-gap` for the space around the viewport.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`
@@ -3330,6 +3352,12 @@ the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value �
 **CSS parts:** `base`, `backdrop`, `panel`, `header`, `body`, `footer` (`backdrop` is only rendered
 in the overlay presentation).
 
+The docked frame accepts `--lr-responsive-panel-bg`, `--lr-responsive-panel-docked-radius` and
+`--lr-responsive-panel-docked-border-color`. Set `--lr-responsive-panel-padding` to override
+header, body and footer padding, and `--lr-responsive-panel-gap` for the footer action gap.
+The overlay dialog accepts a programmatic `accessibleLabel` and references the host's
+`aria-describedby` targets. Writing `open` in a close-request listener resolves the request.
+
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
 `var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
@@ -4146,6 +4174,10 @@ meant for slotted content, and it owns the card's `:focus-visible` ring), `media
 hidden entirely when empty), `body` (wrapper around the default slot), `footer` (wrapper around the
 `footer` and `footer-actions` slots, hidden entirely when both are empty).
 
+The actionable button and linked anchor receive the host's `aria-describedby` references.
+Canceling the native click suppresses card activation. Keyboard focus rings sit inside the card,
+and an actionable accent stripe keeps its configured color on hover.
+
 **Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
 gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`
 (default `var(--lr-color-border-subtle)`), `--border-radius`, and `--border-width` control the outer
@@ -4635,6 +4667,11 @@ Import the granular details, checkbox and badge registration entries. Adjust the
 for the actual labels. Logical sizing supports RTL and narrower allocations; the checkbox remains
 independently focusable and operable when the summary is disabled.
 
+The details summary and accordion item trigger receive the host's `aria-describedby`
+references. Set `accessibleLabel` on Details to supply the summary name programmatically.
+`--lr-accordion-radius` controls framed group corners and `--lr-accordion-item-font-size`
+sets the item's base text size. The trigger minimum height follows the form-control size tier.
+
 **Themeable custom properties:** accordion item exposes `--lr-accordion-item-spacing` (default
 `var(--lr-form-control-padding-inline)`), `--lr-accordion-item-show-duration` and
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
@@ -4875,9 +4912,10 @@ and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-
 They are real cascade-authoritative public hooks: the `columns`/`rowHeight`/`gap` properties supply
 private computed fallbacks rather than overwriting these public variables inline.
 `--lr-dashboard-grid-cell-hover-outline-color`
-(default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
-preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
-draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
+(default `var(--lr-color-border-strong)`) retints the hover outline on draggable cells. Set it to `transparent` to hide that outline.
+The resize handle has a visible corner grip at rest. Set `--lr-dashboard-grid-resize-handle-color`
+to change its color from the default `var(--lr-color-border-strong)`. An empty `columns`
+attribute restores 12 columns.
 
 **Additional API surface:**
 
@@ -5624,6 +5662,11 @@ own main landmark. Multiple Page instances therefore never share a global `#main
 `navigation-footer`, `navigation-header`, `navigation-toggle`, `navigation-toggle-icon`,
 `skip-to-content`, and `subheader`.
 
+Set `accessibleLabel` to name the navigation landmark programmatically. Empty aside and footer
+slots expose no landmarks. The header becomes a landmark when it contains header content or a
+visible navigation toggle. A navigation request listener can write `navOpen` to resolve the
+request before the component commits it.
+
 **Themeable custom properties:** `--lr-page-aside-width` (default `auto`),
 `--lr-page-banner-height` (`0px`), `--lr-page-header-height` (`0px`),
 `--lr-page-main-width` (`1fr`), `--lr-page-menu-width` (`auto`), and
@@ -5645,9 +5688,9 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
 
-The sticky banner, header, and subheader each paint an opaque surface so main content scrolling
-underneath never shows through: `--lr-page-banner-bg`, `--lr-page-header-bg`, and
-`--lr-page-subheader-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
+The sticky banner, header, subheader, menu and aside each paint an opaque surface. Their background
+properties are `--lr-page-banner-bg`, `--lr-page-header-bg`, `--lr-page-subheader-bg`,
+`--lr-page-menu-bg`, and `--lr-page-aside-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
 themes). They are inherited inline fallbacks like the paints above, so set one on the Page or any
 ancestor to retheme only that region; `::part(header)` and its siblings still win. A region named in
 `disable-sticky` drops back to a transparent background, and the non-sticky `footer` is never

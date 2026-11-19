@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Karusselli slaidid',
   carouselGoTo: 'Mine slaidile {index}',
+  carouselPauseRotation: 'Peata pööramine',
+  carouselResumeRotation: 'Jätka pööramist',
   scrollerLabel: 'Keritav sisu',
   scrollPrevious: 'Keri tagasi',
   scrollNext: 'Keri edasi',

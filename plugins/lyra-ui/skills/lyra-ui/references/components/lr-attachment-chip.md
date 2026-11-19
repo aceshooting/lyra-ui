@@ -95,7 +95,10 @@ The component identifies _which_ attachment an action event is about through `at
 `attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
 and `file` is set, a stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
-generated internal id is used as a last resort.
+generated internal id is used as a last resort. Give duplicate occurrences distinct `attachment-id` values if their actions need to target different chips.
+
+A chip requests attachment preview with `lr-preview-request`. Its `name` and `src` correspond to
+`filename` and `src` on a media card’s `lr-media-open` event.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`; the button is not rendered while
 `without-remove-button` is set), `lr-retry`

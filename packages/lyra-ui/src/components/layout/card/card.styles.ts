@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRingInset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
@@ -163,6 +163,10 @@ export const styles = css`
       )
     );
   }
+  :host([appearance="accent"]) [part="base"][data-actionable="true"]:not([data-disabled]),
+  :host([appearance="accent"]) .linked-shell:hover > [part="base"][data-actionable="true"]:not([data-disabled]) {
+    border-inline-start-color: var(--lr-card-accent-border-color, var(--lr-color-brand));
+  }
   /* MUST stay after the pointer/hover/pressed rules above: [part="base"][data-disabled] and
      [part="base"][data-actionable="true"] are both (0,2,0), so source order alone decides whose
      cursor a disabled actionable card shows.
@@ -190,12 +194,9 @@ export const styles = css`
     background: transparent;
     pointer-events: none;
   }
-  [part="activation-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
-  }
+  [part="activation-button"]:focus-visible,
   [part="base"][href]:focus-visible {
-    ${focusRing}
+    ${focusRingInset}
   }
   [part~="media"][hidden],
   [part="header"][hidden],

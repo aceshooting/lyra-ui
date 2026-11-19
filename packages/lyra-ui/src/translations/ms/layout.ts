@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Slaid karusel',
   carouselGoTo: 'Pergi ke slaid {index}',
+  carouselPauseRotation: 'Jeda putaran',
+  carouselResumeRotation: 'Sambung semula putaran',
   scrollerLabel: 'Kandungan boleh tatal',
   scrollPrevious: 'Tatal ke belakang',
   scrollNext: 'Tatal ke hadapan',

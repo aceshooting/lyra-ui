@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'شرائح الشريط الدوّار',
   carouselGoTo: 'الانتقال إلى الشريحة {index}',
+  carouselPauseRotation: 'إيقاف التدوير مؤقتًا',
+  carouselResumeRotation: 'استئناف التدوير',
   scrollerLabel: 'محتوى قابل للتمرير',
   scrollPrevious: 'التمرير للخلف',
   scrollNext: 'التمرير للأمام',

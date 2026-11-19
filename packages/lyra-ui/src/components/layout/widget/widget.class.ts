@@ -28,6 +28,11 @@ import {
   isPersistedPropertyExplicitlySet,
 } from '../../../internal/persisted-restore.js';
 import { nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedContains } from '../../../internal/composed-tree.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import {
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
@@ -213,6 +218,7 @@ export interface LyraWidgetEventMap {
  *   view-toggle click accepts the change. Also fires when a `views` reassignment drops the
  *   currently-active view, forcing a fallback to the first remaining view. Not fired when a
  *   consumer sets `activeViewId` directly, even to a now-invalid id. `detail: { viewId }`.
+ *   Check `event.target === widget` to identify this event when a descendant also changes views.
  * @event lr-activate - Fired on every accepted header view-toggle activation, whether or not
  *   `activeViewId` actually moved. `detail: { value }` carries the activated view's `viewId`.
  *   Bubbling and composed, so a host outside the shadow tree receives it. Not cancelable:
@@ -239,6 +245,12 @@ export interface LyraWidgetEventMap {
  * @csspart fullscreen-button - The fullscreen toggle button.
  * @csspart body - The wrapper around the default slot (the panel body).
  * @csspart backdrop - The fullscreen scrim behind the panel.
+ * @cssprop [--lr-widget-bg=var(--lr-color-surface)] - Docked background.
+ * @cssprop [--lr-widget-border-color=var(--lr-color-border-subtle)] - Docked border color.
+ * @cssprop [--lr-widget-radius=var(--lr-radius)] - Docked corner radius.
+ * @cssprop [--lr-widget-gap=var(--lr-space-s)] - Gap between header contents, defaulting to the size tier.
+ * @cssprop [--lr-widget-header-padding=var(--lr-space-s) var(--lr-space-m)] - Header padding, defaulting to the size tier.
+ * @cssprop [--lr-widget-body-padding=var(--lr-space-m)] - Body padding, defaulting to the size tier.
  * @cssprop [--lr-widget-overlay-color=var(--lr-color-overlay)] - The fullscreen scrim's color,
  *   applied to `[part="backdrop"]`.
  * @cssprop [--lr-widget-view-toggle-active-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -291,6 +303,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     widgetViewGroup: LYRA_DEFAULT_widgetViewGroup,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private readonly fullscreenGuard = new VetoWriteGuard();
+  private _fullscreen = false;
+  private requestingFullscreen = false;
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, modalHostStyles, scrollOverflowFadeStyles, styles];
 
@@ -357,7 +373,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  this one's write-tracking mechanism. Unset (the default) touches storage not at all. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
   @property({ type: Boolean, reflect: true }) expandable = false;
-  @property({ type: Boolean, reflect: true }) fullscreen = false;
+  /** Displays the widget as a fullscreen dialog.
+   * @default false */
+  @property({ type: Boolean, reflect: true })
+  get fullscreen(): boolean {
+    return this._fullscreen;
+  }
+  set fullscreen(value: boolean) {
+    markVetoGuardWrite(this.fullscreenGuard);
+    this._fullscreen = value;
+  }
   /** CSS `inset` shorthand applied to the fullscreen panel instead of its safe-area default.
    * The backdrop remains viewport-filling unless `backdropInset` is also set. */
   @property({ attribute: 'fullscreen-inset' }) fullscreenInset = '';
@@ -420,6 +445,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private ownerRealmGeneration = 0;
   private readonly bodyId = nextId('widget-body');
   private focusedViewIdBeforeUpdate?: string;
+  private collapseHadFocus = false;
+  @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
 
   private get storageFullKey(): string | undefined {
     return this.storageKey ? `lr-widget:${this.storageKey}` : undefined;
@@ -460,6 +487,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         !isPersistedPropertyExplicitlySet(this, 'collapsed')
       )
         this.collapsed = parsed.collapsed;
+    }
+    if (changed.has('collapsed') && this.hasUpdated && this.collapsed) {
+      const active = deepActiveElementIn(this.ownerDocument);
+      this.collapseHadFocus = active !== null && composedContains(this, active);
     }
     if (changed.has('fullscreen')) {
       if (this.fullscreen) {
@@ -532,6 +563,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       writePersistedState(this.storageFullKey, { collapsed: this.collapsed });
     }
     this.persistReady = true;
+    const dialogOwners = this.renderRoot.querySelectorAll<HTMLElement>('[part="base"], [data-native-modal-carrier]');
+    for (const owner of dialogOwners) {
+      syncAriaDescribedByElements(this, owner, this.fullscreen ? this.hostDescribedBy : null);
+    }
+    if (this.collapseHadFocus) {
+      this.collapseHadFocus = false;
+      if (!this.fullscreen) {
+        restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLElement>('[part="collapse-button"]'));
+      }
+    }
     if (changed.has('fullscreen') && this.fullscreen) {
       this.overlayHandle?.focusInitial();
     } else if (changed.has('collapsed') && this.fullscreen) {
@@ -727,11 +768,28 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  while retaining lr-fullscreen-change as the existing post-commit notification. Returns
    *  whether the change was accepted, mirroring requestCollapse() above. */
   private requestFullscreenChange(next: boolean): boolean {
-    const request = this.emit('lr-fullscreen-request', { fullscreen: next }, { cancelable: true });
-    if (request.defaultPrevented) return false;
-    this.fullscreen = next;
-    this.emit('lr-fullscreen-change', { fullscreen: next });
-    return true;
+    if (this.requestingFullscreen) return false;
+    const parent = this.parentNode;
+    const document = this.ownerDocument;
+    const connected = this.isConnected;
+    this.requestingFullscreen = true;
+    let committed = false;
+    try {
+      requestThenCommit({
+        requestDetail: { fullscreen: next },
+        emitRequest: (proposal, init: { cancelable: true }) => this.emit('lr-fullscreen-request', proposal, init),
+        guard: this.fullscreenGuard,
+        commit: () => {
+          if (this.isConnected !== connected || this.parentNode !== parent || this.ownerDocument !== document) return;
+          this.fullscreen = next;
+          this.emit('lr-fullscreen-change', { fullscreen: next });
+          committed = true;
+        },
+      });
+    } finally {
+      this.requestingFullscreen = false;
+    }
+    return committed;
   }
 
   private toggleFullscreen = (e: MouseEvent): void => {
@@ -816,18 +874,18 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                   // before -- aria-label is only ever added for an icon-only toggle (`label`
                   // omitted), where `ariaLabel` is the intended name and `viewId` is the last-resort
                   // fallback if even that's missing (see LyraWidgetView's doc).
-                  const hasLabel = !!view.label;
+                  const visibleLabel = normalizeLabel(view.label);
                   return html`<button
                     part="view-toggle"
                     type="button"
                     data-view-id=${view.viewId}
                     aria-pressed=${view.viewId === this.activeViewId ? 'true' : 'false'}
-                    aria-label=${hasLabel ? nothing : view.ariaLabel || view.viewId}
+                    aria-label=${visibleLabel ? nothing : normalizeLabel(view.ariaLabel) ?? view.viewId}
                     @click=${() => this.setActiveView(view.viewId, views)}
                   >
                     ${view.icon
                       ? renderInertPresentation(view.icon, { part: 'view-icon' })
-                      : nothing}${view.label
+                      : nothing}${visibleLabel
                       ? html`<span part="view-label">${view.label}</span>`
                       : nothing}
                   </button>`;

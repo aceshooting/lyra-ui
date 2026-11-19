@@ -1,25 +1,11 @@
-import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
-import type { DropSessionController } from '../../../internal/drop-session-controller.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { matchesAccept } from './accept.js';
-
-export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-/** Fallback for an invalid (negative/`NaN`) `maxFiles` override; `0`/`Infinity` mean no limit. */
-export const DEFAULT_MAX_FILES = 100;
-/** Fallback for an invalid (negative/`NaN`) `maxTotalSize` override; `0`/`Infinity` mean no limit. */
-export const DEFAULT_MAX_TOTAL_SIZE_BYTES = 250 * 1024 * 1024;
-
-export interface FileIntakeRejected {
-  readonly file: File;
-  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
-}
-
-export interface FileIntakeResult {
-  files: File[];
-  rejected: FileIntakeRejected[];
-  remainingFiles: number | null;
-  remainingTotalSize: number | null;
-}
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraMessageKey } from '../../../internal/localization-types.js';
+import type { DropSessionController, DropSessionState } from '../../../internal/drop-session-controller.js';
+import type { FileIntakeRejected, FileIntakeResult } from './accept.js';
+export {
+  classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes, DEFAULT_MAX_FILES, DEFAULT_MAX_FILE_SIZE_BYTES, DEFAULT_MAX_TOTAL_SIZE_BYTES,
+  type FileIntakeRejected, type FileIntakeResult,
+} from './accept.js';
 
 /** Frozen `lr-files` detail; `remaining*` is the allowance left under the limit (`null` while unset). */
 export interface FileIntakeDetail {
@@ -27,63 +13,6 @@ export interface FileIntakeDetail {
   readonly rejected: readonly FileIntakeRejected[];
   readonly remainingFiles: number | null;
   readonly remainingTotalSize: number | null;
-}
-
-/** The `accept`/limit properties every file-intake component shares; an omitted one is unset. */
-export interface FileIntakeLimits {
-  accept: string;
-  maxFileSize: number;
-  maxFiles: number;
-  maxTotalSize: number;
-  heldFileCount: number;
-  heldTotalSize: number;
-}
-
-/** `0`/`Infinity` mean "no limit" (`null`); any other invalid value falls back to a sane cap
- *  instead of silently disabling the check. */
-const limit = (value = 0, fallback = 1): number | null =>
-  value === 0 || value === Infinity ? null : finiteRange(value > 0 ? value : NaN, fallback, 1);
-
-/** Sorts a batch into accepted and rejected files, counting `retained` files and the held totals
- *  against the limits. `isPreview` marks dragenter items, which have no name or size yet. */
-export function classifyFiles(
-  options: Partial<FileIntakeLimits>,
-  fileList: File[],
-  multiple: boolean,
-  retained: readonly File[] = [],
-  isPreview = false,
-  typeAllowed: (file: File) => boolean = () => true,
-): FileIntakeResult {
-  const limits = {
-    maxFiles: limit(options.maxFiles, DEFAULT_MAX_FILES),
-    maxTotalSize: limit(options.maxTotalSize, DEFAULT_MAX_TOTAL_SIZE_BYTES),
-  };
-  const maxFileSize = limit(options.maxFileSize, DEFAULT_MAX_FILE_SIZE_BYTES);
-  const tracker = new AggregateFileLimitTracker(
-    retained.length + finiteCount(options.heldFileCount ?? 0, 0),
-    retained.reduce((total, file) => total + (Number.isFinite(file.size) ? file.size : 0), 0) +
-      finiteCount(options.heldTotalSize ?? 0, 0),
-  );
-  if (!multiple && fileList.length > 1) {
-    return {
-      files: [],
-      rejected: fileList.map((file) => ({ file, reason: 'count' as const })),
-      ...tracker.allowance(limits),
-    };
-  }
-  const files: File[] = [];
-  const rejected: FileIntakeRejected[] = [];
-  for (const file of fileList) {
-    // Extension patterns can't be evaluated while previewing, so they count as a possible match.
-    const reason = !typeAllowed(file) || (options.accept && !matchesAccept(file, options.accept, isPreview))
-      ? 'type'
-      : maxFileSize !== null && file.size > maxFileSize
-        ? 'size'
-        : tracker.evaluate(file, limits);
-    if (reason) rejected.push({ file, reason });
-    else files.push(file);
-  }
-  return { files, rejected, ...tracker.allowance(limits) };
 }
 
 export function freezeDetail(
@@ -140,35 +69,49 @@ export function handleDrop(
   if (files.length || rejectedFolders.length) emit(files, rejectedFolders);
 }
 
-const MAX_MIME_TYPES = 10_000;
-export const EMPTY_MIME_TYPES: readonly string[] = Object.freeze([]);
-
-export function snapshotMimeTypes(value: unknown): readonly string[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_MIME_TYPES;
-    const count = Math.min(value.length, MAX_MIME_TYPES);
-    const values: string[] = [];
-    for (let index = 0; index < count; index++) {
-      try {
-        const candidate = value[index];
-        if (typeof candidate === 'string') values.push(candidate);
-      } catch {
-        // A hostile indexed getter invalidates only its own entry.
-      }
-    }
-    return values.length ? Object.freeze(values) : EMPTY_MIME_TYPES;
-  } catch {
-    return EMPTY_MIME_TYPES;
-  }
-}
-
 /** Caller-owned outcome copy with `{count}` substituted; `undefined` falls back to the localized default. */
-export function outcomeText(override: string | undefined, fallback: () => string, count: string): string {
+function outcomeText(override: string | undefined, fallback: () => string, count: string): string {
   return override == null ? fallback() : override.replace(/\{count\}/g, count);
 }
 
-/** Exact-MIME gate: the denylist is evaluated first, an empty allowlist allows everything else. */
-export const mimeTypeFilter =
-  (allowed: readonly string[], forbidden: readonly string[]) =>
-  ({ type }: File): boolean =>
-    !forbidden.includes(type) && (allowed.length === 0 || allowed.includes(type));
+/** Most rejection rows rendered and announced at once; the full list stays in the `lr-files` detail. */
+const MAX_RENDERED_REJECTIONS = 20;
+
+type IntakeMessage = (key: LyraMessageKey, values?: Record<string, number | string>) => string;
+
+export function dragInstruction(state: DropSessionState, localize: IntakeMessage): string {
+  if (state === 'accept') return localize('dropzoneReleaseToAdd');
+  if (state === 'reject') return localize('dropzoneRejectedType');
+  return '';
+}
+
+const rejectionKeys = {
+  type: 'fileInputRejectedType', size: 'fileInputRejectedSize', count: 'fileInputRejectedCount',
+  directory: 'fileInputFolderRejected', read: 'fileInputRejectedRead', limit: 'fileInputRejectedLimit',
+  maxFiles: 'fileInputRejectedMaxFiles', maxTotalSize: 'fileInputRejectedMaxTotalSize',
+} as const satisfies Record<FileIntakeRejected['reason'], LyraMessageKey>;
+
+export function rejectionMessages(rejected: readonly FileIntakeRejected[], locale: string, localize: IntakeMessage): string[] {
+  const shown = rejected.slice(0, MAX_RENDERED_REJECTIONS).map(({ reason, file }) => localize(rejectionKeys[reason], { filename: file.name }));
+  const hidden = rejected.length - shown.length;
+  if (hidden) shown.push(localize('fileInputRejectionsMore', { count: getNumberFormat(locale).format(hidden), pluralCount: hidden }));
+  return shown;
+}
+
+export function selectionMessage(
+  { files, rejected }: FileIntakeDetail, locale: string, localize: IntakeMessage,
+  acceptedMessage?: string, rejectedMessage?: string,
+): string {
+  const messages: string[] = [];
+  const format = getNumberFormat(locale);
+  for (const [n, override, key] of [
+    [files.length, acceptedMessage, files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany'],
+    [rejected.length, rejectedMessage, rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany'],
+  ] as const) {
+    if (!n) continue;
+    const count = format.format(n);
+    const text = outcomeText(override, () => localize(key, { count, pluralCount: n }), count);
+    if (text) messages.push(text);
+  }
+  return messages.join(' ');
+}

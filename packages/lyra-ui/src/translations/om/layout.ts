@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Isliidiiwwan marsaa naanna\'u',
   carouselGoTo: 'Gara isliidii {index}tti deemi',
+  carouselPauseRotation: 'Naannoo dhaabi',
+  carouselResumeRotation: 'Naannoo itti fufi',
   scrollerLabel: 'Qabiyyee garagalchuu danda\'amu',
   scrollPrevious: 'Gara duubaatti garagalchi',
   scrollNext: 'Gara fuulduraatti garagalchi',

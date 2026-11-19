@@ -1,3 +1,5 @@
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { admitMapTerrain, mapScenePreparation, type LyraMapTerrain } from './map-scene-configuration.js';
 
 type MapSceneControlKind = 'globe' | 'terrain';
@@ -30,6 +32,8 @@ class SceneControl {
   private button?: HTMLButtonElement;
   private pressed: boolean | 'mixed' = false;
   private queued = false;
+  /** The button held focus when it was disabled for an action, so focus returns once it re-enables. */
+  private focusHeld = false;
   private generation = 0;
   private readonly listeners = new Set<(event: unknown) => void>();
   private readonly events = ['terrain', 'projectiontransition', 'style.load', 'sourcedata', 'idle'] as const;
@@ -66,7 +70,7 @@ class SceneControl {
     const peer = this.peer; this.peer = undefined; this.generation++;
     this.button?.removeEventListener('click', this.activate);
     for (const event of this.events) { try { peer?.off(event, this.schedule); } catch { /* Retire every subscription. */ } }
-    this.root?.remove(); this.root = undefined; this.button = undefined; this.queued = false;
+    this.root?.remove(); this.root = undefined; this.button = undefined; this.queued = false; this.focusHeld = false;
   }
   private current(): boolean { return !!this.peer && !!this.context?.isCurrent(); }
   private readonly schedule = (): void => {
@@ -99,12 +103,20 @@ class SceneControl {
     button.setAttribute('aria-label', state.label); button.title = state.label;
     button.setAttribute('aria-pressed', String(this.pressed));
     button.setAttribute('aria-busy', String(state.busy));
-    button.disabled = !state.ready || state.busy || unavailable;
+    const disabled = !state.ready || state.busy || unavailable;
+    if (disabled && !button.disabled) this.focusHeld = deepActiveElementIn(button.ownerDocument) === button;
+    button.disabled = disabled;
+    if (!disabled && this.focusHeld && this.root) {
+      this.focusHeld = false;
+      restoreComposedFocus(this.root, true, button);
+      if (!this.current()) return;
+    }
     context.unavailable(this.kind, unavailable);
   }
   private readonly activate = (): void => {
     this.refreshSceneControl();
     if (!this.current() || !this.button || this.button.disabled) return;
+    this.focusHeld = deepActiveElementIn(this.button.ownerDocument) === this.button;
     this.button.disabled = true; this.button.setAttribute('aria-busy', 'true');
     const event: MapSceneControlActivation = Object.freeze({ kind: this.kind, pressed: this.pressed, ...(this.terrain ? { terrain: this.terrain } : {}) });
     for (const listener of [...this.listeners]) {

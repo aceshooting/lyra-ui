@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'স্লাইডারের স্লাইড',
   carouselGoTo: '{index} নম্বর স্লাইডে যান',
+  carouselPauseRotation: 'ঘূর্ণন বিরতি দিন',
+  carouselResumeRotation: 'ঘূর্ণন আবার শুরু করুন',
   scrollerLabel: 'স্ক্রলযোগ্য বিষয়বস্তু',
   scrollPrevious: 'পেছনে স্ক্রল করুন',
   scrollNext: 'সামনে স্ক্রল করুন',

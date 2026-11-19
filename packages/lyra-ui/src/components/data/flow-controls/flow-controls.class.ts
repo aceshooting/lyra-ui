@@ -1,3 +1,4 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -125,6 +126,8 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
    *  ancestor canvas -- the slotted-into-a-corner-slot case. Changing it at runtime re-resolves and
    *  re-subscribes; a target that mounts later is picked up too. */
   @property() for = '';
+  /** Accessible name of the control group when the host has no aria-label. */
+  @property() label = '';
   private _orientation: LyraOrientation = 'vertical';
   /** Layout axis of the button cluster. */
   @property({ reflect: true })
@@ -153,7 +156,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
   @state() private canvasReadonly = false;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
-  private focusedZoom?: HTMLButtonElement;
+  private focusedButton?: HTMLButtonElement;
   private readonly companionController = new FlowCanvasCompanionController<FlowCanvasLike>(
     this,
     isFlowCanvasLike,
@@ -185,21 +188,16 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
     if (this.hasUpdated && changed.has('for')) {
       this.companionController.targetIdChanged();
     }
-    if (changed.has('atMaxZoom') || changed.has('atMinZoom')) {
-      const active = shadowFocusTarget(this);
-      const part = active?.getAttribute('part');
-      if ((part === 'zoom-in' && this.atMaxZoom) || (part === 'zoom-out' && this.atMinZoom)) {
-        this.focusedZoom = active as HTMLButtonElement;
-      }
-    }
+    const active = shadowFocusTarget(this);
+    if (active?.localName === 'button') this.focusedButton = active as HTMLButtonElement;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    const focused = this.focusedZoom;
-    this.focusedZoom = undefined;
+    const focused = this.focusedButton;
+    this.focusedButton = undefined;
     if (focused) repairUnavailableControlFocus(focused, [
-      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="zoom-in"], [part="zoom-out"], [part="fit"]'),
+      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('button'),
     ]);
   }
 
@@ -235,7 +233,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
     return html`<div
       part="base"
       role="group"
-      aria-label=${hostAriaLabel(this) ?? this.localize('flowControlsLabel')}
+      aria-label=${hostAriaLabel(this) === '' ? '' : resolveAccessibleName(this, this.label, this.localize('flowControlsLabel'))}
     >
       <button
         part="zoom-in"

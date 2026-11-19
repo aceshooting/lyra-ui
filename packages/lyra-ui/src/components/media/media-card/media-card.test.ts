@@ -8,7 +8,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
-expectLocaleFallback('ar', ['mediaCardOpenName', 'promptStudioRoleAssistant']);
+expectLocaleFallback('ar', ['avPlayerFailedToLoad', 'imageViewerFailedToLoad', 'mediaCardOpenName', 'promptStudioRoleAssistant']);
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-media-card', 'appearance');

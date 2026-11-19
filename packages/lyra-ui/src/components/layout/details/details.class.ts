@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -223,6 +224,10 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
    *  existed. */
   @property({ reflect: true }) size: LyraDetailsSize = 'm';
 
+  /** Accessible name of the summary. A present host aria-label takes precedence. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
+
   @property() summary = '';
 
   // `[part='summary']:empty` never matches because the part always contains a literal `<slot>`
@@ -287,6 +292,11 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     this.contentGateGeneration += 1;
     this.setContentGateMode(this._open ? 'open' : 'until-found');
     if (this.isConnected) this.armFragmentNavigation();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    syncAriaDescribedByElements(this, this.summaryElement ?? undefined, this.hostDescribedBy);
   }
 
   override firstUpdated(changed: PropertyValues): void {

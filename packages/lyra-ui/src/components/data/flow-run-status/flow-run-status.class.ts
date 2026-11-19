@@ -5,6 +5,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
 import {
   Announcer,
   AnnouncementSinkController,
@@ -269,8 +270,8 @@ export class LyraFlowRunStatus extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('flowRunStatusLabel');
-    const ariaLabel = hostAriaLabel(this) ?? label;
+    const label = normalizeLabel(this.label) ?? this.localize('flowRunStatusLabel');
+    const ariaLabel = hostAriaLabel(this) === '' ? '' : resolveAccessibleName(this, label) ?? label;
     const { done, total, counts } = this.summary();
     const number = getNumberFormat(this.effectiveLocale);
     return html`<div part="base" role="group" aria-label=${ariaLabel}>

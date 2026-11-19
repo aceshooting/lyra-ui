@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
@@ -44,7 +45,7 @@ function assertPerformanceRecord(record) {
   assertSummary(record.table.inputToTwoFrames, typingSamples, 'table typing');
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   await build({
     root, configFile: false, publicDir: false, base: '/', logLevel: 'warn',
     build: { outDir: output, emptyOutDir: true, rollupOptions: { input: resolve(root, 'test/browser.html') } },

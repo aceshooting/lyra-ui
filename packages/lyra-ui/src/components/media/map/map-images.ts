@@ -3,7 +3,7 @@ import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 import { isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
-import { sanitizePassiveMarkupFragment } from '../../viewers/passive-markup.js';
+import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { inspectMapImageMetadata } from './map-image-metadata.js';
 import { admitMapImages, failMapImage as fail, MAP_IMAGE_LIMITS, mapImageBytes as bytesOf, mapImageIssue, MapImageFailure as ImageFailure,
   type MapImageIssue } from './map-image-admission.js';
@@ -13,6 +13,8 @@ export type { LyraMapImage } from './map-image-admission.js';
 export interface MapImagePreparationContext {
   readonly owner: Element;
   readonly signal: AbortSignal;
+  /** A component-owned request can abort the transfer without cancelling its parent operation. */
+  readonly fetchController?: AbortController;
   readonly isCurrent: () => boolean;
 }
 interface MapImageRasterInput {
@@ -28,6 +30,8 @@ interface RasterizedMapImage { readonly image: ImageData; dispose(): void }
 export interface MapImagePreparationServices {
   readonly loadSanitizer?: () => Promise<HtmlSanitizer | null>;
   readonly rasterize?: (input: MapImageRasterInput, context: MapImagePreparationContext) => Promise<RasterizedMapImage>;
+  /** Wall-clock budget for one remote image's fetch plus body read (default: the decode timeout). */
+  readonly fetchTimeoutMs?: number;
 }
 export interface PreparedMapImage {
   /** Encoded input bytes retained for aggregate component cache accounting. */
@@ -57,6 +61,47 @@ function webUrl(owner: Element, source: string): ReturnType<typeof resolveOwnerF
   const parsed = new target.view.URL(target.url);
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) return fail('unsafe-url');
   return target;
+}
+async function readRemoteImage(
+  source: string, context: MapImagePreparationContext, check: () => void, limit: number, timeout: number,
+): Promise<{ mime: string; encoded: Uint8Array }> {
+  const target = webUrl(context.owner, source)!;
+  let rejectRead!: (reason: ImageFailure) => void;
+  const stopped = new Promise<never>((_, reject) => { rejectRead = reject; });
+  let expired = false;
+  const abort = () => {
+    expired = true;
+    rejectRead(new ImageFailure(context.signal.aborted ? 'aborted' : 'fetch'));
+    context.fetchController?.abort();
+  };
+  context.signal.addEventListener('abort', abort, { once: true });
+  const deadline = target.view.setTimeout(abort, timeout);
+  const read = async () => {
+    let response: Response | undefined;
+    try {
+      response = await target.view.fetch(target.url, { mode: 'cors', credentials: 'omit', redirect: 'error', signal: context.fetchController?.signal ?? context.signal });
+      check();
+      if (expired || !response.ok || !['basic', 'cors'].includes(response.type)) return fail('fetch');
+      if (response.url) webUrl(context.owner, response.url);
+      const mime = (response.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
+      if (!['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'].includes(mime)) return fail('unsupported-format');
+      const buffer = await readResponseArrayBuffer(response, limit);
+      check();
+      return { mime, encoded: new Uint8Array(buffer) };
+    } catch (error) {
+      if (response?.body && !response.body.locked) void response.body.cancel().catch(() => undefined);
+      check();
+      if (response) throw error;
+      return fail('fetch');
+    }
+  };
+  try {
+    check();
+    return await Promise.race([stopped, read()]);
+  } finally {
+    target.view.clearTimeout(deadline);
+    context.signal.removeEventListener('abort', abort);
+  }
 }
 function sanitizeSvg(raw: string, sanitizer: HtmlSanitizer, owner: Element, width: number, height: number): string {
   const fragment = sanitizePassiveMarkupFragment(sanitizer, raw, owner.ownerDocument, 'passive-svg');
@@ -154,7 +199,6 @@ export async function prepareMapImages(value: unknown, context: MapImagePreparat
   let totalBytes = 0;
   let totalDecodedPixels = 0;
   let pendingRaster: RasterizedMapImage | undefined;
-  let pendingResponse: Response | undefined;
   try {
     guard(context);
     const documentAtStart = context.owner.ownerDocument;
@@ -167,18 +211,9 @@ export async function prepareMapImages(value: unknown, context: MapImagePreparat
       let encoded: Uint8Array;
       if (descriptor.source.kind === 'svg') encoded = bytesOf(descriptor.source.markup, MAP_IMAGE_LIMITS.svgBytes);
       else {
-        const target = webUrl(context.owner, descriptor.source.url)!;
-        let response: Response;
-        try { response = await target.view.fetch(target.url, { mode: 'cors', credentials: 'omit', redirect: 'error', signal: context.signal }); }
-        catch { check(); return fail('fetch'); }
-        pendingResponse = response;
-        check();
-        if (!response.ok || !['basic', 'cors'].includes(response.type)) return fail('fetch');
-        if (response.url) webUrl(context.owner, response.url);
-        mime = (response.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
-        if (!['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'].includes(mime)) return fail('unsupported-format');
-        encoded = new Uint8Array(await readResponseArrayBuffer(response, Math.min(MAP_IMAGE_LIMITS.encodedBytes, MAP_IMAGE_LIMITS.totalBytes - totalBytes)));
-        pendingResponse = undefined;
+        const remaining = Math.min(MAP_IMAGE_LIMITS.encodedBytes, MAP_IMAGE_LIMITS.totalBytes - totalBytes);
+        ({ mime, encoded } = await readRemoteImage(descriptor.source.url, context, check, remaining,
+          services.fetchTimeoutMs ?? MAP_IMAGE_LIMITS.decodeTimeoutMs));
         check();
       }
       totalBytes += encoded.length;
@@ -221,7 +256,6 @@ export async function prepareMapImages(value: unknown, context: MapImagePreparat
     const images = Object.freeze(prepared);
     return Object.freeze({ ok: true, images, dispose() { for (const image of images) image.dispose(); } });
   } catch (error) {
-    try { await pendingResponse?.body?.cancel(); } catch { /* The original failure remains authoritative. */ }
     try { pendingRaster?.dispose(); } catch { /* Preserve the preparation failure and dispose the batch. */ }
     for (const image of prepared) image.dispose();
     return issue(context.signal.aborted ? new ImageFailure('aborted') : error, currentId);

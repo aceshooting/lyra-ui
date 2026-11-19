@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), '..');
@@ -35,7 +36,7 @@ export function syncPlaywrightImages({ write, repoRoot = defaultRoot }) {
 }
 
 const mode = process.argv[2];
-if (process.argv[1] && path.resolve(process.argv[1]) !== scriptPath) {
+if (!isMainModule(import.meta.url)) {
   // Imported (for example by its test): expose the functions without running the CLI.
 } else if (mode === '--write' || mode === '--check') {
   const { version, stale } = syncPlaywrightImages({ write: mode === '--write' });

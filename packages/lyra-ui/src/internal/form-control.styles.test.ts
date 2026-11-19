@@ -145,3 +145,14 @@ describe('field and group label typography', () => {
     }
   });
 });
+
+describe('the shared supporting text', () => {
+  it('lets a long unbroken hint wrap inside a narrow control instead of overflowing it', async () => {
+    const el = await fixture<HTMLElement>(
+      html`<div style="inline-size: 120px"><lr-input label="Name" hint="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"></lr-input></div>`,
+    );
+    const hint = (el.querySelector('lr-input') as Element).shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+    expect(hint.getBoundingClientRect().width <= 120).to.equal(true);
+    expect(getComputedStyle(hint).overflowWrap).to.equal('anywhere');
+  });
+});

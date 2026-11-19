@@ -108,9 +108,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-snug);
-    transition:
-      background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
   }
 
   [part='thumbnail'] {
@@ -210,7 +208,7 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
   }
   [part='retry-button'] {
     color: var(--lr-color-danger);

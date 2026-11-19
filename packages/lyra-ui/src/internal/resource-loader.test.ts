@@ -3,6 +3,7 @@ import {
   assertTableDimensions,
   assertTableSize,
   isAbortError,
+  isPdfRenderCancellation,
   LyraResourceLimitError,
   MAX_RESOURCE_STREAM_CHUNKS,
   readResponseArrayBuffer,
@@ -207,5 +208,33 @@ describe('yieldViewerTask', () => {
       error = caught;
     }
     expect(error instanceof DOMException && error.name).to.equal('AbortError');
+  });
+});
+
+describe('declared Content-Length sizing', () => {
+  const streamed = (bytes: number[], declared: string): Response =>
+    new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(Uint8Array.from(bytes));
+        controller.close();
+      },
+    }), { headers: { 'content-length': declared } });
+
+  it('returns exactly the streamed bytes whether the declared length is exact, high, low or garbage', async () => {
+    for (const declared of ['4', '9', '2', 'abc', '-1']) {
+      const buffer = await readResponseArrayBuffer(streamed([1, 2, 3, 4], declared), 64);
+      expect([buffer.byteLength, ...new Uint8Array(buffer)].join(',')).to.equal('4,1,2,3,4');
+    }
+  });
+});
+
+describe('isPdfRenderCancellation', () => {
+  it('treats pdf.js cancellation and abort exceptions as cancellations, not failures', () => {
+    const named = (name: string) => Object.assign(new Error('x'), { name });
+    expect(isPdfRenderCancellation(named('RenderingCancelledException'))).to.equal(true);
+    expect(isPdfRenderCancellation(named('AbortException'))).to.equal(true);
+    expect(isPdfRenderCancellation(named('AbortError'))).to.equal(true);
+    expect(isPdfRenderCancellation(named('TypeError'))).to.equal(false);
+    expect(isPdfRenderCancellation(null)).to.equal(false);
   });
 });

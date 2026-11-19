@@ -12,6 +12,10 @@ export const styles = css`
     inline-size: 100%;
     box-sizing: border-box;
   }
+  :host([mode='label']) [part='base'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
   [part='icon'] {
     --_lr-file-icon-size: var(--lr-file-icon-size, var(--lr-size-2rem));
     position: relative;
@@ -92,7 +96,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='label'] { color: var(--lr-color-text); }
-  [part='label'] { flex: 1 1 0; }
-  [part='description'] { color: var(--lr-color-text-quiet); flex: 1 1 100%; }
-  [part='size'] { flex: 0 1 auto; }
+  [part='label'] { grid-column: 2; grid-row: 1; }
+  [part='description'] { color: var(--lr-color-text-quiet); grid-column: 2 / -1; grid-row: 2; }
+  [part='size'] { grid-column: 3; grid-row: 1; }
 `;

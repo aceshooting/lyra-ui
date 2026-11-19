@@ -1,6 +1,9 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import type { LyraFrame } from '../../../internal/variants.js';
@@ -14,7 +17,7 @@ import { styles } from './media-card.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAttachment, LYRA_DEFAULT_mediaCardOpenImageAttachment, LYRA_DEFAULT_mediaCardOpenName, LYRA_DEFAULT_mediaCardOpenVideoAttachment, LYRA_DEFAULT_mediaCardUntitledFile, LYRA_DEFAULT_mediaCardVideoAttachment } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAttachment, LYRA_DEFAULT_mediaCardOpenImageAttachment, LYRA_DEFAULT_mediaCardOpenName, LYRA_DEFAULT_mediaCardOpenVideoAttachment, LYRA_DEFAULT_mediaCardUntitledFile, LYRA_DEFAULT_mediaCardVideoAttachment } from '../../../internal/default-strings/media.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraMediaCardKind = 'image' | 'video' | 'file';
@@ -26,6 +29,7 @@ export interface LyraMediaCardOpenDetail {
 
 export interface LyraMediaCardEventMap {
   'lr-media-open': CustomEvent<LyraMediaCardOpenDetail>;
+  'lr-render-error': CustomEvent<{ error: Error }>;
   /** Canonical cancelable veto point before a safe file anchor's native download/open. */
   'lr-media-download-request': CustomEvent<LyraMediaCardOpenDetail>;
   blur: FocusEvent;
@@ -119,6 +123,7 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * interactive player unnamed rather than mark it decorative.
  *
  * @customElement lr-media-card
+ * @event lr-render-error - The image or video `src` failed to load; the card shows a localized failure message in place of the media. `detail: { error }`.
  * @event lr-media-open - An image card or video `open-button` requested consumer-owned viewing.
  *   `detail: { src, filename }`; noncancelable notification.
  * @event lr-media-download-request - A safe file anchor is about to perform its native default.
@@ -132,6 +137,7 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * `<a>` (when `src` passes the href safety check) or a plain `<span>`
  * (otherwise) for the `file`-chip fallback.
  * @csspart media - The `<img>` or `<video>` element.
+ * @csspart media-error - Localized message shown in place of media that failed to load.
  * @csspart file-icon - The generic file glyph, shown only in the file-chip fallback.
  * @csspart filename - The filename text, shown only in the file-chip fallback.
  * @csspart open-button - The explicit "open" affordance rendered next to
@@ -165,6 +171,8 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    avPlayerFailedToLoad: LYRA_DEFAULT_avPlayerFailedToLoad,
+    imageViewerFailedToLoad: LYRA_DEFAULT_imageViewerFailedToLoad,
     mediaCardImageAttachment: LYRA_DEFAULT_mediaCardImageAttachment,
     mediaCardOpenFileAttachment: LYRA_DEFAULT_mediaCardOpenFileAttachment,
     mediaCardOpenImageAttachment: LYRA_DEFAULT_mediaCardOpenImageAttachment,
@@ -270,10 +278,9 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     // A present host label already controls the component itself. Keep the nested action's
     // purpose-specific generated name instead of cloning one label onto two semantic owners; an
     // explicitly unnamed host does not make its still-interactive nested button/link unnamed.
-    if (this.accessibleLabel && (hostLabel === null || this.accessibleLabel !== hostLabel)) {
-      return this.accessibleLabel;
-    }
-    const name = this.filename || this.alt;
+    const custom = normalizeLabel(this.accessibleLabel);
+    if (custom && (hostLabel === null || this.accessibleLabel !== hostLabel)) return custom;
+    const name = normalizeLabel(this.filename) ?? normalizeLabel(this.alt);
     if (name) return this.localize('mediaCardOpenName', undefined, { name });
     if (this.resolvedKind === 'image') return this.localize('mediaCardOpenImageAttachment');
     if (this.resolvedKind === 'video') return this.localize('mediaCardOpenVideoAttachment');
@@ -372,6 +379,35 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     this.primaryAction?.click();
   }
 
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
+  @state() private failedSrc: string | null = null;
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('src') || changed.has('kind') || changed.has('mimeType')) this.failedSrc = null;
+  }
+
+  private failureText(): string {
+    return this.resolvedKind === 'video' ? this.localize('avPlayerFailedToLoad') : this.localize('imageViewerFailedToLoad');
+  }
+
+  private onMediaError(event: Event, src: string): void {
+    if (!this.isConnected || event.currentTarget !== this.renderRoot.querySelector('[part="media"]') ||
+        safeMediaCardSrc(this.src) !== src || this.failedSrc === src) return;
+    this.failedSrc = src;
+    this.announcements.announceAssertive(this.failureText());
+    this.emit('lr-render-error', { error: new Error('The media failed to load.') });
+  }
+
+  private renderMedia(src: string, template: TemplateResult) {
+    return this.failedSrc === src ? html`<span part="media-error">${this.failureText()}</span>` : keyed(src, template);
+  }
+
   private renderImage(src: string): TemplateResult {
     return html`
       <button
@@ -386,7 +422,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
         @focus=${this.onActionFocus}
         @blur=${this.onActionBlur}
       >
-        <img part="media" src=${src} alt=${this.imgAlt} />
+        ${this.renderMedia(src, html`<img part="media" src=${src} alt=${this.imgAlt} @error=${(event: Event) => this.onMediaError(event, src)} />`)}
       </button>
     `;
   }
@@ -394,7 +430,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   private renderVideo(src: string): TemplateResult {
     return html`
       <div part="base" style=${this.baseStyle}>
-        <video part="media" controls src=${src} aria-label=${this.videoLabel}></video>
+        ${this.renderMedia(src, html`<video part="media" controls src=${src} aria-label=${this.videoLabel} @error=${(event: Event) => this.onMediaError(event, src)}></video>`)}
         <button
           part="open-button"
           type="button"

@@ -1,7 +1,9 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { srOnly } from '../../../internal/a11y.js';
 
 export const styles = css`
+  ${srOnly}
   :host {
     display: block;
     min-inline-size: 0;
@@ -229,6 +231,18 @@ export const styles = css`
   }
 
   @media (forced-colors: active) {
+    [part='marker']:not([data-has-icon]):not([data-ordered]) {
+      background: CanvasText;
+    }
+    [part='marker'][data-ordered] {
+      border-color: CanvasText;
+    }
+    :host([active]) [part='marker'] {
+      outline-color: Highlight;
+    }
+    [part='rail'] {
+      background: CanvasText;
+    }
     [part='cluster-count'] {
       border: var(--lr-border-width-medium) solid ButtonText;
       background: ButtonFace;

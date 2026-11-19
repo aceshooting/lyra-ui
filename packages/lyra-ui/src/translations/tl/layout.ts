@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Mga slide ng carousel',
   carouselGoTo: 'Pumunta sa slide {index}',
+  carouselPauseRotation: 'I-pause ang pag-ikot',
+  carouselResumeRotation: 'Ituloy ang pag-ikot',
   scrollerLabel: 'Nai-scroll na nilalaman',
   scrollPrevious: 'Mag-scroll paatras',
   scrollNext: 'Mag-scroll pasulong',

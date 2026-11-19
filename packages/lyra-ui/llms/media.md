@@ -1,3 +1,4 @@
+
 ## Breaking changes in 10.0.0
 
 Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
@@ -2967,10 +2968,14 @@ reimplemented.
   up. The default slot is not a drop target while a target is bound.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
-- `readonly dragging: boolean` — `true` during an active drag session
+- `readonly dragging: boolean` — `true` during an active drag session. Assigning this getter in strict mode throws a `TypeError`.
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
   can match a neighboring small-tier `lr-file-input` in the same dense layout.
+
+Every completed selection announces its outcome, including consecutive selections of the same count.
+The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
+messages accept localized plural forms selected with the numeric count.
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
 `rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
@@ -2988,11 +2993,12 @@ overrides the localized accept/reject overlay text.
 layered above the slotted content via `position: absolute; inset: 0`, hidden outside an active drag
 session), `overlay-icon`, `overlay-text`, `status` (a visually-hidden, `aria-hidden` mirror of the
 drag state and counts — announcements go through the shared light-DOM regions, same as
-`lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
-while one exists).
+`lr-file-input`), `rejection` (the first 20 rejection reasons, followed by a localized count of further rejections).
 
 **CSS custom states:** `dragging`, matching `lr-file-input`'s; `targeted` while `for`/`target`
 resolves to an element the zone is attached to.
+
+A targeted overlay uses `--lr-drop-zone-overlay-z-index`, which defaults to `--lr-layer-dropdown`. In forced colors, accepted drags have a double border and rejected drags have a dotted border.
 
 **Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
 `--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
@@ -3062,6 +3068,8 @@ layout tree, and the zone's script can load after first paint:
 
 ## `lr-file-input`
 
+Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions.
+
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
 
@@ -3089,8 +3097,7 @@ height for that content and the dropzone's minimum size.
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count; real drag events alone own the drag session and its
-  accept/reject state.
+  updates the selected-file count. Drag events update `dragging`. Assigning either getter in strict mode throws a `TypeError`.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -3198,11 +3205,14 @@ height for that content and the dropzone's minimum size.
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
+Every completed selection announces its outcome, including consecutive selections of the same count.
+The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
+messages accept localized plural forms selected with the numeric count.
+
 **Events:** a user selection or removal emits native bubbling/composed `input`, `lr-input`,
 native `change`, then `lr-change`; the typed pair carries `{ value: readonly File[] }` with a frozen
-snapshot of the current files and preserves each File identity. Programmatic `files` writes are
-silent (the event pairs still fire while `nonRetaining` is set,
-even though `files` itself is not written in that mode). `lr-files` (`detail:
+snapshot of the retained files. In `nonRetaining` mode, `value` contains the accepted batch. Each
+`File` retains its identity. Programmatic `files` writes are silent. `lr-files` (`detail:
 LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
 rejected-file records, plus `remainingFiles`/`remainingTotalSize` reporting the allowance still left
 under `maxFiles`/`maxTotalSize` after this batch (`null` while that limit is unset), fired on both
@@ -3219,7 +3229,8 @@ complete selection atomically; lifecycle cancellation and supersession stay sile
 fire when the semantic dropzone (the actual keyboard-focusable element, not the hidden native
 `<input>`) gains/loses focus. `lr-invalid` is the bubbling/composed alias of native invalidity.
 
-Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
+The first 20 rejections appear in `[part="rejection"]`. The localized `fileInputRejectionsMore`
+message reports the remaining count, and `lr-files` carries every rejection. Each visible row names
 the file and the reason via one of eight locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
@@ -3431,6 +3442,10 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
+The divider takes `--lr-image-comparer-divider-color`. Style the handle with
+`--lr-image-comparer-handle-bg`, `--lr-image-comparer-handle-color`, and
+`--lr-image-comparer-handle-border-color`. The divider uses system colors in forced-colors mode.
+
 **CSS custom properties:** `--lr-image-comparer-divider-width` (default
 `var(--divider-width, var(--lr-size-1px))`) controls the dividing line's thickness, and
 `--lr-image-comparer-handle-size` (default `var(--handle-size, var(--lr-icon-button-size))`) sizes
@@ -3458,6 +3473,10 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 
 Focus on either zoom control does not enter the iframe browsing context, and `blur()` does not blur
 a focused zoom control.
+
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
 
 **Properties:**
 
@@ -3559,6 +3578,10 @@ panning. This is the compatibility destination for Lyra's former `lr-zoomable-fr
 existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom` (and the class
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
+
 **Properties:**
 
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
@@ -3574,6 +3597,9 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
   `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
+
+A failed image renders a localized message in the `error` part, announces the failure, and emits
+`lr-render-error` with `{ error: Error }`.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
@@ -3696,7 +3722,10 @@ The component identifies _which_ attachment an action event is about through `at
 `attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
 and `file` is set, a stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
-generated internal id is used as a last resort.
+generated internal id is used as a last resort. Give duplicate occurrences distinct `attachment-id` values if their actions need to target different chips.
+
+A chip requests attachment preview with `lr-preview-request`. Its `name` and `src` correspond to
+`filename` and `src` on a media card’s `lr-media-open` event.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`; the button is not rendered while
 `without-remove-button` is set), `lr-retry`
@@ -3955,6 +3984,11 @@ and later MIME values restore detection.
 `LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
+When an image or video fails to load, `media-error` displays a localized message and
+`lr-render-error` reports `{ error: Error }`. Selecting another source retries playback or display.
+A media card’s `lr-media-open` detail uses `filename` and `src`, corresponding to `name` and `src`
+on an attachment chip’s `lr-preview-request`.
+
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
 noncancelable) notifies
 after image-card or video open-button activation; those kinds have no component-owned navigation,
@@ -4093,6 +4127,12 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
+`maxFileSize` (`max-file-size`) and `maxTotalSize` (`max-total-size`) limit bytes per file and
+per selection. `maxFiles` (`max-files`) limits the number of accepted files.
+`heldFileCount` (`held-file-count`) and `heldTotalSize` (`held-total-size`) supply the externally
+held baseline for the two aggregate limits. `allowedMimeTypes` and `forbiddenMimeTypes` accept
+arrays of exact MIME types. The denylist takes precedence. All numeric limits default to `0` for unlimited intake. Rejections use `size`, `maxTotalSize`, or `maxFiles`.
+
 **Events:** `lr-files` (`detail: { capability: LyraAttachmentFilesCapability; files, rejected,
 remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
 `LyraAttachmentFilesCapability = 'files' | 'image' | 'camera'`, `'camera'` only while
@@ -4100,7 +4140,7 @@ remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
 capability's hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
 owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
 "All files" filter let through that do not match `accept` are listed in `rejected` with reason
-`'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
+`'type'`. The `remaining*` fields report the unused aggregate limits, or `null` for an unlimited count or size. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated (for `camera`, unless
@@ -4614,8 +4654,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
 - `fit: LyraImageFit = 'actual'` (reflected) — opt-in base sizing policy for the current image,
-  reusing `<lr-image-viewer>`'s `contain`/`width`/`actual` vocabulary. The default preserves the
-  existing natural-size behavior. `contain` fits both landscape and tall images inside the stage;
+  using the same `contain`/`width`/`actual` choices as `<lr-image-viewer>`. Lightbox and pan-zoom
+  start at the image's natural size for detail inspection. Image-viewer starts at `contain` to
+  show the entire image and its annotations. `contain` fits both landscape and tall images inside the stage;
   `width` fills its inline size. CSS recalculates either policy when the stage is resized or a
   delayed image source finishes loading, so navigation and opening do not require consumer timers.
   Fit is the base zoom policy: an explicit user zoom remains until navigation or a reset, and
@@ -4688,6 +4729,10 @@ embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, 
 `id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
 (the current source image's retry button). `stage` exposes `aria-busy="true"` while source
 descriptor or native image loading is pending.
+
+Source loading and error messages use `--lr-lightbox-status-color`, falling back to
+`--lr-color-on-strong-overlay`. When the image collection shrinks, a listener for the resulting
+`lr-index-change` sees the newly rendered image.
 
 **Themeable custom properties:** `--lr-lightbox-overlay-color` (default
 `var(--lr-color-overlay-strong)` — the backdrop scrim), `--lr-lightbox-control-bg` (default
@@ -4807,6 +4852,10 @@ grow past its data or overlap a neighbour. The accessible pointer target is a se
 box always wins over another region's enlarged area, and where only enlarged areas overlap the
 later highlight in document order wins. Keyboard navigation between highlights is unaffected.
 
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
+
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
 `contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
@@ -4871,7 +4920,8 @@ duplicates use first-wins uniqueness. At most
 `IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
 is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
 leading window replaces its final entry so identity stays reachable. `data-truncated` and
-`data-total` on `highlight-layer` expose the bounded state. Highlight tones retain distinct border
+`data-total` on `highlight-layer` expose the bounded state. The viewer announces the displayed
+and total counts through `imageViewerHighlightsLimited` when the limit is exceeded. Highlight tones retain distinct border
 styles as well as colors, including forced-colors mode.
 
 At 90°/270°, `rotation-frame` swaps the untransformed wrapper's layout axes and centers the painted

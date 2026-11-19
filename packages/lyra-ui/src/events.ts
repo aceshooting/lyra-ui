@@ -2553,15 +2553,15 @@ export type LyraRemoveConditionEvent = LyraConditionBuilderEventMap['lr-remove-c
 export type LyraRenameEvent = LyraConversationItemEventMap['lr-rename'];
 
 /**
- * `lr-render-error` — dispatched by 28 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-render-error` — dispatched by 30 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
  * `<lr-document-compare>`, `<lr-document-preview>`, `<lr-document-viewer>`, `<lr-docx-viewer>`,
  * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
- * `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
- * `<lr-model-viewer>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`,
- * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-tool-call-block>`, `<lr-tool-result-view>`,
- * `<lr-widget-renderer>`, `<lr-xml-viewer>`; detail union of 28, e.g.
- * `LyraArchiveViewerEventMap['lr-render-error']`.
+ * `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-media-card>`,
+ * `<lr-message-parts>`, `<lr-model-viewer>`, `<lr-notebook-viewer>`, `<lr-pan-zoom>`,
+ * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`,
+ * `<lr-tool-call-block>`, `<lr-tool-result-view>`, `<lr-widget-renderer>`, `<lr-xml-viewer>`;
+ * detail union of 30, e.g. `LyraArchiveViewerEventMap['lr-render-error']`.
  */
 export type LyraRenderErrorEvent =
   | LyraArchiveViewerEventMap['lr-render-error']
@@ -2581,9 +2581,11 @@ export type LyraRenderErrorEvent =
   | LyraImageViewerEventMap['lr-render-error']
   | LyraMarkdownCoreEventMap['lr-render-error']
   | LyraMarkdownEventMap['lr-render-error']
+  | LyraMediaCardEventMap['lr-render-error']
   | LyraMessagePartsEventMap['lr-render-error']
   | LyraModelViewerEventMap['lr-render-error']
   | LyraNotebookViewerEventMap['lr-render-error']
+  | LyraPanZoomEventMap['lr-render-error']
   | LyraPdfViewerEventMap['lr-render-error']
   | LyraPptxViewerEventMap['lr-render-error']
   | LyraSpreadsheetViewerEventMap['lr-render-error']

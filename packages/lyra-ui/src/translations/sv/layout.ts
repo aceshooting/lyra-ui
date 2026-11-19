@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Karusellbilder',
   carouselGoTo: 'Gå till bild {index}',
+  carouselPauseRotation: 'Pausa rotationen',
+  carouselResumeRotation: 'Återuppta rotationen',
   scrollerLabel: 'Rullningsbart innehåll',
   scrollPrevious: 'Rulla bakåt',
   scrollNext: 'Rulla framåt',

@@ -768,6 +768,10 @@ it('normalizeTreeData: treats an unreadable children.length as zero (hostile Pro
       if (prop === 'length') throw new Error('hostile length');
       return Reflect.get(target, prop, receiver);
     },
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop === 'length') throw new Error('unreadable length descriptor');
+      return Reflect.getOwnPropertyDescriptor(target, prop);
+    },
   });
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = [{ id: 'parent', label: 'Parent', children: hostileChildren as never }];

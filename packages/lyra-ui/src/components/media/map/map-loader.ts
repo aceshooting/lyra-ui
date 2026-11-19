@@ -1,5 +1,8 @@
 import type { Feature, Geometry } from 'geojson';
+import { litDevWarnings } from '../../../internal/dev-warning.js';
+import { isObjectLike } from '../../../internal/object-guards.js';
 import {
+  createOptionalPeerLoader,
   resolveOptionalPeerCapability,
   unwrapOptionalPeerDefault,
 } from '../../../internal/optional-peer-capabilities.js';
@@ -212,10 +215,6 @@ const MAP_METHODS = [
 const MARKER_METHODS = ['setLngLat', 'setPopup', 'getPopup', 'addTo', 'remove'] as const;
 const POPUP_METHODS = ['setHTML', 'setText'] as const;
 
-function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
-  return (typeof value === 'object' || typeof value === 'function') && value !== null;
-}
-
 function isConstructor(value: unknown): value is new (...args: never[]) => object {
   if (typeof value !== 'function') return false;
   try {
@@ -227,16 +226,16 @@ function isConstructor(value: unknown): value is new (...args: never[]) => objec
 }
 
 function missingConstructorCapability(
-  module: Record<PropertyKey, unknown>,
+  module: object,
   name: 'Map' | 'Marker' | 'Popup',
   methods: readonly string[],
 ): string | undefined {
-  const Constructor = module[name];
+  const Constructor = (module as Record<string, unknown>)[name];
   if (!isConstructor(Constructor)) return name;
   const prototype = (Constructor as unknown as { prototype?: unknown }).prototype;
   if (!isObjectLike(prototype)) return `${name}.prototype`;
   for (const method of methods) {
-    if (typeof prototype[method] !== 'function') return `${name}.prototype.${method}`;
+    if (typeof (prototype as Record<string, unknown>)[method] !== 'function') return `${name}.prototype.${method}`;
   }
   return undefined;
 }
@@ -254,61 +253,79 @@ function isMaplibreModule(candidate: unknown): candidate is MaplibreModule {
   return missingMaplibreCapability(candidate) === undefined;
 }
 
-function resolveMaplibreModule(value: unknown): MaplibreModule {
-  const module = resolveOptionalPeerCapability(value, isMaplibreModule);
-  if (module) return module;
-  const candidate = unwrapOptionalPeerDefault(value);
-  const missing = missingMaplibreCapability(candidate) ?? 'module namespace';
-  throw new Error(
-    `Invalid optional peer \`maplibre-gl\`: missing or invalid \`${missing}\` capability.`,
-  );
+/** The shared loader owns retry policy. A fulfilled inspection can also describe an incompatible peer. */
+export function createMapEngineLoader<T>(
+  peer: string,
+  importer: () => Promise<unknown>,
+  validate: (candidate: unknown) => candidate is T,
+  missing: (candidate: unknown) => string | undefined,
+) {
+  type Inspection = { module: T | null };
+  const inspect = async (load: () => Promise<unknown>): Promise<Inspection> => {
+    const value = await load();
+    let capability = 'module namespace';
+    try {
+      const module = resolveOptionalPeerCapability(value, validate);
+      if (module) return { module };
+      capability = missing(unwrapOptionalPeerDefault(value)) ?? capability;
+    } catch { /* The namespace may have unusable accessors. */ }
+    const warnings = litDevWarnings();
+    const key = `lyra-map:${peer}:${capability}`;
+    if (warnings && !warnings.has(key)) {
+      warnings.add(key);
+      console.warn(`<lr-map> found \`${peer}\`, but it lacks a capability the map needs. Check its version.`,
+        new Error(`Invalid optional peer \`${peer}\`: missing or invalid \`${capability}\` capability.`));
+    }
+    return { module: null };
+  };
+  const loader = createOptionalPeerLoader<Inspection>({
+    load: () => inspect(importer),
+    isCapability: (value): value is Inspection => isObjectLike(value) && 'module' in value,
+    cache: 'generation',
+    warningKey: `lyra-map:${peer}:import`,
+    warning: `<lr-map> could not load the optional peer dependency \`${peer}\`. Check the network and installation (\`pnpm add ${peer}\`).`,
+  });
+  // Preserve the shared promise identity when mapping inspections to the engine capability.
+  let previous: Promise<Inspection | null> | undefined;
+  let result: Promise<T | null>;
+  return {
+    get(): Promise<T | null> {
+      const next = loader.get();
+      if (next !== previous) {
+        previous = next;
+        result = next.then(value => value?.module ?? null);
+      }
+      return result;
+    },
+    async loadWith(load = importer): Promise<T | null> {
+      return (await loader.loadWith(() => inspect(load)))?.module ?? null;
+    },
+  };
 }
 
-let maplibre: Promise<MaplibreModule | null> | undefined;
 let maplibreCapabilities: unknown;
+const importMaplibre = (): Promise<unknown> => import('maplibre-gl').then(source =>
+  maplibreCapabilities ??= Object.freeze({
+    get Map() { return source.Map; },
+    get Marker() { return source.Marker; },
+    get Popup() { return source.Popup; },
+    get NavigationControl() { return source.NavigationControl; },
+    get ScaleControl() { return source.ScaleControl; },
+    get GeolocateControl() { return source.GeolocateControl; },
+    get AttributionControl() { return source.AttributionControl; },
+    get setWorkerUrl() { return source.setWorkerUrl; },
+    get getVersion() { return source.getVersion; },
+    get default() { return (source as unknown as { readonly default?: unknown }).default; },
+  }),
+);
+
+const maplibreLoader = createMapEngineLoader('maplibre-gl', importMaplibre, isMaplibreModule, missingMaplibreCapability);
 
 /** Loads and validates the MapLibre capabilities consumed by `<lr-map>`. @internal */
-export async function loadMaplibreModule(
-  importer: () => Promise<unknown> = () => import('maplibre-gl').then(source =>
-    maplibreCapabilities ??= Object.freeze({
-      get Map() { return source.Map; },
-      get Marker() { return source.Marker; },
-      get Popup() { return source.Popup; },
-      get NavigationControl() { return source.NavigationControl; },
-      get ScaleControl() { return source.ScaleControl; },
-      get GeolocateControl() { return source.GeolocateControl; },
-      get AttributionControl() { return source.AttributionControl; },
-      get setWorkerUrl() { return source.setWorkerUrl; },
-      get getVersion() { return source.getVersion; },
-      get default() { return (source as unknown as { readonly default?: unknown }).default; },
-    }),
-  ),
-): Promise<MaplibreModule | null> {
-  try {
-    return resolveMaplibreModule(await importer());
-  } catch (error) {
-    console.warn(
-      '<lr-map> needs the optional peer dependency `maplibre-gl` — install it with ' +
-        '`pnpm add maplibre-gl`.',
-      error,
-    );
-    return null;
-  }
-}
+export const loadMaplibreModule = maplibreLoader.loadWith;
 
-/**
- * Lazily loads the optional peer dependency `maplibre-gl` once per page.
- * Resolves to `null` (with a one-time warning) if it isn't installed —
- * mirrors `<lr-flag>`'s peer-dependency pattern. `<lr-map>` supplies the styles for MapLibre's
- * generated DOM inside its shadow root. MapLibre v6 consumers also configure its module-worker URL
- * for their bundler once they install the peer; v5's standard build includes its worker.
- */
-export function loadMaplibre(): Promise<MaplibreModule | null> {
-  if (!maplibre) {
-    maplibre = loadMaplibreModule();
-  }
-  return maplibre;
-}
+/** Lazily loads the native engine. A rejected import is retried on the next call. */
+export const loadMaplibre = maplibreLoader.get;
 
 /** The companion additionally provides per-map main-thread and worker readiness. */
 export interface ModularMapModule extends MaplibreModule {
@@ -323,36 +340,22 @@ function isModularMapModule(candidate: unknown): candidate is ModularMapModule {
 }
 
 let modularMapCapabilities: unknown;
+const importModularMap = (): Promise<unknown> => import('@aceshooting/lyra-map').then(source =>
+  modularMapCapabilities ??= Object.freeze({
+    get Map() { return source.Map; },
+    get Marker() { return source.Marker; },
+    get Popup() { return source.Popup; },
+  }),
+);
+
+const modularLoader = createMapEngineLoader('@aceshooting/lyra-map', importModularMap, isModularMapModule,
+  candidate => missingMaplibreCapability(candidate) ?? 'Map.prototype.prepareFeatures');
 
 /** Loads and validates the optional modular engine without substituting a canonical engine. @internal */
-export async function loadModularMapModule(
-  importer: () => Promise<unknown> = () => import('@aceshooting/lyra-map').then(source =>
-    modularMapCapabilities ??= Object.freeze({
-      get Map() { return source.Map; },
-      get Marker() { return source.Marker; },
-      get Popup() { return source.Popup; },
-    }),
-  ),
-): Promise<ModularMapModule | null> {
-  try {
-    const value = await importer();
-    const module = resolveOptionalPeerCapability(value, isModularMapModule);
-    if (module) return module;
-    const candidate = unwrapOptionalPeerDefault(value);
-    const missing = missingMaplibreCapability(candidate) ?? 'Map.prototype.prepareFeatures';
-    throw new Error(`Invalid optional peer \`@aceshooting/lyra-map\`: missing or invalid \`${missing}\` capability.`);
-  } catch (error) {
-    console.warn('<lr-map> needs the optional peer dependency `@aceshooting/lyra-map` — install it with `pnpm add @aceshooting/lyra-map`.', error);
-    return null;
-  }
-}
+export const loadModularMapModule = modularLoader.loadWith;
 
-let modularMap: Promise<ModularMapModule | null> | undefined;
-
-/** Lazily loads the modular companion once per page. A failed load never selects another engine. */
-export function loadModularMap(): Promise<ModularMapModule | null> {
-  return modularMap ??= loadModularMapModule();
-}
+/** Lazily loads the modular companion. A rejected import is retried on the next call. */
+export const loadModularMap = modularLoader.get;
 
 /** The standard peer controls `<lr-map controls>` can add, by kind. */
 export type MapControlKind = 'navigation' | 'scale' | 'geolocate' | 'globe' | 'terrain' | 'attribution';
@@ -383,7 +386,7 @@ export async function loadMapControl(
       : kind === 'geolocate' ? await import('@aceshooting/lyra-map/controls/geolocate')
       : await import('@aceshooting/lyra-map/controls/attribution');
     const candidate = unwrapOptionalPeerDefault(source);
-    const control = isObjectLike(candidate) ? candidate[name] : undefined;
+    const control = isObjectLike(candidate) ? (candidate as Record<string, unknown>)[name] : undefined;
     return isConstructor(control) ? control as MapLibreControlConstructor : null;
   } catch (error) {
     console.warn(`<lr-map> could not load the ${kind} control from \`@aceshooting/lyra-map\`.`, error);

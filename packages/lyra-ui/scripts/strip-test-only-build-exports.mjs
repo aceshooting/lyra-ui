@@ -8,6 +8,8 @@ const TEST_ONLY_EXPORTS = Object.freeze({
   'internal/aria-controls': ['describeElement', 'undescribeElement'],
   'internal/converters': ['trueDefaultBooleanFromAttributeConverter'],
   'internal/deprecated-aliases': ['invertAlias'],
+  'internal/delimited-data': ['parseDelimitedGrid', 'parseDelimitedRecords'],
+  'internal/papaparse-loader': ['loadPapaParse'],
   'internal/dompurify-loader': ['__setDompurifyImporterForTesting'],
   'theme/theme': ['applyLyraThemeBootstrapForTesting'],
   'internal/text-quote': ['resolveTextQuote', 'findTextQuoteMatches'],

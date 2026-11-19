@@ -38,7 +38,7 @@ function vetoPanelClose(event: Event): void {
 export const DockedInline: Story = {
   name: 'mode="inline" (docked)',
   render: () => html`
-    <lr-responsive-panel mode="inline" open style="max-width: 20rem;">
+    <lr-responsive-panel mode="inline" open style="max-width: 20rem; --lr-responsive-panel-docked-radius: var(--lr-radius); --lr-responsive-panel-bg: var(--lr-color-surface-raised);">
       <span slot="header" style="font-weight: 600;">Filters</span>
       <div style="display: flex; flex-direction: column; gap: 0.5rem;">
         <label><input type="checkbox" checked /> Show archived</label>

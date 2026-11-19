@@ -7,9 +7,20 @@ import { twoFrames } from '../../../../test/frames.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('does not observe label content when the author supplies an accessible name', async () => {
-  const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="a" aria-label="Named">Content</lr-reorder-item>`);
-  const probe = el as unknown as { contentObserver?: MutationObserver };
-  expect(probe.contentObserver === undefined).to.equal(true);
+  const original = MutationObserver.prototype.observe;
+  const observed: Node[] = [];
+  MutationObserver.prototype.observe = function (this: MutationObserver, target: Node, options?: MutationObserverInit): void {
+    observed.push(target);
+    return original.call(this, target, options);
+  };
+  try {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="a" aria-label="Named">Content</lr-reorder-item>`);
+    const { contentObserver } = el as unknown as { contentObserver: { active: boolean } };
+    expect(contentObserver.active).to.equal(false);
+    expect(observed.some((target) => target === el)).to.equal(false);
+  } finally {
+    MutationObserver.prototype.observe = original;
+  }
 });
 it('coalesces a structural move to one boundary reconciliation', async () => {
   const el = await fixture<LyraReorderList>(html`<lr-reorder-list><lr-reorder-item value="a">A</lr-reorder-item><lr-reorder-item value="b">B</lr-reorder-item></lr-reorder-list>`);

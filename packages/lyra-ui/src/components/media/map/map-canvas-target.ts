@@ -1,4 +1,5 @@
 import { flattenedParentElement } from '../../../internal/composed-tree.js';
+import { OwnedIntersectionObserver, readIntersecting } from '../../../internal/owned-observer.js';
 
 interface Rect { readonly left: number; readonly top: number; readonly width: number; readonly height: number }
 /** @internal Measured allocation shared only by the map layout controller and owner. */
@@ -76,7 +77,25 @@ export class MapCanvasAllocationController {
   private key = '';
   private updating = false;
   private stopped = false;
-  constructor(private readonly host: AllocationHost) {}
+  private readonly observer: OwnedIntersectionObserver;
+  private watched?: Element;
+  private visible = true;
+
+  constructor(private readonly host: AllocationHost) {
+    this.observer = new OwnedIntersectionObserver(host.element, entries => {
+      const visible = this.watched && readIntersecting(entries, this.watched);
+      if (visible === undefined || visible === this.visible) return;
+      this.visible = visible;
+      this.refresh();
+    });
+  }
+  private watch(target?: Element): void {
+    if (target === this.watched) return;
+    this.observer.clear();
+    this.watched = target;
+    this.visible = true;
+    if (target) this.observer.observe(target);
+  }
   refresh(): void {
     if (this.stopped || this.updating) return;
     this.updating = true;
@@ -90,6 +109,7 @@ export class MapCanvasAllocationController {
           const validTarget = target === 'viewport' || candidate !== null && typeof candidate === 'object' &&
             candidate !== host && candidate.namespaceURI === 'http://www.w3.org/1999/xhtml' &&
             candidate.ownerDocument === host.ownerDocument && candidate.isConnected;
+          this.watch(validTarget ? target === 'viewport' ? host : candidate! : undefined);
           if (validTarget && compatibleAncestors(base, target)) {
             const rect = base.getBoundingClientRect();
             const viewport = view.visualViewport;
@@ -103,7 +123,7 @@ export class MapCanvasAllocationController {
             if (targetRect && box) allocation = mapCanvasAllocation(box.rect, targetRect, box.width, box.height);
           }
         } catch { /* An unavailable target restores the component's own allocation. */ }
-      }
+      } else this.watch();
       const values = allocation ? [allocation.left, allocation.top, allocation.width, allocation.height,
         allocation.padding.top, allocation.padding.right, allocation.padding.bottom, allocation.padding.left] : [];
       const key = values.map(value => Math.round(value * 1000) / 1000).join(',');
@@ -119,7 +139,7 @@ export class MapCanvasAllocationController {
         this.host.changed(allocation);
       }
       if (this.stopped) return;
-      if (host.isConnected && this.host.target() !== undefined && view && host.ownerDocument.defaultView === view) this.schedule(view);
+      if (this.visible && host.isConnected && this.host.target() !== undefined && view && host.ownerDocument.defaultView === view) this.schedule(view);
       else this.cancel();
     } finally { this.updating = false; }
   }
@@ -140,7 +160,7 @@ export class MapCanvasAllocationController {
     for (const name of VARIABLES) base.style.removeProperty(`--_lr-map-canvas-${name}`);
   }
   dispose(): void {
-    this.stopped = true; this.cancel();
+    this.stopped = true; this.cancel(); this.watch();
     if (this.base) this.clear(this.base);
     this.base = undefined;
   }

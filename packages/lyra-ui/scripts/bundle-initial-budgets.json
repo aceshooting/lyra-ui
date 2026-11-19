@@ -14,14 +14,14 @@
     "dist/utilities/scoped-registry-loader.js": 11.25
   },
   "$marginalGzipKb": {
-    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 8.0,
+    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 8.0625,
     "dist/components/conversation/model-select/model-select.js": 28.75,
-    "dist/components/conversation/usage-badge/usage-badge.js": 4.625,
+    "dist/components/conversation/usage-badge/usage-badge.js": 4.8125,
     "dist/components/conversation/voice-picker/voice-picker.js": 30.25,
     "dist/components/forms/color-picker/color-picker.js": 28.4462890625,
     "dist/components/forms/combobox/combobox.js": 41.75,
-    "dist/components/forms/date-picker/date-input.js": 42.125,
-    "dist/components/forms/input/time-input.js": 27.0625,
+    "dist/components/forms/date-picker/date-input.js": 42.1875,
+    "dist/components/forms/input/time-input.js": 27.125,
     "dist/components/forms/locale-picker/locale-picker.js": 29.375,
     "dist/components/forms/select/select.js": 36.5625,
     "dist/components/layout/app-rail/app-rail-item.js": 8.25,

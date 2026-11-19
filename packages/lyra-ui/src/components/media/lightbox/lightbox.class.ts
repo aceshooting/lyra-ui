@@ -6,7 +6,7 @@ import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { live } from 'lit/directives/live.js';
 import { property, query, state } from 'lit/decorators.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -14,6 +14,7 @@ import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.j
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './lightbox.styles.js';
@@ -213,6 +214,7 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @cssprop --lr-lightbox-overlay-color - The backdrop scrim color.
  * @cssprop --lr-lightbox-control-bg - Background for every floating/toolbar icon button.
  * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
+ * @cssprop --lr-lightbox-status-color - Color of the source-mode loading and error messages on the backdrop.
  * @status stable
  * @since 4.0.0
  */
@@ -241,6 +243,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.announcements.adopted();
     this.hostDescription.adopted();
     this.sourceController.adopted();
   }
@@ -397,7 +400,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     },
   });
   private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private sourceErrorAnnounced = false;
   private sourceHasRendered = false;
   private lastSourceImage?: LyraLightboxImage;
@@ -572,8 +575,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       const index = changed.has('index') ? undefined : this.index;
       const intent = this.navigationIntent + 1;
       this.syncImages();
-      if (index !== undefined && this.index !== index && this.navigationIntent === intent && this.sourceBindingCurrent)
-        this.emit('lr-index-change', { index: this.index });
+      if (index !== undefined && this.index !== index && this.navigationIntent === intent && this.sourceBindingCurrent) {
+        const corrected = this.index;
+        this.scheduleAfterUpdate(() => {
+          if (this.index === corrected && this.navigationIntent === intent) this.emit('lr-index-change', { index: corrected });
+        }, 'index-change');
+      }
     }
     if (this.sourceBindingCurrent && this.imageSource !== undefined) this.sourceController.select(this.currentIndex());
     if (!this.sourceBindingCurrent) {
@@ -619,13 +626,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       isAccessibilityVisible(this) &&
       (changed.has('index') || changed.has('images') || changed.has('imageSource'))
     ) {
-      this.announcementSink?.announce(this.liveText);
+      this.announcements.announcePolite(this.liveText);
     }
     const sourceError = this.sourceBindingCurrent && this.imageSource !== undefined && this.sourceController.state === 'error';
     if (!sourceError) this.sourceErrorAnnounced = false;
     if (sourceError && !this.sourceErrorAnnounced && this.sourceHasRendered && this.open && isAccessibilityVisible(this)) {
       this.sourceErrorAnnounced = true;
-      this.announcementSink?.announce(this.localize('imageViewerFailedToLoad'));
+      this.announcements.announcePolite(this.localize('imageViewerFailedToLoad'));
     }
     this.sourceHasRendered = true;
     if (this.isConnected && this.sourceBindingCurrent) this.captureAnnouncementBaseline();
@@ -660,10 +667,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     super.connectedCallback();
     const generation = ++this.connectionGeneration;
     const connectionDocument = this.ownerDocument;
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.captureAnnouncementBaseline();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
@@ -691,8 +694,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   override disconnectedCallback(): void {
     const generation = ++this.connectionGeneration;
     const connectionDocument = this.ownerDocument;
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.announcementBaseline = undefined;
     this.sourceErrorAnnounced = false;
     this.sourceHasRendered = false;
@@ -764,7 +765,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event) || event.shiftKey) return;
     // A slotted button/link (actions slot) owns Arrow keys; the lightbox's own shadow controls do not.
     for (const target of event.composedPath() as Node[]) {
       if (target === this) break;

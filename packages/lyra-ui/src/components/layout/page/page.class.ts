@@ -1,3 +1,6 @@
+import { AllocationObserverController } from '../../../internal/owned-observer.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -29,6 +32,7 @@ import {
   deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './page.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -181,6 +185,10 @@ export interface LyraPageEventMap {
  * @cssprop [--lr-page-subheader-bg=var(--lr-color-surface)] - Opaque background of the sticky
  *   subheader, so scrolled content never shows through; unpainted when `disable-sticky` names
  *   `subheader`.
+ * @cssprop [--lr-page-menu-bg=var(--lr-color-surface)] - Opaque background of the sticky menu, so
+ *   scrolled content never shows through; unpainted when `disable-sticky` names `menu`.
+ * @cssprop [--lr-page-aside-bg=var(--lr-color-surface)] - Opaque background of the sticky aside, so
+ *   scrolled content never shows through; unpainted when `disable-sticky` names `aside`.
  * @cssprop [--aside-width] - Web Awesome alias for `--lr-page-aside-width`.
  * @cssprop [--banner-height] - Web Awesome alias for `--lr-page-banner-height`.
  * @cssprop [--header-height] - Web Awesome alias for `--lr-page-header-height`.
@@ -207,15 +215,26 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
    *  attribute does not draw an "unknown attribute" dev warning. */
   protected static readonly knownUnobservedAttributes: readonly string[] = ['disable-sticky'];
 
+  private readonly navOpenGuard = new VetoWriteGuard();
+  private _navOpen = false;
+  private requestingNavOpen = false;
+
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   /** Presentation derived from the Page's allocated inline size. It begins at `desktop` so server
    * output is deterministic, then reflects the first live allocation measurement. */
   @property({ reflect: true }) view: PageView = 'desktop';
 
-  /** Whether mobile navigation is open. Desktop navigation remains visible independently. */
-  @property({ type: Boolean, attribute: 'nav-open', reflect: true }) navOpen =
-    false;
+  /** Whether mobile navigation is open. Desktop navigation remains visible independently.
+   * @default false */
+  @property({ type: Boolean, attribute: 'nav-open', reflect: true })
+  get navOpen(): boolean {
+    return this._navOpen;
+  }
+  set navOpen(value: boolean) {
+    markVetoGuardWrite(this.navOpenGuard);
+    this._navOpen = value;
+  }
 
   /** Allocation breakpoint in pixels, host `em`, root `rem`, or owner-window `vw` and `vh`.
    * Invalid lengths fall back to `768px`. */
@@ -234,9 +253,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   disableNavigationToggle = false;
 
   /** Host-level accessible-name override forwarded to the internal navigation landmark. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel:
-    | string
-    | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private readonly mainId = nextId('page-main');
   private readonly navigationId = nextId('page-navigation');
@@ -251,13 +268,17 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   @property({ attribute: 'tabindex', reflect: true }) private fragmentTabIndex:
     | string
     | null = this.getAttribute('tabindex') ?? '-1';
-  private resizeObserver?: ResizeObserver;
+  private readonly allocation = new AllocationObserverController(this, {
+    extra: () => this.allocationMetric ?? null,
+    onInlineSize: (size, target) => this.onAllocation(size, target),
+  });
   private allocationMeasured = false;
   private allocationInlineSize?: number;
   private allocationBreakpoint?: number;
   private allocationMetric?: HTMLElement;
   private allocationMetricInlineSize?: number;
   private readonly allocationFrame = new OwnedFrame(this);
+  private readonly slotPresence = new SlotPresenceController(this);
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
@@ -309,8 +330,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   override disconnectedCallback(): void {
     this.modalSurface.disconnect();
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
     this.allocationMetric?.remove();
     this.allocationMetric = undefined;
     this.allocationMetricInlineSize = undefined;
@@ -388,7 +407,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       : unit === 'em' ? this.renderRoot : undefined;
     if (this.allocationMetric?.parentNode === parent) return;
     if (this.allocationMetric) {
-      this.resizeObserver?.unobserve(this.allocationMetric);
       this.allocationMetric.remove();
       this.allocationMetric = undefined;
     }
@@ -400,7 +418,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       metric.style.inlineSize = unit === 'rem' ? '1rem' : '1em';
       parent.appendChild(metric);
       this.allocationMetric = metric;
-      this.resizeObserver?.observe(metric);
     }
   }
 
@@ -409,52 +426,37 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     const view = this.ownerDocument.defaultView;
-    const ResizeObserverConstructor = view?.ResizeObserver;
     const unit = this.allocationBreakpointUnit;
-    if (view && (!ResizeObserverConstructor || unit === 'vw' || unit === 'vh')) {
+    if (view?.ResizeObserver && (unit === 'vw' || unit === 'vh')) {
       this.resizeView = view;
       view.addEventListener('resize', this.onWindowResize);
     }
-    if (ResizeObserverConstructor) {
-      if (!this.resizeObserver) {
-        const observer = new ResizeObserverConstructor((entries) => {
-          if (!this.isConnected || this.ownerDocument.defaultView !== view || this.resizeObserver !== observer) return;
-          // A single-target observer may deliver only a content rectangle for its first entry.
-          const hostEntry = entries.find((entry) => entry.target === this) ??
-            (this.allocationMetric ? undefined : entries[0]);
-          let changed = false;
-          for (const entry of entries) {
-            const inlineSize = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-            if (!Number.isFinite(inlineSize) || inlineSize < 0) continue;
-            if (entry === hostEntry && inlineSize !== this.allocationInlineSize) {
-              this.allocationInlineSize = inlineSize;
-              changed = true;
-            } else if (entry.target === this.allocationMetric && inlineSize !== this.allocationMetricInlineSize) {
-              this.allocationMetricInlineSize = inlineSize;
-              // Read the font in the same delivery as its measured unit, before another frame can change it.
-              this.allocationBreakpoint = this.resolveAllocationBreakpoint();
-              changed = true;
-            }
-          }
-          // Block-only host notifications do not invalidate the breakpoint. Font-relative units
-          // have their own metric observation, including font changes inherited through stylesheets.
-          if (changed && this.allocationInlineSize !== undefined) {
-            this.allocationFrame.schedule(() => {
-              if (this.allocationInlineSize !== undefined) this.applyMeasuredInlineSize(this.allocationInlineSize, true);
-            });
-          }
-        });
-        this.resizeObserver = observer;
-      }
-      this.resizeObserver.observe(this);
-      this.observeAllocationMetric(unit);
+    this.observeAllocationMetric(unit);
+    this.allocation.refresh();
+  }
+
+  private onAllocation(size: number, target: Element): void {
+    if (!this.ownerDocument.defaultView?.ResizeObserver) {
+      this.measureAllocation();
+      return;
     }
+    if (target === this) {
+      if (this.allocationInlineSize === size) return;
+      this.allocationInlineSize = size;
+    } else {
+      if (this.allocationMetricInlineSize === size) return;
+      this.allocationMetricInlineSize = size;
+      this.allocationBreakpoint = this.resolveAllocationBreakpoint();
+    }
+    this.allocationFrame.schedule(() => {
+      if (this.allocationInlineSize !== undefined) this.applyMeasuredInlineSize(this.allocationInlineSize, true);
+    });
   }
 
   private readonly onWindowResize = (): void => this.measureAllocation();
 
   private measureAllocation(): void {
-    const width = this.getBoundingClientRect().width;
+    const width = this.offsetWidth;
     if (width > 0) {
       this.allocationMeasured = true;
       this.allocationInlineSize = width;
@@ -771,11 +773,25 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
    *  mutation path -- showNavigation(), hideNavigation(), toggleNavigation(), and the built-in
    *  drawer dismissals that call them. */
   private requestNavOpen(next: boolean): void {
-    if (this.navOpen === next) return;
-    const request = this.emit('lr-nav-toggle-request', { open: next }, { cancelable: true });
-    if (request.defaultPrevented) return;
-    this.navOpen = next;
-    this.emit('lr-nav-open-change', { open: next });
+    if (this.requestingNavOpen || this.navOpen === next) return;
+    const parent = this.parentNode;
+    const document = this.ownerDocument;
+    const connected = this.isConnected;
+    this.requestingNavOpen = true;
+    try {
+      requestThenCommit({
+        requestDetail: { open: next },
+        emitRequest: (proposal, init: { cancelable: true }) => this.emit('lr-nav-toggle-request', proposal, init),
+        guard: this.navOpenGuard,
+        commit: () => {
+          if (this.isConnected !== connected || this.parentNode !== parent || this.ownerDocument !== document) return;
+          this.navOpen = next;
+          this.emit('lr-nav-open-change', { open: next });
+        },
+      });
+    } finally {
+      this.requestingNavOpen = false;
+    }
   }
 
   /** Open mobile navigation. Desktop navigation is already visible, but the state is retained so
@@ -818,6 +834,8 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   override render(): TemplateResult {
     const mobile = this.view === 'mobile';
     const overlayOpen = mobile && this.navOpen;
+    const hasHeader = this.slotPresence.has('header') ||
+      (mobile && (!this.disableNavigationToggle || this.slotPresence.has('navigation-toggle')));
     const navigationLabel = this.accessibleLabel ?? this.localize('navigation');
     return html`
       <div part="base page" @click=${this.onPageClick}>
@@ -835,7 +853,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
         </a>
 
         <div part="banner"><slot name="banner"></slot></div>
-        <header part="header">
+        <header part="header" role=${hasHeader ? nothing : 'presentation'}>
           <slot name="header"></slot>
           <div class="navigation-toggle-container">
             <slot
@@ -898,10 +916,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
             <div part="main-content"><slot></slot></div>
             <div part="main-footer"><slot name="main-footer"></slot></div>
           </main>
-          <aside part="aside"><slot name="aside"></slot></aside>
+          <aside part="aside" ?hidden=${!this.slotPresence.has('aside')}><slot name="aside"></slot></aside>
         </div>
 
-        <footer part="footer"><slot name="footer"></slot></footer>
+        <footer part="footer" ?hidden=${!this.slotPresence.has('footer')}><slot name="footer"></slot></footer>
       </div>
     `;
   }

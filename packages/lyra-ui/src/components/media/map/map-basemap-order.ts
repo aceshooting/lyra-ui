@@ -59,12 +59,17 @@ export class MapBasemapOrder {
     for (const [entry, ids] of members) {
       // Selector expansion follows style order; retained baselines keep it stable after our moves.
       const original = next.get(ids[0]!)!.original;
-      ids.sort((a, b) => original.indexOf(a) - original.indexOf(b));
+      if (ids.length > 1) {
+        const positions = new Map<string, number>();
+        original.forEach((layer, rank) => { if (!positions.has(layer)) positions.set(layer, rank); });
+        ids.sort((a, b) => (positions.get(a) ?? -1) - (positions.get(b) ?? -1));
+      }
       groups.push(Object.freeze({ id: ids[0]!, layerIds: Object.freeze(ids), ...(entry.before === null ? {} : { before: entry.before }) }));
     }
     const released = [...this.baselines].filter(([id, baseline]) => !next.has(id) && existing.includes(id) && !isOwned(id) &&
       !relocated(id, existing, baseline.applied))
-      .sort(([a, first], [b, second]) => second.original.indexOf(b) - first.original.indexOf(a));
+      .map(([id, baseline]) => ({ id, baseline, rank: baseline.original.indexOf(id) }))
+      .sort((first, second) => second.rank - first.rank);
     return {
       groups: Object.freeze(groups),
       plan: (live, owned) => {
@@ -81,11 +86,11 @@ export class MapBasemapOrder {
         const restores: Array<{ kind: 'move'; id: string; before?: string }> = [];
         // Restore only released IDs; unrelated IDs retain their relative order. Active constraints
         // run afterwards, so a released placement cannot create a cycle against an active owner.
-        for (const [id, baseline] of released) {
+        for (const { id, baseline, rank } of released) {
           if (relocated(id, live, baseline.applied, controlledIds)) continue;
           const index = working.indexOf(id);
           if (index < 0) continue;
-          const before = baseline.original.slice(baseline.original.indexOf(id) + 1).find(other =>
+          const before = baseline.original.slice(rank + 1).find(other =>
             working.includes(other) && !controlledIds.has(other) && !next.has(other));
           if (before === undefined ? index === working.length - 1 : working[index + 1] === before) continue;
           working.splice(index, 1);

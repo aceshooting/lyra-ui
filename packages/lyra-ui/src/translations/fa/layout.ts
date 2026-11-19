@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'اسلایدهای چرخ‌وفلک',
   carouselGoTo: 'رفتن به اسلاید {index}',
+  carouselPauseRotation: 'توقف چرخش',
+  carouselResumeRotation: 'ادامهٔ چرخش',
   scrollerLabel: 'محتوای قابل پیمایش',
   scrollPrevious: 'پیمایش به عقب',
   scrollNext: 'پیمایش به جلو',

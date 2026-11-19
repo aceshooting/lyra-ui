@@ -26,6 +26,8 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
+A non-neutral `variant` adds a localized, visually hidden state to the item title. In forced colours, the marker and rail use system colours.
+
 Every assigned item remains mounted; the timeline does not window large collections. Flow mode
 leaves untouched items' positioning styles alone. Time mode reuses item geometry between targeted
 resize notifications; allocation, timestamp placement, structural and orientation changes can

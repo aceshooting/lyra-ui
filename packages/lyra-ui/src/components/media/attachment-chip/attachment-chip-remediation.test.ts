@@ -1,6 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './attachment-chip.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import type { LyraAttachmentChip } from './attachment-chip.js';
 
 it('keeps a detached failure silent on immediate reconnect and announces later connected failures once', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-attachment-chip']>(html`<lr-attachment-chip status="uploading" .strings=${{ attachmentUploadFailed: 'Failed upload' }}></lr-attachment-chip>`);
@@ -54,4 +55,12 @@ it('announces one new connected failure when a retry coalesces uploading and err
   parent.append(el);
   await el.updateComplete;
   expect(messages()).to.deep.equal([]);
+});
+
+it('falls back to the localized remove name when remove-label is whitespace only', async () => {
+  const el = await fixture<LyraAttachmentChip>(html`<lr-attachment-chip name="report.pdf" remove-label="   "></lr-attachment-chip>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="remove-button"]')!;
+  const inner = button.shadowRoot?.querySelector('button') ?? button;
+  const name = button.getAttribute('aria-label') ?? inner.getAttribute('aria-label');
+  expect(name).to.equal('Remove report.pdf');
 });

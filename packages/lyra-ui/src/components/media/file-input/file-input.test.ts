@@ -4192,13 +4192,13 @@ describe("lr-file-input custom validators", () => {
     await el.updateComplete;
     const priv = el as unknown as {
       validityRevision: number;
-      validatorAttributeObserver?: unknown;
+      disposeValidatorObserver?: unknown;
     };
-    expect(priv.validatorAttributeObserver === undefined).to.equal(false);
+    expect(priv.disposeValidatorObserver === undefined).to.equal(false);
 
     const parent = el.parentElement!;
     el.remove();
-    expect(priv.validatorAttributeObserver === undefined).to.equal(true);
+    expect(priv.disposeValidatorObserver === undefined).to.equal(true);
     const revisionBefore = priv.validityRevision;
     el.setAttribute("data-external-flag", "go");
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -4209,7 +4209,7 @@ describe("lr-file-input custom validators", () => {
     parent.append(el);
     await el.updateComplete;
     expect(
-      priv.validatorAttributeObserver === undefined,
+      priv.disposeValidatorObserver === undefined,
       "reconnect rebuilds the observer"
     ).to.equal(false);
     el.setAttribute("data-external-flag", "again");

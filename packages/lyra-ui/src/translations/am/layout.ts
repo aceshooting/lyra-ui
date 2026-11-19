@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'የካሩሰል ስላይዶች',
   carouselGoTo: 'ወደ {index}ኛ ስላይድ ሂድ',
+  carouselPauseRotation: 'ማዞርን ባለበት አቁም',
+  carouselResumeRotation: 'ማዞርን ቀጥል',
   scrollerLabel: 'ሊሸበለል የሚችል ይዘት',
   scrollPrevious: 'ወደ ኋላ ሸብልል',
   scrollNext: 'ወደ ፊት ሸብልል',

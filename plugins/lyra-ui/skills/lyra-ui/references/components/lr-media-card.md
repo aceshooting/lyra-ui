@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -82,6 +82,11 @@ and later MIME values restore detection.
 **Authoring types:** `LyraMediaCardKind` and `LyraMediaCardOpenDetail`; `frame` uses the shared
 `LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
+
+When an image or video fails to load, `media-error` displays a localized message and
+`lr-render-error` reports `{ error: Error }`. Selecting another source retries playback or display.
+A media card’s `lr-media-open` detail uses `filename` and `src`, corresponding to `name` and `src`
+on an attachment chip’s `lr-preview-request`.
 
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
 noncancelable) notifies

@@ -6,7 +6,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
-import { composedContains } from '../../../internal/overlay-stack.js';
+import { composedContains } from '../../../internal/composed-tree.js';
+import { isElementNode, isShadowRoot } from '../../../internal/dom-guards.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import {
   releaseReorderOwnerState,
@@ -52,7 +53,7 @@ type ReorderFocusTarget = {
  *  shadow root has a root node that is neither `item.shadowRoot` nor the document. */
 function isRowOwnChrome(node: Element, item: LyraReorderItem): boolean {
   let root: Node = node.getRootNode();
-  while (root instanceof ShadowRoot) {
+  while (isShadowRoot(root)) {
     if (root === item.shadowRoot) return true;
     root = root.host.getRootNode();
   }
@@ -575,14 +576,14 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     const path = e.composedPath();
     const item = path.find(
       (target): target is LyraReorderItem =>
-        target instanceof Element &&
+        isElementNode(target) &&
         target.localName === tag('reorder-item') &&
         target.parentElement === this,
     );
     if (!item) return;
     const itemIndex = path.indexOf(item);
     const originatedInNestedControl = path.slice(0, itemIndex).some((target) => {
-      if (!(target instanceof Element)) return false;
+      if (!isElementNode(target)) return false;
       // Anything the item RENDERED ITSELF is the row's own chrome, never consumer content:
       // consumer content arrives through a slot, so its root node is the document, never the
       // item's shadow root (or a shadow root nested inside it). `isRowOwnChrome` climbs shadow

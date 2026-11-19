@@ -49,15 +49,15 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     min-block-size: 0;
-    background: var(--lr-color-surface);
+    background: var(--lr-responsive-panel-bg, var(--lr-color-surface));
   }
 
   /* Inline (docked) presentation: a normal panel in the page's layout flow, bordered like a card so
      it reads as a distinct region. */
   [part='base']:not(.overlay) [part='panel'] {
     flex: 1 1 auto;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius-container);
+    border: var(--lr-border-width-thin) solid var(--lr-responsive-panel-docked-border-color, var(--lr-color-border-subtle));
+    border-radius: var(--lr-responsive-panel-docked-radius, var(--lr-radius-container));
     overflow: auto;
   }
 
@@ -134,7 +134,7 @@ export const styles = css`
   [part='header'] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    padding: var(--lr-space-m) var(--lr-space-l);
+    padding: var(--lr-responsive-panel-padding, var(--lr-space-m) var(--lr-space-l));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow-wrap: anywhere;
   }
@@ -146,7 +146,7 @@ export const styles = css`
     flex: 1;
     min-inline-size: 0;
     max-inline-size: 100%;
-    padding: var(--lr-space-l);
+    padding: var(--lr-responsive-panel-padding, var(--lr-space-l));
     overflow-wrap: anywhere;
     overflow: auto;
   }
@@ -156,10 +156,10 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--lr-space-s);
+    gap: var(--lr-responsive-panel-gap, var(--lr-space-s));
     min-inline-size: 0;
     max-inline-size: 100%;
-    padding: var(--lr-space-m) var(--lr-space-l);
+    padding: var(--lr-responsive-panel-padding, var(--lr-space-m) var(--lr-space-l));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow-wrap: anywhere;
   }

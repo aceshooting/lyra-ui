@@ -13,7 +13,8 @@ import { styles } from './attachment-trigger.styles.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
-import { matchesAccept } from '../file-input/accept.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes } from '../file-input/accept.js';
 import type { LyraFileInputRejectedFile } from '../file-input/file-input.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -227,8 +228,9 @@ export interface LyraAttachmentTriggerEventMap {
  * remainingTotalSize }` (`'camera'` only while `camera-capture` routed the capture there),
  * the same shape as `lr-file-input`'s. `files` are the picks matching `accept` (a fresh readonly
  * owner-realm `File[]` snapshot rather than the native input's live `FileList`); the rest, which
- * the OS dialog's "All files" filter can let through, are listed in `rejected`. No size or count
- * limits apply here, so both `remaining*` fields are `null`.
+ * the OS dialog's "All files" filter can let through, are listed in `rejected`. Size and count
+ * limits are off unless `max-file-size`, `max-files` or `max-total-size` is set; `remaining*` are
+ * `null` while the matching limit is unset.
  * @event lr-camera-request - The `camera` capability was activated. No
  * detail payload — see the class doc's scope note; the host implements the
  * actual capture flow. Not fired when `camera-capture` opens the system camera instead.
@@ -305,7 +307,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   /** Native-file-input-style accept string (e.g. `'image/*'` or
    *  `'.pdf,.docx'`), forwarded to the hidden file input for the
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
-  @property() accept = '';
+  @property({ useDefault: true }) accept = '';
 
   /** The host `aria-label`: names either trigger shape. An empty value is ignored. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
@@ -325,6 +327,28 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  keeps firing `lr-camera-request`. Unset (the default) or any other value: `camera` only fires
    *  `lr-camera-request`, unchanged. */
   @property({ attribute: 'camera-capture' }) cameraCapture?: LyraAttachmentCameraCapture;
+
+  /** Largest accepted file size in bytes; larger picks are listed in `rejected` with reason
+   *  `'size'`. `0` (the default) disables the check; an invalid override falls back to 25 MiB. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
+  @property({ type: Number, attribute: 'max-file-size', useDefault: true }) maxFileSize = 0;
+  /** Largest number of files accepted per selection; excess picks are rejected with reason
+   *  `'maxFiles'`. `0` (the default) disables the check; an invalid override falls back to 100. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
+  @property({ type: Number, attribute: 'max-files', useDefault: true }) maxFiles = 0;
+  /** Largest combined byte size accepted per selection (`'maxTotalSize'` rejection). `0` (the
+   *  default) disables the check; an invalid override falls back to 250 MiB. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
+  @property({ type: Number, attribute: 'max-total-size', useDefault: true }) maxTotalSize = 0;
+
+  /** Externally held files to count against `maxFiles`. */
+  @property({ type: Number, attribute: 'held-file-count', useDefault: true }) heldFileCount = 0;
+  /** Externally held bytes to count against `maxTotalSize`. */
+  @property({ type: Number, attribute: 'held-total-size', useDefault: true }) heldTotalSize = 0;
+  /** Exact MIME types allowed in addition to satisfying `accept`. An empty allowlist admits any type. */
+  @property({ attribute: false }) allowedMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
+  /** Exact MIME types rejected even when present in the allowlist. */
+  @property({ attribute: false }) forbiddenMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
 
   /** Forwarded to the hidden file input's own `multiple` attribute. */
   @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
@@ -498,16 +522,18 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       && selected.length > 0
     ) {
       const accept = this.effectiveAccept(this.pendingCapability);
-      const files = Array.from(selected);
-      const matching = files.filter((file) => matchesAccept(file, accept));
-      const matchingFiles = new Set(matching);
-      this.emit('lr-files', {
-        capability: this.pendingCapability,
-        files: matching,
-        rejected: files.filter((file) => !matchingFiles.has(file)).map((file) => ({ file, reason: 'type' as const })),
-        remainingFiles: null,
-        remainingTotalSize: null,
-      });
+      const allowed = snapshotMimeTypes(this.allowedMimeTypes);
+      const forbidden = snapshotMimeTypes(this.forbiddenMimeTypes);
+      const typeAllowed = allowed.length || forbidden.length ? mimeTypeFilter(allowed, forbidden) : undefined;
+      const result = classifyFiles({
+        accept, maxFiles: this.maxFiles, maxFileSize: this.maxFileSize, maxTotalSize: this.maxTotalSize,
+        heldFileCount: this.heldFileCount, heldTotalSize: this.heldTotalSize,
+      }, Array.from(selected), true, [], false, typeAllowed);
+      // A File identity that matched the type filter cannot also be a type rejection.
+      const matched = new Set(result.files);
+      for (const entry of result.rejected) if (entry.reason !== 'type') matched.add(entry.file);
+      const rejected = result.rejected.filter(entry => entry.reason !== 'type' || !matched.has(entry.file));
+      this.emit('lr-files', { ...result, capability: this.pendingCapability, rejected });
     }
     // Clearing `.value` (not just leaving the stale selection in place)
     // means re-picking the exact same file still fires another 'change'
@@ -563,7 +589,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const label = this.hostAccessibleLabel || this.localize(meta.triggerKey);
+    const label = normalizeLabel(this.hostAccessibleLabel) ?? this.localize(meta.triggerKey);
     return html`
       <lr-icon-button
         part="trigger"
@@ -583,7 +609,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
-    const accessibleLabel = this.hostAccessibleLabel || addLabel;
+    const accessibleLabel = normalizeLabel(this.hostAccessibleLabel) ?? addLabel;
     return html`
       <lr-dropdown without-arrow
         part="menu"

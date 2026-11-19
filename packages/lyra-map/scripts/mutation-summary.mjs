@@ -5,8 +5,7 @@
 // mutant that could be tested.
 //
 //   node scripts/mutation-summary.mjs [reports/mutation/mutation.json] [--max-survivors 15]
-import { appendFileSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const KILLED = new Set(['Killed', 'Timeout']);
@@ -73,7 +72,7 @@ export function renderMarkdown(summary, { maxSurvivors = 15 } = {}) {
   return `${out.join('\n')}\n`;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const args = process.argv.slice(2);
   const limit = args.indexOf('--max-survivors');
   const maxSurvivors = limit >= 0 ? Number(args[limit + 1]) : 15;

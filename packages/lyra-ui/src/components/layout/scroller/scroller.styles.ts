@@ -14,6 +14,7 @@ export const styles = css`
       --lr-scroller-shadow-color,
       var(--shadow-color, var(--lr-color-surface))
     );
+    --_lr-scroller-ring-room: calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset));
     --_lr-scroller-effective-shadow-size: var(
       --lr-scroller-shadow-size,
       var(--shadow-size, var(--lr-size-2rem))
@@ -24,7 +25,7 @@ export const styles = css`
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-scroller-controls-gap, var(--lr-space-xs));
     min-inline-size: 0;
   }
 
@@ -38,6 +39,12 @@ export const styles = css`
        so nothing changes for a consumer who never sets the theme input. */
     scrollbar-width: var(--lr-theme-scrollbar-width, auto);
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+  }
+
+  /* Leaves room around slotted items for their focus rings on the cross axis without moving them. */
+  :host(:not([orientation="vertical"])) [part="viewport"] {
+    padding-block: var(--_lr-scroller-ring-room);
+    margin-block: calc(-1 * var(--_lr-scroller-ring-room));
   }
 
   :host([without-scrollbar]) [part="viewport"] {
@@ -81,7 +88,7 @@ export const styles = css`
 
   [part="content"] {
     display: flex;
-    gap: var(--lr-space-s);
+    gap: var(--lr-scroller-gap, var(--lr-space-s));
     min-inline-size: max-content;
   }
 

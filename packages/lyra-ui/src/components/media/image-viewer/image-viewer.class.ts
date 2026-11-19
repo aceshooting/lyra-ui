@@ -1,3 +1,4 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { panoramaStyles } from '../../../internal/media-panorama.styles.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
 import { PanoramaController, PANORAMA_PROJECTION, PANORAMA_DEFAULT_CAMERA, normalizePanoramaCamera, snapshotPanoramaHotspots, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
@@ -21,6 +22,8 @@ import type {
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { capturePointer } from '../../../internal/pointer-capture.js';
+import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { normalizeImageZoom } from '../../../internal/image-zoom.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -33,7 +36,7 @@ import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fi
 import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerHighlightsLimited, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -265,6 +268,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     imageViewerFitLabel: LYRA_DEFAULT_imageViewerFitLabel,
     imageViewerFitWidth: LYRA_DEFAULT_imageViewerFitWidth,
     imageViewerHighlightsLabel: LYRA_DEFAULT_imageViewerHighlightsLabel,
+    imageViewerHighlightsLimited: LYRA_DEFAULT_imageViewerHighlightsLimited,
     imageViewerLabel: LYRA_DEFAULT_imageViewerLabel,
     imageViewerRotate: LYRA_DEFAULT_imageViewerRotate,
     imageViewerUnlabeledHighlight: LYRA_DEFAULT_imageViewerUnlabeledHighlight,
@@ -425,8 +429,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
   private geometryObserver?: ResizeObserver;
   private observedWrapper?: HTMLElement;
-  private geometryFrame?: number;
-  private geometryFrameOwner?: Window;
+  private readonly geometryFrame = new OwnedFrame(this);
 
   @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
@@ -467,6 +470,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       this.liveRegion?.announce(this.localize('imageViewerAnnotationHint'), { force: true });
     }
     this.syncGeometryObserver();
+    this.announceHighlightLimit();
     const image = this.renderRoot.querySelector<HTMLImageElement>('[part="image"]');
     this.panorama.update(this.panoramaEnabled, this.hasOperableContent ? image : null, this.panoramaRevision, this.hotspots, this.panoramaCamera,
       this.renderRoot.querySelector<HTMLElement>('[part="panorama-engine"]'));
@@ -558,9 +562,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this.geometryObserver?.disconnect();
     this.geometryObserver = undefined;
     this.observedWrapper = undefined;
-    if (this.geometryFrame !== undefined) this.geometryFrameOwner?.cancelAnimationFrame(this.geometryFrame);
-    this.geometryFrame = undefined;
-    this.geometryFrameOwner = undefined;
+    this.geometryFrame.cancel();
   }
 
   private updateMediaLayoutSize(width: number, height: number): void {
@@ -576,16 +578,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       this.updateMediaLayoutSize(width, height);
       return;
     }
-    if (this.geometryFrame !== undefined) this.geometryFrameOwner?.cancelAnimationFrame(this.geometryFrame);
-    this.geometryFrameOwner = view;
-    const frame = view.requestAnimationFrame(() => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== view ||
-          this.geometryFrameOwner !== view || this.geometryFrame !== frame) return;
-      this.geometryFrame = undefined;
-      this.geometryFrameOwner = undefined;
+    this.geometryFrame.schedule(() => {
       this.updateMediaLayoutSize(Math.round(width * 100) / 100, Math.round(height * 100) / 100);
     });
-    this.geometryFrame = frame;
   }
 
   private syncGeometryObserver(): void {
@@ -648,8 +643,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   private onWrapperKeyDown = (event: KeyboardEvent): void => {
-    if (event.target !== event.currentTarget) return;
-    if (!this.annotatable || !this.hasOperableContent) return;
+    if (event.target !== event.currentTarget || event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
+    if (!this.annotatable || !this.hasOperableContent || (event.key === 'Enter' && isRepeatedActivationKey(event))) return;
     if (!this.draft) {
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -740,12 +735,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const origin = screenPercentToImagePercent(px, py, this.rotation);
     this.pointerOrigin = origin;
     this.pointerDraftId = event.pointerId;
-    try {
-      this.wrapperEl.setPointerCapture(event.pointerId);
-    } catch {
-      // Synthetic events have no active browser pointer to capture; their explicit terminal event
-      // still clears the same identity-keyed gesture state.
-    }
+    capturePointer(this.wrapperEl, event.pointerId);
     this.draft = { x: origin.x, y: origin.y, width: 0, height: 0 };
     event.preventDefault();
   };
@@ -806,11 +796,27 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     return { all, visible };
   }
 
+  private reportedHighlightTotal = 0;
+
+  private announceHighlightLimit(): void {
+    const count = this.hasOperableContent ? this.canonicalRegionHighlights().length : 0;
+    const total = count > IMAGE_VIEWER_HIGHLIGHT_LIMIT ? count : 0;
+    if (total === this.reportedHighlightTotal) return;
+    this.reportedHighlightTotal = total;
+    if (!total) return;
+    const formatter = getNumberFormat(this.effectiveLocale);
+    this.liveRegion?.announce(this.localize('imageViewerHighlightsLimited', undefined, {
+      shown: formatter.format(IMAGE_VIEWER_HIGHLIGHT_LIMIT),
+      total: formatter.format(total),
+    }));
+  }
+
   private onHighlightFocus(id: string): void {
     this.highlightFocusId = id;
   }
 
   private onHighlightKeyDown(event: KeyboardEvent, id: string): void {
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const buttons = [...this.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight"]')];
     if (buttons.length < 2) return;
     const current = buttons.findIndex((button) => button.dataset['highlightId'] === id);
@@ -871,6 +877,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
             top: `${rect.y}%`,
             width: `${rect.width}%`,
             height: `${rect.height}%`,
+            '--_lr-image-viewer-label-min-inset': `${layout ? -rect.y * layout.height / 100 : 0}px`,
             '--_lr-image-viewer-highlight-w': String(rect.width),
             '--_lr-image-viewer-highlight-h': String(rect.height),
             // Floor the visible half-region to keep browser border snapping inside the rectangle.

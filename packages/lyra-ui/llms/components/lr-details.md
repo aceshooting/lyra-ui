@@ -270,6 +270,11 @@ Import the granular details, checkbox and badge registration entries. Adjust the
 for the actual labels. Logical sizing supports RTL and narrower allocations; the checkbox remains
 independently focusable and operable when the summary is disabled.
 
+The details summary and accordion item trigger receive the host's `aria-describedby`
+references. Set `accessibleLabel` on Details to supply the summary name programmatically.
+`--lr-accordion-radius` controls framed group corners and `--lr-accordion-item-font-size`
+sets the item's base text size. The trigger minimum height follows the form-control size tier.
+
 **Themeable custom properties:** accordion item exposes `--lr-accordion-item-spacing` (default
 `var(--lr-form-control-padding-inline)`), `--lr-accordion-item-show-duration` and
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and

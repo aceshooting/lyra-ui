@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, activeFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -31,15 +31,15 @@ export const styles = css`
   [part='source-records'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
   [part='source-navigator'] :where(button, input, select), [part='source-status'] button {
     font: inherit; color: inherit; background: var(--lr-color-surface);
-    min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
     max-inline-size: 100%;
   }
-  [part='source-navigator'] button, [part='source-status'] button { cursor: pointer; overflow-wrap: anywhere; transition: var(--lr-transition-interactive); }
+  [part='source-navigator'] button, [part='source-status'] button { cursor: pointer; overflow-wrap: anywhere; ${interactiveTransition} }
   [part='source-navigator'] button:where(:hover), [part='source-status'] button:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }
-  [part='source-navigator'] button:where(:active), [part='source-status'] button:where(:active) { background: color-mix(in oklab, var(--lr-color-neutral-fill-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='source-navigator'] button:where(:active), [part='source-status'] button:where(:active) { background: ${activeFill('var(--lr-color-neutral-fill-quiet)')}; }
   [part='source-navigator'] :where(button, input, select):where(:focus-visible), [part='source-status'] button:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   .source-scene-status { position: absolute; inset-block-start: 0; inset-inline-start: 0; background: var(--lr-color-surface); }
   [part='source-status'] { padding: var(--lr-space-xs); overflow-wrap: anywhere; }
@@ -157,14 +157,14 @@ export const styles = css`
   [part='edge'] {
     fill: none;
     stroke: var(--_lr-flow-edge-color, var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border)));
-    stroke-width: 1.5;
+    stroke-width: calc(1.5px / var(--_lr-flow-zoom, 1));
     pointer-events: stroke;
     cursor: pointer;
   }
   [part='edge-hit-area'] {
     fill: none;
     stroke: transparent;
-    stroke-width: var(--lr-icon-button-size);
+    stroke-width: calc(var(--lr-icon-button-size) / var(--_lr-flow-zoom, 1));
     pointer-events: stroke;
     cursor: pointer;
   }
@@ -289,7 +289,7 @@ export const styles = css`
      [part='edge-hit-area']:active + [part='edge'] arm is (0,3,0), three compound selectors, and
      out-ranked it either way, so the press still worked through the fat hit target. */
   [part='edge'][aria-pressed='true'] {
-    stroke-width: 2.5;
+    stroke-width: calc(2.5px / var(--_lr-flow-zoom, 1));
   }
   /* The hit area is the wide transparent twin painted immediately before its edge, so it wins the
      hit test everywhere outside the drawn 1.5px stroke; without the sibling selector the edge lit
@@ -297,7 +297,7 @@ export const styles = css`
      an already-selected edge is a no-op because there is nothing further to say, not masking. */
   [part='edge']:hover,
   [part='edge-hit-area']:hover + [part='edge'] {
-    stroke-width: 2.5;
+    stroke-width: calc(2.5px / var(--_lr-flow-zoom, 1));
   }
   /* Stroke weight is the only channel an edge has: the stroke colour is the consumer's assigned
      tone (the [data-tone] rules above), so tinting on press would read as a tone change, not
@@ -305,7 +305,7 @@ export const styles = css`
      below that rule -- hence the ordering above. */
   [part='edge']:active,
   [part='edge-hit-area']:active + [part='edge'] {
-    stroke-width: 3.5;
+    stroke-width: calc(3.5px / var(--_lr-flow-zoom, 1));
   }
   [part='node']:has([part='node-control']:focus-visible),
   [part='edge']:focus-visible {

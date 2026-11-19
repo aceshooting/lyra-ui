@@ -18,6 +18,14 @@ export class DisclosureMotionController {
     setCustomState(this.internals, 'animating', false);
   }
 
+  cancelIfDetached(): void {
+    const generation = this.generation;
+    queueMicrotask(() => {
+      if (this.host.isConnected || this.generation !== generation) return;
+      this.cancel();
+    });
+  }
+
   /** Moves focus to `trigger` when it sits inside `region`, which a collapse is about to hide. */
   repairFocus(region: Element | null, trigger: HTMLElement | null): void {
     for (let node = deepActiveElementIn(this.host.ownerDocument); node && region; node = composedParentElement(node)) {

@@ -34,6 +34,7 @@ export const styles = css`
 
   [part='condition'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
@@ -42,12 +43,14 @@ export const styles = css`
   [part='field-select'],
   [part='operator-select'],
   [part='value'] {
-    flex: 1 1 0;
-    min-inline-size: 0;
+    flex: 1 1 var(--lr-size-8rem);
+    min-inline-size: min(var(--lr-size-8rem), 100%);
   }
 
   .value-placeholder {
     display: block;
+    flex-basis: 0;
+    min-inline-size: 0;
   }
 
   [part='remove-button'] {

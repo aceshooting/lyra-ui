@@ -15,7 +15,7 @@ export const styles = css`
   [part~="accordion-item"] {
     min-inline-size: 0;
     background: transparent;
-    font-size: var(--lr-form-control-font-size);
+    font-size: var(--lr-accordion-item-font-size, var(--lr-form-control-font-size));
   }
   [part~="accordion-item"][data-appearance="outlined"] {
     background: var(--lr-accordion-item-outlined-bg, var(--lr-color-surface));
@@ -45,7 +45,7 @@ export const styles = css`
       var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
     );
     inline-size: 100%;
-    min-block-size: var(--lr-icon-button-size);
+    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     box-sizing: border-box;
     padding-block: var(
       --spacing,

@@ -1,3 +1,4 @@
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -98,7 +99,10 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     busy: false,
     validIdentity: false,
   };
-  private contentObserver?: MutationObserver;
+  private readonly contentObserver = new OwnedMutationObserver(this, () => {
+    this.contentLabel = undefined;
+    this.requestUpdate();
+  });
   private contentLabel?: string;
 
   /** Required unique, nonempty stable identifier included in the parent list's emitted
@@ -248,12 +252,8 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   private refreshContentObserver(): void {
     this.contentLabel = undefined;
-    this.contentObserver?.disconnect();
-    this.contentObserver = undefined;
+    this.contentObserver.clear();
     if (this.hostAccessibleLabel !== null || !this.isConnected) return;
-    const Observer = this.ownerDocument?.defaultView?.MutationObserver;
-    if (!Observer) return;
-    this.contentObserver = new Observer(() => { this.contentLabel = undefined; this.requestUpdate(); });
     this.contentObserver.observe(this, {
       attributes: true,
       childList: true,
@@ -281,8 +281,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.contentObserver?.disconnect();
-    this.contentObserver = undefined;
+    this.contentObserver.clear();
     super.disconnectedCallback();
   }
 

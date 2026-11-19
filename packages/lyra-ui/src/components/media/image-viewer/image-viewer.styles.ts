@@ -1,4 +1,5 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { iconAction, iconActionActive, iconActionHover } from '../../../internal/icon-action.styles.js';
+import { iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -53,13 +54,17 @@ export const styles = css`
   [part="fit-control"],
   [part="rotate-button"],
   [part="annotate-toggle"] {
+    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
+    --_lr-icon-button-background-default: var(--lr-color-surface);
+    --_lr-icon-button-color-default: var(--lr-color-text);
+    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
+    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
+    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    ${iconAction}
     ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
+    ${interactiveTransition}
+    padding: revert;
   }
   [part="fit-control"]:disabled,
   [part="rotate-button"]:disabled,
@@ -82,7 +87,7 @@ export const styles = css`
   [part="fit-control"]:where(:not(:disabled)):hover,
   [part="rotate-button"]:where(:not(:disabled)):hover,
   [part="annotate-toggle"]:where(:not(:disabled)):hover {
-    background: var(--lr-color-brand-quiet);
+    ${iconActionHover}
   }
   /* Declared before the [aria-pressed='true'] rule below so the toggle's own 'on' fill wins the
      source-order tie, as it already does against :hover. Covers UNPRESSED toggles only -- an 'on'
@@ -91,11 +96,7 @@ export const styles = css`
   [part="fit-control"]:where(:not(:disabled)):active,
   [part="rotate-button"]:where(:not(:disabled)):active,
   [part="annotate-toggle"]:where(:not(:disabled)):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ${iconActionActive}
   }
   [part="fit-control"]:focus-visible,
   [part="rotate-button"]:focus-visible,
@@ -343,7 +344,7 @@ export const styles = css`
   }
   [part="highlight-label"] {
     position: absolute;
-    inset-block-start: calc(var(--lr-size-1-5em) * -1);
+    inset-block-start: max(calc(var(--lr-size-1-5em) * -1), var(--_lr-image-viewer-label-min-inset, 0px));
     /* policy-allow(physical-css): the parent [part='highlight'] is positioned with physical
        left/top -- region rects are physical percent-of-image coordinates over a raster that never
        mirrors (see renderHighlights()). The parent never moves under RTL, so a logical inset would

@@ -86,18 +86,23 @@ export const nextId = (scope: string): string => {
 };
 
 /** Returns the host's authored `aria-label`, including a public programmatic `accessibleLabel`
- * binding. Attribute presence wins and preserves the empty string. A non-empty own or Lit-reactive
- * compatibility property is the fallback; private computed getters are deliberately not invoked.
- * `null` means neither path supplies a name and the caller may compute one. */
+ * binding. Attribute presence wins and an empty attribute is the explicit opt-out, preserved as
+ * `''`. A whitespace-only attribute or property is not an opt-out: it counts as absent. A
+ * non-blank own or Lit-reactive compatibility property is the fallback; private computed getters
+ * are deliberately not invoked. `null` means neither path supplies a name and the caller may
+ * compute one. */
 export function hostAriaLabel(host: Element): string | null {
-  if (host.hasAttribute('aria-label')) return host.getAttribute('aria-label') ?? '';
+  if (host.hasAttribute('aria-label')) {
+    const attribute = host.getAttribute('aria-label')!;
+    if (attribute === '' || attribute.trim() !== '') return attribute;
+  }
   const hasOwnProperty = Object.prototype.hasOwnProperty.call(host, 'accessibleLabel');
   const reactiveProperties = (host.constructor as typeof Element & {
     elementProperties?: ReadonlyMap<PropertyKey, unknown>;
   }).elementProperties;
   if (!hasOwnProperty && !reactiveProperties?.has('accessibleLabel')) return null;
   const propertyValue = (host as Element & { accessibleLabel?: unknown }).accessibleLabel;
-  return typeof propertyValue === 'string' && propertyValue.length > 0 ? propertyValue : null;
+  return typeof propertyValue === 'string' && propertyValue.trim().length > 0 ? propertyValue : null;
 }
 
 // The one "is there real content" predicate for a set of light-DOM/assigned

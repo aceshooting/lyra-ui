@@ -247,17 +247,17 @@ it('keeps geometry resources released when an update flushes after removal', asy
   const el = await viewer([region('geometry', { x: 0.1, y: 0.1, width: 0.2, height: 0.2 })]);
   const state = el as unknown as {
     geometryObserver?: ResizeObserver;
-    geometryFrame?: number;
+    geometryFrame: { handle?: number; owner?: Window };
     mediaLayoutSize: { width: number; height: number } | null;
   };
-  await waitUntil(() => state.geometryObserver !== undefined && state.geometryFrame === undefined);
+  await waitUntil(() => state.geometryObserver !== undefined && state.geometryFrame.handle === undefined);
   const parent = el.parentNode!;
   const initialSize = JSON.stringify(state.mediaLayoutSize);
   el.rotation = 90;
   el.remove();
   await el.updateComplete;
   expect(state.geometryObserver === undefined, 'detached update must not recreate an observer').to.equal(true);
-  expect(state.geometryFrame === undefined, 'detached update must not queue geometry work').to.equal(true);
+  expect(state.geometryFrame.handle === undefined, 'detached update must not queue geometry work').to.equal(true);
   await paint();
   expect(JSON.stringify(state.mediaLayoutSize)).to.equal(initialSize);
   parent.appendChild(el);
@@ -288,7 +288,7 @@ it('rejects a retired geometry observer after adoption into a new owner window',
   let el: LyraImageViewer | undefined;
   try {
     el = await viewer([region('geometry', { x: 0.1, y: 0.1, width: 0.2, height: 0.2 })]);
-    const state = el as unknown as { geometryObserver?: ResizeObserver; geometryFrame?: number };
+    const state = el as unknown as { geometryObserver?: ResizeObserver; geometryFrame: { handle?: number; owner?: Window } };
     await waitUntil(() => state.geometryObserver !== undefined);
     const retired = records.find(record => record.observer === state.geometryObserver)!;
     iframe.contentDocument!.adoptNode(el);
@@ -298,9 +298,9 @@ it('rejects a retired geometry observer after adoption into a new owner window',
     const current = records.find(record => record.observer === state.geometryObserver)!;
     expect(current.owner === nextWindow).to.equal(true);
     const target = el.shadowRoot!.querySelector<HTMLElement>('[part="image-wrapper"]')!;
-    const before = state.geometryFrame;
+    const before = state.geometryFrame.handle;
     retired.callback([{ target, contentRect: { width: 999, height: 777 } } as unknown as ResizeObserverEntry], retired.observer);
-    expect(state.geometryFrame).to.equal(before);
+    expect(state.geometryFrame.handle).to.equal(before);
   } finally {
     el?.remove();
     window.ResizeObserver = original;
@@ -313,8 +313,7 @@ it('ignores a retired geometry frame without clearing the adopted owner frame', 
   const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const nextWindow = iframe.contentWindow!;
   const state = el as unknown as {
-    geometryFrame?: number;
-    geometryFrameOwner?: Window;
+    geometryFrame: { handle?: number; owner?: Window };
     mediaLayoutSize: { width: number; height: number } | null;
     scheduleMediaLayoutSize(width: number, height: number): void;
   };
@@ -331,20 +330,20 @@ it('ignores a retired geometry frame without clearing the adopted owner frame', 
   nextWindow.requestAnimationFrame = instrument(nextWindow, nextOriginal);
   try {
     state.scheduleMediaLayoutSize(321, 123);
-    const retired = records.find(record => record.owner === window && record.handle === state.geometryFrame)!;
+    const retired = records.find(record => record.owner === window && record.handle === state.geometryFrame.handle)!;
     iframe.contentDocument!.adoptNode(el);
     iframe.contentDocument!.body.append(el);
     await el.updateComplete;
     state.scheduleMediaLayoutSize(222, 111);
-    const current = records.find(record => record.owner === nextWindow && record.handle === state.geometryFrame)!;
+    const current = records.find(record => record.owner === nextWindow && record.handle === state.geometryFrame.handle)!;
     const before = JSON.stringify(state.mediaLayoutSize);
     retired.callback(0);
     expect(JSON.stringify(state.mediaLayoutSize)).to.equal(before);
-    expect(state.geometryFrame).to.equal(current.handle);
-    expect(state.geometryFrameOwner === nextWindow).to.equal(true);
+    expect(state.geometryFrame.handle).to.equal(current.handle);
+    expect(state.geometryFrame.owner === nextWindow).to.equal(true);
     current.callback(1);
     expect(state.mediaLayoutSize).to.deep.equal({ width: 222, height: 111 });
-    expect(state.geometryFrame === undefined).to.equal(true);
+    expect(state.geometryFrame.handle === undefined).to.equal(true);
   } finally {
     el.remove();
     for (const record of records) record.owner.cancelAnimationFrame(record.handle);

@@ -217,3 +217,44 @@ describe('FlowCanvasCompanionController stale continuations', () => {
     controller.disconnect();
   });
 });
+
+it('does not re-arm whenDefined while the canvas tag is already defined', async () => {
+  const canvas = (await fixture(html`
+    <lr-flow-canvas><div id="companion-host"></div></lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  const host = canvas.querySelector('#companion-host') as HTMLElement & { for: string };
+  const registry = host.ownerDocument.defaultView!.customElements;
+  const original = registry.whenDefined;
+  let calls = 0;
+  registry.whenDefined = () => {
+    calls++;
+    return new Promise<CustomElementConstructor>(() => {});
+  };
+  const controller = new FlowCanvasCompanionController(host, (_candidate): _candidate is CapableCanvas => false, () => {});
+  try {
+    controller.connect();
+    expect(calls).to.equal(0);
+  } finally {
+    registry.whenDefined = original;
+    controller.disconnect();
+  }
+});
+
+it('resolves the explicit canvas even when the observer cannot attach to the root', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><lr-flow-canvas id="flow"></lr-flow-canvas><div></div></div>`);
+  const host = wrapper.lastElementChild as HTMLElement & { for: string };
+  host.for = 'flow';
+  const controller = new FlowCanvasCompanionController(host, isCapable, () => {});
+  const observe = MutationObserver.prototype.observe;
+  MutationObserver.prototype.observe = function(target, options) {
+    if (target === host.getRootNode()) throw new Error('Observation unavailable');
+    observe.call(this, target, options);
+  };
+  try {
+    controller.connect();
+    expect(controller.target?.id).to.equal('flow');
+  } finally {
+    MutationObserver.prototype.observe = observe;
+    controller.disconnect();
+  }
+});

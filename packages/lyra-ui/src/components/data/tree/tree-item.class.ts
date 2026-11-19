@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -577,8 +579,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     this.cancelLifecycleTimer();
     // Loading is transient request state. A reconnected item can be expanded again to issue a
     // fresh generation, but a response to the detached request must never expand it later.
+    if (this._loading && !this.expansionOwner) this.setExpanded(false);
     this._loading = false;
-    if (this.lazy && !this.expansionOwner) this.setExpanded(false);
     this._collapsing = false;
     super.disconnectedCallback();
   }
@@ -884,14 +886,14 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     const toggle = event.currentTarget as HTMLElement | null;
     if (toggle?.nodeType !== 1) return;
     toggle.setAttribute('data-pressed', '');
-    toggle.setPointerCapture(event.pointerId);
+    capturePointer(toggle, event.pointerId);
   };
 
   private onTogglePointerEnd = (event: PointerEvent): void => {
     const toggle = event.currentTarget as HTMLElement | null;
     if (toggle?.nodeType !== 1) return;
     toggle.removeAttribute('data-pressed');
-    if (toggle.hasPointerCapture(event.pointerId)) toggle.releasePointerCapture(event.pointerId);
+    releasePointer(toggle, event.pointerId);
   };
 
   /** A click on a control inside the label (a button, a link) is that control's, not a row
@@ -1049,8 +1051,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
             (b) => html`<span
                 part="badge"
                 data-tone=${b.tone ?? 'neutral'}
-                role=${b.label ? 'img' : nothing}
-                aria-label=${b.label || nothing}
+                role=${normalizeLabel(b.label) ? 'img' : nothing}
+                aria-label=${normalizeLabel(b.label) ?? nothing}
               >${b.text}</span
             >`
           )}`,

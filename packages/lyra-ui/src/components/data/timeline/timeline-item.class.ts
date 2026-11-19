@@ -1,9 +1,10 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
+import type { LyraMessageKey } from '../../../internal/localization-types.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import {
   OBSERVE_TIMELINE_ITEM_TIMESTAMP,
@@ -15,6 +16,12 @@ import {
   type TimelineTimestampObserver,
   timeValueChanged,
 } from './timeline-cluster.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_timelineItemVariantBrand, LYRA_DEFAULT_timelineItemVariantWarning } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const timelineItemVariantConverter = {
   fromAttribute(value: string | null): LyraVariant {
@@ -32,6 +39,13 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
   value === 'danger'
     ? value
     : 'neutral';
+
+const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
+  brand: 'timelineItemVariantBrand',
+  success: 'statusSuccess',
+  warning: 'timelineItemVariantWarning',
+  danger: 'statusError',
+};
 
 /**
  * `<lr-timeline-item>` — one marker + title + optional timestamp + optional description row inside
@@ -134,6 +148,24 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  * @since 4.0.0
  */
 export class LyraTimelineItem extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    statusError: LYRA_DEFAULT_statusError,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    timelineItemVariantBrand: LYRA_DEFAULT_timelineItemVariantBrand,
+    timelineItemVariantWarning: LYRA_DEFAULT_timelineItemVariantWarning,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** When this event happened. Accepts a `Date`, anything `new Date()` can parse (e.g. an ISO 8601
@@ -178,29 +210,12 @@ export class LyraTimelineItem extends LyraElement {
    *  `prefers-reduced-motion: reduce`) and an explicit `aria-current` state on the host. */
   @property({ type: Boolean, reflect: true }) active = false;
 
-  // Tracked in JS rather than relying on native <slot> fallback content: the "slot wins outright"
-  // precedence described in the class doc requires the internal <lr-relative-time>/default-dot
-  // markup to be entirely absent from the render() output -- not merely visually superseded -- once
-  // the corresponding slot has assigned content. Same [part][hidden]-not-:empty reasoning as
-  // <lr-menu-item>'s hasIconSlot (a [part] containing a literal <slot> child never matches a bare
-  // :empty selector) drives hasTimestampSlot/hasDescriptionSlot below; hasIconSlot itself can't
-  // use [hidden] the same way -- [part='marker'] must stay visible either way to host the slotted
-  // icon -- so it instead drives [part='marker'][data-has-icon] suppressing just the dot's
-  // background fill (see timeline-item.styles.ts).
-  @state() private hasIconSlot = false;
-  @state() private hasTimestampSlot = false;
-  @state() private hasDescriptionSlot = false;
+  // Slot content replaces the internal timestamp/description/dot markup outright, so presence is
+  // tracked in JS; the icon only suppresses the dot fill and keeps [part='marker'] visible.
+  private readonly slotPresence = new SlotPresenceController(this);
   @state() private clusterPresentation?: TimelineClusterPresentation;
   /** Step number pushed by an `ordered` parent timeline; `undefined` renders the ordinary marker. */
   @state() private ordinal?: number;
-  // Read once more from `firstUpdated()` in addition to each slot's own `@slotchange` listener --
-  // see `collectInitialSlotAssignment`'s doc: happy-dom never fires a slot's INITIAL `slotchange`,
-  // so an item whose marker-icon/timestamp/description children already exist at connect (the
-  // ordinary "render once data is ready" Lit pattern) would otherwise never flip these booleans and
-  // stay on the internal fallback markup forever, even though the slot truly has content.
-  @query('slot[name="marker-icon"]') private markerIconSlot?: HTMLSlotElement;
-  @query('slot[name="timestamp"]') private timestampSlotEl?: HTMLSlotElement;
-  @query('slot[name="description"]') private descriptionSlotEl?: HTMLSlotElement;
   private readonly timestampObservers = new Set<TimelineTimestampObserver>();
   private timestampObserversReady = false;
 
@@ -277,61 +292,6 @@ export class LyraTimelineItem extends LyraElement {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
-  /**
-   * Also called once from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
-   * environment, or a real-browser timing race, where a slot's initial assignment never fires
-   * `slotchange`. Idempotent: re-reading the same still-assigned elements just re-derives the same
-   * boolean, so running once from `firstUpdated()` and again from a real initial `slotchange` (every
-   * real-browser connect) produces no duplicate side effect.
-   */
-  private onIconSlotChange = (): void => {
-    this.collectIconSlotAssignment(this.markerIconSlot);
-  };
-
-  private collectIconSlotAssignment(slot: HTMLSlotElement | null | undefined): void {
-    this.hasIconSlot = Boolean(slot?.assignedElements({ flatten: true }).length);
-  }
-
-  private onTimestampSlotChange = (e: Event): void => {
-    this.collectTimestampSlotAssignment(e.target as HTMLSlotElement);
-  };
-
-  private collectTimestampSlotAssignment(slot: HTMLSlotElement): void {
-    this.hasTimestampSlot = slot.assignedElements({ flatten: true }).length > 0;
-  }
-
-  private onDescriptionSlotChange = (e: Event): void => {
-    this.collectDescriptionSlotAssignment(e.target as HTMLSlotElement);
-  };
-
-  private collectDescriptionSlotAssignment(slot: HTMLSlotElement): void {
-    this.hasDescriptionSlot = slot.assignedElements({ flatten: true }).length > 0;
-  }
-
-  protected override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
-    // `collectInitialSlotAssignment`'s own doc -- so an item whose marker-icon/timestamp/description
-    // children already exist at connect (the ordinary "render once data is ready" Lit pattern) would
-    // otherwise leave these three booleans false forever. Collect once here too, from each slot's
-    // current assignment. Deferred a microtask, mirroring `select.class.ts`'s identical fix: these
-    // three are reactive `@state` fields, so writing them synchronously inside `firstUpdated()`
-    // -- after this same update has already been marked complete -- trips Lit's "scheduled an
-    // update after an update completed" dev warning. A real `slotchange` event runs this same
-    // collection from a task/microtask entirely outside the update cycle, which never trips it;
-    // queuing a microtask here reproduces that same "outside the cycle" timing instead. Still
-    // guaranteed to land before any caller's own `await el.updateComplete` continuation, which joins
-    // the microtask queue behind this one.
-    const markerIconSlot = this.markerIconSlot;
-    const timestampSlot = this.timestampSlotEl;
-    const descriptionSlot = this.descriptionSlotEl;
-    queueMicrotask(() => {
-      collectInitialSlotAssignment(markerIconSlot, (s) => this.collectIconSlotAssignment(s));
-      collectInitialSlotAssignment(timestampSlot, (s) => this.collectTimestampSlotAssignment(s));
-      collectInitialSlotAssignment(descriptionSlot, (s) => this.collectDescriptionSlotAssignment(s));
-    });
-  }
-
   override render(): TemplateResult {
     if (this.clusterPresentation) {
       return html`
@@ -348,8 +308,8 @@ export class LyraTimelineItem extends LyraElement {
       `;
     }
     const ts = this.normalizedTimestamp;
-    const showTimestampFallback = !this.hasTimestampSlot && ts !== undefined;
-    const showTimestamp = this.hasTimestampSlot || ts !== undefined;
+    const showTimestampFallback = !this.slotPresence.has('timestamp') && ts !== undefined;
+    const showTimestamp = this.slotPresence.has('timestamp') || ts !== undefined;
     // Intl-formatted absolute date/time -- caller/data formatting exempt from localize() routing per
     // AGENTS.md's i18n carve-out for Intl-formatted dates. Never hand-rolled.
     const absolute = ts
@@ -359,6 +319,7 @@ export class LyraTimelineItem extends LyraElement {
         }).format(ts)
       : '';
 
+    const variantKey = VARIANT_NAME_KEYS[this._variant];
     return html`
       <div part="base">
         <div part="track">
@@ -371,22 +332,24 @@ export class LyraTimelineItem extends LyraElement {
             : html`<span
                 part="marker"
                 aria-hidden="true"
-                ?data-has-icon=${this.hasIconSlot}
+                ?data-has-icon=${this.slotPresence.has('marker-icon')}
               >
                 <slot
                   name="marker-icon"
-                  @slotchange=${this.onIconSlotChange}
                 ></slot>
               </span>`}
           <span part="rail"></span>
         </div>
         <div part="content">
           <div part="header">
-            <span part="title"><slot></slot></span>
+            <span part="title"
+              >${variantKey
+                ? html`<span class="sr-only" data-variant-name>${this.localize(variantKey)}: </span>`
+                : nothing}<slot></slot
+            ></span>
             <span part="timestamp" ?hidden=${!showTimestamp}>
               <slot
                 name="timestamp"
-                @slotchange=${this.onTimestampSlotChange}
               ></slot>
               ${showTimestampFallback
                 ? html`<time datetime=${ts!.toISOString()} title=${absolute}>
@@ -398,10 +361,9 @@ export class LyraTimelineItem extends LyraElement {
                 : nothing}
             </span>
           </div>
-          <span part="description" ?hidden=${!this.hasDescriptionSlot}>
+          <span part="description" ?hidden=${!this.slotPresence.has('description')}>
             <slot
               name="description"
-              @slotchange=${this.onDescriptionSlotChange}
             ></slot>
           </span>
         </div>

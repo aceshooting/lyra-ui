@@ -1,5 +1,5 @@
-import { readdirSync, rmSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { readdirSync, rmSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packageDirectory, runCommand } from './build.mjs';
 
@@ -29,4 +29,4 @@ export function runNodeTests(directory = packageDirectory, run = runCommand) {
   run(process.execPath, ['--test', ...collectNodeTests(directory)], directory);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) runNodeTests();
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) runNodeTests();

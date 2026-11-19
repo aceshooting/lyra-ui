@@ -1,4 +1,7 @@
+import { HostChildrenObserver, OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import type { LyraGraphSource, LyraGraphScene, LyraGraphSourceQuery, LyraGraphSourceSummary, LyraGraphOverview, LyraSourceRecord, LyraSourceBounds } from '../../../data-sources.js';
+import { isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { capturePointer } from '../../../internal/pointer-capture.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { SourceRequestController, sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
 import { GraphSceneController, SceneReader } from '../../../internal/graph-scene-controller.js';
@@ -12,6 +15,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { fitTransform } from '../../../internal/fit-transform.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import {
   AnnouncementSinkController,
   Announcer,
@@ -20,7 +24,6 @@ import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
 import { isActionableElement, repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
@@ -52,7 +55,7 @@ import { FlowViewportIndex, type FlowViewportBounds } from './flow-viewport-inde
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_flowCanvasInputLimit, LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasLayoutLimit, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_flowCanvasInputLimit, LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasLayoutLimit, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_flowSourceRecordMatches, LYRA_DEFAULT_flowSourceRevealSourceNode, LYRA_DEFAULT_flowSourceRevealTargetNode, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 export * from './flow-types.js';
@@ -75,6 +78,7 @@ const CONNECT_OFFSET_MAX = 120;
 const ZOOM_MULTIPLIER = 1.2;
 const DEFAULT_FIT_PADDING = 24;
 const KEYBOARD_PAN_STEP = 32;
+const NAVIGATION_KEYS: ReadonlySet<string> = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
 const UNMATCHED_AUTHORED_CARD_WARNING = 'lyra-flow-canvas-unmatched-authored-card';
 
 function toggledSelection(list: readonly string[], id: string): readonly string[] {
@@ -347,6 +351,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     flowNodeMoved: LYRA_DEFAULT_flowNodeMoved,
     flowNodeSelected: LYRA_DEFAULT_flowNodeSelected,
     flowSelectionCleared: LYRA_DEFAULT_flowSelectionCleared,
+    flowSourceRecordMatches: LYRA_DEFAULT_flowSourceRecordMatches,
+    flowSourceRevealSourceNode: LYRA_DEFAULT_flowSourceRevealSourceNode,
+    flowSourceRevealTargetNode: LYRA_DEFAULT_flowSourceRevealTargetNode,
     graphSourceAllRecords: LYRA_DEFAULT_graphSourceAllRecords,
     graphSourceBothDirections: LYRA_DEFAULT_graphSourceBothDirections,
     graphSourceCoverageAggregate: LYRA_DEFAULT_graphSourceCoverageAggregate,
@@ -387,6 +394,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private sourceError?: unknown;
   private sourceSceneFailure = false;
   private sourceMissing = false;
+  private lastRecordStatus?: string;
   private sourceNodes = EMPTY_FLOW_NODES;
   private sourceEdges = EMPTY_FLOW_EDGES;
   private sourceAcceptedScene?: LyraGraphScene<FlowNode, FlowEdge>;
@@ -477,6 +485,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private get sourceMode(): boolean { return this.graphSource !== undefined; }
 
   private resetFlowSource(): void {
+    this.lastRecordStatus = undefined;
     this.sourceEpoch++; this.sourceIntent++; this.sourceInputs = undefined; this.sourcePageInputs = undefined;
     this.sourceSceneInputs = ''; this.sourceQuery = EMPTY_FLOW_QUERY; this._sourcePage = 0;
     this.sourceError = undefined; this.sourceMissing = false; this.sourceSceneFailure = false;
@@ -677,6 +686,22 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     ]);
   }
 
+  private recordStatus(): string {
+    const { pending, error, result } = this.sourcePages.state;
+    if (pending) return this.localize('loading');
+    if (error || this.sourceError) return this.localize('graphSourceRecordsError');
+    if (this.sourceMissing) return this.localize('graphSourceRecordMissing');
+    if (!result) return '';
+    if (!result.total) return this.localize('noData');
+    if (this.sourceQuery.search || this.sourceQuery.centerKey !== null) {
+      return this.localize('flowSourceRecordMatches', undefined, { count: this.formatLocaleNumber(result.total) });
+    }
+    return this.localize('graphSourceTotals', undefined, {
+      nodes: this.formatLocaleNumber(result.summary.nodes),
+      edges: this.formatLocaleNumber(result.summary.edges),
+    });
+  }
+
   private renderSourceNavigator(): TemplateResult {
     const state = this.sourcePages.state, query = this.sourceQuery, authority = this.sourceAuthority(), error = this.sourceError;
     const current = () => authority() && this.sourcePages.state === state && this.sourceQuery === query && this.sourceError === error;
@@ -689,17 +714,17 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         ${query.centerKey ? html`<button type="button" @click=${() => { if (current()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: query.kind }); }}>${this.localize('graphSourceAllRecords')}</button>
           <label>${this.localize('graphSourceDirection')}<select .value=${query.direction} @change=${(event: Event) => { if (current()) this.setSourceQuery({ ...query, direction: (event.target as HTMLSelectElement).value as 'in' | 'out' | 'both' }); }}><option value="both">${this.localize('graphSourceBothDirections')}</option><option value="in">${this.localize('neighborDirectionIn')}</option><option value="out">${this.localize('neighborDirectionOut')}</option></select></label>` : nothing}
       </div>
-      <p part="source-status">${state.pending ? this.localize('loading') : state.error || error ? this.localize('graphSourceRecordsError') : this.sourceMissing ? this.localize('graphSourceRecordMissing') : total === 0 ? this.localize('noData') : this.localize('graphSourceTotals', undefined, { nodes: this.formatNumber(state.result?.summary.nodes ?? 0), edges: this.formatNumber(state.result?.summary.edges ?? 0) })}
+      <p part="source-status">${this.recordStatus()}
         ${(state.error || error) && !state.pending ? html`<button type="button" @click=${() => { if (current() && (state.error || error)) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}</p>
       ${this.sourceScene.state.scene && !this.sourceSceneFailure ? html`<p part="source-coverage">${this.localize(this.sourceScene.state.scene.coverage === 'complete' ? 'graphSourceCoverageComplete' : this.sourceScene.state.scene.coverage === 'aggregate' ? 'graphSourceCoverageAggregate' : 'graphSourceCoverageNeighborhood', undefined, {
-        shownNodes: this.formatNumber(this.sourceNodes.length), shownEdges: this.formatNumber(this.sourceEdges.length),
-        nodes: this.formatNumber(this.sourceScene.state.scene.total.nodes), edges: this.formatNumber(this.sourceScene.state.scene.total.edges),
+        shownNodes: this.formatLocaleNumber(this.sourceNodes.length), shownEdges: this.formatLocaleNumber(this.sourceEdges.length),
+        nodes: this.formatLocaleNumber(this.sourceScene.state.scene.total.nodes), edges: this.formatLocaleNumber(this.sourceScene.state.scene.total.edges),
       })}</p>` : nothing}
       <div part="source-records">${state.result?.rows.map(row => {
         const value = row.value, rowCurrent = () => current() && !state.pending && !state.error && state.result?.rows.includes(row);
         return html`<div part="source-record"><button type="button" data-source-key=${row.key} ?disabled=${value.kind === 'node' && value.value.disabled}
           @keydown=${(event: KeyboardEvent) => {
-            if (!rowCurrent() || total === null || total === 0) return;
+            if (!rowCurrent() || total === null || total === 0 || shouldIgnoreNavigationKey(event)) return;
             const index = page * size + state.result!.rows.indexOf(row);
             const direction = event.key === 'Home' || event.key === 'ArrowDown' ? 1 :
               event.key === 'End' || event.key === 'ArrowUp' ? -1 : null;
@@ -709,7 +734,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
             void this.focusSourceRecord(next, direction, total, event.currentTarget as HTMLButtonElement);
           }}
           @click=${(event: MouseEvent) => { if (!rowCurrent()) return; if (value.kind === 'node') this.onNodeActivate(value.value, event.ctrlKey || event.metaKey); else this.onEdgeActivate(value.value, event.ctrlKey || event.metaKey); }}>${value.kind === 'node' ? this.nodeAccessibleText(value.value) : this.edgeAccessibleText(value.value)}</button>
-          ${value.kind === 'node' ? html`<button type="button" @click=${() => { if (rowCurrent()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: 'edges', centerKey: row.key }); }}>${this.localize('graphSourceIncidentEdges', undefined, { label: this.nodeAccessibleText(value.value as FlowNode) })}</button>` : html`<button type="button" @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.source}`); }}>${value.value.source}</button><button type="button" @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.target}`); }}>${value.value.target}</button>`}</div>`;
+          ${value.kind === 'node' ? html`<button type="button" @click=${() => { if (rowCurrent()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: 'edges', centerKey: row.key }); }}>${this.localize('graphSourceIncidentEdges', undefined, { label: this.nodeAccessibleText(value.value as FlowNode) })}</button>` : html`<button type="button" aria-label=${this.localize('flowSourceRevealSourceNode', undefined, { node: value.value.source, edge: this.edgeAccessibleText(value.value) })} @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.source}`); }}>${value.value.source}</button><button type="button" aria-label=${this.localize('flowSourceRevealTargetNode', undefined, { node: value.value.target, edge: this.edgeAccessibleText(value.value) })} @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.target}`); }}>${value.value.target}</button>`}</div>`;
       })}</div>
       <div part="source-controls"><button type="button" data-source-page-button ?disabled=${state.pending || page === 0} @click=${(event: Event) => { if (current()) void this.activateSourcePager(event, page - 1); }}>${this.localize('previous')}</button>
         <label>${this.localize('paginationPage')}<input data-source-page type="number" min="1" .value=${String(page + 1)} @change=${(event: Event) => changePage(finiteInteger(Number((event.target as HTMLInputElement).value) - 1, 0, 0))}></label>
@@ -1022,22 +1047,20 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private bindNodeWrapper(id: string, element: Element | undefined): void {
     const previous = this.nodeWrappers.get(id);
     if (previous && previous !== element) {
-      this.resizeObserver?.unobserve(previous); this.observedNodeEls.delete(previous);
+      this.resizeObserver.unobserve(previous); this.observedNodeEls.delete(previous);
       this.nodeWrappers.delete(id); this.fallbackSizes.delete(previous);
     }
     if (element) {
       this.nodeWrappers.set(id, element as HTMLElement);
       if (!this.observedNodeEls.has(element)) {
-        this.resizeObserver?.observe(element); this.observedNodeEls.add(element);
+        this.resizeObserver.observe(element); this.observedNodeEls.add(element);
       }
     }
   }
 
 
-  private resizeObserver?: ResizeObserver;
+  private readonly resizeObserver = new OwnedResizeObserver(this, entries => this.onNodesResized(entries));
   private readonly observedNodeEls = new Set<Element>();
-  private authoredCardObserver?: MutationObserver;
-  private authoredCardObserverDocument?: Document;
   private authoredCardObserverGeneration = 0;
   private authoredCardSyncQueued = false;
   private readonly authoredCardSlotLeases = new Map<Element, AuthoredCardSlotLease>();
@@ -1098,6 +1121,20 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private companionCallbacks = new Set<(snapshot: FlowStructureSnapshot) => void>();
   private companionRaf: OwnedAnimationFrame | null = null;
   private stopMotionWatch?: () => void;
+  private mirroredViewport = false;
+
+  constructor() {
+    super();
+    new HostChildrenObserver(this, {
+      attributeFilter: ['node-id'],
+      subtree: true,
+      onChange: records => {
+        if (records.some(record => record.type === 'childList' ? record.target === this : record.target.parentNode === this)) {
+          this.scheduleAuthoredCardReconciliation();
+        }
+      },
+    });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -1105,11 +1142,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const ownerWindow = this.ownerDocument.defaultView;
     this.connectedWindow = ownerWindow ?? undefined;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
-    const ResizeObserverCtor = ownerWindow?.ResizeObserver;
-    this.resizeObserver = ResizeObserverCtor
-      ? new ResizeObserverCtor((entries) => this.onNodesResized(entries))
-      : undefined;
-    this.bindAuthoredCardObserver();
     this.syncAuthoredCards();
     this.pushCardPropsAll();
     this.scheduleCompanionNotify();
@@ -1118,7 +1150,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     // wrapper unwatched by the freshly created observer above, so re-observe directly here.
     if (this.hasUpdated) {
       this.observeNodeWrappers();
-      if (this.viewportEl) this.resizeObserver?.observe(this.viewportEl);
+      if (this.viewportEl) this.resizeObserver.observe(this.viewportEl);
       if (this.modelNodes.length > 0) this.scheduleLayoutPass();
     }
   }
@@ -1128,14 +1160,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     super.disconnectedCallback();
     this.stopMotionWatch?.();
     this.stopMotionWatch = undefined;
-    this.resetAuthoredCardObserver();
+    this.authoredCardObserverGeneration++;
+    this.authoredCardSyncQueued = false;
     this.restoreAuthoredCardSlots();
     this.hasConnectedLayoutBaseline = false;
     this.layoutLimitAnnouncementPending = false;
     this.announcer.cancel();
     this.mirrorAnnouncement('');
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
+    this.resizeObserver.clear();
     this.observedNodeEls.clear();
     if (this.geometryRaf != null) {
       this.cancelOwnerAnimationFrame(this.geometryRaf);
@@ -1188,14 +1220,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     super.adoptedCallback();
     if (this.sourceMode) this.resetFlowSource();
     this.announcements.adopted();
-    this.resetAuthoredCardObserver();
+    this.authoredCardObserverGeneration++;
+    this.authoredCardSyncQueued = false;
     this.restoreAuthoredCardSlots();
     this.hasConnectedLayoutBaseline = false;
     this.layoutLimitAnnouncementPending = false;
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     if (this.isConnected) {
-      this.bindAuthoredCardObserver();
       this.scheduleAuthoredCardReconciliation();
       if (this.modelNodes.length > 0) this.scheduleLayoutPass();
     }
@@ -1215,61 +1247,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     (this.renderRoot as ParentNode | undefined)?.querySelector('[part="live-region"]')?.replaceChildren(text);
   }
 
-  private resetAuthoredCardObserver(): void {
-    this.authoredCardObserverGeneration += 1;
-    this.authoredCardObserver?.disconnect();
-    this.authoredCardObserver = undefined;
-    this.authoredCardObserverDocument = undefined;
-    this.authoredCardSyncQueued = false;
-  }
-
-  /** Direct-child insertion/removal and direct `node-id` changes are the only light-DOM changes
-   * that can alter card ownership. The observer is constructed from the element's owner realm so
-   * adoption does not retain an old document's callback. */
-  private bindAuthoredCardObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (
-      !this.isConnected ||
-      (this.authoredCardObserver && this.authoredCardObserverDocument === ownerDocument)
-    ) {
-      return;
-    }
-    this.resetAuthoredCardObserver();
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.authoredCardObserverGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (
-        this.authoredCardObserver !== observer ||
-        this.authoredCardObserverDocument !== ownerDocument ||
-        this.authoredCardObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      const directlyRelevant = records.some((record) =>
-        record.type === 'childList'
-          ? record.target === this
-          : record.type === 'attributes' &&
-            record.attributeName === 'node-id' &&
-            record.target.parentNode === this,
-      );
-      if (directlyRelevant) this.scheduleAuthoredCardReconciliation();
-    });
-    observer.observe(this, {
-      childList: true,
-      attributes: true,
-      attributeFilter: ['node-id'],
-      subtree: true,
-    });
-    this.authoredCardObserver = observer;
-    this.authoredCardObserverDocument = ownerDocument;
-  }
-
   private scheduleAuthoredCardReconciliation(): void {
     const generation = this.authoredCardObserverGeneration;
-    const ownerDocument = this.authoredCardObserverDocument ?? this.ownerDocument;
+    const ownerDocument = this.ownerDocument;
     if (!this.isConnected || this.authoredCardSyncQueued) return;
     this.authoredCardSyncQueued = true;
     queueMicrotask(() => {
@@ -1294,7 +1274,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     for (const el of this.nodeWrappers.values()) {
       if (!this.observedNodeEls.has(el)) {
         this.observedNodeEls.add(el);
-        this.resizeObserver?.observe(el);
+        this.resizeObserver.observe(el);
       }
     }
   }
@@ -1381,13 +1361,20 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     for (const element of this.observedNodeEls) {
       const id = (element as HTMLElement).dataset['nodeId'];
       if (id && nodeIds.has(id)) continue;
-      this.resizeObserver?.unobserve(element);
+      this.resizeObserver.unobserve(element);
       this.observedNodeEls.delete(element);
     }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.sourceMode) {
+      const status = this.recordStatus();
+      if (this.lastRecordStatus !== undefined && status && status !== this.lastRecordStatus) {
+        this.announcements.announcePolite(status);
+      }
+      this.lastRecordStatus = status;
+    }
     const item = this.rovingItems()[this.normalizedItemIndex()];
     const next = item?.kind === 'node'
       ? this.nodeWrappers.get(item.id)?.querySelector<HTMLElement>('[part="node-control"]')
@@ -1410,8 +1397,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     ) {
       this.scheduleLayoutPass();
     }
+    const mirrored = this.orientation === 'horizontal' && this.effectiveDirection === 'rtl';
     if (
-      changed.has('nodes') ||
+      mirrored !== this.mirroredViewport || changed.has('nodes') ||
       changed.has('edges') ||
       changed.has('decorations') ||
       changed.has('minZoom') ||
@@ -1421,12 +1409,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       changed.has('layerGap') ||
       changed.has('nodeGap')
     ) {
+      this.mirroredViewport = mirrored;
       this.scheduleCompanionNotify();
     }
     const viewportEl = this.renderRoot.querySelector('[part="viewport"]') as HTMLElement | null;
     if (viewportEl && viewportEl !== this.viewportEl) {
       this.viewportEl = viewportEl;
-      this.resizeObserver?.observe(viewportEl);
+      this.resizeObserver.observe(viewportEl);
       this.worldEl = this.renderRoot.querySelector('.world') as HTMLElement | undefined;
       viewportEl.addEventListener('wheel', this.onWheel, { passive: false });
       viewportEl.addEventListener('keydown', this.onViewportKeyDown);
@@ -1654,7 +1643,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private nodeAccessibleText(node: FlowNode): string {
-    if (node.accessibleLabel) return node.accessibleLabel;
+    const named = normalizeLabel(node.accessibleLabel);
+    if (named !== undefined) return named;
     const label = typeof node.data?.['label'] === 'string' ? node.data['label'] : node.id;
     return this.localize('flowNode', undefined, { label });
   }
@@ -1943,7 +1933,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   focusNode(id: string, options?: { zoom?: number }): void {
     if (this.readonly) return;
-    const node = this.modelNodes.find((n) => n.id === id);
+    const node = nodeById(this.modelNodes, id);
     if (!node) return;
     const resolved = this.resolvedNode(node);
     const rect = this.viewportEl?.getBoundingClientRect();
@@ -1984,7 +1974,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.companionRaf = null;
       if (!this.isConnected || this.ownerDocument.defaultView !== request?.owner) return;
       // Each observer receives its own frozen snapshot; the deeply frozen nodes/edges are shared.
-      for (const cb of this.companionCallbacks) cb(this.buildSnapshot());
+      for (const cb of [...this.companionCallbacks]) {
+        try {
+          cb(this.buildSnapshot());
+        } catch {
+          // One failing companion must not starve the others.
+        }
+      }
     });
     this.companionRaf = request;
   }
@@ -2042,7 +2038,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private applyWorldTransform(invalidateViewport = true): void {
-    if (this.worldEl) this.worldEl.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoomLevel})`;
+    if (this.worldEl) {
+      this.worldEl.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoomLevel})`;
+      this.worldEl.style.setProperty('--_lr-flow-zoom', String(this.zoomLevel));
+    }
     this.scheduleCompanionNotify(false);
     if (invalidateViewport) this.viewportRevision++;
   }
@@ -2140,7 +2139,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       // Resolved once per gesture: isRtl() reads getComputedStyle, too costly per pointermove.
       rtlFlip: this.orientation === 'horizontal' && isRtl(this) ? -1 : 1,
     };
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    capturePointer(e.target as HTMLElement, e.pointerId);
     this.viewportEl?.setAttribute('data-panning', '');
     this.connectedWindow?.addEventListener('pointermove', this.onBackgroundPointerMove);
     this.connectedWindow?.addEventListener('pointerup', this.onBackgroundPointerUp);
@@ -2188,7 +2187,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onViewportKeyDown = (e: KeyboardEvent): void => {
     // Roving node/edge navigation is bound on each item individually and stops propagation, so
     // this only ever fires when the viewport region itself has focus.
-    if (e.target !== this.viewportEl || this.readonly) return;
+    if (e.target !== this.viewportEl || this.readonly || shouldIgnoreNavigationKey(e)) return;
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
       this.zoomIn();
@@ -2337,32 +2336,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return -1;
   }
 
-  /** Steps by one roving position in `direction`, skipping disabled nodes without wrapping. */
-  private nextEnabledItemIndex(from: number, direction: 1 | -1): number {
-    const items = this.rovingItems();
-    const count = items.length;
-    if (!count) return -1;
-    let index = Math.min(Math.max(from + direction, 0), count - 1);
-    for (let steps = 0; steps < count; steps += 1) {
-      if (!this.isRovingItemDisabled(items[index]!)) return index;
-      index += direction;
-      if (index < 0 || index >= count) break;
-    }
-    return from >= 0 && from < count && !this.isRovingItemDisabled(items[from]!) ? from : -1;
-  }
-
-  private firstEnabledItemIndex(): number {
-    return this.rovingItems().findIndex((item) => !this.isRovingItemDisabled(item));
-  }
-
-  private lastEnabledItemIndex(): number {
-    const items = this.rovingItems();
-    for (let index = items.length - 1; index >= 0; index -= 1) {
-      if (!this.isRovingItemDisabled(items[index]!)) return index;
-    }
-    return -1;
-  }
-
   private itemAccessibleText(item: { kind: 'node' | 'edge'; id: string }): string {
     this.ensureModelIndexes();
     if (item.kind === 'node') {
@@ -2383,15 +2356,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.announcer.announce(
       this.localize('flowItemAnnouncement', undefined, {
         item: this.itemAccessibleText(item),
-        index: this.formatNumber(index + 1),
-        total: this.formatNumber(this.itemCount()),
+        index: this.formatLocaleNumber(index + 1),
+        total: this.formatLocaleNumber(this.itemCount()),
       }),
     );
   }
 
-  private formatNumber(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
-  }
 
   private onItemFocus(index: number): void {
     if (this.normalizedItemIndex(index) < 0) return;
@@ -2554,6 +2524,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onItemKeyDown(e: KeyboardEvent, index: number, activate: (additive: boolean) => void): void {
+    if (e.altKey || e.isComposing || e.keyCode === 229) return;
     const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (!this.sourceMode && this.nodesDraggable && !this.readonly && (e.ctrlKey || e.metaKey) && arrowKeys.includes(e.key)) {
       const item = this.rovingItems()[index];
@@ -2563,6 +2534,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         return;
       }
     }
+    const selectionKey = e.key === 'Enter' || e.key === ' ';
+    if (!selectionKey && shouldIgnoreNavigationKey(e)) return;
     if (this.keyboardConnectSourceId) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -2571,6 +2544,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       }
       if (e.key === 'Enter') {
         e.preventDefault();
+        if (isRepeatedActivationKey(e)) return;
         this.commitKeyboardConnect();
         return;
       }
@@ -2593,12 +2567,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       const item = this.rovingItems()[index];
       if (item?.kind === 'node') {
         e.preventDefault();
+        if (isRepeatedActivationKey(e)) return;
         this.startKeyboardConnect(item.id);
         return;
       }
     }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      if (isRepeatedActivationKey(e)) return;
       this.setActiveItemQuiet(index);
       activate(e.ctrlKey || e.metaKey);
       return;
@@ -2611,22 +2587,25 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && e.target === e.currentTarget) {
       e.preventDefault();
+      if (isRepeatedActivationKey(e)) return;
       this.deleteSelection();
       return;
     }
     const count = this.itemCount();
     if (!count) return;
-    const rtl = isRtl(this);
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
-    let next: number;
-    if (e.key === forwardKey || e.key === 'ArrowDown') next = this.nextEnabledItemIndex(index, 1);
-    else if (e.key === backwardKey || e.key === 'ArrowUp') next = this.nextEnabledItemIndex(index, -1);
-    else if (e.key === 'Home') next = this.firstEnabledItemIndex();
-    else if (e.key === 'End') next = this.lastEnabledItemIndex();
-    else return;
+    if (!NAVIGATION_KEYS.has(e.key) || shouldIgnoreNavigationKey(e)) return;
+    const items = this.rovingItems();
+    const next = resolveListMove(e, {
+      count,
+      current: index,
+      orientation: 'both',
+      direction: isRtl(this) ? 'rtl' : 'ltr',
+      wrap: false,
+      clamp: true,
+      isAvailable: (i) => !this.isRovingItemDisabled(items[i]!),
+    });
     e.preventDefault();
-    if (next >= 0) this.focusActiveItem(next);
+    if (next !== null) this.focusActiveItem(next);
   }
 
   private setActiveItemQuiet(index: number): void {
@@ -2728,7 +2707,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       rtlFlip: this.orientation === 'horizontal' && isRtl(this) ? -1 : 1,
     };
     this.dragEdgeRefs = this.buildDragEdgeRefs(node.id);
-    wrapper.setPointerCapture?.(e.pointerId);
+    capturePointer(wrapper, e.pointerId);
     this.connectedWindow?.addEventListener('pointermove', this.onNodePointerMove);
     this.connectedWindow?.addEventListener('pointerup', this.onNodePointerUp);
     this.connectedWindow?.addEventListener('pointercancel', this.onNodePointerUp);
@@ -2791,7 +2770,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     // skips rewriting this exact attribute, leaving the mid-drag transform stuck. Writing the
     // reset transform directly (looked up fresh by id, in case a synchronous host listener already
     // applied a new position) fixes the visible state immediately regardless of Lit's diffing.
-    const resetNode = this.modelNodes.find((n) => n.id === drag.nodeId);
+    const resetNode = nodeById(this.modelNodes, drag.nodeId);
     const resetPos = resetNode ? this.nodePosition(resetNode) : previous;
     drag.wrapper.style.transform = `translate(${resetPos.x}px, ${resetPos.y}px)`;
     this.updateIncidentEdges(drag.nodeId, resetPos.x, resetPos.y, drag.rtlFlip);
@@ -2801,7 +2780,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private nudgeNode(nodeId: string, key: string): void {
     if (this.sourceMode) return;
-    const node = this.modelNodes.find((n) => n.id === nodeId);
+    const node = nodeById(this.modelNodes, nodeId);
     if (!node) return;
     const current = this.nodePosition(node);
     const step = this.safeGrid > 0 ? this.safeGrid : 1;
@@ -2824,8 +2803,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.announcer.announce(
       this.localize('flowNodeMoved', undefined, {
         label: this.nodeAccessibleText(node),
-        x: this.formatNumber(position.x),
-        y: this.formatNumber(position.y),
+        x: this.formatLocaleNumber(position.x),
+        y: this.formatLocaleNumber(position.y),
       }),
     );
     this.requestUpdate();
@@ -2871,7 +2850,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private startConnectGesture(nodeId: string, handleId: string, clientX: number, clientY: number): void {
     if (this.sourceMode) return;
-    const sourceNode = this.modelNodes.find((n) => n.id === nodeId);
+    const sourceNode = nodeById(this.modelNodes, nodeId);
     if (!sourceNode || sourceNode.disabled) return;
     const startPt = this.handlePoint(this.resolvedNode(sourceNode), 'output', handleId);
     this.connectState = {
@@ -2953,8 +2932,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         targetHandle,
       }),
     );
-    const sourceNode = this.modelNodes.find((node) => node.id === state.sourceId);
-    const targetNode = this.modelNodes.find((node) => node.id === targetNodeId);
+    const sourceNode = nodeById(this.modelNodes, state.sourceId);
+    const targetNode = nodeById(this.modelNodes, targetNodeId);
     this.announcer.announce(
       this.localize('flowConnectCommitted', undefined, {
         source: sourceNode ? this.nodeAccessibleText(sourceNode) : state.sourceId,
@@ -3021,7 +3000,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private startKeyboardConnect(sourceId: string): void {
     if (this.sourceMode) return;
-    const sourceNode = this.modelNodes.find((n) => n.id === sourceId);
+    const sourceNode = nodeById(this.modelNodes, sourceId);
     if (!sourceNode || sourceNode.disabled) return;
     const targets = this.eligibleConnectTargets(sourceId);
     if (targets.length === 0) return;
@@ -3041,7 +3020,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private announceKeyboardConnectTarget(): void {
     const sourceId = this.keyboardConnectSourceId;
     if (!sourceId) return;
-    const source = this.modelNodes.find((node) => node.id === sourceId);
+    const source = nodeById(this.modelNodes, sourceId);
     const targets = this.eligibleConnectTargets(sourceId);
     const target = targets[this.keyboardConnectTargetIndex];
     if (!source || !target) return;
@@ -3049,8 +3028,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.localize('flowConnectTarget', undefined, {
         source: this.nodeAccessibleText(source),
         target: this.nodeAccessibleText(target),
-        index: this.formatNumber(this.keyboardConnectTargetIndex + 1),
-        total: this.formatNumber(targets.length),
+        index: this.formatLocaleNumber(this.keyboardConnectTargetIndex + 1),
+        total: this.formatLocaleNumber(targets.length),
       }),
     );
   }
@@ -3075,7 +3054,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         targetHandle: targetInputs[0]?.id ?? 'in',
       }),
     );
-    const source = this.modelNodes.find((node) => node.id === sourceId);
+    const source = nodeById(this.modelNodes, sourceId);
     this.announcer.announce(
       this.localize('flowConnectCommitted', undefined, {
         source: source ? this.nodeAccessibleText(source) : sourceId,
@@ -3392,16 +3371,16 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.selectRenderedGeometry(resolvedById);
     const fallbackEdges = this.fallbackEdges;
     const state = this.sourceScene.state, current = this.sourceAuthority();
-    return html`<div part="base" class=${this.sourceMode ? 'source-mode' : ''} role="region" aria-label=${this.accessibleLabel ?? this.localize('flowCanvasLabel')}>
+    return html`<div part="base" class=${this.sourceMode ? 'source-mode' : ''} role="region" aria-label=${normalizeLabel(this.accessibleLabel) ?? this.localize('flowCanvasLabel')}>
       <div
         part="viewport"
         ?data-empty=${isEmpty}
         role="group"
         tabindex="0"
-        aria-label=${this.accessibleLabel ??
+        aria-label=${normalizeLabel(this.accessibleLabel) ??
         this.localize('flowCanvasSummary', undefined, {
-          nodeCount: this.formatNumber(this.modelNodes.length),
-          edgeCount: this.formatNumber(this.modelEdges.length),
+          nodeCount: this.formatLocaleNumber(this.modelNodes.length),
+          edgeCount: this.formatLocaleNumber(this.modelEdges.length),
         })}
         @pointerdown=${isEmpty ? this.onBackgroundPointerDown : undefined}
       >

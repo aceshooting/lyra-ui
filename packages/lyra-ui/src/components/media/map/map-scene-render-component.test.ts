@@ -88,6 +88,15 @@ describe('lr-map scene renderer connection', () => {
     expect(first.disposed).to.equal(true); expect(second.disposed).to.equal(false);
   });
 
+  it('reads CSS Color 4 marker channels and alpha in the map document', async () => {
+    const { peer } = await env.mount(element => {
+      element.scene = { objects: [{ ...sceneMarker(), color: 'color(srgb 0.2 0.4 0.8 / 0.5)' }] };
+    });
+    const { rgba } = (await env.bridge(peer)).host.captureRenderInput().markers[0]!;
+    const channels = [0.2, 0.4, 0.8, 0.5];
+    rgba.forEach((value, index) => expect(value).to.be.closeTo(channels[index]!, 0.01));
+  });
+
   it('resolves the existing accent token and explicit CSS alpha before applying opacity once', async () => {
     const { peer } = await env.mount(element => {
       element.style.setProperty('--lr-color-brand', 'rgb(20, 40, 60)');

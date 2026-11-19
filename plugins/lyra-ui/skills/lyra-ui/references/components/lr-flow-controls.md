@@ -26,6 +26,7 @@ the opposite zoom button or to Fit if both directions are disabled.
 **Properties:**
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
+- `label: string = ''` — accessible name of the control group. A host `aria-label` takes precedence.
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
 

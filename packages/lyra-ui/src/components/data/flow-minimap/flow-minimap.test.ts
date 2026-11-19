@@ -182,7 +182,7 @@ it('cancels an active viewport drag before binding a same-id replacement canvas'
 
   expect((minimap as unknown as { dragState?: unknown }).dragState).to.equal(undefined);
   expect((minimap as unknown as { dragEventWindow?: Window }).dragEventWindow).to.equal(undefined);
-  expect((minimap as unknown as { justDraggedViewport: boolean }).justDraggedViewport).to.be.false;
+  expect((minimap as unknown as { disarmClickSuppression?: unknown }).disarmClickSuppression).to.equal(undefined);
   expect((minimap as unknown as { announceNextSnapshot: boolean }).announceNextSnapshot).to.be.false;
   window.dispatchEvent(new PointerEvent('pointermove', {
     pointerId: 305,
@@ -656,7 +656,7 @@ it('cancels a viewport drag silently when the canvas turns readonly before the p
   const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
   (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
   rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
-  const internals = minimap as unknown as { dragState?: unknown; justDraggedViewport?: boolean };
+  const internals = minimap as unknown as { dragState?: unknown; disarmClickSuppression?: unknown };
   expect(internals.dragState !== undefined).to.equal(true);
 
   wrapper.readonly = true;
@@ -664,7 +664,7 @@ it('cancels a viewport drag silently when the canvas turns readonly before the p
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 60, clientY: 60 }));
 
   expect(internals.dragState === undefined, 'the drag state is released').to.equal(true);
-  expect(internals.justDraggedViewport === true, 'no drag-click suppression is armed').to.equal(false);
+  expect(internals.disarmClickSuppression === undefined, 'no drag-click suppression is armed').to.equal(true);
   expect(sinkTexts(), 'a canceled viewport drag must remain silent').to.deep.equal([]);
 });
 
@@ -1291,4 +1291,53 @@ describe('frame', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+});
+
+it('lets a genuine click recenter after a drag that produced no click', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
+  rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, clientX: 10, clientY: 10, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 40, clientY: 40 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, clientX: 40, clientY: 40 }));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const before = JSON.stringify(wrapper.viewport);
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGElement;
+  const box = map.getBoundingClientRect();
+  map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: box.left + 5, clientY: box.top + 5 }));
+  await new Promise((r) => requestAnimationFrame(r));
+  expect(JSON.stringify(wrapper.viewport) === before).to.equal(false);
+});
+
+it('matches the order of nodes on a horizontal RTL canvas with an external minimap', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-flow-canvas id="mirrored" dir="rtl" style="width:800px;height:300px"></lr-flow-canvas>
+    <lr-flow-minimap for="mirrored" dir="ltr"></lr-flow-minimap></div>`);
+  const canvas = wrapper.querySelector('lr-flow-canvas')!;
+  canvas.nodes = [
+    { id: 'left', position: { x: -240, y: 10 } },
+    { id: 'right', position: { x: -20, y: 10 } },
+  ];
+  canvas.selectedNodeIds = ['left', 'right'];
+  const minimap = wrapper.querySelector('lr-flow-minimap')!;
+  await waitUntil(() => minimap.shadowRoot!.querySelectorAll('[part="node"]').length === 2);
+  const order = (root: ShadowRoot) => {
+    const rects = [...root.querySelectorAll('[part="node"]')].map(node => node.getBoundingClientRect());
+    return Math.sign(rects[1]!.left - rects[0]!.left);
+  };
+  const expected = order(canvas.shadowRoot!);
+  expect(expected).to.equal(-1);
+  expect(order(minimap.shadowRoot!)).to.equal(expected);
+  const handle = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]')!;
+  const panBefore = canvas.viewport.x;
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(canvas.viewport.x).to.be.greaterThan(panBefore);
 });

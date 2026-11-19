@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Indikator galeri geser',
   carouselGoTo: 'Menyang slide {index}',
+  carouselPauseRotation: 'Setop rotasi sauntara',
+  carouselResumeRotation: 'Terusake rotasi',
   scrollerLabel: 'Konten sing bisa digulung',
   scrollPrevious: 'Gulung mundur',
   scrollNext: 'Gulung maju',

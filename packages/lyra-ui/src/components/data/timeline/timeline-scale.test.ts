@@ -1,4 +1,4 @@
-import { expect, fixture, html, aTimeout } from '@open-wc/testing';
+import { expect, fixture, html, aTimeout, waitUntil } from '@open-wc/testing';
 import './timeline.js';
 import type { LyraTimeline } from './timeline.js';
 import type { LyraTimelineItem } from './timeline-item.js';
@@ -111,4 +111,35 @@ it('updates horizontal overflow and tab reachability after width-only item growt
   await twoFrames(); await aTimeout(60);
   expect(base.hasAttribute('data-scroll-overflow')).to.equal(false);
   expect(base.tabIndex).to.equal(-1);
+});
+
+it('tracks item growth after a horizontal timeline reconnects', async () => {
+  const el = await fixture<LyraTimeline>(html`<lr-timeline orientation="horizontal" style="width:260px">
+    <lr-timeline-item>Start</lr-timeline-item><lr-timeline-item>End</lr-timeline-item>
+  </lr-timeline>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  base.style.scrollbarWidth = 'none';
+  await twoFrames();
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await twoFrames();
+  expect(base.hasAttribute('data-scroll-overflow')).to.equal(false);
+  (el.lastElementChild as HTMLElement).style.flex = '0 0 500px';
+  await waitUntil(() => base.hasAttribute('data-scroll-overflow'), 'resized item did not update overflow after the move');
+});
+
+it('remeasures a time item that grows after its timeline moves', async () => {
+  const el = await fixture<LyraTimeline>(html`<lr-timeline scale="time" orientation="horizontal">
+    <lr-timeline-item style="height:40px"></lr-timeline-item><lr-timeline-item style="height:60px"></lr-timeline-item>
+  </lr-timeline>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const height = () => Number.parseFloat(base.style.getPropertyValue('--_lr-timeline-content-height'));
+  await waitUntil(() => height() >= 60);
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await twoFrames();
+  (el.firstElementChild as HTMLElement).style.height = '180px';
+  await waitUntil(() => height() >= 180, 'time extent did not include the resized item');
 });

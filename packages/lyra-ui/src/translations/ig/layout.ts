@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Ihe ngosi ngagharị onyonyo',
   carouselGoTo: 'Gaa na onyonyo {index}',
+  carouselPauseRotation: 'Kwụsịtụ mgbanwe',
+  carouselResumeRotation: 'Gaa n’ihu na mgbanwe',
   scrollerLabel: 'Ọdịnaya a pụrụ ịpịgharị',
   scrollPrevious: 'Pịgharịa azụ',
   scrollNext: 'Pịgharịa n’ihu',

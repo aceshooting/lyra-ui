@@ -1,5 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './file-input.js';
+import { classifyFiles, matchesAccept } from './accept.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 for (const property of ['label', 'hint'] as const) {
@@ -98,4 +100,131 @@ it('does no work when the same MIME list or files array is re-assigned', async (
   el.files = files;
   expect(el.isUpdatePending).to.equal(false);
   expect(el.allowedMimeTypes).to.equal(snapshot);
+});
+
+const dropFiles = (target: HTMLElement, files: File[]): void => {
+  const transfer = new DataTransfer();
+  for (const file of files) transfer.items.add(file);
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  target.dispatchEvent(event);
+};
+it('announces a second identical drop outcome again', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple></lr-file-input>`);
+  const zone = el.shadowRoot!.querySelector<HTMLElement>('[part~="dropzone"]')!;
+  const count = (): number => sinkTexts('polite').filter((text) => text === '1 file added.').length;
+  const before = count();
+  dropFiles(zone, [new File(['a'], 'a.txt', { type: 'text/plain' })]);
+  await el.updateComplete;
+  expect(count()).to.equal(before + 1);
+  dropFiles(zone, [new File(['b'], 'b.txt', { type: 'text/plain' })]);
+  await el.updateComplete;
+  expect(count()).to.equal(before + 2);
+});
+
+for (const action of ['form reset', 'state restoration'] as const) {
+  it(`retires an in-flight folder traversal on ${action}`, async () => {
+    const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple></lr-file-input>`);
+    const zone = el.shadowRoot!.querySelector<HTMLElement>('[part~="dropzone"]')!;
+    let finish: (() => void) | undefined;
+    const nested = new File(['x'], 'late.txt', { type: 'text/plain' });
+    let read = false;
+    const directory = {
+      isDirectory: true, isFile: false, name: 'folder',
+      createReader: () => ({
+        readEntries: (success: (entries: unknown[]) => void) => {
+          if (read) { success([]); return; }
+          read = true;
+          finish = () => success([{ isDirectory: false, isFile: true, name: nested.name, file: (ok: (file: File) => void) => ok(nested) }]);
+        },
+      }),
+    };
+    const transfer = { files: [] as unknown as FileList, items: [{ kind: 'file', webkitGetAsEntry: () => directory }] };
+    const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { value: transfer });
+    let emitted = 0;
+    el.addEventListener('lr-files', () => { emitted++; });
+    zone.dispatchEvent(event);
+    await waitUntil(() => finish !== undefined);
+    if (action === 'form reset') el.formResetCallback();
+    else el.formStateRestoreCallback(null, 'restore');
+    finish!();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(emitted).to.equal(0);
+    expect(el.files.length).to.equal(0);
+  });
+}
+
+it('reports the accepted files as the value of a non-retaining selection', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple non-retaining></lr-file-input>`);
+  const zone = el.shadowRoot!.querySelector<HTMLElement>('[part~="dropzone"]')!;
+  const names: string[][] = [];
+  el.addEventListener('lr-change', (event) => names.push([...(event as CustomEvent<{ value: File[] }>).detail.value].map((file) => file.name)));
+  dropFiles(zone, [new File(['a'], 'a.txt', { type: 'text/plain' })]);
+  await el.updateComplete;
+  expect(names).to.deep.equal([['a.txt']]);
+  expect(el.files.length).to.equal(0);
+});
+
+it('restores the declared accept default when the attribute is removed', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input accept="image/png"></lr-file-input>`);
+  el.removeAttribute('accept');
+  await el.updateComplete;
+  expect(el.accept).to.equal('');
+});
+
+it('renders and announces a bounded rejection list with a summary of the rest', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple accept="image/png"></lr-file-input>`);
+  const zone = el.shadowRoot!.querySelector<HTMLElement>('[part~="dropzone"]')!;
+  dropFiles(zone, Array.from({ length: 45 }, (_, index) => new File(['x'], `f${index}.txt`, { type: 'text/plain' })));
+  await el.updateComplete;
+  const rows = [...el.shadowRoot!.querySelectorAll('[part="rejection"] li')];
+  expect(rows.length).to.equal(21);
+  expect(rows[20]!.textContent).to.equal('and 25 more not shown.');
+  expect(sinkTexts('assertive').some((text) => text.includes('and 25 more not shown.') && !text.includes('f44.txt'))).to.equal(true);
+});
+
+it('uses the numeric selection count to choose a plural message', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple non-retaining locale="sl" .strings=${{
+    fileInputDefaultLabel: 'Select', fileInputAcceptedMany: { two: 'pair', other: 'other', one: 'singular' },
+  }}></lr-file-input>`);
+  await el.updateComplete;
+  const transfer = new DataTransfer();
+  for (const name of ['a', 'b']) transfer.items.add(new File(['x'], name));
+  const event = new Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  el.shadowRoot!.querySelector('[part="dropzone"]')!.dispatchEvent(event);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal('pair');
+});
+
+it('bounds image thumbnails while retaining every file and promotes the next preview after removal', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple></lr-file-input>`);
+  const files = Array.from({ length: 52 }, (_, index) => new File([], `image-${index}.png`, { type: 'image/png' }));
+  el.files = files;
+  await el.updateComplete;
+  const names = () => [...el.shadowRoot!.querySelectorAll('[part="file"]')]
+    .filter((row) => row.querySelector('[part="file-image"]'))
+    .map((row) => row.querySelector('[part="file-name"]')!.textContent);
+  expect(el.files.length).to.equal(52);
+  expect(names()).to.deep.equal(files.slice(0, 50).map((file) => file.name));
+  el.files = files.slice(1);
+  await el.updateComplete;
+  expect(names()).to.deep.equal(files.slice(1, 51).map((file) => file.name));
+});
+
+it('counts externally held files against the batch limits and tolerates a non-string accept', () => {
+  const file = (name: string): File => new File(['x'], name, { type: 'text/plain' });
+  const result = classifyFiles({ maxFiles: 3, heldFileCount: 2, heldTotalSize: 10 }, [file('a.txt'), file('b.txt')], true);
+  expect(result.files.length).to.equal(1);
+  expect(result.rejected.length).to.equal(1);
+  expect(matchesAccept(file('a.txt'), undefined as unknown as string)).to.equal(true);
+});
+
+it('treats unset held totals and non-finite retained sizes as zero', () => {
+  const retained = new File(['x'], 'r.txt', { type: 'text/plain' });
+  Object.defineProperty(retained, 'size', { value: Number.NaN });
+  const result = classifyFiles({ maxFiles: 2 }, [new File(['y'], 'n.txt', { type: 'text/plain' })], true, [retained]);
+  expect(result.files.length).to.equal(1);
+  expect(result.remainingTotalSize === null || Number.isFinite(result.remainingTotalSize)).to.equal(true);
 });

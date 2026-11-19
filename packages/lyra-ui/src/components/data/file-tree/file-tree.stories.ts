@@ -84,7 +84,7 @@ export const LazyLoading: Story = {
 
 /** Raise the bounded projection budget while retaining the default when max-nodes is omitted. */
 export const RaisedNodeLimit: Story = {
-  render: () => html`<lr-file-tree label="Larger collection" max-nodes="1200"
+  render: () => html`<lr-file-tree label="Larger collection" size="s" max-nodes="1200"
     .nodes=${Array.from({length:1100},(_,index)=>({path:`file-${index + 1}.ts`}))}></lr-file-tree>`,
 };
 

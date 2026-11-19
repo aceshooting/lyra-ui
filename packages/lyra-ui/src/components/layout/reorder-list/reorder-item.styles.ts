@@ -94,10 +94,4 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  @media (prefers-reduced-motion: reduce) {
-    [part='move-up-button'],
-    [part='move-down-button'] {
-      transition: none !important;
-    }
-  }
 `;

@@ -2,7 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { settlePopupTransition } from './anchored-overlay-runtime.js';
 import { OverlayTransitionGate } from './overlay-shared.js';
 
-export type DisclosureLifecycleEvent = 'lr-show' | 'lr-hide' | 'lr-after-show' | 'lr-after-hide';
+type DisclosureLifecycleEvent = 'lr-show' | 'lr-hide' | 'lr-after-show' | 'lr-after-hide';
 
 /** What a host supplies to {@link AnchoredDisclosureController}. */
 export interface AnchoredDisclosureOptions {

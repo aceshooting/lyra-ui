@@ -1,6 +1,7 @@
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 
 export const styles = css`
   :host {
@@ -25,7 +26,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   :host(:focus-visible) [part='row'] {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   /* no-hover-state: the dynamically named [part~='item'] ancestor owns the row's hover and active
      fills below, and this row explicitly inherits that background. itemPartNames() assembles the
@@ -91,6 +92,9 @@ export const styles = css`
      it lights up on mousedown and then does nothing. */
   :host([aria-disabled='true']) [part~='item']:active {
     background: transparent;
+  }
+  :host([aria-disabled='true'][aria-selected='true']) [part~='item']:is(:hover, :active) {
+    background: var(--_lr-tree-selected-fill);
   }
   [part='toggle'],
   [part='checkbox'] {
@@ -377,4 +381,6 @@ export const styles = css`
       animation: none;
     }
   }
+
+  ${forcedColorsPart(':host([aria-selected="true"]) [part~="item"]')}
 `;

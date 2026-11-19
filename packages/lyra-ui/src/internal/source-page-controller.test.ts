@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { LyraPageRequest, LyraPageResult, LyraPageSource, LyraSourceRecord } from '../data-sources.js';
-import { SourcePageController, type SourcePageOptions } from './source-page-controller.js';
+import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController, type SourcePageOptions } from './source-page-controller.js';
 import { setSourcePageScope } from './source-page-scope.js';
 
 type Row = { id: string; text: string };
@@ -642,4 +642,33 @@ it('settles a scope revoked before its queued page starts without calling the pr
     expect(calls).to.equal(1);
     expect(current.control.state.result?.rows[0]?.key).to.equal('key-0');
   } finally { obsolete.disconnect(); current.disconnect(); }
+});
+
+describe('readOwnSourceField', () => {
+  const always = (): boolean => true;
+  const message = (read: () => unknown): string => {
+    try { read(); } catch (error) { return error instanceof Error ? error.message : 'thrown'; }
+    return 'returned';
+  };
+
+  it('reads an own data field and an optional missing one', () => {
+    expect(readOwnSourceField({ id: 'a' }, 'id', always, true)).to.equal('a');
+    expect(readOwnSourceField({}, 'tags', always)).to.equal(undefined);
+  });
+
+  it('fails closed on a missing required field, an accessor and a non-object', () => {
+    expect(message(() => readOwnSourceField({}, 'id', always, true))).to.equal('Invalid source field');
+    expect(message(() => readOwnSourceField({ get id() { return 'a'; } }, 'id', always))).to.equal('Invalid source field');
+    expect(message(() => readOwnSourceField('text', 'id', always))).to.equal('Invalid source object');
+  });
+
+  it('fails closed when the record is revoked before or during the read', () => {
+    expect(message(() => readOwnSourceField({ id: 'a' }, 'id', () => false))).to.equal('Obsolete source record');
+    let calls = 0;
+    expect(message(() => readOwnSourceField({ id: 'a' }, 'id', () => ++calls < 2))).to.equal('Obsolete source record');
+  });
+
+  it('exposes the shared text budget', () => {
+    expect(SOURCE_TEXT_UNIT_LIMIT).to.equal(65_536);
+  });
 });

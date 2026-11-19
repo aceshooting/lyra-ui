@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Karruseldias',
   carouselGoTo: 'Gå til dias {index}',
+  carouselPauseRotation: 'Sæt rotation på pause',
+  carouselResumeRotation: 'Genoptag rotation',
   scrollerLabel: 'Rulbart indhold',
   scrollPrevious: 'Rul tilbage',
   scrollNext: 'Rul frem',

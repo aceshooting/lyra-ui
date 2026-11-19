@@ -31,7 +31,7 @@ it("falls back to the owner window resize signal when ResizeObserver is unavaila
     el = await fixture<LyraResponsivePanel>(html`
       <lr-responsive-panel open>body</lr-responsive-panel>
     `);
-    el.getBoundingClientRect = () => ({ width: 320 }) as DOMRect;
+    el.style.inlineSize = '320px';
     window.dispatchEvent(new Event("resize"));
     await el.updateComplete;
     expect(el.effectiveMode).to.equal("overlay");

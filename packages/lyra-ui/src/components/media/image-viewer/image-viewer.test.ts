@@ -1648,6 +1648,8 @@ describe("active-state cssprop escape hatches", () => {
     expect(toggle != null, "the annotate toggle renders pressed").to.equal(
       true
     );
+    getComputedStyle(toggle).backgroundColor;
+    await Promise.all(toggle.getAnimations().map(animation => animation.finished));
     return { el, toggle };
   }
 

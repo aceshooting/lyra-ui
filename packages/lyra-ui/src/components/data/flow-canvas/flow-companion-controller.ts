@@ -1,11 +1,11 @@
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { tag } from '../../../internal/prefix.js';
 
 type RootWithIds = Document | ShadowRoot;
 
 /** Shared lifecycle-safe resolver used by each flow-canvas companion. */
 export class FlowCanvasCompanionController<T extends HTMLElement> {
-  private observer?: MutationObserver;
-  private observerDocument?: Document;
+  private observer?: OwnedMutationObserver;
   private generation = 0;
   private _target: T | null = null;
 
@@ -29,7 +29,6 @@ export class FlowCanvasCompanionController<T extends HTMLElement> {
     this.generation += 1;
     this.observer?.disconnect();
     this.observer = undefined;
-    this.observerDocument = undefined;
     this.setTarget(null);
   }
 
@@ -82,7 +81,7 @@ export class FlowCanvasCompanionController<T extends HTMLElement> {
     // after the owner realm defines the tag and discard stale adoption/disconnect continuations.
     const ownerDocument = this.host.ownerDocument;
     const registry = ownerDocument.defaultView?.customElements;
-    if (!registry) return;
+    if (!registry || registry.get(tag('flow-canvas')) !== undefined) return;
     const generation = this.generation;
     const root = this.root();
     void registry.whenDefined(tag('flow-canvas')).then(() => {
@@ -99,30 +98,14 @@ export class FlowCanvasCompanionController<T extends HTMLElement> {
   }
 
   private watchRoot(): void {
-    const ownerDocument = this.host.ownerDocument;
-    this.observer?.disconnect();
+    this.observer?.clear();
     this.observer = undefined;
-    this.observerDocument = undefined;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    // An ancestor target changes only when the host moves, which reconnects it.
-    if (!MutationObserverCtor || !this.host.isConnected || !this.host.for) return;
+    if (!this.host.isConnected || !this.host.for) return;
     const root = this.root();
-    const generation = this.generation;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.observer !== observer ||
-        this.observerDocument !== ownerDocument ||
-        generation !== this.generation ||
-        !this.host.isConnected ||
-        this.host.ownerDocument !== ownerDocument ||
-        this.root() !== root
-      ) {
-        return;
-      }
-      this.reconcile();
+    const observer = new OwnedMutationObserver(this.host, () => {
+      if (this.root() === root) this.reconcile();
     });
     this.observer = observer;
-    this.observerDocument = ownerDocument;
     observer.observe(root, {
       childList: true,
       subtree: true,

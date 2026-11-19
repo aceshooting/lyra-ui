@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Carrousel-dia’s',
   carouselGoTo: 'Ga naar dia {index}',
+  carouselPauseRotation: 'Rotatie pauzeren',
+  carouselResumeRotation: 'Rotatie hervatten',
   scrollerLabel: 'Scrollbare inhoud',
   scrollPrevious: 'Terug scrollen',
   scrollNext: 'Verder scrollen',

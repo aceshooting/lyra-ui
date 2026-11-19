@@ -158,3 +158,21 @@ it('projects a host description onto the iframe', async function () {
     (frame.getAttribute('aria-describedby')?.split(/\s+/).includes('zf-help') ?? false),
   ).to.equal(true);
 });
+
+it('applies shared icon action tokens to the native toolbar control', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-zoomable-frame style="--lr-icon-button-border: 3px solid rgb(11, 22, 33); --lr-icon-button-bg: rgb(21, 31, 41); --lr-icon-button-radius: 9px"></lr-zoomable-frame>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector('[part="zoom-in-button"]')!);
+  expect(style.borderTopColor).to.equal('rgb(11, 22, 33)');
+  expect(style.borderTopWidth).to.equal('3px');
+  expect(style.backgroundColor).to.equal('rgb(21, 31, 41)');
+  expect(style.borderTopLeftRadius).to.equal('9px');
+});
+
+it('does not impose a twenty-rem floor on a shrink-to-fit iframe wrapper', async () => {
+  const outer = await fixture<HTMLElement>(html`<div style="display:inline-block">
+    <lr-zoomable-frame style="block-size:90px;inline-size:auto"></lr-zoomable-frame>
+  </div>`);
+  const frame = outer.querySelector('lr-zoomable-frame')!;
+  expect(getComputedStyle(frame).containerType).to.equal('normal');
+  expect(outer.getBoundingClientRect().width).to.be.lessThan(200);
+});

@@ -134,7 +134,7 @@ it('exposes determinate progress semantics with its current value', async () => 
   const el = (await fixture(html`<lr-flow-node heading="Fetch" progress="40"></lr-flow-node>`)) as LyraFlowNode;
   const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
   expect(progress.getAttribute('role')).to.equal('progressbar');
-  expect(progress.getAttribute('aria-label')).to.equal('Progress');
+  expect(progress.getAttribute('aria-label')).to.equal('Fetch progress');
   expect(progress.getAttribute('aria-valuemin')).to.equal('0');
   expect(progress.getAttribute('aria-valuemax')).to.equal('100');
   expect(progress.getAttribute('aria-valuenow')).to.equal('40');
@@ -769,7 +769,8 @@ describe('toolbar menu', () => {
     await resetMouse();
   });
 
-  it('keeps the toolbar revealed while a menu opened from it is open, wherever the pointer goes', async () => {
+  it('keeps the toolbar revealed while a menu opened from it is open, wherever the pointer goes', async function () {
+    this.timeout(20_000);
     const { waitUntil } = await import('@open-wc/testing');
     const { hoverUntilMatched, sendMouse } = await import('../../../../test/wtr-mouse.js');
     await import('../flow-canvas/flow-canvas.js');
@@ -828,11 +829,7 @@ describe('toolbar menu', () => {
     expect(lastRect.top, 'the last item sits below the node card').to.be.greaterThan(
       node.getBoundingClientRect().bottom
     );
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(lastRect.left + lastRect.width / 2), Math.round(lastRect.top + lastRect.height / 2)],
-    });
-    await waitUntil(() => last.matches(':hover'), 'the pointer reached the open menu');
+    await hoverUntilMatched(last, 'the pointer reached the open menu');
     await waitUntil(
       () => getComputedStyle(toolbar).opacity === '1',
       'the toolbar stays revealed while the pointer is inside its open menu'

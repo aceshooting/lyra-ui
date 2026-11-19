@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconAction } from '../../../internal/icon-action.styles.js';
+import { iconHitTarget, focusRing, activeFill, disabledControl } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -51,20 +52,11 @@ export const styles = css`
   [part='zoom-in'],
   [part='zoom-out'],
   [part='fit'],
-  [part='lock'] {
-    display: inline-flex;
-    font: inherit;
-    align-items: center;
-    justify-content: center;
+  [part='lock'],
+  ::slotted(button) {
+    --_lr-icon-button-color-default: var(--lr-color-text);
+    ${iconAction}
     ${iconHitTarget}
-    padding: 0;
-    border: none;
-    border-radius: var(--lr-radius);
-    background: transparent;
-    color: var(--lr-color-text);
-    cursor: pointer;
-    /* Hover/active below only repaint background, so that is all this needs; without it these
-       buttons' fill snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast);
   }
   /* Keep the internal state selector low-specificity so sibling shadow-tree rules remain easy to
@@ -80,15 +72,10 @@ export const styles = css`
      further toward --lr-color-mix-partner (the text colour), which moves whichever way the
      surface needs instead of always lightening. */
   :where([part='base'] button):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
   }
   [part='base'] button:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='base'] button:focus-visible {
     ${focusRing}
@@ -104,23 +91,9 @@ export const styles = css`
      matches the slotted element only, never its descendants -- the button's box, not the
      consumer's icon markup. */
   ::slotted(button) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    ${iconHitTarget}
     max-inline-size: 100%;
-    padding: 0;
-    border: none;
-    border-radius: var(--lr-radius);
-    background: transparent;
-    color: var(--lr-color-text);
-    font: inherit;
     white-space: normal;
     overflow-wrap: anywhere;
-    cursor: pointer;
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       slotted button's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
   }
   /* The display above is author-origin, so it outranks the UA stylesheet's own
      '[hidden] { display: none }' and a consumer hiding one of its own action buttons would still
@@ -135,15 +108,10 @@ export const styles = css`
     background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
   }
   ::slotted(button:active:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
   }
   ::slotted(button:disabled) {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   ::slotted(button:focus-visible) {
     ${focusRing}

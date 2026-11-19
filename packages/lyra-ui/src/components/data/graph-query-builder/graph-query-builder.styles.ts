@@ -1,5 +1,6 @@
+import { iconAction } from '../../../internal/icon-action.styles.js';
 import { formControlLabelTypography } from '../../../internal/form-control.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, disabledControl } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -125,8 +126,7 @@ export const styles = css`
   [part='save-button']:disabled,
   [part='saved-load-button']:disabled,
   [part='saved-delete-button']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='run-button']:focus-visible,
   [part='save-button']:focus-visible,
@@ -212,22 +212,13 @@ export const styles = css`
   }
   [part='saved-delete-button'] {
     flex: none;
-    display: inline-flex;
-    font: inherit;
-    align-items: center;
-    justify-content: center;
+    --_lr-icon-button-color-default: var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet));
+    --_lr-icon-button-radius-default: var(--lr-radius-xs);
+    ${iconAction}
     inline-size: var(--lr-space-2xl);
     block-size: var(--lr-space-2xl);
     ${iconHitTarget}
-    padding: 0;
-    color: var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet));
-    background: none;
-    border: none;
-    border-radius: var(--lr-radius-xs);
-    cursor: pointer;
-    /* Hover below repaints color, and active also fills a background, so both channels need to
-       ease; without this this button's paint snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+
   }
   [part='saved-delete-button'] svg {
     inline-size: var(--lr-size-1em);

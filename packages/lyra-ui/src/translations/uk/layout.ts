@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Слайди каруселі',
   carouselGoTo: 'Перейти до слайда {index}',
+  carouselPauseRotation: 'Призупинити зміну слайдів',
+  carouselResumeRotation: 'Відновити зміну слайдів',
   scrollerLabel: 'Вміст із прокручуванням',
   scrollPrevious: 'Прокрутити назад',
   scrollNext: 'Прокрутити вперед',

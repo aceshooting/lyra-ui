@@ -71,4 +71,25 @@ describe('file tree source display values', () => {
       expect(element.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(0);
     });
   }
+  it('names a source row from its visible name, diff summary and status', async () => {
+    const element = await fixture<LyraFileTree>(html`<lr-file-tree label="Files"
+      .treeSource=${provider({ path: 'src/file.ts', name: 'file.ts', gitStatus: 'modified', additions: 3, deletions: 1 })}></lr-file-tree>`);
+    await waitUntil(() => row(element) !== null);
+    expect(row(element)?.getAttribute('aria-label')).to.equal('file.ts +3 -1 Modified');
+  });
+});
+
+it('announces a changed source total through the document live region', async () => {
+  const files = provider({ path: 'src/file.ts', name: 'File' });
+  const project = files.project;
+  files.project = async request => ({
+    ...await project(request),
+    total: request.action.type === 'select' ? 2 : 1,
+  });
+  const element = await fixture<LyraFileTree>(html`<lr-file-tree label="Files" .treeSource=${files}
+    .strings=${{ treeSourceSummary: 'File results: {visible} of {total}' }}></lr-file-tree>`);
+  await waitUntil(() => row(element) !== null);
+  row(element)!.click();
+  await waitUntil(() => [...document.querySelectorAll('[data-lr-live-region] > div')]
+    .some(node => node.textContent === 'File results: 1 of 2'));
 });

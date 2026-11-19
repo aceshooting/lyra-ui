@@ -2,6 +2,7 @@ import { emitValueEvents } from '../../../internal/value-events.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
+import { capturePointer } from '../../../internal/pointer-capture.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -75,6 +76,10 @@ function normalizeOrientation(value: unknown): LyraImageComparerOrientation {
  *   `--lr-image-comparer-divider-width`.
  * @cssprop [--handle-size=var(--lr-icon-button-size)] - Retained Shoelace-compat source for
  *   `--lr-image-comparer-handle-size`.
+ * @cssprop [--lr-image-comparer-divider-color=var(--lr-color-surface)] - Fill of the dividing line.
+ * @cssprop [--lr-image-comparer-handle-bg=var(--lr-color-surface)] - Fill of the visible handle.
+ * @cssprop [--lr-image-comparer-handle-color=var(--lr-color-text)] - Glyph color of the visible handle.
+ * @cssprop [--lr-image-comparer-handle-border-color=var(--lr-color-border)] - Border color of the visible handle.
  * @cssstate dragging - Present while a pointer gesture is active on the range input.
  * @status stable
  * @since 4.0.0
@@ -146,13 +151,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     if (!event.isPrimary || event.button !== 0 || this.activePointerId !== undefined) return;
     this.activePointerId = event.pointerId;
     setCustomState(this.internals, 'dragging', true);
-    try {
-      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    } catch {
-      // Synthetic events and partial DOM shims have no active pointer to capture. The state still
-      // follows their explicit pointerup/pointercancel event, while real gestures gain a reliable
-      // end event even when the pointer leaves the comparison bounds.
-    }
+    capturePointer(event.currentTarget as HTMLElement, event.pointerId);
   };
 
   private onPointerEnd = (event?: PointerEvent): void => {

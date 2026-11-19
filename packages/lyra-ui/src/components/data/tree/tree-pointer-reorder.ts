@@ -1,3 +1,4 @@
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import type { LyraTreeNodeData, LyraTreePointerReorderDetail } from './tree-types.js';
 import type { LyraTreeItem } from './tree-item.class.js';
 import { composedContains, flattenedParentElement } from '../../../internal/composed-tree.js';
@@ -167,7 +168,7 @@ export class TreePointerReorder {
       if (Math.hypot(gesture.x - gesture.startX, gesture.y - gesture.startY) < 5) return;
       gesture.dragging = true;
       // Window listeners keep the gesture usable when capture is unavailable or the pointer ended.
-      try { this.tree.setPointerCapture(gesture.pointerId); } catch { /* No active native pointer. */ }
+      capturePointer(this.tree, gesture.pointerId);
     }
     if (event.cancelable) event.preventDefault();
     this.updateTarget();
@@ -311,7 +312,7 @@ export class TreePointerReorder {
     this.tree.removeEventListener('lostpointercapture', this.interrupt);
     view.removeEventListener('keydown', this.keyDown, true);
     view.removeEventListener('blur', this.cancel);
-    if (this.tree.hasPointerCapture?.(pointerId)) this.tree.releasePointerCapture(pointerId);
+    releasePointer(this.tree, pointerId);
     const line = this.indicator;
     if (line) line.hidden = true;
     if (gesture.dragging && this.tree.isConnected) {

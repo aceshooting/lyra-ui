@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'د کړۍ انځورونه',
   carouselGoTo: '{index} انځور ته لاړ شئ',
+  carouselPauseRotation: 'گرځېدل ودروئ',
+  carouselResumeRotation: 'گرځېدل بیا پیل کړئ',
   scrollerLabel: 'خوځېدونکې منځپانګه',
   scrollPrevious: 'شاته خوځول',
   scrollNext: 'مخکې خوځول',

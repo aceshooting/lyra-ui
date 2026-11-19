@@ -134,3 +134,21 @@ it('updates only newly measured geometry after panning to an unvisited node at n
     expect(canvas.shadowRoot!.querySelector('[data-node-id="n750"]') !== null).to.equal(true);
   } finally { geometry.restore(); }
 });
+
+it('looks up the focused node without scanning the model on each focus request', async () => {
+  const canvas = await mount();
+  const nodes = canvas.nodes;
+  const original = Array.prototype.find;
+  let scans = 0;
+  Array.prototype.find = function <T>(this: T[], predicate: (value: T, index: number, array: T[]) => unknown, receiver?: unknown): T | undefined {
+    if (Object.is(this, nodes)) scans++;
+    return original.call(this, predicate, receiver) as T | undefined;
+  };
+  try {
+    canvas.focusNode('n990');
+    canvas.focusNode('n999');
+    expect(scans).to.equal(0);
+  } finally {
+    Array.prototype.find = original;
+  }
+});

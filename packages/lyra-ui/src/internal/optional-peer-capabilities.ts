@@ -1,4 +1,5 @@
 import { devWarnOnce } from './dev-warning.js';
+import { classifyOptionalPeerImportError } from './optional-peer-failure.js';
 
 /**
  * The sanitizer capability Lyra consumes from DOMPurify.
@@ -52,6 +53,8 @@ export interface OptionalPeerLoaderOptions<Capability> {
   readonly warningKey: string;
   /** Fixed development diagnostic; importer errors are never included (they can carry paths). */
   readonly warning: string;
+  /** Diagnostic for an import that rejected although the peer resolves (network, chunk or syntax failure); defaults to `warning`. */
+  readonly failedWarning?: string;
   /**
    * Cache policy. `'success-only'` (default) keeps only an in-flight or successful load, so every
    * failure (import rejection or unusable module) is retried by the next call. `'generation'`
@@ -97,8 +100,9 @@ export function createOptionalPeerLoader<Capability>(
     let module: unknown;
     try {
       module = await importer();
-    } catch {
-      devWarnOnce(options.warningKey, options.warning);
+    } catch (error) {
+      const failed = classifyOptionalPeerImportError(error) === 'failed';
+      devWarnOnce(options.warningKey, failed ? (options.failedWarning ?? options.warning) : options.warning);
       return { capability: null, transient: true };
     }
     const capability = resolveOptionalPeerCapability(module, options.isCapability);

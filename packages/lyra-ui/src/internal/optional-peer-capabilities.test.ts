@@ -70,6 +70,25 @@ describe('createOptionalPeerLoader', () => {
     expect(messages).to.deep.equal(['test peer unavailable']);
   });
 
+  it('words the warning by failure class: not installed versus failed to load', async () => {
+    const make = (key: string, load: () => Promise<unknown>) =>
+      createOptionalPeerLoader({
+        load,
+        isCapability: isGreeter,
+        warningKey: key,
+        warning: 'install the peer',
+        failedWarning: 'the peer failed to load',
+      });
+    const failed = await devWarnings(async () => {
+      await make('lyra-test-peer-class-failed', () => Promise.reject(new Error('chunk offline'))).get();
+    });
+    const missing = await devWarnings(async () => {
+      await make('lyra-test-peer-class-missing', () => Promise.reject(new Error('Failed to resolve module specifier "x"'))).get();
+    });
+    expect(failed).to.deep.equal(['the peer failed to load']);
+    expect(missing).to.deep.equal(['install the peer']);
+  });
+
   it('warns once, without importer details, for a module that lacks the capability', async () => {
     const loader = createOptionalPeerLoader({
       load: () => Promise.resolve({ default: { greet: 'not a function' } }),

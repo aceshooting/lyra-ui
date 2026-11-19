@@ -685,3 +685,22 @@ describe('summary visibility', () => {
   });
 
 });
+
+it('stays silent for the default-to-first assignment and announces the first change after a reconnect', async () => {
+  const canvas = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  canvas.nodes = nodes;
+  await canvas.updateComplete;
+  const overlay = document.createElement('lr-flow-run-status') as LyraFlowRunStatus;
+  overlay.slot = 'top-end';
+  canvas.append(overlay);
+  overlay.decorations = { fetch: { status: 'running' } };
+  await overlay.updateComplete;
+  const region = () => overlay.shadowRoot!.querySelector('[part="live-region"]')?.textContent?.trim() ?? '';
+  expect(region()).to.equal('');
+  overlay.remove();
+  canvas.append(overlay);
+  await overlay.updateComplete;
+  overlay.decorations = { fetch: { status: 'success' } };
+  await overlay.updateComplete;
+  expect(region()).to.equal('Fetch data: Success');
+});

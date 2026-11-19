@@ -289,6 +289,8 @@ it('scopes incident edges, changes direction, clears scope and reveals an endpoi
   clear.click(); await ready(el); await el.updateComplete;
   expect(data.queries.at(-1)!.query).to.include({ kind: 'edges', centerKey: null, direction: 'both' });
   const endpoints = el.shadowRoot!.querySelector('[part="source-record"]')!.querySelectorAll<HTMLButtonElement>('button');
+  expect(endpoints[1]!.getAttribute('aria-label') ?? '').to.match(/^Go to source node .+ of /);
+  expect(endpoints[2]!.getAttribute('aria-label') ?? '').to.match(/^Go to target node .+ of /);
   endpoints[2]!.click();
   await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-source-key') === 'node:1');
   expect(data.queries.at(-1)!.query).to.include({ kind: 'nodes', centerKey: null });
@@ -359,4 +361,34 @@ it('retains a usable page control after a source navigation button becomes disab
   await waitUntil(() => el.sourcePage === 1 && Boolean(previous && !previous.disabled));
   const usable = () => root.activeElement === previous || root.activeElement?.hasAttribute('data-source-page');
   await waitUntil(usable, 'the pager retains focus within usable controls');
+});
+
+it('leaves modified and composing navigation on source records to the browser', async () => {
+  const data = provider();
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}></lr-flow-canvas>`);
+  await ready(el);
+  await el.updateComplete;
+  const record = el.shadowRoot!.querySelector('[data-source-key]')!;
+  for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true, ...init });
+    record.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+  }
+});
+
+it('announces an empty record search in the document live region', async () => {
+  const data = provider();
+  const query = data.source.records.query;
+  data.source.records.query = async request => {
+    const result = await query(request);
+    return request.query.search ? { ...result, rows: [], total: 0 } : result;
+  };
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}
+    .strings=${{ noData: 'No workflow matches' }}></lr-flow-canvas>`);
+  await ready(el);
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-search]')!;
+  search.value = 'absent';
+  search.dispatchEvent(new Event('input'));
+  await waitUntil(() => el.sourceTotal === 0);
+  await waitUntil(() => document.querySelector('[data-lr-live-region="polite"]')?.textContent?.includes('No workflow matches') === true);
 });

@@ -1,8 +1,11 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { armClickSuppression, capturePointer, consumeSuppressedClick } from '../../../internal/pointer-capture.js';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import type { LyraFrame } from '../../../internal/variants.js';
@@ -92,6 +95,10 @@ const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
  *   announcements use the shared light-DOM polite sink.
  * @cssprop [--lr-flow-minimap-inline-size=var(--lr-size-12rem)] - Map inline size.
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
+ * @cssprop [--lr-flow-minimap-hover-bg=var(--lr-color-brand-quiet)] - Map fill while hovered; the
+ *   pressed fill mixes from it.
+ * @cssprop [--lr-flow-minimap-active-bg] - Map fill while pressed; defaults to the hover fill mixed
+ *   with the shared press partner.
  * @cssprop [--lr-flow-status-color=var(--lr-color-border-strong)] - Fill of nodes without
  *   an execution status.
  * @cssprop [--lr-flow-status-pending-color=var(--lr-color-border-strong)] - Pending-node fill.
@@ -143,6 +150,7 @@ export class LyraFlowMinimap extends LyraElement {
   @state() private liveText = '';
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private canvasEl?: FlowCanvasLike;
+  private mirrored = false;
   private unsubscribe?: () => void;
   private companionGeneration = 0;
   private dragState?: {
@@ -169,7 +177,7 @@ export class LyraFlowMinimap extends LyraElement {
    *  map's own `@click` (click-to-center) handler -- without this, releasing the viewport rect
    *  after dragging it re-centers the map on the release point, undoing the drag. Consumed (reset
    *  to `false`) the next time `onMapClick` runs, so a genuine click on the map still centers it. */
-  private justDraggedViewport = false;
+  private disarmClickSuppression?: () => void;
   private announceNextSnapshot = false;
   /** Physical-pixel floor for the draggable viewport rect, resolved from the live
    *  `--lr-flow-minimap-viewport-min-size` token. */
@@ -227,6 +235,7 @@ export class LyraFlowMinimap extends LyraElement {
     super.disconnectedCallback();
     this.announceNextSnapshot = false;
     this.liveText = '';
+    this.clearClickSuppression();
     this.companionController.disconnect();
     this.geometryObserver?.disconnect();
     this.geometryObserver = undefined;
@@ -296,7 +305,9 @@ export class LyraFlowMinimap extends LyraElement {
     if (!canvas) return;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
       if (!this.isConnected || this.canvasEl !== canvas || generation !== this.companionGeneration) return;
-      if (!sameSourceBounds(this.snapshot, snapshot)) this.cancelViewportDrag();
+      const mirrored = snapshot.orientation === 'horizontal' && canvas.matches(':dir(rtl)');
+      if (mirrored !== this.mirrored || !sameSourceBounds(this.snapshot, snapshot)) this.cancelViewportDrag();
+      this.mirrored = mirrored;
       this.snapshot = snapshot;
       if (snapshot.locked) this.cancelViewportDrag();
       if (this.announceNextSnapshot) {
@@ -306,9 +317,14 @@ export class LyraFlowMinimap extends LyraElement {
     });
   }
 
+  private clearClickSuppression(): void {
+    this.disarmClickSuppression?.();
+    this.disarmClickSuppression = undefined;
+  }
+
   private cancelViewportDrag(): void {
     this.dragState = undefined;
-    this.justDraggedViewport = false;
+    this.clearClickSuppression();
     this.announceNextSnapshot = false;
     this.detachViewportDragListeners();
   }
@@ -434,10 +450,7 @@ export class LyraFlowMinimap extends LyraElement {
 
   private onMapClick = (e: MouseEvent): void => {
     if (!this.ownsEvent(e)) return;
-    if (this.justDraggedViewport) {
-      this.justDraggedViewport = false;
-      return;
-    }
+    if (consumeSuppressedClick(e, this.instructionsId)) return;
     const action = this.captureInteraction(e);
     if (!action) return;
     const point = this.clientToContentPoint(e.currentTarget as SVGSVGElement, e.clientX, e.clientY);
@@ -464,14 +477,11 @@ export class LyraFlowMinimap extends LyraElement {
     if (!ctm || !svgEl || !action.current()) return;
     const inverse = ctm.inverse();
     if (!action.current()) return;
-    const captureTarget = e.target as SVGElement;
-    const capture = captureTarget.setPointerCapture;
-    if (!action.current()) return;
-    if (capture) Reflect.apply(capture, captureTarget, [e.pointerId]);
+    capturePointer(e.target as SVGElement, e.pointerId);
     if (!action.current()) return;
     e.stopPropagation();
     this.detachViewportDragListeners();
-    this.justDraggedViewport = false;
+    this.clearClickSuppression();
     this.dragState = {
       canvas: action.canvas,
       generation: this.companionGeneration,
@@ -532,8 +542,11 @@ export class LyraFlowMinimap extends LyraElement {
       if (this.dragState === drag) this.cancelViewportDrag();
       return;
     }
-    this.justDraggedViewport = e.type === 'pointerup' && drag.moved;
-    if (this.justDraggedViewport && drag.latestViewport && action.current()) {
+    const dragged = e.type === 'pointerup' && drag.moved;
+    this.clearClickSuppression();
+    const win = this.ownerDocument.defaultView;
+    if (dragged && win) this.disarmClickSuppression = armClickSuppression(win, this.instructionsId);
+    if (dragged && drag.latestViewport && action.current()) {
       this.announceViewport(drag.latestViewport);
     }
     this.dragState = undefined;
@@ -552,6 +565,7 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(e)) return;
     const action = this.captureInteraction(e);
     if (!action) return;
     if (e.key === '+' || e.key === '=') {
@@ -570,7 +584,7 @@ export class LyraFlowMinimap extends LyraElement {
       return;
     }
     const { x, y, zoom, width, height } = action.snapshot.viewport;
-    const stepX = width * 0.1;
+    const stepX = width * 0.1 * (this.mirrored ? -1 : 1);
     const stepY = height * 0.1;
     // policy-allow(rtl-arrow-keys): pans a 2-D spatial viewport in canvas coordinates; x always
     // increases toward the physical right regardless of text direction, so the arrows stay physical.
@@ -600,7 +614,8 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = hostAriaLabel(this) ?? (this.label || this.localize('flowMinimapLabel'));
+    const host = hostAriaLabel(this);
+    const label = host === '' ? '' : resolveAccessibleName(this, this.label, this.localize('flowMinimapLabel')) ?? '';
     if (!this.canvasEl || !this.snapshot) {
       return html`<div part="base" aria-hidden="true"></div>`;
     }
@@ -620,6 +635,7 @@ export class LyraFlowMinimap extends LyraElement {
       aria-label=${label}
       aria-disabled=${locked ? 'true' : 'false'}
       ?data-locked=${locked}
+      ?data-mirrored=${this.mirrored}
     >
       <svg
         part="map"

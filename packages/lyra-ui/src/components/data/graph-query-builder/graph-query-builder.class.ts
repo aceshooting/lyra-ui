@@ -1,3 +1,5 @@
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -17,24 +19,30 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import {
   getFormOwner,
   isBarredFromValidation,
+  isLiveDisabled,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  acquireResolvedAriaRelationship,
-  type ResolvedAriaRelationshipLease,
-} from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { StructuredFormValidityController } from '../../../internal/form-validator-runtime.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_noData, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** Events the owned pickers raise beyond the shared list; none is part of this component's contract. */
+const OWNED_CONTROL_EVENTS = Object.freeze([
+  'lr-change-request', 'lr-create', 'lr-retry-request', 'lr-source-error', 'lr-chip-change', 'lr-overflow-toggle',
+]);
 
 installFormControlLabelSupport();
 
@@ -131,16 +139,6 @@ const EMPTY_VALUE: GraphQuery = Object.freeze({
 const EMPTY_OPTIONS: readonly GraphQueryTypeOption[] = Object.freeze([]);
 const EMPTY_SAVED: readonly GraphQuerySavedItem[] = Object.freeze([]);
 
-/** Reads only own data properties so a hostile provider getter cannot reject a Lit update. */
-function ownValue(record: object, key: string): unknown {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function boundedString(value: unknown): string {
   return boundedRecordString(value, MAX_TEXT);
 }
@@ -161,22 +159,22 @@ function stringArray(value: unknown): readonly string[] {
 function normalizeGraphQuery(value: unknown): GraphQuery {
   const record =
     value !== null && typeof value === 'object' && !Array.isArray(value) ? value : EMPTY_VALUE;
-  const direction = ownValue(record, 'direction');
+  const direction = readOwnDataValue(record, 'direction');
   return Object.freeze({
-    startId: boundedString(ownValue(record, 'startId')),
-    endId: boundedString(ownValue(record, 'endId')),
-    relationshipTypes: stringArray(ownValue(record, 'relationshipTypes')),
-    nodeTypes: stringArray(ownValue(record, 'nodeTypes')),
+    startId: boundedString(readOwnDataValue(record, 'startId')),
+    endId: boundedString(readOwnDataValue(record, 'endId')),
+    relationshipTypes: stringArray(readOwnDataValue(record, 'relationshipTypes')),
+    nodeTypes: stringArray(readOwnDataValue(record, 'nodeTypes')),
     direction: direction === 'out' || direction === 'in' || direction === 'both' ? direction : 'both',
     minHops: finiteInteger(
-      typeof ownValue(record, 'minHops') === 'number' ? (ownValue(record, 'minHops') as number)
+      typeof readOwnDataValue(record, 'minHops') === 'number' ? (readOwnDataValue(record, 'minHops') as number)
         : EMPTY_VALUE.minHops,
       EMPTY_VALUE.minHops,
       1,
       20
     ),
     maxHops: finiteInteger(
-      typeof ownValue(record, 'maxHops') === 'number' ? (ownValue(record, 'maxHops') as number)
+      typeof readOwnDataValue(record, 'maxHops') === 'number' ? (readOwnDataValue(record, 'maxHops') as number)
         : EMPTY_VALUE.maxHops,
       EMPTY_VALUE.maxHops,
       1,
@@ -196,13 +194,13 @@ function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
   const result: GraphQuerySavedItem[] = [];
   for (const candidate of value.slice(0, MAX_SAVED_QUERIES)) {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const id = boundedString(ownValue(candidate, 'id'));
+    const id = boundedString(readOwnDataValue(candidate, 'id'));
     if (id.trim().length === 0 || ids.has(id)) continue;
     ids.add(id);
     result.push(Object.freeze({
       id,
-      name: boundedString(ownValue(candidate, 'name')),
-      query: normalizeGraphQuery(ownValue(candidate, 'query')),
+      name: boundedString(readOwnDataValue(candidate, 'name')),
+      query: normalizeGraphQuery(readOwnDataValue(candidate, 'query')),
     }));
   }
   return Object.freeze(result);
@@ -486,6 +484,10 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   /** Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite
    *  integer in `[1, 20]`, falling back to `6`. */
   @property({ attribute: 'hop-limit', type: Number }) hopLimit = 6;
+
+  /** Semantic level of the saved-queries heading: `1`-`6` expose it as a heading at that level
+   *  (default `3`), `none` renders plain text so it stays out of the document outline. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
   /** Accessible name for the whole component; falls back to the localized `graphQueryBuilderLabel`.
    *  A host-level `aria-label` attribute wins over both this property and the localized default --
    *  see the class doc's "Accessible name" note. */
@@ -499,12 +501,9 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   @state() private touchedFields = new Set<string>();
   @state() private saveName = '';
   private readonly slotPresence = new SlotPresenceController(this);
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private readonly labelId = nextId('graph-query-builder-label');
-  private readonly hintId = nextId('graph-query-builder-hint');
-  private readonly errorId = nextId('graph-query-builder-error');
+  private readonly supportingId = nextId('graph-query-builder');
 
   private internals: ElementInternals;
   private validityController: FormControlController;
@@ -525,9 +524,17 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   // blur, or interactive validation (`reportValidity()` or a submission attempt, via
   // `installInteractionOnInvalid()`); a silent `checkValidity()` alone never sets it.
   private hasInteracted = false;
-  // Guards lr-validity-change so it only fires on an actual change -- `undefined` guarantees the
-  // first computed state always "changes" from it, mirroring lr-rubric-form's identical guard.
-  private lastValidityKey: string | undefined;
+  private readonly validitySnapshot = new StructuredFormValidityController(this, {
+    baseErrorMessage: () => this.validityController.customValidityMessage,
+    fieldErrors: () => this._errors,
+    validityController: () => this.validityController,
+    reveal: () => {
+      this.hasInteracted = true;
+      this.syncFormState();
+      if (Object.keys(this._errors).length) this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
+    },
+    emit: snapshot => this.emit('lr-validity-change', snapshot),
+  });
   private pendingRemovalFocus?:
     | {
         kind: 'chip';
@@ -536,10 +543,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
       }
     | { kind: 'saved'; targetId?: string };
   private removalFocusGeneration = 0;
-  /** Projects a host `aria-describedby` onto the internal `role="group"` owner --
-   *  IDREFs are scoped per shadow root, so the host's own attribute cannot reach across the
-   *  boundary on its own. Mirrors `<lr-slider>`'s `externalDescriptionLease`. */
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  private readonly description = new HostDescriptionController(this, () => this.renderRoot.querySelector('[part="base"]'));
 
   constructor() {
     super();
@@ -552,33 +556,15 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     this.syncFormState();
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.description.adopted();
   }
 
   override disconnectedCallback(): void {
     this.removalFocusGeneration++;
     this.pendingRemovalFocus = undefined;
-    this.releaseExternalDescription();
     super.disconnectedCallback();
-  }
-
-  private syncExternalDescription(): void {
-    const target = this.isConnected
-      ? (this.renderRoot.querySelector<HTMLElement>('[part="base"]') ?? null)
-      : null;
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
-    }
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
   }
 
   get form(): HTMLFormElement | null {
@@ -639,23 +625,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   /** The current effective validation errors. Intrinsic errors are keyed by their field part;
    *  a caller-supplied custom validity message is keyed by the whole-control `base` part. */
   get errors(): Readonly<Record<string, string>> {
-    return this.publicValidityErrors();
-  }
-
-  private publicValidityErrors(): Readonly<Record<string, string>> {
-    const errors: Record<string, string> = { ...this._errors };
-    if (this.willValidate && this.validity.customError) errors['base'] = this.validationMessage;
-    return Object.freeze(errors);
-  }
-
-  private publishValiditySnapshot(): void {
-    if (!this.isConnected) return;
-    const valid = !this.willValidate || this.validity.valid;
-    const errors = valid ? Object.freeze({}) : this.publicValidityErrors();
-    const key = JSON.stringify({ valid, errors });
-    if (key === this.lastValidityKey) return;
-    this.lastValidityKey = key;
-    this.emit('lr-validity-change', Object.freeze({ valid, errors }));
+    return this.validitySnapshot.errors;
   }
 
   /** @internal */
@@ -701,7 +671,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
       this.validityController.setValidity(flags, message);
     }
     this.syncValidityCustomStates();
-    this.publishValiditySnapshot();
+    this.validitySnapshot.publish();
   }
 
   /**
@@ -744,17 +714,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   /** Reveals every current field error and returns overall validity -- the hook Run calls before
    *  acting, mirroring a native `<form>`'s `reportValidity()`. */
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // A reportValidity() call is what a submit attempt (here, the Run button) runs, so it counts as
-    // interaction for the user-valid/user-invalid pair — set before syncFormState(), which is what
-    // republishes them. (A real `<form>` submission attempt never calls this method -- it drives
-    // `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.)
-    this.hasInteracted = true;
-    this.syncFormState();
-    if (Object.keys(this._errors).length > 0) {
-      this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
-    }
-    return this.internals.reportValidity();
+    return this.validitySnapshot.reportValidity();
   }
 
   /**
@@ -775,7 +735,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityCustomStates();
-    this.publishValiditySnapshot();
+    this.validitySnapshot.publish();
     this.requestUpdate();
   }
 
@@ -818,12 +778,8 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     this.requestUpdate();
   }
 
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
-  }
-
   private focusFirstControl(options?: FocusOptions): void {
-    if (!this.renderRoot || this.liveDisabled) return;
+    if (!this.renderRoot || isLiveDisabled(this)) return;
     const control =
       this.renderRoot.querySelector<HTMLElement>('[part="start-input"]') ||
       this.renderRoot.querySelector<HTMLElement>('[part="end-input"]') ||
@@ -981,8 +937,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.publishValiditySnapshot();
-    this.syncExternalDescription();
+    this.validitySnapshot.publish();
     const pending = this.pendingRemovalFocus;
     if (!pending) return;
     this.pendingRemovalFocus = undefined;
@@ -1034,7 +989,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     const root = super.createRenderRoot();
-    for (const type of BUILDER_CHILD_EVENTS) root.addEventListener(type, containShadowChildEvent);
+    for (const type of [...BUILDER_CHILD_EVENTS, ...OWNED_CONTROL_EVENTS]) root.addEventListener(type, containShadowChildEvent);
     return root;
   }
 
@@ -1102,11 +1057,12 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     const value = this._value;
     const hasStartError = this.touchedFields.has('start-input') && Boolean(this._errors['start-input']);
     const hasHopError = this.touchedFields.has('max-hops') && Boolean(this._errors['max-hops']);
-    const hostLabel = this.getAttribute('aria-label');
-    const hasHint = this.hasHintSlot || Boolean(this.hint);
-    const hasError = this.hasErrorSlot || Boolean(this.errorText);
-    const describedBy = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ');
+    const rawHostLabel = this.getAttribute('aria-label');
+    const hostLabel = rawHostLabel === '' ? '' : normalizeLabel(rawHostLabel) ?? null;
+    const supporting = { idPrefix: this.supportingId, presence: this.slotPresence, hint: this.hint, errorText: this.errorText };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
     const hopNumber = getNumberFormat(this.effectiveLocale);
+    const savedHeadingLevel = resolveHeadingLevel(this.headingLevel ?? '3');
 
     return html`
       <div
@@ -1119,15 +1075,10 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
       >
         <div part="form-control-label label" id=${this.labelId}>
           <slot name="label"
-            >${this.label || this.localize('graphQueryBuilderLabel')}</slot
+            >${normalizeLabel(this.label) ?? this.localize('graphQueryBuilderLabel')}</slot
           >
         </div>
-        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint"></slot>
-        </div>
-        <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
+        ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
         <div part="path-fields">
           <lr-input
             part="start-input"
@@ -1230,7 +1181,11 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
         </div>
 
         <div part="saved-queries">
-          <h3 part="saved-queries-label">${this.localize('graphQuerySavedQueriesLabel')}</h3>
+          <div
+            part="saved-queries-label"
+            role=${savedHeadingLevel ? 'heading' : nothing}
+            aria-level=${savedHeadingLevel ?? nothing}
+          >${this.localize('graphQuerySavedQueriesLabel')}</div>
           <div part="save-row">
             <lr-input
               part="save-name-input"

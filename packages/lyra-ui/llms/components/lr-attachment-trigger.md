@@ -59,6 +59,12 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
+`maxFileSize` (`max-file-size`) and `maxTotalSize` (`max-total-size`) limit bytes per file and
+per selection. `maxFiles` (`max-files`) limits the number of accepted files.
+`heldFileCount` (`held-file-count`) and `heldTotalSize` (`held-total-size`) supply the externally
+held baseline for the two aggregate limits. `allowedMimeTypes` and `forbiddenMimeTypes` accept
+arrays of exact MIME types. The denylist takes precedence. All numeric limits default to `0` for unlimited intake. Rejections use `size`, `maxTotalSize`, or `maxFiles`.
+
 **Events:** `lr-files` (`detail: { capability: LyraAttachmentFilesCapability; files, rejected,
 remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
 `LyraAttachmentFilesCapability = 'files' | 'image' | 'camera'`, `'camera'` only while
@@ -66,7 +72,7 @@ remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
 capability's hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
 owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
 "All files" filter let through that do not match `accept` are listed in `rejected` with reason
-`'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
+`'type'`. The `remaining*` fields report the unused aggregate limits, or `null` for an unlimited count or size. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated (for `camera`, unless

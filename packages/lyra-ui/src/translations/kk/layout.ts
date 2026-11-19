@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Карусель слайдтары',
   carouselGoTo: 'Слайдқа өту: {index}',
+  carouselPauseRotation: 'Айналдыруды кідірту',
+  carouselResumeRotation: 'Айналдыруды жалғастыру',
   scrollerLabel: 'Айналдырылатын мазмұн',
   scrollPrevious: 'Артқа айналдыру',
   scrollNext: 'Алға айналдыру',

@@ -1,12 +1,12 @@
+import type { LyraMessageKey } from '../../../internal/localization-types.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { fileIcon } from '../../../internal/icons.js';
 import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
 import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
@@ -15,20 +15,20 @@ import {
   type DropSessionState,
 } from '../../../internal/drop-session-controller.js';
 import {
-  classifyFiles, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, outcomeText, snapshotMimeTypes,
-  type FileIntakeResult,
+  classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
+  type FileIntakeRejected, type FileIntakeResult,
 } from '../file-input/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileInputRejectionsMore } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraDropZoneRejectedFile {
   readonly file: File;
-  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+  readonly reason: FileIntakeRejected['reason'];
 }
 
 export interface LyraDropZoneFilesDetail {
@@ -97,10 +97,11 @@ export interface LyraDropZoneEventMap {
  * accepted/rejected counts. The announcement itself lands in the shared light-DOM polite region
  * (`acquireAnnouncementSink()` in `internal/announcer.ts`); this part is a styling/inspection
  * surface only.
- * @csspart rejection - The visible region listing each currently-rejected file alongside its
+ * @csspart rejection - The visible region listing the first 20 rejected files alongside their
  * reason, rendered in addition to the sr-only `status` summary.
  * @cssstate dragging - Matches during an active file drag session.
  * @cssstate targeted - Matches while `for`/`target` resolves to an element the zone is attached to.
+ * @cssprop [--lr-drop-zone-overlay-z-index=var(--lr-layer-dropdown)] - Stacking order of the overlay while attached to a `for`/`target` element.
  * @cssprop [--lr-drop-zone-radius=var(--lr-radius)] - Corner radius of `[part="overlay"]`.
  * @cssprop [--lr-drop-zone-overlay-border-color=var(--lr-color-brand)] - Dashed border color of
  *   `[part="overlay"]` in its neutral drag state, before an accept or reject verdict.
@@ -147,6 +148,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     fileInputRejectedRead: LYRA_DEFAULT_fileInputRejectedRead,
     fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
+    fileInputRejectionsMore: LYRA_DEFAULT_fileInputRejectionsMore,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
@@ -232,8 +234,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
 
   private readonly internals: ElementInternals;
   private readonly dropSession: DropSessionController;
-  private politeSink?: AnnouncementSink;
-  private assertiveSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   /** False until the first render has committed, so mounting never announces a resting state. */
   private announcementsArmed = false;
 
@@ -331,27 +332,17 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     super.connectedCallback();
     this.syncTarget();
     this.observeRoot();
-    // Acquired on connect, not on the first announcement: assistive tech has to have been
-    // observing a live region *before* text arrives for the change to be announced at all, and a
-    // drag can start in the same task this element is appended in.
-    this.politeSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   override disconnectedCallback(): void {
     this.stopObservingRoot?.();
     this.stopObservingRoot = undefined;
     this.syncTarget();
-    this.politeSink?.release();
-    this.politeSink = undefined;
-    this.assertiveSink?.release();
-    this.assertiveSink = undefined;
     // Re-arm so a reconnect never replays the state it disconnected holding. The drag session
     // itself is reset automatically: `DropSessionController.hostDisconnected()`.
     this.announcementsArmed = false;
@@ -365,13 +356,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     if (changed.has('dragState')) this.positionTargetOverlay();
     if (this.announcementsArmed) {
       if (changed.has('dragState') && this.dragState !== 'default') {
-        this.politeSink?.announce(this.overlayText());
-      }
-      if (changed.has('resultStatus') && this.resultStatus) this.politeSink?.announce(this.resultStatus);
-      if (changed.has('rejectedFiles') && this.rejectedFiles.length > 0) {
-        this.assertiveSink?.announce(
-          this.rejectedFiles.map((rejected) => this.rejectionMessage(rejected)).join(' '),
-        );
+        this.announcements.announcePolite(dragInstruction(this.dragState, this.intakeMessage));
       }
     }
     this.announcementsArmed = true;
@@ -384,45 +369,16 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     );
   }
 
-  private rejectionMessage(rejected: LyraDropZoneRejectedFile): string {
-    const filename = rejected.file.name;
-    switch (rejected.reason) {
-      case 'type':
-        return this.localize('fileInputRejectedType', undefined, { filename });
-      case 'size':
-        return this.localize('fileInputRejectedSize', undefined, { filename });
-      case 'count':
-        return this.localize('fileInputRejectedCount', undefined, { filename });
-      case 'directory':
-        return this.localize('fileInputFolderRejected', undefined, { filename });
-      case 'read':
-        return this.localize('fileInputRejectedRead', undefined, { filename });
-      case 'limit':
-        return this.localize('fileInputRejectedLimit', undefined, { filename });
-      case 'maxFiles':
-        return this.localize('fileInputRejectedMaxFiles', undefined, { filename });
-      case 'maxTotalSize':
-        return this.localize('fileInputRejectedMaxTotalSize', undefined, { filename });
-    }
-  }
+  private readonly intakeMessage = (key: LyraMessageKey, values?: Record<string, number | string>): string =>
+    this.localize(key, undefined, values);
 
   private emitFiles(fileList: File[], additionalRejected: readonly LyraDropZoneRejectedFile[] = []): void {
     const detail = freezeDetail(this.classify(fileList), additionalRejected);
-    const { files, rejected } = detail;
+    const { rejected } = detail;
     this.rejectedFiles = rejected;
-    const messages: string[] = [];
-    const numberFormat = getNumberFormat(this.effectiveLocale);
-    if (files.length) {
-      const count = numberFormat.format(files.length);
-      const key = files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany';
-      messages.push(outcomeText(this.acceptedMessage, () => this.localize(key, undefined, { count }), count));
-    }
-    if (rejected.length) {
-      const count = numberFormat.format(rejected.length);
-      const key = rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany';
-      messages.push(outcomeText(this.rejectedMessage, () => this.localize(key, undefined, { count }), count));
-    }
-    this.resultStatus = messages.filter((message) => message.length > 0).join(' ');
+    this.resultStatus = selectionMessage(detail, this.effectiveLocale, this.intakeMessage, this.acceptedMessage, this.rejectedMessage);
+    if (this.resultStatus) this.announcements.announcePolite(this.resultStatus);
+    if (rejected.length > 0) this.announcements.announceAssertive(rejectionMessages(rejected, this.effectiveLocale, this.intakeMessage).join(' '));
     this.emit('lr-files', detail);
   }
 
@@ -455,14 +411,8 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     handleDrop(this, this.dropSession, e, this.multiple, (files, rejected) => this.emitFiles(files, rejected));
   }
 
-  private overlayText(): string {
-    if (this.dragState === 'accept') return this.localize('dropzoneReleaseToAdd');
-    if (this.dragState === 'reject') return this.localize('dropzoneRejectedType');
-    return '';
-  }
-
   private statusText(): string {
-    return this.dragState === 'default' ? this.resultStatus : this.overlayText();
+    return this.dragState === 'default' ? this.resultStatus : dragInstruction(this.dragState, this.intakeMessage);
   }
 
   override render(): TemplateResult {
@@ -477,7 +427,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
         <slot></slot>
         <div part="overlay" data-drag-state=${this.dragState} ?hidden=${!this.dragging} aria-hidden="true">
           <span part="overlay-icon">${fileIcon()}</span>
-          <span part="overlay-text"><slot name="overlay">${this.overlayText()}</slot></span>
+          <span part="overlay-text"><slot name="overlay">${dragInstruction(this.dragState, this.intakeMessage)}</slot></span>
         </div>
       </div>
       <div part="status" class="sr-only" aria-hidden="true">${this.statusText()}</div>
@@ -485,7 +435,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
         ? html`
             <div part="rejection">
               <ul>
-                ${this.rejectedFiles.map((r) => html`<li>${this.rejectionMessage(r)}</li>`)}
+                ${rejectionMessages(this.rejectedFiles, this.effectiveLocale, this.intakeMessage).map((message) => html`<li>${message}</li>`)}
               </ul>
             </div>
           `

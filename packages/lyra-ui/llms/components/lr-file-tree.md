@@ -19,6 +19,8 @@
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+`size` (`2xs`, `xs`, `s`, `m`, `l`, `xl`, and the `small`, `medium`, `large` aliases) sets row density on the composed `<lr-tree>` in array mode. The file tree handles the inner tree's `lr-bulk-toggle` internally.
+
 **Provider hierarchy:** `treeSource: FileTreeSource | undefined` (attribute: false)
 uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
@@ -54,6 +56,9 @@ the initial projection, without synthetic user events or moving focus; clearing 
 previously controlled key. The default `null` does not request a global clear. A current valid path
 is reconciled again after source replacement, rebind or refresh. Invalid empty/blank/oversized
 controlled paths are not forwarded. This adapter has no source search/copy controls.
+
+Source rows display the file name, diff summary and Git status when supplied. The accessible name
+includes those same details.
 
 With `treeSource` undefined, the following snapshot and lazy-directory route applies.
 

@@ -1,3 +1,4 @@
+import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -17,17 +18,9 @@ export const styles = css`
     max-block-size: none;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(
-      var(--lr-space-l),
-      var(--lr-safe-area-inline-start)
-    );
-    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+    ${dialogChrome}
   }
-  :host([open]) {
-    display: flex;
-  }
+  ${dialogOpenHost}
   [part="backdrop"] {
     position: absolute;
     inset: 0;
@@ -102,7 +95,7 @@ export const styles = css`
     background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
     color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
   }
   [part="close-button"] {
     margin-inline-start: var(--lr-space-xs);
@@ -157,7 +150,7 @@ export const styles = css`
     justify-content: center;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
-    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
+    color: var(--lr-lightbox-status-color, var(--lr-color-on-strong-overlay));
     overflow-wrap: anywhere;
   }
   [part="source-retry"] { padding-inline: var(--lr-space-s); }

@@ -26,8 +26,12 @@ fields and `lr-combobox.js` for multi-value enum operators. The default entry re
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
 and listbox show/hide lifecycle events from every row control and the combinator stay inside the
-builder; events from slotted consumer content pass through. Programmatic `value` assignments
-remain silent. Both builders use the same bounded, own-data option normalization, retaining each
+builder; events from slotted consumer content pass through. The owned pickers' `lr-change-request`,
+`lr-create`, `lr-retry-request`, `lr-source-error`, `lr-chip-change` and `lr-overflow-toggle` stay
+inside as well. Programmatic `value` assignments remain silent. Each row control's accessible name
+carries its row number (`Field, condition 2`), adding or removing a condition is announced politely,
+and a row's validation issue is shown as the error text of the control that owns it. Row controls
+wrap below about 8rem each instead of shrinking further. Both builders use the same bounded, own-data option normalization, retaining each
 builder's public option type and first-value-wins behavior.
 
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
@@ -64,6 +68,9 @@ leaving all three unset preserves the previous unconstrained controls.
 `removeCondition(id)` removes the matching condition and emits `lr-remove-condition`
 (`detail: { conditionId }`); it is a
 no-op while disabled or when the id is absent.
+
+Use `lr-input` for edits shared by both builders. The condition builder emits it for each edit.
+The form-associated graph query builder also emits `lr-change` for a committed query.
 
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`; all details and nested model
 snapshots are readonly and frozen. **CSS parts:** `base`, `conditions`,

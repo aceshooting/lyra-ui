@@ -35,7 +35,7 @@ export const ThemedHoverOutline: Story = {
   },
   render: () => html`
     <div
-      style="max-inline-size: 28rem; --lr-scroller-hover-outline-width: var(--lr-border-width-thick); --lr-scroller-hover-outline-style: dashed; --lr-scroller-hover-outline-color: ${storyColor(
+      style="max-inline-size: 28rem; --lr-scroller-gap: var(--lr-space-l); --lr-scroller-controls-gap: var(--lr-space-m); --lr-scroller-hover-outline-width: var(--lr-border-width-thick); --lr-scroller-hover-outline-style: dashed; --lr-scroller-hover-outline-color: ${storyColor(
         'warning',
       )}; --lr-scroller-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
     >

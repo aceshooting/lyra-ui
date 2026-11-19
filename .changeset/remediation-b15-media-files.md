@@ -1,0 +1,22 @@
+---
+'@aceshooting/lyra-ui': patch
+---
+
+- Keep lightbox loading and error messages legible over the backdrop in dark mode.
+- Report lightbox index corrections after the replacement image renders.
+- Respect browser shortcuts and input composition in image navigation and annotation.
+- Apply icon-button theme colors, borders, and pointer transitions to viewer toolbar controls.
+- Show and announce localized image and video load failures in media cards and pan-and-zoom frames.
+- Announce the image highlight limit and keep highlight labels within the image’s top edge.
+- Announce consecutive file selections and use the numeric count for localized plurals.
+- Limit visible and spoken file rejections to 20 reasons and a remaining count.
+- Limit file-input thumbnail previews to the first 50 rows while keeping every selection available.
+- Cancel pending folder selections when a file input resets or restores form state.
+- Include the accepted batch in typed file-input events in non-retaining mode.
+- Apply MIME policies and per-file, count, and total-byte limits in attachment pickers, including externally held files.
+- Restore the default accept filter after attribute removal and use localized names for blank attachment action labels.
+- Give targeted drop overlays a configurable stacking level and distinguish drag states in forced colors.
+- Expose image-comparer divider and handle colors and keep the divider visible in forced colors.
+- Preserve a media card’s plain frame while its action is pressed.
+- Keep file icon labels readable alongside descriptions and sizes in narrow layouts.
+- Let shrink-to-fit iframe previews follow their allocated dimensions.

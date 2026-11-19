@@ -1381,3 +1381,23 @@ it('keeps hovered unselected rows independent of the selected fill and supports 
     await resetMouse();
   }
 });
+
+it('keeps the selected fill on a disabled selected row under the pointer', async () => {
+  const wrapper = await fixture(
+    html`<div role="tree">
+      <lr-tree-item .item=${{ id: 'd', label: 'Disabled', selected: true, disabled: true }}></lr-tree-item>
+    </div>`
+  );
+  const disabledItem = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
+  await disabledItem.updateComplete;
+  const row = disabledItem.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  row.scrollIntoView();
+  const resting = getComputedStyle(row).backgroundColor;
+  expect(resting).to.not.equal('rgba(0, 0, 0, 0)');
+  try {
+    await hoverUntilMatched(row, 'disabled selected row never entered :hover');
+    expect(getComputedStyle(row).backgroundColor).to.equal(resting);
+  } finally {
+    await resetMouse();
+  }
+});

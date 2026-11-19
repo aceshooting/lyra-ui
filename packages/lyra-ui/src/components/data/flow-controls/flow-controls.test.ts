@@ -709,3 +709,35 @@ it('leaves focus where a consumer moves it before the limit snapshot arrives', a
   await waitUntil(() => zoomIn.disabled);
   expect(document.activeElement === outside).to.equal(true);
 });
+
+it('keeps focus inside the cluster when the canvas locks and disables the focused control', async () => {
+  const canvas = await fixture<LyraFlowCanvas>(html`
+    <lr-flow-canvas .nodes=${nodes}>
+      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+    </lr-flow-canvas>
+  `);
+  const controls = canvas.querySelector<LyraFlowControls>('lr-flow-controls')!;
+  await controls.updateComplete;
+  await nextFrame();
+  const fit = controls.shadowRoot!.querySelector<HTMLButtonElement>('[part="fit"]')!;
+  const lock = controls.shadowRoot!.querySelector<HTMLButtonElement>('[part="lock"]')!;
+  await waitUntil(() => !fit.disabled);
+  await focusByKeyboard(fit);
+  canvas.readonly = true;
+  await waitUntil(() => fit.disabled, 'the companion did not report the lock');
+  await controls.updateComplete;
+  expect(controls.shadowRoot!.activeElement === lock).to.equal(true);
+});
+
+it('names the control group from its label with host aria-label taking precedence', async () => {
+  const el = await fixture<LyraFlowControls>(html`<lr-flow-controls label="Graph actions"></lr-flow-controls>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Graph actions');
+  el.setAttribute('aria-label', 'Canvas actions');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Canvas actions');
+  el.setAttribute('aria-label', '  ');
+  el.removeAttribute('label');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
+});

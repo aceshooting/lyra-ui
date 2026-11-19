@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const fullSha = value => typeof value === 'string' && value.length === 40 && /^[a-f0-9]{40}$/u.test(value);
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 }).trim();
@@ -73,7 +73,7 @@ export function preparationReceipt({ workflowSha, sourceSha, candidateSha = '', 
   };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use the hosted generation workflow');
   assert.equal(process.env.GITHUB_REF, 'refs/heads/main', 'Generation requires main');
   const [command, root, workflowSha, sourceSha] = process.argv.slice(2);

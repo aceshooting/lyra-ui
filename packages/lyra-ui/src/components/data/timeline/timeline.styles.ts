@@ -110,6 +110,8 @@ export const styles = css`
        sub-pixel rounding even when nothing overflows block-wise. */
     overflow-x: auto;
     overflow-y: hidden;
+    /* Room for the active marker's outer ring, which the scrollport would otherwise clip. */
+    padding: calc(var(--lr-space-2xs) + var(--lr-border-width-medium));
   }
   /* The strip becomes keyboard-reachable (tabindex 0 instead of -1) only while it genuinely
      overflows, because its items are passive and nothing inside it is tabbable -- see

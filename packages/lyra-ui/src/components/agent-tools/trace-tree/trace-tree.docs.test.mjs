@@ -36,7 +36,8 @@ function ramp(name) {
   return value;
 }
 function textQuietLight() {
-  const match = tokensSource.match(/--lr-color-text-quiet: var\(--lr-theme-color-text-quiet, (#[0-9a-fA-F]{6})\)/);
+  // The light default is the theme fallback inside the first public declaration, however it is wrapped.
+  const match = tokensSource.match(/--lr-color-text-quiet:[^;]*?--lr-theme-color-text-quiet, (#[0-9a-fA-F]{6})\)/);
   assert.ok(match, 'expected a light --lr-color-text-quiet default');
   return match[1];
 }

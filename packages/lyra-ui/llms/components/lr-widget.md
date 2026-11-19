@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -68,6 +68,11 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   a `storageKey` there is no persistence and storage is never touched — listen for
   `lr-toggle` and persist the state yourself.
 
+The fullscreen dialog receives the host's `aria-describedby` references. A fullscreen request
+listener can resolve the request by writing `fullscreen` synchronously. When observing a widget
+that contains another view switcher, check `event.target === widget` before reading the widget's
+`lr-view-change` detail.
+
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
 built-in toggle. Call `preventDefault()` on the request to leave `collapsed` and any persisted state
@@ -121,6 +126,11 @@ overflow is measured, not assumed: a row that fits is left unmasked.
 Forced-colors mode disables those decorative masks while retaining the native scroll owners. The
 body is the block-axis scroll owner whenever the widget receives a constrained height, so the
 header remains fixed while deep body content scrolls.
+
+For the docked frame, `--lr-widget-bg`, `--lr-widget-border-color` and `--lr-widget-radius`
+control the fill, border and corners. `--lr-widget-header-padding`, `--lr-widget-body-padding`
+and `--lr-widget-gap` override the size tier's padding and header gap. The selected view has a
+visible outline in forced colors. Collapsing a body that held focus returns focus to its toggle.
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side

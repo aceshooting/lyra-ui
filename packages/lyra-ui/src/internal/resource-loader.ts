@@ -69,6 +69,13 @@ export function isAbortError(error: unknown): boolean {
   );
 }
 
+/** True for a superseded pdf.js render or load (`RenderingCancelledException`, `AbortException`) as well as an `AbortError`. */
+export function isPdfRenderCancellation(error: unknown): boolean {
+  if (isAbortError(error)) return true;
+  const name = typeof error === 'object' && error !== null ? (error as { name?: unknown }).name : undefined;
+  return name === 'RenderingCancelledException' || name === 'AbortException';
+}
+
 export function isResourceLimitError(error: unknown): boolean {
   return error instanceof LyraResourceLimitError;
 }
@@ -89,16 +96,19 @@ export function assertTableSize(rows: readonly unknown[][], maxRows = DEFAULT_MA
   if (rows.some((row) => row.length > maxColumns)) throw new LyraResourceLimitError('The table contains too many columns.');
 }
 
-function checkContentLength(response: Response, limit: number): void {
+/** Rejects a declared length over the cap; returns the declared length when it is a usable size, else 0. */
+function checkContentLength(response: Response, limit: number): number {
   const headers = (response as Response & { headers?: Headers }).headers;
-  const contentLength = Number(headers?.get('content-length'));
+  const raw = headers?.get('content-length');
+  const contentLength = raw === null || raw === undefined || raw.trim() === '' ? NaN : Number(raw);
   if (Number.isFinite(contentLength) && contentLength > limit) throw new LyraResourceLimitError();
+  return Number.isInteger(contentLength) && contentLength > 0 ? contentLength : 0;
 }
 
 /** Reads a response with a hard cap, including when the server omits Content-Length. */
 export async function readResponseArrayBuffer(response: Response, maxBytes = DEFAULT_MAX_RESOURCE_BYTES): Promise<ArrayBuffer> {
   const limit = validateLimit(maxBytes);
-  checkContentLength(response, limit);
+  const declared = checkContentLength(response, limit);
   if (!response.body) {
     const source = response as Response & { arrayBuffer?: () => Promise<ArrayBuffer>; text?: () => Promise<string> };
     const buffer = source.arrayBuffer
@@ -109,7 +119,8 @@ export async function readResponseArrayBuffer(response: Response, maxBytes = DEF
   }
 
   const reader = response.body.getReader();
-  let output = new Uint8Array(0);
+  // A declared length within the cap sizes the buffer once, so an honest body needs no growth or trailing slice.
+  let output = new Uint8Array(declared);
   let total = 0;
   let chunkCount = 0;
   const rejectStream = async (message?: string): Promise<never> => {

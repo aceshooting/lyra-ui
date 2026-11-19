@@ -164,4 +164,16 @@ export const styles = css`
       box-shadow: 0 0 0 var(--lr-size-4px) var(--lr-flow-node-running-glow, var(--lr-color-brand-quiet));
     }
   }
+
+  @media (forced-colors: active) {
+    .status-dot {
+      background: CanvasText;
+    }
+    .progress-fill {
+      background: Highlight;
+    }
+    :host([status='running']) .card {
+      border-color: Highlight;
+    }
+  }
 `;

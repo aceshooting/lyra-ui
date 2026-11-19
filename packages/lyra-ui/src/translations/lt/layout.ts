@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Karuselės skaidrės',
   carouselGoTo: 'Pereiti į {index} skaidrę',
+  carouselPauseRotation: 'Pristabdyti sukimąsi',
+  carouselResumeRotation: 'Tęsti sukimąsi',
   scrollerLabel: 'Slenkamas turinys',
   scrollPrevious: 'Slinkti atgal',
   scrollNext: 'Slinkti pirmyn',

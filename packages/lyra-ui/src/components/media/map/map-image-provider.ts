@@ -324,7 +324,9 @@ export class MapImageProvider {
     // Lazy images share the `images` budget: count, encoded bytes and decoded pixels.
     if (!this.fits(context, 0, candidate.width * candidate.height)) return this.decline(id, epoch, 'image budget');
     const abort = this.abort ??= new AbortController();
-    const result = await context.prepare([candidate], { owner: context.owner, signal: abort.signal, isCurrent: current });
+    let result: Awaited<ReturnType<typeof context.prepare>>;
+    try { result = await context.prepare([candidate], { owner: context.owner, signal: abort.signal, isCurrent: current }); }
+    catch { return current() ? this.decline(id, epoch, 'runtime unavailable') : undefined; }
     if (!result.ok) return current() ? this.decline(id, epoch, result.issue.code) : undefined;
     const image = result.images[0]!;
     if (!current() || this.prepared.has(id)) { image.dispose(); return this.prepared.get(id); }

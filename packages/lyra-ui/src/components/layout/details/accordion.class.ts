@@ -1,3 +1,6 @@
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { isRovingTargetAvailable } from '../../../internal/list-navigation.js';
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -117,6 +120,7 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *   </script>
  *   ```
  * @csspart base - The accordion wrapper.
+ * @cssprop [--lr-accordion-radius=var(--lr-radius-container)] - Corner radius of the framed accordion.
  * @cssprop [--lr-accordion-outlined-bg=var(--lr-color-surface)] - Outlined group background.
  * @cssprop [--lr-accordion-outlined-border-color=var(--lr-color-border-subtle)] - Outlined border color.
  * @cssprop [--lr-accordion-filled-bg=var(--lr-color-surface-raised)] - Filled group background.
@@ -151,7 +155,9 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   private readonly panels = new Set<LyraAccordionItem>();
   #rovingItem?: LyraAccordionItem;
   #lastFocusedItem?: LyraAccordionItem;
-  #availabilityObserver?: MutationObserver;
+  readonly #availabilityObserver = new OwnedMutationObserver(this, (records) =>
+    this.#onAvailabilityMutation(records)
+  );
   #panelsInitialized = false;
   // happy-dom never fires the default slot's INITIAL `slotchange` (only a later mutation), so the
   // slot's current assignment is also collected once from `firstUpdated()` -- see
@@ -318,7 +324,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
 
   /** `excluded` memoises composed ancestors for one pass, so items share their common ancestors' style reads. */
   #isNavigableItem(item: LyraAccordionItem, excluded = new Map<Element, boolean>()): boolean {
-    if (item.disabled) return false;
+    if (!isRovingTargetAvailable(item)) return false;
     for (
       let current: Element | null = item;
       current;
@@ -382,39 +388,16 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   }
 
   #armAvailabilityObserver(): void {
-    const ownerDocument = this.ownerDocument;
     if (!this.isConnected) return;
-    if (this.#availabilityObserver) return;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const observer = new MutationObserverCtor((records) => {
-      if (
-        this.#availabilityObserver !== observer ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      // An inline-style write that touches no visibility declaration (scroll lock, positioner) cannot change availability.
-      const touchesVisibility = (value: string | null): boolean => !!value && VISIBILITY_STYLE.test(value);
-      if (
-        records.every(
-          (record) =>
-            record.attributeName === 'style' &&
-            record.target instanceof HTMLElement &&
-            !touchesVisibility(record.oldValue) &&
-            !touchesVisibility(record.target.getAttribute('style')),
-        )
-      ) return;
-      this.#reconcileRovingFocus();
-    });
-    this.#availabilityObserver = observer;
+    const observer = this.#availabilityObserver;
+    observer.clear();
     observer.observe(this, {
       attributes: true,
       attributeOldValue: true,
       subtree: true,
       attributeFilter: [
         'disabled',
+        'aria-disabled',
         'hidden',
         'aria-hidden',
         'inert',
@@ -436,8 +419,22 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   }
 
   #resetAvailabilityObserver(): void {
-    this.#availabilityObserver?.disconnect();
-    this.#availabilityObserver = undefined;
+    this.#availabilityObserver.clear();
+  }
+
+  #onAvailabilityMutation(records: MutationRecord[]): void {
+    // An inline-style write that touches no visibility declaration (scroll lock, positioner) cannot change availability.
+    const touchesVisibility = (value: string | null): boolean => !!value && VISIBILITY_STYLE.test(value);
+    if (
+      records.every(
+        (record) =>
+          record.attributeName === 'style' &&
+          isElementNode(record.target) &&
+          !touchesVisibility(record.oldValue) &&
+          !touchesVisibility(record.target.getAttribute('style')),
+      )
+    ) return;
+    this.#reconcileRovingFocus();
   }
 
   #performPanelState(

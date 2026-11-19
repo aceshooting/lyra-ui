@@ -451,6 +451,8 @@ describe('lr-file-icon', () => {
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-file-icon') as LyraFileIcon;
+    const label = el.shadowRoot!.querySelector('[part="label"]')!;
+    expect(label.getBoundingClientRect().width, 'readable label beside the badge').to.be.greaterThan(100);
     expect(el.matches(':dir(rtl)')).to.be.true;
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   });

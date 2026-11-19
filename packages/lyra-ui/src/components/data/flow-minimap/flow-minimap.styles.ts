@@ -52,14 +52,14 @@ export const styles = css`
      icon of its own. */
   [part='map']:hover,
   [part='base']:hover [part='map'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-flow-minimap-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Clicking the map recenters the canvas viewport, and that jump is the only confirmation -- the
      pressed fill says the click landed on the map rather than on the viewport rect drawn over it.
      */
   [part='map']:active,
   [part='base']:active [part='map'] {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-flow-minimap-active-bg, color-mix(in oklab, var(--lr-flow-minimap-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='base'][data-locked] [part='map'] {
     cursor: default;
@@ -69,6 +69,9 @@ export const styles = css`
   [part='base'][data-locked]:hover [part='map'],
   [part='base'][data-locked]:active [part='map'] {
     background: transparent;
+  }
+  [data-mirrored] > svg {
+    transform: scaleX(-1);
   }
   [part='node'] {
     fill: var(--_lr-flow-status-paint, var(--lr-flow-status-color, var(--lr-color-border-strong)));
@@ -93,6 +96,7 @@ export const styles = css`
     fill: color-mix(in srgb, var(--_lr-flow-minimap-viewport) 15%, transparent);
     stroke: var(--_lr-flow-minimap-viewport);
     stroke-width: 2;
+    vector-effect: non-scaling-stroke;
     pointer-events: none;
   }
   [part='viewport-hit-area'] {

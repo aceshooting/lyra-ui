@@ -1,3 +1,7 @@
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import { AllocationObserverController, OwnedMutationObserver } from '../../../internal/owned-observer.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -138,6 +142,12 @@ export interface LyraResponsivePanelEventMap {
  * @csspart footer - The wrapper around the `footer` slot.
  * Overlay state properties are resolved as inline fallbacks, so setting one on a panel or any
  * ancestor themes the overlay without changing docked panel chrome or shared tokens.
+ * @cssprop --lr-responsive-panel-padding - Header, body and footer padding, each defaulting to its regional spacing.
+ * @cssprop [--lr-responsive-panel-docked-radius=var(--lr-radius-container)] - Docked corner radius.
+ * @cssprop [--lr-responsive-panel-docked-border-color=var(--lr-color-border-subtle)] - Docked border color.
+ * @cssprop [--lr-responsive-panel-gap=var(--lr-space-s)] - Footer action gap.
+ * @cssprop [--lr-responsive-panel-bg=var(--lr-color-surface)] - Background of `[part="panel"]` in the
+ *   docked presentation; overlay presentations use `--lr-responsive-panel-overlay-panel-bg`.
  * @cssprop [--lr-responsive-panel-overlay-color=var(--lr-color-overlay)] - The overlay
  *   presentation's scrim color, applied to `[part="backdrop"]`.
  * @cssprop [--lr-responsive-panel-overlay-panel-bg=var(--lr-color-surface-overlay)] - Background
@@ -160,11 +170,23 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  private readonly openGuard = new VetoWriteGuard();
+  private _open = false;
+  private requestingOpen = false;
+
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in
-   *  the overlay presentation this is the actual modal open/closed state. */
-  @property({ type: Boolean, reflect: true }) open = false;
+   *  the overlay presentation this is the actual modal open/closed state.
+   * @default false */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(value: boolean) {
+    markVetoGuardWrite(this.openGuard);
+    this._open = value;
+  }
 
   /** `'auto'` (default) tracks `overlay-breakpoint` against this element's allocation;
    * `'inline'`/`'overlay'` force that presentation. */
@@ -208,11 +230,8 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   /** Host-level `aria-label` override for the overlay presentation's accessible name -- wins over
    *  every other source (`label`, the header-slot fallback), matching `<lr-dialog>`'s
-   *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
-   *  `aria-label` attribute on `<lr-responsive-panel>` itself, not a public JS property. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel:
-    | string
-    | null = null;
+   *  `accessibleLabel` pattern. See the class doc for the full precedence order. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private belowBreakpoint = false;
   @state() private resolvedMode: LyraResponsivePanelEffectiveMode = 'inline';
@@ -220,8 +239,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   /** Fallback accessible name sourced from the `header` slot's content -- see `detectHeadingText()`. */
   @state() private headingText?: string;
 
-  private resizeObserver?: ResizeObserver;
-  private resizeView?: Window;
+  private readonly allocation = new AllocationObserverController(this, {
+    onInlineSize: (size) => {
+      if (!this.ownerDocument.defaultView?.ResizeObserver) this.measureAllocation();
+      else this.queueOwnerMicrotask(() => this.applyMeasuredInlineSize(size), true);
+    },
+  });
   private lastTrigger?: HTMLElement;
   private overlayHandle?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
@@ -236,9 +259,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.nativeModal,
     () => this.shadowRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
   );
-  private headerObserver?: MutationObserver;
-  private headerObserverDocument?: Document;
-  private headerObserverGeneration = 0;
+  private readonly headerObserver = new OwnedMutationObserver(this, () => {
+    this.headingText = this.detectHeadingText();
+  });
+  @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
   private ownerRealmGeneration = 0;
   /** Whether the overlay-only mechanics (scroll-lock and shared overlay registration) are currently
    *  engaged -- derived from `effectiveMode === 'overlay' && open`, tracked separately from those
@@ -319,6 +343,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.showOverlaySurface();
+    const overlayOpen = this.open && this.effectiveMode === 'overlay';
+    for (const owner of this.renderRoot.querySelectorAll<HTMLElement>('[part="panel"], [data-native-modal-carrier]')) {
+      syncAriaDescribedByElements(this, owner, overlayOpen ? this.hostDescribedBy : null);
+    }
     if (!this.isFirstUpdate && changed.has('resolvedMode')) {
       this.emit('lr-mode-change', {
         mode: this.resolvedMode,
@@ -333,7 +361,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   override connectedCallback(): void {
     super.connectedCallback();
     this.measureAllocation();
-    this.observeAllocation();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
@@ -365,12 +392,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   override disconnectedCallback(): void {
     // Finish connection cleanup before overlay teardown can flush a queued reconnect.
     this.resetOwnerRealmWork();
-    const resizeObserver = this.resizeObserver;
-    this.resizeObserver = undefined;
-    const resizeView = this.resizeView;
-    this.resizeView = undefined;
-    resizeObserver?.disconnect();
-    resizeView?.removeEventListener('resize', this.onWindowResize);
     cancelDeferredFocusReturn(this);
     super.disconnectedCallback();
     this.modalSurface.disconnect();
@@ -379,10 +400,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.resizeView?.removeEventListener('resize', this.onWindowResize);
-    this.resizeView = undefined;
+    this.allocation.refresh();
     this.resetOwnerRealmWork();
     // Connection in the new document owns measurement and observer setup.
   }
@@ -444,35 +462,9 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.modalSurface.show();
   }
 
-  private observeAllocation(): void {
-    if (!this.isConnected) return;
-    this.resizeView?.removeEventListener('resize', this.onWindowResize);
-    this.resizeView = undefined;
-    const view = this.ownerDocument.defaultView;
-    const ResizeObserverConstructor = view?.ResizeObserver;
-    if (ResizeObserverConstructor) {
-      this.resizeObserver ??= new ResizeObserverConstructor((entries) => {
-        const entry = entries.find((candidate) => candidate.target === this) ?? entries[0];
-        const inlineSize = entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
-        if (inlineSize !== undefined) {
-          // Next frame: the flip changes this host's block size, which loops the observer if done inside it.
-          this.queueOwnerMicrotask(() => this.applyMeasuredInlineSize(inlineSize), true);
-        }
-      });
-      this.resizeObserver.observe(this);
-      return;
-    }
-    if (view) {
-      this.resizeView = view;
-      view.addEventListener('resize', this.onWindowResize);
-    }
-  }
-
-  private readonly onWindowResize = (): void => this.measureAllocation();
-
   private measureAllocation(): void {
     if (this.mode !== 'auto') return;
-    const inlineSize = this.getBoundingClientRect().width;
+    const inlineSize = this.offsetWidth;
     if (inlineSize > 0) this.applyMeasuredInlineSize(inlineSize);
   }
 
@@ -499,26 +491,8 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.headingText = this.detectHeadingText();
     this.resetHeaderObserver();
     if (assigned.length === 0 || !this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.headerObserverGeneration;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.headerObserver !== observer ||
-        this.headerObserverDocument !== ownerDocument ||
-        this.headerObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.headingText = this.detectHeadingText();
-    });
-    this.headerObserver = observer;
-    this.headerObserverDocument = ownerDocument;
     for (const element of assigned) {
-      observer.observe(element, {
+      this.headerObserver.observe(element, {
         childList: true,
         characterData: true,
         subtree: true,
@@ -527,10 +501,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private resetHeaderObserver(): void {
-    this.headerObserverGeneration += 1;
-    this.headerObserver?.disconnect();
-    this.headerObserver = undefined;
-    this.headerObserverDocument = undefined;
+    this.headerObserver.clear();
   }
 
   // Only direct children slotted into `header` are scanned -- same depth
@@ -570,12 +541,25 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    * away from anything to begin with.
    */
   close(reason: LyraResponsivePanelCloseReason = 'api'): void {
-    if (!this.open) return;
-    if (this.emit('lr-close-request', { reason }, { cancelable: true }).defaultPrevented) {
-      return;
+    if (this.requestingOpen || !this.open) return;
+    const parent = this.parentNode;
+    const document = this.ownerDocument;
+    const connected = this.isConnected;
+    this.requestingOpen = true;
+    try {
+      requestThenCommit({
+        requestDetail: { reason },
+        emitRequest: (proposal, init: { cancelable: true }) => this.emit('lr-close-request', proposal, init),
+        guard: this.openGuard,
+        commit: () => {
+          if (this.isConnected !== connected || this.parentNode !== parent || this.ownerDocument !== document) return;
+          this.open = false;
+          this.emit('lr-close', { reason });
+        },
+      });
+    } finally {
+      this.requestingOpen = false;
     }
-    this.open = false;
-    this.emit('lr-close', { reason });
   }
 
   /** Opens either presentation through the same `open` property as a controlled host write. */

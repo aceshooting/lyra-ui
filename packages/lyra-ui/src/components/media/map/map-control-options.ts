@@ -1,4 +1,6 @@
 import { admitMapTerrain, type LyraMapTerrain } from './map-scene-configuration.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { escapeHtml } from '../../../internal/escape-html.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 
@@ -38,7 +40,7 @@ export interface LyraMapGeolocateControlOptions extends LyraMapNavigationControl
 }
 /** A text credit linked to an absolute HTTP(S) URL; admission takes an immutable own-data snapshot. */
 export interface LyraMapAttributionLink {
-  /** Escaped display text, at most 4,096 characters. */
+  /** Escaped display text, at most 4,096 characters. A blank label uses the URL hostname. */
   readonly label: string;
   /** Absolute HTTP(S) URL, at most 2,048 characters, without credentials or control characters. */
   readonly url: string;
@@ -101,25 +103,26 @@ function position(input: object, fallback: LyraMapControlPosition): LyraMapContr
   const value = own(input, 'position'); if (value === undefined) return fallback;
   if (!positions.has(value as LyraMapControlPosition)) throw new TypeError('Invalid control position'); return value as LyraMapControlPosition;
 }
-const escapeText = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 function attributionText(input: unknown): { readonly html: string | readonly string[]; readonly text: readonly string[] } {
   let total = 0;
   const labels: string[] = [];
   const text = (value: unknown): string => {
     if (typeof value !== 'string' || value.length > 4096 || (total += value.length) > 16384) throw new RangeError('Attribution text limit');
-    return escapeText(value);
+    return escapeHtml(value);
   };
   const item = (value: unknown): string => {
     if (typeof value === 'string') { const label = text(value); labels.push(label); return label; }
     const record = plain(value);
-    const label = text(own(record, 'label')), raw = own(record, 'url');
+    const authored = own(record, 'label'), raw = own(record, 'url');
     if (typeof raw !== 'string' || raw.length > 2048 || /[\u0000-\u0020\u007f-\u009f]/.test(raw)) throw new TypeError('Invalid attribution URL');
     const url = new URL(raw);
     if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password ||
       url.href.length > 2048 || (total += url.href.length) > 16384) throw new TypeError('Invalid attribution URL');
+    const escaped = text(authored);
+    const label = normalizeLabel(escaped) ?? text(url.hostname);
     const snapshot = Object.freeze({ label, url: url.href });
     labels.push(snapshot.label);
-    return `<a href="${escapeText(snapshot.url)}" target="_blank" rel="${resolveGuardedRel(undefined, '_blank')}">${snapshot.label}</a>`;
+    return `<a href="${escapeHtml(snapshot.url)}" target="_blank" rel="${resolveGuardedRel(undefined, '_blank')}">${snapshot.label}</a>`;
   };
   let html: string | readonly string[];
   if (!Array.isArray(input)) html = item(input);

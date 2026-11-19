@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,7 +45,10 @@ slide itself; they do not change the active slide or move focus away from it.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
   carousel or while a dropdown, popover, context menu or picker panel (`lr-select`, `lr-combobox`,
   `lr-color-picker`, `lr-date-input`, `lr-time-input`) inside a slide is open, and remains off
-  under `prefers-reduced-motion: reduce`.
+  under `prefers-reduced-motion: reduce`. A multi-page autoplay carousel also displays an
+  `autoplay-button`. Pausing with this button lasts until the reader resumes rotation.
+  Override `carouselPauseRotation` and `carouselResumeRotation` to localize the button text.
+  An empty or whitespace-only `autoplay-interval` uses the 3000 ms default.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons; a focused one that disables itself at the first or last page hands focus to the other
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
@@ -145,7 +148,10 @@ active aliases `pagination-item-active` / `pagination-item--active`, and `indica
 (logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions
 `--lr-carousel-indicator-current-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-carousel-indicator-current-border-color` (default `var(--lr-color-brand)`) color only the
-active `indicator-dot`. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
+active `indicator-dot`. Its thicker border distinguishes the current page on hover and in
+forced colors. Set `--lr-carousel-indicator-current-border-width` to adjust the thickness.
+`--lr-carousel-gap` sets the space below the viewport and `--lr-carousel-controls-gap` sets
+spacing within and between control rows. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
 overrides the basis computed from `slidesPerPage`; prefer the property for normal multi-slide
 layouts because it also updates paging and accessibility state.
 Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,

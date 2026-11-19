@@ -1,3 +1,4 @@
+
 ## `lr-sparkline`
 
 Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default allocation is one
@@ -3331,7 +3332,8 @@ from that event to correlate a response with the current request.
   to leaves. Partially-selected branches expose `indeterminate`
 - `label: string = ''` — accessible-name fallback for the tree; `role="tree"` lives on an internal
   `[part="base"]` element. A host `aria-label` takes precedence by attribute presence, including an
-  explicit empty string; removing it restores the `label` fallback. External `aria-labelledby`
+  explicit empty string. Removing it restores the `label` fallback. A whitespace-only name uses
+  the localized tree name when no other name is available. External `aria-labelledby`
   idrefs are not forwarded across the shadow boundary.
 - `size: LyraSize | undefined` — optional row density for object data and declarative items.
   Accepts `2xs`, `xs`, `s`, `m`, `l`, `xl` and the `small`, `medium`, `large` aliases.
@@ -3790,6 +3792,8 @@ entries, global `total`, explicit `coverage: 'complete' | 'neighborhood' | 'aggr
 bounds; an optional value position must agree. Position/world rectangle endpoints stay within ±1,000,000,
 with nonnegative world dimensions and finite endpoints. Scene edge keys/endpoints must match
 value IDs and resolve to nodes in that scene. Missing positions never trigger local auto-layout.
+The record navigator announces changes to loading, errors and query results. A search or incident-edge scope shows the matching record count.
+Endpoint actions identify the edge, the node and whether it is the source or target.
 The same revision must keep world bounds and global totals consistent. `source-coverage` reports
 shown versus global counts, rather than suggesting every record is drawn.
 
@@ -4073,7 +4077,8 @@ owns none of that.
   standalone card in a document outline. Invalid untyped values use level 3; nothing is exposed
   while `heading` is empty
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
-- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
+- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set. A
+  nonblank node heading is included in its localized accessible name.
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
@@ -4087,7 +4092,7 @@ owns none of that.
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
   (a record rejected for an unreadable optional label does not reserve its ID);
-  reassign a collection after changes
+  reassign a collection after changes. An empty collection removes its handle gutter.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 
@@ -4191,6 +4196,7 @@ and freezing, and the minimap adds no provider query or second normalization. A 
 while world framing and unlocked viewport controls remain usable. Accepted empty bins are a
 successful empty overview and do not show the unavailable state.
 
+The minimap mirrors both SVG layers when its target canvas is horizontal and right-to-left, including when connected by `for`.
 The immutable overview layer is reused by identity across viewport-only snapshots. Map clicks,
 viewport drag, wheel zoom and physical arrow keys use the same exact source-world inverse
 mapping, including RTL and zero-axis display fallback. A change in world coordinate values
@@ -4224,7 +4230,9 @@ exact visible view rectangle), `viewport-hit-area` (the transparent draggable/fo
 latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`), plus the shared
+`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-flow-minimap-active-bg` (pressed fill, mixed from the hover
+fill by default), plus the shared
 `--lr-flow-status-color` and the explicit palette hooks
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
 `--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
@@ -4282,6 +4290,7 @@ the opposite zoom button or to Fit if both directions are disabled.
 **Properties:**
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
+- `label: string = ''` — accessible name of the control group. A host `aria-label` takes precedence.
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
 
@@ -4708,6 +4717,8 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
+A non-neutral `variant` adds a localized, visually hidden state to the item title. In forced colours, the marker and rail use system colours.
+
 Every assigned item remains mounted; the timeline does not window large collections. Flow mode
 leaves untouched items' positioning styles alone. Time mode reuses item geometry between targeted
 resize notifications; allocation, timestamp placement, structural and orientation changes can
@@ -4858,6 +4869,8 @@ former `--lr-timeline-item-*` plumbing names.
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+`size` (`2xs`, `xs`, `s`, `m`, `l`, `xl`, and the `small`, `medium`, `large` aliases) sets row density on the composed `<lr-tree>` in array mode. The file tree handles the inner tree's `lr-bulk-toggle` internally.
+
 **Provider hierarchy:** `treeSource: FileTreeSource | undefined` (attribute: false)
 uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
@@ -4893,6 +4906,9 @@ the initial projection, without synthetic user events or moving focus; clearing 
 previously controlled key. The default `null` does not request a global clear. A current valid path
 is reconciled again after source replacement, rebind or refresh. Invalid empty/blank/oversized
 controlled paths are not forwarded. This adapter has no source search/copy controls.
+
+Source rows display the file name, diff summary and Git status when supplied. The accessible name
+includes those same details.
 
 With `treeSource` undefined, the following snapshot and lazy-directory route applies.
 
@@ -4969,6 +4985,8 @@ secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButto
 `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty string remains
 empty. A host `aria-label` wins by attribute presence, including when empty.
 
+Names and values are bidi-isolated (`dir="auto"`). A whitespace-only `label` falls back to the localized default. Entries or `withoutReveal` changes that re-mask a revealed row emit `lr-reveal-change` with `revealed: false` for it. After a copy the button shows the localized copied or failed text for a moment (`data-copy-state`). The text buttons keep the minimum 24px target.
+
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal
 to the real unmasked value); `lr-copy-error` (frozen readonly
@@ -4977,10 +4995,12 @@ without raw platform error text). Failure is announced through the localized `co
 in the owning document's shared polite live region; copy intent is never announced as success.
 
 **CSS parts:** `base` (the `<dl>` root), `name` (the `<dt>` text), `value-cell` (the `<dd>` wrapping
-an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`, and
-`copy-button`.
+an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`,
+`copy-button`, and `limit` (a localized note shown when `entries` exceeds the 10,000-entry ceiling).
 
-**Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
+**Themeable custom properties:** `--lr-env-list-button-hover-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-env-list-button-active-bg` (reveal/copy button hover and pressed fills),
+`--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
 `var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
 base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
@@ -5210,6 +5230,8 @@ Use `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
 
+`headingLevel` (attribute `heading-level`, default `3`) sets the level of the saved-queries heading; `none` renders plain text.
+
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
 and saved-query updates continue normally. Each edit updates the query once and emits
 `input`/`lr-input` and `change`/`lr-change` on commits, with the complete
@@ -5323,8 +5345,12 @@ fields and `lr-combobox.js` for multi-value enum operators. The default entry re
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
 and listbox show/hide lifecycle events from every row control and the combinator stay inside the
-builder; events from slotted consumer content pass through. Programmatic `value` assignments
-remain silent. Both builders use the same bounded, own-data option normalization, retaining each
+builder; events from slotted consumer content pass through. The owned pickers' `lr-change-request`,
+`lr-create`, `lr-retry-request`, `lr-source-error`, `lr-chip-change` and `lr-overflow-toggle` stay
+inside as well. Programmatic `value` assignments remain silent. Each row control's accessible name
+carries its row number (`Field, condition 2`), adding or removing a condition is announced politely,
+and a row's validation issue is shown as the error text of the control that owns it. Row controls
+wrap below about 8rem each instead of shrinking further. Both builders use the same bounded, own-data option normalization, retaining each
 builder's public option type and first-value-wins behavior.
 
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
@@ -5361,6 +5387,9 @@ leaving all three unset preserves the previous unconstrained controls.
 `removeCondition(id)` removes the matching condition and emits `lr-remove-condition`
 (`detail: { conditionId }`); it is a
 no-op while disabled or when the id is absent.
+
+Use `lr-input` for edits shared by both builders. The condition builder emits it for each edit.
+The form-associated graph query builder also emits `lr-change` for a committed query.
 
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`; all details and nested model
 snapshots are readonly and frozen. **CSS parts:** `base`, `conditions`,

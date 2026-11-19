@@ -1,4 +1,5 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { iconAction, iconActionActive, iconActionHover } from '../../../internal/icon-action.styles.js';
+import { iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -19,7 +20,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     outline: none;
-    transition: border-color var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
   }
   [part='viewport']:focus-visible {
     outline: var(--lr-focus-ring);
@@ -79,14 +80,17 @@ export const styles = css`
   [part='zoom-out'],
   [part='zoom-in'],
   [part='reset'] {
+    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
+    --_lr-icon-button-background-default: var(--lr-color-surface);
+    --_lr-icon-button-color-default: var(--lr-color-text);
+    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
+    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
+    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    ${iconAction}
     ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
+    padding: revert;
   }
   [part='reset'] {
     position: relative;
@@ -98,16 +102,12 @@ export const styles = css`
   [part='zoom-out']:not(:disabled):hover,
   [part='zoom-in']:not(:disabled):hover,
   [part='reset']:hover {
-    background: var(--lr-color-brand-quiet);
+    ${iconActionHover}
   }
   [part='zoom-out']:not(:disabled):active,
   [part='zoom-in']:not(:disabled):active,
   [part='reset']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ${iconActionActive}
   }
   [part='zoom-out']:disabled,
   [part='zoom-in']:disabled {

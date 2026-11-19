@@ -20,7 +20,7 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => html`
     <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
-      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+      <lr-flow-controls slot="bottom-start" label="Workflow controls"></lr-flow-controls>
     </lr-flow-canvas>
   `,
 };

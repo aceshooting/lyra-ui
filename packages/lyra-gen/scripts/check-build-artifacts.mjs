@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseProgram, visitAst } from '../../lyra-ui/scripts/lib/ast.mjs';
+import { isMainModule } from '../../lyra-ui/scripts/is-main-module.mjs';
 
 const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const registrationEntries = ['dist/dashboard-binding.js', 'dist/gen-view.js'];
@@ -62,4 +63,4 @@ export function checkGenBuildArtifacts(directory = packageDirectory) {
   console.log('Lyra Gen emitted-artifact and pure-root contracts passed.');
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) checkGenBuildArtifacts();
+if (isMainModule(import.meta.url)) checkGenBuildArtifacts();

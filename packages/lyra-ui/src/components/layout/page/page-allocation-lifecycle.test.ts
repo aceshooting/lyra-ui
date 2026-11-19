@@ -2,17 +2,22 @@ import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import './page.js';
 import '../responsive-panel/responsive-panel.js';
 
+function observeWidthReads(element: HTMLElement, onRead: (width: number) => void): void {
+  const nativeWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')!.get!;
+  Object.defineProperty(element, 'offsetWidth', { configurable: true, get() {
+    const width = nativeWidth.call(element) as number;
+    onRead(width);
+    return width;
+  } });
+}
+
 for (const name of ['lr-page', 'lr-responsive-panel'] as const) {
   it(`${name} measures its initial allocation once and reconnects with the current width`, async () => {
     const wrapper = await fixture<HTMLElement>(html`<div></div>`);
     const element = document.createElement(name);
     element.style.inlineSize = '320px';
-    const read = element.getBoundingClientRect.bind(element);
     let reads = 0;
-    element.getBoundingClientRect = () => {
-      reads += 1;
-      return read();
-    };
+    observeWidthReads(element, () => { reads++; });
     wrapper.append(element);
     await element.updateComplete;
     await element.updateComplete;
@@ -38,12 +43,8 @@ for (const mode of ['inline', 'overlay'] as const) {
     const panel = document.createElement('lr-responsive-panel');
     panel.mode = mode;
     panel.style.inlineSize = '320px';
-    const read = panel.getBoundingClientRect.bind(panel);
     let reads = 0;
-    panel.getBoundingClientRect = () => {
-      reads += 1;
-      return read();
-    };
+    observeWidthReads(panel, () => { reads++; });
     wrapper.append(panel);
     await panel.updateComplete;
     expect(panel.effectiveMode).to.equal(mode);
@@ -62,13 +63,8 @@ it('retries a zero-width page allocation after its shrink-to-fit content renders
   content.style.inlineSize = '1000px';
   content.textContent = 'Wide content';
   page.append(content);
-  const read = page.getBoundingClientRect.bind(page);
   const widths: number[] = [];
-  page.getBoundingClientRect = () => {
-    const rect = read();
-    widths.push(rect.width);
-    return rect;
-  };
+  observeWidthReads(page, (width) => widths.push(width));
   wrapper.append(page);
   await page.updateComplete;
   await page.updateComplete;
@@ -83,12 +79,8 @@ for (const name of ['lr-page', 'lr-responsive-panel'] as const) {
     const frameDocument = wrapper.querySelector('iframe')!.contentDocument!;
     const element = document.createElement(name);
     element.style.inlineSize = '320px';
-    const read = element.getBoundingClientRect.bind(element);
     let reads = 0;
-    element.getBoundingClientRect = () => {
-      reads += 1;
-      return read();
-    };
+    observeWidthReads(element, () => { reads++; });
     try {
       wrapper.append(element);
       await element.updateComplete;

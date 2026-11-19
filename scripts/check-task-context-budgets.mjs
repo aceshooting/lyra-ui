@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), '..');
@@ -170,4 +171,4 @@ function main(args) {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) main(process.argv.slice(2));
+if (isMainModule(import.meta.url)) main(process.argv.slice(2));

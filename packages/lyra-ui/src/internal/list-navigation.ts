@@ -1,3 +1,5 @@
+import { composedParentElement } from './active-element.js';
+
 export interface ListMoveOptions {
   count: number;
   current: number;
@@ -68,11 +70,13 @@ export function resolveListMove(event: KeyboardEvent | string, options: ListMove
   return null;
 }
 
-/** Common availability baseline; callers may add widget-specific guards. */
+/** Common availability baseline; callers may add widget-specific guards. Hidden and inert
+ *  ancestors are checked across shadow boundaries. */
 export function isRovingTargetAvailable(element: HTMLElement): boolean {
-  return !('disabled' in element && Boolean(element.disabled)) &&
-    element.getAttribute('aria-disabled') !== 'true' &&
-    element.getAttribute('aria-hidden') !== 'true' &&
-    !element.hidden &&
-    !element.closest('[hidden], [inert]');
+  if ('disabled' in element && Boolean(element.disabled)) return false;
+  if (element.getAttribute('aria-disabled') === 'true' || element.getAttribute('aria-hidden') === 'true') return false;
+  for (let node: Element | null = element; node; node = composedParentElement(node)) {
+    if (node.hasAttribute('hidden') || node.hasAttribute('inert')) return false;
+  }
+  return !element.hidden;
 }

@@ -23,6 +23,10 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 Focus on either zoom control does not enter the iframe browsing context, and `blur()` does not blur
 a focused zoom control.
 
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
+
 **Properties:**
 
 - `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`

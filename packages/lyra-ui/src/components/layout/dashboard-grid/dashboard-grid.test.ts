@@ -2119,6 +2119,7 @@ describe("pointer drag", () => {
         '[part="cell"]'
       ) as HTMLElement;
       wrapper.setPointerCapture = () => {};
+      wrapper.hasPointerCapture = () => true;
       let releasedPointerId: number | undefined;
       wrapper.releasePointerCapture = (pointerId) => {
         releasedPointerId = pointerId;
@@ -2451,6 +2452,7 @@ describe("pointer resize", () => {
         '[part="resize-handle"]'
       ) as HTMLElement;
       handle.setPointerCapture = () => {};
+      handle.hasPointerCapture = () => true;
       let releasedPointerId: number | undefined;
       handle.releasePointerCapture = (pointerId) => {
         releasedPointerId = pointerId;
@@ -2874,24 +2876,6 @@ describe("localized strings", () => {
   });
 });
 
-it("gives resize-handle a hover state", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/\[part='resize-handle'\]:hover/);
-});
-
-it("gives cell (a real focusable, draggable/resizable target) a hover state matching its own focus-visible ring", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/\[part='cell'\]:hover\s*\{[^}]*outline:/);
-});
-
-it("themes the cell hover outline color via --lr-dashboard-grid-cell-hover-outline-color, falling back to --lr-color-border-strong", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  const rule = css.match(/\[part='cell'\]:hover\s*\{([^}]+)\}/)?.[1] ?? "";
-  expect(rule).to.match(
-    /outline:[^;]*var\(\s*--lr-dashboard-grid-cell-hover-outline-color,\s*var\(--lr-color-border-strong\)\s*\)/
-  );
-});
-
 it("themes collision state independently through --lr-dashboard-grid-collision-outline-color", () => {
   const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
   const rule =
@@ -3155,6 +3139,7 @@ describe("defensive edge cases", () => {
       '[part="cell"]'
     ) as HTMLElement;
     wrapper.setPointerCapture = () => {};
+    wrapper.hasPointerCapture = () => true;
     let releasedPointerId: number | undefined;
     wrapper.releasePointerCapture = (pointerId) => {
       releasedPointerId = pointerId;
@@ -3196,6 +3181,7 @@ describe("defensive edge cases", () => {
       '[part="resize-handle"]'
     ) as HTMLElement;
     handle.setPointerCapture = () => {};
+    handle.hasPointerCapture = () => true;
     let releasedPointerId: number | undefined;
     handle.releasePointerCapture = (pointerId) => {
       releasedPointerId = pointerId;

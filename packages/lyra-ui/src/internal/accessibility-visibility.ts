@@ -2,10 +2,12 @@ import type { CustomElementUpgradeObserver } from './custom-element-upgrade-obse
 import { composedParentElement } from './active-element.js';
 import { assignedSlotOf } from './composed-tree.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
+import { isAriaTrue } from './aria-values.js';
 import { imageMapImageFor } from './dom-guards.js';
 import { subscribeInheritedAttributes, type InheritedAttributeRelease } from './inherited-attribute-hub.js';
 
 export { composedParentElement } from './active-element.js';
+export { isAriaTrue } from './aria-values.js';
 
 const NON_CONTENT_ELEMENTS = new Set(['script', 'style', 'template']);
 const DEFAULT_ACCESSIBILITY_TEXT_MAX_CHARACTERS = 4_096;
@@ -68,11 +70,6 @@ export interface AccessibilityElementState {
   display: string | undefined;
   subtreeExcluded: boolean;
   visibilityHidden: boolean;
-}
-
-/** `aria-hidden` is an ASCII case-insensitive true/false token in HTML. */
-export function isAriaTrue(value: string | null): boolean {
-  return value?.trim().toLowerCase() === 'true';
 }
 
 function accessibilityElementState(

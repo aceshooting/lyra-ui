@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '。',
   carouselIndicators: 'カルーセルのスライド',
   carouselGoTo: 'スライド {index} へ移動',
+  carouselPauseRotation: '自動切り替えを一時停止',
+  carouselResumeRotation: '自動切り替えを再開',
   scrollerLabel: 'スクロール可能なコンテンツ',
   scrollPrevious: '前へスクロール',
   scrollNext: '次へスクロール',

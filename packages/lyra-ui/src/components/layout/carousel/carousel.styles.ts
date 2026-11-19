@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -13,7 +14,7 @@ export const styles = css`
   [part~="base"] {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
-    gap: var(--lr-space-s);
+    gap: var(--lr-carousel-gap, var(--lr-space-s));
     min-inline-size: 0;
     block-size: 100%;
   }
@@ -63,13 +64,14 @@ export const styles = css`
   }
 
   [part~="scroll-container"]:focus-visible,
+  [part~="autoplay-button"]:focus-visible,
   [part~="navigation-button"]:focus-visible,
   [part~="pagination-item"]:focus-visible {
     ${focusRing}
   }
 
   /* no-pressed-state: no action. */
-  [part~="scroll-container"]:hover {
+  [part~="scroll-container"]:hover:not(:focus-visible) {
     outline-width: var(
       --lr-carousel-scroll-container-hover-outline-width,
       var(--lr-border-width-thin)
@@ -164,7 +166,7 @@ export const styles = css`
 
   [part="controls"] {
     display: grid;
-    gap: var(--lr-space-s);
+    gap: var(--lr-carousel-controls-gap, var(--lr-space-s));
     min-inline-size: 0;
   }
 
@@ -172,9 +174,10 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-space-s);
+    gap: var(--lr-carousel-controls-gap, var(--lr-space-s));
   }
 
+  [part~="autoplay-button"],
   [part~="navigation-button"],
   [part~="pagination-item"] {
     display: inline-flex;
@@ -185,6 +188,9 @@ export const styles = css`
     cursor: pointer;
   }
 
+  [part~="autoplay-button"] { justify-self: start; }
+
+  [part~="autoplay-button"],
   [part~="navigation-button"] {
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
@@ -193,11 +199,13 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
 
+  [part~="autoplay-button"]:not(:disabled):hover,
   [part~="navigation-button"]:not(:disabled):hover {
     background: var(--lr-carousel-navigation-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-carousel-navigation-hover-border-color, var(--lr-color-brand));
   }
 
+  [part~="autoplay-button"]:not(:disabled):active,
   [part~="navigation-button"]:not(:disabled):active {
     background: var(
       --lr-carousel-navigation-active-bg,
@@ -219,7 +227,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-carousel-controls-gap, var(--lr-space-xs));
   }
 
   [data-orientation="vertical"] [part~="pagination"] {
@@ -230,7 +238,7 @@ export const styles = css`
   @container ${compactContainerQuery} {
     [part="controls"],
     [part~="navigation"] {
-      gap: var(--lr-space-xs);
+      gap: var(--lr-carousel-controls-gap, var(--lr-space-xs));
     }
 
     [part~="pagination"] {
@@ -254,17 +262,6 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
 
-  [part~="pagination-item-active"] [part="indicator-dot"] {
-    background: var(
-      --lr-carousel-indicator-current-bg,
-      var(--lr-color-brand-quiet)
-    );
-    border-color: var(
-      --lr-carousel-indicator-current-border-color,
-      var(--lr-color-brand)
-    );
-  }
-
   [part~="pagination-item"]:hover [part="indicator-dot"] {
     background: var(--lr-carousel-pagination-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-carousel-pagination-hover-border-color, var(--lr-color-brand));
@@ -282,8 +279,22 @@ export const styles = css`
     border-color: var(--lr-carousel-pagination-active-border-color, var(--lr-color-brand));
   }
 
+  [part~="pagination-item"][part~="pagination-item-active"] [part="indicator-dot"] {
+    border-width: var(--lr-carousel-indicator-current-border-width, var(--lr-border-width-thick));
+    background: var(
+      --lr-carousel-indicator-current-bg,
+      var(--lr-color-brand-quiet)
+    );
+    border-color: var(
+      --lr-carousel-indicator-current-border-color,
+      var(--lr-color-brand)
+    );
+  }
+
   :host(:dir(rtl)) [part="previous-glyph"],
   :host(:dir(rtl)) [part="next-glyph"] {
     transform: scaleX(-1);
   }
+
+  ${forcedColorsPart('[part~="pagination-item"][part~="pagination-item-active"] [part="indicator-dot"]')}
 `;

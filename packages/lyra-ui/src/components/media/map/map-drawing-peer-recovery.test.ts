@@ -205,6 +205,30 @@ describe('lr-map drawing native recovery', () => {
     }
   }
 
+  it('cancels a queued drawing preview in the issuing window during adoption', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Map destination"></iframe>`);
+    const { element, peer } = await mount();
+    await arm(element);
+    await vertex(element, peer, 0);
+    const drawing = (element as unknown as { drawingController: { preview(point: readonly [number, number]): void } }).drawingController;
+    const request = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
+    let pending: number | undefined;
+    const cancelled: number[] = [];
+    try {
+      window.requestAnimationFrame = callback => (pending = request.call(window, callback));
+      drawing.preview([1, 2]);
+      window.requestAnimationFrame = request;
+      window.cancelAnimationFrame = id => { cancelled.push(id); cancel.call(window, id); };
+      frame.contentDocument!.adoptNode(element);
+      expect(typeof pending).to.equal('number');
+      expect(cancelled).to.include(pending);
+    } finally {
+      window.requestAnimationFrame = request;
+      window.cancelAnimationFrame = cancel;
+      if (pending !== undefined) cancel.call(window, pending);
+    }
+  });
+
   it('discards a queued rubber-band preview when drawing is cancelled and keeps the next edit clean', async () => {
     const { element, peer } = await mount(); await arm(element);
     await vertex(element, peer, 0); await vertex(element, peer, 5);

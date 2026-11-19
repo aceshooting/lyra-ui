@@ -124,6 +124,8 @@ export const ThemedInteractionStates: Story = {
         --lr-page-navigation-drawer-bg: var(--lr-color-surface);
         --lr-page-navigation-drawer-shadow: var(--lr-shadow-xl);
         --lr-page-header-bg: var(--lr-color-brand-quiet);
+        --lr-page-menu-bg: var(--lr-color-surface-raised);
+        --lr-page-aside-bg: var(--lr-color-surface-raised);
       "
     >
       <lr-page

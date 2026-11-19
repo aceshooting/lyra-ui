@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Slajdovi vrteške',
   carouselGoTo: 'Idi na slajd {index}',
+  carouselPauseRotation: 'Pauziraj rotaciju',
+  carouselResumeRotation: 'Nastavi rotaciju',
   scrollerLabel: 'Sadržaj koji se pomera',
   scrollPrevious: 'Pomeri unazad',
   scrollNext: 'Pomeri unapred',

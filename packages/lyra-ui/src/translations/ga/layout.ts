@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Sleamhnáin an timpealláin',
   carouselGoTo: 'Téigh go sleamhnán {index}',
+  carouselPauseRotation: 'Cuir an rothlú ar sos',
+  carouselResumeRotation: 'Lean ar aghaidh leis an rothlú',
   scrollerLabel: 'Ábhar inscrollaithe',
   scrollPrevious: 'Scrollaigh siar',
   scrollNext: 'Scrollaigh ar aghaidh',

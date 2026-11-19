@@ -88,3 +88,30 @@ describe('activation key guard', () => {
     expect(shouldIgnoreActivationKey(key({ key: ' ', shiftKey: true }))).to.equal(false);
   });
 });
+
+describe('roving target availability across shadow boundaries', () => {
+  it('rejects disabled, aria-disabled and aria-hidden targets and accepts a plain one', () => {
+    const button = document.body.appendChild(document.createElement('button'));
+    expect(isRovingTargetAvailable(button)).to.equal(true);
+    button.disabled = true;
+    expect(isRovingTargetAvailable(button)).to.equal(false);
+    button.disabled = false;
+    button.setAttribute('aria-disabled', 'true');
+    expect(isRovingTargetAvailable(button)).to.equal(false);
+    button.removeAttribute('aria-disabled');
+    button.setAttribute('aria-hidden', 'true');
+    expect(isRovingTargetAvailable(button)).to.equal(false);
+    button.remove();
+  });
+
+  it('rejects a target under a hidden or inert host that sits outside its shadow root', async () => {
+    for (const attribute of ['hidden', 'inert']) {
+      const host = document.body.appendChild(document.createElement('div'));
+      const target = host.attachShadow({ mode: 'open' }).appendChild(document.createElement('button'));
+      expect(isRovingTargetAvailable(target)).to.equal(true);
+      host.setAttribute(attribute, '');
+      expect(isRovingTargetAvailable(target)).to.equal(false);
+      host.remove();
+    }
+  });
+});

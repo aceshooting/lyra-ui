@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,8 +56,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
 - `fit: LyraImageFit = 'actual'` (reflected) — opt-in base sizing policy for the current image,
-  reusing `<lr-image-viewer>`'s `contain`/`width`/`actual` vocabulary. The default preserves the
-  existing natural-size behavior. `contain` fits both landscape and tall images inside the stage;
+  using the same `contain`/`width`/`actual` choices as `<lr-image-viewer>`. Lightbox and pan-zoom
+  start at the image's natural size for detail inspection. Image-viewer starts at `contain` to
+  show the entire image and its annotations. `contain` fits both landscape and tall images inside the stage;
   `width` fills its inline size. CSS recalculates either policy when the stage is resized or a
   delayed image source finishes loading, so navigation and opening do not require consumer timers.
   Fit is the base zoom policy: an explicit user zoom remains until navigation or a reset, and
@@ -130,6 +131,10 @@ embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, 
 `id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
 (the current source image's retry button). `stage` exposes `aria-busy="true"` while source
 descriptor or native image loading is pending.
+
+Source loading and error messages use `--lr-lightbox-status-color`, falling back to
+`--lr-color-on-strong-overlay`. When the image collection shrinks, a listener for the resulting
+`lr-index-change` sees the newly rendered image.
 
 **Themeable custom properties:** `--lr-lightbox-overlay-color` (default
 `var(--lr-color-overlay-strong)` — the backdrop scrim), `--lr-lightbox-control-bg` (default

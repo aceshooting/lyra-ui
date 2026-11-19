@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,6 +30,8 @@ secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButto
 `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty string remains
 empty. A host `aria-label` wins by attribute presence, including when empty.
 
+Names and values are bidi-isolated (`dir="auto"`). A whitespace-only `label` falls back to the localized default. Entries or `withoutReveal` changes that re-mask a revealed row emit `lr-reveal-change` with `revealed: false` for it. After a copy the button shows the localized copied or failed text for a moment (`data-copy-state`). The text buttons keep the minimum 24px target.
+
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal
 to the real unmasked value); `lr-copy-error` (frozen readonly
@@ -38,10 +40,12 @@ without raw platform error text). Failure is announced through the localized `co
 in the owning document's shared polite live region; copy intent is never announced as success.
 
 **CSS parts:** `base` (the `<dl>` root), `name` (the `<dt>` text), `value-cell` (the `<dd>` wrapping
-an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`, and
-`copy-button`.
+an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`,
+`copy-button`, and `limit` (a localized note shown when `entries` exceeds the 10,000-entry ceiling).
 
-**Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
+**Themeable custom properties:** `--lr-env-list-button-hover-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-env-list-button-active-bg` (reveal/copy button hover and pressed fills),
+`--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
 `var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
 base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")

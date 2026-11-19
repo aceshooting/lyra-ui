@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Amaslayidi ombukiso',
   carouselGoTo: 'Iya kusilayidi {index}',
+  carouselPauseRotation: 'Misa ukujikeleza okwesikhashana',
+  carouselResumeRotation: 'Qhubeka nokujikeleza',
   scrollerLabel: 'Okuqukethwe okushelelekayo',
   scrollPrevious: 'Skrolela emuva',
   scrollNext: 'Skrolela phambili',

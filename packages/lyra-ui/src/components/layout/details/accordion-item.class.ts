@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { resolveHeadingLevel, type LyraResolvedHeadingLevel } from '../../../internal/heading-level.js';
@@ -60,6 +61,7 @@ export type {
  * @csspart icon - Expand/collapse icon container.
  * @csspart panel - Expandable panel.
  * @csspart content - Content container inside the panel.
+ * @cssprop [--lr-accordion-item-font-size=var(--lr-form-control-font-size)] - Base text size.
  * @cssprop [--lr-accordion-item-outlined-bg=var(--lr-color-surface)] - Outlined item background.
  * @cssprop [--lr-accordion-item-filled-bg=var(--lr-color-surface-raised)] - Filled item background.
  * @cssprop [--lr-accordion-item-filled-outlined-bg=var(--lr-color-surface-raised)] -
@@ -164,11 +166,13 @@ export class LyraAccordionItem extends LyraElement {
   @property({ reflect: true })
   appearance: LyraAccordionAppearance = 'outlined';
 
+  @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
+
   /** @internal Roving-tabindex state controlled by the owning accordion. */
   @property({ attribute: false }) isTabbable = true;
 
   override disconnectedCallback(): void {
-    this.disclosureMotion.cancel();
+    this.disclosureMotion.cancelIfDetached();
     this.settledClosed = !this._expanded;
     super.disconnectedCallback();
   }
@@ -184,6 +188,7 @@ export class LyraAccordionItem extends LyraElement {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    syncAriaDescribedByElements(this, this.button ?? undefined, this.hostDescribedBy);
     if (changed.has('disabled')) notifyAccordionItemStateChanged(this);
   }
 
@@ -219,8 +224,9 @@ export class LyraAccordionItem extends LyraElement {
       return;
     }
 
+    const parent = this.parentNode;
     this.applyExpandedState(expanded);
-    if (!(await this.disclosureMotion.settle())) return;
+    if (!(await this.disclosureMotion.settle()) || !this.isConnected || this.parentNode !== parent) return;
     this.settledClosed = !this._expanded;
     if (announceOwner) notifyAccordionItemTransitionSettled(this, expanded);
   }

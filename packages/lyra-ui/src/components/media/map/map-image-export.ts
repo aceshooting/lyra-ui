@@ -30,18 +30,29 @@ function optionsOf(value: unknown): Required<LyraMapImageExportOptions> {
   return { type: type as LyraMapImageExportType, attribution };
 }
 function dimensions(width: number, height: number): boolean { return Number.isSafeInteger(width) && Number.isSafeInteger(height) && width > 0 && height > 0 && width <= MAX_SIDE && height <= MAX_SIDE && width * height <= MAX_PIXELS; }
-function linesOf(ctx: CanvasRenderingContext2D, text: string, width: number): readonly string[] {
-  if (text.length > 4096 || width < 24) throw new LyraMapImageExportError('attribution-failed');
+function linesOf(ctx: CanvasRenderingContext2D, text: string, width: number, minimum: number): readonly string[] {
+  if (text.length > 4096 || width < minimum) throw new LyraMapImageExportError('attribution-failed');
   const lines: string[] = []; let line = '';
-  const push = () => { lines.push(line); line = ''; if (lines.length > 32) throw new LyraMapImageExportError('attribution-failed'); };
-  // Code-point iteration keeps surrogate pairs intact. All text is painted literally.
-  for (const character of text.replaceAll('\r\n', '\n').replaceAll('\r', '\n')) {
-    if (character === '\n') { push(); continue; }
-    if (ctx.measureText(character).width > width) throw new LyraMapImageExportError('attribution-failed');
-    if (line && ctx.measureText(line + character).width > width) push();
-    line += character;
-  }
-  if (line || !lines.length) push(); return lines;
+  const fits = (value: string) => ctx.measureText(value).width <= width;
+  const push = () => { lines.push(line.trimEnd()); line = ''; if (lines.length > 32) throw new LyraMapImageExportError('attribution-failed'); };
+  const paragraphs = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
+  paragraphs.forEach((paragraph, index) => {
+    // Break at whitespace; code-point iteration (surrogate pairs stay intact) only splits a token wider than the line.
+    for (const token of paragraph.split(/(\s+)/u)) {
+      if (!token) continue;
+      if (fits(line + token)) { line += token; continue; }
+      if (line.trim()) push(); else line = '';
+      if (/^\s+$/u.test(token)) continue;
+      if (fits(token)) { line = token; continue; }
+      for (const character of token) {
+        if (!fits(character)) throw new LyraMapImageExportError('attribution-failed');
+        if (line && !fits(line + character)) push();
+        line += character;
+      }
+    }
+    if (index < paragraphs.length - 1 || line || !lines.length) push();
+  });
+  return lines;
 }
 function signature(bytes: Uint8Array, type: LyraMapImageExportType): boolean {
   if (type === 'image/png') return [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value);
@@ -112,14 +123,20 @@ export function exportMapImage(input: unknown, services: MapImageExportServices,
         if (!current()) { finish(undefined, 'cancelled'); return; }
         if (typeof attribution !== 'string') throw new LyraMapImageExportError('attribution-failed');
         if (attribution) {
-          ctx.font = '12px sans-serif'; const lines = linesOf(ctx, attribution, width - 16), totalHeight = height + 16 + lines.length * 16;
+          // The strip is sized in CSS pixels of the map so it stays legible when the backing store is denser.
+          const cssWidth = source.clientWidth;
+          const scale = cssWidth > 0 ? width / cssWidth : 1;
+          const pad = Math.round(8 * scale), pitch = Math.max(1, Math.round(16 * scale));
+          const rtl = source.ownerDocument.defaultView?.getComputedStyle(source).direction === 'rtl';
+          ctx.font = `${12 * scale}px sans-serif`; ctx.direction = rtl ? 'rtl' : 'ltr';
+          const lines = linesOf(ctx, attribution, width - 2 * pad, Math.round(24 * scale)), totalHeight = height + 2 * pad + lines.length * pitch;
           if (!dimensions(width, totalHeight)) throw new LyraMapImageExportError('limit');
           // Resizing clears the bitmap: preserve the already captured source pixels locally.
           canvas.height = totalHeight; ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) throw new LyraMapImageExportError('capture-failed'); ctx.putImageData(image, 0, 0);
           ctx.fillStyle = '#ffffff'; ctx.fillRect(0, height, width, totalHeight - height);
-          ctx.fillStyle = '#111111'; ctx.font = '12px sans-serif'; ctx.textBaseline = 'top';
-          for (let index = 0; index < lines.length; index++) ctx.fillText(lines[index]!, 8, height + 8 + index * 16);
+          ctx.fillStyle = '#111111'; ctx.font = `${12 * scale}px sans-serif`; ctx.textBaseline = 'top'; ctx.direction = rtl ? 'rtl' : 'ltr'; ctx.textAlign = 'start';
+          for (let index = 0; index < lines.length; index++) ctx.fillText(lines[index]!, rtl ? width - pad : pad, height + pad + index * pitch);
         }
         if (!current()) { finish(undefined, 'cancelled'); return; }
         try { canvas.toBlob((blob) => { void encode(blob); }, options.type); }

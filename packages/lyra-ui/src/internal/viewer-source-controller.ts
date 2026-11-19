@@ -136,7 +136,7 @@ export class ViewerSourceController implements ReactiveController {
 }
 
 /** Cancels an unread body so the connection is released; a consumed or absent body is a no-op. */
-export function discardBody(response: Response | undefined): void {
+function discardBody(response: Response | undefined): void {
   if (!response?.body || response.bodyUsed) return;
   try {
     void response.body.cancel().catch(() => undefined);

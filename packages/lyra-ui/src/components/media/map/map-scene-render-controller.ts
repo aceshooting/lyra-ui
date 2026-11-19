@@ -1,4 +1,4 @@
-import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+import { readCanvasRgba, resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import type { MapLibreMapCapability } from './map-loader.js';
@@ -96,13 +96,8 @@ function resolvedColor(element: Element, expression: string): Rgba | undefined {
       match[4] === undefined ? 1 : Number(match[4])];
     if (channels.every(value => Number.isFinite(value) && value >= 0 && value <= 1)) return channels;
   }
-  const canvas = element.ownerDocument.createElement('canvas');
-  canvas.width = 1; canvas.height = 1;
-  const context = canvas.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
-  if (!context) return undefined;
-  context.fillStyle = color; context.fillRect(0, 0, 1, 1);
-  const pixel = context.getImageData(0, 0, 1, 1).data;
-  return [pixel[0]! / 255, pixel[1]! / 255, pixel[2]! / 255, pixel[3]! / 255];
+  const pixel = readCanvasRgba(element.ownerDocument, color);
+  return pixel && [pixel[0] / 255, pixel[1] / 255, pixel[2] / 255, pixel[3]];
 }
 
 /** One native installation; accepted intent and revision counters remain on the connection owner. */
@@ -129,8 +124,7 @@ export function createMapSceneRenderController(options: {
   let preparing = false;
   let bridgeFailure: number | undefined, report: BridgeReport | undefined, markerContextLost = false;
   let linesFor: SceneAcceptedSnapshot | undefined, lineColorsStale = true;
-  // Elevated paths and arcs: `undefined` runtime is not loaded yet, `null` is unavailable.
-  let elevatedRuntime: ElevatedRuntime | null | undefined, elevatedLoading = false, elevatedWanted = false;
+  let elevatedRuntime: ElevatedRuntime | undefined, elevatedLoading = false, elevatedWanted = false;
   let elevated: ElevatedInstallation | undefined, elevatedFailed: number | undefined, linesTerrain: boolean | undefined;
 
   function current(): boolean {
@@ -155,12 +149,12 @@ export function createMapSceneRenderController(options: {
     if (!current()) return;
     lineColorsStale = true; sync(); statusChanged();
   }
-  function startElevatedRuntime(): void {
+  function startElevatedRuntime(revision: number): void {
     if (elevatedLoading || elevatedRuntime !== undefined) return;
     elevatedLoading = true;
     void Promise.all([loadMapSceneLayerRuntime(), import('./map-scene-elevated-lines.js')]).then(
       ([layers, lines]) => { elevatedRuntime = { layers, lines }; },
-      () => { elevatedRuntime = null; },
+      () => { elevatedFailed = revision; },
     ).finally(() => { elevatedLoading = false; linesInvalidated(); });
   }
   function installElevated(runtime: ElevatedRuntime, revision: number, data: readonly ElevatedSceneLine[]): void {
@@ -230,7 +224,7 @@ export function createMapSceneRenderController(options: {
         const raised = objects.map(row => !sceneLineGrounded(row, terrain));
         elevatedWanted = raised.some(Boolean);
         const runtime = elevatedWanted && elevatedFailed !== revision ? elevatedRuntime : undefined;
-        if (elevatedWanted && elevatedRuntime === undefined) startElevatedRuntime();
+        if (elevatedWanted && elevatedRuntime === undefined && elevatedFailed !== revision) startElevatedRuntime(revision);
         const flat: SceneLineObject[] = [], flatGeometry: typeof geometry[number][] = [];
         objects.forEach((row, index) => {
           if (runtime && raised[index]) {

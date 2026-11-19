@@ -58,6 +58,10 @@ grow past its data or overlap a neighbour. The accessible pointer target is a se
 box always wins over another region's enlarged area, and where only enlarged areas overlap the
 later highlight in document order wins. Keyboard navigation between highlights is unaffected.
 
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
+
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
 `contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
@@ -122,7 +126,8 @@ duplicates use first-wins uniqueness. At most
 `IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
 is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
 leading window replaces its final entry so identity stays reachable. `data-truncated` and
-`data-total` on `highlight-layer` expose the bounded state. Highlight tones retain distinct border
+`data-total` on `highlight-layer` expose the bounded state. The viewer announces the displayed
+and total counts through `imageViewerHighlightsLimited` when the limit is exceeded. Highlight tones retain distinct border
 styles as well as colors, including forced-colors mode.
 
 At 90°/270°, `rotation-frame` swaps the untransformed wrapper's layout axes and centers the painted

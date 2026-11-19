@@ -516,6 +516,12 @@ describe('LyraSsrFallbackRenderer', () => {
     expect(renderer.renderAttributes()).to.deep.equal([' data-label="a&amp;b&quot;c&lt;d&gt;e"']);
   });
 
+  it('escapes a single quote so the value is safe in either attribute quoting', () => {
+    const renderer = new LyraSsrFallbackRenderer('lr-radio');
+    renderer.setAttribute('data-label', `it's`);
+    expect(renderer.renderAttributes()).to.deep.equal([' data-label="it&#39;s"']);
+  });
+
   it('renders every set attribute, in insertion order', () => {
     const renderer = new LyraSsrFallbackRenderer('lr-radio');
     renderer.setAttribute('Value', 'a');

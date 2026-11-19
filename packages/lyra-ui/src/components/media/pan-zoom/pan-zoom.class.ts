@@ -1,5 +1,7 @@
-import { html, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -10,10 +12,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -21,6 +24,7 @@ export type { LyraImageFit } from '../../../internal/image-fit.js';
 
 export interface LyraPanZoomEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
+  'lr-render-error': CustomEvent<{ error: Error }>;
   blur: FocusEvent;
   focus: FocusEvent;
 }
@@ -40,6 +44,7 @@ export interface LyraPanZoomEventMap {
  * @customElement lr-pan-zoom
  * @slot - Content to inspect; when `src` is set, an image is rendered instead.
  * @event lr-zoom-change - Zoom changed. `detail: { zoom }`.
+ * @event lr-render-error - The `src` image failed to load. `detail: { error }`.
  * @event {FocusEvent} focus - Relayed once from the scrollable viewport as a bubbling, composed
  *   native event.
  * @event {FocusEvent} blur - Relayed once from the scrollable viewport as a bubbling, composed
@@ -47,6 +52,7 @@ export interface LyraPanZoomEventMap {
  * @csspart base - The frame wrapper.
  * @csspart viewport - The scrollable viewport.
  * @csspart content - The transformed content wrapper.
+ * @csspart error - Localized message shown in place of an image that failed to load.
  * @csspart controls - Labelled group of independently tabbable zoom controls.
  * @csspart zoom-out - Zoom-out button.
  * @csspart zoom-in - Zoom-in button.
@@ -61,6 +67,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    imageViewerFailedToLoad: LYRA_DEFAULT_imageViewerFailedToLoad,
     pdfViewerCurrentZoom: LYRA_DEFAULT_pdfViewerCurrentZoom,
     resetZoom: LYRA_DEFAULT_resetZoom,
     zoomControls: LYRA_DEFAULT_zoomControls,
@@ -75,9 +82,26 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this, () => this.renderRoot.querySelector<HTMLElement>('[part="viewport"][role="group"]'),
   );
 
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
+  @state() private failedSrc: string | null = null;
+
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.hostDescription.adopted();
+    this.announcements.adopted();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('src')) this.failedSrc = null;
+  }
+
+  private onImageError(event: Event, src: string): void {
+    if (!this.isConnected || event.currentTarget !== this.renderRoot.querySelector('img') ||
+        safeMediaSrc(this.src) !== src || this.failedSrc === src) return;
+    this.failedSrc = src;
+    this.announcements.announceAssertive(this.localize('imageViewerFailedToLoad'));
+    this.emit('lr-render-error', { error: new Error('The image failed to load.') });
   }
 
   @property({ type: Number, reflect: true }) zoom = 1;
@@ -175,9 +199,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
     if (
-      event.altKey ||
-      event.ctrlKey ||
-      event.metaKey ||
+      event.defaultPrevented || shouldIgnoreNavigationKey(event) ||
       keyEventOwnedByInnerControl(event, { container: this })
     ) return;
     if (event.key === '+' || event.key === '=') {
@@ -213,7 +235,11 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
           data-zoom=${String(zoom)}
           style="--lr-pan-zoom-zoom: ${zoom}"
         >
-          ${safeSrc ? html`<img src=${safeSrc} alt=${this.alt} />` : html`<slot></slot>`}
+          ${safeSrc
+            ? this.failedSrc === safeSrc
+              ? html`<div part="error">${this.localize('imageViewerFailedToLoad')}</div>`
+              : keyed(safeSrc, html`<img src=${safeSrc} alt=${this.alt} @error=${(event: Event) => this.onImageError(event, safeSrc)} />`)
+            : html`<slot></slot>`}
         </div>
       </div>
       <div part="controls" role="group" aria-label=${this.localize('zoomControls')}>

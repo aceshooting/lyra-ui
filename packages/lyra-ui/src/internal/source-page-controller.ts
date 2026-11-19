@@ -2,6 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { LyraPageResult, LyraPageSource, LyraSourceContext, LyraSourceFacet, LyraSourceGroup, LyraSourceRecord, LyraSourceRevision } from '../data-sources.js';
 import { SourceRequestController, sourceCount, sourceRevision } from './source-request-controller.js';
 import { sourcePageScope } from './source-page-scope.js';
+import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
 
 export interface SourcePageBinding<T, Q, S = undefined> {
   readonly source: LyraPageSource<T, Q, S>;
@@ -45,7 +46,10 @@ interface Lane<R> {
   scheduled: boolean;
 }
 interface PageIntent<Q> { readonly query: Q; readonly page: number; readonly pageSize: number; }
-const MAX_TEXT = 65_536;
+
+/** Code units of text one source record may carry across its fields. */
+export const SOURCE_TEXT_UNIT_LIMIT = 65_536;
+const MAX_TEXT = SOURCE_TEXT_UNIT_LIMIT;
 const MAX_TEXT_TOTAL = 2_000_000;
 const revoked = new Error('Source operation revoked');
 
@@ -58,6 +62,19 @@ function field(value: unknown, key: PropertyKey, required = true): unknown {
   }
   if (!('value' in descriptor)) throw new TypeError('Accessor source field');
   return descriptor.value;
+}
+/**
+ * Reads one own data field of a provider record, failing closed: throws when the record was
+ * revoked (`current()` is false before or after the read), the target is not an object, the field
+ * is an accessor, or a `required` field is missing. An optional missing field reads `undefined`.
+ */
+export function readOwnSourceField(target: unknown, key: PropertyKey, current: () => boolean, required = false): unknown {
+  if (!current()) throw new TypeError('Obsolete source record');
+  if ((typeof target !== 'object' && typeof target !== 'function') || target === null) throw new TypeError('Invalid source object');
+  const descriptor = getOwnDataDescriptor(target, key);
+  if (!current()) throw new TypeError('Obsolete source record');
+  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || (required && descriptor === MISSING_OWN_DATA_DESCRIPTOR)) throw new TypeError('Invalid source field');
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
 }
 function list(value: unknown, max: number): readonly unknown[] {
   if (!Array.isArray(value)) throw new TypeError('Invalid source collection');

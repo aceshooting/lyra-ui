@@ -1,4 +1,27 @@
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedContains } from '../../../internal/composed-tree.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
+
+/**
+ * Runs a DOM move of `element` and returns a repair for the focus it may have dropped. The repair
+ * refocuses only a passive, move-induced loss: a focus handler's own choice of target wins.
+ */
+export function moveKeepingFocus(element: HTMLElement, move: () => void): () => void {
+  const document = element.ownerDocument;
+  const active = deepActiveElementIn(document);
+  const focus = isHtmlElement(active) && composedContains(element, active) ? active : undefined;
+  let transferred = false;
+  const trackFocus = (): void => { transferred = true; };
+  if (focus) document.addEventListener('focus', trackFocus, true);
+  try { move(); } finally { if (focus) document.removeEventListener('focus', trackFocus, true); }
+  return () => {
+    const remaining = deepActiveElementIn(document);
+    const lost = !remaining || remaining === document.body || remaining === document.documentElement;
+    if (focus?.isConnected && composedContains(element, focus) && focus.ownerDocument === document && !transferred && lost) {
+      focus.focus({ preventScroll: true });
+    }
+  };
+}
 
 /** Separate row formatting contexts let each pair of native corners share its own width. */
 export function syncMapControlRows(container: HTMLElement, isCurrent: () => boolean): void {
@@ -19,23 +42,12 @@ export function syncMapControlRows(container: HTMLElement, isCurrent: () => bool
         if (!corner) continue;
         const before = side === 'left' ? row.querySelector(`.maplibregl-ctrl-${edge}-right`) : null;
         if (corner.parentNode === row && corner.nextSibling === before) continue;
-        const document = corner.ownerDocument;
-        const active = deepActiveElementIn(document);
-        const focus = active instanceof HTMLElement && corner.contains(active) ? active : undefined;
-        let transferred = false;
-        const trackFocus = (): void => { transferred = true; };
-        if (focus) document.addEventListener('focus', trackFocus, true);
-        try {
+        const restore = moveKeepingFocus(corner, () => {
           if (typeof row.moveBefore === 'function') row.moveBefore(corner, before);
           else row.insertBefore(corner, before);
-        } finally { if (focus) document.removeEventListener('focus', trackFocus, true); }
+        });
         if (!current()) return;
-        const remaining = deepActiveElementIn(document);
-        const lost = !remaining || remaining === document.body || remaining === document.documentElement;
-        // Restore only a passive move-induced loss; a blur handler's focus choice takes precedence.
-        if (focus?.isConnected && corner.contains(focus) && focus.ownerDocument === document && !transferred && lost) {
-          focus.focus({ preventScroll: true });
-        }
+        restore();
       }
     }
   }

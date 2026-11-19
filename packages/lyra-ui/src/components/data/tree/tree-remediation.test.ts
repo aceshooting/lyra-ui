@@ -204,3 +204,29 @@ it('tree item reads the motion duration properties with the shared time grammar'
   expect(read(true)).to.equal(200);
   expect(read(false)).to.equal(100);
 });
+
+it('projects rows without reading the length property of a supplied array', async () => {
+  const tree = await fixture<LyraTree>(html`<lr-tree label="Files"></lr-tree>`);
+  let reads = 0;
+  tree.data = new Proxy([{ id: 'root', label: 'Root' }], {
+    get(target, key, receiver) {
+      if (key === 'length') reads++;
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  await tree.updateComplete;
+  expect(tree.data.map(row => row.id)).to.deep.equal(['root']);
+  expect(reads).to.equal(0);
+});
+
+it('leaves composing navigation and Alt-modified reorder chords alone', async () => {
+  const tree = await fixture<LyraTree>(html`<lr-tree label="Files" reorderable>
+    <lr-tree-item label="First"></lr-tree-item><lr-tree-item label="Next"></lr-tree-item>
+  </lr-tree>`);
+  const item = tree.querySelector('lr-tree-item')!;
+  for (const init of [{ isComposing: true }, { ctrlKey: true, altKey: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true, ...init });
+    item.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+  }
+});

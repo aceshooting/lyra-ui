@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Các trang chiếu',
   carouselGoTo: 'Đi đến trang chiếu {index}',
+  carouselPauseRotation: 'Tạm dừng xoay vòng',
+  carouselResumeRotation: 'Tiếp tục xoay vòng',
   scrollerLabel: 'Nội dung có thể cuộn',
   scrollPrevious: 'Cuộn về trước',
   scrollNext: 'Cuộn về sau',

@@ -14,6 +14,10 @@ const rootGuardScripts = Object.freeze([
   'changeset-release-plan.mjs',
   'check-framework-recipes.mjs',
   'generate-release-qualification.mjs',
+  'check-dependency-security.mjs',
+  'check-peer-compatibility.mjs',
+  'check-task-context-budgets.mjs',
+  'packed-runtime-singleton-consumer.mjs',
   'plan-test-browsers.mjs',
   'release-integrity.mjs',
   'sync-plugin-version.mjs',
@@ -96,6 +100,34 @@ test('package scripts do not compare the raw argv path with import.meta.url', ()
     /realpathSync\(invoked\) === fs\.realpathSync\(here\)/,
     'the standalone packaged CLI keeps its equivalent symlink-aware realpath guard',
   );
+});
+
+test('repository and companion scripts never compare the raw argv path with the module URL', () => {
+  const repoRoot = path.resolve(rootScriptsDir, '..');
+  const directories = [rootScriptsDir];
+  for (const name of readdirSync(path.join(repoRoot, 'packages'))) {
+    if (name === 'lyra-ui') continue;
+    directories.push(path.join(repoRoot, 'packages', name, 'scripts'));
+  }
+  const offenders = [];
+  for (const directory of directories) {
+    let names = [];
+    try {
+      names = readdirSync(directory).filter((file) => file.endsWith('.mjs') && !file.endsWith('.test.mjs'));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      const source = readFileSync(path.join(directory, name), 'utf8');
+      const guardsOnRawArgv = source.split('\n').some((line) => (
+        line.includes('process.argv[1]')
+        && /import\.meta\.url|scriptPath/.test(line)
+        && !line.includes('realpathSync')
+      ));
+      if (guardsOnRawArgv) offenders.push(path.relative(repoRoot, path.join(directory, name)));
+    }
+  }
+  assert.deepEqual(offenders, []);
 });
 
 test('repository entry points use the shared symlink-aware main-module guard', () => {

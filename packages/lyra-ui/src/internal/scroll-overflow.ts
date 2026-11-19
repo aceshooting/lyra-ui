@@ -89,6 +89,7 @@ export class ScrollOverflowController implements ReactiveController {
   #observed?: Element;
   #ownerWindow?: Window;
   #scrollTarget?: Element;
+  #extras = new Set<Element>();
   #onScroll = (): void => this.measure();
 
   /**
@@ -146,6 +147,8 @@ export class ScrollOverflowController implements ReactiveController {
         });
         this.#observer = observer;
         observer.observe(element);
+        this.pruneExtras();
+        for (const extra of this.#extras) observer.observe(extra);
       }
     }
     this.measure();
@@ -186,15 +189,25 @@ export class ScrollOverflowController implements ReactiveController {
    * Adds extra elements to this controller's single `ResizeObserver` instance -- for a consumer
    * that also needs to react to a *descendant's* intrinsic geometry changing independently of the
    * tracked element's own border box (e.g. a tab's label growing without the tablist's fixed-width
-   * container resizing). A no-op until `sync()` has a live observer (no owner realm yet, or the
-   * realm has no `ResizeObserver`); safe to call on every host update with the current element set
-   * -- observing an already-observed target is a spec-defined no-op, and a target dropped from a
-   * later call (e.g. a removed tab) simply stops mattering once it disconnects, matching the
-   * primary element's own lifecycle here.
+   * container resizing). Additive: elements are remembered, observed once however often they are
+   * passed again, handed to the replacement observer after a reconnect or realm change, and
+   * dropped once they leave the document. Safe to call on every host update with the current set.
    */
   observeExtra(elements: Iterable<Element>): void {
-    if (!this.#observer) return;
-    for (const element of elements) this.#observer.observe(element);
+    this.pruneExtras();
+    for (const element of elements) {
+      if (this.#extras.has(element)) continue;
+      this.#extras.add(element);
+      this.#observer?.observe(element);
+    }
+  }
+
+  private pruneExtras(): void {
+    for (const extra of this.#extras) {
+      if (extra.isConnected) continue;
+      this.#extras.delete(extra);
+      this.#observer?.unobserve(extra);
+    }
   }
 }
 

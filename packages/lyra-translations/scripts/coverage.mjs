@@ -7,6 +7,7 @@
 // measures them. Every other JavaScript file must be classified here, so a new script cannot silently
 // leave the report.
 import { dirname, resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runNodeCoverage } from '../../../scripts/lib/coverage/node-coverage.mjs';
 
@@ -21,6 +22,6 @@ export const SCOPE = Object.freeze({
   ],
 });
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   process.exitCode = (await runNodeCoverage({ root: ROOT, ...SCOPE })).exitCode;
 }

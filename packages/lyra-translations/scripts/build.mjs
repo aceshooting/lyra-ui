@@ -1,7 +1,7 @@
 // Assembles the published tree from lyra-ui's build output: every real locale catalog
 // (dist/translations, minus the pseudo-locales that stay in lyra-ui) with its private runtime
 // import retargeted to the public `@aceshooting/lyra-ui/localization.js` entry.
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -42,6 +42,6 @@ export function buildTranslations({ source = defaultSource, target = defaultTarg
   return files.length;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   console.log(`Locale catalogs assembled: ${buildTranslations()} modules.`);
 }

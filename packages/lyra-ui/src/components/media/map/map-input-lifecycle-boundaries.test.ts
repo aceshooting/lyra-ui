@@ -133,6 +133,18 @@ describe('lr-map native input failure boundaries', () => {
     expect(left.length).to.equal(1);
   });
 
+  it('clears a reported pointer on disconnect without emitting a detached leave', async () => {
+    const { element, peer } = await mount();
+    const moved = events(element, 'lr-map-pointer-move');
+    const left = events(element, 'lr-map-pointer-leave');
+    peer.fire('mousemove', { lngLat: { lng: 1, lat: 2 }, point: { x: 10, y: 20 } });
+    await nextFrame();
+    expect(moved.length).to.equal(1);
+    element.remove();
+    peer.fire('mouseout');
+    expect(left).to.deep.equal([]);
+  });
+
   it('drops queued pointer reports while disabled and resumes with a fresh position after enabling', async () => {
     const { element, peer } = await mount();
     const moved = events(element, 'lr-map-pointer-move');

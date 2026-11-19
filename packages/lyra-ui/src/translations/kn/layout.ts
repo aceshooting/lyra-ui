@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '। ',
   carouselIndicators: 'ಕ್ಯಾರೌಸೆಲ್ ಸ್ಲೈಡ್‌ಗಳು',
   carouselGoTo: '{index}ನೇ ಸ್ಲೈಡ್‌ಗೆ ಹೋಗಿ',
+  carouselPauseRotation: 'ತಿರುಗುವಿಕೆಯನ್ನು ವಿರಾಮಗೊಳಿಸಿ',
+  carouselResumeRotation: 'ತಿರುಗುವಿಕೆಯನ್ನು ಮುಂದುವರಿಸಿ',
   scrollerLabel: 'ಸ್ಕ್ರೋಲ್ ಮಾಡಬಹುದಾದ ವಿಷಯ',
   scrollPrevious: 'ಹಿಂದಕ್ಕೆ ಸ್ಕ್ರೋಲ್ ಮಾಡಿ',
   scrollNext: 'ಮುಂದಕ್ಕೆ ಸ್ಕ್ರೋಲ್ ಮಾಡಿ',

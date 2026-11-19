@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,10 +61,14 @@ reimplemented.
   up. The default slot is not a drop target while a target is bound.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
-- `readonly dragging: boolean` — `true` during an active drag session
+- `readonly dragging: boolean` — `true` during an active drag session. Assigning this getter in strict mode throws a `TypeError`.
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
   can match a neighboring small-tier `lr-file-input` in the same dense layout.
+
+Every completed selection announces its outcome, including consecutive selections of the same count.
+The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
+messages accept localized plural forms selected with the numeric count.
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
 `rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
@@ -82,11 +86,12 @@ overrides the localized accept/reject overlay text.
 layered above the slotted content via `position: absolute; inset: 0`, hidden outside an active drag
 session), `overlay-icon`, `overlay-text`, `status` (a visually-hidden, `aria-hidden` mirror of the
 drag state and counts — announcements go through the shared light-DOM regions, same as
-`lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
-while one exists).
+`lr-file-input`), `rejection` (the first 20 rejection reasons, followed by a localized count of further rejections).
 
 **CSS custom states:** `dragging`, matching `lr-file-input`'s; `targeted` while `for`/`target`
 resolves to an element the zone is attached to.
+
+A targeted overlay uses `--lr-drop-zone-overlay-z-index`, which defaults to `--lr-layer-dropdown`. In forced colors, accepted drags have a double border and rejected drags have a dotted border.
 
 **Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
 `--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in

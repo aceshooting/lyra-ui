@@ -19234,7 +19234,8 @@ from that event to correlate a response with the current request.
   to leaves. Partially-selected branches expose `indeterminate`
 - `label: string = ''` — accessible-name fallback for the tree; `role="tree"` lives on an internal
   `[part="base"]` element. A host `aria-label` takes precedence by attribute presence, including an
-  explicit empty string; removing it restores the `label` fallback. External `aria-labelledby`
+  explicit empty string. Removing it restores the `label` fallback. A whitespace-only name uses
+  the localized tree name when no other name is available. External `aria-labelledby`
   idrefs are not forwarded across the shadow boundary.
 - `size: LyraSize | undefined` — optional row density for object data and declarative items.
   Accepts `2xs`, `xs`, `s`, `m`, `l`, `xl` and the `small`, `medium`, `large` aliases.
@@ -19693,6 +19694,8 @@ entries, global `total`, explicit `coverage: 'complete' | 'neighborhood' | 'aggr
 bounds; an optional value position must agree. Position/world rectangle endpoints stay within ±1,000,000,
 with nonnegative world dimensions and finite endpoints. Scene edge keys/endpoints must match
 value IDs and resolve to nodes in that scene. Missing positions never trigger local auto-layout.
+The record navigator announces changes to loading, errors and query results. A search or incident-edge scope shows the matching record count.
+Endpoint actions identify the edge, the node and whether it is the source or target.
 The same revision must keep world bounds and global totals consistent. `source-coverage` reports
 shown versus global counts, rather than suggesting every record is drawn.
 
@@ -19976,7 +19979,8 @@ owns none of that.
   standalone card in a document outline. Invalid untyped values use level 3; nothing is exposed
   while `heading` is empty
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
-- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
+- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set. A
+  nonblank node heading is included in its localized accessible name.
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
@@ -19990,7 +19994,7 @@ owns none of that.
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
   (a record rejected for an unreadable optional label does not reserve its ID);
-  reassign a collection after changes
+  reassign a collection after changes. An empty collection removes its handle gutter.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 
@@ -20094,6 +20098,7 @@ and freezing, and the minimap adds no provider query or second normalization. A 
 while world framing and unlocked viewport controls remain usable. Accepted empty bins are a
 successful empty overview and do not show the unavailable state.
 
+The minimap mirrors both SVG layers when its target canvas is horizontal and right-to-left, including when connected by `for`.
 The immutable overview layer is reused by identity across viewport-only snapshots. Map clicks,
 viewport drag, wheel zoom and physical arrow keys use the same exact source-world inverse
 mapping, including RTL and zero-axis display fallback. A change in world coordinate values
@@ -20127,7 +20132,9 @@ exact visible view rectangle), `viewport-hit-area` (the transparent draggable/fo
 latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`), plus the shared
+`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-flow-minimap-active-bg` (pressed fill, mixed from the hover
+fill by default), plus the shared
 `--lr-flow-status-color` and the explicit palette hooks
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
 `--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
@@ -20185,6 +20192,7 @@ the opposite zoom button or to Fit if both directions are disabled.
 **Properties:**
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
+- `label: string = ''` — accessible name of the control group. A host `aria-label` takes precedence.
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
 
@@ -20611,6 +20619,8 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
+A non-neutral `variant` adds a localized, visually hidden state to the item title. In forced colours, the marker and rail use system colours.
+
 Every assigned item remains mounted; the timeline does not window large collections. Flow mode
 leaves untouched items' positioning styles alone. Time mode reuses item geometry between targeted
 resize notifications; allocation, timestamp placement, structural and orientation changes can
@@ -20761,6 +20771,8 @@ former `--lr-timeline-item-*` plumbing names.
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+`size` (`2xs`, `xs`, `s`, `m`, `l`, `xl`, and the `small`, `medium`, `large` aliases) sets row density on the composed `<lr-tree>` in array mode. The file tree handles the inner tree's `lr-bulk-toggle` internally.
+
 **Provider hierarchy:** `treeSource: FileTreeSource | undefined` (attribute: false)
 uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
@@ -20796,6 +20808,9 @@ the initial projection, without synthetic user events or moving focus; clearing 
 previously controlled key. The default `null` does not request a global clear. A current valid path
 is reconciled again after source replacement, rebind or refresh. Invalid empty/blank/oversized
 controlled paths are not forwarded. This adapter has no source search/copy controls.
+
+Source rows display the file name, diff summary and Git status when supplied. The accessible name
+includes those same details.
 
 With `treeSource` undefined, the following snapshot and lazy-directory route applies.
 
@@ -20872,6 +20887,8 @@ secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButto
 `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty string remains
 empty. A host `aria-label` wins by attribute presence, including when empty.
 
+Names and values are bidi-isolated (`dir="auto"`). A whitespace-only `label` falls back to the localized default. Entries or `withoutReveal` changes that re-mask a revealed row emit `lr-reveal-change` with `revealed: false` for it. After a copy the button shows the localized copied or failed text for a moment (`data-copy-state`). The text buttons keep the minimum 24px target.
+
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal
 to the real unmasked value); `lr-copy-error` (frozen readonly
@@ -20880,10 +20897,12 @@ without raw platform error text). Failure is announced through the localized `co
 in the owning document's shared polite live region; copy intent is never announced as success.
 
 **CSS parts:** `base` (the `<dl>` root), `name` (the `<dt>` text), `value-cell` (the `<dd>` wrapping
-an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`, and
-`copy-button`.
+an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`,
+`copy-button`, and `limit` (a localized note shown when `entries` exceeds the 10,000-entry ceiling).
 
-**Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
+**Themeable custom properties:** `--lr-env-list-button-hover-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-env-list-button-active-bg` (reveal/copy button hover and pressed fills),
+`--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
 `var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
 base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
@@ -21113,6 +21132,8 @@ Use `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
 
+`headingLevel` (attribute `heading-level`, default `3`) sets the level of the saved-queries heading; `none` renders plain text.
+
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
 and saved-query updates continue normally. Each edit updates the query once and emits
 `input`/`lr-input` and `change`/`lr-change` on commits, with the complete
@@ -21226,8 +21247,12 @@ fields and `lr-combobox.js` for multi-value enum operators. The default entry re
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
 and listbox show/hide lifecycle events from every row control and the combinator stay inside the
-builder; events from slotted consumer content pass through. Programmatic `value` assignments
-remain silent. Both builders use the same bounded, own-data option normalization, retaining each
+builder; events from slotted consumer content pass through. The owned pickers' `lr-change-request`,
+`lr-create`, `lr-retry-request`, `lr-source-error`, `lr-chip-change` and `lr-overflow-toggle` stay
+inside as well. Programmatic `value` assignments remain silent. Each row control's accessible name
+carries its row number (`Field, condition 2`), adding or removing a condition is announced politely,
+and a row's validation issue is shown as the error text of the control that owns it. Row controls
+wrap below about 8rem each instead of shrinking further. Both builders use the same bounded, own-data option normalization, retaining each
 builder's public option type and first-value-wins behavior.
 
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
@@ -21264,6 +21289,9 @@ leaving all three unset preserves the previous unconstrained controls.
 `removeCondition(id)` removes the matching condition and emits `lr-remove-condition`
 (`detail: { conditionId }`); it is a
 no-op while disabled or when the id is absent.
+
+Use `lr-input` for edits shared by both builders. The condition builder emits it for each edit.
+The form-associated graph query builder also emits `lr-change` for a committed query.
 
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`; all details and nested model
 snapshots are readonly and frozen. **CSS parts:** `base`, `conditions`,
@@ -22575,6 +22603,11 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   a `storageKey` there is no persistence and storage is never touched — listen for
   `lr-toggle` and persist the state yourself.
 
+The fullscreen dialog receives the host's `aria-describedby` references. A fullscreen request
+listener can resolve the request by writing `fullscreen` synchronously. When observing a widget
+that contains another view switcher, check `event.target === widget` before reading the widget's
+`lr-view-change` detail.
+
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
 built-in toggle. Call `preventDefault()` on the request to leave `collapsed` and any persisted state
@@ -22628,6 +22661,11 @@ overflow is measured, not assumed: a row that fits is left unmasked.
 Forced-colors mode disables those decorative masks while retaining the native scroll owners. The
 body is the block-axis scroll owner whenever the widget receives a constrained height, so the
 header remains fixed while deep body content scrolls.
+
+For the docked frame, `--lr-widget-bg`, `--lr-widget-border-color` and `--lr-widget-radius`
+control the fill, border and corners. `--lr-widget-header-padding`, `--lr-widget-body-padding`
+and `--lr-widget-gap` override the size tier's padding and header gap. The selected view has a
+visible outline in forced colors. Collapsing a body that held focus returns focus to its toggle.
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
@@ -22748,7 +22786,10 @@ slide itself; they do not change the active slide or move focus away from it.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
   carousel or while a dropdown, popover, context menu or picker panel (`lr-select`, `lr-combobox`,
   `lr-color-picker`, `lr-date-input`, `lr-time-input`) inside a slide is open, and remains off
-  under `prefers-reduced-motion: reduce`.
+  under `prefers-reduced-motion: reduce`. A multi-page autoplay carousel also displays an
+  `autoplay-button`. Pausing with this button lasts until the reader resumes rotation.
+  Override `carouselPauseRotation` and `carouselResumeRotation` to localize the button text.
+  An empty or whitespace-only `autoplay-interval` uses the 3000 ms default.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons; a focused one that disables itself at the first or last page hands focus to the other
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
@@ -22848,7 +22889,10 @@ active aliases `pagination-item-active` / `pagination-item--active`, and `indica
 (logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions
 `--lr-carousel-indicator-current-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-carousel-indicator-current-border-color` (default `var(--lr-color-brand)`) color only the
-active `indicator-dot`. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
+active `indicator-dot`. Its thicker border distinguishes the current page on hover and in
+forced colors. Set `--lr-carousel-indicator-current-border-width` to adjust the thickness.
+`--lr-carousel-gap` sets the space below the viewport and `--lr-carousel-controls-gap` sets
+spacing within and between control rows. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
 overrides the basis computed from `slidesPerPage`; prefer the property for normal multi-slide
 layouts because it also updates paging and accessibility state.
 Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,
@@ -22989,6 +23033,11 @@ vertical scroller. Before the first client measurement, both cues are hidden and
 controls are disabled, so server-rendered markup never advertises a false scroll direction. A control
 that has focus when it reaches its edge and disables hands focus to the viewport rather than
 dropping it to `<body>`.
+
+Set `accessibleLabel` or the host `aria-label` to name the viewport. The viewport and its
+buttons keep unmodified navigation keys within the scroller. The scroller leaves key events from
+slotted controls available to the application. Set `--lr-scroller-gap` for the space between
+content items and `--lr-scroller-controls-gap` for the space around the viewport.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`
@@ -25303,6 +25352,12 @@ the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value �
 **CSS parts:** `base`, `backdrop`, `panel`, `header`, `body`, `footer` (`backdrop` is only rendered
 in the overlay presentation).
 
+The docked frame accepts `--lr-responsive-panel-bg`, `--lr-responsive-panel-docked-radius` and
+`--lr-responsive-panel-docked-border-color`. Set `--lr-responsive-panel-padding` to override
+header, body and footer padding, and `--lr-responsive-panel-gap` for the footer action gap.
+The overlay dialog accepts a programmatic `accessibleLabel` and references the host's
+`aria-describedby` targets. Writing `open` in a close-request listener resolves the request.
+
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
 `var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
@@ -26119,6 +26174,10 @@ meant for slotted content, and it owns the card's `:focus-visible` ring), `media
 hidden entirely when empty), `body` (wrapper around the default slot), `footer` (wrapper around the
 `footer` and `footer-actions` slots, hidden entirely when both are empty).
 
+The actionable button and linked anchor receive the host's `aria-describedby` references.
+Canceling the native click suppresses card activation. Keyboard focus rings sit inside the card,
+and an actionable accent stripe keeps its configured color on hover.
+
 **Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
 gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`
 (default `var(--lr-color-border-subtle)`), `--border-radius`, and `--border-width` control the outer
@@ -26608,6 +26667,11 @@ Import the granular details, checkbox and badge registration entries. Adjust the
 for the actual labels. Logical sizing supports RTL and narrower allocations; the checkbox remains
 independently focusable and operable when the summary is disabled.
 
+The details summary and accordion item trigger receive the host's `aria-describedby`
+references. Set `accessibleLabel` on Details to supply the summary name programmatically.
+`--lr-accordion-radius` controls framed group corners and `--lr-accordion-item-font-size`
+sets the item's base text size. The trigger minimum height follows the form-control size tier.
+
 **Themeable custom properties:** accordion item exposes `--lr-accordion-item-spacing` (default
 `var(--lr-form-control-padding-inline)`), `--lr-accordion-item-show-duration` and
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
@@ -26848,9 +26912,10 @@ and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-
 They are real cascade-authoritative public hooks: the `columns`/`rowHeight`/`gap` properties supply
 private computed fallbacks rather than overwriting these public variables inline.
 `--lr-dashboard-grid-cell-hover-outline-color`
-(default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
-preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
-draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
+(default `var(--lr-color-border-strong)`) retints the hover outline on draggable cells. Set it to `transparent` to hide that outline.
+The resize handle has a visible corner grip at rest. Set `--lr-dashboard-grid-resize-handle-color`
+to change its color from the default `var(--lr-color-border-strong)`. An empty `columns`
+attribute restores 12 columns.
 
 **Additional API surface:**
 
@@ -27597,6 +27662,11 @@ own main landmark. Multiple Page instances therefore never share a global `#main
 `navigation-footer`, `navigation-header`, `navigation-toggle`, `navigation-toggle-icon`,
 `skip-to-content`, and `subheader`.
 
+Set `accessibleLabel` to name the navigation landmark programmatically. Empty aside and footer
+slots expose no landmarks. The header becomes a landmark when it contains header content or a
+visible navigation toggle. A navigation request listener can write `navOpen` to resolve the
+request before the component commits it.
+
 **Themeable custom properties:** `--lr-page-aside-width` (default `auto`),
 `--lr-page-banner-height` (`0px`), `--lr-page-header-height` (`0px`),
 `--lr-page-main-width` (`1fr`), `--lr-page-menu-width` (`auto`), and
@@ -27618,9 +27688,9 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
 
-The sticky banner, header, and subheader each paint an opaque surface so main content scrolling
-underneath never shows through: `--lr-page-banner-bg`, `--lr-page-header-bg`, and
-`--lr-page-subheader-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
+The sticky banner, header, subheader, menu and aside each paint an opaque surface. Their background
+properties are `--lr-page-banner-bg`, `--lr-page-header-bg`, `--lr-page-subheader-bg`,
+`--lr-page-menu-bg`, and `--lr-page-aside-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
 themes). They are inherited inline fallbacks like the paints above, so set one on the Page or any
 ancestor to retheme only that region; `::part(header)` and its siblings still win. A region named in
 `disable-sticky` drops back to a transparent background, and the non-sticky `footer` is never
@@ -37255,10 +37325,14 @@ reimplemented.
   up. The default slot is not a drop target while a target is bound.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
-- `readonly dragging: boolean` — `true` during an active drag session
+- `readonly dragging: boolean` — `true` during an active drag session. Assigning this getter in strict mode throws a `TypeError`.
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
   can match a neighboring small-tier `lr-file-input` in the same dense layout.
+
+Every completed selection announces its outcome, including consecutive selections of the same count.
+The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
+messages accept localized plural forms selected with the numeric count.
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
 `rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
@@ -37276,11 +37350,12 @@ overrides the localized accept/reject overlay text.
 layered above the slotted content via `position: absolute; inset: 0`, hidden outside an active drag
 session), `overlay-icon`, `overlay-text`, `status` (a visually-hidden, `aria-hidden` mirror of the
 drag state and counts — announcements go through the shared light-DOM regions, same as
-`lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
-while one exists).
+`lr-file-input`), `rejection` (the first 20 rejection reasons, followed by a localized count of further rejections).
 
 **CSS custom states:** `dragging`, matching `lr-file-input`'s; `targeted` while `for`/`target`
 resolves to an element the zone is attached to.
+
+A targeted overlay uses `--lr-drop-zone-overlay-z-index`, which defaults to `--lr-layer-dropdown`. In forced colors, accepted drags have a double border and rejected drags have a dotted border.
 
 **Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
 `--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
@@ -37350,6 +37425,8 @@ layout tree, and the zone's script can load after first paint:
 
 ## `lr-file-input`
 
+Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions.
+
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
 
@@ -37377,8 +37454,7 @@ height for that content and the dropzone's minimum size.
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count; real drag events alone own the drag session and its
-  accept/reject state.
+  updates the selected-file count. Drag events update `dragging`. Assigning either getter in strict mode throws a `TypeError`.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -37486,11 +37562,14 @@ height for that content and the dropzone's minimum size.
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
+Every completed selection announces its outcome, including consecutive selections of the same count.
+The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
+messages accept localized plural forms selected with the numeric count.
+
 **Events:** a user selection or removal emits native bubbling/composed `input`, `lr-input`,
 native `change`, then `lr-change`; the typed pair carries `{ value: readonly File[] }` with a frozen
-snapshot of the current files and preserves each File identity. Programmatic `files` writes are
-silent (the event pairs still fire while `nonRetaining` is set,
-even though `files` itself is not written in that mode). `lr-files` (`detail:
+snapshot of the retained files. In `nonRetaining` mode, `value` contains the accepted batch. Each
+`File` retains its identity. Programmatic `files` writes are silent. `lr-files` (`detail:
 LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
 rejected-file records, plus `remainingFiles`/`remainingTotalSize` reporting the allowance still left
 under `maxFiles`/`maxTotalSize` after this batch (`null` while that limit is unset), fired on both
@@ -37507,7 +37586,8 @@ complete selection atomically; lifecycle cancellation and supersession stay sile
 fire when the semantic dropzone (the actual keyboard-focusable element, not the hidden native
 `<input>`) gains/loses focus. `lr-invalid` is the bubbling/composed alias of native invalidity.
 
-Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
+The first 20 rejections appear in `[part="rejection"]`. The localized `fileInputRejectionsMore`
+message reports the remaining count, and `lr-files` carries every rejection. Each visible row names
 the file and the reason via one of eight locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
@@ -37719,6 +37799,10 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
+The divider takes `--lr-image-comparer-divider-color`. Style the handle with
+`--lr-image-comparer-handle-bg`, `--lr-image-comparer-handle-color`, and
+`--lr-image-comparer-handle-border-color`. The divider uses system colors in forced-colors mode.
+
 **CSS custom properties:** `--lr-image-comparer-divider-width` (default
 `var(--divider-width, var(--lr-size-1px))`) controls the dividing line's thickness, and
 `--lr-image-comparer-handle-size` (default `var(--handle-size, var(--lr-icon-button-size))`) sizes
@@ -37746,6 +37830,10 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 
 Focus on either zoom control does not enter the iframe browsing context, and `blur()` does not blur
 a focused zoom control.
+
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
 
 **Properties:**
 
@@ -37847,6 +37935,10 @@ panning. This is the compatibility destination for Lyra's former `lr-zoomable-fr
 existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom` (and the class
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
+
 **Properties:**
 
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
@@ -37862,6 +37954,9 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
   `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
+
+A failed image renders a localized message in the `error` part, announces the failure, and emits
+`lr-render-error` with `{ error: Error }`.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
@@ -37984,7 +38079,10 @@ The component identifies _which_ attachment an action event is about through `at
 `attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
 and `file` is set, a stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
-generated internal id is used as a last resort.
+generated internal id is used as a last resort. Give duplicate occurrences distinct `attachment-id` values if their actions need to target different chips.
+
+A chip requests attachment preview with `lr-preview-request`. Its `name` and `src` correspond to
+`filename` and `src` on a media card’s `lr-media-open` event.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`; the button is not rendered while
 `without-remove-button` is set), `lr-retry`
@@ -38243,6 +38341,11 @@ and later MIME values restore detection.
 `LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
+When an image or video fails to load, `media-error` displays a localized message and
+`lr-render-error` reports `{ error: Error }`. Selecting another source retries playback or display.
+A media card’s `lr-media-open` detail uses `filename` and `src`, corresponding to `name` and `src`
+on an attachment chip’s `lr-preview-request`.
+
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
 noncancelable) notifies
 after image-card or video open-button activation; those kinds have no component-owned navigation,
@@ -38381,6 +38484,12 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
+`maxFileSize` (`max-file-size`) and `maxTotalSize` (`max-total-size`) limit bytes per file and
+per selection. `maxFiles` (`max-files`) limits the number of accepted files.
+`heldFileCount` (`held-file-count`) and `heldTotalSize` (`held-total-size`) supply the externally
+held baseline for the two aggregate limits. `allowedMimeTypes` and `forbiddenMimeTypes` accept
+arrays of exact MIME types. The denylist takes precedence. All numeric limits default to `0` for unlimited intake. Rejections use `size`, `maxTotalSize`, or `maxFiles`.
+
 **Events:** `lr-files` (`detail: { capability: LyraAttachmentFilesCapability; files, rejected,
 remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
 `LyraAttachmentFilesCapability = 'files' | 'image' | 'camera'`, `'camera'` only while
@@ -38388,7 +38497,7 @@ remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
 capability's hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
 owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
 "All files" filter let through that do not match `accept` are listed in `rejected` with reason
-`'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
+`'type'`. The `remaining*` fields report the unused aggregate limits, or `null` for an unlimited count or size. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated (for `camera`, unless
@@ -38902,8 +39011,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
 - `fit: LyraImageFit = 'actual'` (reflected) — opt-in base sizing policy for the current image,
-  reusing `<lr-image-viewer>`'s `contain`/`width`/`actual` vocabulary. The default preserves the
-  existing natural-size behavior. `contain` fits both landscape and tall images inside the stage;
+  using the same `contain`/`width`/`actual` choices as `<lr-image-viewer>`. Lightbox and pan-zoom
+  start at the image's natural size for detail inspection. Image-viewer starts at `contain` to
+  show the entire image and its annotations. `contain` fits both landscape and tall images inside the stage;
   `width` fills its inline size. CSS recalculates either policy when the stage is resized or a
   delayed image source finishes loading, so navigation and opening do not require consumer timers.
   Fit is the base zoom policy: an explicit user zoom remains until navigation or a reset, and
@@ -38976,6 +39086,10 @@ embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, 
 `id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
 (the current source image's retry button). `stage` exposes `aria-busy="true"` while source
 descriptor or native image loading is pending.
+
+Source loading and error messages use `--lr-lightbox-status-color`, falling back to
+`--lr-color-on-strong-overlay`. When the image collection shrinks, a listener for the resulting
+`lr-index-change` sees the newly rendered image.
 
 **Themeable custom properties:** `--lr-lightbox-overlay-color` (default
 `var(--lr-color-overlay-strong)` — the backdrop scrim), `--lr-lightbox-control-bg` (default
@@ -39095,6 +39209,10 @@ grow past its data or overlap a neighbour. The accessible pointer target is a se
 box always wins over another region's enlarged area, and where only enlarged areas overlap the
 later highlight in document order wins. Keyboard navigation between highlights is unaffected.
 
+Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
+`--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
+variants ending in `-hover` and `-active`.
+
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
 `contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
@@ -39159,7 +39277,8 @@ duplicates use first-wins uniqueness. At most
 `IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
 is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
 leading window replaces its final entry so identity stays reachable. `data-truncated` and
-`data-total` on `highlight-layer` expose the bounded state. Highlight tones retain distinct border
+`data-total` on `highlight-layer` expose the bounded state. The viewer announces the displayed
+and total counts through `imageViewerHighlightsLimited` when the limit is exceeded. Highlight tones retain distinct border
 styles as well as colors, including forced-colors mode.
 
 At 90°/270°, `rotation-frame` swaps the untransformed wrapper's layout axes and centers the painted

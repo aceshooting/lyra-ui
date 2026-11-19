@@ -1,3 +1,4 @@
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
@@ -188,6 +189,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   // shadow boundary, so a selectable card tile had no way to announce its selection at all.
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
+  @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
 
   /** When set, a real stretched `<a href=...>` renders behind the card's consumer slots for a
    *  whole-card link (e.g. a wide CTA tile). Slotted controls remain independent actions; clicks
@@ -247,6 +249,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    syncAriaDescribedByElements(this, this.semanticOwner() ?? undefined, this.hostDescribedBy);
     const focusOrigin = this.semanticFocusOrigin;
     this.semanticFocusOrigin = undefined;
     if (!focusOrigin) return;
@@ -278,7 +281,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     // The activation button is `pointer-events: none`, so a pointer press lands on the card
     // content and reaches this listener instead -- native `disabled` alone therefore closes only
     // the keyboard path, and this guard is what closes the pointer one.
-    if (this.disabled) return;
+    if (this.disabled || e.defaultPrevented) return;
     const origin = e.composedPath()[0];
     if (
       isElementNode(origin) &&
@@ -348,7 +351,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   override click(): void {
     if (this.disabled) return;
     this.renderRoot
-      .querySelector<HTMLAnchorElement | HTMLButtonElement>(
+      ?.querySelector<HTMLAnchorElement | HTMLButtonElement>(
         'a[part~="base"], button[part~="activation-button"]'
       )
       ?.click();

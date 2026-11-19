@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './pan-zoom.js';
@@ -91,3 +91,52 @@ for (const width of [640, 320]) {
     });
   }
 }
+
+const broken = 'data:image/png;base64,AAAA';
+const good = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
+
+it('shows localized failure text and emits lr-render-error when the image fails', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom src=${broken}></lr-pan-zoom>`);
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'failure text');
+  expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('The image failed to load.');
+  expect(el.shadowRoot!.querySelector('img') === null).to.equal(true);
+});
+
+it('emits lr-render-error once and recovers when src changes', async () => {
+  const el = document.createElement('lr-pan-zoom') as LyraPanZoom;
+  let errors = 0;
+  el.addEventListener('lr-render-error', () => { errors++; });
+  const failed = oneEvent(el, 'lr-render-error');
+  el.src = broken;
+  document.body.append(el);
+  await failed;
+  expect(errors).to.equal(1);
+  el.src = good;
+  await waitUntil(() => el.shadowRoot!.querySelector('img') !== null && el.shadowRoot!.querySelector('[part="error"]') === null);
+  el.remove();
+});
+
+it('leaves Alt-modified and composing zoom keys alone', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom src=${good}></lr-pan-zoom>`);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const composing = new KeyboardEvent('keydown', { key: '+', bubbles: true, composed: true, cancelable: true, isComposing: true });
+  viewport.dispatchEvent(composing);
+  expect(composing.defaultPrevented).to.equal(false);
+  expect(el.zoom).to.equal(1);
+});
+
+it('eases hover and press paint on the zoom buttons', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom src=${good}></lr-pan-zoom>`);
+  const property = getComputedStyle(el.shadowRoot!.querySelector('[part="zoom-in"]')!).transitionProperty;
+  expect(property.includes('color'), property).to.equal(true);
+  expect(property.includes('border-color'), property).to.equal(true);
+});
+
+it('applies shared icon action tokens to the native toolbar control', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-pan-zoom style="--lr-icon-button-border: 3px solid rgb(11, 22, 33); --lr-icon-button-bg: rgb(21, 31, 41); --lr-icon-button-radius: 9px"></lr-pan-zoom>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector('[part="zoom-in"]')!);
+  expect(style.borderTopColor).to.equal('rgb(11, 22, 33)');
+  expect(style.borderTopWidth).to.equal('3px');
+  expect(style.backgroundColor).to.equal('rgb(21, 31, 41)');
+  expect(style.borderTopLeftRadius).to.equal('9px');
+});

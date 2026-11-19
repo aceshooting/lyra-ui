@@ -27,7 +27,7 @@ type NativeSelectionDirection = 'forward' | 'backward' | 'none';
  * `null` and writes are no-ops while no field is rendered. Install with
  * {@linkcode installNativeSelectionAccessors} and declare the members with `declare`.
  */
-export function nativeSelectionAccessors<T extends object>(
+function nativeSelectionAccessors<T extends object>(
   getEl: (host: T) => NativeTextElement | null | undefined,
 ): PropertyDescriptorMap & ThisType<T> {
   return {

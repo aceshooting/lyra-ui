@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 
 export const styles = css`
   :host {
@@ -77,7 +78,7 @@ export const styles = css`
       --lr-image-comparer-divider-width,
       var(--_lr-image-comparer-divider-width)
     );
-    background: var(--lr-color-surface);
+    background: var(--lr-image-comparer-divider-color, var(--lr-color-surface));
     /* Card step, not the overlay step: the shadow only keeps a hairline legible against arbitrary
        imagery on both sides -- a wider blur reads as a smudge along the seam. */
     box-shadow: var(--lr-shadow-s);
@@ -140,10 +141,10 @@ export const styles = css`
       --lr-image-comparer-handle-size,
       var(--_lr-image-comparer-handle-size)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-image-comparer-handle-border-color, var(--lr-color-border));
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    background: var(--lr-image-comparer-handle-bg, var(--lr-color-surface));
+    color: var(--lr-image-comparer-handle-color, var(--lr-color-text));
     box-shadow: var(--lr-shadow-s);
     pointer-events: none;
     transform: translate(-50%, -50%);
@@ -196,5 +197,13 @@ export const styles = css`
       var(--lr-color-brand),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+  }
+  ${forcedColorsPart('[part="divider"]')}
+  @media (forced-colors: active) {
+    [part~="base"] [part="divider"] {
+      forced-color-adjust: none;
+      background: CanvasText;
+      transition: none;
+    }
   }
 `;

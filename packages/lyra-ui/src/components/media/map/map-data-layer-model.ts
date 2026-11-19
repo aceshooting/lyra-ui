@@ -3,6 +3,7 @@ import { projectMapVectorStyle, resolveMapVectorStyle, type CanonicalMapVectorSt
 import { projectMapLocalImageUrl } from './map-local-image-url.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions, type CanonicalMapInteraction } from './map-interaction-options.js';
+import { escapeHtml } from '../../../internal/escape-html.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import type { LyraMapOverlayLayer, LyraMapOverlaySource } from './map-overlay-admission.js';
 
@@ -23,6 +24,7 @@ export interface LyraMapLabelOptions {
   readonly offset?: readonly [number, number];
   readonly size?: number;
   readonly color?: string;
+  /** Halo colour; with a `haloWidth` above 0 and no colour it resolves to `var(--lr-color-surface)`. */
   readonly haloColor?: string;
   readonly haloWidth?: number;
   readonly minZoom?: number;
@@ -254,8 +256,7 @@ function tileSource(value: unknown, kind: 'vector' | 'raster', base: string): Re
     if (!entries.length) return invalid();
     native['tiles'] = Object.freeze(entries.map(entry => url(entry, base, true)));
   }
-  if (attribution !== undefined) native['attribution'] = text(attribution, 4096, false).replace(/[&<>"']/gu, character =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+  if (attribution !== undefined) native['attribution'] = escapeHtml(text(attribution, 4096, false));
   if (kind === 'raster' && own(source, 'tileSize') !== undefined) native['tileSize'] = numeric(own(source, 'tileSize'), 512, 1, 4096);
   return Object.freeze(native);
 }
@@ -395,7 +396,7 @@ export function buildMapLabelLayer(id: string, source: string, label: CanonicalM
       ...(label.font ? { 'text-font': label.font } : {}),
       ...(label.anchor === undefined ? {} : { 'text-anchor': label.anchor }),
       ...(label.offset === undefined ? {} : { 'text-offset': label.offset }) },
-    paint: { 'text-color': color(label.color), 'text-halo-color': color(label.haloColor), 'text-halo-width': label.haloWidth } };
+    paint: { 'text-color': color(label.color), 'text-halo-color': color(label.haloColor ?? (label.haloWidth > 0 ? 'var(--lr-color-surface)' : undefined)), 'text-halo-width': label.haloWidth } };
 }
 
 /** Native source/layer descriptors for the separate generated external-resource owner. */

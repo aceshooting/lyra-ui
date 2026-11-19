@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '; ',
   carouselIndicators: 'Slaidi za jukwaa la mzunguko',
   carouselGoTo: 'Nenda kwenye slaidi {index}',
+  carouselPauseRotation: 'Sitisha mzunguko',
+  carouselResumeRotation: 'Endeleza mzunguko',
   scrollerLabel: 'Maudhui yanayoweza kusogezwa',
   scrollPrevious: 'Sogeza nyuma',
   scrollNext: 'Sogeza mbele',

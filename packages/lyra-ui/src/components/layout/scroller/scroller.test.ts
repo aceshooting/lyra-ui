@@ -344,22 +344,20 @@ describe("<lr-scroller>", () => {
 
   it("re-observes size changes after being moved in the DOM", async () => {
     const el = await fixture<LyraScroller>(
-      html`<lr-scroller><span>Content</span></lr-scroller>`
+      html`<lr-scroller controls style="inline-size: 100px"><div id="wide" style="inline-size: 10px">x</div></lr-scroller>`
     );
+    const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!;
+    await waitUntil(() => next.disabled, "no overflow yet");
+    const { resizeObserver } = el as unknown as { resizeObserver: { active: boolean } };
+    expect(resizeObserver.active).to.equal(true);
     const parent = el.parentElement!;
-    expect(
-      (el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver
-    ).to.exist;
-
     el.remove();
-    expect(
-      (el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver
-    ).to.be.undefined;
+    expect(resizeObserver.active).to.equal(false);
     parent.append(el);
-
-    expect(
-      (el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver
-    ).to.exist;
+    expect(resizeObserver.active).to.equal(true);
+    el.querySelector<HTMLElement>("#wide")!.style.inlineSize = "500px";
+    await waitUntil(() => !next.disabled, "a content resize after the move refreshes the edges");
+    expect(next.disabled).to.equal(false);
   });
 
   it("renders a labeled native scroll viewport", async () => {

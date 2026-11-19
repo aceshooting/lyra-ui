@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { hasRealContent } from './a11y.js';
+import { HostChildrenObserver } from './owned-observer.js';
 import { SEED_FIRST_RENDER_STATE, SLOT_PRESENCE_UNRESOLVED } from './lyra-element.js';
 
 type SlotPresenceHost = ReactiveControllerHost &
@@ -53,13 +54,19 @@ export class SlotPresenceController implements ReactiveController {
   #listeningRoot?: EventTarget;
   #reconcileQueued = false;
   #connected = false;
-  #observer?: MutationObserver;
 
   constructor(
     private readonly host: SlotPresenceHost,
-    private readonly options: { observeLightDom?: boolean } = {},
+    options: { observeLightDom?: boolean } = {},
   ) {
     host.addController(this);
+    if (options.observeLightDom) {
+      new HostChildrenObserver(host as ReactiveControllerHost & HTMLElement, {
+        subtree: true,
+        attributeFilter: ['slot'],
+        onChange: () => this.#seedAvailablePresence(true),
+      });
+    }
   }
 
   /** Whether the named slot has real content. Omit `name` for the default slot. */
@@ -74,12 +81,6 @@ export class SlotPresenceController implements ReactiveController {
     if (this.host[SEED_FIRST_RENDER_STATE]) this.host[SEED_FIRST_RENDER_STATE](seed);
     else seed();
     this.#listen();
-    const Observer = this.host.ownerDocument?.defaultView?.MutationObserver;
-    if (this.options.observeLightDom && Observer) {
-      this.#observer?.disconnect();
-      this.#observer = new Observer(() => this.#seedAvailablePresence(true));
-      this.#observer.observe(this.host, { childList: true, attributes: true, subtree: true, attributeFilter: ['slot'] });
-    }
   }
 
   hostUpdate(): void {
@@ -100,8 +101,6 @@ export class SlotPresenceController implements ReactiveController {
   hostDisconnected(): void {
     this.#connected = false;
     this.#stopListening();
-    this.#observer?.disconnect();
-    this.#observer = undefined;
   }
 
   readonly #onSlotChange = (): void => {

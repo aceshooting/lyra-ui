@@ -66,7 +66,7 @@ export const styles = css`
      [data-dragging] treatment below; a plain :active rule would also fire for every press landing
      on the slotted widget's own buttons, since :active matches the ancestors of whatever was
      pressed. */
-  [part="cell"]:hover {
+  [part="cell"]:where([data-draggable]):hover:not(:focus-visible) {
     outline: var(--lr-border-width-thin) solid
       var(
         --lr-dashboard-grid-cell-hover-outline-color,
@@ -137,6 +137,17 @@ export const styles = css`
     cursor: nwse-resize;
     touch-action: none;
     transition: background-color var(--lr-transition-fast);
+  }
+  [part="resize-handle"]::before {
+    content: '';
+    position: absolute;
+    inset-block-end: var(--lr-space-2xs);
+    inset-inline-end: var(--lr-space-2xs);
+    inline-size: var(--lr-space-s);
+    block-size: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-medium) solid var(--lr-dashboard-grid-resize-handle-color, var(--lr-color-border-strong));
+    border-inline-end: var(--lr-border-width-medium) solid var(--lr-dashboard-grid-resize-handle-color, var(--lr-color-border-strong));
+    pointer-events: none;
   }
 
   [part="resize-handle"]:hover {

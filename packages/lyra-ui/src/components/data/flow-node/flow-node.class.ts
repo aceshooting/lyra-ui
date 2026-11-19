@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { FlowHandle } from '../flow-canvas/flow-types.js';
 import {
@@ -12,7 +13,7 @@ import {
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -20,11 +21,12 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { styles } from './flow-node.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowNodeProgressLabel, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -95,6 +97,7 @@ export class LyraFlowNode extends LyraElement {
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     flowInputHandle: LYRA_DEFAULT_flowInputHandle,
+    flowNodeProgressLabel: LYRA_DEFAULT_flowNodeProgressLabel,
     flowOutputHandle: LYRA_DEFAULT_flowOutputHandle,
     flowStatusWithDetail: LYRA_DEFAULT_flowStatusWithDetail,
     flowStatusWithDuration: LYRA_DEFAULT_flowStatusWithDuration,
@@ -159,11 +162,9 @@ export class LyraFlowNode extends LyraElement {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (size) => {
+      this._size = size;
+    });
   }
   private _inputs: readonly FlowHandle[] = DEFAULT_FLOW_INPUTS;
   private inputsSource?: readonly FlowHandle[];
@@ -208,10 +209,7 @@ export class LyraFlowNode extends LyraElement {
     if (next !== previous || value !== next) this.requestUpdate('orientation', previous);
   }
 
-  @state() private hasHeaderSlot = false;
-  @state() private hasIconSlot = false;
-  @state() private hasBodySlot = false;
-  @state() private hasToolbarSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   @state() private pulsesRing = false;
   /** Keeps the hover/focus-revealed toolbar visible while a menu opened from it is open. */
   private readonly toolbarOverlay = new SlottedOverlayController(this, () =>
@@ -229,46 +227,12 @@ export class LyraFlowNode extends LyraElement {
     }
   }
 
-  private sampleSlotPresence(): void {
-    // `hasHeaderSlot`/`hasIconSlot`/`hasToolbarSlot` always read the light-DOM `slot` attribute
-    // directly, in both the pre-render and rendered case, rather than a rendered slot's live
-    // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
-    // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
-    // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute never
-    // changed.
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    const lightChildren = Array.from(children ?? []);
-    this.hasHeaderSlot = lightChildren.some((element) => element.getAttribute('slot') === 'header');
-    this.hasIconSlot = lightChildren.some((element) => element.getAttribute('slot') === 'start');
-    this.hasToolbarSlot = lightChildren.some((element) => element.getAttribute('slot') === 'toolbar');
-
-    const renderRoot = this.renderRoot as ParentNode | undefined;
-    const renderedSlots = renderRoot?.querySelectorAll<HTMLSlotElement>('slot');
-    if (renderedSlots?.length) {
-      this.hasBodySlot = [...renderedSlots].some(
-        (slot) =>
-          slot.name === '' &&
-          slot.assignedNodes({ flatten: true }).some(
-            (node) => node.nodeType === 1 || Boolean(node.textContent?.trim()),
-          ),
-      );
-      return;
-    }
-    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    this.hasBodySlot = Array.from(childNodes ?? []).some(
-      (node) =>
-        (node.nodeType === 1 && !(node as Element).hasAttribute('slot')) ||
-        (node.nodeType === 3 && Boolean(node.textContent?.trim())),
-    );
-  }
-
   private shouldPulseRing(): boolean {
     const ownerWindow = this.ownerDocument?.defaultView;
     return this.status === 'running' && !!ownerWindow && !prefersReducedMotion(this);
   }
 
   private sampleBrowserState(): void {
-    this.sampleSlotPresence();
     this.pulsesRing = this.shouldPulseRing();
     this.browserStateSeeded = true;
   }
@@ -301,10 +265,6 @@ export class LyraFlowNode extends LyraElement {
     this.stopMotionWatch = undefined;
     super.disconnectedCallback();
   }
-
-  private onSlotChange = (): void => {
-    this.sampleSlotPresence();
-  };
 
   /** `progress` normalized to a finite `[0, 100]` percentage, or `null` -- `null`/`undefined` and a
    *  non-finite raw value (e.g. a stray `NaN` push from a decoration) both mean "no determinate
@@ -355,17 +315,24 @@ export class LyraFlowNode extends LyraElement {
     ></span>`;
   }
 
+  private progressName(): string {
+    const name = normalizeLabel(this.heading);
+    return name === undefined
+      ? this.localize('progress')
+      : this.localize('flowNodeProgressLabel', undefined, { label: name });
+  }
+
   override render(): TemplateResult {
     const clampedProgress = this.safeProgress;
     // A removed `heading-level` attribute arrives as null; it restores the plain-text default
     // rather than falling through to the invalid-value level.
     const headingLevel = this.heading ? resolveHeadingLevel(this.headingLevel ?? 'none') : undefined;
     return html`<div part="base">
-      <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
+      <div class="handles handles-input" ?hidden=${this.inputs.length === 0}>${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
-        <slot name="header" @slotchange=${this.onSlotChange}></slot>
-        <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.renderSlotPresence(this.hasIconSlot))}>
-          <slot name="start" part="icon" @slotchange=${this.onSlotChange}></slot>
+        <slot name="header"></slot>
+        <div part="header" ?hidden=${(this.slotPresence.has('header') && !this.renderSlotPresence(false)) || (!this.heading && !this.slotPresence.has('start'))}>
+          <slot name="start" part="icon"></slot>
           <span
             part="heading"
             role=${headingLevel ? 'heading' : nothing}
@@ -381,7 +348,7 @@ export class LyraFlowNode extends LyraElement {
           ? html`<div
               part="progress"
               role="progressbar"
-              aria-label=${this.localize('progress')}
+              aria-label=${this.progressName()}
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow=${clampedProgress}
@@ -389,18 +356,18 @@ export class LyraFlowNode extends LyraElement {
               <div class="progress-fill" style="inline-size:${clampedProgress}%"></div>
             </div>`
           : nothing}
-        <div part="body" ?hidden=${!this.hasBodySlot}>
-          <slot @slotchange=${this.onSlotChange}></slot>
+        <div part="body" ?hidden=${!this.slotPresence.has()}>
+          <slot></slot>
         </div>
         <div
           part="toolbar"
-          ?hidden=${!this.hasToolbarSlot}
+          ?hidden=${!this.slotPresence.has('toolbar')}
           ?data-menu-open=${this.toolbarOverlay.open}
         >
-          <slot name="toolbar" @slotchange=${this.onSlotChange}></slot>
+          <slot name="toolbar"></slot>
         </div>
       </div>
-      <div class="handles handles-output">${this.outputs.map((h) => this.handleTemplate('output', h))}</div>
+      <div class="handles handles-output" ?hidden=${this.outputs.length === 0}>${this.outputs.map((h) => this.handleTemplate('output', h))}</div>
     </div>`;
   }
 

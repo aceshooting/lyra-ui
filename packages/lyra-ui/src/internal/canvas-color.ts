@@ -88,7 +88,7 @@ const READBACK_BASES = ['#010203', '#040506'] as const;
 export function readCanvasRgba(doc: Document, css: string): CanvasRgba | undefined {
   let ctx: CanvasRenderingContext2D | null;
   try {
-    const canvas = doc.createElement('canvas');
+    const canvas = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
     canvas.width = 1;
     canvas.height = 1;
     ctx = canvas.getContext('2d', { willReadFrequently: true });

@@ -203,3 +203,34 @@ it('keeps a disabled Save at rest under the pointer and mixes Run hover from its
     await resetMouse();
   }
 });
+
+it('contains the owned pickers\' request and overflow events', async () => {
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder .value=${query()}></lr-graph-query-builder>`);
+  const leaked: string[] = [];
+  const names = ['lr-change-request', 'lr-create', 'lr-retry-request', 'lr-source-error', 'lr-chip-change', 'lr-overflow-toggle'];
+  for (const name of names) el.addEventListener(name, () => leaked.push(name));
+  const inner = el.shadowRoot!.querySelector('lr-select, lr-combobox, input, button')!;
+  for (const name of names) inner.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, cancelable: true }));
+  expect(leaked).to.deep.equal([]);
+});
+
+it('exposes the saved-queries heading at a configurable level', async () => {
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder></lr-graph-query-builder>`);
+  const label = () => el.shadowRoot!.querySelector('[part="saved-queries-label"]')!;
+  expect([label().getAttribute('role'), label().getAttribute('aria-level')]).to.deep.equal(['heading', '3']);
+  el.headingLevel = '2';
+  await el.updateComplete;
+  expect(label().getAttribute('aria-level')).to.equal('2');
+  el.headingLevel = 'none';
+  await el.updateComplete;
+  expect(label().hasAttribute('role')).to.equal(false);
+  expect(label().hasAttribute('aria-level')).to.equal(false);
+});
+
+it('describes the form error before the hint in the rendered order', async () => {
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder hint="Pick a node" error-text="Missing node"></lr-graph-query-builder>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const roles = (base.getAttribute('aria-describedby') ?? '').split(' ').map(id => el.shadowRoot!.getElementById(id)?.getAttribute('part'));
+  expect(roles).to.deep.equal(['error', 'hint']);
+  expect([...base.querySelectorAll('[part="hint"], [part="error"]')].map(node => node.getAttribute('part'))).to.deep.equal(roles);
+});

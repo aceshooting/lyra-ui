@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   carouselSlideAnnouncementSeparator: '。',
   carouselIndicators: '輪播幻燈片',
   carouselGoTo: '轉到第{index}張幻燈片',
+  carouselPauseRotation: '暫停輪播',
+  carouselResumeRotation: '繼續輪播',
   scrollerLabel: '可滾動內容',
   scrollPrevious: '向前滾動',
   scrollNext: '向後滾動',

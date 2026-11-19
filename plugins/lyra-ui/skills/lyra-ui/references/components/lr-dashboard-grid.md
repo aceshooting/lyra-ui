@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,9 +89,10 @@ and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-
 They are real cascade-authoritative public hooks: the `columns`/`rowHeight`/`gap` properties supply
 private computed fallbacks rather than overwriting these public variables inline.
 `--lr-dashboard-grid-cell-hover-outline-color`
-(default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
-preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
-draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
+(default `var(--lr-color-border-strong)`) retints the hover outline on draggable cells. Set it to `transparent` to hide that outline.
+The resize handle has a visible corner grip at rest. Set `--lr-dashboard-grid-resize-handle-color`
+to change its color from the default `var(--lr-color-border-strong)`. An empty `columns`
+attribute restores 12 columns.
 
 **Additional API surface:**
 

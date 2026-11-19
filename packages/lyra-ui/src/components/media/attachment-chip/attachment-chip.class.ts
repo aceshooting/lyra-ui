@@ -12,6 +12,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './attachment-chip.styles.js';
@@ -572,14 +573,16 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
             percent: progressPercent,
           })
         : this.localize('attachmentUploadingIndeterminate');
-    const uploadingWithContext = this.uploadingLabel
+    const uploadingWithContext = normalizeLabel(this.uploadingLabel)
       ? uploadingText
       : this.localize('attachmentUploadingWithContext', undefined, { label: displayName });
-    const retryWithContext = this.retryLabel
-      ? fillMessage(this.retryLabel, { label: displayName })
+    const retryOverride = normalizeLabel(this.retryLabel);
+    const retryWithContext = retryOverride
+      ? fillMessage(retryOverride, { label: displayName })
       : this.localize('attachmentRetryWithContext', undefined, { label: displayName });
-    const removeWithContext = this.removeLabel
-      ? fillMessage(this.removeLabel, { label: displayName })
+    const removeOverride = normalizeLabel(this.removeLabel);
+    const removeWithContext = removeOverride
+      ? fillMessage(removeOverride, { label: displayName })
       : this.localize('removeWithContext', undefined, { label: displayName });
     const status = this.effectiveStatus;
     const text = statusText(status, uploadingText, uploadFailedLabel);

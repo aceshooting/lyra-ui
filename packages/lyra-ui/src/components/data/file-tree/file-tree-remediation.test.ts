@@ -53,3 +53,23 @@ it('preserves both sibling loads completed before the next render', async () => 
     ['root/a/one'], ['root/b/two'],
   ]);
 });
+
+it('does not leak the inner tree\'s bulk-toggle event', async () => {
+  const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
+  el.nodes = [{ path: 'src', name: 'src', kind: 'directory', children: [{ path: 'src/a.ts', name: 'a.ts', kind: 'file' }] }] as FileTreeNode[];
+  await el.updateComplete;
+  const seen: string[] = [];
+  el.addEventListener('lr-bulk-toggle', () => seen.push('bulk'));
+  await el.expandAll();
+  await el.updateComplete;
+  expect(seen).to.deep.equal([]);
+});
+
+it('forwards size to the composed tree', async () => {
+  const el = await fixture<LyraFileTree>(html`<lr-file-tree size="s"></lr-file-tree>`);
+  expect(el.shadowRoot!.querySelector('lr-tree')!.size).to.equal('s');
+  el.size = 'l';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-tree')!.size).to.equal('l');
+  expect(el.getAttribute('size')).to.equal('l');
+});

@@ -71,6 +71,7 @@ export const styles = css`
   :host(:state(targeted)) [part="overlay"] {
     position: fixed;
     inset: auto;
+    z-index: var(--lr-drop-zone-overlay-z-index, var(--lr-layer-dropdown));
   }
   [part="overlay-icon"] {
     font-size: var(--lr-drop-zone-overlay-icon-size, var(--_lr-drop-zone-overlay-icon-size));
@@ -82,6 +83,10 @@ export const styles = css`
   [part="overlay"][data-drag-state="reject"] {
     border-color: var(--lr-drop-zone-reject-border-color, var(--lr-color-danger));
     background: var(--lr-drop-zone-reject-bg, color-mix(in srgb, var(--lr-color-danger) 12%, transparent));
+  }
+  @media (forced-colors: active) {
+    [part="overlay"][data-drag-state="accept"] { border-style: double; }
+    [part="overlay"][data-drag-state="reject"] { border-style: dotted; }
   }
   [part="rejection"] {
     margin-block-start: var(--lr-space-xs);
