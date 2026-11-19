@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Umlayezo',
   composerPlaceholder: 'Buza noma yini…',
   rename: 'Qamba kabusha u-{title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Impendulo enhle',
   feedbackNegative: 'Impendulo embi',

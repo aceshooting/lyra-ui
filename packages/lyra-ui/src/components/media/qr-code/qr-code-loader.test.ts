@@ -105,20 +105,4 @@ describe('loadQrCode()', () => {
       console.warn = originalWarn;
     }
   });
-
-  // A "caches the real optional module result" test (importing the actual `qrcode` package with
-  // no injected fake, and asserting a real, non-null resolution -- mirroring pdf-loader.test.ts's
-  // 4th test) is intentionally skipped rather than asserted either way: the `qrcode` peer is not
-  // directly available to this browser runner: `qrcode`'s browser entry is genuine multi-file
-  // CommonJS with no single-file browser bundle, so @web/test-runner's esbuild-based pipeline
-  // cannot currently resolve it without additional CJS-interop wiring (a
-  // `@rollup/plugin-commonjs` + `@web/dev-server-rollup` addition to web-test-runner.config.js is
-  // the likely fix, scoped to `qrcode`'s own directory, but that is a centralized-config change
-  // outside this component's own files). Every other loader behavior above is covered against an
-  // injected fake, so this is real coverage's only gap.
-  it.skip('caches the real optional module result', async () => {
-    const first = await loadQrCodeCached();
-    const second = await loadQrCodeCached();
-    expect(second).to.equal(first);
-  });
 });

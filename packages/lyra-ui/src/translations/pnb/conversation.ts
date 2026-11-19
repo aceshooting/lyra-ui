@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'پیغام',
   composerPlaceholder: 'کجھ وی پچھو…',
   rename: '{title} دا ناں بدلو',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'چنگا جواب',
   feedbackNegative: 'ماڑا جواب',

@@ -26,6 +26,7 @@ import { styles } from './pptx-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind, TextSelectDetail } from '../document-viewer/anchors.js';
 import { textQuoteContextScore } from '../document-viewer/anchors.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
@@ -765,9 +766,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       if (current()) this.emit('lr-render-error', { error });
       return;
     }
-    if (signal?.aborted || !current()) return;
+    if (signal?.aborted || !current()) {
+      discardBody(response);
+      return;
+    }
     if (!module || !response.ok) {
-      void response.body?.cancel().catch(() => undefined);
+      discardBody(response);
       this.errorMessage = module
         ? () => this.localize('documentPreviewFailedToLoad')
         : () => this.localize('pptxViewerMissingLibrary');

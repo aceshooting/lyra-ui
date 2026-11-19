@@ -54,6 +54,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'הודעה',
   composerPlaceholder: 'שאל כל דבר…',
   rename: 'שנה את השם של {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} דקות {seconds} שניות',
   feedbackPositive: 'תגובה טובה',
   feedbackNegative: 'תגובה גרועה',

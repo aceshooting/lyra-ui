@@ -1,5 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
@@ -10,7 +12,7 @@ import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { containsNestedInteractive } from '../../../internal/nested-interactive.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraFrame,
   type LyraSize,
@@ -20,7 +22,7 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './stat.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged, LYRA_DEFAULT_statRowsInputLimit } from '../../../internal/default-strings/data.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type StatGoodDirection = 'up' | 'down';
@@ -34,7 +36,6 @@ export interface StatRow {
   readonly exactValue?: string;
 }
 
-const MAX_STAT_ROWS = 10_000;
 
 /**
  * `<lr-stat>` — a KPI/stat card. First-party invention consolidating the
@@ -49,6 +50,7 @@ const MAX_STAT_ROWS = 10_000;
  * When linked, every consumer slot remains a sibling of the stretched anchor so an interactive
  * slotted descendant is never nested inside the whole-card link. Passive slotted content forwards
  * pointer modifiers; the platform primary modifier and Shift preserve new-context activation.
+ * @csspart limit - Notice showing how many rows were admitted when input exceeded the limit.
  * @csspart base - The component's root wrapper (`<div>`, or a stretched real `<a>` when `href` is safe).
  * @csspart icon - Container for the `start` slot.
  * @csspart label - The label text, exposed as a term when present. Hidden (and collapsed) whenever
@@ -103,6 +105,7 @@ const MAX_STAT_ROWS = 10_000;
  *   `emphasis` is set. Independent of the headline's emphasis tint and `brand` variant.
  * @cssprop [--lr-stat-emphasis-value-color=var(--lr-color-brand)] - Headline value color when
  *   `emphasis` is set on a neutral stat. Independent of the accent edge and `brand` variant.
+ * @cssprop [--lr-stat-value-hover-color=var(--lr-color-brand)] - Exact-value hover color for neutral values.
  * @cssprop [--lr-stat-link-hover-border-color=var(--lr-color-brand)] - Linked-card border on hover.
  * @cssprop [--lr-stat-link-hover-shadow=var(--lr-shadow-s)] - Linked-card shadow on hover.
  * @cssprop [--lr-stat-link-active-border-color=var(--lr-stat-link-hover-border-color,var(--lr-color-brand))] - Linked-card border while pressed.
@@ -116,6 +119,7 @@ export class LyraStat extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    statRowsInputLimit: LYRA_DEFAULT_statRowsInputLimit,
     statTrendAnnouncement: LYRA_DEFAULT_statTrendAnnouncement,
     statTrendBad: LYRA_DEFAULT_statTrendBad,
     statTrendDecreased: LYRA_DEFAULT_statTrendDecreased,
@@ -125,13 +129,21 @@ export class LyraStat extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override collectionSupport = collectionSupport;
+  protected static override readonly ownedCollectionProperties = Object.freeze(['rows']);
+  protected static override readonly identityCollectionProperties = Object.freeze(['rows']);
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  /** Metric name displayed above the value. */
   @property() label = '';
   /** Host accessible-name override forwarded to the linked anchor when `href` is safe. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Headline metric value, formatted by the caller. */
   @property() value = '';
+  /** Optional unit displayed beside the headline value. */
   @property() unit = '';
+  /** Semantic color of the headline value. */
   @property({ reflect: true }) variant: LyraVariant = 'neutral';
   /** When set to a safe URL, renders the whole stat as a real anchor instead of a static div. */
   @property() href?: string;
@@ -161,19 +173,16 @@ export class LyraStat extends LyraElement {
    *  cost/latency/error-rate-style metrics where a decrease is the win. */
   @property({ attribute: 'good-direction' }) goodDirection: StatGoodDirection = 'up';
   private _rows: readonly StatRow[] = [];
-  private rowsSource?: unknown;
   /** Breakdown rows rendered as a simple label/value list beneath the caption. The first 10,000
    * rows are snapshotted and frozen so caller mutation cannot bypass the reactive boundary;
    * reassign the collection to update. */
   @property({ attribute: false })
   get rows(): readonly StatRow[] { return this._rows; }
   set rows(value: readonly StatRow[]) {
-    if (value === this.rowsSource || value === this._rows) return;
-    this.rowsSource = value;
     const previous = this._rows;
     const snapshot: StatRow[] = [];
     if (Array.isArray(value)) {
-      for (const row of value.slice(0, MAX_STAT_ROWS)) {
+      for (const row of value) {
         try {
           snapshot.push(Object.freeze({
             label: typeof row?.label === 'string' ? row.label : '',
@@ -214,11 +223,7 @@ export class LyraStat extends LyraElement {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (value) => { this._size = value; });
   }
   /** Container treatment — the shared `frame` vocabulary, not a fill. `'card'` (the default) keeps
    *  the bordered, filled, padded box that stretches to fill its parent; `'plain'` removes the
@@ -310,6 +315,7 @@ export class LyraStat extends LyraElement {
     const anchor = this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]');
     const MouseEventConstructor = this.ownerDocument.defaultView?.MouseEvent;
     if (!anchor) return;
+    event.stopPropagation();
     if (MouseEventConstructor && event instanceof MouseEventConstructor) {
       const platform = detectPlatform(this.ownerDocument.defaultView?.navigator);
       const newContext = event.shiftKey || (platform === 'mac' ? event.metaKey : event.ctrlKey);
@@ -362,7 +368,24 @@ export class LyraStat extends LyraElement {
     else super.click();
   }
 
+  private readonly announcements = new AnnouncementSinkController(this);
+
+  private inputLimitMessage(): string {
+    const limit = publicCollectionTruncation(this, 'rows');
+    return limit ? this.localize('statRowsInputLimit', undefined, {
+      count: this.formatLocaleNumber(limit.retained),
+      total: this.formatLocaleNumber(limit.source),
+    }) : '';
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const notice = this.inputLimitMessage();
+    this.announcements.transition('input-limit', notice, notice, 'polite');
+  }
+
   override render(): TemplateResult {
+    const notice = this.inputLimitMessage();
     const href = safeLinkHref(this.href);
     const linked = Boolean(href);
     const hasTrend = this.deltaPercent !== null;
@@ -434,6 +457,7 @@ export class LyraStat extends LyraElement {
       <div part="caption" ?hidden=${!hasCaption}>
         <slot name="caption" @slotchange=${this.onCaptionSlotChange}>${this.caption}</slot>
       </div>
+      ${notice ? html`<div part="limit">${notice}</div>` : nothing}
       <div part="rows" ?hidden=${this.rows.length === 0}>
         ${this.rows.map((row, i) => {
           const rowLabelId = this.rowLabelIds[i];

@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Saƙo',
   composerPlaceholder: 'Tambayi duk abin da kake so…',
   rename: 'Sake wa {title} suna',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Amsa mai kyau',
   feedbackNegative: 'Amsa mara kyau',

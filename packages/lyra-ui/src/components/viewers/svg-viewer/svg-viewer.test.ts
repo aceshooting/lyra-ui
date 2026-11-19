@@ -982,6 +982,24 @@ describe('active-region cssprop escape hatch', () => {
     return { el, region, restore };
   }
 
+  it('marks the active region with an outer ring a warning-tone region does not have', async () => {
+    const { el, restore } = await activeRegion();
+    try {
+      el.highlights = [
+        { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
+        { id: 'h2', tone: 'warning', anchor: { kind: 'region', rect: { x: 20, y: 0, width: 10, height: 10 } } },
+      ];
+      await el.updateComplete;
+      const active = el.shadowRoot!.querySelector('[part="region-highlight"][data-active]') as HTMLElement;
+      const warning = el.shadowRoot!.querySelector('[part="region-highlight"][data-tone="warning"]:not([data-active])') as HTMLElement;
+      expect(getComputedStyle(active).outlineStyle).to.equal('solid');
+      expect(Number.parseFloat(getComputedStyle(active).outlineWidth)).to.be.greaterThan(0);
+      expect(getComputedStyle(warning).outlineStyle).to.equal('none');
+    } finally {
+      restore();
+    }
+  });
+
   it('recolors the active region border from an ancestor via --lr-svg-viewer-active-border', async () => {
     const { region, restore } = await activeRegion('--lr-svg-viewer-active-border: rgb(0, 51, 102)');
     try {

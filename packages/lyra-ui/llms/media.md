@@ -174,9 +174,13 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   `<span part="error">` text (the `flagLoadError` message key, `"Flag unavailable"` by default).
   Each fresh failure appends that same localized message to the document's pre-mounted
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
-  retries remain separate additions. The failure also produces a one-time `console.warn`
-  once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances). A **separate** one-time `console.warn` covers the
+  retries remain separate additions. Importing a peer entry (`flag-peer.js` and its bulk variants)
+  asks the library to load `@aceshooting/lyra-flags`, so its outcome is reported once per entry in
+  every build with a cause-specific `console.warn`: a package that cannot be resolved is told to
+  install it; a package that loads without the needed `flagUrl`/`createFlagUrlResolver` is a version
+  mismatch to upgrade (both are cached for the page); an import that rejects for another reason (a
+  network or chunk failure) is reported as a load failure and retried by the next flag resolution,
+  with flags failing closed until a retry succeeds. A **separate** one-time, development-only `console.warn` covers the
   commonest setup mistake — `country`/`language` set while no resolver was ever registered, i.e.
   `flag-peer.js` was not imported. It names the offending code and that import path, because the
   visible `[part="error"]` state alone is indistinguishable from missing flag data. It is armed
@@ -332,7 +336,8 @@ allocations and is not a live region, avoiding unsolicited announcements on ever
 `--lr-sequence-playback-play-button-active-bg` (default
 `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) —
 the pressed play/pause background; and `--lr-sequence-playback-play-button-active-border-color` (default
-`var(--lr-color-brand)`) — its pressed border. Both are inline `var()` fallbacks, so a value set on
+`var(--lr-color-brand)`) — its pressed border; `--lr-sequence-playback-play-button-hover-border-color`
+(default `var(--lr-color-brand)`) — its hovered border. All are inline `var()` fallbacks, so a value set on
 the element or an ancestor inherits without being shadowed by a host default. Plus shared tokens `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`,
 `--lr-icon-button-size` (the play button's box), `--lr-opacity-disabled` (play button/slider
@@ -439,6 +444,26 @@ and additive `dataLayers` — plain GeoJSON, natively clustered points, or a hea
 plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
+
+The base reports the engine's loading state through `aria-busy`. An application can set
+`aria-busy` on the host independently. Removing that attribute resumes the loading-state mirror.
+The cancel button emits cancelable `lr-map-pick-cancel-request` and, after turning off pick mode,
+`lr-map-pick-cancel`. Both carry frozen `{ source: 'control' }`. Assigning `pickMode` stays silent.
+Globe and terrain controls emit cancelable `lr-map-projection-change-request` and
+`lr-map-terrain-change-request` with the same details as their respective change events.
+Vetoing or assigning the corresponding property during a request suppresses the default change.
+Read the settled `center` and `zoom` after an initial URL restoration or a limit clamp. Those
+initialization and constraint writes are silent.
+
+The slot anchor emits cancelable `lr-map-anchor-close-request` with frozen `{ reason }` for its close
+button, Escape, or `closeAnchor()`. A veto preserves placement and focus. The existing
+`lr-map-anchor-close` reports an accepted dismissal.
+
+Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (default 0.2),
+`--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
+`--lr-map-drawing-preview-dash` (two positive lengths, default `2 2`).
+`--lr-map-drawing-vertex-hover-bg` and `--lr-map-drawing-vertex-active-bg` theme edit handles.
+Scene, pick and drawing buttons accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`.
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -751,7 +776,8 @@ images within an aggregate budget of 16,777,216 backing pixels and 8 MiB of enco
 sprite catalog fits. `sdf: true` registers a signed-distance-field image that `icon-color` and
 `icon-halo-color` recolor. Reassigning `images` adds, replaces and removes images in place, without
 removing or re-adding the layers that use them. These resources are restored after style
-replacement; keep IDs distinct from basemap and generated resources.
+replacement; keep IDs distinct from basemap and generated resources. A remote URL source that
+does not deliver its headers and body within the image decode timeout fails with `fetch`.
 
 `imageProvider?: LyraMapImageProvider` (attribute: false) supplies images on demand:
 `(id) => LyraMapImage | null | undefined` (or a promise of one), called through the engine's
@@ -842,7 +868,8 @@ and `render`. Image descriptors use `url` and canvas descriptors retain an `HTML
 both require four `coordinates` ordered top-left, top-right, bottom-right, bottom-left. External
 layers accept `before`, `minZoom`, `maxZoom`, `opacity`, and `category`. GeoJSON and vector labels
 use `label: LyraMapLabelOptions` with exactly one `field` or `expression`; text needs a style with
-a glyph provider. Image/canvas interaction tests the full four-corner footprint, including
+a glyph provider. A `haloWidth` above 0 without a `haloColor` draws the halo in
+`--lr-color-surface`. Image/canvas interaction tests the full four-corner footprint, including
 transparent pixels, and reports `sourceId` without inventing feature identity or `sourceLayer`.
 
 For a retained canvas, change `redrawRevision` (default `0`, a nonnegative safe integer) in a
@@ -903,7 +930,8 @@ at most once per animation frame whatever lies under it, for tooltips and coordi
 `lr-map-feature-leave`, `lr-map-contextmenu` and `lr-map-pick` add `feature`, the hit as a detached,
 deeply frozen GeoJSON `Feature` (`LyraMapFeature`) with its `[longitude, latitude]` geometry. That
 geometry is the rendered one, so a large feature may be clipped to the tiles around the pointer, and
-`geometry` is `null` above 100,000 coordinate values.
+`geometry` is `null` above 100,000 coordinate values. Disconnecting the map clears its hover state without emitting
+`lr-map-feature-leave` or `lr-map-pointer-leave`. Clear any tooltip or highlight when removing the map.
 
 **Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. The
 controls render as soon as a mode is armed; the session starts once the drawing runtime has loaded
@@ -982,7 +1010,9 @@ when sharing an export. DOM markers, popups and slotted overlays are excluded. E
 current-frame readiness; handle rejection as `LyraMapImageExportError` with a sanitized `code`.
 `lr-map-export-error` carries `LyraMapImageExportErrorDetail`, never raw renderer errors. The first
 call loads the export runtime; options are still admitted when the call is made, and a runtime that
-cannot load rejects with `capture-failed`.
+cannot load rejects with `capture-failed`. The credit strip is sized in CSS pixels of the map, so it
+stays the same size on a high-density display, wraps at spaces (a single word wider than the strip is
+split), and is drawn right-to-left, aligned to the right edge, inside an RTL map.
 
 **Properties:**
 
@@ -1522,7 +1552,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   starts only on user activation. Attribution is enabled by default; set `attribution: false` to
   disable it. Attribution options accept `position`, `compact`, `initialExpanded`, and `customAttribution` as a string,
   `LyraMapAttributionLink { readonly label: string; readonly url: string }`, or a readonly array of
-  either. Labels are escaped text; links open in a new tab with `rel="noopener noreferrer"`.
+  either. Labels are escaped text (a blank label shows the link's host); links open in a new tab with `rel="noopener noreferrer"`.
   Link URLs must be absolute HTTP(S), no longer than 2,048 characters, with no credentials or
   control characters. At most 32 credits and 16 KiB of label/URL text are accepted, with each label
   limited to 4,096 characters. Admission snapshots own data properties without invoking accessors.
@@ -1732,7 +1762,8 @@ calling the same methods through `map`, which the element neither knows about no
 - Every option is optional and an unusable one is ignored: `center` must be a finite
   `[longitude, latitude]` (clamped into range), `zoom` is clamped into the zoom limits
   (`minZoom`/`maxZoom`, `[0, 22]` by default), `pitch` into
-  `[0, 85]`, and a negative or non-finite `duration` means the engine's default. With nothing
+  `[0, 85]`, and a negative or non-finite `duration` means the engine's default (a longer one is
+  capped at 60000 ms). With nothing
   usable the call returns `false` (and warns in development) without moving anything.
 - Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
   applied without animation right after construction, unless `center` or `zoom` has been given a
@@ -1821,7 +1852,9 @@ disclosure, not a *category's* visibility, so it deliberately does not reuse
 `lr-map-legend-toggle-request`. `preventDefault()` is the same genuine veto: `legendOpen` is not
 written, the rendered rows and the disclosure's `aria-expanded` do not change, so a host can own the
 open state and assign its own value from `event.detail.open`. A programmatic `legendOpen` assignment
-reconciles without emitting it, so a controlled host cannot loop.
+reconciles without emitting it, so a controlled host cannot loop. For either legend request, assigning
+the controlled property in a listener takes precedence, even if the value stays the same. Removing
+and reinserting the map during the request also cancels the pending change.
 Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
@@ -1885,8 +1918,7 @@ Failures: `lr-map-geolocate-error` (frozen `LyraMapGeolocateErrorDetail { code }
 expose no coordinates or native messages; `lr-map-export-error` (frozen
 `LyraMapImageExportErrorDetail { code }`) reports a sanitized `exportImage()` failure.
 Attribution: `lr-map-attribution-toggle` (`LyraMapAttributionToggleDetail { expanded }`) after the owned
-attribution control's credits are shown or hidden. None of these events is cancelable; all bubble and
-are composed.
+attribution control's credits are shown or hidden. These notifications bubble and are composed.
 Scene: `lr-map-projection-change` (frozen `LyraMapProjectionChangeDetail { projection, source:
 'control' }`) and `lr-map-terrain-change` (frozen `LyraMapTerrainChangeDetail { terrain, source:
 'control' }`) follow a component-owned globe or terrain control after the property is assigned;
@@ -1969,6 +2001,11 @@ Hiding that label retains the button's localized accessible name. Pick mode rend
 `drawing-summary` with `drawingMeasurements`), vertex editing renders `drawing-handles` containing
 one `drawing-vertex` per editable vertex, and `drawingMeasurements` renders `drawing-measurements`
 holding the `drawing-measurement` labels.
+Configuration problems (hash, control, export, data-layer, feature-state and drawing messages) render as stacked
+`configuration-error` banners above the map. Pick and drawing action bars reserve space for the legend,
+scene panel and native corner controls. When a focused action disappears, focus moves to a surviving
+action, the map canvas or the initialization button. Disabling the map also disables marker activation
+and legend toggles.
 The compact attribution summary has a decorative, current-color information glyph and retains
 MapLibre's accessible name, keyboard/touch disclosure behavior and attribution links. To make
 only this control compact, scope the shared target-size token to its public wrapper:
@@ -2272,7 +2309,9 @@ occurs in the browser.
 `<lr-map>` styles the generated canvas, marker, popup, and control DOM inside its shadow root;
 a page-level map stylesheet is neither required nor able to reach those nodes. The explicit
 `engine="maplibre"` choice uses the separate optional `maplibre-gl` `>=5 <7` peer. Canonical v6 needs
-its own bundler-specific module-worker URL; v5's standard build includes its worker.
+its own bundler-specific module-worker URL; v5's standard build includes its worker. A rejected engine
+import (a network or chunk failure) is retried by the next map that connects; an installed engine
+missing a capability the map needs is not.
 
 With the default companion configured:
 
@@ -2821,18 +2860,14 @@ with a development warning while it is open, and `focusContent()` returns `false
   close button. Returns `false` while the panel is hidden or not yet placed, when it is inert, or when
   nothing in it can take focus. It never queues focus.
 
-**Events:** `lr-close-request` and `lr-close` both bubble, are composed and carry a frozen
-`detail: { reason }` (`LyraMapAnchorCloseDetail`, with `reason` `'api'`, `'close-button'` or `'escape'`).
+Child anchor events bubble across shadow boundaries with a frozen `LyraMapAnchorCloseDetail`.
+Its `reason` is `api`, `close-button` or `escape`.
 
-- `lr-close-request` — cancelable, before a requested close; `preventDefault()` keeps the anchor
-  open.
-- `lr-close` — after an accepted close has set `open = false`. Not fired when the panel merely
-  hides, for an `open = false` assignment, or for removal or disconnect. A listener may reopen the
-  anchor (focus then stays where it is) or remove it.
+- `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
+- `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
 
-The names are the library's shared dismissal pair, so they also bubble through a surrounding dialog
-or drawer: an ancestor that handles only its own dismissal checks `event.target`. The map's
-`lr-map-anchor-close` never fires for these anchors.
+The deprecated aliases `lr-close-request` and `lr-close` remain available. A veto through either request
+preserves the anchor. The map's slot anchor emits `lr-map-anchor-close`.
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.
@@ -4394,7 +4429,11 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 `var(--lr-icon-button-size)`), `--lr-animated-image-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)`), `--lr-animated-image-max-height` (default
 `var(--lr-size-20rem)` — caps the rendered media's block-size, same contract as
-`--lr-media-card-max-height`).
+`--lr-media-card-max-height`), `--lr-animated-image-control-box-bg` (default
+`color-mix(in srgb, var(--lr-color-surface) 78%, transparent)` — the resting scrim behind the
+button), and `--lr-animated-image-play-button-hover-bg` / `--lr-animated-image-play-button-active-bg`
+(defaults: the opaque surface, and that surface mixed toward `--lr-color-mix-partner` by
+`--lr-color-mix-active`) for the hovered and pressed button.
 
 **Optional peer deps:** none.
 
@@ -5298,19 +5337,28 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Three further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
 color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
 step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background
 of the `cue-current` row the playhead is inside, and `--lr-av-player-cue-active-match-color`
 (default `var(--lr-color-warning)`) is the outline of the `cue-active-match` row, leaving the other
-matches' dashed outline on the shared warning token. All three are inline `var()` fallbacks at the
+matches' dashed outline on `--lr-av-player-cue-match-color` (default `var(--lr-color-warning)`).
+`--lr-av-player-rate-select-hover-bg` (default `var(--lr-color-brand-quiet)`) paints the hovered
+`rate-select`, and `--lr-av-player-rate-select-active-bg` its pressed state (default: a mix from the
+hover value). All are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so any of them can be set on the element or on any
 ancestor.
 
 **RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
 on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
 both LTR and RTL. ArrowUp/ArrowDown also seek, and PageUp/PageDown move by a tenth of the duration (at least 15 seconds).
+
+**Accessible-name vocabulary across media:** each media component keeps the attribute its native
+or upstream counterpart uses for its caller-facing name: `lr-av-player` `name`, `lr-video` `title`,
+`lr-animated-image` `alt`, and `lr-flag`/`lr-qr-code` `label`. These are one concept under
+different names, so map them by component rather than expecting a shared `label`; each section
+documents how a host `aria-label` combines with it.
 
 ## `lr-video`
 
@@ -5351,7 +5399,9 @@ accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: 
 'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`,
 `readonly playing: boolean` (live state reflected as the `playing` attribute; drive it with `play()`
 and `pause()`, since assigning it throws in strict-mode code), `poster: string = ''`, `preload: 'auto'
-| 'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
+| 'metadata' | 'none' = 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`;
+clamped to the native `0.0625..16` range, removing the attribute restores `1`, and native rate
+changes update it, matching `lr-av-player`), `src: string = ''`, `thumbnails: string = ''`, `title: string =
 ''`, and `volume: number = 1`. The private native `<video>` always carries `playsinline`; native
 browser controls stay disabled because the selected Lyra preset owns the control surface.
 `autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently
@@ -5403,9 +5453,11 @@ flat-tree descendants. An accidentally supplied link, button, or input therefore
 nested action or second keyboard stop. `controls-start` and `controls-after-play` remain ordinary
 composition slots and may intentionally contain interactive controls.
 
-A declarative host `aria-label` or `title` remains the component's overall name and is not copied to
-the private native video; that element receives the localized player-purpose name. An explicitly
-empty host `aria-label` is preserved exactly as an empty native-video name. Caption/subtitle tracks
+A non-blank host `aria-label` names the whole player: the host takes a `region` role to carry it,
+and the private native video receives the localized player-purpose name (key `videoPlayerLabel`).
+Without one, the native video is named by `title` (attribute or property alike), falling back to
+that localized name; whitespace-only values count as absent. An explicitly empty host `aria-label`
+is preserved exactly as an empty native-video name. Caption/subtitle tracks
 selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
 without asking the browser to paint a duplicate native caption layer.
 
@@ -5418,11 +5470,12 @@ viewport), `panorama-engine` (the optional renderer container), `panorama-notice
 renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
 with one `panorama-hotspot` button per hotspot, and `panorama-page` (a hotspot page action).
 
-The `progress` range carries `aria-label` and points through `aria-describedby` to a localized
-`{current} of {duration}` description (key `avPlayerPosition`, shared with `lr-av-player`) built
-from the same locale-formatted clock times as the visible labels. This deliberately avoids relying
-on `aria-valuetext`, which browsers ignore on native range semantics. Before duration is available,
-the same range remains in the DOM as a disabled `0..0` control with its description intact,
+The `progress` range carries `aria-label` and a localized `{current} of {duration}`
+`aria-valuetext` (key `avPlayerPosition`, shared with `lr-av-player`) built from the same
+locale-formatted clock times as the visible labels, so assistive technology announces a time rather
+than a raw number of seconds; `aria-describedby` points to the same text. The volume range's
+`aria-valuetext` is its locale-formatted percentage. Before duration is available, the same range
+remains in the DOM as a disabled `0..0` control with its value text and description intact,
 avoiding a disappearing/reappearing semantic target.
 
 **Themeable custom properties:** `--controls-background` (default
@@ -5517,7 +5570,11 @@ are not playlist items.
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
 `var(--lr-color-brand)`) and `--lr-video-playlist-item-current-bg` (default
 `var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
-its hover and press mix from the current background rather than the plain-row surface.
+its hover and press mix from the current background rather than the plain-row surface. Other rows
+take `--lr-video-playlist-item-hover-bg`, `--lr-video-playlist-item-hover-border-color` (default
+`var(--lr-color-border-strong)`) and `--lr-video-playlist-item-active-bg` under the pointer; the
+background defaults are the surface mixed toward `--lr-color-mix-partner` by `--lr-color-mix-hover`
+and `--lr-color-mix-active`.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

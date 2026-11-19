@@ -95,22 +95,22 @@ export const styles = css`
     ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface);
-    color: var(--lr-color-brand);
+    color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
 
   [part="highlight-action"]:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-color-surface-raised);
   }
 
   [part="highlight-action"]:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-color-surface-raised),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

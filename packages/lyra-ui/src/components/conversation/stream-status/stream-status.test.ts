@@ -750,9 +750,9 @@ describe('phase-dot cssprop escape hatches', () => {
     const el = (await fixture(html`<lr-stream-status data-start-stalled></lr-stream-status>`)) as LyraStreamStatus;
     const dot = indicator(el);
 
-    expect(getComputedStyle(dot).backgroundColor).to.equal(
-      resolvedInShadow(el, 'color: var(--lr-color-warning)', 'color'),
-    );
+    const warning = resolvedInShadow(el, 'color: var(--lr-color-warning)', 'color');
+    await waitUntil(() => getComputedStyle(dot).backgroundColor === warning);
+    expect(getComputedStyle(dot).backgroundColor).to.equal(warning);
     expect(getComputedStyle(dot).opacity).to.equal('1');
   });
 });
@@ -770,6 +770,7 @@ describe('stalled-row cssprop escape hatches', () => {
         style="--lr-stream-status-stalled-bg: rgb(0, 51, 102);"
       ></lr-stream-status>
     `)) as LyraStreamStatus;
+    await waitUntil(() => getComputedStyle(base(el)).backgroundColor === 'rgb(0, 51, 102)');
     expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 
@@ -780,6 +781,7 @@ describe('stalled-row cssprop escape hatches', () => {
         style="--lr-stream-status-stalled-border-color: rgb(102, 0, 51);"
       ></lr-stream-status>
     `)) as LyraStreamStatus;
+    await waitUntil(() => getComputedStyle(base(el)).borderTopColor === 'rgb(102, 0, 51)');
     expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(102, 0, 51)');
   });
 
@@ -798,6 +800,7 @@ describe('stalled-row cssprop escape hatches', () => {
     const warningQuiet = resolvedInShadow(el, 'color: var(--lr-color-warning-quiet)', 'color');
     const warning = resolvedInShadow(el, 'color: var(--lr-color-warning)', 'color');
 
+    await waitUntil(() => getComputedStyle(base(el)).backgroundColor === warningQuiet);
     expect(getComputedStyle(base(el)).backgroundColor).to.equal(warningQuiet);
     expect(getComputedStyle(base(el)).borderTopColor).to.equal(warning);
     expect(getComputedStyle(message(el)).color).to.equal(warning);
@@ -951,4 +954,22 @@ it('restores the default stall threshold when stall-threshold-ms is removed', as
   el.removeAttribute('stall-threshold-ms');
   await el.updateComplete;
   expect(el.stallThresholdMs).to.equal(10000);
+});
+
+it('announces localized non-stall phase changes without firing stall or recovery events', async () => {
+  const el = await renderFixture<LyraStreamStatus>(html`
+    <lr-stream-status stall-threshold-ms="0" .strings=${{ streamInterrupted: 'Stream stopped here' }}></lr-stream-status>
+  `);
+  let stallEvents = 0;
+  el.addEventListener('lr-stall', () => { stallEvents++; });
+  el.addEventListener('lr-recover', () => { stallEvents++; });
+  expect(liveRegionText(el)).to.equal('');
+  for (const phase of ['connecting', 'streaming', 'interrupted', 'idle'] as const) {
+    el.connectionState = phase;
+    await el.updateComplete;
+    const text = el.shadowRoot!.querySelector('[part="phase"]')!.textContent;
+    await waitUntil(() => liveRegionText(el) === text);
+    if (phase === 'interrupted') expect(liveRegionText(el)).to.equal('Stream stopped here');
+  }
+  expect(stallEvents).to.equal(0);
 });

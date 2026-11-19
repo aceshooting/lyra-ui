@@ -1,3 +1,5 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { isElementNode } from '../../../internal/dom-guards.js';
 import { deferredPlaceSession as place, type DeferredPlacementSession } from '../../../internal/anchored-overlay-runtime.js';
 import { getInheritedPropertyDescriptor } from '../../../internal/data-descriptors.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
@@ -67,6 +69,7 @@ export interface MapAnchorHost extends MapAnchorMapHost {
   pending(): boolean;
   /** Withdraws the request when `close()` accepts it. */
   retire(): void;
+  requestClose?(detail: LyraMapAnchorCloseDetail): boolean;
   emitClose(detail: LyraMapAnchorCloseDetail): void;
   /** Handles Escape instead of `close('escape')`. */
   escape?(): void;
@@ -112,7 +115,7 @@ export class MapAnchorController {
   private boundaryObserver?: ResizeObserver;
   private observedBoundaries: readonly Element[] = [];
   private placement?: MapAnchorPlacement;
-  private frame?: number;
+  private readonly frame = new OwnedFrame(this.host.element);
   /** When this anchor was last raised; the most recently raised one is painted in front. */
   private raisedAt = 0;
   /** The shared stack order of the current Escape entry. */
@@ -147,22 +150,20 @@ export class MapAnchorController {
   /** Runs `sync()` on the next animation frame, once however many callers ask. */
   schedule(): void {
     this.invalidate();
-    if (this.frame !== undefined) return;
+    if (this.frame.pending) return;
     const view = this.view();
     if (!view || typeof view.requestAnimationFrame !== 'function') {
       this.sync();
       return;
     }
-    this.frame = view.requestAnimationFrame(() => {
-      this.frame = undefined;
+    this.frame.schedule(() => {
       this.sync();
     });
   }
 
   private cancelFrame(): void {
-    if (this.frame === undefined) return;
-    this.view()?.cancelAnimationFrame?.(this.frame);
-    this.frame = undefined;
+    if (!this.frame.pending) return;
+    this.frame.cancel();
   }
 
   focus(): boolean {
@@ -196,17 +197,23 @@ export class MapAnchorController {
     } catch { /* A missing focus capability does not create a return target. */ }
   }
 
+  private requestingClose = false;
   close(reason: LyraMapAnchorCloseReason): boolean {
     const host = this.host, wrapper = host.wrapper();
-    if (!wrapper || !this.isOpen()) return false;
+    if (this.requestingClose || !wrapper || !this.isOpen()) return false;
     const requestEpoch = this.epoch, map = host.map(), coordinates = host.request();
+    const detail = Object.freeze({ reason } satisfies LyraMapAnchorCloseDetail);
     const repair = captureComposedFocusRepair(wrapper, this.returnTarget ?? null);
+    if (requestEpoch !== this.epoch || !this.isOpen()) return false;
+    this.requestingClose = true;
+    try { if (host.requestClose?.(detail) === false) return false; }
+    finally { this.requestingClose = false; }
     if (requestEpoch !== this.epoch || map !== host.map() || coordinates !== host.request() || !this.isOpen()) return false;
     this.closingState = true;
     try { host.retire(); } finally { this.closingState = false; }
     this.hide(false, true);
     const epoch = this.epoch;
-    host.emitClose(Object.freeze({ reason } satisfies LyraMapAnchorCloseDetail));
+    host.emitClose(detail);
     if (repair && epoch === this.epoch && host.request() === null) applyComposedFocusRepair(repair);
     return true;
   }
@@ -397,8 +404,8 @@ export class MapAnchorController {
   /** Raises the anchor when focus enters it from outside and retains where focus came from as the return target. */
   focusIn(event: FocusEvent): void {
     const wrapper = this.host.wrapper(), previous = event.relatedTarget, view = this.view();
-    if (wrapper && view && !(previous instanceof view.Element && composedContains(wrapper, previous))) this.raise();
-    if (!wrapper || !view || !(previous instanceof view.Element) || previous.ownerDocument !== this.host.element.ownerDocument || composedContains(wrapper, previous)) return;
+    if (wrapper && view && !(isElementNode(previous) && composedContains(wrapper, previous))) this.raise();
+    if (!wrapper || !view || !isElementNode(previous) || previous.ownerDocument !== this.host.element.ownerDocument || composedContains(wrapper, previous)) return;
     try {
       const descriptor = getInheritedPropertyDescriptor(previous, 'focus');
       if (descriptor && Object.hasOwn(descriptor, 'value') && typeof descriptor.value === 'function') {
@@ -537,6 +544,22 @@ export class MapAnchorChildren {
   private readonly entries = new Map<MapAnchorChild, MapAnchorChildEntry>();
   private readonly admittedControllers = new Set<MapAnchorController>();
   private serial = 0;
+  private syncQueued = false;
+
+  private readonly dirty = new Set<MapAnchorChild>();
+
+  private queueSync(anchor?: MapAnchorChild): void {
+    if (anchor) this.dirty.add(anchor);
+    if (this.syncQueued) return;
+    this.syncQueued = true;
+    queueMicrotask(() => {
+      if (!this.syncQueued) return;
+      this.syncQueued = false;
+      const pending = new Set(this.dirty);
+      this.dirty.clear();
+      if (this.host.element.isConnected) this.each(controller => { controller.sync(); }, pending);
+    });
+  }
 
   constructor(private readonly host: MapAnchorChildrenHost, anchors: Iterable<MapAnchorChild>) {
     for (const anchor of anchors) this.attach(anchor);
@@ -546,11 +569,11 @@ export class MapAnchorChildren {
   run(anchor: MapAnchorChild, operation: MapAnchorOwnerOperation, value?: unknown): unknown {
     const entry = this.entries.get(anchor);
     switch (operation) {
-      case 'attach': this.sync(this.attach(anchor)); return undefined;
+      case 'attach': this.attach(anchor); this.queueSync(anchor); return undefined;
       case 'detach':
         if (entry) {
           for (const type of CHILD_EVENTS) anchor.removeEventListener(type, entry.listener);
-          this.entries.delete(anchor); entry.controller.dispose(); this.sync(entry);
+          this.entries.delete(anchor); entry.controller.dispose(); this.queueSync();
         }
         return undefined;
       case 'capture': return entry?.controller.capture();
@@ -567,14 +590,14 @@ export class MapAnchorChildren {
         }
         return undefined;
       case 'focus': return entry?.controller.focus() ?? false;
-      default: if (entry) this.sync(entry); return undefined;
+      default: if (entry) this.queueSync(anchor); return undefined;
     }
   }
 
-  /** Re-places every open child, or just `only` and the children whose admission it changed. */
-  sync(only?: MapAnchorChildEntry): void { this.each(only, controller => { controller.sync(); }); }
+  /** Re-places every admitted child after a map or document-order change. */
+  sync(): void { this.syncQueued = false; this.dirty.clear(); this.each(controller => { controller.sync(); }); }
 
-  schedule(): void { this.each(undefined, controller => { controller.schedule(); }); }
+  schedule(): void { this.each(controller => { controller.schedule(); }); }
 
   invalidate(): void { for (const controller of this.admittedControllers) controller.invalidate(); }
 
@@ -584,15 +607,16 @@ export class MapAnchorChildren {
   hide(): void { for (const { controller, open } of this.entries.values()) if (open) controller.hide(); }
 
   /** Retires every child's placement before the engine is removed; their `open` requests remain. */
-  dispose(): void { for (const { controller } of this.entries.values()) controller.dispose(); }
+  dispose(): void { this.syncQueued = false; this.dirty.clear(); for (const { controller } of this.entries.values()) controller.dispose(); }
 
-  private each(only: MapAnchorChildEntry | undefined, place: (controller: MapAnchorController) => void): void {
+  private each(place: (controller: MapAnchorController) => void, dirty?: ReadonlySet<MapAnchorChild>): void {
     const changed = this.admit();
     for (const [anchor, entry] of this.entries) {
-      if (only && entry !== only && !changed.has(entry)) continue;
       if (anchor.open) {
         entry.open = true;
-        if (entry.admitted) place(entry.controller);
+        if (entry.admitted) {
+          if (!dirty || dirty.has(anchor) || changed.has(entry)) place(entry.controller);
+        }
         else if (changed.has(entry)) entry.controller.suspendAdmission();
       }
       else if (entry.open) { entry.open = false; entry.controller.hide(true, true); }

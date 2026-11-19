@@ -2087,7 +2087,7 @@ describe('lr-video control surface', () => {
     expect(progress.disabled, 'source reset').to.be.true;
   });
 
-  it('describes the native timeline with localized clock time instead of ignored aria-valuetext', async () => {
+  it('speaks the native timeline value and describes it with localized clock time', async () => {
     const el = await fixture<LyraVideo>(html`
       <lr-video lang="ar-EG" .strings=${{ avPlayerPosition: '{current} sur {duration}' }}></lr-video>
     `);
@@ -2101,7 +2101,7 @@ describe('lr-video control surface', () => {
     await el.updateComplete;
 
     const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
-    expect(progress.hasAttribute('aria-valuetext')).to.be.false;
+    expect(progress.getAttribute('aria-valuetext')).to.equal('٠:٠٥ sur ١:٠١');
     const descriptionId = progress.getAttribute('aria-describedby')!;
     expect(el.shadowRoot!.getElementById(descriptionId)?.textContent).to.equal('٠:٠٥ sur ١:٠١');
 
@@ -2120,6 +2120,34 @@ describe('lr-video control surface', () => {
       )?.textContent,
       'the English fallback renders with no locale registered',
     ).to.equal('0:05 of 1:01');
+    const plainProgress = plain.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
+    expect(plainProgress.getAttribute('aria-valuetext')).to.equal('0:05 of 1:01');
+    plainMedia.currentTime = 30;
+    plainMedia.dispatchEvent(new Event('timeupdate'));
+    await plain.updateComplete;
+    expect(plainProgress.getAttribute('aria-valuetext')).to.equal('0:30 of 1:01');
+  });
+
+  it('speaks the volume range as a localized percentage that follows volume changes', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video lang="ar-EG" volume="0.5"></lr-video>`);
+    const volume = el.shadowRoot!.querySelector('[data-control="volume"]') as HTMLInputElement;
+    expect(volume.getAttribute('aria-valuetext')).to.equal(new Intl.NumberFormat('ar-EG', { style: 'percent' }).format(0.5));
+    const plain = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const plainVolume = plain.shadowRoot!.querySelector('[data-control="volume"]') as HTMLInputElement;
+    plain.volume = 0.25;
+    await plain.updateComplete;
+    expect(plainVolume.getAttribute('aria-valuetext')).to.equal('25%');
+    plainVolume.value = '0.8';
+    plainVolume.dispatchEvent(new Event('input', { bubbles: true }));
+    await plain.updateComplete;
+    expect(plainVolume.getAttribute('aria-valuetext')).to.equal('80%');
+  });
+
+  it('keeps a value text on the disabled timeline before duration is known', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
+    expect(progress.disabled).to.be.true;
+    expect(progress.getAttribute('aria-valuetext')).to.equal('0:00 of 0:00');
   });
 
   it('forwards host focus()/blur()/click() to the play control and re-dispatches its focus/blur with no prefixed alias', async () => {
@@ -2836,6 +2864,56 @@ describe('lr-video coverage gap-filling', () => {
 });
 
 describe('lr-video remediation', () => {
+  it('exposes playbackRate as a property and playback-rate attribute applied to the native video', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="full" playback-rate="1.5"></lr-video>`);
+    const media = nativeVideo(el);
+    expect(el.playbackRate).to.equal(1.5);
+    expect(media.playbackRate).to.equal(1.5);
+    const rate = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="rate"]')!;
+    expect(rate.value).to.equal('1.5');
+    el.playbackRate = 99;
+    await el.updateComplete;
+    expect(el.playbackRate).to.equal(16);
+    expect(media.playbackRate).to.equal(16);
+    el.playbackRate = Number.NaN;
+    await el.updateComplete;
+    expect(el.playbackRate).to.equal(1);
+    el.setAttribute('playback-rate', '2');
+    await el.updateComplete;
+    expect(media.playbackRate).to.equal(2);
+    el.removeAttribute('playback-rate');
+    await el.updateComplete;
+    expect(el.playbackRate).to.equal(1);
+    expect(media.playbackRate).to.equal(1);
+    el.setPlaybackRate(0.5);
+    await el.updateComplete;
+    expect(el.playbackRate).to.equal(0.5);
+  });
+
+  it('names the native video from title whether it is set as an attribute or a property', async () => {
+    const attribute = await fixture<LyraVideo>(html`<lr-video title="Keynote"></lr-video>`);
+    expect(nativeVideo(attribute).getAttribute('aria-label')).to.equal('Keynote');
+    const property = await fixture<LyraVideo>(html`<lr-video .title=${'Keynote'}></lr-video>`);
+    expect(nativeVideo(property).getAttribute('aria-label')).to.equal('Keynote');
+    const blank = await fixture<LyraVideo>(html`<lr-video title="   "></lr-video>`);
+    expect(nativeVideo(blank).getAttribute('aria-label')).to.equal('Video player');
+  });
+
+  it('gives a host aria-label a region role to own it, and ignores a whitespace-only one', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video aria-label="Product tour" title="Keynote"></lr-video>`);
+    const internals = (el as unknown as { semanticInternals: ElementInternals }).semanticInternals;
+    expect(internals.role).to.equal('region');
+    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('Video player');
+    el.setAttribute('aria-label', '   ');
+    await el.updateComplete;
+    expect(internals.role).to.equal(null);
+    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('Keynote');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(internals.role).to.equal(null);
+    await expect(el).to.be.accessible();
+  });
+
   function withDuration(el: LyraVideo, duration = 60): HTMLVideoElement {
     const media = nativeVideo(el);
     Object.defineProperties(media, {

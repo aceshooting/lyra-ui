@@ -1,8 +1,9 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { flattenedParentElement } from '../../../internal/composed-tree.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { devWarnOnce, warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -18,8 +19,11 @@ import { LYRA_DEFAULT_close } from '../../../internal/default-strings/shared.gen
 
 
 export interface LyraMapAnchorEventMap {
-  /** Cancelable proposal to close the anchor. */
+  'lr-map-anchor-dismiss-request': CustomEvent<LyraMapAnchorCloseDetail>;
+  'lr-map-anchor-dismiss': CustomEvent<LyraMapAnchorCloseDetail>;
+  /** @deprecated Use lr-map-anchor-dismiss-request. */
   'lr-close-request': CustomEvent<LyraMapAnchorCloseDetail>;
+  /** @deprecated Use lr-map-anchor-dismiss. */
   'lr-close': CustomEvent<LyraMapAnchorCloseDetail>;
 }
 
@@ -65,11 +69,13 @@ type MapAnchorDetachment = 'map' | 'slot' | 'nested';
  *   attribute permits placement again when the other placement conditions hold.
  * @slot - The anchored content, any light DOM. It is only rendered, never cloned or moved.
  * @slot close-icon - Replaces the glyph of the close button.
- * @event lr-close-request - **Cancelable.** Frozen `detail: { reason }` (`'api'`, `'close-button'`
+ * @event lr-map-anchor-dismiss-request - Cancelable proposal with the close reason before dismissing this child anchor.
+ * @event lr-map-anchor-dismiss - Frozen close reason after dismissing this child anchor.
+ * @event lr-close-request - Deprecated alias for lr-map-anchor-dismiss-request. **Cancelable.** Frozen `detail: { reason }` (`'api'`, `'close-button'`
  *   or `'escape'`) before a requested close. `preventDefault()` keeps the anchor open, and a
  *   listener that changes `open`, `lngLat` or the anchor's map abandons the close. An `open = false`
  *   assignment is a silent state write.
- * @event lr-close - Frozen `detail: { reason }` after an accepted close has set `open` to false. Not
+ * @event lr-close - Deprecated alias for lr-map-anchor-dismiss. Frozen `detail: { reason }` after an accepted close has set `open` to false. Not
  *   fired when the panel merely hides, or for removal or disconnect. Ancestors that handle only this
  *   anchor's dismissal check `event.target`.
  * @csspart base - The positioned panel surface. A `z-index` set on it replaces automatic ordering.
@@ -122,6 +128,7 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
   private detachment?: MapAnchorDetachment;
   private autofocusPending = false;
   private attachmentRevision = 0;
+  private requestingClose = false;
 
   override connectedCallback(): void {
     this.attachmentRevision += 1;
@@ -191,14 +198,25 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
 
   /** The request/close sequence of every close source; placement and focus repair come from the map. */
   private requestClose(reason: LyraMapAnchorCloseReason): boolean {
-    if (!this.open) return false;
+    if (!this.open || this.requestingClose) return false;
     const owner = this.owner, lngLat = this.lngLat, revision = this.attachmentRevision;
     const repair = owner?.[MAP_ANCHOR_SEAM](this, 'capture');
     const detail = Object.freeze({ reason } satisfies LyraMapAnchorCloseDetail);
-    if (this.emit('lr-close-request', detail, { cancelable: true }).defaultPrevented || !this.open ||
-      this.lngLat !== lngLat || this.owner !== owner || this.attachmentRevision !== revision) return false;
+    const current = () => this.open && this.lngLat === lngLat && this.owner === owner && this.attachmentRevision === revision;
+    this.requestingClose = true;
+    try {
+      if (this.emit('lr-map-anchor-dismiss-request', detail, { cancelable: true }).defaultPrevented || !current()) return false;
+      if (this.emit('lr-close-request', detail, { cancelable: true }).defaultPrevented) {
+        warnDeprecatedUsage(this, 'event', 'lr-close-request', 'lr-map-anchor-dismiss-request');
+        return false;
+      }
+    } finally {
+      this.requestingClose = false;
+    }
+    if (!current()) return false;
     this.open = false;
     owner?.[MAP_ANCHOR_SEAM](this, 'retire');
+    this.emit('lr-map-anchor-dismiss', detail);
     this.emit('lr-close', detail);
     // A listener that reopened the anchor keeps focus where it is.
     if (!this.open) owner?.[MAP_ANCHOR_SEAM](this, 'repair', repair);
@@ -224,7 +242,7 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
   private onCloseClick = (): void => { this.requestClose('close-button'); };
 
   override render(): TemplateResult {
-    const name = this.hasAttribute('aria-label') ? this.getAttribute('aria-label') : this.label;
+    const name = this.getAttribute('aria-label') === '' ? undefined : resolveAccessibleName(this, this.label);
     return html`<div class="fence" aria-hidden="true"></div><div part="base" hidden role=${name ? 'group' : nothing}
       aria-label=${name || nothing}><div part="body"><slot @slotchange=${this.onContentChange}></slot></div>${this.closable
         ? html`<button type="button" part="close-button" aria-label=${this.localize('close')} @click=${this.onCloseClick}

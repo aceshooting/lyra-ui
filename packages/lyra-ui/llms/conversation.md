@@ -631,7 +631,9 @@ after the write fulfills.
   padding/background box, for an action row that must sit visually outside the bubble's chrome.
   `ChatMessageActionsPosition` remains exported as the same union.
 - `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
-  included in `lr-message-retry` detail when the built-in retry control is activated
+  included in `lr-message-retry` detail and in the accessible name of the built-in retry control.
+  Override the `conversationActionWithTitle` string to localize how the retry label and message ID
+  are combined
 - `avatarPlacement: ChatMessageAvatarPlacement = 'top'` (`'top' | 'start' | 'end'`, attribute
   `avatar-placement`, reflected) — `'top'` keeps `[part="avatar"]` in the header row above the body;
   `'start'`/`'end'` move it into its own column of `[part="bubble"]` beside the body at the inline
@@ -1244,8 +1246,8 @@ Internally, the inactivity timer runs only while `phase === 'streaming'`. It's (
 `'stalled'`) and on every subsequent `recordActivity()` call while already streaming; it's disarmed
 the instant the effective phase becomes anything else, including a host-driven transport transition away from
 `'streaming'` — so a stale timer can never fire a stall transition after the host has already moved
-on. Phase transitions into/out of `'stalled'` are announced through an internal
-`<lr-live-region>` rather than a hand-rolled `aria-live` region: entering `'stalled'` announces
+on. The live region announces the localized phase text politely after mount. For transitions
+into and out of a stall it uses dedicated announcements. Entering `'stalled'` announces
 "Connection stalled." with `mode="assertive"` (a stall can need the user's attention before they
 give up and navigate away). Leaving `'stalled'` always announces with `mode="polite"` (good news
 doesn't need to interrupt), but the _wording_ depends on the destination phase: "Connection
@@ -1345,7 +1347,8 @@ plus bubbling/composed `blur` and `focus` with `null` detail relayed from the re
 - `start` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
   selectable region before the label/excerpt content.
 - `content` — replaces the built-in label + excerpt + meta content area with host-supplied
-  non-interactive row content.
+  non-interactive row content. Provide visible text to name the selectable row, or supply a host
+  `aria-label` for content with no accessible text.
 - `excerpt` — full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`);
   wins over the `excerpt` property whenever it has assigned content.
 - `meta` — small, non-focusable structured fields below the label/excerpt (a day label, cost, request
@@ -1803,9 +1806,9 @@ not a delta — this component does no accumulation or ordering of its own.
 **Direction.** Markdown mode inherits `<lr-markdown>`'s code direction (see its **Direction**
 paragraph), including the isolated fenced runs and code spans of the streaming plain-text view,
 and the forwarded `code-block`/`inline-code` parts accept an outer `direction` override once the
-content has settled. Plain `content-mode`, including a fenced block shown as plain text, follows
-the page direction; use `content-mode="markdown"` when code must read left-to-right while
-streaming.
+content has settled. In plain mode, the first strong character sets the direction of the text,
+including text that contains literal fences. Use `content-mode="markdown"` to give code its own
+left-to-right direction inside mixed-direction content.
 
 **Properties:**
 
@@ -3212,8 +3215,9 @@ root); wins over `label` and the localized default.
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 
-**Events:** `lr-follow-change` — `detail: { following }`, fired whenever `follow` flips (user
-scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
+**Events.** `lr-follow-change` carries `detail: { following }` when scrolling releases or resumes
+follow, or the user activates the jump button. Handle direct `follow` writes and calls to
+`scrollToBottom()` at their call sites if the application tracks those changes.
 
 Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
 the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
@@ -3533,7 +3537,10 @@ self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
-data mode only: built-in icon buttons rendered into each row's `actions` slot. `withArchived: boolean
+data mode only: built-in icon buttons rendered into each row's `actions` slot. Their accessible
+names combine the localized action with the thread title (or the ID when the title is blank).
+Override the `conversationActionWithTitle` string to change how the action and title are combined.
+`withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off.
@@ -4535,7 +4542,8 @@ allocating every preceding part for each citation in a citation-heavy or growing
 
 Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code reads
 left-to-right inside a right-to-left document. `lr-message-parts` forwards no Markdown part, so that
-nested code direction cannot be overridden from outside with `::part()`.
+nested code direction cannot be overridden from outside with `::part()`. In plain mode each text
+and reasoning part uses its own first-strong text direction.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `withoutReasoning: boolean = false` (attribute

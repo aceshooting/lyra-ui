@@ -9,7 +9,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements, updateDescriptionBaseline } from '../../../internal/aria-reflection.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
@@ -312,8 +314,7 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  * aggregate accessible name live on that same focusable SVG. An authored host
  * `aria-label` is forwarded to that semantic owner and takes precedence over
  * the localized generated name; any authored host role remains on the host.
- * `[part="live-region"]` is an aria-hidden mirror of the most recent announcement. Mount is silent, and identical edge
- * movements append separate announcements.
+ * `[part="live-region"]` is an aria-hidden mirror of the most recent announcement. Mount is silent. Keyboard focus and identical edge movements append separate announcements.
  *
  * The eight default palette custom properties inherit from theme ancestors; setting one directly
  * on the word cloud still wins through the normal cascade.
@@ -551,6 +552,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Roving-focus cursor -- an index into `order`, not into `cachedLayout.placed`. */
   @state() private focusedIndex: number | null = null;
+  @state() private ringHidden = false;
   /** Text mirrored in `[part="live-region"]`. */
   @state() private liveText = '';
   @state() private pressedOriginalIndex: number | null = null;
@@ -581,6 +583,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.focusedIndex = null;
+    this.ringHidden = false;
     this.liveText = '';
     this.pressedOriginalIndex = null;
     this.hoveredOriginalIndex = null;
@@ -871,8 +874,17 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     return nearest;
   }
 
-  private onSvgFocus = (): void => {
-    if (this.focusedIndex === null && this.cachedLayout.placed.length > 0) this.focusedIndex = 0;
+  private onSvgFocus = (event: FocusEvent): void => {
+    this.ringHidden = false;
+    this.focusedIndex ??= 0;
+    if (isKeyboardFocusEvent(event)) this.announce(this.order[this.focusedIndex]!);
+  };
+
+  private onSvgBlur = (): void => {
+    queueMicrotask(() => {
+      const svgNode = this.svgEl;
+      if (this.isConnected && svgNode?.isConnected && this.shadowRoot?.activeElement !== svgNode) this.ringHidden = true;
+    });
   };
 
   private onSvgPointerDown = (event: PointerEvent): void => {
@@ -881,6 +893,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const index = this.wordIndex(word);
     if (index < 0) return;
     this.focusedIndex = index;
+    this.ringHidden = false;
     this.pressedOriginalIndex = word.originalIndex;
     this.svgEl?.focus();
   };
@@ -915,9 +928,11 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     const order = this.order;
-    if (order.length === 0) return;
+    if (order.length === 0 || shouldIgnoreNavigationKey(e)) return;
+    this.ringHidden = false;
 
     if (e.key === 'Enter' || e.key === ' ') {
+      if (e.repeat) return;
       e.preventDefault();
       if (this.focusedIndex !== null) this.activate(order[this.focusedIndex]!);
       return;
@@ -1032,7 +1047,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
     const { fills, legend } = (this.paint ??= this.resolvePaint());
     const order = this.order;
-    const focused = this.focusedIndex !== null ? order[this.focusedIndex] : undefined;
+    const focused = this.focusedIndex !== null && !this.ringHidden ? order[this.focusedIndex] : undefined;
     const ring = focused ? this.focusRingRect(focused) : undefined;
     const generatedLabel = this.localize('wordCloud', undefined, {
       count: this.formatCount(layout.placed.length),
@@ -1053,6 +1068,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"
           @focus=${this.onSvgFocus}
+          @blur=${this.onSvgBlur}
           @keydown=${this.onKeyDown}
           @pointerdown=${this.onSvgPointerDown}
           @pointermove=${this.onSvgPointerMove}

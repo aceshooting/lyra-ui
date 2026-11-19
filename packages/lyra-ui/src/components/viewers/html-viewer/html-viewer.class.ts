@@ -1,4 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
@@ -14,7 +15,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -158,8 +159,9 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadHtmlSanitizer();
@@ -181,6 +183,8 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

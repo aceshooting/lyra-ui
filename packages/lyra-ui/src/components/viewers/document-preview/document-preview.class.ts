@@ -35,6 +35,7 @@ import {
 } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import {
   snapshotLyraHighlightAnchorKind,
   snapshotLyraHighlights,
@@ -557,7 +558,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this.textFetch = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      const stale = signal?.aborted || !this.isConnected || generation !== this.generation;
+      if (stale || !response.ok) discardBody(response);
+      if (stale) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;

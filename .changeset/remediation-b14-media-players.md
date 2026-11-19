@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': patch
+'@aceshooting/lyra-ui': major
 ---
 
 - `lr-video`: the timeline range now shows a visible keyboard focus ring and a forced-colors-safe track and fill.
@@ -14,3 +14,9 @@
 - `lr-sequence-playback`: removing `interval-ms` restores the default interval, and `autoplay-interval` is accepted as a second spelling.
 - `lr-flag`: the inset ring is drawn above the image and the loading skeleton follows the flag shape and radius.
 - `lr-qr-code`: modules are painted in a single path.
+- `lr-video`: the timeline range now carries a localized `{current} of {duration}` `aria-valuetext` and the volume range a localized percentage. Remove any selector or assertion that expects these ranges to have no `aria-valuetext`.
+- `lr-video`: a non-blank host `aria-label` now gives the host a `region` role so the name has an owner, and `title` names the native video the same way whether it is set as an attribute or a property (a `title` attribute no longer forces the generic "Video player" name).
+- `lr-video`: adds a `playbackRate` property (attribute `playback-rate`) that applies to the native video, survives source changes and follows native rate changes; WebVTT thumbnail parsing now loads on demand.
+- `lr-av-player`: highlight markers paint their true time range, with a pointer target extending around short markers and kept inside the timeline.
+- `lr-av-player`, `lr-video-playlist`, `lr-animated-image`, `lr-sequence-playback`: new state tokens `--lr-av-player-rate-select-hover-bg`, `--lr-av-player-rate-select-active-bg`, `--lr-av-player-cue-match-color`, `--lr-video-playlist-item-hover-bg`, `--lr-video-playlist-item-hover-border-color`, `--lr-video-playlist-item-active-bg`, `--lr-animated-image-control-box-bg`, `--lr-animated-image-play-button-hover-bg`, `--lr-animated-image-play-button-active-bg` and `--lr-sequence-playback-play-button-hover-border-color`.
+- `lr-flag`: a flag peer import that fails for a reason other than a missing package is reported as a load failure instead of an install instruction, and is retried by the next flag resolution.

@@ -178,4 +178,30 @@ describe('lr-map component-owned scene controls', () => {
     expect(globe.getAttribute('aria-pressed')).to.equal('true'); expect(events).to.equal(0);
   });
 
+  for (const [control, property] of [['globe', 'projection'], ['terrain', 'terrain']] as const) {
+    it(`lets the host veto or take ownership of a ${control} control write`, async () => {
+      const { element } = await mount(configure);
+      await ready(element);
+      const changes: string[] = [];
+      element.addEventListener(`lr-map-${property}-change`, event => changes.push(event.type));
+      element.addEventListener(`lr-map-${property}-change-request`, event => event.preventDefault(), { once: true });
+      button(element, control).click();
+      expect(element[property]).to.equal(undefined);
+      await ready(element);
+      element.addEventListener(`lr-map-${property}-change-request`, () => { element[property] = undefined; }, { once: true });
+      button(element, control).click();
+      expect(element[property]).to.equal(undefined);
+      expect(changes).to.deep.equal([]);
+      await ready(element);
+      element.addEventListener(`lr-map-${property}-change-request`, () => element.setAttribute('disabled', ''), { once: true });
+      button(element, control).click();
+      expect(element[property]).to.equal(undefined);
+      expect(changes).to.deep.equal([]);
+      element.removeAttribute('disabled');
+      await ready(element);
+      button(element, control).click();
+      expect(changes).to.deep.equal([`lr-map-${property}-change`]);
+    });
+  }
+
 });

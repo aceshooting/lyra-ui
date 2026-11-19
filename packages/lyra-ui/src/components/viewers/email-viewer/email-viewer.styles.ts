@@ -126,7 +126,6 @@ export const styles = css`
     flex: none;
   }
   [part="quote-toggle"] {
-    align-self: flex-start;
     margin-block-start: var(--lr-space-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

@@ -5,7 +5,7 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+import { readCanvasRgba, resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
@@ -202,6 +202,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   private engine?: Engine3dInstance;
   private observers: Array<{ disconnect(): void }> = [];
   private mediaCleanup: Array<() => void> = [];
+  private refreshFrame?: { owner: Window; handle: number; restyle: boolean };
+  private styleKey?: string;
   private readonly announcements = new ViewerAnnouncementController(this);
   private readonly descriptions = new HostDescriptionController(this, () => this.viewport, () => {
     const instructions = this.renderRoot.querySelector('[part="instructions"]');
@@ -218,7 +220,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     if (this.detached.cancel() && this.engine) {
       const generation = this.generation;
       this.watchEnvironment(() => this.isConnected && generation === this.generation);
-      this.refreshEngine();
+      this.refreshEngine(true);
     } else if (this.hasUpdated) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -321,7 +323,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       const engine = candidate;
       this.engine = engine;
       if (typeof engine.fit !== 'function') { this.fail('engineUnavailable', 'unavailable'); return; }
-      engine.setStyle(this.engineStyle());
+      this.styleKey = undefined;
+      this.applyEngineStyle(engine);
       if (!current()) return;
       let parsed = false;
       let contextLost = false;
@@ -364,7 +367,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
             contextLost = false;
             this.message = '';
             if (parsed) publishParsedView(); else this.status = 'loading';
-            if (current()) this.refreshEngine();
+            this.styleKey = undefined;
+            if (current()) this.refreshEngine(true);
           } catch (error) {
             if (current()) this.fail('invalid', 'error', error);
           }
@@ -380,7 +384,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       if (this.authoredCamera && this.camera) engine.setCamera(this.camera);
       if (!current()) return;
       this.watchEnvironment(current);
-      this.refreshEngine();
+      this.refreshEngine(true);
       if (!current()) return;
       if (supportsAsyncModelData(engine)) {
         await engine.setDataAsync({ bytes, format }, generation, { signal: controller.signal });
@@ -397,17 +401,10 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   private engineStyle(): unknown {
     const view = this.ownerDocument.defaultView!;
     const computed = view.getComputedStyle(this);
-    const canvas = this.ownerDocument.createElement('canvas');
-    canvas.width = canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
     const color = (token: string) => {
       const resolved = resolveCanvasColor(this, `var(${token})`, computed.color);
-      if (!context) return resolved;
-      context.clearRect(0, 0, 1, 1);
-      context.fillStyle = resolved;
-      context.fillRect(0, 0, 1, 1);
-      const rgba = context.getImageData(0, 0, 1, 1).data;
-      return `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]! / 255})`;
+      const rgba = readCanvasRgba(this.ownerDocument, resolved);
+      return rgba ? `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]})` : resolved;
     };
     return {
       background: color('--lr-color-surface'),
@@ -426,12 +423,32 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     };
   }
 
-  private refreshEngine(): void {
+  private applyEngineStyle(engine: Engine3dInstance): void {
+    const style = this.engineStyle();
+    const key = JSON.stringify(style);
+    if (key === this.styleKey) return;
+    this.styleKey = key;
+    engine.setStyle(style);
+  }
+
+  private scheduleRefresh(restyle: boolean): void {
+    const pending = this.refreshFrame;
+    if (pending) { pending.restyle ||= restyle; return; }
+    const owner = this.ownerDocument.defaultView!;
+    const frame = { owner, restyle, handle: 0 };
+    frame.handle = owner.requestAnimationFrame(() => {
+      this.refreshFrame = undefined;
+      this.refreshEngine(frame.restyle);
+    });
+    this.refreshFrame = frame;
+  }
+
+  private refreshEngine(restyle: boolean): void {
     const engine = this.engine;
     const generation = this.generation;
     if (!engine || !this.isConnected) return;
     try {
-      engine.setStyle(this.engineStyle());
+      if (restyle) this.applyEngineStyle(engine);
       if (generation !== this.generation) return;
       const box = this.viewport?.getBoundingClientRect();
       if (box) engine.resize(Math.max(1, box.width), Math.max(1, box.height));
@@ -441,6 +458,9 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   }
 
   private stopWatchingEnvironment(): void {
+    const frame = this.refreshFrame;
+    this.refreshFrame = undefined;
+    frame?.owner.cancelAnimationFrame(frame.handle);
     for (const observer of this.observers) observer.disconnect();
     this.observers = [];
     for (const cleanup of this.mediaCleanup) cleanup();
@@ -449,8 +469,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
 
   private watchEnvironment(current: () => boolean): void {
     const view = this.ownerDocument.defaultView!;
-    const refresh = () => { if (current()) this.refreshEngine(); };
-    const resize = new view.ResizeObserver(refresh);
+    const refresh = () => { if (current()) this.scheduleRefresh(true); };
+    const resize = new view.ResizeObserver(() => { if (current()) this.scheduleRefresh(false); });
     resize.observe(this.viewport!);
     this.observers.push(resize);
     const mutation = new view.MutationObserver(refresh);

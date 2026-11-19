@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -237,8 +238,8 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     const count = this.normalizedCount;
     if (count < 2) return html``;
     const index = this.normalizedIndex;
-    const label = this.label == null ? this.localize('branchPickerLabel') : this.label;
-    const ariaLabel = this.getAttribute('aria-label') ?? label;
+    const label = this.getAttribute('aria-label') ?? this.label;
+    const ariaLabel = label === '' ? '' : normalizeLabel(label) ?? this.localize('branchPickerLabel');
     const formatter = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="base" id=${this.groupId} role="group" aria-label=${ariaLabel}>

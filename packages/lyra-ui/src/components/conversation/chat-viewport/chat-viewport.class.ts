@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { finiteCount, finiteDuration, finiteMidpoint, finiteRange } from '../../../internal/numbers.js';
@@ -122,8 +123,8 @@ const MAX_BUSY_SETTLE_SAMPLES = 60;
  *
  * @customElement lr-chat-viewport
  * @slot - The transcript: ordinary element children, or exactly one `<lr-virtual-list>`.
- * @event lr-follow-change - `detail: { following }` -- fired whenever `follow` flips (user
- *   scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
+ * @event lr-follow-change - `detail: { following }` — scrolling or a jump-button click changed
+ *   whether the viewport follows the transcript.
  * @csspart base - The positioning root.
  * @csspart scroll - The scroll container (`role="log"` and, in slotted mode, `tabindex="0"`). In
  *   virtual mode it stops scrolling itself and drops its tab stop because the slotted list owns
@@ -231,6 +232,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private pendingUserIntentExpiryFrame: OwnedAnimationFrame | null = null;
   private scrollbarDragActive = false;
   private scrollbarDragWindow?: Window;
+  private scrollbarDragRelease?: () => void;
   private isMounting = true;
   private pendingScrollBehavior?: 'auto' | 'smooth';
   private contentResizeObserver?: ResizeObserver;
@@ -254,6 +256,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  still-pending deferred initial-measurement microtask from a now-stale arm. */
   private armGeneration = 0;
   private followFocusRepair: ComposedFocusRepairSnapshot | null = null;
+  private requestedFollow?: boolean;
   private readonly knownProjectedNodes = new WeakSet<Node>();
   /** Appended children waiting to settle (`liveSettle` mode): the text seen at the previous
    *  sample (`null` before the first stable sample) and the owner-bound pending timer. */
@@ -325,6 +328,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.clearKeyboardScrollIntent();
     this.scrollbarDragActive = false;
     this.followFocusRepair = null;
+    this.requestedFollow = undefined;
     this.clearSettlingNodes();
     this.unreadBoundaryEl?.remove();
     this.unreadBoundaryEl = undefined;
@@ -368,6 +372,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.unreadBoundaryEl?.setAttribute('aria-label', this.localize('newMessages'));
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    const requestedFollow = this.requestedFollow;
+    this.requestedFollow = undefined;
     if (changed.has('follow')) {
       if (this.follow) {
         // The very first paint always lands at the end instantly -- there's no prior on-screen
@@ -383,7 +389,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         this.pendingScrollBehavior = undefined;
         this.performScrollToEnd(behavior);
       }
-      if (!wasMounting) {
+      if (!wasMounting && requestedFollow === this.follow && changed.get('follow') !== this.follow) {
         this.emit('lr-follow-change', { following: this.follow });
       }
     }
@@ -610,22 +616,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         : event.clientX >= rect.right - borderRight - gutter;
     if (!inGutter) return;
     this.scrollbarDragActive = true;
-    // Dragging a native scrollbar thumb (or just holding the mouse button) can end with the
-    // pointer well outside `[part="scroll"]` -- the release target is wherever the cursor
-    // happens to be, not necessarily this element or one of its descendants. A listener bound
-    // only here would never see that pointerup, leaving this flag stuck `true` and letting a
-    // later, unrelated layout-shift scroll spuriously release `follow`.
     const owner = this.ownerDocument.defaultView;
     if (!owner || this.scrollbarDragWindow === owner) return;
     this.releaseScrollbarDragListeners();
     this.scrollbarDragWindow = owner;
-    owner.addEventListener('pointerup', this.onPointerUp);
-    // A drag can also end without a pointerup ever firing: a system gesture / palm rejection can
-    // fire `pointercancel` instead, and losing implicit pointer capture (e.g. the dragged element
-    // is removed) fires `lostpointercapture` -- both need the same teardown as pointerup, or this
-    // flag is stuck true just as surely as the pointerup-outside-the-element case above.
-    owner.addEventListener('pointercancel', this.onPointerUp);
-    owner.addEventListener('lostpointercapture', this.onPointerUp);
+    this.scrollbarDragRelease = listenUntilPointerEnd(owner, this.onPointerUp, { lostCapture: true });
   };
 
   private onPointerUp = (): void => {
@@ -634,11 +629,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   };
 
   private releaseScrollbarDragListeners(): void {
-    const owner = this.scrollbarDragWindow;
-    if (!owner) return;
-    owner.removeEventListener('pointerup', this.onPointerUp);
-    owner.removeEventListener('pointercancel', this.onPointerUp);
-    owner.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.scrollbarDragRelease?.();
+    this.scrollbarDragRelease = undefined;
     this.scrollbarDragWindow = undefined;
   }
 
@@ -724,14 +716,23 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const atBottom = distanceFromEnd <= this.effectiveBottomThreshold;
     if (atBottom) {
       this.clearUserIntent();
-      if (!this.follow) this.follow = true;
+      if (!this.follow) {
+        this.requestedFollow = true;
+        this.follow = true;
+      }
       return;
     }
     const userCaused = this.consumeUserIntent() || keyboardCaused || this.scrollbarDragActive;
     if (userCaused && this.follow) {
       this.clearKeyboardScrollIntent();
+      this.requestedFollow = false;
       this.follow = false;
     }
+  };
+
+  private onJumpClick = (): void => {
+    if (!this.follow) this.requestedFollow = true;
+    this.scrollToBottom();
   };
 
   private onVirtualScroll = (e: Event): void => {
@@ -1142,7 +1143,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
               ?data-icon-only=${this.jumpIconOnly}
               aria-label=${this.jumpIconOnly ? this.localize('jumpToLatest') : nothing}
               aria-description=${this.jumpIconOnly && this.unreadCount > 0 ? this.pillLabel() : nothing}
-              @click=${() => this.scrollToBottom()}
+              @click=${this.onJumpClick}
             >${this.jumpIconOnly ? html`<span class="jump-icon">${chevronIcon()}</span>` : this.pillLabel()}</button>`
           : nothing}
       </div>

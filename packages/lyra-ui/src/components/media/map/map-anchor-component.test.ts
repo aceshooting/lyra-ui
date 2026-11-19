@@ -298,5 +298,26 @@ describe('lr-map anchor placement and close ownership', () => {
     const style = getComputedStyle(cancel); expect(style.cursor).to.equal('pointer');
     expect(style.outlineStyle === 'none' || Number.parseFloat(style.outlineWidth) === 0).to.equal(true);
   });
+  it('lets a slot anchor close request veto or replace the coordinates before retirement', async () => {
+    const { element } = await open(el => { el.anchorClosable = true; });
+    const closes = capture(element);
+    const requests: unknown[] = [];
+    element.addEventListener('lr-map-anchor-close-request', event => {
+      requests.push((event as CustomEvent).detail);
+      expect(element.closeAnchor()).to.equal(false);
+      event.preventDefault();
+    }, { once: true });
+    anchor(element).querySelector('button')!.click();
+    expect(requests).to.deep.equal([{ reason: 'close-button' }]);
+    expect(element.anchorLngLat).to.deep.equal([0, 0]);
+    element.addEventListener('lr-map-anchor-close-request', () => { element.anchorLngLat = [1, 1]; }, { once: true });
+    expect(element.closeAnchor()).to.equal(false);
+    expect(element.anchorLngLat).to.deep.equal([1, 1]);
+    expect(closes).to.deep.equal([]);
+    await placed(element);
+    expect(element.closeAnchor()).to.equal(true);
+    expect(closes).to.deep.equal([{ reason: 'api' }]);
+  });
+
 });
 

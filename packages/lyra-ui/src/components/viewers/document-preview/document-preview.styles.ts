@@ -227,8 +227,12 @@ export const styles = css`
   [part="download-link"] {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--lr-space-xs);
+    min-block-size: var(--lr-size-2rem);
     padding: var(--lr-space-xs) var(--lr-space-m);
+    box-sizing: border-box;
+    border: var(--lr-border-width-thin) solid var(--lr-color-brand);
     border-radius: var(--lr-radius);
     background: var(--lr-color-brand);
     color: var(--lr-color-on-brand);

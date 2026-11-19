@@ -153,6 +153,7 @@ export const styles = css`
   lr-virtual-list::part(output-stream-label) { ${visuallyHidden} }
   lr-virtual-list::part(output-toggle) {
     align-self: flex-start;
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: none;
     color: var(--lr-color-brand);

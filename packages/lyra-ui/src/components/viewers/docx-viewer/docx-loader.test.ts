@@ -115,6 +115,12 @@ describe('loadDocxDeps()', () => {
     expect(getDocxDepsIfLoaded()).to.equal(second);
   });
 
+  it('gives concurrent callers one resolved object', async () => {
+    const [first, second] = await Promise.all([loadDocxDeps(), loadDocxDeps()]);
+    expect(first === second).to.equal(true);
+    expect(getDocxDepsIfLoaded() === first).to.equal(true);
+  });
+
   it('retries a peer that failed to load instead of caching the failure', async () => {
     const warnings = captureDevWarnings();
     try {

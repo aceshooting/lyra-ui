@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'メッセージ',
   composerPlaceholder: '何でも質問してください…',
   rename: '{title} の名前を変更',
+  conversationActionWithTitle: '{action}：{title}',
   elapsedMinutesSecondsTemplate: '{minutes} 分 {seconds} 秒',
   feedbackPositive: '良い回答',
   feedbackNegative: '悪い回答',

@@ -1,4 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { tag } from '../../../internal/prefix.js';
@@ -371,8 +372,9 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const buffer = await readResponseArrayBuffer(response);
@@ -403,6 +405,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
           : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

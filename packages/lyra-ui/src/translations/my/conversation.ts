@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'မက်ဆေ့ချ်',
   composerPlaceholder: 'မည်သည့်အရာကိုမဆို မေးပါ…',
   rename: '{title} အမည်ပြောင်းရန်',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} မိနစ် {seconds} စက္ကန့်',
   feedbackPositive: 'ကောင်းသော တုံ့ပြန်ချက်',
   feedbackNegative: 'မကောင်းသော တုံ့ပြန်ချက်',

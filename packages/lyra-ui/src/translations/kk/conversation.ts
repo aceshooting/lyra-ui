@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Хабарлама',
   composerPlaceholder: 'Кез келген сұрақ қойыңыз…',
   rename: 'Атауын өзгерту: {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} мин {seconds} с',
   feedbackPositive: 'Жақсы жауап',
   feedbackNegative: 'Нашар жауап',

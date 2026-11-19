@@ -2,6 +2,7 @@ import type { LyraTabularSource } from '../../../data-sources.js';
 export type { LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraTabularReadRequest, LyraSourceSearchRequest, LyraSourceSearchResult } from '../../../data-sources.js';
 /** Host-owned indexed or rectangular source for this viewer. */
 export type CsvViewerSource = LyraTabularSource;
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { snapshotViewerRows } from '../../../internal/delimited-data.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -384,8 +385,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(
+      response = await fetchTarget.view.fetch(
         fetchTarget.url,
         signal ? { signal } : undefined
       );
@@ -433,6 +435,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
           : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

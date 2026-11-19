@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Viesti',
   composerPlaceholder: 'Kysy mitä tahansa…',
   rename: 'Nimeä uudelleen: {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   feedbackPositive: 'Hyvä vastaus',
   feedbackNegative: 'Huono vastaus',

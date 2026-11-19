@@ -19,7 +19,7 @@ import {
 } from './include-resource.js';
 import { styles } from './include.styles.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

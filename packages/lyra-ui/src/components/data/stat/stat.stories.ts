@@ -121,7 +121,8 @@ export const BreakdownRows: Story = {
 export const BreakdownRowsWithExactValue: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lr-stat label="Usage" value="12,480" caption="By model, this billing cycle"></lr-stat>
+      <lr-stat label="Usage" value="12.5K" exact-value="12,480" caption="By model, this billing cycle"
+        style="--lr-stat-value-hover-color: var(--lr-color-brand)"></lr-stat>
     </div>
   `,
   play: async ({ canvasElement }) => {

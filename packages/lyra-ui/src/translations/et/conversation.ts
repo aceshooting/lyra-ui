@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Sõnum',
   composerPlaceholder: 'Küsi mida tahes…',
   rename: 'Nimeta ümber: {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   feedbackPositive: 'Hea vastus',
   feedbackNegative: 'Halb vastus',

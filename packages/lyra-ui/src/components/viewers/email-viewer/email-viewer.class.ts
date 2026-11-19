@@ -1,4 +1,6 @@
+import { splitLines } from '../../../internal/text-lines.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { bdi } from '../../../internal/bidi.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -30,7 +32,7 @@ import {
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -267,7 +269,7 @@ class LyraEmailViewerBase extends LyraElement<LyraEmailViewerEventMap> {
  *  separator lines to a longer raw run -- is left inline; blank lines alone never count toward the
  *  threshold since they carry no quoted content). */
 function splitTrailingQuoteBlock(text: string): { visible: string; quoted: string } | null {
-  const lines = text.split(/\r\n|\r|\n/);
+  const lines = splitLines(text);
   let start = lines.length;
   let quotedLineCount = 0;
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -609,8 +611,9 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.fetchState = { kind: 'loading' };
     this.pendingTransportGeneration = generation;
     let acquiringMessage = true;
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       if (!(await loadEmailDeps()).PostalMime) {
@@ -633,6 +636,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
     } finally {
+      discardBody(response);
       if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
     }
   }

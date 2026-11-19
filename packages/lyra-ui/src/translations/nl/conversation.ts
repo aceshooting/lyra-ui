@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Bericht',
   composerPlaceholder: 'Stel een vraag…',
   rename: '{title} hernoemen',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} m {seconds} s',
   feedbackPositive: 'Goed antwoord',
   feedbackNegative: 'Slecht antwoord',

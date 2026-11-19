@@ -25,9 +25,9 @@ const items = [
   { id: '3', categoryId: 'text' },
 ];
 
-expectLocaleFallback('ar', ['sequenceStripCategoryCount', 'sequenceStripEmpty']);
-expectLocaleFallback('fa-IR', ['sequenceStripCategoryCount', 'sequenceStripEmpty']);
-expectLocaleFallback('ja', ['sequenceStripCategoryCount', 'sequenceStripEmpty']);
+expectLocaleFallback('ar', ['sequenceStripCategoryCount', 'sequenceStripEmpty', 'sequenceStripCellKeyboardHelp']);
+expectLocaleFallback('fa-IR', ['sequenceStripCategoryCount', 'sequenceStripEmpty', 'sequenceStripCellKeyboardHelp']);
+expectLocaleFallback('ja', ['sequenceStripCategoryCount', 'sequenceStripEmpty', 'sequenceStripCellKeyboardHelp']);
 
 it('rejects declaration-breaking and url category paint values', async () => {
   const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip with-legend></lr-sequence-strip>`);
@@ -543,7 +543,7 @@ describe('hover tooltip', () => {
     await focusByKeyboard(cells[0]!);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Turn 1: text');
-    expect(cells[0]!.getAttribute('aria-describedby')).to.be.null;
+    expect(cells[0]!.getAttribute('aria-describedby')).to.equal('sequence-strip-help');
 
     cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;

@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Съобщение',
   composerPlaceholder: 'Попитайте каквото и да е…',
   rename: 'Преименувай {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} мин {seconds} с',
   feedbackPositive: 'Добър отговор',
   feedbackNegative: 'Лош отговор',

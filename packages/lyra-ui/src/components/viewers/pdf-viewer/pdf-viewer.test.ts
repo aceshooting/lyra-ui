@@ -372,6 +372,24 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
+  it('cancels the unread body of a non-ok response', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } });
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(new Response(body, { status: 500 }))) as typeof window.fetch;
+    try {
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/broken.pdf';
+      await event;
+      await waitUntil(() => cancelled, 'response body was not cancelled');
+      expect(cancelled).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it("emits render errors for failed fetches", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
@@ -476,6 +494,23 @@ describe("lr-pdf-viewer", () => {
       expect(destroyCalls).to.equal(1);
       expect(el.shadowRoot!.querySelector("lr-virtual-list") === null).to.be
         .true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('emits lr-page-change when a new load resets the page to 1', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/a.pdf';
+      await waitFor(el, '[part="page-indicator"]');
+      el.page = 3;
+      await el.updateComplete;
+      const eventPromise = oneEvent(el, 'lr-page-change');
+      el.src = 'https://example.test/b.pdf';
+      expect((await eventPromise).detail).to.deep.equal({ page: 1, pageCount: 3 });
     } finally {
       restore();
     }

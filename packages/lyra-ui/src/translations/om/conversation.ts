@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Ergaa',
   composerPlaceholder: 'Waa\'ee waan kamiyyuu gaafadhu…',
   rename: '{title} maqaa jijjiiri',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Deebii gaarii',
   feedbackNegative: 'Deebii hamaa',

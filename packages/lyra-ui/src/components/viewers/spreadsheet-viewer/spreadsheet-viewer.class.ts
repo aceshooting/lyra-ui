@@ -1,4 +1,5 @@
 import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import type { LyraWorkbookSource } from '../../../data-sources.js';
 export type { LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraTabularReadRequest, LyraSourceSearchRequest, LyraSourceSearchResult, LyraWorkbookHit } from '../../../data-sources.js';
 /** Host-owned indexed or rectangular source for this viewer. */
@@ -407,8 +408,9 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(
+      response = await fetchTarget.view.fetch(
         fetchTarget.url,
         signal ? { signal } : undefined
       );
@@ -506,6 +508,8 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
           : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

@@ -91,8 +91,8 @@ describe('lr-qr-code', () => {
     // (unlike every other test here, which overrides the per-instance `loadLibrary` seam) --
     // by design, since its whole purpose is priming the actual peer for a real application.
     // `qrcode` is a genuine multi-file CommonJS package with no single-file browser bundle
-    // (qr-code-loader.test.ts's own skipped "caches the real optional module result" test
-    // documents the same gap), so this test browser cannot resolve it. Its fixed development-only
+    // (qr-code-peer.docs.test.mjs pins the real module under Node), so this test browser cannot
+    // resolve it. Its fixed development-only
     // diagnostic is expected; stub `console.warn` locally so it does not trip strict-console mode.
     const originalWarn = console.warn;
     const warnings: unknown[][] = [];

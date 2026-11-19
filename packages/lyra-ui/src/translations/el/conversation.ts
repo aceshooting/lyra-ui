@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Μήνυμα',
   composerPlaceholder: 'Ρωτήστε οτιδήποτε…',
   rename: 'Μετονομασία {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Καλή απάντηση',
   feedbackNegative: 'Κακή απάντηση',

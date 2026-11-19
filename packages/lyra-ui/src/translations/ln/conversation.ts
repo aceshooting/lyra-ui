@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Komá nsango',
   composerPlaceholder: 'Tuna eloko nyonso…',
   rename: 'Pesa {title} nkombo mosusu',
+  conversationActionWithTitle: '{action} : {title}',
   elapsedMinutesSecondsTemplate: '{minutes}min {seconds}s',
   feedbackPositive: 'Eyano malamu',
   feedbackNegative: 'Eyano mabe',

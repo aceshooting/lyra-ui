@@ -161,7 +161,7 @@ export function buildCalendarGrid(
       week: cell.week,
       label:
         monthLabelText?.(cellDate.getUTCMonth(), cellDate.getUTCFullYear()) ??
-        getDateTimeFormat(locale, { month: 'short', timeZone: 'UTC' }).format(cellDate),
+        getDateTimeFormat(locale, { month: 'short', calendar: 'gregory', timeZone: 'UTC' }).format(cellDate),
     });
   }
 

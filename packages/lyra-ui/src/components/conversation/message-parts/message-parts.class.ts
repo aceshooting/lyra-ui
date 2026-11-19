@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { isolateText } from '../../../internal/bidi.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -654,7 +656,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       case 'text':
         return this.contentMode === 'markdown'
           ? this.renderPartMarkdown(part)
-          : part.text;
+          : isolateText(part.text);
       case 'reasoning':
         if (!this.rendererReady('thinking-panel')) return this.rendererFallback('thinking-panel');
         return html`<lr-thinking-panel
@@ -663,7 +665,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           ?expanded=${part.collapsed === false}
           >${this.contentMode === 'markdown'
             ? this.renderPartMarkdown(part)
-            : part.text}</lr-thinking-panel
+            : isolateText(part.text)}</lr-thinking-panel
         >`;
       case 'tool-call': {
         if (this.toolDisplay === 'block') return this.renderToolBlock(part, pairing?.results.get(part.id));
@@ -801,7 +803,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') ?? this.localize('messagePartsLabel');
+    const authoredLabel = this.getAttribute('aria-label');
+    const label = authoredLabel === '' ? '' : normalizeLabel(authoredLabel) ?? this.localize('messagePartsLabel');
     // Ranks are derived from the FULL sequence, before any rendering window is applied, so a
     // citation's number stays stable even once an earlier citation rolls out of view.
     const allParts = this.effectiveParts;

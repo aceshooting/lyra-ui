@@ -73,10 +73,13 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   [part='rate-select']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-av-player-rate-select-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='rate-select']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-av-player-rate-select-active-bg,
+      color-mix(in oklab, var(--lr-av-player-rate-select-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='rate-select']:focus-visible {
     outline: var(--lr-focus-ring);
@@ -140,11 +143,15 @@ export const styles = css`
      toned marker to brand on hover, and per-tone pairs would be ten near-identical rules. Each fill
      still falls back through the untouched public --lr-av-player-*-bg knobs. */
   [part='timeline-marker'] {
-    position: absolute;
-    inset-block: 0;
+    --_lr-av-player-marker-paint: max(var(--lr-border-width-medium), var(--_lr-av-player-marker-width));
+    grid-area: 1 / 1;
+    justify-self: start;
+    box-sizing: border-box;
+    inline-size: var(--_lr-av-player-marker-paint);
+    block-size: 100%;
+    margin-inline-start: min(var(--_lr-av-player-marker-start), calc(100% - var(--_lr-av-player-marker-paint)));
     border: none;
     padding: 0;
-    ${iconHitTarget}
     cursor: pointer;
     --_lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
     background: var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill));
@@ -153,11 +160,25 @@ export const styles = css`
   .timeline-markers {
     position: absolute;
     inset: 0;
+    display: grid;
+    grid-template: 100% / 100%;
     direction: ltr;
     pointer-events: none;
   }
   .timeline-markers [part='timeline-marker'] {
     pointer-events: auto;
+  }
+  /* The bar paints the true range; this pseudo-element is its pointer target, centred on the bar
+     and kept inside the timeline (the unpositioned button leaves .timeline-markers as its box). */
+  [part='timeline-marker']::before {
+    --_lr-av-player-marker-target: min(100%, max(var(--lr-icon-button-size), var(--_lr-av-player-marker-paint)));
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    ${iconHitTarget}
+    min-inline-size: min(100%, var(--lr-icon-button-size));
+    inline-size: var(--_lr-av-player-marker-target);
+    inset-inline-start: clamp(0px, calc(var(--_lr-av-player-marker-start) + var(--_lr-av-player-marker-paint) / 2 - var(--_lr-av-player-marker-target) / 2), calc(100% - var(--_lr-av-player-marker-target)));
   }
   [part='timeline-playhead'] {
     position: absolute;
@@ -234,7 +255,7 @@ export const styles = css`
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));
   }
   lr-virtual-list::part(cue-match) {
-    outline: var(--lr-border-width-thin) dashed var(--lr-color-warning);
+    outline: var(--lr-border-width-thin) dashed var(--lr-av-player-cue-match-color, var(--lr-color-warning));
   }
   lr-virtual-list::part(cue-active-match) {
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning));

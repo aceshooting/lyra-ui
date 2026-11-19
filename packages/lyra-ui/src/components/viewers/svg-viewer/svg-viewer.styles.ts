@@ -125,6 +125,11 @@ export const styles = css`
       --lr-svg-viewer-active-border,
       var(--lr-color-warning, var(--lr-color-brand))
     );
+    outline: var(--lr-border-width-thick) solid var(
+      --lr-svg-viewer-active-border,
+      var(--lr-color-warning, var(--lr-color-brand))
+    );
+    outline-offset: var(--lr-border-width-thick);
   }
   [part="highlight-actions"] {
     display: grid;

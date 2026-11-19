@@ -3,12 +3,13 @@ import {
   readResponseText,
   type OwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import {
   BoundedResourceCache,
   type ResourceCacheLease,
 } from '../../../internal/safe-resource-cache.js';
 import { loadHtmlSanitizer } from '../html-viewer/dompurify-loader.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 
 export type LyraIncludeMode = 'cors' | 'no-cors' | 'same-origin';
 export type IncludeResourceErrorReason =
@@ -67,6 +68,7 @@ export function acquireSanitizedIncludeResource(
       } catch (error) {
         throw new IncludeResourceError('network', 0, error);
       }
+      if (signal?.aborted || !response.ok) discardBody(response);
       signal?.throwIfAborted();
       if (!response.ok) throw new IncludeResourceError('http', response.status);
 

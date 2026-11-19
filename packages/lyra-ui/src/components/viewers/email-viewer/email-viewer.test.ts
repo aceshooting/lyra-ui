@@ -12,6 +12,16 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
+function trackedResponse(text: string, init?: ResponseInit): { response: Response; state: { pulls: number; cancelled: boolean } } {
+  const state = { pulls: 0, cancelled: false };
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) { state.pulls++; controller.enqueue(new TextEncoder().encode(text)); controller.close(); },
+    cancel() { state.cancelled = true; },
+  }, { highWaterMark: 0 });
+  return { response: new Response(body, init), state };
+}
+
+
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('ar', [
   'documentPreviewEmpty',
@@ -2071,12 +2081,13 @@ it('makes an overflowing message body keyboard scrollable with its current name'
 it('reports a missing parser peer without downloading the message body', async () => {
   __setEmailDepsForTesting({ PostalMime: undefined, DOMPurify: undefined } as never);
   const original = window.fetch;
-  const response = new Response('Subject: x\r\n\r\nbody');
+  const { response, state } = trackedResponse('Subject: x\r\n\r\nbody');
   window.fetch = (() => Promise.resolve(response)) as typeof window.fetch;
   try {
     const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="/m.eml"></lr-email-viewer>`);
     await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
-    expect(response.bodyUsed).to.equal(false);
+    await waitUntil(() => state.cancelled);
+    expect(state.pulls).to.equal(0);
   } finally {
     window.fetch = original;
     __setEmailDepsForTesting(undefined);

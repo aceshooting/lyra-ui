@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
 export const styles = css`
   :host {
     display: block;
@@ -56,6 +57,12 @@ export const styles = css`
   [part='day']:active {
     background: var(--lr-calendar-day-active-bg, color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
+  [part='day'][data-selected='true']:hover {
+    background: var(--lr-calendar-day-hover-bg, ${hoverFill('var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet))')});
+  }
+  [part='day'][data-selected='true']:active {
+    background: var(--lr-calendar-day-active-bg, ${activeFill('var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet))')});
+  }
   /* Last of the equal-specificity day rules, so the ring wins on a focused today cell -- the one
      day carrying an outline of its own. The negative outline-offset keeps the ring inside the
      border box, where it replaces that today outline rather than doubling it. */
@@ -78,12 +85,13 @@ export const styles = css`
      replaces left unchanged, and paints under the label instead of recolouring it. */
   [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--_lr-calendar-agenda-event-background, var(--lr-color-brand-quiet))); }
   [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, var(--_lr-calendar-agenda-event-background, color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))); }
-  [part='event']:hover,
+  [part='event']:hover {
+    --_lr-calendar-hover-tint: var(--lr-calendar-event-hover-tint, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background-image: linear-gradient(var(--_lr-calendar-hover-tint), var(--_lr-calendar-hover-tint));
+  }
   [part='agenda-event']:hover {
-    background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
-    );
+    --_lr-calendar-hover-tint: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background-image: linear-gradient(var(--_lr-calendar-hover-tint), var(--_lr-calendar-hover-tint));
   }
   [part='event']:active,
   [part='agenda-event']:active {

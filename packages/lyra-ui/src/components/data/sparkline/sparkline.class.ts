@@ -6,6 +6,7 @@ export type { LyraPreparedSeriesData } from '../../../utilities/data-preparation
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { nextId } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
@@ -98,6 +99,9 @@ function normalizeCurve(value: unknown): LyraSparklineCurve {
  * @csspart line - The stroked trend path.
  * @csspart status - The visible localized invalid-prepared-input message.
  * @csspart bar - Each rectangle rendered by the additive `mark="bar"` mode.
+ * @cssprop --lr-sparkline-fill-color - Scoped area fill color. Takes precedence over the mirrored fill token.
+ * @cssprop --lr-sparkline-line-color - Scoped trend line color. Takes precedence over the mirrored line token.
+ * @cssprop --lr-sparkline-line-width - Scoped trend line width. Takes precedence over the mirrored width token.
  * @cssprop [--fill-color=var(--lr-color-brand-quiet)] - Area fill color. A `trend` supplies a
  *   semantic token default, while an authored value always wins.
  * @cssprop [--line-color=var(--lr-color-brand)] - Trend line color. A `trend` supplies a semantic
@@ -343,7 +347,7 @@ export class LyraSparkline extends LyraElement {
       if (!series.yDomain) return summary;
       const first = values[0] ?? 0, last = values.at(-1) ?? 0;
       const domain = this.localize('chartSummary', undefined, { label: series.label,
-        count: number.format(series.counts.validCount), min: number.format(series.yDomain.min), max: number.format(series.yDomain.max),
+        count: number.format(series.counts.validCount), min: formatChartValue(series.yDomain.min, this.effectiveLocale, number), max: formatChartValue(series.yDomain.max, this.effectiveLocale, number),
         trend: this.localize(last > first ? 'chartTrendIncreasing' : last < first ? 'chartTrendDecreasing' : 'chartTrendFlat'),
       });
       return [domain, summary].join(this.localize('chartSummarySeparator'));

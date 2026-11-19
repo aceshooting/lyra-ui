@@ -51,7 +51,7 @@ import { boundedSelectionRects, boundedSelectionText } from '../../../internal/t
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerMissingLibrary, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerLocationChanged, LYRA_DEFAULT_ebookViewerMissingLibrary, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_ebookViewerShowingChapter, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -581,10 +581,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     ebookViewerLoadError: LYRA_DEFAULT_ebookViewerLoadError,
+    ebookViewerLocationChanged: LYRA_DEFAULT_ebookViewerLocationChanged,
     ebookViewerMissingLibrary: LYRA_DEFAULT_ebookViewerMissingLibrary,
     ebookViewerNextChapter: LYRA_DEFAULT_ebookViewerNextChapter,
     ebookViewerPreviousChapter: LYRA_DEFAULT_ebookViewerPreviousChapter,
     ebookViewerRegionLabel: LYRA_DEFAULT_ebookViewerRegionLabel,
+    ebookViewerShowingChapter: LYRA_DEFAULT_ebookViewerShowingChapter,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -874,6 +876,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         this.relocatedLocation = cfi;
         this.location = cfi;
         this.emit('lr-location-change', { cfi, href: typeof href === 'string' ? href : '' });
+        if (this.navigationPending) {
+          this.navigationPending = false;
+          this.announceLocation(book, typeof href === 'string' ? href : '');
+        }
       });
       rendition.on('selected', (cfiRange: string, contents: unknown) => {
         if (!this.isCurrentBookRendition(generation, fetchTarget.view, book, rendition) || typeof cfiRange !== 'string') return;
@@ -1037,12 +1043,25 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
   }
 
+  /** Set by a toolbar navigation so the relocation it causes is announced. */
+  private navigationPending = false;
+
+  private announceLocation(book: SafeEpubBook, href: string): void {
+    const path = href.split('#')[0];
+    const toc = projectToc(inheritedDataValue(book.getNavigation(), 'toc'));
+    const entry = toc.find((item) => item.href === href) ?? toc.find((item) => item.href.split('#')[0] === path);
+    this.announcements.announce(entry?.label
+      ? this.localize('ebookViewerShowingChapter', undefined, { chapter: entry.label })
+      : this.localize('ebookViewerLocationChanged'));
+  }
+
   private runRenditionNavigation(action: 'previous' | 'next'): void {
     const rendition = this.rendition;
     if (!rendition) return;
     const generation = this.generation;
     const ownerView = this.ownerDocument.defaultView;
     if (!ownerView) return;
+    this.navigationPending = true;
     try {
       const task = action === 'previous' ? rendition.prev() : rendition.next();
       void Promise.resolve(task).catch((error: unknown) => {

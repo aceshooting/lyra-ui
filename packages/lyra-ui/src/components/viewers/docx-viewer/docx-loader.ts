@@ -13,7 +13,6 @@ export interface DocxDeps {
   DOMPurify: HtmlSanitizer | undefined;
 }
 
-let depsPromise: Promise<DocxDeps> | undefined;
 let resolvedDeps: DocxDeps | undefined;
 
 function isMammothApi(value: unknown): value is MammothApi {
@@ -43,17 +42,12 @@ export async function loadMammothAndSanitizer(
   return { mammoth: mammoth ?? undefined, DOMPurify: DOMPurify ?? undefined };
 }
 
-export function loadDocxDeps(): Promise<DocxDeps> {
-  if (!depsPromise) {
-    const pending: Promise<DocxDeps> = loadMammothAndSanitizer().then((resolved) => {
-      // A peer that failed to load is retried by the next caller rather than cached.
-      if (resolved.mammoth && resolved.DOMPurify) resolvedDeps = resolved;
-      else if (depsPromise === pending) depsPromise = undefined;
-      return resolved;
-    });
-    depsPromise = pending;
-  }
-  return depsPromise;
+/** Both peers come from shared loaders that cache a success and retry a failure, so only the complete pair is memoized here. */
+export async function loadDocxDeps(): Promise<DocxDeps> {
+  if (resolvedDeps) return resolvedDeps;
+  const deps = await loadMammothAndSanitizer();
+  if (deps.mammoth && deps.DOMPurify) resolvedDeps ??= deps;
+  return resolvedDeps ?? deps;
 }
 
 export function getDocxDepsIfLoaded(): DocxDeps | undefined {
@@ -61,7 +55,6 @@ export function getDocxDepsIfLoaded(): DocxDeps | undefined {
 }
 
 export function clearDocxDepsCache(): void {
-  depsPromise = undefined;
   resolvedDeps = undefined;
   mammothLoader.clear();
 }

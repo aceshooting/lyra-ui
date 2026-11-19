@@ -14,6 +14,15 @@ function targets(el: LyraHighlightLayer): HTMLElement[] {
 }
 
 describe('lr-highlight-layer remediation', () => {
+  it('treats re-assigning the current items snapshot as no change', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+    el.flash('a');
+    await el.updateComplete;
+    el.items = el.items;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-flash]') !== null).to.equal(true);
+  });
+
   const modified: Array<[string, KeyboardEventInit]> = [
     ['Ctrl', { ctrlKey: true }],
     ['Meta', { metaKey: true }],

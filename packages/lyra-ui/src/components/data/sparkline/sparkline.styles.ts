@@ -34,31 +34,43 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     block-size: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
   [part~="line"] {
     fill: none;
-    stroke: var(--line-color, var(--_lr-sparkline-line-color));
-    stroke-width: var(
-      --line-width,
-      var(--lr-border-width-medium)
-    );
+    stroke: var(--lr-sparkline-line-color, var(--line-color, var(--_lr-sparkline-line-color)));
+    stroke-width: var(--lr-sparkline-line-width, var(--line-width, var(--lr-border-width-medium)));
     stroke-linejoin: round;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
   }
   [part~="fill"] {
-    fill: var(--fill-color, var(--_lr-sparkline-fill-color));
+    fill: var(--lr-sparkline-fill-color, var(--fill-color, var(--_lr-sparkline-fill-color)));
     stroke: none;
   }
   .gradient-start {
-    stop-color: var(--fill-color, var(--_lr-sparkline-fill-color));
+    stop-color: var(--lr-sparkline-fill-color, var(--fill-color, var(--_lr-sparkline-fill-color)));
     stop-opacity: var(--lr-opacity-muted);
   }
   .gradient-end {
     stop-color: transparent;
   }
   [part="bar"] {
-    fill: var(--fill-color, var(--_lr-sparkline-fill-color));
+    fill: var(--lr-sparkline-fill-color, var(--fill-color, var(--_lr-sparkline-fill-color)));
+  }
+  @media (forced-colors: active) {
+    [part~="line"] {
+      forced-color-adjust: none;
+      stroke: Highlight;
+    }
+    [part~="fill"],
+    [part="bar"] {
+      forced-color-adjust: none;
+      fill: Highlight;
+      fill-opacity: 0.35;
+    }
+    [part="bar"] {
+      fill-opacity: 1;
+    }
   }
 `;

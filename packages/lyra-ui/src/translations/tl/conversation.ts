@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Mensahe',
   composerPlaceholder: 'Magtanong ng kahit ano…',
   rename: 'Palitan ang pangalan ng {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Magandang tugon',
   feedbackNegative: 'Hindi magandang tugon',

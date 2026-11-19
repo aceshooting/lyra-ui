@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Ìfiránṣẹ́',
   composerPlaceholder: 'Béèrè ohunkóhun…',
   rename: 'Tún {title} sọ orúkọ',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} ìṣẹ́jú {seconds} ìṣẹ́jú-àáyá',
   feedbackPositive: 'Ìdáhùn tó dára',
   feedbackNegative: 'Ìdáhùn búburú',

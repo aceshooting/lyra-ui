@@ -169,6 +169,12 @@ describe('buildCalendarGrid', () => {
     expect(monthLabels[0]!.label).to.equal('M2-2026');
   });
 
+  it('labels Gregorian grid months in a locale that requests an Islamic calendar', () => {
+    const days = [{ date: '2026-03-05', value: 1 }];
+    const { monthLabels } = buildCalendarGrid(days, 0, undefined, 'en-US-u-ca-islamic');
+    expect(monthLabels.map(({ label }) => label)).to.deep.equal(['Mar']);
+  });
+
   it('falls back to the locale-derived label when monthLabelText returns undefined', () => {
     const { monthLabels } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }], 0, () => undefined);
     const expected = new Date(Date.UTC(2026, 2, 5)).toLocaleString(undefined, {

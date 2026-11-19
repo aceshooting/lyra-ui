@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: '메시지',
   composerPlaceholder: '무엇이든 물어보세요...',
   rename: '{title} 이름 바꾸기',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}분 {seconds}초',
   feedbackPositive: '양호한 응답',
   feedbackNegative: '잘못된 응답',

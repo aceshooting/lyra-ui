@@ -241,6 +241,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.requestUpdate('highlights', previous);
   }
 
+  /** Highlight id marked active in the built-in fallback preview. */
+  @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
+
   /** Media alt text forwarded to the resolved renderer, for image-like renderers. Unset lets the
    *  renderer derive a fallback name; an explicit empty string marks decorative media. */
   @property() alt?: string;
@@ -606,6 +609,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
             filename=${file.name}
             .alt=${file.alt}
             .highlights=${file.highlights ?? EMPTY_HIGHLIGHTS}
+            .activeHighlightId=${this.activeHighlightId}
             .suppressDownload=${true}
           ></lr-document-preview>
         `;

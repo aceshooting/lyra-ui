@@ -1,6 +1,7 @@
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { bdi } from '../../../internal/bidi.js';
-import { utcDate } from '../../forms/date-picker/calendar-core.js';
+import { utcDate } from '../../../internal/calendar-date.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -53,6 +54,13 @@ export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap
 }
 const MAX_CALENDAR_EVENTS = 250;
 const MAX_CALENDAR_RENDERED_CHARS = 2 * 1024 * 1024;
+
+function exceedsEventCount(source: string, limit: number): boolean {
+  const pattern = /^BEGIN:VEVENT\r?$/gim;
+  let count = 0;
+  while (pattern.exec(source)) if (++count > limit) return true;
+  return false;
+}
 
 function formatEventTime(event: ParsedCalendarEvent, locale: string): string {
   if (!event.start) return '';
@@ -245,8 +253,9 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const ical = await this.requireIcal(generation, signal);
@@ -261,6 +270,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 
@@ -278,7 +289,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
 
   private parse(source: string, ical: IcalLibrary): ParsedCalendarEvent[] {
     // Count events before the peer materializes the whole (up to 25 MB) calendar tree.
-    if ((source.match(/^BEGIN:VEVENT\r?$/gim)?.length ?? 0) > MAX_CALENDAR_EVENTS) {
+    if (exceedsEventCount(source, MAX_CALENDAR_EVENTS)) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
     }
     const component = new ical.Component(ical.parse(source));

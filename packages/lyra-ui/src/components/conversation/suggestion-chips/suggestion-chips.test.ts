@@ -721,3 +721,27 @@ it('wraps a single unbreakable label token instead of clipping it', async () => 
   expect(getComputedStyle(label).overflowWrap).to.equal('anywhere');
   expect(label.scrollWidth).to.be.at.most(label.clientWidth + 1);
 });
+
+it('keeps the keyboard focus ring inside the chip in its scrolling row', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips style="--lr-focus-ring-offset: 6px" .suggestions=${suggestions}></lr-suggestion-chips>
+  `);
+  const chip = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="chip"]')!;
+  await focusByKeyboard(chip);
+  const style = getComputedStyle(chip);
+  expect(style.outlineStyle).to.equal('solid');
+  expect(parseFloat(style.outlineOffset)).to.be.at.most(-parseFloat(style.outlineWidth));
+});
+
+it('uses the localized group name for a whitespace-only label or host name', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips label="  " .suggestions=${suggestions}></lr-suggestion-chips>
+  `);
+  const group = el.shadowRoot!.querySelector('[role="group"]')!;
+  const name = group.getAttribute('aria-label');
+  expect(name).to.equal('Suggested prompts');
+  el.label = 'Starter prompts';
+  el.setAttribute('aria-label', '   ');
+  await el.updateComplete;
+  expect(group.getAttribute('aria-label')).to.equal(name);
+});

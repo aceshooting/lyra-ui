@@ -1,6 +1,6 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import {
   html,
   nothing,
@@ -15,7 +15,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { formatTimeOfDay, getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { styles } from './conversation-item.styles.js';
-import { autocorrectConverter, normalizeAutocorrect, spellcheckConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, spellcheckConverter } from '../../../internal/converters.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -100,7 +100,8 @@ export interface LyraConversationItemEventMap {
  *   selectable region before the label/excerpt content. Only non-focusable content should be
  *   slotted here because the selectable region owns `role="button"`.
  * @slot content - Replaces the built-in label, excerpt, and meta content area with host-supplied
- *   row content. Only non-focusable content should be slotted here because the selectable region
+ *   row content. The content names the selectable region unless the host supplies `aria-label`.
+ *   Only non-focusable content should be slotted here because the selectable region
  *   owns `role="button"`.
  * @slot excerpt - Full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`
  *   highlighting). Wins over the `excerpt` property whenever it has assigned content, even if
@@ -241,16 +242,16 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
    *  attribute (browser default). */
   @property() override autocapitalize = '';
 
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
 
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. String
    *  writes are normalized for framework and plain-DOM interoperability; reads are boolean. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
+    this.autocorrectState.set(next);
   }
 
   @state() private renaming = false;
@@ -404,15 +405,9 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   };
 
   private onLabelInputKeyDown = (e: KeyboardEvent): void => {
-    // The input is a descendant of `[part="select-button"]` (unlike the rename
-    // button/actions slot, which are siblings of it) -- its keydown would
-    // otherwise bubble into onOptionKeyDown above. Stopping it here avoids a
-    // race where commitRename() (called below) has already flipped
-    // `renaming` back to `false` by the time that bubbled event reaches
-    // onOptionKeyDown's own `if (this.renaming) return;` guard, which would
-    // otherwise wrongly let the same Enter keystroke also fire lr-select.
+    if (shouldIgnoreActivationKey(e)) return;
+    // Committing the edit also re-enables the selection handler on the parent.
     e.stopPropagation();
-    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       this.commitRename(true);
@@ -498,6 +493,10 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
       });
     const displayLabel = normalizeLabel(this.label) ?? this.localize('untitledConversation');
     const showRenameButton = !this.withoutRename && !this.renaming;
+    const hostLabel = this.getAttribute('aria-label');
+    const selectionLabel = hostLabel === ''
+      ? ''
+      : normalizeLabel(hostLabel) ?? (this.hasContentSlot ? nothing : displayLabel);
     // Shared between the rename button and the input it opens: the input is
     // where focus actually lands, so it needs the same row-specific
     // accessible name (not a generic one) to disambiguate which row a
@@ -520,9 +519,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
             : this.active
             ? 'true'
             : 'false'}
-          aria-label=${this.renaming
-            ? nothing
-            : this.getAttribute('aria-label') ?? displayLabel}
+          aria-label=${this.renaming ? nothing : selectionLabel}
           @click=${this.onOptionClick}
           @keydown=${this.onOptionKeyDown}
         >

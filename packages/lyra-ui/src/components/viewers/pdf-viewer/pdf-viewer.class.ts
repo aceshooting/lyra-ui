@@ -47,6 +47,7 @@ import type { LyraVirtualListIndexedSource } from '../../layout/virtual-list/vir
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {
@@ -892,6 +893,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.publishPageViewerSnapshot('loading', 0);
       if (!current()) return;
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      if (signal?.aborted || !current() || !response.ok) discardBody(response);
       if (signal?.aborted || !current()) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const data = await readResponseArrayBuffer(response);

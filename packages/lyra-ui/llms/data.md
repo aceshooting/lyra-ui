@@ -80,7 +80,8 @@ extension-mode rectangle. `status` is the visible invalid-prepared-input message
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
 default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back to
 `--lr-border-width-medium`. Declare `--line-width` on the sparkline itself because this unprefixed name can also reach other elements that read it.
-No canvas bridge or manual refresh is needed.
+The scoped aliases `--lr-sparkline-line-color`, `--lr-sparkline-fill-color` and
+`--lr-sparkline-line-width` take precedence over the mirrored tokens.
 
 **Optional peer deps:** none.
 
@@ -170,7 +171,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
   tooltip on that row's `[part="row-value"]` and gives it `tabindex="0"`, independently per row —
-  unset rows are unaffected.
+  unset rows are unaffected. If the input exceeds the admission limit, `[part="limit"]` displays
+  the retained and supplied counts using the `statRowsInputLimit` message. Later limit changes are
+  announced politely.
 - `emphasis: boolean = false` (reflected) — visual emphasis (e.g. for a "headline" stat in a group):
   a brand-colored accent edge, orthogonal to the status `variant`; status semantics still win over
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
@@ -178,7 +181,7 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
   `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`); also gives
   `[part="value"]` `tabindex="0"` (only when set) so the tooltip is reachable by keyboard focus, not
-  just hover
+  just hover. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -1639,6 +1642,9 @@ Removing `label` omits the visible SVG label in radial, linear, and ring shapes 
 localized gauge name unless `aria-label` is authored. The property retains removal `null`;
 explicitly empty labels remain empty and later labels render normally.
 
+The linear gauge keeps caption proportions as the track resizes. The radial and ring shapes remain
+square when constrained by their container.
+
 **Properties:**
 
 - `value: number = 0`
@@ -1915,8 +1921,8 @@ its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
 focus cursor to the next word in **declaration order** (not weight/placement order),
 `ArrowLeft`/`ArrowUp` to the previous, `Home`/`End` to the first/last, and `Enter`/`Space` fires
-`lr-word-activate` for the currently-focused word. Tab focus silently establishes the first word,
-so immediate Enter/Space always works without requiring a preparatory arrow key. A
+`lr-word-activate` for the currently-focused word. Tab focus announces the current word, starting with the first word on initial entry.
+Enter/Space can activate it immediately. A
 `[part="focus-ring"]` `<rect>` is drawn around the focused word, and a
 shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
 and repeated edge movements append repeated announcements even when their text is identical.
@@ -2797,6 +2803,8 @@ color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-fo
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).
 
+Escape dismisses the hover tooltip while preserving focus.
+
 **Optional peer deps:** none.
 
 ```html
@@ -2916,7 +2924,8 @@ string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/Ar
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and keyboard focus on a
 cell shows the same `[part="tooltip"]` detail that pointer hover does (a click-focused cell keeps no
 tooltip once the pointer leaves). That tooltip is positioned from the
-active cell, not from the center of the whole strip. The tooltip is visual only and is not
+active cell and stays inside the strip. Escape dismisses it while preserving focus. Enabled cells
+provide the `sequenceStripCellKeyboardHelp` keyboard activation hint. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are actionable: clicking a
 cell, or pressing Enter/Space on the roving cell, emits `lr-item-activate`. Selection is controlled,
@@ -4476,9 +4485,8 @@ boolean }[]`. `value` is an _absolute_
   and its legend row; every other control renders `aria-pressed="false"`. Meaningful only while
   `interactive` is set. Uncontrolled by default: an activation nobody vetoes toggles the index here
   itself. `preventDefault()` on `lr-segment-activate-request` suppresses that write, which is how a consumer
-  that owns the selection takes control. Without a veto, the default toggle uses the latest selection,
-  including any synchronous host assignment. A
-  non-integer or out-of-range entry selects nothing rather than throwing.
+  that owns the selection takes control. A synchronous assignment to `selectedIndices` also
+  takes control of the selection. Non-integer and out-of-range entries are ignored.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
 using `effectiveLocale` (up to three fraction digits, more below one, so a small quantity never reads
@@ -4493,7 +4501,11 @@ that state entirely to the consumer. Never emitted in the default presentational
 event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
 own handler sees the pre-activation value. Reentrant activation during dispatch is ignored.
 Replacing the segment collection, disabling interaction, or disconnecting during dispatch cancels
-the default write.
+the default write. `lr-segment-selection-change` reports the committed selection as
+`{ selectedIndices: readonly number[] }` after a default toggle. The event is noncancelable.
+
+When segment input exceeds the admission limit, `[part="limit"]` displays the retained and supplied
+counts using the `contextMeterInputLimit` message. Later limit changes are announced politely.
 
 **Slots:** none.
 
@@ -4651,7 +4663,7 @@ localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an 
 buttons.
 
 For a large event archive, let the host query the displayed month and replace `events` with a
-bounded result. Listen for `lr-view-change.detail.viewDate` from the previous/next buttons and
+bounded result. Listen for `lr-month-change.detail.viewDate` from the previous/next buttons and
 out-of-grid keyboard moves. Assigning `viewDate` programmatically does not emit that event, so the
 host must also call its loader for a programmatic jump. The host owns request cancellation and
 obsolete-result checks: abort superseded month/page fetches and ignore results whose date window
@@ -4673,10 +4685,12 @@ from the paged table; the calendar remains a bounded month/day preview.
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7, PageUp/PageDown by one month (clamping
 the day), Home/End to the month's first/last day; stepping past the rendered grid rolls
-`viewDate` to the target's month and emits `lr-view-change`. Enter/Space select.
+`viewDate` to the target's month and emits `lr-month-change`. Enter/Space select.
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
-`lr-view-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
+`lr-month-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
+`lr-view-change` is deprecated and still fires with the same detail. Use `lr-month-change` for
+calendar-specific listeners.
 
 **Slots:** none.
 
@@ -4690,7 +4704,8 @@ view when the visible month's events exceed the 500-event render ceiling), `limi
 notice), and `empty` (the agenda
 view's localized "no events" message).
 
-**Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
+**Themeable custom properties:** `--lr-calendar-event-hover-tint` overlays a month-view event fill on hover.
+`--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size
 ≤ 28rem); `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) for a selected
 day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and

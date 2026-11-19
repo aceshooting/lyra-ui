@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'İleti',
   composerPlaceholder: 'Bir şey sorun…',
   rename: '{title} öğesini yeniden adlandır',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'İyi yanıt',
   feedbackNegative: 'Kötü yanıt',

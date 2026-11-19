@@ -1376,9 +1376,7 @@ describe("data mode", () => {
       const children = [...actionsSlot.children];
       // Built-in pin button first, custom content appended after it -- the documented precedence.
       expect(children.length).to.equal(2);
-        expect(children[0]!.getAttribute("aria-label")).to.equal(
-        "Pin conversation"
-      );
+      expect(children[0]!.getAttribute('aria-label')).to.equal('Pin conversation: Today thread');
         expect(children[1]!.classList.contains("custom-action")).to.be.true;
 
       const customPromise = oneEvent(el, "custom-rename");
@@ -4881,4 +4879,39 @@ describe("lr-thread-list search folding and filter containment", () => {
     await search(el, "x");
     expect(renderedThreadIds(el)).to.deep.equal(["b"]);
   });
+});
+
+it('identifies the thread in every localized row action name', async () => {
+  const el = await fixture<LyraThreadList>(html`
+    <lr-thread-list grouping="none" with-archived style="block-size:400px"
+      .threads=${[
+        { id: 'a', title: 'Planning' },
+        { id: 'b', title: 'Review', pinned: true, archived: true },
+        { id: 'untitled', title: ' ' },
+      ]}
+      .rowActions=${['pin', 'archive', 'delete']}
+      .strings=${{ conversationActionWithTitle: '{title} / {action}', pinConversation: 'Pin it' }}
+    ></lr-thread-list>
+  `);
+  const labels = (id: string) => Array.from(dataRow(el, id).querySelectorAll('[part="row-action"]'),
+    (action) => action.getAttribute('aria-label'));
+  await waitUntil(() => renderedThreadIds(el).length === 3);
+  expect(labels('untitled')[0]).to.equal('untitled / Pin it');
+  expect(labels('a')).to.deep.equal(['Planning / Pin it', 'Planning / Archive conversation', 'Planning / Delete conversation']);
+  expect(labels('b')).to.deep.equal(['Review / Unpin conversation', 'Review / Unarchive conversation', 'Review / Delete conversation']);
+});
+
+it('skips a slotted conversation row inside a hidden wrapper during arrow navigation', async () => {
+  const el = await fixture<LyraThreadList>(html`
+    <lr-thread-list>
+      <lr-conversation-item label="First"></lr-conversation-item>
+      <div hidden><lr-conversation-item label="Hidden"></lr-conversation-item></div>
+      <lr-conversation-item label="Last"></lr-conversation-item>
+    </lr-thread-list>
+  `);
+  const rows = el.querySelectorAll('lr-conversation-item');
+  const first = rows[0]!.shadowRoot!.querySelector<HTMLElement>('[part="select-button"]')!;
+  await focusByKeyboard(first);
+  first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
+  expect(rows[2]!.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('Last');
 });

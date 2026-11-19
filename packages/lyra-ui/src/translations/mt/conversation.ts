@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Messaġġ',
   composerPlaceholder: 'Staqsi kwalunkwe ħaġa…',
   rename: 'Semmi mill-ġdid {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Tweġiba tajba',
   feedbackNegative: 'Tweġiba ħażina',

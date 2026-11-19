@@ -393,9 +393,16 @@ describe('lr-streaming-text-core forwarded Markdown parts and code direction', (
     }
   });
 
-  it('keeps plain content mode in page direction, fences included', async () => {
-    const el = await mount('```js\nconst a = 1;\n```\n', 'rtl', 'plain');
-    expect(getComputedStyle(el.shadowRoot!.querySelector('.plain')!).direction).to.equal('rtl');
+  it('lets first-strong text set the direction in plain mode, including literal fences', async () => {
+    for (const [text, hostDirection, textDirection] of [
+      ['```js\nconst a = 1;\n```\n', 'rtl', 'ltr'],
+      ['مرحبا (2026)', 'ltr', 'rtl'],
+    ] as const) {
+      const el = await mount(text, hostDirection, 'plain');
+      const plain = el.shadowRoot!.querySelector('.plain')!;
+      expect(getComputedStyle(plain).direction).to.equal(textDirection);
+      expect(plain.textContent).to.equal(text);
+    }
   });
 });
 

@@ -42,6 +42,7 @@ export const LYRA_DEFAULT_collapseCode: LyraMessage = 'Collapse code';
 export const LYRA_DEFAULT_collapseMessage: LyraMessage = 'Collapse message';
 export const LYRA_DEFAULT_composerLabel: LyraMessage = 'Message';
 export const LYRA_DEFAULT_composerPlaceholder: LyraMessage = 'Ask anything…';
+export const LYRA_DEFAULT_conversationActionWithTitle: LyraMessage = '{action}: {title}';
 export const LYRA_DEFAULT_copiedToClipboard: LyraMessage = 'Copied to clipboard';
 export const LYRA_DEFAULT_copyCode: LyraMessage = 'Copy code';
 export const LYRA_DEFAULT_deleteConversation: LyraMessage = 'Delete conversation';

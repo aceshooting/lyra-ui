@@ -8,8 +8,11 @@ import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatMediaTime } from '../../../internal/media-time.js';
+import { formatProgressPercent } from '../../../internal/progress-value.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
   MIN_NATIVE_PLAYBACK_RATE,
@@ -27,7 +30,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { safeMediaSrc } from '../../../internal/safe-url.js';
+import type { ThumbnailCue } from './video-thumbnails.js';
 import { styles } from './video.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -62,16 +65,6 @@ export interface LyraVideoEventMap {
   focus: FocusEvent;
 }
 
-interface ThumbnailCue {
-  start: number;
-  end: number;
-  src: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-}
-
 interface CaptionTrack {
   track: TextTrack;
   label: string;
@@ -79,7 +72,6 @@ interface CaptionTrack {
 }
 
 const MAX_THUMBNAIL_BYTES = 256 * 1024;
-const MAX_THUMBNAIL_CUES = 2_000;
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -89,67 +81,6 @@ function safeControls(value: unknown): LyraVideoControls {
 
 function safePreload(value: unknown): LyraVideoPreload {
   return value === 'auto' || value === 'none' ? value : 'metadata';
-}
-
-function parseVttTime(source: string): number | null {
-  const parts = source.trim().split(':').map(Number);
-  if (parts.length < 2 || parts.length > 3 || parts.some((part) => !Number.isFinite(part))) {
-    return null;
-  }
-  const seconds = parts.length === 3
-    ? parts[0]! * 3600 + parts[1]! * 60 + parts[2]!
-    : parts[0]! * 60 + parts[1]!;
-  return seconds >= 0 ? seconds : null;
-}
-
-function parseThumbnailUrl(
-  source: string,
-  baseUrl: string,
-  URLCtor: typeof URL,
-): Omit<ThumbnailCue, 'start' | 'end'> | null {
-  const trimmed = source.trim();
-  if (!trimmed) return null;
-  try {
-    const resolved = new URLCtor(trimmed, baseUrl);
-    const sprite = /^#xywh=(\d+),(\d+),(\d+),(\d+)$/u.exec(resolved.hash);
-    resolved.hash = '';
-    const src = safeMediaSrc(resolved.href, URLCtor);
-    if (!src) return null;
-    if (!sprite) return { src };
-    const [x, y, width, height] = sprite.slice(1).map(Number);
-    if (
-      !Number.isFinite(x) ||
-      !Number.isFinite(y) ||
-      !Number.isFinite(width) ||
-      !Number.isFinite(height) ||
-      width! <= 0 ||
-      height! <= 0
-    ) {
-      return null;
-    }
-    return { src, x, y, width, height };
-  } catch {
-    return null;
-  }
-}
-
-function parseThumbnailVtt(source: string, sourceUrl: string, URLCtor: typeof URL): ThumbnailCue[] {
-  const cues: ThumbnailCue[] = [];
-  const normalized = source.replace(/^\uFEFF/u, '').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-  for (const block of normalized.split(/\n{2,}/u)) {
-    if (cues.length >= MAX_THUMBNAIL_CUES) break;
-    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
-    const timingIndex = lines.findIndex((line) => line.includes('-->'));
-    if (timingIndex < 0 || !lines[timingIndex + 1]) continue;
-    const match = /^(\S+)\s+-->\s+(\S+)/u.exec(lines[timingIndex]!);
-    if (!match) continue;
-    const start = parseVttTime(match[1]!);
-    const end = parseVttTime(match[2]!);
-    const thumbnail = parseThumbnailUrl(lines[timingIndex + 1]!, sourceUrl, URLCtor);
-    if (start === null || end === null || end <= start || !thumbnail) continue;
-    cues.push({ start, end, ...thumbnail });
-  }
-  return cues;
 }
 
 function unsupportedPromise(host: Element, message: string): Promise<never> {
@@ -392,6 +323,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @property({ type: Boolean }) loop = false;
   /** Current authored mute state; reflected for state styling. */
   @property({ type: Boolean, reflect: true }) muted = false;
+  private readonly semanticInternals = attachInternalsSafely(this);
   @state() private isPlaying = false;
   /** Whether the media is playing. Read-only state, reflected as the `playing` attribute; use `play()` and `pause()`. */
   get playing(): boolean {
@@ -409,8 +341,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @property() override title = '';
   /** Audio volume from zero to one. */
   @property({ type: Number }) volume = 1;
+  /** Playback-rate multiplier for the native video, clamped to the native range; removing the
+   *  attribute restores `1`. Native `ratechange` and `setPlaybackRate()` update it. */
+  @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
 
-  @state() private playbackRate = 1;
   @state() private posterVisible = true;
   @state() private captionText = '';
   @state() private captionTracks: CaptionTrack[] = [];
@@ -574,6 +508,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A host aria-label names the whole player, so the host needs a role to carry that name.
+    this.semanticInternals.role = normalizeLabel(hostAriaLabel(this)) === undefined ? null : 'region';
     if (changed.has('controls')) this.controls = safeControls(this.controls);
     if (changed.has('preload')) this.preload = safePreload(this.preload);
 
@@ -582,6 +518,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       const next = authored === null ? 1 : finiteRange(authored, this.mediaController.volume, 0, 1);
       if (!Object.is(next, this.volume)) this.volume = next;
       this.mediaController.volume = next;
+    }
+
+    if (changed.has('playbackRate')) {
+      const authored: number | null = this.playbackRate;
+      const next = authored === null ? 1 : finiteRange(authored, 1, MIN_NATIVE_PLAYBACK_RATE, MAX_NATIVE_PLAYBACK_RATE);
+      if (!Object.is(next, this.playbackRate)) this.playbackRate = next;
+      if (this.mediaController.playbackRate !== next) this.mediaController.playbackRate = next;
     }
 
     if (changed.has('isPlaying')) this.toggleAttribute('playing', this.isPlaying);
@@ -672,6 +615,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     // `setSources()` intentionally starts a fresh generation; restore an authored pre-mount seek
     // as a pending currentTime so metadata can clamp/apply it instead of dropping it.
     this.mediaController.currentTime = this.currentTime;
+    // load() resets the native rate to defaultPlaybackRate; the authored rate outlives sources.
+    this.mediaController.playbackRate = this.playbackRate;
   }
 
   private onSourceSlotChange = (): void => this.syncSources();
@@ -1075,6 +1020,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         return;
       }
       const text = await readResponseText(response, MAX_THUMBNAIL_BYTES);
+      const { parseThumbnailVtt } = await import('./video-thumbnails.js');
       if (
         generation !== this.thumbnailGeneration ||
         !this.isConnected ||
@@ -1185,6 +1131,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const canPip = this.canRenderPictureInPicture();
     const max = this.duration > 0 ? this.duration : 0;
     const progress = max > 0 ? finiteRange((this.currentTime / max) * 100, 0, 0, 100) : 0;
+    const positionText = this.localize('avPlayerPosition', undefined, {
+      current: formatMediaTime(this.currentTime, this.effectiveLocale),
+      duration: formatMediaTime(this.duration, this.effectiveLocale),
+    });
     return html`
       <div part="controls-overlay">
         <div part="controls">
@@ -1214,18 +1164,12 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               step="any"
               .value=${String(this.currentTime)}
               aria-label=${this.localize('playbackPosition')}
+              aria-valuetext=${positionText}
               aria-describedby="video-progress-description"
               ?disabled=${max <= 0}
               @input=${this.onTimelineInput}
             >
-            <span id="video-progress-description" class="sr-only">${this.localize(
-              'avPlayerPosition',
-              undefined,
-              {
-                current: formatMediaTime(this.currentTime, this.effectiveLocale),
-                duration: formatMediaTime(this.duration, this.effectiveLocale),
-              },
-            )}</span>
+            <span id="video-progress-description" class="sr-only">${positionText}</span>
             <span part="timeline-track">
               <span part="timeline-indicator" style=${styleMap({ 'inline-size': `${progress}%` })}></span>
             </span>
@@ -1252,6 +1196,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
             step="0.01"
             .value=${String(this.volume)}
             aria-label=${this.localize('videoVolume')}
+            aria-valuetext=${formatProgressPercent(this.effectiveLocale, finiteRange(this.volume, 1, 0, 1) * 100)}
             @input=${this.onVolumeInput}
           >
           ${this.captionTracks.length
@@ -1320,12 +1265,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   override render(): TemplateResult {
     const safePoster = safeNativeMediaSource(this.poster);
     const explicitHostLabel = hostAriaLabel(this);
-    const hostAlreadyOwnsName = explicitHostLabel !== null || this.hasAttribute('title');
     const label = explicitHostLabel === ''
       ? ''
-      : hostAlreadyOwnsName
-        ? this.localize('videoPlayerLabel')
-        : this.title || this.localize('videoPlayerLabel');
+      : normalizeLabel(explicitHostLabel) === undefined
+        ? normalizeLabel(this.title) ?? this.localize('videoPlayerLabel')
+        : this.localize('videoPlayerLabel');
     const posterActive = Boolean(safePoster && this.posterVisible);
     return html`
       ${this.panorama.renderNotice()}

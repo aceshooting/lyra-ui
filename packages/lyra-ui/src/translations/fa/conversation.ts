@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'پیام',
   composerPlaceholder: 'هر سؤالی دارید بپرسید…',
   rename: 'تغییر نام {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} دقیقه {seconds} ثانیه',
   feedbackPositive: 'پاسخ خوب',
   feedbackNegative: 'پاسخ بد',

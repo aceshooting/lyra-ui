@@ -130,7 +130,7 @@ it('leaves explicit source updates unavailable until an incremental source exist
 
 import { registerLyraLocale } from '../../../internal/localization.js';
 it('refreshes canvas, marker and popup semantics for a coalesced public locale update', async () => {
-  registerLyraLocale('fr-XA', { map: 'Carte test', close: 'Fermer test', loading: 'Chargement test', zoomIn: 'Agrandir test' });
+  registerLyraLocale('fr-XA', { map: 'Carte test', mapMarker: 'Repère test', close: 'Fermer test', loading: 'Chargement test', zoomIn: 'Agrandir test' });
   const el = await mountMap();
   const canvas = document.createElement('canvas');
   const marker = document.createElement('button');
@@ -146,7 +146,7 @@ it('refreshes canvas, marker and popup semantics for a coalesced public locale u
   el.legendCollapsible = true; el.locale = 'fr-XA'; await el.updateComplete;
   expect(canvas.getAttribute('lang')).equal('fr-XA');
   expect(canvas.getAttribute('aria-label')).equal('Carte test');
-  expect(marker.getAttribute('aria-label')).equal('Carte test');
+  expect(marker.getAttribute('aria-label')).equal('Repère test');
   expect(popup.getAttribute('lang')).equal('fr-XA');
   expect(popup.getAttribute('aria-label')).equal('Carte test');
   expect(close.getAttribute('aria-label')).equal('Fermer test');

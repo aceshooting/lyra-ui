@@ -92,6 +92,9 @@ export interface LyraAnimatedImageEventMap {
  * @csspart control-box - The container that surrounds and backgrounds the play/pause button. Only rendered once loaded and error-free.
  * @csspart play-button - The `<button type="button">` inside `control-box` that toggles `play`.
  * @cssprop --lr-animated-image-control-box-size - The size of `control-box`. Defaults to `var(--lr-icon-button-size)`.
+ * @cssprop [--lr-animated-image-control-box-bg=color-mix(in srgb, var(--lr-color-surface) 78%, transparent)] - Resting scrim behind the play/pause button.
+ * @cssprop [--lr-animated-image-play-button-hover-bg=color-mix(in srgb, var(--lr-color-surface) 100%, transparent)] - Hovered play/pause button background.
+ * @cssprop [--lr-animated-image-play-button-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed play/pause button background.
  * @cssprop --lr-animated-image-icon-size - The size of the play/pause icons. Defaults to `calc(var(--lr-icon-button-size) * 0.35)`.
  * @cssprop --control-box-size - Upstream-compatible alias for `--lr-animated-image-control-box-size`.
  * @cssprop --icon-size - Upstream-compatible alias for `--lr-animated-image-icon-size`.

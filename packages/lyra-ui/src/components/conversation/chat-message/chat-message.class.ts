@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -12,7 +13,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { styles } from './chat-message.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_expandMessage } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_expandMessage } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -195,6 +196,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     collapse: LYRA_DEFAULT_collapse,
     collapseMessage: LYRA_DEFAULT_collapseMessage,
     details: LYRA_DEFAULT_details,
+    conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
     expandMessage: LYRA_DEFAULT_expandMessage,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
@@ -476,6 +478,15 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     if (this.status !== 'failed') this.bubbleEl?.focus();
   };
 
+  private renderRetryButton(): TemplateResult {
+    const action = this.localize('retry');
+    const title = normalizeLabel(this.messageId);
+    const label = title ? this.localize('conversationActionWithTitle', undefined, { action, title }) : nothing;
+    return html`<button part="retry-button" type="button" aria-label=${label} @click=${this.onRetryClick}>
+      ${retryIcon()}<span>${action}</span>
+    </button>`;
+  }
+
   override render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
@@ -497,9 +508,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
           ? 'promptStudioRoleSystem'
           : 'promptStudioRoleAssistant',
     );
-    const articleLabel = this.hasAttribute('aria-label')
-      ? (this.getAttribute('aria-label') ?? '')
-      : authorLabel;
+    const hostLabel = this.getAttribute('aria-label');
+    const articleLabel = hostLabel === '' ? '' : normalizeLabel(hostLabel) ?? authorLabel;
     const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
       ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
     ></span>`;
@@ -548,9 +558,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
             : nothing}
           ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
           ${this.status === 'failed' && !suppressBuiltInFailedUi
-            ? html`<button part="retry-button" type="button" @click=${this.onRetryClick}>
-                ${retryIcon()}<span>${this.localize('retry')}</span>
-              </button>`
+            ? this.renderRetryButton()
             : nothing}
           ${actionsOutside ? nothing : actionsBlock}
         </div>

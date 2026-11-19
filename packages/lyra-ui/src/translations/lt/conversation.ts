@@ -55,6 +55,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Pranešimas',
   composerPlaceholder: 'Klauskite bet ko…',
   rename: 'Pervadinti {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min. {seconds} s',
   feedbackPositive: 'Geras atsakymas',
   feedbackNegative: 'Blogas atsakymas',

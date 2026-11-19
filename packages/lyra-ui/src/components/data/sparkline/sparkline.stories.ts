@@ -34,6 +34,7 @@ export const Line: Story = {
     <lr-sparkline
       appearance="line"
       data=${DATA}
+      style="--lr-sparkline-line-color: var(--lr-color-success); --lr-sparkline-line-width: var(--lr-border-width-thick)"
       label="Line-only revenue trend"
     ></lr-sparkline>
   `,

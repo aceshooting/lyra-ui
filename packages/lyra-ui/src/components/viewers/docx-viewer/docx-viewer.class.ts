@@ -60,6 +60,7 @@ export type {
 } from '../viewer-diagnostics.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkupFragment } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
@@ -431,39 +432,26 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       return;
     }
 
+    // Conversion has no transport dependency, so only the acquisition phase honours the abort signal.
+    const isStale = (transport: boolean): boolean =>
+      (transport && signal?.aborted === true)
+      || !this.isConnected
+      || generation !== this.generation
+      || this.ownerDocument.defaultView !== fetchTarget.view;
     this.pendingTransportGeneration = generation;
     this.fetchState = { kind: 'loading' };
     let acquiringDocument = true;
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (
-        signal?.aborted || !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(true) || !response.ok) discardBody(response);
+      if (isStale(true)) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const arrayBuffer = await readResponseArrayBuffer(response);
-      if (
-        signal?.aborted || !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(true)) return;
       await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal, strictAdmission: true });
-      if (
-        signal?.aborted || !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(true)) return;
       const { mammoth, DOMPurify } = await this.loadLibrary();
-      if (
-        signal?.aborted || !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(true)) return;
       if (!mammoth) {
         this.failWithLocalizedMessage(() => this.localize('docxViewerMissingConverter'));
         return;
@@ -473,16 +461,10 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         return;
       }
 
-      // Conversion has no transport dependency and can finish across a same-task move.
       acquiringDocument = false;
       if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
       const rawConverted = await mammoth.convertToHtml({ arrayBuffer });
-      if (
-        !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(false)) return;
       const converted = normalizeDocxConversion(rawConverted);
       if (!converted) {
         throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
@@ -493,12 +475,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         this.ownerDocument,
         'passive-document',
       );
-      if (
-        !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(false)) return;
       this.fetchState = {
         kind: 'loaded',
         content: this.stampHeadings(content),
@@ -515,13 +492,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         });
       }
     } catch (error) {
-      if (
-        (acquiringDocument && signal?.aborted)
-        || !this.isConnected
-        || generation !== this.generation
-        || this.ownerDocument.defaultView !== fetchTarget.view
-      )
-        return;
+      if (isStale(acquiringDocument)) return;
       this.fetchState = {
         kind: 'error',
         message: isResourceLimitError(error)

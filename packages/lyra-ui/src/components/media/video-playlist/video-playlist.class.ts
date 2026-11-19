@@ -148,6 +148,12 @@ function trackSnapshot(
  * @csspart playlist-item - An individual playlist item button.
  * @csspart playlist-thumbnail - Thumbnail within a playlist item.
  * @csspart playlist-title - Title text within a playlist item.
+ * @cssprop [--lr-video-playlist-item-hover-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Background of a hovered playlist row that is not the current one.
+ * @cssprop [--lr-video-playlist-item-hover-border-color=var(--lr-color-border-strong)] - Border
+ *   color of a hovered playlist row that is not the current one.
+ * @cssprop [--lr-video-playlist-item-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   Background of a pressed playlist row that is not the current one.
  * @cssprop [--lr-video-playlist-item-current-bg=var(--lr-color-brand-fill-quiet)] - Current
  *   playlist-item background, kept under the pointer.
  * @cssprop [--lr-video-playlist-item-current-border-color=var(--lr-color-brand)] - Current

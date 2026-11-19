@@ -350,6 +350,48 @@ describe('lr-docx-viewer', () => {
     }
   });
 
+  it('drops a converter that arrives after the source changed', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    let release!: (deps: unknown) => void;
+    let converted = 0;
+    const deps = {
+      mammoth: { convertToHtml: () => { converted += 1; return Promise.resolve({ value: '<p>late</p>', messages: [] }); } },
+      DOMPurify: { sanitize: (value: string) => value },
+    };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => new Promise((resolve) => { release = resolve; });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/first.docx';
+      await waitUntil(() => release !== undefined, 'library load never started');
+      const first = release;
+      el.src = '';
+      await el.updateComplete;
+      first(deps);
+      await aTimeout(20);
+      expect(converted).to.equal(0);
+      expect(el.shadowRoot!.querySelector('[part="content"]') === null).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
+
+  it('cancels the unread body of a non-ok response', async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } });
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(new Response(body, { status: 500 }))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/broken.docx';
+      await event;
+      await waitUntil(() => cancelled, 'response body was not cancelled');
+      expect(cancelled).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('rejects unsafe URLs without fetching and emits exactly one render error', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     let called = false;
@@ -1059,6 +1101,25 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       expect(activations).to.equal(0);
     } finally {
       Range.prototype.getClientRects = originalGetClientRects;
+      restore();
+    }
+  });
+
+  it('paints highlight actions with the shared highlight-action recipe', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.highlights = [{ id: 'ada', label: 'Ada passage', anchor: { kind: 'text-quote', quote: 'Ada wrote' } }];
+      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      const action = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight-action"]')!;
+      const probe = document.createElement('span');
+      probe.setAttribute('style', 'color: var(--lr-color-text); border-radius: var(--lr-radius-xs)');
+      el.shadowRoot!.appendChild(probe);
+      const expected = { color: getComputedStyle(probe).color, radius: getComputedStyle(probe).borderStartStartRadius };
+      probe.remove();
+      expect(getComputedStyle(action).color).to.equal(expected.color);
+      expect(getComputedStyle(action).borderStartStartRadius).to.equal(expected.radius);
+    } finally {
       restore();
     }
   });

@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Meddelande',
   composerPlaceholder: 'Fråga vad som helst…',
   rename: 'Byt namn på {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   feedbackPositive: 'Bra svar',
   feedbackNegative: 'Dåligt svar',

@@ -1901,3 +1901,53 @@ describe('review remediation', () => {
     expect(selects).to.equal(1);
   });
 });
+
+it('leaves modified and composing rename keystrokes to the editor', async () => {
+  const el = await fixture<LyraConversationItem>(html`<lr-conversation-item label="Original"></lr-conversation-item>`);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="rename-button"]')!.click();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="label-input"]')!;
+  for (const [key, modifier] of [
+    ['Enter', { ctrlKey: true }],
+    ['Escape', { altKey: true }],
+    ['Enter', { metaKey: true }],
+    ['Enter', { isComposing: true }],
+    ['Escape', { repeat: true }],
+  ] as const) {
+    const event = new KeyboardEvent('keydown', { key, ...modifier, bubbles: true, cancelable: true });
+    input.dispatchEvent(event);
+    await el.updateComplete;
+    expect(event.defaultPrevented).to.equal(false);
+    expect(!!el.shadowRoot!.querySelector('[part="label-input"]')).to.equal(true);
+  }
+});
+
+it('uses the visible custom content as the native row name unless a host name is supplied', async () => {
+  const el = await fixture<LyraConversationItem>(html`
+    <lr-conversation-item label="Internal title">
+      <span slot="content">Visible conversation</span>
+    </lr-conversation-item>
+  `);
+  await waitUntil(() => !selectButtonEl(el).hasAttribute('aria-label'));
+  const slot = selectButtonEl(el).querySelector<HTMLSlotElement>('slot[name="content"]')!;
+  expect(slot.assignedElements().map((node) => node.textContent)).to.deep.equal(['Visible conversation']);
+  el.setAttribute('aria-label', 'Custom conversation');
+  await el.updateComplete;
+  expect(selectButtonEl(el).getAttribute('aria-label')).to.equal('Custom conversation');
+  el.setAttribute('aria-label', '   ');
+  await el.updateComplete;
+  expect(selectButtonEl(el).hasAttribute('aria-label')).to.equal(false);
+});
+
+it('restores the native autocorrect default when an explicit on hint is removed', async () => {
+  const el = await fixture<LyraConversationItem>(html`
+    <lr-conversation-item label="Draft" autocorrect="on"></lr-conversation-item>
+  `);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="rename-button"]')!.click();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="label-input"]')!;
+  expect(input.getAttribute('autocorrect')).to.equal('on');
+  el.removeAttribute('autocorrect');
+  await el.updateComplete;
+  expect(input.hasAttribute('autocorrect')).to.equal(false);
+});

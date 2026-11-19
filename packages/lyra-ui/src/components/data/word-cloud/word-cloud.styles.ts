@@ -109,6 +109,10 @@ export const styles = css`
     }
   }
   @media (forced-colors: active) {
+    [part='legend-swatch'] {
+      forced-color-adjust: none;
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
     [part='word'] {
       fill: CanvasText;
     }

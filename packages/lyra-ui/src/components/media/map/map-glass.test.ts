@@ -1,5 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { toRgba, contrastRatio, resolvedColorToken } from '../../../../test/color-contrast.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import './map.js';
 import type { LyraMap } from './map.js';
@@ -12,7 +13,7 @@ const composite = (paint: string, backdrop: string): string => {
 
 /** Native peer nodes exercise the component's CSS even where WebGL2 is unavailable. */
 async function chromeFixture(look = 'shadcn', mode = 'light', treatment = 'glass') {
-  const host = await fixture<LyraMap>(html`<lr-map engine="maplibre" data-lr-look=${look} data-lr-mode=${mode}
+  const host = await fixture<LyraMap>(html`<lr-map engine="maplibre" initialization="interaction" data-lr-look=${look} data-lr-mode=${mode}
     data-lr-surface=${treatment} .legend=${[{ label: 'Category', color: 'red', pattern: 'solid' }]}></lr-map>`);
   const base = host.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const controls = ['maplibregl-ctrl-group', 'maplibregl-ctrl-scale', 'maplibregl-ctrl-attrib'].map((name) => {
@@ -51,6 +52,13 @@ describe('map floating chrome material', () => {
     it(`shares readable ${look}/${mode} material across navigation, scale, attribution and legend`, async function () {
       if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
       const { host, controls, surfaces } = await chromeFixture(look, mode);
+      const base = host.shadowRoot!.querySelector('[part="base"]')!;
+      const actions = ['pick-center', 'drawing-cancel', 'anchor-close', 'scene-toggle', 'scene-item', 'drawing-status', 'drawing-summary', 'drawing-measurement'].map(name => {
+        const button = document.createElement('button');
+        button.part.add(name); base.append(button);
+        return button;
+      });
+      surfaces.push(...actions);
       for (const surface of surfaces) {
         const paint = getComputedStyle(surface).backgroundColor;
         expect(toRgba(paint)[3]).to.be.within(152, 154);
@@ -125,6 +133,26 @@ describe('map floating chrome material', () => {
     }
   });
 
+  it('uses the action hover and pressed tokens on pick and scene buttons', async () => {
+    const { host } = await chromeFixture('shadcn', 'light', 'solid');
+    host.style.setProperty('--lr-map-action-hover-bg', 'rgb(24, 48, 72)');
+    host.style.setProperty('--lr-map-action-active-bg', 'rgb(72, 48, 24)');
+    const base = host.shadowRoot!.querySelector('[part="base"]')!;
+    for (const name of ['pick-center', 'scene-toggle']) {
+      const button = document.createElement('button');
+      button.part.add(name); button.textContent = name;
+      button.style.position = 'relative';
+      base.append(button);
+      try {
+        await hoverUntilMatched(button, name);
+        expect(toRgba(getComputedStyle(button).backgroundColor)).to.deep.equal([24, 48, 72, 255]);
+        await sendMouse({ type: 'down' });
+        await waitUntil(() => button.matches(':active'));
+        expect(toRgba(getComputedStyle(button).backgroundColor)).to.deep.equal([72, 48, 24, 255]);
+      } finally { await resetMouse(); button.remove(); }
+    }
+  });
+
   it('keeps the legend material stationary through scrolling, resizing and reconnecting in both directions', async () => {
     const { host, legend } = await chromeFixture();
     legend.style.maxBlockSize = '80px';
@@ -139,6 +167,7 @@ describe('map floating chrome material', () => {
       legend.scrollTop = 0;
       legend.scrollLeft = 0;
       await waitUntil(() => parseFloat(getComputedStyle(layer, '::before').height) === legend.clientHeight);
+      await waitUntil(() => getComputedStyle(legend).direction === direction);
       const initial = layer.getBoundingClientRect();
       legend.scrollTop = 120;
       legend.scrollLeft = direction === 'rtl' ? -50 : 50;

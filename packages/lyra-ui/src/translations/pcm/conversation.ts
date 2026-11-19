@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Wetin you wan send',
   composerPlaceholder: 'Ask wetin you wan know…',
   rename: 'Change name of {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Good answer',
   feedbackNegative: 'Bad answer',

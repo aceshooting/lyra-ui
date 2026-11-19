@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { twoFrames } from '../../../../test/frames.js';
@@ -7,6 +8,8 @@ import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
 import type { LyraSequenceStrip, SequenceStripItem } from './sequence-strip.class.js';
 import { sequenceItem, sequenceSnapshot, type LyraSequenceSource } from './sequence-strip-source.js';
+
+expectLocaleFallback('fr', ['sequenceStripCellKeyboardHelp']);
 
 const item = (index: number): SequenceStripItem => ({ id: `item-${index}`, categoryId: 'a', label: `Item ${index}`, marker: index === 999999 });
 const source = (): LyraSequenceSource<SequenceStripItem> => ({ revision: 1, length: 1000000,
@@ -27,6 +30,25 @@ const smallSource = (): LyraSequenceSource<SequenceStripItem> => ({ revision: 1,
   getItem: index => ({ id: `id-${index}`, categoryId: 'a', label: `Exact ${index}`, disabled: index === 1 }),
   findIndex: id => Number(id.slice(3)),
   summarize: () => [{ startIndex: 0, endIndex: 3, categoryCounts: { a: 3 }, markerCount: 0, enabledCount: 2 }],
+});
+
+it('leaves modified exact navigation and range activation keys to the browser', async () => {
+  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .source=${smallSource()}></lr-sequence-strip>`);
+  await ready(el);
+  await el.revealSourceItem(0);
+  const exact = el.shadowRoot!.querySelector('[part="source-exact"]')!;
+  const range = el.shadowRoot!.querySelector('[part="cell"]')!;
+  let activations = 0;
+  el.addEventListener('lr-item-activate', () => { activations += 1; });
+  const shortcut = new KeyboardEvent('keydown', { key: 'End', altKey: true, bubbles: true, cancelable: true });
+  const activation = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true });
+  exact.dispatchEvent(shortcut);
+  range.dispatchEvent(activation);
+  expect(shortcut.defaultPrevented).to.equal(false);
+  expect(activation.defaultPrevented).to.equal(false);
+  await twoFrames();
+  expect(exact.textContent).to.contain('Exact 0');
+  expect(activations).to.equal(0);
 });
 
 describe('sequence source admission and actions', () => {

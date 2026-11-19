@@ -1,3 +1,5 @@
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -561,4 +563,97 @@ describe('lr-map drawing integration', () => {
     expect(peer.gestureCalls).to.deep.equal(['disable', 'enable']);
     expect(peer.sources.size).to.equal(0);
   });
+  it('uses the map drawing geometry tokens for temporary peer layers', async () => {
+    const { element, peer } = await drawing('polygon', el => {
+      el.style.setProperty('--lr-map-drawing-fill-opacity', '0.6');
+      el.style.setProperty('--lr-map-drawing-stroke-width', '4');
+      el.style.setProperty('--lr-map-drawing-vertex-radius', '8');
+      el.style.setProperty('--lr-map-drawing-preview-dash', '3 6');
+    });
+    await vertex(element, peer, 1, 2);
+    const paint = (suffix: string) => ([...peer.layers].find(([id]) => id.endsWith(suffix))![1] as { paint: Record<string, unknown> }).paint;
+    expect(paint('-fill')['fill-opacity']).to.equal(0.6);
+    expect(paint('-line')['line-width']).to.equal(4);
+    expect(paint('-preview')['line-width']).to.equal(4);
+    expect(paint('-preview')['line-dasharray']).to.deep.equal([3, 6]);
+    expect(paint('-points')['circle-radius']).to.equal(8);
+  });
+
+  it('ignores invalid drawing dimensions and bounds fill opacity to the native paint range', async () => {
+    const { element, peer } = await drawing('polygon', el => {
+      el.style.setProperty('--lr-map-drawing-fill-opacity', '5');
+      el.style.setProperty('--lr-map-drawing-stroke-width', '-1');
+      el.style.setProperty('--lr-map-drawing-vertex-radius', 'bad');
+      el.style.setProperty('--lr-map-drawing-preview-dash', '2 0');
+    });
+    await vertex(element, peer, 1, 2);
+    const paint = (suffix: string) => ([...peer.layers].find(([id]) => id.endsWith(suffix))![1] as { paint: Record<string, unknown> }).paint;
+    expect(paint('-fill')['fill-opacity']).to.equal(1);
+    expect(paint('-line')['line-width']).to.equal(2);
+    expect(paint('-preview')['line-dasharray']).to.deep.equal([2, 2]);
+    expect(paint('-points')['circle-radius']).to.equal(5);
+  });
+
+  it('uses the authored hover and pressed fills on an editable vertex', async () => {
+    const { element, peer } = await mount();
+    await editSurface(element, peer);
+    element.style.setProperty('--lr-map-drawing-vertex-hover-bg', 'rgb(10, 20, 30)');
+    element.style.setProperty('--lr-map-drawing-vertex-active-bg', 'rgb(30, 20, 10)');
+    expect(element.editDrawing(completed())).to.equal(true);
+    await settle(element, peer);
+    const handle = element.shadowRoot!.querySelector<HTMLElement>('[part="drawing-vertex"]')!;
+    const dot = handle.firstElementChild!;
+    try {
+      await hoverUntilMatched(handle, 'Editable vertex receives pointer hover');
+      expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(10, 20, 30)');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(dot).backgroundColor === 'rgb(30, 20, 10)');
+    } finally { await resetMouse(); }
+  });
+
+  it('repairs drawing action focus when a completed drawing removes its controls', async () => {
+    const { element, peer } = await drawing();
+    await editSurface(element, peer);
+    peer.canvas.tabIndex = 0;
+    await vertex(element, peer, 0, 0); await vertex(element, peer, 2, 3);
+    const finish = element.shadowRoot!.querySelector<HTMLButtonElement>('[part="drawing-complete"]')!;
+    await focusByKeyboard(finish);
+    finish.click(); await element.updateComplete;
+    expect(element.shadowRoot!.activeElement === peer.canvas).to.equal(true);
+  });
+
+  it('localizes empty and invalid-coordinate drawing feedback', async () => {
+    const { element } = await drawing('polygon', el => { el.strings = {
+      mapDrawingTooFewVertices: 'Choose {count} points', mapDrawingInvalidCoordinate: 'Choose a coordinate',
+    }; });
+    const feedback = element as unknown as { showDrawingError(code: string): void };
+    for (const [code, message] of [['empty', 'Choose 3 points'], ['invalid-coordinate', 'Choose a coordinate']] as const) {
+      feedback.showDrawingError(code);
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('[part="configuration-error"]')!.textContent).to.equal(message);
+    }
+  });
+
+  it('names vertex counts and edit handles with the active numbering system', async () => {
+    const locale = 'ar-EG-x-map-draw';
+    registerLyraLocale(locale, { ...LYRA_DEFAULT_STRINGS });
+    const { element, peer } = await drawing('line', el => { el.locale = locale; });
+    await vertex(element, peer, 0, 0);
+    expect(element.shadowRoot!.querySelector('[part="drawing-status"]')!.textContent).to.include(new Intl.NumberFormat('ar-EG').format(1));
+    expect(element.completeDrawing()).to.equal(false);
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="configuration-error"]')!.textContent).to.include(new Intl.NumberFormat('ar-EG').format(2));
+    await vertex(element, peer, 2, 3);
+    expect(element.completeDrawing()).to.equal(true);
+    await settle(element, peer);
+    await editSurface(element, peer);
+    expect(element.editDrawing(completed())).to.equal(true);
+    await settle(element, peer);
+    const handles = [...element.shadowRoot!.querySelectorAll('[part="drawing-vertex"]')];
+    expect(handles.length).to.equal(2);
+    for (const [index, handle] of handles.entries()) {
+      expect(handle.getAttribute('aria-label')).to.include(new Intl.NumberFormat(locale).format(index + 1));
+    }
+  });
+
 });

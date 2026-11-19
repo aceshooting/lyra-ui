@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, fixtureCleanup, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -33,6 +34,8 @@ function centreX(map: LyraMap, anchor: LyraMapAnchor): number {
   const rect = base(anchor).getBoundingClientRect();
   return rect.left + rect.width / 2 - containerLeft(map);
 }
+
+expectDeprecatedUsage('lr-map-anchor', 'event', 'lr-close-request');
 
 describe('lr-map-anchor placement, coexistence and close ownership', () => {
   beforeEach(() => { stubMapEnvironment(); });
@@ -378,4 +381,20 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     await focusByKeyboard(button);
     expect(getComputedStyle(button).outlineStyle).to.equal('solid');
   });
+  it('lets ancestors handle child anchor dismissals by their specific event names', async () => {
+    const { map } = await mountMap();
+    const anchor = addAnchor(map);
+    await placed(anchor);
+    const events: string[] = [];
+    map.addEventListener('lr-map-anchor-dismiss-request', event => {
+      events.push(event.type);
+      event.preventDefault();
+    }, { once: true });
+    map.addEventListener('lr-map-anchor-dismiss', event => events.push(event.type));
+    expect(anchor.close()).to.equal(false);
+    expect(anchor.open).to.equal(true);
+    expect(anchor.close()).to.equal(true);
+    expect(events).to.deep.equal(['lr-map-anchor-dismiss-request', 'lr-map-anchor-dismiss']);
+  });
+
 });

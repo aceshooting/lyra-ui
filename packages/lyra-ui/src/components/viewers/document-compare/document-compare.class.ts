@@ -340,8 +340,19 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-document-compare-pane-max-height` --
    *  the max block size of each `view="side-by-side"` pane -- declaratively, the same `max-height`
    *  attribute every other content-viewer sibling exposes, rather than requiring a consumer to set
-   *  the differently-named CSS custom property inline. Invalid values are ignored. */
+   *  the differently-named CSS custom property inline. In `view="diff"` it caps the diff view's
+   *  own block size instead. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+
+  /** Forwarded to the internal `<lr-diff-view>`'s `languageLoaders` while `view="diff"`. */
+  @property({ attribute: false }) languageLoaders?: LyraDiffView['languageLoaders'];
+
+  /** Forwarded to the internal `<lr-diff-view>`'s `contextLines` while `view="diff"`; unset shows
+   *  every unchanged line. */
+  @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
+
+  /** Highlight id marked active in both `view="side-by-side"` panes. */
+  @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
 
   /** A shared scroll-to-anchor target, applied to the diff view or to both `view="side-by-side"`
    *  panes. Re-assigning the identical object or id is not a new jump; call `scrollToAnchor()`
@@ -513,6 +524,9 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
         ?copyable=${this.copyable}
         language=${this.language}
         .languages=${this.languages}
+        .languageLoaders=${this.languageLoaders}
+        .contextLines=${this.contextLines}
+        max-height=${this.maxHeight || nothing}
         .anchor=${this.anchor}
       ></lr-diff-view>
     `;
@@ -526,6 +540,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
         mime-type=${version.mimeType ?? ''}
         src=${version.uri ?? ''}
         .highlights=${version.highlights ?? EMPTY_HIGHLIGHTS}
+        .activeHighlightId=${this.activeHighlightId}
         @lr-highlight-activate=${(e: CustomEvent<HighlightActivateDetail>) =>
           this.onHighlightActivate(side, e)}
       ></lr-document-preview>

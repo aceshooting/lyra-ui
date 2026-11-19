@@ -3,7 +3,7 @@ import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/t
 import './animated-image.js';
 import type { LyraAnimatedImage } from './animated-image.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -885,5 +885,31 @@ describe('lr-animated-image remediation', () => {
     await loaded(el, OTHER_DATA_URI);
     const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="play-button"]')!;
     expect(el.shadowRoot!.activeElement === next).to.equal(true);
+  });
+});
+
+describe('control state tokens', () => {
+  it('paints the control scrim and the hovered and pressed play button from their own tokens', async () => {
+    const el = (await fixture(html`
+      <lr-animated-image
+        alt="Pixel"
+        ignore-reduced-motion
+        style="inline-size: 160px; block-size: 100px; --lr-transition-fast: 0s; --lr-animated-image-control-box-bg: rgb(1, 2, 3); --lr-animated-image-play-button-hover-bg: rgb(10, 20, 30); --lr-animated-image-play-button-active-bg: rgb(70, 80, 90)"
+      ></lr-animated-image>
+    `)) as LyraAnimatedImage;
+    await loaded(el);
+    const box = el.shadowRoot!.querySelector<HTMLElement>('[part="control-box"]')!;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!;
+    expect(getComputedStyle(box).backgroundColor).to.equal('rgb(1, 2, 3)');
+    button.scrollIntoView({ block: 'center' });
+    try {
+      await hoverUntilMatched(button, 'the play button never reported :hover');
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(10, 20, 30)', 'hover token never painted');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(70, 80, 90)', 'pressed token never painted');
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 });

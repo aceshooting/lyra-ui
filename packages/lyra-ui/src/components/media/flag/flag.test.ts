@@ -440,7 +440,7 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
     console.warn = () => {};
     let resolve: Awaited<ReturnType<typeof loadFlagUrl>> | undefined;
     try {
-      resolve = await loadFlagUrl(() => Promise.reject(new Error('boom')));
+      resolve = await loadFlagUrl(() => Promise.reject(new TypeError("Failed to resolve module specifier '@aceshooting/lyra-flags'")));
     } finally {
       console.warn = originalWarn;
     }
@@ -452,7 +452,7 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
     const calls: unknown[][] = [];
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
-      await loadFlagUrl(() => Promise.reject(new Error('boom')));
+      await loadFlagUrl(() => Promise.reject(new TypeError("Failed to resolve module specifier '@aceshooting/lyra-flags'")));
     } finally {
       console.warn = originalWarn;
     }
@@ -517,7 +517,7 @@ describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
     console.warn = () => {};
     let resolve: Awaited<ReturnType<typeof loadBulkFlagUrl>> | undefined;
     try {
-      resolve = await loadBulkFlagUrl(() => Promise.reject(new Error('boom')));
+      resolve = await loadBulkFlagUrl(() => Promise.reject(new TypeError("Failed to resolve module specifier '@aceshooting/lyra-flags'")));
     } finally {
       console.warn = originalWarn;
     }
@@ -529,7 +529,7 @@ describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
     const calls: unknown[][] = [];
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
-      await loadBulkFlagUrl(() => Promise.reject(new Error('boom')));
+      await loadBulkFlagUrl(() => Promise.reject(new TypeError("Failed to resolve module specifier '@aceshooting/lyra-flags'")));
     } finally {
       console.warn = originalWarn;
     }
@@ -1413,7 +1413,7 @@ describe('peer capability diagnostics', () => {
   it('distinguishes an absent peer from one that loaded without the bulk capability', async () => {
     const absent = captureWarnings();
     try {
-      await loadBulkFlagUrl(() => Promise.reject(new Error('Cannot find module')));
+      await loadBulkFlagUrl(() => Promise.reject(new Error("Cannot find module '@aceshooting/lyra-flags'")));
     } finally {
       absent.restore();
     }
@@ -1447,6 +1447,84 @@ describe('peer capability diagnostics', () => {
     expect(outdated.calls.length).to.equal(1);
     expect(String(outdated.calls[0]![0])).to.contain('flagUrl');
     expect(String(outdated.calls[0]![0])).to.not.contain('install it with');
+  });
+});
+
+describe('transient peer import failure', () => {
+  const FAILED_FETCH = 'Failed to fetch dynamically imported module: /node_modules/@aceshooting/lyra-flags/index.js';
+  for (const [name, load, peer] of [
+    ['per-code', loadFlagUrl, { flagUrl: async (code: string) => `/flags/${code}.svg` }],
+    ['bulk', loadBulkFlagUrl, { createFlagUrlResolver: () => async (code: string) => `/flags/${code}.svg` }],
+  ] as const) {
+    it(`retries a ${name} import that rejected and keeps the first success`, async () => {
+      const calls: unknown[][] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => calls.push(args);
+      let attempts = 0;
+      let available = false;
+      try {
+        const resolve = await load(async () => {
+          attempts++;
+          if (!available) throw new TypeError(FAILED_FETCH);
+          return peer;
+        });
+        expect(typeof resolve).to.equal('function');
+        expect(calls.length).to.equal(1);
+        expect(String(calls[0]![0])).to.contain('could not load');
+        expect(String(calls[0]![0])).to.not.contain('install it with');
+        let rejected = false;
+        try { await resolve!('fr'); } catch { rejected = true; }
+        expect(rejected, 'a still-failing import fails the resolution closed').to.be.true;
+        available = true;
+        expect(await resolve!('fr')).to.equal('/flags/fr.svg');
+        expect(await resolve!('de')).to.equal('/flags/de.svg');
+        expect(attempts).to.equal(3);
+        expect(calls.length).to.equal(1);
+      } finally {
+        console.warn = originalWarn;
+      }
+    });
+  }
+
+  it('fails closed when the retried import lacks the capability', async () => {
+    const calls: unknown[][] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => calls.push(args);
+    let first = true;
+    try {
+      const resolve = await loadFlagUrl(async () => {
+        if (first) { first = false; throw new TypeError(FAILED_FETCH); }
+        return { somethingElse: 1 };
+      });
+      let rejected = false;
+      try { await resolve!('fr'); } catch { rejected = true; }
+      expect(rejected).to.be.true;
+      expect(calls.length).to.equal(2);
+      expect(String(calls[1]![0])).to.contain('version mismatch');
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('shows the error part and then the flag once a failed peer import recovers', async () => {
+    let available = false;
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      setFlagUrlResolver(loadFlagUrl(async () => {
+        if (!available) throw new TypeError(FAILED_FETCH);
+        return { flagUrl: async () => TEST_FLAG_SRC };
+      }));
+      const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+      await waitUntil(() => el.shadowRoot?.querySelector('[part="error"]') !== null);
+      available = true;
+      el.country = 'de';
+      await waitUntil(() => el.shadowRoot?.querySelector('img') !== null);
+      expect(el.shadowRoot?.querySelector('[part="error"]') === null).to.be.true;
+    } finally {
+      console.warn = originalWarn;
+      setFlagUrlResolver(registerLyraFlagPeer());
+    }
   });
 });
 

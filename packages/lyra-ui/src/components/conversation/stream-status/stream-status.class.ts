@@ -79,7 +79,7 @@ export interface LyraStreamStatusEventMap {
  * to *mount* with is never itself treated as an eventful transition — only a
  * later change fires an event or an announcement.
  *
- * Accessibility: phase transitions into/out of `'stalled'` are announced
+ * Accessibility: phase changes are announced
  * through an internal `<lr-live-region>` (see that component for the
  * throttled/coalesced-announcement machinery this composes) rather than a
  * hand-rolled `aria-live` region. `recordActivity()` itself never announces
@@ -324,7 +324,10 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     current: StreamStatusPhase
   ): void {
     if (!this.isConnected || previous === undefined || previous === current) return;
-    if (current !== 'stalled' && previous !== 'stalled') return;
+    if (current !== 'stalled' && previous !== 'stalled') {
+      this.announceTransition('polite', this.phaseText);
+      return;
+    }
 
     const generation = this.notificationGeneration;
     // Run after Lit's update hooks so a listener can change the phase immediately.

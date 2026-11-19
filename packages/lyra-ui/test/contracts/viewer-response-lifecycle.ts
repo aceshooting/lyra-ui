@@ -43,7 +43,7 @@ export function describeViewerResponseLifecycle(name: string, template: Template
         await waitUntil(() => errors === 1);
         await viewer.updateComplete;
         expect(viewer.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim()).to.equal(message);
-        expect(failure.bodyUsed).to.equal(false);
+        expect(failure.bodyUsed).to.equal(true);
         viewer.src = currentUrl;
         await waitUntil(() => renderedContent(viewer).includes(currentLabel));
         expect(viewer.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
@@ -114,7 +114,7 @@ export function describeViewerResponseLifecycle(name: string, template: Template
             await viewer.updateComplete;
             expect(errors).to.equal(0);
             expect(content()).not.to.contain(obsoleteLabel);
-            if (boundary === 'headers') expect(obsolete.bodyUsed).to.equal(false);
+            if (boundary === 'headers') expect(obsolete.bodyUsed).to.equal(outcome === 'fulfilled');
             if (retirement === 'disconnect') {
               expect(content()).not.to.contain(currentLabel);
               viewer.src = currentUrl;

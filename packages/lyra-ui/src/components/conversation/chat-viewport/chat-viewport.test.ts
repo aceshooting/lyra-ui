@@ -2039,3 +2039,29 @@ it("resolves a host aria-describedby onto its log owner", async () => {
   host.removeAttribute("aria-describedby");
   await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
 });
+
+it('emits follow changes for user scrolling or a jump, and keeps direct writes silent', async () => {
+  const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:100px"
+    >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lr-chat-viewport>`);
+  await nextFrame();
+  const changes: boolean[] = [];
+  el.addEventListener('lr-follow-change', (event) => changes.push((event as CustomEvent<{ following: boolean }>).detail.following));
+
+  el.follow = false;
+  await el.updateComplete;
+  el.scrollToBottom({ behavior: 'auto' });
+  await el.updateComplete;
+  expect(el.follow).to.equal(true);
+  expect(changes).to.deep.equal([]);
+
+  const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+  scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: -40 }));
+  scroll.scrollTop = 0;
+  scroll.dispatchEvent(new Event('scroll'));
+  await el.updateComplete;
+  expect(changes).to.deep.equal([false]);
+
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="jump-pill"]')!.click();
+  await el.updateComplete;
+  expect(changes).to.deep.equal([false, true]);
+});

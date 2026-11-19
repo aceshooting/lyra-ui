@@ -1,13 +1,16 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatAdaptiveShare } from '../../../internal/locale-number.js';
 import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
+import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
@@ -16,12 +19,14 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { statePart } from '../../../internal/state-part.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal, LYRA_DEFAULT_contextMeterInputLimit } from '../../../internal/default-strings/data.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
@@ -66,6 +71,7 @@ export interface LyraContextMeterSegmentActivateDetail {
 
 export interface LyraContextMeterEventMap {
   'lr-segment-activate-request': CustomEvent<LyraContextMeterSegmentActivateDetail>;
+  'lr-segment-selection-change': CustomEvent<{ readonly selectedIndices: readonly number[] }>;
 }
 
 export interface ContextMeterSegment {
@@ -192,6 +198,7 @@ function formatCount(n: number, locale: string): string {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-context-meter
+ * @csspart limit - Notice showing how many segments were admitted when input exceeded the limit.
  * @csspart base - The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`).
  * @csspart track - The unfilled/empty capacity track.
  * @csspart segment - One occupied segment. Carries `data-tone` for styling and
@@ -242,6 +249,7 @@ function formatCount(n: number, locale: string): string {
  *   `index` in its own `selectedIndices`, so `preventDefault()` hands that state entirely to the
  *   consumer. Never emitted in the default presentational mode. Synchronous reentry is ignored;
  *   replacing the segments, disabling interaction, or disconnecting during dispatch cancels the write.
+ * @event lr-segment-selection-change - Detail: `{ selectedIndices: readonly number[] }`. Fires after the default toggle commits.
  * @status stable
  * @since 4.0.0
  */
@@ -250,6 +258,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    contextMeterInputLimit: LYRA_DEFAULT_contextMeterInputLimit,
     contextMeterSegmentLabel: LYRA_DEFAULT_contextMeterSegmentLabel,
     contextMeterUsed: LYRA_DEFAULT_contextMeterUsed,
     contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
@@ -264,6 +273,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-segment-activate-request',
+    'lr-segment-selection-change',
   ]);
 
   static override styles = [LyraElement.styles, srOnly, styles];
@@ -338,6 +348,9 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    */
   @property({ type: Boolean, reflect: true }) interactive = false;
 
+  private readonly selectedIndicesGuard = new VetoWriteGuard();
+  private selectedIndicesValue: readonly number[] = [];
+
   /**
    * Indexes of the currently selected segments, rendered as `aria-pressed="true"` plus a second
    * part token -- `segment-selected` on the band, `legend-item-selected` on its legend row.
@@ -346,12 +359,19 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    * Uncontrolled by default: an activation this component emits and nobody vetoes toggles the
    * index here itself. `preventDefault()` on `lr-segment-activate-request` suppresses that write, which is
    * how a consumer that owns the selection takes control -- the library's standard request/commit
-   * shape. Without a veto, the default toggle uses the latest selection, including a synchronous
-   * host assignment. A non-integer or out-of-range entry selects nothing rather than throwing.
+   * shape. A synchronous host assignment also takes control of the selection. Entries outside
+   * the index range are ignored.
    */
   // numeric-guard-exempt: isSelected() rejects anything that is not an in-range integer before the
   // value reaches rendering, so a non-finite or fractional entry selects nothing.
-  @property({ attribute: false }) selectedIndices: readonly number[] = [];
+  @property({ attribute: false, hasChanged: (value, old) => value !== old })
+  get selectedIndices(): readonly number[] { return this.selectedIndicesValue; }
+  set selectedIndices(value: readonly number[]) {
+    const previous = this.selectedIndicesValue;
+    this.selectedIndicesValue = value;
+    markVetoGuardWrite(this.selectedIndicesGuard);
+    this.requestUpdate('selectedIndices', previous);
+  }
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   private projectedSegmentsSource: unknown;
@@ -461,6 +481,8 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
 
   /** The same clamped ratio the band paints, as a locale-formatted percentage. */
   private formatShare(ratio: number): string {
+    const magnitude = Math.abs(ratio);
+    if (magnitude > 0 && magnitude < 0.001) return formatAdaptiveShare(this.effectiveLocale, ratio);
     return getNumberFormat(this.effectiveLocale, {
       style: 'percent',
       maximumFractionDigits: 1,
@@ -469,28 +491,24 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
 
   private activationDispatching = false;
 
-  /** Dispatch both veto names before applying the default toggle to the latest selection. */
   private activateSegment(index: number, segment: Readonly<ContextMeterSegment>): void {
     if (this.activationDispatching || !this.isConnected || !this.interactive || segment.disabled ||
         this.effectiveSegments[index] !== segment) return;
     this.activationDispatching = true;
     try {
+      const detail = { index, label: segment.label, value: this.normalizedSegmentValue(segment) };
       requestThenCommit({
-        requestDetail: {
-          index,
-          label: segment.label,
-          value: this.normalizedSegmentValue(segment),
-        },
-        emitRequest: (detail, init: { cancelable: true }) => {
-          const request = this.emit('lr-segment-activate-request', detail, init);
-          return request;
-        },
+        requestDetail: detail,
+        guard: this.selectedIndicesGuard,
+        emitRequest: (detail, init: { cancelable: true }) =>
+          this.emit('lr-segment-activate-request', detail, init),
         commit: () => {
           if (!this.isConnected || !this.interactive || this.effectiveSegments[index] !== segment) return;
           const selected = this.canonicalSelectedIndices();
           this.selectedIndices = selected.includes(index)
             ? selected.filter((candidate) => candidate !== index)
             : [...selected, index].sort((left, right) => left - right);
+          this.emit('lr-segment-selection-change', { selectedIndices: this.selectedIndices });
         },
       });
     } finally {
@@ -501,6 +519,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   /** Enter/Space on the ring's `role="button"` arcs, which get none of a native button's keys. */
   private onArcKeyDown(event: KeyboardEvent, index: number, segment: Readonly<ContextMeterSegment>): void {
     if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (shouldIgnoreActivationKey(event)) return;
     event.preventDefault();
     this.activateSegment(index, segment);
   }
@@ -518,7 +537,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private renderSemantics(): TemplateResult {
     const { used, total } = this.clampedUsedTotal;
     const summary = this.summary;
-    const name = this.hostAccessibleLabel ?? (this.label || summary);
+    const name = normalizeLabel(this.hostAccessibleLabel) ?? normalizeLabel(this.label) ?? summary;
     return html`
       <div
         part="semantic"
@@ -683,11 +702,29 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     `;
   }
 
+  private readonly announcements = new AnnouncementSinkController(this);
+
+  private inputLimitMessage(): string {
+    const limit = publicCollectionTruncation(this, 'segments');
+    return limit ? this.localize('contextMeterInputLimit', undefined, {
+      count: this.formatLocaleNumber(limit.retained),
+      total: this.formatLocaleNumber(limit.source),
+    }) : '';
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const notice = this.inputLimitMessage();
+    this.announcements.transition('input-limit', notice, notice, 'polite');
+  }
+
   override render(): TemplateResult {
+    const notice = this.inputLimitMessage();
     const ratios = this.ratios();
     return html`
       ${this.shape === 'ring' ? this.renderRing(ratios) : this.renderBar(ratios)}
       ${this.withLegend ? this.renderLegend(ratios) : nothing}
+      ${notice ? html`<div part="limit">${notice}</div>` : nothing}
       ${this.renderSemantics()}
     `;
   }

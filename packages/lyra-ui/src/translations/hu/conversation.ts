@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Üzenet',
   composerPlaceholder: 'Kérdezzen bármit…',
   rename: 'Átnevezés: {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} p {seconds} mp',
   feedbackPositive: 'Jó válasz',
   feedbackNegative: 'Rossz válasz',

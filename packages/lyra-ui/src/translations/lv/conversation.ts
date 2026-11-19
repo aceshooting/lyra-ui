@@ -54,6 +54,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Ziņojums',
   composerPlaceholder: 'Jautājiet jebko…',
   rename: 'Pārdēvēt {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   feedbackPositive: 'Laba atbilde',
   feedbackNegative: 'Slikta atbilde',

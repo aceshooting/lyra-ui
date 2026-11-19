@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'செய்தி',
   composerPlaceholder: 'எதையும் கேளுங்கள்…',
   rename: '{title}-ஐ மறுபெயரிடு',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'நல்ல பதில்',
   feedbackNegative: 'மோசமான பதில்',

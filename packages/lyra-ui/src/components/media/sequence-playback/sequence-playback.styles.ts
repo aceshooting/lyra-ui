@@ -63,7 +63,7 @@ export const styles = css`
     display: flex;
   }
   [part="play-button"]:hover:where(:not(:disabled)) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-sequence-playback-play-button-hover-border-color, var(--lr-color-brand));
   }
   [part="play-button"]:active:where(:not(:disabled)) {
     border-color: var(

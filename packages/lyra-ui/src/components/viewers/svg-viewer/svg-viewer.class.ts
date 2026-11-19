@@ -1,4 +1,5 @@
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
@@ -28,7 +29,7 @@ import {
   renderRegionHighlightLayer,
   sameRegionRect,
 } from '../region-highlight-layer.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -51,13 +52,13 @@ function sanitizeInlineSvg(
   raw: string,
   ownerDocument: Document,
 ): string {
-  const markup = sanitizePassiveMarkup(sanitizer, raw, ownerDocument, 'passive-svg');
-  const template = ownerDocument.createElement('template');
-  template.innerHTML = markup;
-  if (!template.content.querySelector('svg')) {
+  const fragment = sanitizePassiveMarkupFragment(sanitizer, raw, ownerDocument, 'passive-svg');
+  if (!fragment.querySelector('svg')) {
     throw new Error('SVG sanitizer did not return an SVG document.');
   }
-  return markup;
+  const template = ownerDocument.createElement('template');
+  template.content.append(fragment);
+  return template.innerHTML;
 }
 
 type SvgFetchState =
@@ -119,8 +120,8 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart region-highlight-action - One non-overlapping highlight action.
  * @cssprop [--lr-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-svg-viewer-active-border=var(--lr-color-warning, var(--lr-color-brand))] - Border
- *   color of the `[part="region-highlight"]` matching `activeHighlightId`. Distinct from the
- *   resting highlight border, so the active region can be recolored without touching the rest.
+ *   and outer-ring color of the `[part="region-highlight"]` matching `activeHighlightId`. The ring
+ *   keeps the active region distinct from a warning-tone highlight.
  * @cssprop [--lr-svg-viewer-highlight-accent-color=var(--lr-color-brand)] - Accent highlight border and hover tint.
  * @cssprop [--lr-svg-viewer-highlight-success-color=var(--lr-color-success)] - Success highlight border and hover tint.
  * @cssprop [--lr-svg-viewer-highlight-warning-color=var(--lr-color-warning)] - Warning highlight border and hover tint.
@@ -255,8 +256,9 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadSvgSanitizer();
@@ -277,6 +279,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

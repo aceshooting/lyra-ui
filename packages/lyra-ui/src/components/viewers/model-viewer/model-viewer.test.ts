@@ -8,6 +8,7 @@ import type { LyraModelViewer } from './model-viewer.class.js';
 import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';
 import { DEFAULT_MODEL_CAMERA } from './model-viewer-source.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { twoFrames } from '../../../../test/frames.js';
 
 const camera = () => ({ yaw: 0, pitch: 0, distance: 10, target: { x: 0, y: 0, z: 0 } });
 const source = 'data:text/plain,v%200%200%200%0Av%201%200%200%0Av%200%201%200%0Af%201%202%203';
@@ -361,6 +362,35 @@ describe('environment changes', () => {
     holder.style.setProperty('--lr-theme-color-surface-default', 'rgb(0, 0, 255)');
     await waitUntil(() => background() === 'rgba(0, 0, 255, 1)');
   });
+  it('coalesces ancestor mutations into one restyle and skips unchanged styles', async () => {
+    const holder = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-color-surface-default: rgb(255, 0, 0)"><lr-model-viewer src=${source} format="obj"></lr-model-viewer></div>`);
+    const viewer = holder.firstElementChild as LyraModelViewer; await ready(viewer);
+    await twoFrames();
+    const settled = styles.length;
+    for (let step = 0; step < 5; step++) holder.setAttribute('data-step', String(step));
+    await twoFrames();
+    expect(styles.length).to.equal(settled);
+    for (const channel of [10, 20, 30]) holder.style.setProperty('--lr-theme-color-surface-default', `rgb(0, ${channel}, 255)`);
+    await twoFrames();
+    expect(styles.length).to.equal(settled + 1);
+    expect(background()).to.equal('rgba(0, 30, 255, 1)');
+  });
+  it('merges a pending resize-only refresh with a later restyle in the same frame', async () => {
+    const holder = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-color-surface-default: rgb(255, 0, 0)"><lr-model-viewer src=${source} format="obj"></lr-model-viewer></div>`);
+    const viewer = holder.firstElementChild as LyraModelViewer; await ready(viewer);
+    await twoFrames();
+    const settled = styles.length;
+    const scheduler = viewer as unknown as { scheduleRefresh(restyle: boolean): void };
+    holder.style.setProperty('--lr-theme-color-surface-default', 'rgb(0, 128, 0)');
+    scheduler.scheduleRefresh(false);
+    await twoFrames();
+    expect(styles.length).to.equal(settled + 1);
+    expect(background()).to.equal('rgba(0, 128, 0, 1)');
+    scheduler.scheduleRefresh(true);
+    scheduler.scheduleRefresh(true);
+    await twoFrames();
+    expect(styles.length).to.equal(settled + 1);
+  });
   it('refreshes the engine style when the color scheme changes', async () => {
     await setColorScheme('light');
     try {
@@ -513,12 +543,12 @@ describe('engine lifecycle edges', () => {
 
   it('stops loading when the first environment refresh detaches the viewer', async () => {
     let viewer!: LyraModelViewer;
-    engineWith({ setStyle(value: unknown) { styles.push(value); if (styles.length === 2) viewer.remove(); } });
+    engineWith({ resize(width: number, height: number) { resizes.push([width, height]); if (resizes.length === 1) viewer.remove(); } });
     const holder = await fixture<HTMLDivElement>(html`<div></div>`);
     viewer = document.createElement('lr-model-viewer') as LyraModelViewer;
     viewer.format = 'obj'; viewer.src = source;
     holder.append(viewer);
-    await waitUntil(() => styles.length === 2 && !viewer.isConnected, 'the refresh reached the engine');
+    await waitUntil(() => resizes.length === 1 && !viewer.isConnected, 'the refresh reached the engine');
     await new Promise(resolve => setTimeout(resolve, 20));
     expect(data).to.have.length(0);
     expect(disposed).to.equal(1);

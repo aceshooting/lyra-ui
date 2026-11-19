@@ -3,6 +3,16 @@ import './include.js';
 import type { LyraInclude } from './include.js';
 import { __clearIncludeResourceCacheForTesting, acquireSanitizedIncludeResource, MAX_INCLUDE_BYTES } from './include-resource.js';
 
+function trackedResponse(text: string, init?: ResponseInit): { response: Response; state: { pulls: number; cancelled: boolean } } {
+  const state = { pulls: 0, cancelled: false };
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) { state.pulls++; controller.enqueue(new TextEncoder().encode(text)); controller.close(); },
+    cancel() { state.cancelled = true; },
+  }, { highWaterMark: 0 });
+  return { response: new Response(body, init), state };
+}
+
+
 const originalFetch = window.fetch;
 afterEach(() => { window.fetch = originalFetch; __clearIncludeResourceCacheForTesting(); });
 
@@ -87,7 +97,7 @@ it('drops name attributes so included markup cannot clobber window or document p
   expect(typeof (document as unknown as Record<string, unknown>)['lyraIncludeProbe']).to.equal('undefined');
 });
 
-it('leaves a late response body unread after source removal', async () => {
+it('discards a late response body unread after source removal', async () => {
   let resolveFetch!: (response: Response) => void;
   let signal: AbortSignal | null | undefined;
   window.fetch = (_url, init) => {
@@ -101,10 +111,10 @@ it('leaves a late response body unread after source removal', async () => {
   await waitUntil(() => Boolean(signal));
   el.src = '';
   await waitUntil(() => signal?.aborted === true);
-  const response = new Response('retired');
+  const { response, state } = trackedResponse('retired');
   resolveFetch(response);
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(response.bodyUsed).to.equal(false);
+  await waitUntil(() => state.cancelled);
+  expect(state.pulls).to.equal(0);
   expect(failures).to.equal(0);
 });
 

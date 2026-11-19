@@ -57,19 +57,17 @@ export const styles = css`
   }
 
   [part='playlist-item']:hover {
-    border-color: var(--lr-color-border-strong);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    border-color: var(--lr-video-playlist-item-hover-border-color, var(--lr-color-border-strong));
+    background: var(
+      --lr-video-playlist-item-hover-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
     );
   }
 
   [part='playlist-item']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-video-playlist-item-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
   }
 

@@ -1,4 +1,5 @@
 import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
+import { classifyOptionalPeerImportError } from '../../../internal/optional-peer-failure.js';
 
 export type LyraFlagFidelity = 'compact' | 'standard' | 'detailed';
 export type LyraFlagShape = 'rect' | 'circle';
@@ -33,14 +34,7 @@ function warnFlagPeerMissing(): void {
   );
 }
 
-/**
- * The peer imported fine but does not carry the capability this entry point needs. That is a
- * VERSION problem, not a missing-dependency problem, and the two used to be reported identically —
- * "install it with `pnpm add @aceshooting/lyra-flags`", advice the reader has already followed,
- * pointing them at the wrong thing entirely. It matters most for `createFlagUrlResolver`, which
- * older peers do not export from the tier-committed subpaths at all, so a consumer who upgrades
- * lyra-ui while pinning the peer lands here by the ordinary route rather than an exotic one.
- */
+/** The peer imported but lacks the capability this entry needs: a version mismatch, not an absent package. */
 function warnFlagPeerIncapable(capability: string): void {
   console.warn(
     `<lr-flag> loaded '@aceshooting/lyra-flags' but it does not expose \`${capability}\`. The `
@@ -50,31 +44,84 @@ function warnFlagPeerIncapable(capability: string): void {
   );
 }
 
+/** The peer resolved but its import rejected (network, chunk or syntax failure): it will be retried. */
+function warnFlagPeerLoadFailed(): void {
+  console.warn(
+    "<lr-flag> found the optional peer '@aceshooting/lyra-flags' but could not load it (a network, "
+      + 'chunk or module error, not a missing package). Flags retry the import on their next resolution.',
+  );
+}
+
+function perCodeResolver(peerModule: unknown): LyraFlagUrlResolver | null {
+  const resolver = resolverFromModule(peerModule);
+  if (resolver) return resolver;
+  warnFlagPeerIncapable('flagUrl');
+  return null;
+}
+
+async function bulkResolver(peerModule: unknown): Promise<LyraFlagUrlResolver | null> {
+  const factory = resolverFactoryFromModule(peerModule);
+  try {
+    const resolver = await factory?.();
+    if (typeof resolver === 'function') return resolver as LyraFlagUrlResolver;
+  } catch {
+    // Initialization failures share the same capability diagnostic as unusable results.
+  }
+  warnFlagPeerIncapable('createFlagUrlResolver');
+  return null;
+}
+
+/**
+ * A resolver standing in for a peer whose import rejected transiently: each call shares one
+ * re-import, keeps a successful one, and rejects (so the flag fails closed) until then.
+ */
+function retryingResolver(
+  importFlags: () => Promise<unknown>,
+  build: (peerModule: unknown) => LyraFlagUrlResolver | null | Promise<LyraFlagUrlResolver | null>,
+): LyraFlagUrlResolver {
+  let pending: Promise<LyraFlagUrlResolver | null> | undefined;
+  return async (code, options) => {
+    const current = pending ??= importFlags().then(build);
+    const resolver = await current.catch((error: unknown) => {
+      if (pending === current) pending = undefined;
+      throw error;
+    });
+    if (!resolver) throw new Error('@aceshooting/lyra-flags does not provide a flag resolver');
+    return resolver(code, options);
+  };
+}
+
+async function loadPeer(
+  importFlags: () => Promise<unknown>,
+  build: (peerModule: unknown) => LyraFlagUrlResolver | null | Promise<LyraFlagUrlResolver | null>,
+): Promise<LyraFlagUrlResolver | null> {
+  let peerModule: unknown;
+  try {
+    peerModule = await importFlags();
+  } catch (error) {
+    if (classifyOptionalPeerImportError(error) === 'missing') {
+      warnFlagPeerMissing();
+      return null;
+    }
+    warnFlagPeerLoadFailed();
+    return retryingResolver(importFlags, build);
+  }
+  return build(peerModule);
+}
+
 /**
  * Resolves the optional peer dependency `@aceshooting/lyra-flags`'s `flagUrl`
  * via the given importer. Uncached and
  * dependency-injectable — unlike `loadFlagUrlResolver()` below — so the
  * caught-error warning path is directly testable without needing to
- * actually uninstall the package.
+ * actually uninstall the package. Resolves `null` when the peer is absent or
+ * lacks `flagUrl`; a transient import failure resolves a resolver that retries
+ * the import on its next call.
  */
-export async function loadFlagUrl(
+export function loadFlagUrl(
   importFlags: () => Promise<unknown>,
 ): Promise<LyraFlagUrlResolver | null> {
-  let peerModule: unknown;
-  try {
-    peerModule = await importFlags();
-  } catch {
-    warnFlagPeerMissing();
-    return null;
-  }
-  try {
-    const resolver = resolverFromModule(peerModule);
-    if (resolver) return resolver;
-  } catch {
-    // Hostile namespace/default getters fall through to the capability warning below.
-  }
-  warnFlagPeerIncapable('flagUrl');
-  return null;
+  return loadPeer(importFlags, perCodeResolver);
 }
 
 function resolverFactoryFromModule(module: unknown): (() => unknown) | null {
@@ -99,27 +146,12 @@ function resolverFactoryFromModule(module: unknown): (() => unknown) | null {
  * it once, the bulk-resolution twin of `loadFlagUrl()` above. Backs `flag-peer-bulk.js` — the
  * opt-in alternative to `flag-peer.js` for a page that renders most/all flags at once, where one
  * shared `flagUrls()` fetch beats resolving every `<lr-flag>` instance independently. Same
- * dependency-injectable, uncached shape as `loadFlagUrl()`, for the same testability reason.
+ * dependency-injectable, uncached shape and failure handling as `loadFlagUrl()`.
  */
-export async function loadBulkFlagUrl(
+export function loadBulkFlagUrl(
   importFlags: () => Promise<unknown>,
 ): Promise<LyraFlagUrlResolver | null> {
-  let peerModule: unknown;
-  try {
-    peerModule = await importFlags();
-  } catch {
-    warnFlagPeerMissing();
-    return null;
-  }
-  const factory = resolverFactoryFromModule(peerModule);
-  try {
-    const resolver = await factory?.();
-    if (typeof resolver === 'function') return resolver as LyraFlagUrlResolver;
-  } catch {
-    // Initialization failures share the same capability diagnostic as unusable results.
-  }
-  warnFlagPeerIncapable('createFlagUrlResolver');
-  return null;
+  return loadPeer(importFlags, bulkResolver);
 }
 
 let flagUrlResolver: Promise<LyraFlagUrlResolver | null> | undefined;

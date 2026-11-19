@@ -2,6 +2,11 @@ import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
+  [part='limit'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    overflow-wrap: anywhere;
+  }
   :host {
     display: block;
   }
@@ -156,7 +161,7 @@ export const styles = css`
      interaction and its pressed state above covers it. */
   :where([part='value'][tabindex]):hover,
   :where([part='row-value'][tabindex]):hover {
-    color: var(--lr-color-brand);
+    color: var(--lr-stat-value-hover-color, var(--lr-color-brand));
     cursor: help;
   }
   [part='unit'] {

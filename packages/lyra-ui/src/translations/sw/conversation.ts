@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Ujumbe',
   composerPlaceholder: 'Uliza chochote…',
   rename: 'Badilisha jina la {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: 'dakika {minutes}, sekunde {seconds}',
   feedbackPositive: 'Jibu zuri',
   feedbackNegative: 'Jibu baya',

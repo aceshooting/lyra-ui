@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
@@ -576,15 +577,15 @@ it('swaps which arrow key advances/retreats roving focus under dir="rtl"', async
   expect((await eventPromise3).detail.text).to.equal('alpha');
 });
 
-it('establishes the first word silently on Tab focus so immediate Enter activates it', async () => {
+it('announces the first word on keyboard focus and supports immediate activation', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
   expect(sinkTexts()).to.deep.equal([]);
 
-  svgEl(el).focus();
+  await focusByKeyboard(svgEl(el) as unknown as HTMLElement);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.exist;
-  expect(sinkTexts()).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelector('[part="focus-ring"]') !== null).to.equal(true);
+  expect(sinkTexts()).to.deep.equal(['alpha, 10']);
 
   const eventPromise = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');

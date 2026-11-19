@@ -188,8 +188,8 @@ export const InteractiveFilter: Story = {
         story:
           'Opt into `interactive` and every band, plus every legend row, becomes a real button ' +
           'emitting the cancelable `lr-segment-activate-request`. Selection is toggled by the component ' +
-          'itself unless a listener calls `preventDefault()`, and both surfaces carry explicit ' +
-          '`aria-pressed`, so a filter toggle can be reported as on or off.',
+          'itself unless the request is canceled or a listener sets the selection. ' +
+          '`lr-segment-selection-change` reports the committed selection.',
       },
     },
   },
@@ -211,9 +211,9 @@ export const InteractiveFilter: Story = {
     const meter = canvasElement.querySelector('lr-context-meter')!;
     const output = canvasElement.querySelector('#context-meter-activation')!;
     withSegments(meter, CONTEXT_SEGMENTS);
-    meter.addEventListener('lr-segment-activate-request', (event) => {
-      const { label, value } = (event as CustomEvent<{ label: string; value: number }>).detail;
-      output.textContent = `Activated ${label} (${value.toLocaleString()}).`;
+    meter.addEventListener('lr-segment-selection-change', ({ detail }) => {
+      const labels = detail.selectedIndices.map((index) => CONTEXT_SEGMENTS[index]?.label);
+      output.textContent = labels.length ? `Selected ${labels.join(', ')}.` : 'No band selected.';
     });
   },
 };

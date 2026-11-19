@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -331,8 +332,8 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   override render(): TemplateResult {
     const suggestions = this.effectiveSuggestions;
     if (suggestions.length === 0) return html``;
-    const label = this.label == null ? this.localize('suggestionsLabel') : this.label;
-    const ariaLabel = this.getAttribute('aria-label') ?? label;
+    const label = this.getAttribute('aria-label') ?? this.label;
+    const ariaLabel = label === '' ? '' : normalizeLabel(label) ?? this.localize('suggestionsLabel');
     const activeIndex = this.effectiveActiveIndex(suggestions);
     const chips = repeat(
       suggestions,

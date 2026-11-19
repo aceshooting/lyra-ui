@@ -1528,18 +1528,56 @@ describe('timeline marker activation', () => {
     const el = (await fixture(html`
       <lr-av-player
         src=${MP3_SRC}
-        .highlights=${[{ id: 'point', anchor: { kind: 'time-range', start: 1 } }]}
+        .highlights=${[{ id: 'point', anchor: { kind: 'time-range', start: 5000 } }]}
       ></lr-av-player>
     `)) as LyraAvPlayer;
     const media = mediaEl(el);
     Object.defineProperty(media, 'duration', { value: 10_000, configurable: true });
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
-    const rect = el.shadowRoot!
-      .querySelector('[part="timeline-marker"]')!
-      .getBoundingClientRect();
-    expect(rect.width).to.be.at.least(36);
+    const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]')!;
+    const rect = marker.getBoundingClientRect();
+    expect(rect.width).to.be.greaterThan(0);
+    expect(rect.width).to.be.lessThan(8);
     expect(rect.height).to.be.at.least(36);
+    const centreY = rect.top + rect.height / 2;
+    const centreX = rect.left + rect.width / 2;
+    for (const dx of [-16, 0, 16]) {
+      expect(el.shadowRoot!.elementFromPoint(centreX + dx, centreY) === marker, `hit at ${dx}px`).to.be.true;
+    }
+  });
+
+  it('paints each ranged marker at its true width and keeps edge hit targets inside the timeline', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        style="inline-size: 400px"
+        src=${MP3_SRC}
+        .highlights=${[
+          { id: 'range', anchor: { kind: 'time-range', start: 10, end: 20 } },
+          { id: 'end', anchor: { kind: 'time-range', start: 100 } },
+          { id: 'start', anchor: { kind: 'time-range', start: 0 } },
+        ]}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const layer = el.shadowRoot!.querySelector('.timeline-markers')!.getBoundingClientRect();
+    const [range, end, start] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="timeline-marker"]')];
+    const rangeRect = range!.getBoundingClientRect();
+    expect(Math.abs(rangeRect.width - layer.width * 0.1) < 1).to.be.true;
+    expect(Math.abs(rangeRect.left - (layer.left + layer.width * 0.1)) < 1).to.be.true;
+    const endRect = end!.getBoundingClientRect();
+    expect(endRect.right <= layer.right + 0.5).to.be.true;
+    const y = layer.top + layer.height / 2;
+    expect(el.shadowRoot!.elementFromPoint(layer.right - 30, y) === end).to.be.true;
+    expect(el.shadowRoot!.elementFromPoint(layer.left + 30, y) === start).to.be.true;
+    for (const marker of [range!, end!, start!]) {
+      const before = getComputedStyle(marker, '::before');
+      const offset = Number.parseFloat(before.left);
+      expect(offset >= -0.5 && offset + Number.parseFloat(before.width) <= layer.width + 0.5).to.be.true;
+    }
   });
 });
 
@@ -3000,6 +3038,33 @@ describe('active-state cssprop escape hatches', () => {
         'pressed mixes further from --lr-av-player-cue-hover-bg rather than repeating hover',
       );
       await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('--lr-av-player-cue-match-color recolors the other search-match cue outlines', async () => {
+    const el = await withCues('--lr-av-player-cue-match-color: rgb(0, 102, 51)');
+    const other = [...cueRoot(el).querySelectorAll<HTMLElement>('[part~="cue-match"]')]
+      .find((cue) => !cue.part.contains('cue-active-match'));
+    expect(other !== undefined).to.be.true;
+    expect(getComputedStyle(other!).outlineColor).to.equal('rgb(0, 102, 51)');
+    expect(getComputedStyle(activeMatchCue(el)).outlineColor).to.not.equal('rgb(0, 102, 51)');
+  });
+
+  it('--lr-av-player-rate-select-hover-bg paints the hovered rate select', async () => {
+    const el = (await fixture(html`
+      <lr-av-player src=${MP4_SRC} style="--lr-transition-fast: 0ms linear; --lr-av-player-rate-select-hover-bg: rgb(4, 5, 6)"></lr-av-player>
+    `)) as LyraAvPlayer;
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
+    try {
+      await hoverAndAwaitPaint(
+        select,
+        'the rate-select never registered :hover',
+        () => getComputedStyle(select).backgroundColor === 'rgb(4, 5, 6)',
+        'the rate-select hover token never painted',
+      );
     } finally {
       await resetMouse();
     }

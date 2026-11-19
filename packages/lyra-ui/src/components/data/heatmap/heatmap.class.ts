@@ -13,6 +13,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { finiteCount, finiteInteger, finiteNumber, finiteRange, minMax } from '../../../internal/numbers.js';
+import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
+import { watchDevicePixelRatio } from '../../../internal/owned-observer.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { getScratchCtx, resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
@@ -62,7 +67,7 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { HeatmapLabelCache } from './heatmap-label-cache.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import { escapeCsvField } from '../../utility/export-button/csv.js';
+import { csvRow } from '../../../internal/csv.js';
 import {
   AnnouncementSinkController,
 } from '../../../internal/announcer.js';
@@ -175,6 +180,13 @@ const MAX_CANVAS_PIXELS = 16_777_216;
 // `direction: ltr` in heatmap.styles.ts -- so arrow keys stay physical too; see
 // onMatrixKeyDown()/onCalendarKeyDown().
 const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
+function ignoresGridKey(event: KeyboardEvent): boolean {
+  if (event.key === 'Home' || event.key === 'End') {
+    return event.isComposing || event.keyCode === 229 || event.altKey;
+  }
+  return shouldIgnoreNavigationKey(event);
+}
 const GRID_KEYS = new Set([...ARROW_KEYS, 'Home', 'End']);
 const MS_PER_DAY = 86_400_000;
 const CAL_MONTH_LABEL_GAP = 2;
@@ -797,26 +809,47 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (width <= 0) return;
     if (!this.sourceNeedsConfigure && width === this.sourceWidth) return;
     this.sourceWidth = width; this.sourceNeedsConfigure = false;
+    this.sourceTooltip = null;
     if (this.sourceViewportInvalid || this.data.kind !== 'matrix' || !['mean', 'min', 'max'].includes(this.matrixReducer)) { this.sourceController.fail(); return; }
     this.sourceController.configure(this.matrixSource, this.matrixViewport, this.sourceViewportExplicit,
       Math.min(this.cellBudget, Math.max(1, width * width)));
     this.sourceViewportExplicit = false;
   }
-  @state() private sourceHovered: LyraHeatmapTile | null = null;
+  @state() private sourceTooltip: { tile: LyraHeatmapTile; x: number; y: number } | null = null;
+  private sourceValueLabel(value: number | null): string {
+    return value === null ? this.localize('heatmapNoDataValue') : this.formatNumericValue(value);
+  }
+
   private sourceRangeLabel(tile: LyraHeatmapTile): string {
-    const format = (value: number | null) => value === null ? this.localize('heatmapNoDataValue') : getNumberFormat(this.effectiveLocale).format(value);
+    const number = getNumberFormat(this.effectiveLocale);
     return this.localize('heatmapSourceRangeLabel', undefined, {
-      rowStart: format(tile.rowStart + 1), rowEnd: format(tile.rowEnd), columnStart: format(tile.columnStart + 1), columnEnd: format(tile.columnEnd),
-      valid: format(tile.validCount), count: format(tile.count), min: format(tile.min), max: format(tile.max), reducer: this.sourceReducerLabel(), value: format(this.sourceTileValue(tile)),
+      rowStart: number.format(tile.rowStart + 1),
+      rowEnd: number.format(tile.rowEnd),
+      columnStart: number.format(tile.columnStart + 1),
+      columnEnd: number.format(tile.columnEnd),
+      valid: number.format(tile.validCount),
+      count: number.format(tile.count),
+      min: this.sourceValueLabel(tile.min),
+      max: this.sourceValueLabel(tile.max),
+      reducer: this.sourceReducerLabel(),
+      value: this.sourceValueLabel(this.sourceTileValue(tile)),
     });
   }
   private sourceHover = (event: MouseEvent): void => {
     const viewport = this.sourceController.viewport;
     if (!viewport || this.sourceController.loading || this.sourceController.error) return;
-    const bounds = (event.currentTarget as HTMLCanvasElement).getBoundingClientRect();
-    const row = viewport.rowStart + Math.floor((event.clientY - bounds.top) / bounds.height * (viewport.rowEnd - viewport.rowStart));
-    const col = viewport.columnStart + Math.floor((event.clientX - bounds.left) / bounds.width * (viewport.columnEnd - viewport.columnStart));
-    this.sourceHovered = this.sourceTileAt(row, col) ?? null;
+    const canvas = event.currentTarget as HTMLCanvasElement;
+    const bounds = canvas.getBoundingClientRect();
+    const fx = (event.clientX - bounds.left) / bounds.width;
+    const fy = (event.clientY - bounds.top) / bounds.height;
+    const row = viewport.rowStart + Math.floor(fy * (viewport.rowEnd - viewport.rowStart));
+    const col = viewport.columnStart + Math.floor(fx * (viewport.columnEnd - viewport.columnStart));
+    const tile = this.sourceTileAt(row, col);
+    this.sourceTooltip = tile ? {
+      tile,
+      x: canvas.offsetLeft + fx * canvas.offsetWidth,
+      y: canvas.offsetTop + fy * canvas.offsetHeight,
+    } : null;
   };
   private sourceReducerLabel(): string {
     return this.localize(this.matrixReducer === 'min' ? 'heatmapSourceMin' : this.matrixReducer === 'max' ? 'heatmapSourceMax' : 'heatmapSourceMean');
@@ -863,6 +896,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     else if (tile) this.sourceRange(tile);
   };
   private sourceKeydown = async (event: KeyboardEvent): Promise<void> => {
+    if (ignoresGridKey(event)) return;
     const controller = this.sourceController, viewport = controller.viewport;
     const source = this.matrixSource, epoch = controller.requests.epoch, navigation = ++this.sourceNavigationIntent;
     if (!source || !viewport || controller.error) return;
@@ -897,13 +931,17 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const cellText = this.cellText;
     if (!current()) return '';
     return cellText?.call(this, { row: cell.row, col: cell.col }, cell.value ?? Number.NaN) ??
-      this.localize('heatmapMatrixCellLabel', undefined, { row: cell.rowLabel, col: cell.columnLabel, value: cell.value === null ? this.localize('heatmapNoDataValue') : getNumberFormat(this.effectiveLocale).format(cell.value) });
+      this.localize('heatmapMatrixCellLabel', undefined, { row: cell.rowLabel, col: cell.columnLabel, value: this.sourceValueLabel(cell.value) });
   }
   private sourceCsv(): string {
     const controller = this.sourceController;
     if (controller.loading || controller.error || !controller.tiles.length) return '';
     const header = 'rowStart,rowEnd,columnStart,columnEnd,count,validCount,min,max,sum,reducer,value';
-    return [header, ...controller.tiles.map(tile => [tile.rowStart, tile.rowEnd, tile.columnStart, tile.columnEnd, tile.count, tile.validCount, tile.min ?? '', tile.max ?? '', tile.sum, this.matrixReducer, this.sourceTileValue(tile) ?? ''].map(escapeCsvField).join(','))].join('\r\n');
+    const rows = controller.tiles.map(tile => csvRow([
+      tile.rowStart, tile.rowEnd, tile.columnStart, tile.columnEnd, tile.count, tile.validCount,
+      tile.min, tile.max, tile.sum, this.matrixReducer, this.sourceTileValue(tile),
+    ]));
+    return [header, ...rows].join('\r\n');
   }
   private paintSource(): void {
     this.configureSource();
@@ -984,8 +1022,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       ${viewport ? html`<div class="source-axes" aria-hidden="true"><span>${number(viewport.columnStart + 1)}</span><span>${number(viewport.columnStart + Math.floor((viewport.columnEnd - viewport.columnStart - 1) / 2) + 1)}</span><span>${number(viewport.columnEnd)}</span></div>` : nothing}
       <canvas part="canvas" data-source-entry tabindex=${this.accessibleCells ? '-1' : '0'} role=${this.accessibleCells ? nothing : 'application'}
         aria-hidden=${this.accessibleCells ? 'true' : nothing} aria-label=${this.accessibleCells ? nothing : this.getAttribute('aria-label') || summary} aria-describedby="source-help"
-        @click=${this.sourceClick} @mousemove=${this.sourceHover} @mouseleave=${() => { this.sourceHovered = null; }} @keydown=${this.sourceKeydown}></canvas>
-      ${this.sourceHovered ? html`<p part="tooltip">${this.sourceRangeLabel(this.sourceHovered)}</p>` : nothing}
+        @click=${this.sourceClick} @mousemove=${this.sourceHover} @mouseleave=${() => { this.sourceTooltip = null; }} @keydown=${this.sourceKeydown}></canvas>
+      ${this.sourceTooltip ? html`<p part="tooltip" style=${styleMap({
+        left: `${this.sourceTooltip.x}px`, top: `${this.sourceTooltip.y}px`,
+      })}>${this.sourceRangeLabel(this.sourceTooltip.tile)}</p>` : nothing}
       ${this.accessibleCells ? html`<p>${windowLabel}</p><div part="source-exact-window" role="grid" aria-label=${this.getAttribute('aria-label') || windowLabel}
         aria-rowcount=${controller.rows} aria-colcount=${controller.cols} tabindex=${entry ? '-1' : '0'} data-source-entry @keydown=${this.sourceKeydown}>
         ${rows.map(row => html`<div role="row" aria-rowindex=${row + 1}>${cells.filter(cell => cell.row === row).map(cell => html`<div role="gridcell" aria-colindex=${cell.col + 1} aria-selected=${String(this.multiple ? this.sourceSelectedKeys.has(`${cell.row}:${cell.col}`) : this.selectedCell?.row === cell.row && this.selectedCell.col === cell.col)}><button part="cell" data-source-row=${cell.row} data-source-col=${cell.col}
@@ -1280,20 +1320,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (this.matrixSource) return this.sourceCsv();
     const data = this.data;
     if (data.kind === 'calendar') {
-      const header = ['date', 'value'].map(escapeCsvField).join(',');
+      const header = 'date,value';
       const rows = data.days
         .filter((day) => !this.isNoData(day.value))
-        .map((day) => [day.date, day.value].map(escapeCsvField).join(','));
+        .map((day) => csvRow([day.date, day.value]));
       return [header, ...rows].join('\r\n');
     }
-    const header = ['row', 'column', 'value'].map(escapeCsvField).join(',');
+    const header = 'row,column,value';
     const rows: string[] = [];
     data.values.forEach((rowValues, rowIndex) => {
       const rowLabel = data.rowLabels[rowIndex] ?? '';
       rowValues.forEach((value, colIndex) => {
         if (this.isNoData(value)) return;
         const colLabel = data.colLabels[colIndex] ?? '';
-        rows.push([rowLabel, colLabel, value].map(escapeCsvField).join(','));
+        rows.push(csvRow([rowLabel, colLabel, value]));
       });
     });
     return [header, ...rows].join('\r\n');
@@ -1907,8 +1947,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private resizeObserver?: ResizeObserver;
   private intersectionObserver?: IntersectionObserver;
   private drawFrameRequest?: OwnedAnimationFrame;
-  private dprQuery?: MediaQueryList;
-  private dprChangeListener?: (event: MediaQueryListEvent) => void;
+  private stopWatchingDpr?: () => void;
 
   constructor() {
     super();
@@ -2138,8 +2177,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.dismissTooltip();
     super.disconnectedCallback();
-    this.sourceHovered = null;
     this.cancelSelectionGesture();
     this.selectionAnchor = null;
     this.selectionRangeBase = undefined;
@@ -2149,6 +2188,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.restoringAccessibleFocus = false;
     this.hoverCell = null;
     this.focusedCell = null;
+    this.canvasBlurred = false;
     this.liveText = '';
     this.canvasHasContent = false;
     this.drawDirty = true;
@@ -2157,7 +2197,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
     this.canvasVisible = true;
-    this.clearDprWatcher();
+    this.stopWatchingDpr?.();
+    this.stopWatchingDpr = undefined;
     this.cancelDrawFrame();
   }
 
@@ -2168,43 +2209,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private watchDpr(): void {
-    // A MediaQueryList's `matches` is fixed at creation time, so crossing the
-    // DPR threshold it was built for means building a fresh one for the new
-    // ratio — remove the previous instance's listener first, or it leaks
-    // (disconnectedCallback only ever cleans up whichever is current).
-    this.clearDprWatcher();
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || typeof owner.matchMedia !== 'function') return;
-    const query = owner.matchMedia(
-      `(resolution: ${owner.devicePixelRatio}dppx)`
-    );
-    const listener = (): void => {
-      if (
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner ||
-        this.dprQuery !== query
-      ) {
-        return;
-      }
-      this.onDprChange();
-    };
-    this.dprQuery = query;
-    this.dprChangeListener = listener;
-    query.addEventListener('change', listener);
+    this.stopWatchingDpr = watchDevicePixelRatio(this.ownerDocument.defaultView, () => this.requestDraw());
   }
-
-  private clearDprWatcher(): void {
-    if (this.dprQuery && this.dprChangeListener) {
-      this.dprQuery.removeEventListener('change', this.dprChangeListener);
-    }
-    this.dprQuery = undefined;
-    this.dprChangeListener = undefined;
-  }
-
-  private onDprChange = (): void => {
-    this.watchDpr();
-    this.requestDraw();
-  };
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -2682,7 +2688,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private formatNumericValue(value: number): string {
-    return getNumberFormat(this.effectiveLocale || undefined).format(value);
+    return formatChartValue(value, this.effectiveLocale);
   }
 
   // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never reaches
@@ -2703,6 +2709,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncTooltipOverlay();
     const locale = this.effectiveLocale;
     const localeChanged = this.lastUpdatedLocale !== locale;
     this.lastUpdatedLocale = locale;
@@ -3083,13 +3090,28 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     base.toggleAttribute('data-fit-frame-contained', contained);
   }
 
+  /** Whether the canvas has lost focus; the roving cursor survives but its ring is not drawn. */
+  private canvasBlurred = false;
+
+  private ringedCell(): CellPos | null {
+    return this.canvasBlurred ? null : this.focusedCell;
+  }
+
+  private onCanvasFocusChange = (event: FocusEvent): void => {
+    const blurred = event.type === 'blur';
+    if (this.canvasBlurred === blurred) return;
+    this.canvasBlurred = blurred;
+    if (!this.focusedCell) return;
+    if (!this.repaintFocusRing(blurred ? this.focusedCell : null)) this.requestDraw();
+  };
+
   /** Repaints the old and new focus-ring cells after keyboard/click navigation. The underlying
    * cell fill plus annotation/selection rings are restored before the new focus ring is stroked,
    * so clearing a dirty rectangle never erases persistent data. Returns false when a complete draw
    * is still required (for example before the first canvas pass or after a mode change). */
   private repaintFocusRing(previous: CellPos | null | undefined): boolean {
     if (!this.canvasHasContent || !this.canvas || this.drawDirty) return false;
-    const current = this.focusedCell;
+    const current = this.ringedCell();
     if (this.effectiveMode === 'calendar') {
       if (
         (previous && !('week' in previous)) ||
@@ -3499,55 +3521,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
-    // Normalize at the allocation boundary as a final guard even though the
-    // public accessor and attribute converter already normalize their inputs.
-    const buckets = normalizeBucketCount(this.bucketCount);
-    const ramp = this.colorRamp(buckets, cs).colors;
-    const noDataFill = this.noDataFill(cs);
+    const fill = this.fillContext(normalizeBucketCount(this.bucketCount), cs, 'calendar');
     this.canvasColorCache.clear();
-    // Only consulted when `scale === 'sqrt'` — mirrors `drawMatrix()`'s own
-    // `hi` bound, reusing the already-cached value range instead of
-    // rescanning `sortedValues` for its max.
-    const bounds = this.cachedValueRange;
-    const lo = bounds ? bounds[0] : 0;
-    const hi = bounds ? bounds[1] : 1;
-
-    // Indexed once per draw so every (week, weekday) grid position can be
-    // painted below, not just positions with a matching entry in `cells` — a
-    // day missing from `days` entirely (a gap in a sparse calendar) still
-    // gets a real grid cell (see `calendarCellAt()`'s doc comment for the
-    // same `-1` no-data sentinel used here) instead of being left
-    // transparent.
     for (let week = 0; week < weekCount; week++) {
       for (let weekday = 0; weekday < 7; weekday++) {
-        const value = this.calendarValueAt(week, weekday);
-        const x = this.columnXFor(week);
-        const y = this.rowYFor(weekday);
-        // `calendarPos()` is an array read plus one object literal, and the optional-call syntax
-        // short-circuits it entirely when `cellColor` is unset — deliberately *not*
-        // `calendarCellAt()`, whose miss path would allocate a Date and an ISO string for every
-        // gap position on every repaint.
-        const override = this.cellColor?.(
-          this.calendarPos(week, weekday),
-          value
-        );
-        if (override != null) {
-          ctx.fillStyle = this.resolveCellColor(override, cs);
-        } else if (this.isNoData(value)) {
-          ctx.fillStyle = noDataFill;
-        } else if (this.scale === 'sqrt') {
-          const step = sqrtStep(value, hi, ramp.length);
-          ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
-        } else if (this.cachedColorSteps.length >= 2) {
-          const step = this.rampBucket(value, lo, hi, ramp.length);
-          ctx.fillStyle = ramp[step]!;
-        } else {
-          ctx.fillStyle =
-            ramp[
-              quartileBucket(value, this.cachedCalendarSortedValues, buckets)
-            ]!;
-        }
-        this.fillCalendarCell(ctx, x, y, cellSize, spacing.radius);
+        this.paintCalendarCell(ctx, week, weekday, cellSize, spacing.radius, fill);
       }
     }
 
@@ -3593,8 +3571,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     // Keyboard focus ring, redrawn on top of the fill pass (and any
     // annotation rings) on every draw.
-    if (this.focusedCell && 'week' in this.focusedCell) {
-      const { week, weekday } = this.focusedCell;
+    const ringed = this.ringedCell();
+    if (ringed && 'week' in ringed) {
+      const { week, weekday } = ringed;
       if (week < weekCount && weekday < 7) {
         const x = this.columnXFor(week);
         const y = this.rowYFor(weekday);
@@ -3691,43 +3670,51 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
   }
 
+  private fillContext(bucketCount: number, cs: CSSStyleDeclaration, mode: 'matrix' | 'calendar') {
+    const [lo, hi] = this.cachedValueRange ?? [0, 1];
+    return {
+      ramp: this.colorRamp(bucketCount, cs),
+      noData: this.noDataFill(cs),
+      lo,
+      hi,
+      mode,
+      styles: cs,
+    };
+  }
+
+  private cellFill(
+    value: number,
+    override: string | undefined,
+    fill: ReturnType<LyraHeatmap['fillContext']>,
+  ): string {
+    const { ramp, noData, lo, hi, mode, styles } = fill;
+    if (override != null) return this.resolveCellColor(override, styles);
+    if (this.isNoData(value)) return noData;
+    if (this.scale === 'sqrt') {
+      const step = sqrtStep(value, hi, ramp.colors.length);
+      return step < 0 ? noData : ramp.colors[step]!;
+    }
+    if (this.cachedColorSteps.length >= 2) {
+      return ramp.colors[this.rampBucket(value, lo, hi, ramp.colors.length)]!;
+    }
+    if (mode === 'calendar') {
+      return ramp.colors[quartileBucket(value, this.cachedCalendarSortedValues, ramp.colors.length)]!;
+    }
+    return mixRgb(ramp.loRgb, ramp.hiRgb, this.rampAlpha(value, lo, hi));
+  }
+
   private paintMatrixCell(
     ctx: CanvasRenderingContext2D,
     row: number,
     col: number,
-    cellSize: number,
-    rowHeight: number,
+    x: number,
+    y: number,
     shape: ReturnType<LyraHeatmap['matrixCellShape']>,
-    cs: CSSStyleDeclaration,
-    rampData: ReturnType<LyraHeatmap['colorRamp']>,
-    noDataFill: string
+    fill: ReturnType<LyraHeatmap['fillContext']>,
   ): void {
     const value = this.matrixValues[row]?.[col] ?? Number.NaN;
-    const bounds = this.cachedValueRange;
-    const lo = bounds ? bounds[0] : 0;
-    const hi = bounds ? bounds[1] : 1;
-    const override = this.cellColor?.({ row, col }, value);
-    if (override != null) ctx.fillStyle = this.resolveCellColor(override, cs);
-    else if (this.isNoData(value)) ctx.fillStyle = noDataFill;
-    else if (this.scale === 'sqrt') {
-      const step = sqrtStep(value, hi, rampData.colors.length);
-      ctx.fillStyle = step < 0 ? noDataFill : rampData.colors[step]!;
-    } else if (this.cachedColorSteps.length >= 2) {
-      ctx.fillStyle =
-        rampData.colors[this.rampBucket(value, lo, hi, rampData.colors.length)]!;
-    } else {
-      ctx.fillStyle = mixRgb(
-        rampData.loRgb,
-        rampData.hiRgb,
-        this.rampAlpha(value, lo, hi)
-      );
-    }
-    this.fillMatrixCell(
-      ctx,
-      this.matrixPadLeft + col * cellSize,
-      this.matrixPadTop + row * rowHeight,
-      shape
-    );
+    ctx.fillStyle = this.cellFill(value, this.cellColor?.({ row, col }, value), fill);
+    this.fillMatrixCell(ctx, x, y, shape);
   }
 
   private paintMatrixFocusOverlays(
@@ -3764,12 +3751,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         shape
       );
     }
+    const focused = this.ringedCell();
     if (
       state === 'focus' &&
-      this.focusedCell &&
-      'row' in this.focusedCell &&
-      this.focusedCell.row === row &&
-      this.focusedCell.col === col
+      focused &&
+      'row' in focused &&
+      focused.row === row &&
+      focused.col === col
     ) {
       this.strokeCellState(
         ctx,
@@ -3821,8 +3809,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const cellSize = this.matrixCellSize(cols);
     const rowHeight = this.matrixRowHeight(cellSize);
     const shape = this.matrixCellShape(cellSize, rowHeight);
-    const x = this.matrixPadLeft + pos.col * cellSize;
-    const y = this.matrixPadTop + pos.row * rowHeight;
+    const padLeft = this.matrixPadLeft;
+    const padTop = this.matrixPadTop;
+    const x = padLeft + pos.col * cellSize;
+    const y = padTop + pos.row * rowHeight;
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
@@ -3836,8 +3826,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const lastRow = Math.min(rows - 1, pos.row + rowRadius);
     const firstCol = Math.max(0, pos.col - radius);
     const lastCol = Math.min(cols - 1, pos.col + radius);
-    const ramp = this.colorRamp(RAMP_STEPS, cs);
-    const noData = this.noDataFill(cs);
+    const fill = this.fillContext(RAMP_STEPS, cs, 'matrix');
     // A second clipping path intersects each rounded cell's antialiased clip mask. In very
     // narrow/short cells this changes edge pixels even when the dirty box uses device-pixel
     // boundaries. Rasterize complete neighboring cells into a bounded scratch bitmap instead,
@@ -3868,7 +3857,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
       for (let row = firstRow; row <= lastRow; row++) {
         for (let col = firstCol; col <= lastCol; col++) {
-          this.paintMatrixCell(paintCtx, row, col, cellSize, rowHeight, shape, cs, ramp, noData);
+          this.paintMatrixCell(paintCtx, row, col, padLeft + col * cellSize, padTop + row * rowHeight, shape, fill);
         }
       }
       for (const state of ['annotation', 'selected', 'focus'] as const) {
@@ -3905,35 +3894,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     week: number,
     weekday: number,
     cellSize: number,
-    cs: CSSStyleDeclaration,
-    ramp: string[],
-    noDataFill: string
+    radius: number,
+    fill: ReturnType<LyraHeatmap['fillContext']>,
   ): void {
     const value = this.calendarValueAt(week, weekday);
-    const bounds = this.cachedValueRange;
-    const lo = bounds ? bounds[0] : 0;
-    const hi = bounds ? bounds[1] : 1;
-    const override = this.cellColor?.(this.calendarPos(week, weekday), value);
-    if (override != null) ctx.fillStyle = this.resolveCellColor(override, cs);
-    else if (this.isNoData(value)) ctx.fillStyle = noDataFill;
-    else if (this.scale === 'sqrt') {
-      const step = sqrtStep(value, hi, ramp.length);
-      ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
-    } else if (this.cachedColorSteps.length >= 2) {
-      ctx.fillStyle = ramp[this.rampBucket(value, lo, hi, ramp.length)]!;
-    } else {
-      ctx.fillStyle =
-        ramp[
-          quartileBucket(value, this.cachedCalendarSortedValues, ramp.length)
-        ]!;
-    }
-    this.fillCalendarCell(
-      ctx,
-      this.columnXFor(week),
-      this.rowYFor(weekday),
-      cellSize,
-      this.calendarSpacing().radius
-    );
+    ctx.fillStyle = this.cellFill(value, this.cellColor?.(this.calendarPos(week, weekday), value), fill);
+    this.fillCalendarCell(ctx, this.columnXFor(week), this.rowYFor(weekday), cellSize, radius);
   }
 
   /** Fills one calendar cell, rounded only when an explicit `cellRadius` resolved above zero. */
@@ -4017,12 +3983,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         this.selectedColor(cs)
       );
     }
+    const focused = this.ringedCell();
     if (
       state === 'focus' &&
-      this.focusedCell &&
-      'week' in this.focusedCell &&
-      this.focusedCell.week === week &&
-      this.focusedCell.weekday === weekday
+      focused &&
+      'week' in focused &&
+      focused.week === week &&
+      focused.weekday === weekday
     ) {
       this.strokeCellState(
         ctx,
@@ -4063,8 +4030,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const lastWeek = Math.min(weekCount - 1, pos.week + radius);
     const firstDay = Math.max(0, pos.weekday - radius);
     const lastDay = Math.min(6, pos.weekday + radius);
-    const ramp = this.colorRamp(normalizeBucketCount(this.bucketCount), cs).colors;
-    const noData = this.noDataFill(cs);
+    const fill = this.fillContext(normalizeBucketCount(this.bucketCount), cs, 'calendar');
+    const cellRadius = this.calendarSpacing().radius;
     ctx.save();
     try {
       ctx.beginPath();
@@ -4073,7 +4040,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       ctx.clearRect(left, top, width, height);
       for (let week = firstWeek; week <= lastWeek; week++) {
         for (let day = firstDay; day <= lastDay; day++) {
-          this.paintCalendarCell(ctx, week, day, cellSize, cs, ramp, noData);
+          this.paintCalendarCell(ctx, week, day, cellSize, cellRadius, fill);
         }
       }
       for (const state of ['annotation', 'selected', 'focus'] as const) {
@@ -4146,47 +4113,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
-    const bounds = this.cachedValueRange;
-    const lo = bounds ? bounds[0] : 0;
-    const hi = bounds ? bounds[1] : 1;
-    const rampData = this.colorRamp(RAMP_STEPS, cs);
-    const ramp = rampData.colors;
-    const { loRgb, hiRgb } = rampData;
-    const noDataFill = this.noDataFill(cs);
+    const fill = this.fillContext(RAMP_STEPS, cs, 'matrix');
     this.canvasColorCache.clear();
-
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const v = this.matrixValues[r]?.[c] ?? Number.NaN;
-        const x = padLeft + c * cellSize;
-        const y = padTop + r * rowHeight;
-        const override = this.cellColor?.({ row: r, col: c }, v);
-        if (override != null) {
-          ctx.fillStyle = this.resolveCellColor(override, cs);
-        } else if (this.isNoData(v)) {
-          // isNoData() keeps the non-finite half of this guard unconditional, which matters here:
-          // `v < 0` alone is false for NaN, which would otherwise fall through to the ramp
-          // branches below, compute an unparsable rgb(NaN, NaN, NaN) fillStyle, and silently paint
-          // with whatever color the previous cell left in `ctx.fillStyle` (canvas ignores
-          // unparsable assignments).
-          ctx.fillStyle = noDataFill;
-        } else if (this.scale === 'sqrt') {
-          // ramp.length (not the RAMP_STEPS constant) so a colorSteps-driven ramp's
-          // actual length governs bucketing -- equal to RAMP_STEPS when colorSteps is unset.
-          const step = sqrtStep(v, hi, ramp.length);
-          ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
-        } else if (this.cachedColorSteps.length >= 2) {
-          const step = this.rampBucket(v, lo, hi, ramp.length);
-          ctx.fillStyle = ramp[step]!;
-        } else {
-          // linearAlpha() returns a 0.1-1.0 ramp position; reused here as a
-          // mix ratio between the two ramp-endpoint colors (rather than as a
-          // literal canvas alpha channel) so the 'linear' scale also respects
-          // --lr-heatmap-scale-lo/-hi.
-          const t = this.rampAlpha(v, lo, hi);
-          ctx.fillStyle = mixRgb(loRgb, hiRgb, t);
-        }
-        this.fillMatrixCell(ctx, x, y, shape);
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        this.paintMatrixCell(ctx, row, col, padLeft + col * cellSize, padTop + row * rowHeight, shape, fill);
       }
     }
 
@@ -4239,8 +4170,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // annotation rings) on every draw — canvas has no persistent DOM focus
     // affordance of its own for an individual cell, only a `:focus-visible`
     // outline around the whole element (see heatmap.styles.ts).
-    if (this.focusedCell && 'row' in this.focusedCell) {
-      const { row, col } = this.focusedCell;
+    const ringedMatrix = this.ringedCell();
+    if (ringedMatrix && 'row' in ringedMatrix) {
+      const { row, col } = ringedMatrix;
       if (row < rows && col < cols) {
         const x = padLeft + col * cellSize;
         const y = padTop + row * rowHeight;
@@ -4718,6 +4650,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const label = getDateTimeFormat(this.effectiveLocale || undefined, {
       month: 'short',
       day: 'numeric',
+      calendar: 'gregory',
       timeZone: 'UTC',
     }).format(parseIsoDate(date));
     // Must track the painted contract exactly: a signed-domain cell that renders on the ramp has
@@ -4890,8 +4823,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private selectionKeyDown(event: KeyboardEvent, pos: CellPos | null): boolean {
-    if (!this.multiple) return false;
-    if (event.key === 'Escape' && this.selectionGesture) {
+    if (!this.multiple || event.isComposing || event.keyCode === 229 || event.altKey) return false;
+    if (event.key === 'Escape' && this.selectionGesture && !shouldIgnoreNavigationKey(event)) {
       event.preventDefault();
       this.cancelSelectionGesture();
       return true;
@@ -4974,7 +4907,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       selecting: !this.selectedPositions.has(this.accessibleCellKey(pos)),
       cells: new Map(this.selectedPositions),
     };
-    try { target.setPointerCapture(event.pointerId); } catch { /* Synthetic events cannot capture. */ }
+    capturePointer(target, event.pointerId);
     this.paintSelectionTo(pos);
   };
 
@@ -5047,9 +4980,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.selectionPreview = undefined;
     if (!gesture) return;
     this.suppressSelectionClick = true;
-    try {
-      if (gesture.target.hasPointerCapture(gesture.pointerId)) gesture.target.releasePointerCapture(gesture.pointerId);
-    } catch { /* The pointer or its owner document may already have gone away. */ }
+    releasePointer(gesture.target, gesture.pointerId);
   }
 
   private consumeSelectionClick(event: MouseEvent): boolean {
@@ -5235,6 +5166,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.selectionKeyDown(e, this.focusedCell)) return;
+    if (ignoresGridKey(e)) return;
     const previous = this.focusedCell;
     const edge = this.edgeCell(e);
     if (edge) {
@@ -5455,7 +5387,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
     if (this.selectionKeyDown(e, pos)) return;
-    if (!GRID_KEYS.has(e.key)) return;
+    if (!GRID_KEYS.has(e.key) || ignoresGridKey(e)) return;
     e.preventDefault();
     this.focusedCell = pos;
     this.onKeyDown(e);
@@ -5645,6 +5577,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         @pointerleave=${this.onPointerLeave}
         @click=${this.onCanvasClick}
         @keydown=${this.onKeyDown}
+        @focus=${this.onCanvasFocusChange}
+        @blur=${this.onCanvasFocusChange}
       ></canvas>
       ${guard([this.overlayRevision, this.accessibleWindowStart()], () => this.renderAccessibleCells())}
       ${this.freezesRowLabels
@@ -5677,6 +5611,32 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * strong character (`unicode-bidi: plaintext` in the stylesheet), so a number-first formatted
    * value is never reordered by an RTL host.
    */
+  private tooltipOverlay?: OverlayHandle;
+
+  private visibleTooltip(): HTMLElement | null {
+    return this.renderRoot.querySelector('[part="tooltip"]:not([hidden])');
+  }
+
+  private dismissTooltip(): void {
+    this.tooltipOverlay?.deactivate({ restoreFocus: false });
+    this.tooltipOverlay = undefined;
+    this.hoverCell = null;
+    this.sourceTooltip = null;
+  }
+
+  private syncTooltipOverlay(): void {
+    if (this.visibleTooltip()) {
+      this.tooltipOverlay ??= activateNonmodalOverlay({
+        host: this,
+        panel: () => this.visibleTooltip(),
+        onEscape: () => this.dismissTooltip(),
+      });
+    } else if (this.tooltipOverlay) {
+      this.tooltipOverlay.deactivate({ restoreFocus: false });
+      this.tooltipOverlay = undefined;
+    }
+  }
+
   private renderTooltip(): TemplateResult {
     const pos = this.hoverCell;
     const anchor = pos ? this.tooltipAnchor(pos) : null;

@@ -621,6 +621,20 @@ it("renders the interactive base hover and keyboard-focus treatment", async () =
   }, "the usage badge keyboard focus ring never appeared");
 });
 
+it('uses the shared overlay surface and border tokens for the floating tooltip', async () => {
+  const el = await fixture<LyraUsageBadge>(html`
+    <lr-usage-badge tokens-in="1"
+      style="--lr-overlay-surface: rgb(20, 30, 40); --lr-overlay-border: rgb(70, 80, 90)"
+    ></lr-usage-badge>
+  `);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!);
+  const tooltip = el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!;
+  await waitUntil(() => !tooltip.hidden);
+  const style = getComputedStyle(tooltip);
+  expect(style.backgroundColor).to.equal('rgb(20, 30, 40)');
+  expect(style.borderTopColor).to.equal('rgb(70, 80, 90)');
+});
+
 it("clamps the actual floating tooltip through the shared popover-viewport-clamp token", async () => {
   const el = (await fixture(
     html`<lr-usage-badge tokens-in="1" style="--lr-popover-viewport-clamp: 10px"></lr-usage-badge>`

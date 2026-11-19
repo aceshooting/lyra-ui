@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
 import { SourcePageController, type SourcePageState } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -30,7 +31,7 @@ import type {
   LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './thread-list.styles.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -50,11 +51,13 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
 } from '../../../internal/data-descriptors.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
+import type { LyraMessageKey } from '../../../internal/localization-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -172,15 +175,6 @@ function normalizeProjectedTimestamp(value: unknown): Date | undefined {
   return normalizeLyraTimestamp(value as LyraTimestamp);
 }
 
-function isSafeNonArrayObject(value: unknown): value is object {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    return !Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /** Projects the closed display schema once; render hooks receive only the original source identity. */
 function projectThread(value: unknown): LyraChatThread | undefined {
   if (!isSafeNonArrayObject(value)) return undefined;
@@ -227,7 +221,7 @@ function projectThread(value: unknown): LyraChatThread | undefined {
         ? false
         : archived.value,
   });
-  sourceThreadByProjection.set(thread, value as LyraChatThread);
+  sourceThreadByProjection.set(thread, value as typeof value & LyraChatThread);
   return thread;
 }
 
@@ -446,6 +440,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     archiveConversation: LYRA_DEFAULT_archiveConversation,
+    conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
     clear: LYRA_DEFAULT_clear,
     deleteConversation: LYRA_DEFAULT_deleteConversation,
     loading: LYRA_DEFAULT_loading,
@@ -559,7 +554,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const value = projectThread(snapshot);
     if (!isCurrent()) throw new Error('Obsolete source thread');
     if (!value || value.id !== record.key) throw new TypeError('Invalid source thread identity');
-    sourceThreadByProjection.set(value, raw as LyraChatThread);
+    sourceThreadByProjection.set(value, raw as typeof raw & LyraChatThread);
     this.sourceRowIdentities.add(value);
     return { key: record.key, order: record.order, value };
   }
@@ -1408,25 +1403,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
   }
 
-  /** A row is navigable only while both its public host and semantic option can receive focus.
-   *  `wrapRow` may place the host below an inert ancestor, and an inert target refuses focus
-   *  silently, so the navigation scan must exclude it before committing an index. */
+
   private isNavigableRow(row: LyraConversationItem): boolean {
     const option = this.selectButtonEl(row);
-    return Boolean(
-      option &&
-        option.getAttribute('role') === 'button' &&
-        row.hidden === false &&
-        row.getAttribute('aria-hidden') !== 'true' &&
-        row.getAttribute('aria-disabled') !== 'true' &&
-        !row.inert &&
-        row.closest('[inert]') === null &&
-        option.hidden === false &&
-        option.getAttribute('aria-hidden') !== 'true' &&
-        option.getAttribute('aria-disabled') !== 'true' &&
-        !option.inert &&
-        option.closest('[inert]') === null
-    );
+    return option !== null &&
+      option.getAttribute('role') === 'button' &&
+      isRovingTargetAvailable(row) &&
+      isRovingTargetAvailable(option, row);
   }
 
   private navigableRows(): LyraConversationItem[] {
@@ -1593,6 +1576,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
   };
 
+  private rowActionLabel(thread: LyraChatThread, key: LyraMessageKey): string {
+    return this.localize('conversationActionWithTitle', undefined, {
+      action: this.localize(key),
+      title: normalizeLabel(thread.title) ?? thread.id,
+    });
+  }
+
   private renderRowActions(thread: LyraChatThread): TemplateResult {
     const source = this.sourceThread(thread);
     return html`
@@ -1601,9 +1591,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.localize(
-                thread.pinned ? 'unpinConversation' : 'pinConversation'
-              )}
+              aria-label=${this.rowActionLabel(thread, thread.pinned ? 'unpinConversation' : 'pinConversation')}
               @click=${() =>
                 this.canUseThread(thread) && this.emit('lr-thread-pin', {
                   conversationId: thread.id,
@@ -1617,11 +1605,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.localize(
-                thread.archived
-                  ? 'unarchiveConversation'
-                  : 'archiveConversation'
-              )}
+              aria-label=${this.rowActionLabel(thread, thread.archived ? 'unarchiveConversation' : 'archiveConversation')}
               @click=${() =>
                 this.canUseThread(thread) && this.emit('lr-thread-archive', {
                   conversationId: thread.id,
@@ -1635,7 +1619,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.localize('deleteConversation')}
+              aria-label=${this.rowActionLabel(thread, 'deleteConversation')}
               @click=${() =>
                 this.canUseThread(thread) && this.emit('lr-thread-delete', { conversationId: thread.id })}
             >

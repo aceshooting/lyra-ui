@@ -352,6 +352,10 @@ describe('map anchor bounded document-order admission', () => {
           expect(membership, 'No per-child scan of the complete open array').to.equal(0);
           expect(comparisons, 'Document-order selection keeps only a bounded candidate set').to.be.at.most(6 * count);
         };
+        comparisons = 0;
+        for (const anchor of anchors) children.run(anchor, 'sync');
+        await Promise.resolve();
+        expect(comparisons, 'A batch of child updates shares admission').to.be.at.most(6 * count);
         measure();
         element.prepend(anchors.at(-1)!); measure();
         anchors[0]!.open = false; measure();

@@ -292,6 +292,9 @@ value, without suppressing the visible `name` heading.
   renderer is contained as the localized error state rather than escaping the update.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the highlight id
+  marked active in the built-in `<lr-document-preview>` fallback. Registry renderers do not receive
+  it; call `scrollToAnchor(id)` to activate a highlight there.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   Re-assigning the identical value does not re-scroll; call `scrollToAnchor()` to repeat a jump.
@@ -874,7 +877,9 @@ clears the query, matches, and painted search annotation. `matchCountExact: fals
 malformed or holey spine/find data and failed section load/unload work, not only a search ceiling.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
-`lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
+`lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event (after a
+previous/next chapter button it is also announced politely with the matching table-of-contents
+label, or a generic location message);
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
 navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-anchor-result`
 (`detail: { found }`) after an anchor is
@@ -943,7 +948,9 @@ speaker notes, and several advanced effects are not rendered.
 **Properties:** `src: string = ''`, `name: string = ''`, `label?: string`, `page: number = 1`
 (reflected, one-based current slide), and `maxHeight: string = ''` (attribute `max-height`). Assigning
 `page` while ready navigates to that slide. Omitting `label` reads back `undefined` and falls back to
-`name`, then a localized default; an explicit empty string clears it. A host
+`name`, then a localized default; an explicit empty string clears it. `name` is also the visible
+header text, while `label` only names the region (other viewers spell the same accessible-name
+override `label`; media spell their text alternative `alt`). A host
 `aria-label` takes precedence over
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
@@ -1123,8 +1130,9 @@ localized loading text alongside its decorative ring, and the ring stops under r
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 `--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
-border color of the `[part='region-highlight']` matching `activeHighlightId`, distinct from the
-resting highlight border so the active region can be recolored without touching the rest. It is an
+border and outer-ring color of the `[part='region-highlight']` matching `activeHighlightId`; the
+ring keeps the active region distinct from a warning-tone highlight, and the token recolors the
+active region without touching the rest. It is an
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
 the element _or on any ancestor_: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
@@ -1518,9 +1526,11 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
 `previous-button`, `next-button`, `zoom-out-button`,
-`zoom-in-button` (the four toolbar controls — previously reachable only through `::part(toolbar)
-button`, which is invalid: a descendant combinator after `::part()` never matches, so each button now
-carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+`zoom-in-button` (the four toolbar controls, each with its own part name because a descendant
+combinator after `::part()` never matches; these are borderless text toolbar buttons tinted by
+`--lr-pdf-viewer-toolbar-button-hover-bg`, unlike the bordered chevron pager buttons of
+`lr-pptx-viewer` and `lr-ebook-viewer`, so a `::part(previous-button)` rule written for one does not
+transfer unchanged), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
 (the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
@@ -2595,6 +2605,11 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
   attribute: false) — optional syntax highlighting forwarded to the diff. A runtime non-string
   `language` is treated as `''` without coercion.
+- `languageLoaders?: LyraDiffView['languageLoaders']` (attribute: false) and
+  `contextLines?: number` (attribute `context-lines`) — forwarded to the diff view: lazy grammar
+  loaders, and how many unchanged lines stay visible around each change (unset shows every line).
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the highlight id
+  marked active in both side-by-side preview panes.
 - `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
   side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
   turns that off.
@@ -2605,7 +2620,8 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   `--lr-document-compare-pane-max-height` declaratively, giving each `view="side-by-side"` pane its
   maximum block size before it scrolls internally. The value is sanitized as a CSS length, so an
   invalid one is ignored and the token default applies; the unset default `''` also defers to the
-  token, so setting nothing preserves existing behaviour.
+  token, so setting nothing preserves existing behaviour. In `view="diff"` it caps the diff view's
+  own block size instead.
 
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
@@ -2628,7 +2644,9 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 `lr-render-error` (`detail: { error }`). In diff mode, `lr-search-change`, `lr-anchor-result`
 (`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`. Side by side,
 an `anchor` assignment or `scrollToAnchor()` emits one `lr-anchor-result` for the pair of panes
-(`found` when either pane found the target). When both versions share one name, the two panes are
+(`found` when either pane found the target). Pane events bubble unchanged from the pane's
+`lr-document-preview`; to tell the side, look for the `[part="pane-old"]` or `[part="pane-new"]`
+element in `event.composedPath()`. When both versions share one name, the two panes are
 named by the localized old/new version names so the regions stay distinguishable.
 
 **Slots:** none.

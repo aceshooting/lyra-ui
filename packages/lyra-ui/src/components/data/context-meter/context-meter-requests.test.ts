@@ -65,11 +65,11 @@ describe('context meter activation requests', () => {
     expect(el.selectedIndices).to.deep.equal([1]);
   });
 
-  it('toggles against the latest selection when a host write does not veto', async () => {
+  it('keeps the selection assigned synchronously during an uncanceled request', async () => {
     const el = await meter();
     el.addEventListener(REQUEST, () => { el.selectedIndices = [1]; });
     activate(el);
-    expect(el.selectedIndices).to.deep.equal([0, 1]);
+    expect(el.selectedIndices).to.deep.equal([1]);
   });
 
   for (const change of ['segments', 'interactive', 'connection']) {

@@ -1658,3 +1658,31 @@ describe('lr-video-playlist remediation', () => {
     expect(el.shadowRoot!.activeElement === rows[0]).to.equal(true);
   });
 });
+
+describe('non-current row state tokens', () => {
+  it('paints hovered and pressed non-current rows from their own tokens', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist
+        data-lr-theme-scope
+        style="--lr-transition-fast: 0s; --lr-video-playlist-item-hover-bg: rgb(10, 20, 30); --lr-video-playlist-item-hover-border-color: rgb(40, 50, 60); --lr-video-playlist-item-active-bg: rgb(70, 80, 90); --lr-video-playlist-item-current-border-color: rgb(200, 100, 50)"
+      >
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [current, other] = items(el);
+    try {
+      await hoverUntilMatched(current!, 'the current row never took the pointer hover state');
+      await waitUntil(() => getComputedStyle(current!).borderTopColor === 'rgb(200, 100, 50)', 'current row lost its own border under hover');
+      expect(getComputedStyle(current!).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+      await hoverUntilMatched(other!, 'the non-current row never took the pointer hover state');
+      await waitUntil(() => getComputedStyle(other!).backgroundColor === 'rgb(10, 20, 30)', 'hover background token never painted');
+      expect(getComputedStyle(other!).borderTopColor).to.equal('rgb(40, 50, 60)');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(other!).backgroundColor === 'rgb(70, 80, 90)', 'pressed background token never painted');
+    } finally {
+      await resetMouse();
+    }
+  });
+});

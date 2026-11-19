@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, focusRingInset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -86,6 +86,9 @@ export const styles = css`
   }
   [part~='chip']:focus-visible {
     ${focusRing}
+  }
+  :host(:not([wrap])) [part~='chip']:focus-visible {
+    ${focusRingInset}
   }
   [part='chip-label'] {
     display: -webkit-box;

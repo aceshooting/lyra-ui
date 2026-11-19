@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Tin nhắn',
   composerPlaceholder: 'Hỏi bất cứ điều gì…',
   rename: 'Đổi tên {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} phút {seconds} giây',
   feedbackPositive: 'Câu trả lời hữu ích',
   feedbackNegative: 'Câu trả lời chưa tốt',

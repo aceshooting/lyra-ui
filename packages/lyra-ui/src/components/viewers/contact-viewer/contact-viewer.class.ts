@@ -1,4 +1,6 @@
+import { splitLines } from '../../../internal/text-lines.js';
 import { bdi } from '../../../internal/bidi.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -184,8 +186,9 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       return;
     }
     this.fetchState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
@@ -196,6 +199,8 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 
@@ -204,7 +209,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   }
 
   private formatAddress(address: VCardAddress): string {
-    return this.localize('contactViewerAddressFormat', undefined, {
+    return splitLines(this.localize('contactViewerAddressFormat', undefined, {
       poBox: address.poBox,
       extendedAddress: address.extendedAddress,
       streetAddress: address.streetAddress,
@@ -212,8 +217,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       region: address.region,
       postalCode: address.postalCode,
       country: address.country,
-    })
-      .split(/\r\n|\r|\n/)
+    }))
       .map((line) => line.replace(/\s+/g, ' ').trim())
       .filter(Boolean)
       .join('\n');

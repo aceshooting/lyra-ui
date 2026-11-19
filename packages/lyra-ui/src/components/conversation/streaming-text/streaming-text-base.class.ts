@@ -280,7 +280,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
     return html`<div part="base"
       >${this.effectiveMarkdown
         ? html`${this.renderMarkdown()}${cursor}`
-        : html`<span class="plain">${streamingTailText(this.displayedContent)}</span> ${cursor}`}</div
+        : html`<span class="plain" dir="auto">${streamingTailText(this.displayedContent)}</span> ${cursor}`}</div
     >`;
   }
 }

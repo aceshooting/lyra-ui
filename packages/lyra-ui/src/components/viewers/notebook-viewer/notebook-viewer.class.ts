@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
@@ -19,7 +20,7 @@ import { styles } from './notebook-viewer.styles.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
@@ -864,8 +865,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       return;
     }
     this.loadState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
@@ -878,6 +880,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         message: viewerFailureMessage(error, this.localize.bind(this)),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mapOverlayPanel, mapOverlayPanelLayer, mapOverlayCloseButton, mapOverlayCloseButtonHover, mapOverlayCloseButtonActive } from '../../../internal/map-overlay-panel.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 
@@ -11,7 +12,11 @@ export const styles = css`
     block-size: var(--lr-map-height, var(--lr-size-24rem));
   }
   [part='scene-panel'] {
+    ${mapOverlayPanel}
     position: absolute;
+    grid-row: 2;
+    inline-size: auto;
+    max-inline-size: none;
     inset-inline: var(--lr-space-s);
     inset-block-end: var(--lr-space-s);
     z-index: var(--lr-layer-content);
@@ -19,11 +24,6 @@ export const styles = css`
     min-inline-size: 0;
     overflow: auto;
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    overflow-wrap: anywhere;
   }
   [part='scene-list'] { list-style: none; margin: var(--lr-space-s) 0; padding: 0; min-inline-size: 0; }
   [part='scene-list'] > li { min-inline-size: 0; margin-block: var(--lr-space-xs); }
@@ -33,6 +33,7 @@ export const styles = css`
   [part='scene-pagination'] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-xs); }
   [part='scene-toggle'], button[part='scene-item'], [part='scene-pagination'] button {
     ${iconHitTarget}
+    position: relative;
     max-inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -46,10 +47,10 @@ export const styles = css`
     cursor: pointer;
   }
   [part='scene-toggle']:where(:hover), button[part='scene-item']:where(:hover), [part='scene-pagination'] button:where(:hover) {
-    background: var(--lr-color-surface-raised);
+    --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part='scene-toggle']:where(:active), button[part='scene-item']:where(:active), [part='scene-pagination'] button:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-map-action-fill: var(--lr-map-action-active-bg, color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='scene-toggle']:focus-visible, button[part='scene-item']:focus-visible, [part='scene-pagination'] button:focus-visible {
     ${focusRing}
@@ -87,9 +88,10 @@ export const styles = css`
   /* The fill comes from the shared control material below, so loading and installed controls match. */
   [part~='initialization-control'] { position: relative; flex-shrink: 0; margin: var(--lr-space-xs); inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); }
   [part='pick-controls'], [part='drawing-controls'] {
-    position: absolute;
-    inset-inline: var(--lr-space-s);
-    inset-block-end: var(--lr-space-s);
+    position: relative;
+    grid-area: 3 / 1;
+    margin-inline: var(--lr-space-s);
+    z-index: calc(var(--lr-layer-content) + 1);
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-space-xs);
@@ -109,15 +111,15 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
+  [part='pick-controls'] button, [part='drawing-controls'] button, [part='anchor-close'] { position: relative; }
   [part='pick-center']:where(:hover), [part='pick-cancel']:where(:hover), [part='drawing-add']:where(:hover), [part='drawing-undo']:where(:hover), [part='drawing-complete']:where(:hover), [part='drawing-cancel']:where(:hover), [part='anchor-close']:where(:hover) {
-    background: var(--lr-color-surface-raised);
+    --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part='pick-center']:where(:active), [part='pick-cancel']:where(:active), [part='drawing-add']:where(:active), [part='drawing-undo']:where(:active), [part='drawing-complete']:where(:active), [part='drawing-cancel']:where(:active), [part='anchor-close']:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-map-action-fill: var(--lr-map-action-active-bg, color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='pick-center']:focus-visible, [part='pick-cancel']:focus-visible, [part='drawing-add']:focus-visible, [part='drawing-undo']:focus-visible, [part='drawing-complete']:focus-visible, [part='drawing-cancel']:focus-visible, [part='anchor-close']:focus-visible { ${focusRing} }
   [part='pick-center']:where(:disabled), [part='pick-cancel']:where(:disabled), [part='drawing-add']:where(:disabled), [part='drawing-undo']:where(:disabled), [part='drawing-complete']:where(:disabled), [part='drawing-cancel']:where(:disabled), [part='anchor-close']:where(:disabled) { cursor: default; }
-  [part='drawing-controls'] { z-index: 2; }
   [part='drawing-handles'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   [part='drawing-vertex'] {
     ${iconHitTarget}
@@ -125,9 +127,9 @@ export const styles = css`
     display: grid; place-items: center; touch-action: none; padding: 0; border: 0; background: transparent; color: var(--lr-color-text); cursor: grab;
   }
   [part='drawing-vertex'] > span { inline-size: var(--lr-space-s); block-size: var(--lr-space-s); border-radius: var(--lr-radius-pill); background: var(--lr-map-drawing-color, var(--lr-color-brand)); border: var(--lr-border-width-thin) solid var(--lr-color-surface); }
-  [part='drawing-vertex']:where(:hover) > span { background: color-mix(in srgb, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-surface) 20%); }
+  [part='drawing-vertex']:where(:hover) > span { background: var(--lr-map-drawing-vertex-hover-bg, color-mix(in oklab, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))); }
   [part='drawing-vertex']:where(:active) { cursor: grabbing; }
-  [part='drawing-vertex']:where(:active) > span { background: color-mix(in oklab, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='drawing-vertex']:where(:active) > span { background: var(--lr-map-drawing-vertex-active-bg, color-mix(in oklab, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   [part='drawing-measurements'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
   [part='drawing-measurement'] {
     position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
@@ -137,14 +139,33 @@ export const styles = css`
   }
   [part='drawing-measurement'][data-kind='length'] { transform: translate(-50%, calc(var(--lr-space-s) + 50%)); }
   [part='drawing-measurement'][data-kind='area'] { font-weight: var(--lr-font-weight-semibold); }
-  [part='drawing-summary'] { align-self: center; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); color: var(--lr-color-text); }
+  [part='drawing-summary'] { position: relative; align-self: center; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); color: var(--lr-color-text); }
   [part='drawing-vertex']:focus-visible { ${focusRing} }
   [part='drawing-vertex']:where(:disabled) { cursor: default; }
-  [part='drawing-status'] { color: var(--lr-color-text); background: var(--lr-color-surface); padding: var(--lr-space-xs); overflow-wrap: anywhere; }
+  [part='drawing-status'] { position: relative; border-radius: var(--lr-radius-button); color: var(--lr-color-text); background: var(--lr-color-surface); padding: var(--lr-space-xs); overflow-wrap: anywhere; }
   [part='base'] {
     position: relative;
     inline-size: 100%;
     block-size: 100%;
+  }
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'])) {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) fit-content(60%) auto;
+    row-gap: var(--lr-space-xs);
+    padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px))
+      calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px));
+  }
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls']))
+    > :is([part='legend'], [part='scene-panel']) {
+    position: relative;
+    inset: auto;
+    grid-column: 1;
+    align-self: end;
+    margin-inline: var(--lr-space-s);
+    min-block-size: 0;
+    max-block-size: 100%;
   }
   lr-skeleton {
     --lr-skeleton-w: 100%;
@@ -238,18 +259,16 @@ export const styles = css`
   .maplibregl-popup-anchor-bottom-right {
     flex-direction: column-reverse;
   }
-  /*
-   * anchor-left/anchor-right are assigned by MapLibre at runtime from physical viewport collision
-   * detection -- which side of the container has room for the popup -- not page text direction, and
-   * must never be re-mirrored for dir="rtl", or the popup's tip decouples from its marker.
-   */
   .maplibregl-popup-anchor-left {
     flex-direction: row;
   }
   .maplibregl-popup-anchor-right {
     flex-direction: row-reverse;
   }
+  /* MapLibre chooses anchors in physical viewport coordinates. Only the decorative tip needs a fixed direction. */
+  :host(:dir(rtl)) :is(.maplibregl-popup-anchor-left, .maplibregl-popup-anchor-right) > .maplibregl-popup-tip { order: 1; }
   .maplibregl-popup-tip {
+    direction: ltr;
     inline-size: 0;
     block-size: 0;
     border: var(--lr-size-0-625rem) solid transparent;
@@ -261,13 +280,13 @@ export const styles = css`
     border-block-end-color: var(--lr-color-surface-overlay);
   }
   .maplibregl-popup-anchor-top-left .maplibregl-popup-tip {
-    align-self: flex-start;
+    align-self: self-start;
     border-block-start: none;
     border-inline-start: none;
     border-block-end-color: var(--lr-color-surface-overlay);
   }
   .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
-    align-self: flex-end;
+    align-self: self-end;
     border-block-start: none;
     border-inline-end: none;
     border-block-end-color: var(--lr-color-surface-overlay);
@@ -278,13 +297,13 @@ export const styles = css`
     border-block-start-color: var(--lr-color-surface-overlay);
   }
   .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip {
-    align-self: flex-start;
+    align-self: self-start;
     border-block-end: none;
     border-inline-start: none;
     border-block-start-color: var(--lr-color-surface-overlay);
   }
   .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
-    align-self: flex-end;
+    align-self: self-end;
     border-block-end: none;
     border-inline-end: none;
     border-block-start-color: var(--lr-color-surface-overlay);
@@ -300,16 +319,15 @@ export const styles = css`
     border-inline-start-color: var(--lr-color-surface-overlay);
   }
   .maplibregl-popup-content {
+    ${mapOverlayPanel}
     position: relative;
+    inline-size: auto;
+    max-inline-size: 100%;
+    max-block-size: none;
     min-inline-size: var(--lr-icon-button-size);
     padding: var(--lr-space-m);
     padding-inline-end: calc(var(--lr-icon-button-size) + var(--lr-space-xs));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface-overlay);
-    box-shadow: var(--lr-shadow-m);
     pointer-events: auto;
-    overflow-wrap: anywhere;
   }
   .maplibregl-popup-close-button {
     position: absolute;
@@ -319,22 +337,14 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     ${iconHitTarget}
-    padding: 0;
-    border: 0;
-    border-radius: var(--lr-radius);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
-    font: inherit;
-    cursor: pointer;
+    ${mapOverlayCloseButton}
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   .maplibregl-popup-close-button:where(:hover) {
-    background: var(--lr-map-popup-close-button-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-map-popup-close-button-hover-color, var(--lr-color-brand));
+    ${mapOverlayCloseButtonHover}
   }
   .maplibregl-popup-close-button:where(:active) {
-    background: var(--lr-map-popup-close-button-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
-    color: var(--lr-map-popup-close-button-active-color, var(--lr-color-brand));
+    ${mapOverlayCloseButtonActive}
   }
   .maplibregl-popup-close-button:where(:focus-visible) {
     outline: var(--lr-focus-ring);
@@ -349,6 +359,26 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     text-align: center;
   }
+  /* The map container is absolutely positioned, so in-flow messages would paint underneath the
+     canvas. Configuration errors therefore float over the map as one stacked banner on a surface. */
+  .configuration-errors {
+    position: absolute;
+    inset-inline: var(--lr-space-s);
+    inset-block-start: var(--lr-space-s);
+    z-index: calc(var(--lr-layer-content) + 1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+    pointer-events: none;
+  }
+  .configuration-errors > [part='configuration-error'] {
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-overlay);
+    overflow-wrap: anywhere;
+    pointer-events: auto;
+  }
   /* The anchor slot's wrapper. place() writes position and the coordinates; the surface mirrors a
      marker popup, and the layer sits above the legend and controls so anchored content is never
      covered by them. Its size never depends on the placement's published available-size variables:
@@ -356,26 +386,17 @@ export const styles = css`
   .anchor-boundary { position: absolute; inset: 0; pointer-events: none; }
   [part='anchor-close'] { display: block; margin-inline-start: auto; margin-block-start: var(--lr-space-xs); }
   [part='anchor'] {
-    position: absolute;
-    /* The rank joins child lr-map-anchor paint order; unset, the layer is unchanged. */
-    z-index: calc(var(--lr-layer-content) + 1 + var(--_lr-map-anchor-rank, 0));
-    box-sizing: border-box;
-    inline-size: max-content;
-    max-inline-size: var(--lr-positioner-available-inline-size, calc(100% - var(--lr-space-s) - var(--lr-space-s)));
-    max-block-size: var(--lr-positioner-available-block-size, calc(100% - var(--lr-space-s) - var(--lr-space-s)));
+    ${mapOverlayPanelLayer}
+    ${mapOverlayPanel}
     overflow: auto;
     padding: var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface-overlay);
-    color: var(--lr-color-text);
-    box-shadow: var(--lr-shadow-m);
-    overflow-wrap: anywhere;
   }
   /* Placement and close state must survive consumer display rules on the public part. */
   [part='anchor']:where([hidden]) { display: none !important; }
   [part='legend'] {
     position: absolute;
+    grid-row: 1;
+    justify-self: start;
     inset-block-end: calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, calc(var(--lr-space-xs) * 0)));
     inset-inline-start: var(--lr-space-s);
     z-index: var(--lr-layer-content);
@@ -444,7 +465,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   button[part='legend-disclosure']:where(:hover) {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   button[part='legend-disclosure']:where(:active) {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -485,8 +506,11 @@ export const styles = css`
   }
   [part='legend-lo'],
   [part='legend-hi'] {
-    flex: 0 0 auto;
-    white-space: nowrap;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 35%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   /* The bar and its tick row share one track so a tick lines up with the exact point of the ramp it
      names, whatever width the two captions leave the bar. */
@@ -589,7 +613,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   button[part~='legend-toggle']:where(:hover) {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   button[part~='legend-toggle']:where(:active) {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -939,7 +963,16 @@ export const styles = css`
     content: '';
   }
 
-  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"]', css`var(--lr-color-surface)`)}
+  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"], [part="drawing-summary"], [part="drawing-status"], [part="drawing-measurement"]', css`var(--lr-color-surface)`)}
+  ${glassSurface('[part="pick-center"], [part="pick-cancel"], [part="drawing-add"], [part="drawing-undo"], [part="drawing-complete"], [part="drawing-cancel"], [part="anchor-close"], [part="scene-toggle"], button[part="scene-item"], [part="scene-pagination"] button', css`var(--_lr-map-action-fill, var(--lr-color-surface))`)}
+  [part='anchor-close']:where(:hover) {
+    --_lr-map-action-fill: var(--lr-map-popup-close-button-hover-bg, var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet)));
+    color: var(--lr-map-popup-close-button-hover-color, var(--lr-color-brand));
+  }
+  [part='anchor-close']:where(:active) {
+    --_lr-map-action-fill: var(--lr-map-popup-close-button-active-bg, var(--lr-map-action-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))));
+    color: var(--lr-map-popup-close-button-active-color, var(--lr-color-brand));
+  }
   ${glassScrollLayerStyles}
   [part='legend'] > .glass-scroll-layer {
     /* The zero-size anchor must not add a flex gap before the visible legend content. */

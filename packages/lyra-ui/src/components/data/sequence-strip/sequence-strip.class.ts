@@ -10,7 +10,10 @@ import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { AllocationObserverController } from '../../../internal/owned-observer.js';
+import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
+import { isElementNode } from '../../../internal/dom-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -19,7 +22,7 @@ import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -216,6 +219,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     loading: LYRA_DEFAULT_loading,
     retry: LYRA_DEFAULT_retry,
     sequenceStripBucketLabel: LYRA_DEFAULT_sequenceStripBucketLabel,
+    sequenceStripCellKeyboardHelp: LYRA_DEFAULT_sequenceStripCellKeyboardHelp,
     sequenceStripBucketSummary: LYRA_DEFAULT_sequenceStripBucketSummary,
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
@@ -537,6 +541,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncTooltip();
     if (this.sourceMode) {
       const status = this.sourceController.pending ? this.localize('loading') : this.sourceController.error ? this.localize('sequenceStripSourceError')
         : this.sourceController.exactUnavailable ? this.localize('sequenceStripSourceItemUnavailable') : '';
@@ -571,7 +576,15 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this.sourceController.requests.adopted(); this.sourceAnnouncements.adopted();
     this.invalidateSource(); this.requestUpdate('source');
   }
+  private tooltipOverlay?: OverlayHandle;
+
+  constructor() {
+    super();
+    new AllocationObserverController(this, { onInlineSize: () => this.placeTooltip() });
+  }
+
   override disconnectedCallback(): void {
+    this.closeTooltip();
     this.invalidateSource(); this.sourceStatusInitialized = false; this.previousSourceStatus = '';
 
     this.focusRestoreGeneration++;
@@ -717,19 +730,56 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   private onStripFocusOut(e: FocusEvent): void {
     if (this.restoringOwnedFocus) return;
     const next = e.relatedTarget;
-    if (!(next instanceof Element) || next.getAttribute('part') !== 'cell') this.keyboardIndex = null;
+    if (!isElementNode(next) || next.getAttribute('part') !== 'cell') this.keyboardIndex = null;
+  }
+
+  private tooltip(): HTMLElement | null {
+    return this.renderRoot.querySelector('[part="tooltip"]:not([hidden])');
+  }
+
+  private closeTooltip(): void {
+    this.tooltipOverlay?.deactivate({ restoreFocus: false });
+    this.tooltipOverlay = undefined;
+    this.hoverIndex = null;
+    this.keyboardTooltip = false;
+  }
+
+  private syncTooltip(): void {
+    const tip = this.tooltip();
+    if (!tip) {
+      this.tooltipOverlay?.deactivate({ restoreFocus: false });
+      this.tooltipOverlay = undefined;
+      return;
+    }
+    this.placeTooltip(tip);
+    this.tooltipOverlay ??= activateNonmodalOverlay({
+      host: this,
+      panel: () => this.tooltip(),
+      onEscape: () => this.closeTooltip(),
+    });
+  }
+
+  private placeTooltip(tip = this.tooltip()): void {
+    if (!tip) return;
+    const base = tip.parentElement!;
+    const cell = base.querySelector<HTMLElement>(`[part="cell"][data-index="${tip.dataset['anchorIndex']}"]`)!;
+    const width = base.clientWidth;
+    const center = cell.offsetLeft + cell.offsetWidth / 2;
+    const start = this.effectiveDirection === 'rtl' ? width - center : center;
+    const half = tip.offsetWidth / 2;
+    tip.style.insetInlineStart = `${Math.max(half, Math.min(width - half, start))}px`;
   }
 
   private onCellKeyDown(e: KeyboardEvent, index: number, cell: SequenceStripCell): void {
-    // A focused cell has to be activatable from the keyboard, not only the pointer -- the cells
-    // already carry a roving tabindex, so without this they were reachable but inert.
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      if (shouldIgnoreActivationKey(e)) return;
       e.preventDefault();
       this.activateItem(cell.start);
       return;
     }
     const cells = this.cells();
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || cells.length === 0) return;
+    if (shouldIgnoreNavigationKey(e)) return;
     e.preventDefault();
     const moved = resolveListMove(e, {
       count: cells.length,
@@ -810,7 +860,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   private sourceExactKey(event: KeyboardEvent): void {
     const current = this.sourceController.exact;
     const length = this.sourceController.length;
-    if (!length) return;
+    if (shouldIgnoreNavigationKey(event)) return;
     let next: number;
     if (event.key === 'Home') next = 0;
     else if (event.key === 'End') next = length - 1;
@@ -870,22 +920,28 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
           const activate = () => { if (current() && range.enabledCount) void this.inspectSourceItem(range.startIndex, false, true); };
           return html`<span part="cell" role="listitem" data-index=${index} data-range-start=${range.startIndex} data-range-end=${range.endIndex - 1}
             aria-posinset=${index + 1} aria-setsize=${ranges.length} aria-label=${label} aria-disabled=${range.enabledCount ? 'false' : 'true'}
+            aria-describedby=${range.enabledCount ? 'sequence-strip-help' : nothing}
             aria-current=${selected === index ? 'true' : 'false'} ?data-selected=${selected === index} tabindex=${entry === index ? '0' : '-1'}
             style=${styleMap({ backgroundColor: this.categoryColor(category, categories), flexGrow: String((range.endIndex - range.startIndex) / controller.length) })}
             @click=${activate} @pointerenter=${() => { if (current()) this.onCellEnter(index); }} @pointerleave=${() => { if (current()) this.onCellLeave(); }}
             @focus=${(event: FocusEvent) => { if (current()) this.onCellFocus(index, event); }}
             @keydown=${(event: KeyboardEvent) => {
               if (!current()) return;
-              if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); activate(); return; }
+              if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+                if (shouldIgnoreActivationKey(event)) return;
+                event.preventDefault(); activate(); return;
+              }
               const next = resolveListMove(event, { count: ranges.length, current: index, orientation: 'horizontal', direction: this.effectiveDirection, wrap: false, isAvailable: target => ranges[target]!.enabledCount > 0 });
               if (next !== null && next !== undefined) {
                 event.preventDefault(); this.keyboardIndex = next; this.keyboardTooltip = true;
                 void this.updateComplete.then(() => { if (current()) this.shadowRoot?.querySelector<HTMLElement>(`[part="cell"][data-index="${next}"]`)?.focus(); });
               }
             }}>${range.markerCount ? html`<span part="marker"></span>` : nothing}
-            ${active === index ? html`<span part="tooltip">${label}</span>` : nothing}</span>`;
+            </span>
+            ${active === index ? html`<div part="tooltip" aria-hidden="true" data-anchor-index=${index}>${label}</div>` : nothing}`;
         })}
       </div>
+      <span id="sequence-strip-help" hidden>${this.localize('sequenceStripCellKeyboardHelp')}</span>
       ${snapshot && !controller.length ? html`<span part="empty">${this.localize('sequenceStripEmpty')}</span>` : nothing}
       ${overview ? html`<div part="bucket-summary" aria-hidden="true">${overview}</div>` : nothing}
       ${snapshot && controller.length ? html`<button part="source-exact" type="button" aria-disabled=${!exact || exact.item.disabled ? 'true' : 'false'}
@@ -935,6 +991,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               aria-posinset=${index + 1}
               aria-setsize=${cells.length}
               aria-disabled=${this.cellDisabled(cell) ? 'true' : nothing}
+              aria-describedby=${this.cellDisabled(cell) ? nothing : 'sequence-strip-help'}
               tabindex=${index === tabStop ? '0' : '-1'}
               style=${styleMap({ backgroundColor: view.colors[index] })}
               @pointerenter=${() => this.onCellEnter(index)}
@@ -946,17 +1003,12 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               ?data-selected=${selectedCell === index}
             >
               ${cell.marker ? html`<span part="marker"></span>` : nothing}
-              ${index === tooltipIndex
-                ? html`
-                    <span id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>
-                      ${active ? view.labels[activeIndex!] : ''}
-                    </span>
-                  `
-                : nothing}
             </span>
           `,
         )}
+        <div id="sequence-strip-tooltip" part="tooltip" aria-hidden="true" data-anchor-index=${tooltipIndex} ?hidden=${!active}>${active ? view.labels[tooltipIndex] : ''}</div>
       </div>
+      <span id="sequence-strip-help" hidden>${this.localize('sequenceStripCellKeyboardHelp')}</span>
       ${cells.length === 0
         ? html`<span part="empty" aria-hidden="true">${this.localize('sequenceStripEmpty')}</span>`
         : nothing}

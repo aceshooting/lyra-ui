@@ -41,7 +41,13 @@ export interface CalendarEvent {
   readonly color?: string;
   readonly data?: unknown;
 }
-export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
+export interface LyraCalendarEventMap {
+  'lr-date-select': CustomEvent<{ date: string }>;
+  'lr-event-select': CustomEvent<{ event: CalendarEvent }>;
+  /** @deprecated Use `lr-month-change`. */
+  'lr-view-change': CustomEvent<{ viewDate: string }>;
+  'lr-month-change': CustomEvent<{ viewDate: string }>;
+}
 const monthStart = (date: Date): Date => localDate(date.getFullYear(), date.getMonth(), 1);
 
 /** Caps how many event buttons mount inside one day cell of the month grid before the rest
@@ -182,7 +188,8 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @customElement lr-calendar
  * @event lr-date-select - A calendar date was selected.
  * @event lr-event-select - An event was selected.
- * @event lr-view-change - The visible month changed.
+ * @event lr-view-change - The visible month changed. Use lr-month-change for calendar-specific notifications.
+ * @event lr-month-change - The visible month changed. Detail: `{ viewDate: string }`.
  * @csspart limit - Input admission limit notice.
  * @csspart header - Calendar header.
  * @csspart navigation - Wrapper around both month-navigation controls and the title.
@@ -209,6 +216,7 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @cssprop [--lr-calendar-nav-active-bg=color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Month-navigation pressed background.
  * @cssprop [--lr-calendar-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
  * @cssprop [--lr-calendar-day-active-bg=color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
+ * @cssprop --lr-calendar-event-hover-tint - Tint over a month-view event while hovered.
  * @cssprop [--lr-calendar-agenda-event-hover-bg=var(--lr-color-brand-quiet)] - Agenda-event hover background override; without one, colored events retain their event fill.
  * @cssprop [--lr-calendar-agenda-event-active-bg=color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Agenda-event pressed background override; without one, colored events retain their event fill.
  * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
@@ -272,8 +280,13 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   private changeMonth(delta: number): void {
     const viewDate = formatISO(addMonths(this.viewStart, delta));
     if (!viewDate) return;
+    this.commitMonth(viewDate);
+  }
+  private commitMonth(viewDate: string): void {
     this.viewDate = viewDate;
+    this.emit('lr-month-change', { viewDate });
     this.emit('lr-view-change', { viewDate });
+    this.announcements.announcePolite(dateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(this.viewStart));
   }
   private selectDate(date: string): void { if (!date) return; this.value = date; this.focusedDate = date; this.emit('lr-date-select', { date }); }
   /** Invalid rows are omitted; all later rendering uses the descriptor-safe projection. */
@@ -331,8 +344,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     next = clampDate(next, localDate(0), localDate(9999, 11, 31));
     const [gridFirst, gridLast] = this.gridBounds(this.weeks());
     if (next < gridFirst || next > gridLast) {
-      this.viewDate = formatISO(monthStart(next));
-      this.emit('lr-view-change', { viewDate: this.viewDate });
+      this.commitMonth(formatISO(monthStart(next)));
     }
     this.focusedDate = formatISO(next);
     queueMicrotask(() => this.renderRoot.querySelector<HTMLElement>(`[data-date="${this.focusedDate}"]`)?.focus());

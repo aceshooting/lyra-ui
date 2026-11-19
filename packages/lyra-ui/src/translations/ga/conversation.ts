@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Teachtaireacht',
   composerPlaceholder: 'Cuir ceist ar bith…',
   rename: 'Athainmnigh {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}n {seconds}s',
   feedbackPositive: 'Freagra maith',
   feedbackNegative: 'Drochfhreagra',

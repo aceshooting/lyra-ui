@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Talatah',
   composerPlaceholder: 'Tanya naon waé…',
   rename: 'Ganti ngaran {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Jawaban alus',
   feedbackNegative: 'Jawaban goréng',

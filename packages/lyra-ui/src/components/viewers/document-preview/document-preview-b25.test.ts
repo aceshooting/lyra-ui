@@ -11,6 +11,33 @@ function stubTextFetch(text: string): () => void {
 }
 
 describe('lr-document-preview remediation', () => {
+  it('gives the download link the shared bordered action chrome with a minimum target', async () => {
+    const el = await fixture<LyraDocumentPreview>(html`
+      <lr-document-preview src="https://example.test/report.pdf" mime-type="application/pdf" filename="report.pdf"></lr-document-preview>
+    `);
+    const link = el.shadowRoot!.querySelector<HTMLElement>('[part="download-link"]')!;
+    const style = getComputedStyle(link);
+    expect(style.borderTopStyle).to.equal('solid');
+    expect(link.getBoundingClientRect().height).to.be.at.least(32);
+  });
+
+  it('cancels the unread body of a non-ok text response', async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } });
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(new Response(body, { status: 404, statusText: 'Not Found' }))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraDocumentPreview>(html`
+        <lr-document-preview mime-type="text/plain" src="https://example.test/missing.txt"></lr-document-preview>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'no error part rendered');
+      await waitUntil(() => cancelled, 'response body was not cancelled');
+      expect(cancelled).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('shows an error state and emits one render error when the image fails to load', async () => {
     const el = await fixture<LyraDocumentPreview>(html`
       <lr-document-preview mime-type="image/png" src="https://example.invalid/missing.png"></lr-document-preview>
@@ -20,7 +47,7 @@ describe('lr-document-preview remediation', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'no error part rendered');
     await aTimeout(20);
     expect(errors).to.equal(1);
-    expect(el.shadowRoot!.querySelector('img')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('img') === null).to.equal(true);
   });
 
   it('tries a new image src after a failure', async () => {
@@ -30,7 +57,7 @@ describe('lr-document-preview remediation', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
     el.src = 'https://example.invalid/other.png';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('img')).to.not.equal(null);
+    expect(el.shadowRoot!.querySelector('img') !== null).to.equal(true);
   });
 
   it('isolates caller text direction for the text body and the filename', async () => {

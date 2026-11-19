@@ -1420,6 +1420,20 @@ describe('output collapsing', () => {
     expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.include('line 59');
   });
 
+  it('gives the output toggle the icon-button minimum hit area', async () => {
+    const longText = Array.from({ length: 60 }, (_v, i) => `line ${i}`).join('\n');
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {}, outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText } }] }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
+    const toggle = rowRoot(el).querySelector<HTMLElement>('[part="output-toggle"]')!;
+    const floor = Number.parseFloat(getComputedStyle(toggle).minBlockSize);
+    expect(floor).to.be.greaterThan(20);
+    expect(toggle.getBoundingClientRect().height).to.be.at.least(floor - 0.5);
+  });
+
   it('normalizes a NaN outputCollapseLines to the default (40) instead of silently disabling collapsing', async () => {
     const longText = Array.from({ length: 60 }, (_v, i) => `line ${i}`).join('\n');
     const notebook = {

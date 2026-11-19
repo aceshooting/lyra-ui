@@ -82,6 +82,7 @@ export const StateThemeHooks: Story = {
         --lr-calendar-nav-active-bg: var(--lr-color-warning);
         --lr-calendar-day-hover-bg: var(--lr-color-success-quiet);
         --lr-calendar-day-active-bg: var(--lr-color-success);
+        --lr-calendar-event-hover-tint: color-mix(in srgb, var(--lr-color-warning) 30%, transparent);
         --lr-calendar-agenda-event-hover-bg: var(--lr-color-danger-quiet);
         --lr-calendar-agenda-event-active-bg: var(--lr-color-danger);
         --lr-calendar-day-selected-bg: var(--lr-color-success-quiet);
@@ -90,7 +91,16 @@ export const StateThemeHooks: Story = {
         --lr-calendar-day-today-outline-color: var(--lr-color-danger);
       "
     >
-      <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
+      <output aria-label="Visible month">2026-07-01</output>
+      <lr-calendar
+        view-date="2026-07-01"
+        value="2026-07-15"
+        .events=${[{ date: '2026-07-15', title: 'Planning review' }]}
+        @lr-month-change=${(event: CustomEvent<{ viewDate: string }>) => {
+          const output = (event.currentTarget as HTMLElement).previousElementSibling;
+          if (output) output.textContent = event.detail.viewDate;
+        }}
+      ></lr-calendar>
       <lr-calendar
         view="agenda"
         view-date="2026-07-01"

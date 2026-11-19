@@ -1083,3 +1083,19 @@ describe('lr-sequence-playback remediation', () => {
     expect(el.intervalMs).to.equal(70);
   });
 });
+
+describe('play-button hover token', () => {
+  it('paints the hovered play-button border from its own token', async () => {
+    const el = (await fixture(html`<lr-sequence-playback
+      item-count="3"
+      style="--lr-transition-fast: 0s; --lr-sequence-playback-play-button-hover-border-color: rgb(40, 50, 60)"
+    ></lr-sequence-playback>`)) as LyraSequencePlayback;
+    const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+    try {
+      await hoverUntilMatched(button, 'the play button never reported :hover');
+      await waitUntil(() => getComputedStyle(button).borderTopColor === 'rgb(40, 50, 60)', 'hover border token never painted');
+    } finally {
+      await resetMouse();
+    }
+  });
+});

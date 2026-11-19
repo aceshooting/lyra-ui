@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Xabar',
   composerPlaceholder: 'Istalgan narsani soʻrang…',
   rename: '{title} nomini oʻzgartirish',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Yaxshi javob',
   feedbackNegative: 'Yomon javob',

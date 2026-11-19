@@ -1,4 +1,5 @@
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { guard } from 'lit/directives/guard.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -741,8 +742,9 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       return;
     }
     this.loadState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(
+      response = await fetchTarget.view.fetch(
         fetchTarget.url,
         signal ? { signal } : undefined
       );
@@ -796,6 +798,8 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
           : () => this.localize('geojsonViewInvalid'),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 

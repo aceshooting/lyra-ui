@@ -425,3 +425,13 @@ it('announces the next navigation after a reparent that changed nothing', async 
   const region = el.shadowRoot!.querySelector('lr-live-region')!;
   await waitUntil(() => (region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '') !== '', 'position never announced');
 });
+
+it('uses the localized group name for a whitespace-only label or host name', async () => {
+  const el = await fixture<LyraBranchPicker>(html`<lr-branch-picker count="2" label="  "></lr-branch-picker>`);
+  const group = el.shadowRoot!.querySelector('[role="group"]')!;
+  expect(group.getAttribute('aria-label')).to.equal('Response versions');
+  el.label = 'Revision history';
+  el.setAttribute('aria-label', '   ');
+  await el.updateComplete;
+  expect(group.getAttribute('aria-label')).to.equal('Response versions');
+});

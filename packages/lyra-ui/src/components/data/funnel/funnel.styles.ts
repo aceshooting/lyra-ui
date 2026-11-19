@@ -71,6 +71,12 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
   }
 
+  [part='stage-value'],
+  [part='stage-share'],
+  [part='comparison-value'] {
+    unicode-bidi: plaintext;
+  }
+
   [part='comparison-value'] {
     flex-basis: 100%;
     font-size: var(--lr-font-size-xs);
@@ -136,6 +142,19 @@ export const styles = css`
   @container (max-inline-size: 18rem) {
     [part='stage-label'] {
       flex-basis: 100%;
+    }
+  }
+
+  @media (forced-colors: active) {
+    [part='track'] {
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part~='bar'] {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+    [part='comparison-bar'] {
+      border-color: GrayText;
     }
   }
 

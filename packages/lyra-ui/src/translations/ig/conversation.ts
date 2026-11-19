@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Ozi',
   composerPlaceholder: 'Jụọ ihe ọ bụla…',
   rename: 'Gbanwee aha {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Nzaghachi dị mma',
   feedbackNegative: 'Nzaghachi adịghị mma',

@@ -1,4 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
@@ -960,8 +962,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       return;
     }
     this.xmlState = { kind: 'loading' };
+    let response: Response | undefined;
     try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response, this.effectiveMaxBytes);
@@ -981,6 +984,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
             : () => this.localize('documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      discardBody(response);
     }
   }
 
@@ -1380,7 +1385,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       ) return;
       this.copyTimer = undefined;
       this.copyFeedback = null;
-    }, 1_500);
+    }, COPY_FEEDBACK_MS);
     this.copyTimer = { owner, handle, generation };
   }
 

@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'መልዕክት',
   composerPlaceholder: 'ማንኛውንም ነገር ይጠይቁ…',
   rename: '{title}ን እንደገና ሰይም',
+  conversationActionWithTitle: '{action}፦ {title}',
   elapsedMinutesSecondsTemplate: '{minutes} ደቂቃ {seconds} ሰከንድ',
   feedbackPositive: 'ጥሩ ምላሽ',
   feedbackNegative: 'መጥፎ ምላሽ',

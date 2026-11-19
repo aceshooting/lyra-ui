@@ -102,7 +102,7 @@ export const styles = css`
     border-start-start-radius: var(--lr-radius-xs);
     border-end-start-radius: var(--lr-radius-xs);
   }
-  [part='cell']:last-child {
+  [part='cell']:last-of-type {
     border-start-end-radius: var(--lr-radius-xs);
     border-end-end-radius: var(--lr-radius-xs);
   }
@@ -117,19 +117,19 @@ export const styles = css`
     inset-block-end: 100%;
     inset-inline-start: 50%;
     transform: translate(-50%, calc(-1 * var(--lr-size-6px)));
+    inline-size: max-content;
+    box-sizing: border-box;
+    max-inline-size: min(var(--lr-size-20rem), 100%);
     padding: var(--lr-size-2px) var(--lr-size-6px);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     box-shadow: var(--lr-shadow-m);
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
-  /* The tooltip is a child of the active cell, so this 50% inset tracks that cell, not the strip.
-     Under RTL the inset anchors to the physical right edge, so the fixed -50% translate must flip
-     sign -- translateX is physical, not logical. */
   :host(:dir(rtl)) [part='tooltip'] {
     transform: translate(50%, calc(-1 * var(--lr-size-6px)));
   }
@@ -154,6 +154,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
     font-variant-numeric: tabular-nums;
+  }
+  [part='legend-limit'] {
+    unicode-bidi: isolate;
+    direction: ltr;
   }
   [part='bucket-summary'] {
     margin-block-start: var(--lr-space-2xs);
@@ -184,5 +188,26 @@ export const styles = css`
   [part='legend-label'] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
+  }
+  @media (forced-colors: active) {
+    [part='cell'] {
+      forced-color-adjust: none;
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part='cell'][data-selected] {
+      outline-color: Highlight;
+    }
+    [part='cell']:where(:not([aria-disabled='true'])):focus-visible {
+      outline-color: Highlight;
+    }
+    [part='marker'],
+    [part='legend-swatch'],
+    [part='legend-marker-swatch'] {
+      forced-color-adjust: none;
+    }
+    [part='legend-swatch'],
+    [part='legend-marker-swatch'] {
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
   }
 `;

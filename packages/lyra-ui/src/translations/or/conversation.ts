@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'ବାର୍ତ୍ତା',
   composerPlaceholder: 'ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ…',
   rename: '{title}ର ନାମ ବଦଳାନ୍ତୁ',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} ମିନିଟ୍ {seconds} ସେକେଣ୍ଡ',
   feedbackPositive: 'ଭଲ ଉତ୍ତର',
   feedbackNegative: 'ଖରାପ ଉତ୍ତର',

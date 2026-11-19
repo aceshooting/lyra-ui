@@ -18,6 +18,7 @@ import {
 import type { LyraHeatmapStickyLabels as RootHeatmapStickyLabels } from "../../../lyra.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 type MatrixData = Extract<LyraHeatmap["data"], { kind: "matrix" }>;
 type CalendarData = Extract<LyraHeatmap["data"], { kind: "calendar" }>;
@@ -1151,16 +1152,14 @@ it("removes the previous MediaQueryList change listener before attaching a new o
   }) as typeof window.matchMedia;
 
   try {
-    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    await fixture(html`<lr-heatmap></lr-heatmap>`);
     const dprQueries = () =>
       created.filter(({ query }) => query.startsWith("(resolution:"));
     expect(dprQueries().length).to.equal(1);
     expect(dprQueries()[0]!.addCalls.length).to.equal(1);
 
-    // Simulate a DPR crossing (the real trigger is a 'change' event on the
-    // MediaQueryList, which this fake doesn't dispatch, so invoke the
-    // private handler directly).
-    (el as unknown as { onDprChange: () => void }).onDprChange();
+    const change = dprQueries()[0]!.addCalls[0] as EventListener;
+    change(new Event('change'));
 
     expect(dprQueries().length).to.equal(2);
     // The first MediaQueryList's listener must have been removed, not leaked.
@@ -4014,11 +4013,14 @@ describe("visibility-gated canvas redraws", () => {
 
     let el: LyraHeatmap | undefined;
     try {
-      el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      const wrapper = await fixture<HTMLDivElement>(html`<div><lr-heatmap></lr-heatmap><button type="button">Other</button></div>`);
+      el = wrapper.querySelector('lr-heatmap')!;
       setMatrixData(el, { rowLabels: ["row"] });
       setMatrixData(el, { colLabels: ["column"] });
       setMatrixData(el, { values: [[1]] });
       await el.updateComplete;
+      const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!;
+      await focusByKeyboard(canvas);
       expect(
         callback !== undefined,
         "the owner-window visibility observer is installed"
@@ -4044,6 +4046,9 @@ describe("visibility-gated canvas redraws", () => {
       el.annotations = [{ row: 0, col: 0, label: "changed while hidden" }];
       await el.updateComplete;
       el.refreshTheme();
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      await el.updateComplete;
+      await focusByKeyboard(wrapper.querySelector('button')!);
       expect(draws, "hidden data and theme changes do no canvas work").to.equal(
         0
       );
@@ -6498,15 +6503,16 @@ describe("coverage: additional edge-path gaps", () => {
   it("watchDpr(): no-ops when there is no owner window (defensive)", async () => {
     const el = document.createElement("lr-heatmap") as unknown as {
       watchDpr(): void;
-      dprQuery?: MediaQueryList;
+      stopWatchingDpr?: () => void;
     };
     await withNoOwnerWindow(el as unknown as Node, () => {
       expect(() => el.watchDpr()).to.not.throw();
-      expect(el.dprQuery).to.equal(undefined);
+      expect(typeof el.stopWatchingDpr).to.equal('function');
+      expect(() => el.stopWatchingDpr!()).to.not.throw();
     });
   });
 
-  it("invokes onDprChange when the MediaQueryList reports a real change", async () => {
+  it("repaints the canvas when the resolution query changes", async () => {
     const originalMatchMedia = window.matchMedia;
     let listener: ((ev: MediaQueryListEvent) => void) | undefined;
     window.matchMedia = ((query: string) =>
@@ -6517,7 +6523,7 @@ describe("coverage: additional edge-path gaps", () => {
           _type: string,
           l: EventListenerOrEventListenerObject
         ) => {
-          listener = l as (ev: MediaQueryListEvent) => void;
+          if (query.startsWith('(resolution:')) listener = l as (ev: MediaQueryListEvent) => void;
         },
         removeEventListener: () => {},
       } as unknown as MediaQueryList)) as typeof window.matchMedia;
@@ -6533,11 +6539,12 @@ describe("coverage: additional edge-path gaps", () => {
         listener,
         "the DPR MediaQueryList registers a change listener"
       ).to.not.equal(undefined);
-      expect(() => listener!({} as MediaQueryListEvent)).to.not.throw();
+      let draws = 0;
+      el.cellColor = () => { draws += 1; return '#123'; };
       await el.updateComplete;
-      expect(
-        (el as unknown as { dprQuery?: MediaQueryList }).dprQuery
-      ).to.not.equal(undefined);
+      const before = draws;
+      listener!(new Event('change') as MediaQueryListEvent);
+      expect(draws).to.be.greaterThan(before);
     } finally {
       window.matchMedia = originalMatchMedia;
     }

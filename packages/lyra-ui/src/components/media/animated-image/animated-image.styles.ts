@@ -78,7 +78,7 @@ export const styles = css`
     display: inline-grid;
     place-items: center;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--lr-color-surface) 78%, transparent);
+    background: var(--lr-animated-image-control-box-bg, color-mix(in srgb, var(--lr-color-surface) 78%, transparent));
   }
 
   [part="control-box"] > [part="play-button"],
@@ -108,16 +108,15 @@ export const styles = css`
   /* Internal state qualifiers stay low-specificity so sibling rules in this sheet compose easily;
      consumer ::part() authority follows the shadow cascade, independent of this specificity. */
   :where([part="play-button"]):hover:where(:not(:disabled)) {
-    background: color-mix(in srgb, var(--lr-color-surface) 100%, transparent);
+    background: var(--lr-animated-image-play-button-hover-bg, color-mix(in srgb, var(--lr-color-surface) 100%, transparent));
   }
   /* Pressed goes a step past hover, which only finishes opacifying the translucent scrim and so
      registers nothing once the button is fully opaque. Mixing the opaque surface toward
      --lr-color-mix-partner moves whichever way the theme's surface needs. */
   :where([part="play-button"]):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-animated-image-play-button-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
   }
   [part="play-button"]:focus-visible {

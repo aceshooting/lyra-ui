@@ -103,6 +103,10 @@ it('names the role-owning article with localized author identity and honors a ho
   await el.updateComplete;
   expect(bubble.getAttribute('aria-label')).to.equal('Release assistant');
 
+  el.setAttribute('aria-label', '   ');
+  await el.updateComplete;
+  expect(bubble.getAttribute('aria-label')).to.equal('Système');
+
   el.setAttribute('aria-label', '');
   await el.updateComplete;
   expect(bubble.getAttribute('aria-label')).to.equal('');
@@ -1963,4 +1967,16 @@ describe("--lr-chat-message-failed-color", () => {
     await el.updateComplete;
     expect(getComputedStyle(bubbleOf(el)).color).to.equal("rgb(255, 255, 255)");
   });
+});
+
+it('names the retry action for a specific message while preserving its visible label', async () => {
+  const el = await fixture<LyraChatMessage>(html`
+    <lr-chat-message status="failed" message-id="draft-7"></lr-chat-message>
+  `);
+  const retry = el.shadowRoot!.querySelector('[part="retry-button"]')!;
+  expect(retry.textContent?.trim()).to.equal('Retry');
+  expect(retry.getAttribute('aria-label')).to.equal('Retry: draft-7');
+  el.messageId = '';
+  await el.updateComplete;
+  expect(retry.hasAttribute('aria-label')).to.equal(false);
 });

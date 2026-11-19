@@ -4,11 +4,13 @@ export const styles = css`
   :host {
     display: inline-block;
     inline-size: var(--lr-size-8em);
-    block-size: var(--lr-size-8em);
+    aspect-ratio: 1;
+    max-inline-size: 100%;
   }
   :host([shape='linear']) {
     inline-size: var(--lr-size-12em);
     block-size: var(--lr-size-1-5em);
+    aspect-ratio: auto;
   }
   /* Size tiers, from the explicit-only ladder in
      internal/contextual-vocabulary.styles.ts. Every box above is expressed in em, and the SVG
@@ -102,6 +104,19 @@ export const styles = css`
   }
   :host([shape='linear']) [part='label'] {
     text-anchor: start;
+  }
+  @media (forced-colors: active) {
+    [part='track'] {
+      stroke: GrayText;
+    }
+    [part='fill'] {
+      forced-color-adjust: none;
+      stroke: Highlight;
+    }
+    [part='value'],
+    [part='label'] {
+      fill: CanvasText;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     [part='fill'] {

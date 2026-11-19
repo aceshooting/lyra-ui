@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Pesan',
   composerPlaceholder: 'Tanyakan apa saja…',
   rename: 'Ganti nama {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   feedbackPositive: 'Respons bagus',
   feedbackNegative: 'Respons buruk',

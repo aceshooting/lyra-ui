@@ -300,4 +300,13 @@ export const styles = css`
     border: var(--lr-border-width-medium) solid
       var(--lr-heatmap-annotation-color, var(--_lr-heatmap-annotation-color));
   }
+
+  @media (forced-colors: active) {
+    [part="legend"] .bar,
+    [part="legend-swatch"],
+    [part="legend-annotation"] .ring-swatch {
+      forced-color-adjust: none;
+      outline: var(--lr-border-width-thin) solid CanvasText;
+    }
+  }
 `;

@@ -16,3 +16,9 @@
 - `lr-calendar-viewer`, `lr-dataset-viewer` and `lr-email-viewer` report a missing parser before downloading the document body.
 - `lr-model-viewer` keeps focus after a lost context disables the focused control; `lr-include` reports the loaded source in `lr-load`.
 - `lr-spreadsheet-viewer` shows small numbers without rounding them to zero.
+- Every data and document viewer (`lr-archive-viewer`, `lr-calendar-viewer`, `lr-contact-viewer`, `lr-csv-viewer`, `lr-dataset-viewer`, `lr-email-viewer`, `lr-geojson-viewer`, `lr-html-viewer`, `lr-notebook-viewer`, `lr-spreadsheet-viewer`, `lr-svg-viewer`, `lr-xml-viewer`) and `lr-include` now cancel an unread response body after an HTTP failure, a superseded request or a missing parser, releasing the connection instead of leaving it open.
+- `lr-model-viewer` coalesces theme and size changes into one refresh per frame and skips restyling the engine when the resolved colors did not change.
+- `lr-svg-viewer` marks the active region with an outer ring so it stays distinct from a warning-tone highlight.
+- `lr-notebook-viewer` gives its output toggle the minimum touch-target height.
+- `lr-calendar-viewer` stops counting events as soon as the limit is exceeded, and `lr-svg-viewer` parses sanitized markup once.
+- `lr-xml-viewer` copy feedback uses the shared feedback duration.

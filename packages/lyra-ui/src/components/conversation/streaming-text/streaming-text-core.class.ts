@@ -36,7 +36,7 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * Direction: Markdown mode inherits the composed Markdown element's code direction (code reads
  * left-to-right inside a right-to-left document; see that element's docs), and the forwarded
  * `code-block`/`inline-code` parts accept an outer `direction` override. Plain mode, including
- * a fenced block shown as plain text, follows the page direction.
+ * a fenced block shown as plain text, uses the content's first strong character for direction.
  *
  * @customElement lr-streaming-text-core
  * @event lr-content-settled - Fired after newly-coalesced content actually reaches the rendered

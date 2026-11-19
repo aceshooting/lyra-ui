@@ -4,6 +4,15 @@ import { createDocumentRendererRegistry, type LyraDocumentRendererDefinition } f
 import type { LyraDocumentViewer } from './document-viewer.js';
 
 describe('lr-document-viewer remediation', () => {
+  it('forwards activeHighlightId to the fallback preview', async () => {
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer open name="a.bin" mime-type="application/x-none" active-highlight-id="h1" .registry=${createDocumentRendererRegistry([])}></lr-document-viewer>
+    `);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-document-preview') !== null, 'no fallback preview');
+    const preview = el.shadowRoot!.querySelector('lr-document-preview') as unknown as { activeHighlightId: string | null };
+    expect(preview.activeHighlightId).to.equal('h1');
+  });
+
   it('keeps a rendered renderer when the viewer is moved within the same task', async () => {
     let renders = 0;
     const definition = {
@@ -25,7 +34,7 @@ describe('lr-document-viewer remediation', () => {
     host.querySelector('#b')!.append(el);
     await el.updateComplete;
     await Promise.resolve();
-    expect(el.shadowRoot!.querySelector('[data-custom]')).to.not.equal(null);
+    expect(el.shadowRoot!.querySelector('[data-custom]') !== null).to.equal(true);
     expect(renders).to.equal(before);
   });
 

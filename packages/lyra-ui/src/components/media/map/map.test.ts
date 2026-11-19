@@ -7991,7 +7991,10 @@ it('clusters sized categories, restores filled and stroked icons after a style r
     return map.isStyleLoaded() && !!map.getLayer(`${sourceId}-point-icon`);
   }, 'icon layer restored', { timeout: 5000 });
   await waitUntil(() => map.queryRenderedFeatures({ layers: [`${sourceId}-point-icon`] }).length === 3 && map.loaded(),
-    'all restored icons painted', { timeout: 5000 });
+    'all restored icons are queryable', { timeout: 5000 });
+  const idle = map.once('idle');
+  map.triggerRepaint();
+  await idle;
   const snapshot = await new Promise<{ png: string; center: number[]; circle: number[]; stroke: number[] }>(resolve => {
     map.once('render', () => {
       const canvas = document.createElement('canvas');

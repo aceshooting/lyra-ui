@@ -1529,3 +1529,35 @@ it("a throwing renderPart override falls back to the built-in rendering of that 
   expect(el.shadowRoot!.querySelectorAll("lr-thinking-panel").length).to.equal(1);
   expect(el.shadowRoot!.querySelectorAll("strong").length).to.equal(0);
 });
+
+it('isolates plain text and reasoning in their own direction without altering the text', async () => {
+  const el = await fixture<LyraMessageParts>(html`
+    <lr-message-parts dir="ltr" content-mode="plain" .parts=${[
+      { id: 't', type: 'text', text: 'مرحبا 42' },
+      { id: 'r', type: 'reasoning', text: 'توضيح 42', collapsed: false },
+    ]}></lr-message-parts>
+  `);
+  const content = () => Array.from(el.shadowRoot!.querySelectorAll('bdi[dir="auto"]'));
+  await waitUntil(() => content().length === 2);
+  expect(content().map((node) => node.textContent)).to.deep.equal(['مرحبا 42', 'توضيح 42']);
+  expect(content().map((node) => getComputedStyle(node).direction)).to.deep.equal(['rtl', 'rtl']);
+});
+
+it('uses the localized group name for a whitespace-only host name', async () => {
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts aria-label="  "></lr-message-parts>`);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Message content');
+});
+
+it('rejects a stale retry after its part is replaced before the button rerenders', async () => {
+  const el = await fixture<LyraMessageParts>(html`
+    <lr-message-parts .parts=${[{ type: 'error', id: 'failure', message: 'Try again', retryable: true }]}></lr-message-parts>
+  `);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="retry"]')!;
+  let requests = 0;
+  el.addEventListener('lr-part-retry', () => { requests++; });
+  button.click();
+  expect(requests).to.equal(1);
+  el.parts = [{ type: 'error', id: 'failure', message: 'Second failure', retryable: false }];
+  button.click();
+  expect(requests).to.equal(1);
+});

@@ -60,6 +60,8 @@ export interface LyraSequencePlaybackEventMap {
  * @csspart value - Optional non-live position readout shown by `with-value`.
  * @cssprop [--lr-sequence-playback-icon-size=calc(var(--lr-icon-button-size) * 0.35)] - Font size of the
  *   play/pause glyph, derived from the shared icon-button hit-target size.
+ * @cssprop [--lr-sequence-playback-play-button-hover-border-color=var(--lr-color-brand)] - Hovered
+ *   play/pause button border color; read as an inline fallback so an ancestor value inherits.
  * @cssprop --lr-sequence-playback-play-button-active-bg - Pressed play/pause button background. Defaults
  *   to the existing surface active mix; read as an inline fallback so an ancestor value inherits.
  * @cssprop [--lr-sequence-playback-play-button-active-border-color=var(--lr-color-brand)] - Pressed

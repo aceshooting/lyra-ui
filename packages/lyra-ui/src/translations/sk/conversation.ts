@@ -55,6 +55,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Správa',
   composerPlaceholder: 'Opýtajte sa na čokoľvek…',
   rename: 'Premenovať {title}',
+  conversationActionWithTitle: '{action}: {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   feedbackPositive: 'Dobrá odpoveď',
   feedbackNegative: 'Zlá odpoveď',

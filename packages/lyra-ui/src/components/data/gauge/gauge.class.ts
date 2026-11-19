@@ -5,13 +5,14 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import {
-  normalizeReflectedOptionalSize,
+  writeOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.class.js';
 import { styles } from './gauge.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -35,6 +36,8 @@ export interface LyraGaugeThreshold {
   readonly variant: LyraProgressVariant;
 }
 
+const GAUGE_VARIANTS: ReadonlySet<string> = new Set(['neutral', 'brand', 'success', 'warning', 'danger']);
+
 // Radial gauge sweeps 270° (like a speedometer), leaving a 90° gap at the bottom.
 const SWEEP_DEG = 270;
 const START_DEG = 135; // rotate so the gap is centered at the bottom
@@ -46,7 +49,7 @@ const STROKE = 10;
 // ~12 units are free for a value/label text row above it.
 const LINEAR_STROKE = 6;
 const LINEAR_BAR_Y = 15;
-const LINEAR_TEXT_Y = 8;
+const LINEAR_TEXT_Y = '40%';
 // Length of the x1=0 -> x2=100 horizontal fill/track line (Euclidean, y1==y2).
 const LINEAR_LENGTH = 100;
 // SVG text cannot wrap. Compressing an arbitrary string with `textLength` eventually makes every
@@ -133,8 +136,11 @@ export class LyraGauge extends LyraElement {
     return [...new Set([...super.observedAttributes, 'role'])];
   }
 
+  /** The measured value, clamped to the range for the visual fill. */
   @property({ type: Number }) value = 0;
+  /** Inclusive lower bound of the measured range. */
   @property({ type: Number }) min = 0;
+  /** Inclusive upper bound of the measured range. */
   @property({ type: Number }) max = 100;
   /** Visual geometry. Named `shape` because this Lyra-original component is not a native input. */
   @property({ reflect: true }) shape: GaugeShape = 'radial';
@@ -151,11 +157,7 @@ export class LyraGauge extends LyraElement {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
+    writeOptionalSize(this, this._size, next, (value) => { this._size = value; });
   }
   /** Optional visible label. Attribute removal omits the SVG label and restores the localized
    * gauge name unless an author supplied aria-label; the property retains null readback. */
@@ -227,18 +229,20 @@ export class LyraGauge extends LyraElement {
   // Pick the greatest finite boundary at or below the value without reordering authored data.
   // Equal boundaries keep the last authored variant, matching a stable ascending sort.
   private get effectiveVariant(): LyraProgressVariant {
-    if (Number.isFinite(this.value) && this.thresholds.length > 0) {
+    const thresholds = this.thresholds;
+    if (Number.isFinite(this.value) && Array.isArray(thresholds) && thresholds.length > 0) {
       let matchedAt = Number.NEGATIVE_INFINITY;
       let matched: LyraProgressVariant | undefined;
-      this.thresholds.forEach((threshold) => {
-        const rawAt = threshold.at;
-        if (!Number.isFinite(rawAt)) return;
-        const at = finiteNumber(rawAt, 0);
-        if (at <= this.value && at >= matchedAt) {
-          matchedAt = at;
-          matched = threshold.variant;
+      for (const threshold of thresholds) {
+        if (!isSafeNonArrayObject(threshold)) continue;
+        const rawAt = threshold['at'];
+        const variant = threshold['variant'];
+        if (typeof rawAt !== 'number' || !Number.isFinite(rawAt) || typeof variant !== 'string' || !GAUGE_VARIANTS.has(variant)) continue;
+        if (rawAt <= this.value && rawAt >= matchedAt) {
+          matchedAt = rawAt;
+          matched = variant as LyraProgressVariant;
         }
-      });
+      }
       if (matched) return matched;
     }
     return this.variant;
@@ -394,26 +398,26 @@ export class LyraGauge extends LyraElement {
     const endX = rtl ? 0 : LINEAR_LENGTH;
     return html`<svg
       part="base"
-      viewBox="0 0 100 20"
-      preserveAspectRatio="none"
       aria-hidden="true"
     >
       ${tooltip ? nativeSvgTitle(tooltip) : nothing}
-      <line part="track" x1=${startX} y1=${LINEAR_BAR_Y} x2=${endX} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
-      <line
-        part="fill"
-        x1=${startX}
-        y1=${LINEAR_BAR_Y}
-        x2=${endX}
-        y2=${LINEAR_BAR_Y}
-        stroke-width=${LINEAR_STROKE}
-        stroke-dasharray=${LINEAR_LENGTH}
-        stroke-dashoffset=${dashoffset}
-      ></line>
+      <svg width="100%" height="100%" viewBox="0 0 100 20" preserveAspectRatio="none">
+        <line part="track" x1=${startX} y1=${LINEAR_BAR_Y} x2=${endX} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
+        <line
+          part="fill"
+          x1=${startX}
+          y1=${LINEAR_BAR_Y}
+          x2=${endX}
+          y2=${LINEAR_BAR_Y}
+          stroke-width=${LINEAR_STROKE}
+          stroke-dasharray=${LINEAR_LENGTH}
+          stroke-dashoffset=${dashoffset}
+        ></line>
+      </svg>
       ${this.label
         ? svg`<text
             part="label"
-            x=${startX}
+            x=${startX}%
             y=${LINEAR_TEXT_Y}
             aria-hidden="true"
           >${label}</text>`
@@ -421,7 +425,7 @@ export class LyraGauge extends LyraElement {
       ${!this.withoutValue
         ? svg`<text
             part="value"
-            x=${endX}
+            x=${endX}%
             y=${LINEAR_TEXT_Y}
             aria-hidden="true"
           >${text}</text>`

@@ -1,3 +1,4 @@
+import { splitLines } from '../../../internal/text-lines.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 
@@ -343,7 +344,7 @@ export function parseVCards(
 ): VCardContact[] {
   if (text.includes('\0')) throw malformed('NUL byte');
   const maxContacts = normalizedMaxContacts(options);
-  const physicalLines = text.split(/\r\n|\r|\n/);
+  const physicalLines = splitLines(text);
   if (physicalLines.length > MAX_LOGICAL_LINES) {
     throw new LyraResourceLimitError('The vCard contains too many lines.');
   }

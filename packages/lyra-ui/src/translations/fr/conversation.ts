@@ -54,6 +54,7 @@ const strings: LyraLocaleStrings = {
   composerLabel: 'Message',
   composerPlaceholder: 'Posez votre question…',
   rename: 'Renommer {title}',
+  conversationActionWithTitle: '{action} : {title}',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   feedbackPositive: 'Bonne réponse',
   feedbackNegative: 'Mauvaise réponse',

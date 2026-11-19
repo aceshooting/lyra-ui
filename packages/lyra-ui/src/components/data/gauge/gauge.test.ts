@@ -624,33 +624,21 @@ it('is accessible in linear mode', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('keeps the linear label/value text inside the 0..100 x range under RTL instead of double-flipping text-anchor', async () => {
-  const wrapper = (await fixture(html`
+it('keeps the linear label and value inside the rendered gauge under RTL', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
     <div dir="rtl"><lr-gauge shape="linear" label="Battery" value="50" max="100"></lr-gauge></div>
-  `)) as HTMLElement;
-  const el = wrapper.querySelector('lr-gauge') as LyraGauge;
-  await el.updateComplete;
-  const labelEl = el.shadowRoot!.querySelector('[part="label"]') as unknown as SVGTextElement;
-  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as unknown as SVGTextElement;
-
-  // The stylesheet's text-anchor already mirrors via the inherited `direction` --
-  // an inline style here would double-flip it and push the text outside the viewBox.
-  expect(labelEl.getAttribute('style')).to.be.null;
-  expect(valueEl.getAttribute('style')).to.be.null;
-
-  const labelBox = labelEl.getBBox();
-  const valueBox = valueEl.getBBox();
-  // A double-flipped text-anchor pushes the whole string (tens of units wide) off
-  // the 0..100 viewBox; a 1-unit margin only tolerates ordinary glyph-metrics
-  // overshoot (side bearings/anti-aliasing) at the anchor point itself.
-  expect(labelBox.x).to.be.at.least(-1);
-  expect(labelBox.x + labelBox.width).to.be.at.most(101);
-  expect(valueBox.x).to.be.at.least(-1);
-  expect(valueBox.x + valueBox.width).to.be.at.most(101);
+  `);
+  const el = wrapper.querySelector('lr-gauge')!;
+  const frame = el.getBoundingClientRect();
+  for (const part of ['label', 'value']) {
+    const bounds = el.shadowRoot!.querySelector(`[part="${part}"]`)!.getBoundingClientRect();
+    expect(bounds.left, part).to.be.at.least(frame.left - 1.05);
+    expect(bounds.right, part).to.be.at.most(frame.right + 1.05);
+  }
 });
 
 for (const shape of ['radial', 'ring', 'linear'] as const) {
-  it(`fits long unbroken visible label/value text inside the ${shape} SVG viewBox`, async () => {
+  it(`fits long unbroken visible label/value text inside the rendered ${shape} gauge`, async () => {
     const token = `GAUGE_${'IDENTIFIER'.repeat(40)}`;
     const el = (await fixture(html`
       <lr-gauge
@@ -661,19 +649,12 @@ for (const shape of ['radial', 'ring', 'linear'] as const) {
       ></lr-gauge>
     `)) as LyraGauge;
     await el.updateComplete;
+    const frame = el.getBoundingClientRect();
     for (const part of ['label', 'value']) {
-      const text = el.shadowRoot!.querySelector(`[part="${part}"]`) as unknown as SVGTextElement;
-      const box = text.getBBox();
-      // -1 catches an ordinary side-bearing/anti-aliasing overshoot but is too tight for this
-      // repo's own full-coverage-suite run (WTR_COVERAGE=1 over all ~480 files): observed as low
-      // as -2.63 there, reproducibly, though this file alone -- with or without coverage -- always
-      // measures within -1. Some other test earlier in that huge shared-page run leaves rendering
-      // state (root font metrics are the leading suspect; not confirmed) that shifts glyph
-      // measurement by a small, bounded amount. -6 keeps real regressions caught: a double-flipped
-      // text-anchor (see the RTL test above) pushes the whole string tens of units off-viewBox, far
-      // outside this margin either way.
-      expect(box.x, part).to.be.at.least(-6);
-      expect(box.x + box.width, part).to.be.at.most(106);
+      const bounds = el.shadowRoot!.querySelector(`[part="${part}"]`)!.getBoundingClientRect();
+      const margin = frame.width * 0.06;
+      expect(bounds.left, part).to.be.at.least(frame.left - margin);
+      expect(bounds.right, part).to.be.at.most(frame.right + margin);
     }
   });
 }

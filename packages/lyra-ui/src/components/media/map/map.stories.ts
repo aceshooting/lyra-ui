@@ -1596,7 +1596,9 @@ export const OwnedResourcesAndReadiness: Story = {
 };
 
 export const PickingAndFeatureState: Story = {
-  render: () => {
+  args: { allowPickCancellation: true },
+  argTypes: { allowPickCancellation: { control: 'boolean' } },
+  render: args => {
     let map: LyraMap | undefined;
     let status: HTMLElement | undefined;
     return html`
@@ -1613,6 +1615,8 @@ export const PickingAndFeatureState: Story = {
         .dataLayers=${[{ sourceId: 'site', interactive: true, priority: 2, geojson: {
           type: 'FeatureCollection', features: [{ type: 'Feature', id: 1, properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } }],
         } }]}
+        @lr-map-pick-cancel-request=${(event: Event) => { if (!args['allowPickCancellation']) event.preventDefault(); }}
+        @lr-map-pick-cancel=${() => { if (status) status.textContent = 'Coordinate picking canceled.'; }}
         @lr-map-pick=${(event: CustomEvent) => { if (status) status.textContent = JSON.stringify(event.detail); }}
         @lr-map-contextmenu=${(event: CustomEvent) => { if (status) status.textContent = JSON.stringify(event.detail); }}
       ></lr-map>
@@ -1655,7 +1659,11 @@ export const AnchorBoundaryAndFocus: Story = {
       <lr-button @click=${() => { if (map) map.anchorClosable = !map.anchorClosable; }}>Toggle close affordance</lr-button>
       <lr-button @click=${() => map?.focusAnchor()}>Focus anchor</lr-button>
       <lr-button @click=${() => map?.closeAnchor()}>Close anchor</lr-button>
+      <label><input type="checkbox" class="keep-anchor">Keep anchor open</label>
       <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        @lr-map-anchor-close-request=${(event: Event) => {
+          if ((event.currentTarget as HTMLElement).parentElement?.querySelector<HTMLInputElement>('.keep-anchor')?.checked) event.preventDefault();
+        }}
         label="Bounded anchor" style="block-size: 22rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
         .anchorSafeArea=${{ inlineStart: 24, blockEnd: 24 }}>
         <div slot="anchor"><p>Anchored details</p><button type="button">Inspect location</button></div>
@@ -2017,8 +2025,8 @@ function sceneElevationTile(): string {
 }
 
 export const GlobeAndTerrain: Story = {
-  args: { lang: 'en' },
-  argTypes: { lang: { control: 'select', options: ['en', 'fr', 'ar'] } },
+  args: { lang: 'en', allowControlChanges: true },
+  argTypes: { allowControlChanges: { control: 'boolean' }, lang: { control: 'select', options: ['en', 'fr', 'ar'] } },
   parameters: { docs: { description: { story: 'Typed projection and terrain settings with caller-owned controls and synthetic offline elevation. The scale slider is an example choice, not a limit of the terrain API. Missing elevation demonstrates the localized fallback; Retry restores the valid style. Component-owned globe and terrain toggles share the same properties with the surrounding controls.' } } },
   render: args => {
     const language = args['lang'] === 'fr' ? 'fr' : args['lang'] === 'ar' ? 'ar' : 'en';
@@ -2042,7 +2050,8 @@ export const GlobeAndTerrain: Story = {
       catch { if (status && map === owner && request === revision) status.textContent = messages.failure; }
     };
     const apply = () => { if (map) { map.controls = { navigation: true, scale: true, globe: true, terrain: { source: 'elevation', exaggeration: scale }, attribution: false }; map.projection = projection; map.terrain = enabled ? { source: 'elevation', exaggeration: scale } : null; } void report(); };
-    const controlRequest = () => {
+    const propose = (event: Event) => { if (!args['allowControlChanges']) event.preventDefault(); };
+    const controlChanged = () => {
       if (!map) return;
       projection = map.projection; enabled = map.terrain != null;
       const section = map.closest('section');
@@ -2078,7 +2087,8 @@ export const GlobeAndTerrain: Story = {
           .markers=${[{ id: 'hill', lngLat: [0, 0], label: messages.move }]}
           .controls=${{ navigation: true, scale: true, globe: true, terrain: { source: 'elevation', exaggeration: scale }, attribution: false }}
           .strings=${{ mapGlobe: messages.globe, mapTerrain: messages.terrain }}
-          @lr-map-projection-change=${controlRequest} @lr-map-terrain-change=${controlRequest}
+          @lr-map-projection-change-request=${propose} @lr-map-terrain-change-request=${propose}
+          @lr-map-projection-change=${controlChanged} @lr-map-terrain-change=${controlChanged}
           @lr-map-style-load=${() => { void report(); }}></lr-map>
         <output ${ref(element => { status = element as HTMLElement | undefined; })} aria-live="polite">${messages.loading}</output>
       </section>`;

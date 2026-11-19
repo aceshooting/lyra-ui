@@ -65,7 +65,7 @@ export const TwoIndependentModules: Story = {
         const row = document.createElement('p'); row.textContent = `${title} detail ${index}`; rows.append(row);
       }
       content.append(heading, rows); anchor.append(content);
-      anchor.addEventListener('lr-close', () => { anchor.remove(); }, { once: true });
+      anchor.addEventListener('lr-map-anchor-dismiss', () => { anchor.remove(); }, { once: true });
       map.append(anchor); anchor.open = true;
     };
     return html`${DETAILS_RECIPE}
@@ -76,7 +76,7 @@ export const TwoIndependentModules: Story = {
   },
 };
 
-/** `lr-close-request` is cancelable: this panel stays open until closing is allowed. */
+/** `lr-map-anchor-dismiss-request` is cancelable: this panel stays open until closing is allowed. */
 export const VetoedClose: Story = {
   render: () => {
     let allowed = false;
@@ -84,7 +84,7 @@ export const VetoedClose: Story = {
       <label><input type="checkbox" @change=${(event: Event) => { allowed = (event.target as HTMLInputElement).checked; }}> Allow closing</label>
       <lr-map label="A panel that asks before closing" style="block-size: 18rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}>
         <lr-map-anchor slot="anchors" open closable label="Unsaved note" .lngLat=${[0, 0] as const}
-          @lr-close-request=${(event: LyraMapAnchorEventMap['lr-close-request']) => { if (!allowed) event.preventDefault(); }}>
+          @lr-map-anchor-dismiss-request=${(event: LyraMapAnchorEventMap['lr-map-anchor-dismiss-request']) => { if (!allowed) event.preventDefault(); }}>
           <p>Unsaved changes keep this panel open.</p>
         </lr-map-anchor>
       </lr-map>`;
