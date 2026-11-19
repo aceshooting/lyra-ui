@@ -1,5 +1,10 @@
 import { expect } from '@open-wc/testing';
-import { isRovingTargetAvailable, resolveListMove } from './list-navigation.js';
+import {
+  isRepeatedActivationKey,
+  isRovingTargetAvailable,
+  resolveListMove,
+  shouldIgnoreActivationKey,
+} from './list-navigation.js';
 
 describe('list navigation', () => {
   it('maps inline arrows through RTL and block arrows independently', () => {
@@ -64,5 +69,22 @@ describe('list navigation', () => {
     unavailable.clear();
     expect(resolveListMove('ArrowUp', { ...options, current: 0 })).to.equal(0);
     expect(resolveListMove('ArrowDown', { ...options, current: 2 })).to.equal(2);
+  });
+});
+
+describe('activation key guard', () => {
+  const key = (init: KeyboardEventInit) => new KeyboardEvent('keydown', { key: 'Enter', ...init });
+
+  it('ignores auto-repeat, composition and every modifier, and passes plain keys', () => {
+    expect(isRepeatedActivationKey(key({ repeat: true }))).to.equal(true);
+    expect(isRepeatedActivationKey(key({}))).to.equal(false);
+    expect(shouldIgnoreActivationKey(key({ repeat: true }))).to.equal(true);
+    expect(shouldIgnoreActivationKey(key({ isComposing: true }))).to.equal(true);
+    expect(shouldIgnoreActivationKey(key({ keyCode: 229 }))).to.equal(true);
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey'] as const) {
+      expect(shouldIgnoreActivationKey(key({ [modifier]: true }))).to.equal(true);
+    }
+    expect(shouldIgnoreActivationKey(key({}))).to.equal(false);
+    expect(shouldIgnoreActivationKey(key({ key: ' ', shiftKey: true }))).to.equal(false);
   });
 });

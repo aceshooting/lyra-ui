@@ -272,6 +272,16 @@ export function isBarredFromValidation(
   return false;
 }
 
+/**
+ * Whether a public action (`focus()`, `click()`, clear, steppers, typing) must refuse right now.
+ * Reads the component's own `effectiveDisabled` AND the UA's synchronous `:disabled` fieldset
+ * cascade, which leads `formDisabledCallback()` by a tick. Replaces the per-class `liveDisabled`
+ * getter without adding a member that would collide with subclasses that still declare their own.
+ */
+export function isLiveDisabled(host: Element & { readonly effectiveDisabled: boolean }): boolean {
+  return host.effectiveDisabled || host.matches(':disabled');
+}
+
 /** Reads the branded platform value while rejecting {@linkcode createFallbackInternals}'s stand-in. */
 function readNativeWillValidate(internals: ElementInternals): boolean | undefined {
   if (typeof ElementInternals !== 'function') return undefined;

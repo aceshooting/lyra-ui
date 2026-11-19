@@ -1685,7 +1685,7 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     expect(el.open).to.equal(false);
     expect(el.hasAttribute('open')).to.equal(false);
     expect(el.matches(':state(open)')).to.equal(false);
-    expect(input.getAttribute('aria-expanded')).to.equal('false');
+    expect(input.hasAttribute('aria-expanded')).to.equal(false);
     expect(expand.getAttribute('aria-expanded')).to.equal('false');
     expect(popup.hasAttribute('data-hidden')).to.equal(true);
   });

@@ -1516,3 +1516,16 @@ it('prevents synchronous resume reentry while permitting later host retries', as
   button.click();
   expect(calls).to.equal(2);
 });
+
+it("a throwing renderPart override falls back to the built-in rendering of that part", async () => {
+  const el = (await fixture(html`<lr-message-parts
+    .parts=${parts.slice(0, 2)}
+    .renderPart=${(part: MessagePart) => {
+      if (part.type === "reasoning") throw new Error("boom");
+      return undefined;
+    }}
+  ></lr-message-parts>`)) as LyraMessageParts;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll("lr-thinking-panel").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("strong").length).to.equal(0);
+});

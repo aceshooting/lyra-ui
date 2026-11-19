@@ -281,10 +281,13 @@ export async function awaitPopupAnimations(
 
 /** Shared show/hide ordering; hosts keep their own veto, placement-failure and event policies. */
 export async function settlePopupTransition(options: {
-  host: HTMLElement & { readonly updateComplete: Promise<unknown> };
-  popup: () => Element | null;
+  host: { readonly updateComplete: Promise<unknown>; readonly ownerDocument?: Document };
+  /** The element whose animations a settle waits for; ignored when `animate` is given. */
+  popup?: () => Element | null;
   isCurrent: () => boolean;
   waitForPosition?: () => Promise<boolean>;
+  /** Replaces the wait for the popup's running animations with the host's own motion. */
+  animate?: () => Promise<void>;
   conceal?: () => void;
   onSettled: () => void;
 }): Promise<void> {
@@ -298,7 +301,10 @@ export async function settlePopupTransition(options: {
     await host.updateComplete;
     if (!current()) return;
   }
-  if (!await awaitPopupAnimations(host, options.popup, current)) return;
+  if (options.animate) {
+    await options.animate();
+    if (!current()) return;
+  } else if (!await awaitPopupAnimations(host as unknown as HTMLElement, options.popup ?? (() => null), current)) return;
   if (options.conceal) {
     options.conceal();
     await host.updateComplete;

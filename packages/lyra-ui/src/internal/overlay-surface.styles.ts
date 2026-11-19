@@ -117,3 +117,49 @@ export const anchoredPreviewPanel = css`
   line-height: var(--lr-line-height-1-4);
   color: var(--lr-color-text);
 `;
+
+/**
+ * Hidden-to-open reveal for a positioner-placed popup that stays in the tree: fades and slides in
+ * on the fast transition token, which the reduced-motion branch of the token layer flattens. Interpolate into the
+ * popup's rule, then set the open arm with `anchoredPopupOpen`.
+ */
+export const anchoredPopupReveal = css`
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(var(--lr-size-neg-0-25rem));
+  transition:
+    opacity var(--lr-transition-fast),
+    transform var(--lr-transition-fast),
+    visibility var(--lr-transition-fast);
+`;
+
+/** The open arm of `anchoredPopupReveal`. */
+export const anchoredPopupOpen = css`
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+`;
+
+/**
+ * The settled-closed and exiting states of a popup driven by `AnchoredDisclosureController`
+ * (`popup.hidden` once closed, `data-hidden` while closed or concealed for placement,
+ * `:host([data-closing])` while the exit plays). Interpolate once into the stylesheet of any
+ * component whose popup part is `popup`. `--_lr-popup-exit-transform` lets a popup slide out
+ * (default none); an identity transform is avoided because it would become a containing block for
+ * fixed surfaces nested in the open popup.
+ *
+ * Named apart from `anchoredPopupReveal`, the transition-declaration fragment for popups that stay
+ * in the tree.
+ */
+export const anchoredPopupSettle = css`
+  /* Settled closed: out of layout, so a stale placed box cannot inflate an ancestor's containing block. */
+  [part~='popup'][hidden] { display: none; }
+  [part~='popup'][data-hidden] {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: var(--_lr-popup-exit-transform, none);
+  }
+  [part~='popup'] { opacity: 1; transform: none; }
+  :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
+`;

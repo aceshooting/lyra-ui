@@ -1870,3 +1870,34 @@ it("survives adoption into another document before its first render", async () =
   }
   expect(errors.map(String)).to.deep.equal([]);
 });
+
+describe('review remediation', () => {
+  it('drops a rename draft when the row is handed another conversation', async () => {
+    const el = (await fixture(html`<lr-conversation-item conversation-id="a" label="Alpha"></lr-conversation-item>`)) as LyraConversationItem;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="rename-button"]')!.click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label-input"]') != null).to.equal(true);
+    el.conversationId = 'b';
+    el.label = 'Beta';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label-input"]') == null).to.equal(true);
+  });
+
+  it('does not select on a modified Enter/Space or a held key', async () => {
+    const el = (await fixture(html`<lr-conversation-item conversation-id="a" label="Alpha"></lr-conversation-item>`)) as LyraConversationItem;
+    let selects = 0;
+    el.addEventListener('lr-select', () => selects++);
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="select-button"]')!;
+    const press = (init: KeyboardEventInit): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init });
+      button.dispatchEvent(event);
+      return event;
+    };
+    expect(press({ ctrlKey: true }).defaultPrevented).to.equal(false);
+    expect(press({ metaKey: true }).defaultPrevented).to.equal(false);
+    expect(press({ repeat: true }).defaultPrevented).to.equal(false);
+    expect(selects).to.equal(0);
+    expect(press({}).defaultPrevented).to.equal(true);
+    expect(selects).to.equal(1);
+  });
+});

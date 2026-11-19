@@ -1,5 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { writeClipboardText, type LyraClipboardWriteOutcome } from './clipboard.js';
+import { writeClipboardText, type LyraClipboardWriteOutcome, type LyraCopyErrorReason } from './clipboard.js';
 import { COPY_FEEDBACK_MS } from './copy-feedback.js';
 
 type CopyStatus = 'rest' | 'success' | 'error';
@@ -20,6 +20,7 @@ export class RecordCopyFeedback implements ReactiveController {
     private readonly source: () => string | number,
     private readonly settled: (outcome: LyraClipboardWriteOutcome) => void,
     private readonly statusChanged?: (status: CopyStatus) => void,
+    private readonly durationMs: number = COPY_FEEDBACK_MS,
   ) {
     host.addController?.(this);
   }
@@ -65,7 +66,100 @@ export class RecordCopyFeedback implements ReactiveController {
     this.setStatus(outcome.ok ? 'success' : 'error');
     request.timer = owner.setTimeout(() => {
       if (this.current === request) this.reset();
-    }, COPY_FEEDBACK_MS);
+    }, this.durationMs);
     this.settled(outcome);
+  }
+}
+
+/** The settled outcome of one clipboard write, as emitted in `lr-copy` / `lr-copy-error`. */
+export type CopyOutcome = LyraClipboardWriteOutcome;
+
+/** Builds a frozen copy outcome for a write a component performed itself (for example a lazily built payload). */
+export function copyOutcome(kind: 'success', detail: { text: string }): CopyOutcome;
+export function copyOutcome(
+  kind: 'failure',
+  detail: { text: string; reason?: LyraCopyErrorReason; error?: unknown },
+): CopyOutcome;
+export function copyOutcome(
+  kind: 'success' | 'failure',
+  detail: { text: string; reason?: LyraCopyErrorReason; error?: unknown },
+): CopyOutcome {
+  if (kind === 'success') return Object.freeze({ ok: true, text: detail.text });
+  return Object.freeze({
+    ok: false,
+    text: detail.text,
+    reason: detail.reason ?? 'failed',
+    error: detail.error ?? new Error('The text could not be copied.'),
+  });
+}
+
+/**
+ * Announces and emits one copy outcome: `lr-copy` with the outcome on success, otherwise a
+ * detail-less `lr-error` followed by `lr-copy-error` with the outcome. Every step re-checks
+ * `current()` because a listener may disconnect or retarget the host between steps.
+ */
+export function reportCopyOutcome(
+  host: {
+    emit: (name: 'lr-copy' | 'lr-error' | 'lr-copy-error', detail?: CopyOutcome) => unknown;
+    announce: (ok: boolean) => void;
+  },
+  outcome: CopyOutcome,
+  current: () => boolean = () => true,
+): void {
+  if (!current()) return;
+  host.announce(outcome.ok);
+  if (!current()) return;
+  if (outcome.ok) {
+    host.emit('lr-copy', outcome);
+    return;
+  }
+  host.emit('lr-error');
+  if (current()) host.emit('lr-copy-error', outcome);
+}
+
+/** Per-key copy feedback (one control per row/node); showing a key replaces any earlier one. */
+export class KeyedCopyFeedback implements ReactiveController {
+  /** The key currently showing feedback, and whether its copy succeeded. */
+  state: { readonly key: string; readonly ok: boolean } | null = null;
+  private timer?: { owner: Window; handle: number };
+
+  constructor(
+    private readonly host: HTMLElement & Partial<ReactiveControllerHost>,
+    private readonly durationMs: number = COPY_FEEDBACK_MS,
+  ) {
+    host.addController?.(this);
+  }
+
+  hostDisconnected(): void {
+    this.clear();
+  }
+
+  /** The feedback for `key`, or null when another key (or none) is showing. */
+  for(key: string): { readonly ok: boolean } | null {
+    return this.state?.key === key ? this.state : null;
+  }
+
+  clear(): void {
+    const timer = this.timer;
+    if (timer) timer.owner.clearTimeout(timer.handle);
+    this.timer = undefined;
+    if (this.state === null) return;
+    this.state = null;
+    this.host.requestUpdate?.();
+  }
+
+  show(key: string, ok: boolean): void {
+    const owner = this.host.ownerDocument.defaultView;
+    if (!owner || !this.host.isConnected) return;
+    this.clear();
+    const state = { key, ok };
+    this.state = state;
+    this.timer = {
+      owner,
+      handle: owner.setTimeout(() => {
+        if (this.state === state) this.clear();
+      }, this.durationMs),
+    };
+    this.host.requestUpdate?.();
   }
 }

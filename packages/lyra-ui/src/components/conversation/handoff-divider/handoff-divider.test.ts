@@ -127,3 +127,9 @@ it('is accessible with a full from/to handoff and a slotted avatar', async () =>
   `)) as LyraHandoffDivider;
   await expect(el).to.be.accessible();
 });
+
+it('falls back to the localized name for a whitespace-only label', async () => {
+  const el = (await fixture(html`<lr-handoff-divider label="   "></lr-handoff-divider>`)) as HTMLElement;
+  const name = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+  expect((name ?? '').trim()).to.not.equal('');
+});

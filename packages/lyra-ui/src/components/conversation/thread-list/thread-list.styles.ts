@@ -176,7 +176,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
-    background: var(--lr-color-surface);
+    background: var(--lr-thread-list-group-header-bg, var(--lr-color-surface));
     color: var(--lr-color-text-quiet);
   }
   /* sticky-groups keeps lr-virtual-list's pinned copy pointer-transparent and inert. Only the real

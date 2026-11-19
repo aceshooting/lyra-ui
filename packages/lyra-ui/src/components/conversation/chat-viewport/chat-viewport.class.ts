@@ -51,6 +51,9 @@ const virtualCount = (list: LyraVirtualList): number => {
   return Array.isArray(source) ? source.length : finiteCount((source as LyraVirtualListIndexedSource).count);
 };
 
+/** Consecutive busy settle samples tolerated before the message's text is announced anyway. */
+const MAX_BUSY_SETTLE_SAMPLES = 60;
+
 /**
  * `<lr-chat-viewport>` — the transcript scroll container: owns stick-to-bottom behavior while an
  * answer streams, the "jump to latest" pill, and the unread divider.
@@ -254,7 +257,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private readonly knownProjectedNodes = new WeakSet<Node>();
   /** Appended children waiting to settle (`liveSettle` mode): the text seen at the previous
    *  sample (`null` before the first stable sample) and the owner-bound pending timer. */
-  private readonly settlingNodes = new Map<Node, { text: string | null; owner: Window; handle: number }>();
+  private readonly settlingNodes = new Map<Node, { text: string | null; owner: Window; handle: number; busy?: number }>();
   private unreadBoundaryEl?: HTMLElement;
 
   /** Flattened message list, rebuilt only after a slotchange / update / public read invalidates it. */
@@ -863,7 +866,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.scheduleSettleSample(node, entry);
   }
 
-  private scheduleSettleSample(node: Node, entry: { text: string | null; owner: Window; handle: number }): void {
+  private scheduleSettleSample(node: Node, entry: { text: string | null; owner: Window; handle: number; busy?: number }): void {
     const delay = this.effectiveLiveSettle;
     if (delay === null) {
       this.settlingNodes.delete(node);
@@ -891,7 +894,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       this.settlingNodes.delete(node);
       return;
     }
-    if (this.reportsWorkInProgress(node)) {
+    // Markup that claims to be busy forever must not hold the announcement open indefinitely: after
+    // a bounded run of busy samples the current text is announced like any other settled text.
+    entry.busy = this.reportsWorkInProgress(node) ? (entry.busy ?? 0) + 1 : 0;
+    if (entry.busy > 0 && entry.busy <= MAX_BUSY_SETTLE_SAMPLES) {
       entry.text = null;
       this.scheduleSettleSample(node, entry);
       return;

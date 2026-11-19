@@ -63,6 +63,17 @@ export class FormControlController extends AnchoredValidityController {
     update?.();
     return withStaticValidityCheck(this.host, () => this.formInternals.checkValidity());
   }
+
+  /**
+   * Flushes a pending render, runs `prepare` (recompute validity, mark the control interacted,
+   * reveal errors), then reports through ElementInternals -- the shape every control's
+   * `reportValidity()` repeats. A submit attempt counts as interaction, so callers mark it in `prepare`.
+   */
+  reportValidity(prepare?: () => void): boolean {
+    this.syncConstraints();
+    prepare?.();
+    return this.formInternals.reportValidity();
+  }
 }
 
 /** Reflect the submission key synchronously; callers retain their own value synchronization. */

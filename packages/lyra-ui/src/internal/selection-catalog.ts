@@ -102,3 +102,21 @@ export function snapshotSelectionCatalog(
 export function normalizeSelectionValue(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
+
+/**
+ * Setter body shared by the catalog pickers' clone-owned catalog property: snapshots `value`
+ * through `snapshot`, hands it to `store`, revalidates, then requests the update named `name`
+ * with the previous value (`store` runs first because `requestUpdate` reads the getter).
+ */
+export function writeCatalogProperty<T>(
+  host: { requestUpdate(name: string, old: unknown): void },
+  name: string,
+  previous: T | undefined,
+  snapshot: () => T | undefined,
+  store: (next: T | undefined) => void,
+  updateValidity: () => void,
+): void {
+  store(snapshot());
+  updateValidity();
+  host.requestUpdate(name, previous);
+}

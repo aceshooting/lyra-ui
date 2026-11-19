@@ -3,7 +3,9 @@ import { render } from 'lit';
 import {
   archiveIcon,
   chevronIcon,
+  checkIcon,
   closeIcon,
+  copyIcon,
   playIcon,
   pauseIcon,
   calendarIcon,
@@ -95,4 +97,17 @@ it('every icon shares the same viewBox and stroke-width for visual consistency',
   const strokeWidths = new Set(svgs.map((s) => s.getAttribute('stroke-width')));
   expect(viewBoxes.size, 'all icons should share one viewBox').to.equal(1);
   expect(strokeWidths.size, 'all icons should share one stroke-width').to.equal(1);
+});
+
+describe('check and copy icons', () => {
+  it('renders the shared checkmark and copy glyphs as decorative 1em svgs', () => {
+    const check = renderIcon(checkIcon());
+    expect(check.querySelector('polyline')?.getAttribute('points')).to.equal('5 12.5 10 17.5 19 6.5');
+    const copy = renderIcon(copyIcon());
+    expect(copy.querySelectorAll('rect, path').length).to.equal(2);
+    for (const svg of [check, copy]) {
+      expect(svg.getAttribute('aria-hidden')).to.equal('true');
+      expect(svg.getAttribute('width')).to.equal('1em');
+    }
+  });
 });

@@ -228,3 +228,13 @@ export function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplat
     ><path d=${cuff}></path><path d=${hand}></path></svg>
   `;
 }
+
+/** A confirmation checkmark; the library's one "done" glyph (copy confirmation, checked state). */
+export function checkIcon(): SVGTemplateResult {
+  return icon(svg`<polyline points="5 12.5 10 17.5 19 6.5"></polyline>`);
+}
+
+/** A generic two-rectangle "copy" glyph. */
+export function copyIcon(): SVGTemplateResult {
+  return icon(svg`<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>`);
+}

@@ -1,4 +1,4 @@
-import { html, nothing, svg, type TemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -15,6 +15,9 @@ import {
 } from '../../../internal/invalid-event-alias.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { capturePointer } from '../../../internal/pointer-capture.js';
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
@@ -167,6 +170,9 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   private rect?: DOMRect;
   /** Last measured width-to-height ratio of the surface. */
   private ratio = 3;
+  /** The ratio the cached PNG was exported at; `undefined` until an export ran. */
+  private exportedRatio?: number;
+  private readonly surfaceObserver = new OwnedResizeObserver(this, () => this.refreshMeasuredExport());
   private sink?: AnnouncementSink;
 
   constructor() {
@@ -288,10 +294,33 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+    if (this.hasUpdated) this.surfaceObserver.resume();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    const surface = this.surface;
+    if (surface) this.surfaceObserver.observe(surface);
+  }
+
+  override focus(options?: FocusOptions): void {
+    if (this.inactive) return;
+    this.surface?.focus(options);
+  }
+
+  override blur(): void {
+    const active = shadowFocusTarget(this);
+    if (active && typeof (active as HTMLElement).blur === 'function') (active as HTMLElement).blur();
+  }
+
+  /** Focuses the drawing surface, the one tab stop a click on the host would land on. */
+  override click(): void {
+    this.focus();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.surfaceObserver.disconnect();
     this.cancelStroke();
     this.sink?.release();
     this.sink = undefined;
@@ -354,9 +383,23 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     this.requestUpdate('strokes', old);
   }
 
+  /** A signature restored or assigned before the surface had a layout box was exported at the
+   *  fallback ratio; once the surface is measured at another ratio the cached PNG and the form
+   *  value are rebuilt so the submitted image matches what the user sees. */
+  private refreshMeasuredExport(): void {
+    if (this.exportedRatio === undefined || !this._strokes.length) return;
+    const box = this.surface?.getBoundingClientRect();
+    if (!box?.width || !box.height) return;
+    if (Math.abs(box.width / box.height - this.exportedRatio) < 1e-3) return;
+    this.dataUrl = undefined;
+    const { value } = this;
+    if (value) this.internals.setFormValue(value, JSON.stringify(this._strokes));
+  }
+
   private exportPng(): string {
     const box = this.surface?.getBoundingClientRect();
     if (box?.width && box.height) this.ratio = box.width / box.height;
+    this.exportedRatio = this.ratio;
     const canvas = this.ownerDocument.createElement('canvas');
     const width = (canvas.width = Math.round(EXPORT_SIZE * Math.min(1, this.ratio)));
     const height = (canvas.height = Math.round(EXPORT_SIZE / Math.max(1, this.ratio)));
@@ -424,11 +467,8 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     const rect = (this.rect = surface.getBoundingClientRect());
     if (!rect.width || !rect.height || !this.begin(this.point(event))) return;
     this.pointerId = event.pointerId;
-    try {
-      surface.setPointerCapture(event.pointerId);
-    } catch {
-      // A synthetic pointer has nothing to capture; its own end event still commits.
-    }
+    // A synthetic pointer has nothing to capture; its own end event still commits.
+    capturePointer(surface, event.pointerId);
   }
 
   private onPointerMove(event: PointerEvent): void {
@@ -465,7 +505,8 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
       this.cursor = at(...move);
       if (this.penDown) this.extend(this.cursor);
     } else if (event.key === ' ' || event.key === 'Enter' || (event.key === 'Escape' && this.penDown)) {
-      this.togglePen();
+      // A held key must not flip the pen at the repeat rate (one-point dots, announcement spam).
+      if (!event.repeat) this.togglePen();
     } else {
       return;
     }

@@ -1,4 +1,5 @@
 import type { PlaceStrategy } from './positioner.js';
+import { optionalLiteralSetConverter } from './converters.js';
 
 /**
  * The cascading custom property every anchored/positioned overlay in this library reads to pick
@@ -74,4 +75,48 @@ export function resolveEffectivePositioningStrategy(
   if (inherited === 'absolute' || inherited === 'fixed') return inherited;
   const contextual = computed.getPropertyValue(POSITIONING_STRATEGY_CONTEXT_DEFAULT).trim();
   return contextual === 'absolute' || contextual === 'fixed' ? contextual : fallback;
+}
+
+const PLACE_STRATEGY_CONVERTER = optionalLiteralSetConverter<PlaceStrategy>(['absolute', 'fixed']);
+
+/**
+ * Attribute converter for a control's `positioning-strategy`: unsupported values resolve to absent
+ * so the mirrored default stays the fallback. Use it as the `@property` converter.
+ */
+export const positioningStrategyConverter = PLACE_STRATEGY_CONVERTER;
+
+/**
+ * State behind a `positioningStrategy` property plus its boolean `hoist` alias. It records the
+ * author's own value (even one equal to the default) so
+ * {@link resolveEffectivePositioningStrategy} can tell "unset" from "wrote the default".
+ */
+export class PositioningStrategyState {
+  private explicit?: PlaceStrategy;
+
+  constructor(
+    private readonly host: { requestUpdate(name: string, old: unknown): void },
+    private readonly fallback: PlaceStrategy = 'absolute',
+  ) {}
+
+  /** The instance's own authored value, or `undefined` when none was written. */
+  get authored(): PlaceStrategy | undefined { return this.explicit; }
+
+  /** The authored value, or the mirrored default. */
+  get value(): PlaceStrategy { return this.explicit ?? this.fallback; }
+
+  /** `hoist` reads as `value === 'fixed'`. */
+  get hoist(): boolean { return this.value === 'fixed'; }
+
+  /** Writes a strategy (invalid resolves to the default) and requests both property updates. */
+  set(next: unknown): void {
+    const normalized = PLACE_STRATEGY_CONVERTER.normalize(next) ?? this.fallback;
+    const old = this.value;
+    this.explicit = normalized;
+    if (normalized === old) return;
+    this.host.requestUpdate('positioningStrategy', old);
+    if ((old === 'fixed') !== (normalized === 'fixed')) this.host.requestUpdate('hoist', old === 'fixed');
+  }
+
+  /** The `hoist` setter. */
+  setHoist(next: boolean): void { this.set(next ? 'fixed' : 'absolute'); }
 }

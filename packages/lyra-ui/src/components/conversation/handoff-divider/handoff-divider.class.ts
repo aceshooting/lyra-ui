@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { PropertyValues } from 'lit';
 import { html, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -71,7 +72,8 @@ export class LyraHandoffDivider extends LyraElement {
   };
 
   private get computedLabel(): string {
-    if (this.label) return this.label;
+    const custom = normalizeLabel(this.label);
+    if (custom) return custom;
     if (this.fromAgent && this.toAgent) {
       return this.localize('handoffFromToAgent', undefined, { from: this.fromAgent, to: this.toAgent });
     }

@@ -127751,6 +127751,15 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "checkValidity",
             "overloads": [
               {
@@ -127764,6 +127773,31 @@
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -127876,7 +127910,11 @@
           "forwardedEvents": [
             "change"
           ],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
         }
       }
     },
@@ -144007,6 +144045,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-thread-list-group-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-thread-list-group-toggle-active-bg",

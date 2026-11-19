@@ -26,6 +26,25 @@ export const SCROLL_END_ATTRIBUTE = 'data-scroll-end';
 const TOLERANCE_PX = 1;
 
 /**
+ * Logical scroll-edge state of a scroll container, RTL-aware. Per the CSSOM View spec `scrollLeft`
+ * under RTL runs 0 (inline-start) down to -extent (inline-end), so it is negated to the same
+ * "distance from the logical start" the LTR and vertical branches use. `rtl` only matters for the
+ * horizontal axis. A container that does not overflow is at both edges.
+ */
+export function scrollEdgePosition(
+  el: HTMLElement,
+  horizontal: boolean,
+  rtl: boolean,
+): { atStart: boolean; atEnd: boolean } {
+  const extent = horizontal
+    ? Math.max(0, el.scrollWidth - el.clientWidth)
+    : Math.max(0, el.scrollHeight - el.clientHeight);
+  const raw = horizontal ? (rtl ? -el.scrollLeft : el.scrollLeft) : el.scrollTop;
+  const position = Math.max(0, Math.min(extent, raw));
+  return { atStart: position <= TOLERANCE_PX, atEnd: position >= extent - TOLERANCE_PX };
+}
+
+/**
  * Tracks whether a horizontally scrollable track *actually* overflows, and -- since which logical
  * edge(s) still have content to reach -- toggles three attributes on it so styles can gate an edge
  * affordance (the `--lr-scroll-fade-size` mask, and in `<lr-tab-group>`'s case a pair of scroll
@@ -158,14 +177,9 @@ export class ScrollOverflowController implements ReactiveController {
       element.toggleAttribute(SCROLL_END_ATTRIBUTE, false);
       return;
     }
-    // Per the CSSOM View spec (what every browser this library targets actually implements),
-    // scrollLeft in RTL runs 0 (inline-start) down to -extent (inline-end) -- not the legacy
-    // WebKit convention of extent down to 0. Negating normalizes it back to the same "distance
-    // from the logical start" the LTR branch already computes, matching lr-tab-group/lr-scroller.
-    const raw = isRtl(element) ? -element.scrollLeft : element.scrollLeft;
-    const position = Math.max(0, Math.min(extent, raw));
-    element.toggleAttribute(SCROLL_START_ATTRIBUTE, position > TOLERANCE_PX);
-    element.toggleAttribute(SCROLL_END_ATTRIBUTE, position < extent - TOLERANCE_PX);
+    const { atStart, atEnd } = scrollEdgePosition(element as HTMLElement, true, isRtl(element));
+    element.toggleAttribute(SCROLL_START_ATTRIBUTE, !atStart);
+    element.toggleAttribute(SCROLL_END_ATTRIBUTE, !atEnd);
   }
 
   /**

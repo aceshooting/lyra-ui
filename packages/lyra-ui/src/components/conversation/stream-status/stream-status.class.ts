@@ -188,7 +188,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   /** How long `phase` may stay `'streaming'` with no `recordActivity()` call
    *  before this component declares it stalled. */
-  @property({ type: Number, attribute: 'stall-threshold-ms' })
+  @property({ type: Number, attribute: 'stall-threshold-ms', useDefault: true })
   stallThresholdMs = 10000;
 
   /** Offers a resume request only while interrupted. Does not reconnect a transport. */

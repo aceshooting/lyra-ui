@@ -470,3 +470,9 @@ it('names the busy restore button by its visible "Restoring…" text', async () 
   expect(button.hasAttribute('aria-label')).to.be.false;
   expect(button.textContent!.trim()).to.equal('Restoring…');
 });
+
+it('falls back to the localized name for a whitespace-only label', async () => {
+  const el = (await fixture(html`<lr-checkpoint label="   "></lr-checkpoint>`)) as HTMLElement;
+  const name = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+  expect((name ?? '').trim()).to.not.equal('');
+});

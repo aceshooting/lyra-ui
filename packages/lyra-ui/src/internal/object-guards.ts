@@ -26,3 +26,21 @@ export function isCrossRealmPlainRecord(value: unknown): value is Record<string,
     return false;
   }
 }
+
+/** Whether a value is a non-null object or function (the only values with properties to read). */
+export function isObjectLike(value: unknown): value is object {
+  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
+/**
+ * A non-null, non-array object that is safe to read keys from: a revoked Proxy (whose
+ * `Array.isArray` throws) is rejected, while class instances and other-realm records are accepted.
+ */
+export function isSafeNonArrayObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return false;
+  try {
+    return !Array.isArray(value);
+  } catch {
+    return false;
+  }
+}

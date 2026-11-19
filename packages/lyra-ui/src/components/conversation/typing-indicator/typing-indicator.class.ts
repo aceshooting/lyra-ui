@@ -154,7 +154,6 @@ export class LyraTypingIndicator extends LyraElement {
     super.disconnectedCallback();
     this.sink?.release();
     this.sink = undefined;
-    this.announcedLabel = undefined;
   }
 
   protected override updated(changed: PropertyValues): void {

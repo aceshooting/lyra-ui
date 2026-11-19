@@ -92,6 +92,7 @@ export const styles = css`
     -webkit-line-clamp: var(--lr-suggestion-chips-label-lines, 1);
     -webkit-box-orient: vertical;
     overflow: hidden;
+    overflow-wrap: anywhere;
     inline-size: 100%;
   }
   /* Starter prompts are often full questions; a wrapping row has room to show several lines. */

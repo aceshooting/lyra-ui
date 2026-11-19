@@ -937,7 +937,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
    */
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled || this.readonly) return;
-    if (event.key === 'Enter') this.settledDebounce.flush();
+    if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) this.settledDebounce.flush();
     submitOnEnter(this, event);
   };
 

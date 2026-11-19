@@ -10,6 +10,7 @@ import { hostTokens } from './host-tokens.styles.js';
 import { ensureLyraTokens, primeLyraTokens } from './document-tokens.js';
 import { DOCUMENT_TOKEN_SCOPE_ATTRIBUTES } from './document-tokens.generated.js';
 import { resolveIntlLocale } from './intl-cache.js';
+import { formatLocaleNumber } from './locale-number.js';
 import { claimDocumentRuntime } from './runtime-diagnostics.js';
 import { devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import type { LyraDeprecatedAliases } from './deprecated-alias-types.js';
@@ -830,6 +831,11 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   /** The canonical, structurally valid locale used for locale-sensitive platform APIs. */
   protected get effectiveLocale(): string {
     return resolveIntlLocale(this.effectiveMessageLocale);
+  }
+
+  /** Formats `value` in the effective locale through the shared formatter cache; non-finite prints as 0. */
+  protected formatLocaleNumber(value: number, options?: Intl.NumberFormatOptions): string {
+    return formatLocaleNumber(this.effectiveLocale, value, options);
   }
 
   /** Explicit alias for helpers whose locale role would otherwise be ambiguous. */

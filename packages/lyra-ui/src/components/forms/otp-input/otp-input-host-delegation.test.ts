@@ -78,3 +78,13 @@ describe('lr-otp-input keyboard guards', () => {
     expect(submits).to.equal(1);
   });
 });
+
+describe('lr-otp-input active ring', () => {
+  it('draws the active segment ring inside the segment so the scrolling row cannot clip it', async () => {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+    controlOf(el).focus();
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector<HTMLElement>('[part~="active"]')!;
+    expect(getComputedStyle(active).boxShadow).to.contain('inset');
+  });
+});

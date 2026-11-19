@@ -8,6 +8,7 @@ import {
   SCROLL_OVERFLOW_ATTRIBUTE,
   SCROLL_START_ATTRIBUTE,
   SCROLL_END_ATTRIBUTE,
+  scrollEdgePosition,
 } from './scroll-overflow.js';
 
 /** A minimal `ReactiveControllerHost` that records the controller so a test can drive
@@ -396,5 +397,40 @@ describe('scrollOverflowFadeStyles', () => {
     const ltrStart = await fadeFor('ltr', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_START_ATTRIBUTE]);
     expect(await fadeFor('rtl', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_END_ATTRIBUTE])).to.equal(ltrStart);
     expect(await fadeFor('rtl', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_START_ATTRIBUTE])).to.equal(ltrEnd);
+  });
+});
+
+describe('scrollEdgePosition', () => {
+  async function track(dir: 'ltr' | 'rtl') {
+    const el = await fixture<HTMLElement>(html`
+      <div dir=${dir} style="inline-size:100px;overflow:auto;white-space:nowrap">
+        <div style="inline-size:400px;block-size:10px"></div>
+      </div>`);
+    return el;
+  }
+
+  it('reports logical edges for LTR scrolling', async () => {
+    const el = await track('ltr');
+    expect(scrollEdgePosition(el, true, false)).to.deep.equal({ atStart: true, atEnd: false });
+    el.scrollLeft = 1000;
+    expect(scrollEdgePosition(el, true, false)).to.deep.equal({ atStart: false, atEnd: true });
+  });
+
+  it('reports logical edges for RTL scrolling regardless of the scrollLeft sign convention', async () => {
+    const el = await track('rtl');
+    el.scrollLeft = 0;
+    expect(scrollEdgePosition(el, true, true)).to.deep.equal({ atStart: true, atEnd: false });
+    el.scrollLeft = -1000;
+    expect(scrollEdgePosition(el, true, true)).to.deep.equal({ atStart: false, atEnd: true });
+  });
+
+  it('measures the vertical axis and treats a non-overflowing box as at both edges', async () => {
+    const tall = await fixture<HTMLElement>(html`
+      <div style="block-size:50px;overflow:auto"><div style="block-size:300px"></div></div>`);
+    expect(scrollEdgePosition(tall, false, true)).to.deep.equal({ atStart: true, atEnd: false });
+    tall.scrollTop = 1000;
+    expect(scrollEdgePosition(tall, false, true)).to.deep.equal({ atStart: false, atEnd: true });
+    const fits = await fixture<HTMLElement>(html`<div style="overflow:auto"><p>short</p></div>`);
+    expect(scrollEdgePosition(fits, true, false)).to.deep.equal({ atStart: true, atEnd: true });
   });
 });

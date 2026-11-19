@@ -944,3 +944,11 @@ it('moves focus from Resume to the status when the stream reconnects', async () 
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
+
+it('restores the default stall threshold when stall-threshold-ms is removed', async () => {
+  const el = (await renderFixture(html`<lr-stream-status stall-threshold-ms="120"></lr-stream-status>`)) as LyraStreamStatus;
+  expect(el.stallThresholdMs).to.equal(120);
+  el.removeAttribute('stall-threshold-ms');
+  await el.updateComplete;
+  expect(el.stallThresholdMs).to.equal(10000);
+});

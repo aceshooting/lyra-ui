@@ -1,6 +1,10 @@
 import { DebounceController } from './debounce-controller.js';
 import { resolveIntlLocale } from './intl-cache.js';
 
+/** Per-item folded-label memo for `TypeAheadBuffer.match()`: an item's label is case-folded once per
+ *  label and locale rather than on every keystroke. */
+export type TypeAheadMemo = WeakMap<object, { label: string; locale: string; folded: string }>;
+
 /** A listbox type-ahead buffer: printable keys accumulate and clear 500 ms after the last one, on the
  *  realm the host lives in, so "b" then "a" narrows to "ba" and an adopted host never clears a buffer
  *  that belongs to another document. */
@@ -33,21 +37,33 @@ export class TypeAheadBuffer {
       !event.altKey && !event.ctrlKey && !event.metaKey && event.key.length === 1;
   }
 
-  /** Finds the next prefix match after `current`, wrapping across available entries. */
+  /** Finds the next prefix match after `current`, wrapping across available entries. An optional
+   *  `memo` (object items only) caches each item's folded label per label and locale. */
   match<T>(
     items: readonly T[],
     current: number,
     label: (item: T) => string,
     locale: string,
     isAvailable: (item: T) => boolean = () => true,
+    memo?: TypeAheadMemo,
   ): number | null {
     if (!this.text || items.length === 0) return null;
     const resolvedLocale = resolveIntlLocale(locale);
     for (let step = 1; step <= items.length; step++) {
       const index = ((current + step) % items.length + items.length) % items.length;
       const item = items[index];
-      if (item !== undefined && isAvailable(item) &&
-          label(item).toLocaleLowerCase(resolvedLocale).startsWith(this.text)) return index;
+      if (item === undefined || !isAvailable(item)) continue;
+      const text = label(item);
+      let folded: string;
+      if (memo && typeof item === 'object' && item !== null) {
+        const cached = memo.get(item);
+        if (cached?.label === text && cached.locale === resolvedLocale) folded = cached.folded;
+        else {
+          folded = text.toLocaleLowerCase(resolvedLocale);
+          memo.set(item, { label: text, locale: resolvedLocale, folded });
+        }
+      } else folded = text.toLocaleLowerCase(resolvedLocale);
+      if (folded.startsWith(this.text)) return index;
     }
     return null;
   }

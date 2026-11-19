@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { resolveCanvasColor, resolveCanvasColors } from './canvas-color.js';
+import { readCanvasRgba, resolveCanvasColor, resolveCanvasColors, toRgbaString } from './canvas-color.js';
 
 /** Counts probe insertions, which is what makes a resolution expensive: each one forces a
  *  synchronous style recalculation. */
@@ -80,4 +80,32 @@ it('resolves currentColor, inherit and unset to the scope\'s own computed color 
 it('uses the fallback for a color keyword when the scope has no computed style', () => {
   const detached = document.createElement('div');
   expect(resolveCanvasColor(detached, 'currentColor', '#123456')).to.equal('#123456');
+});
+
+describe('readCanvasRgba', () => {
+  it('reads hex, named, hsl and color-mix colors as sRGB', () => {
+    expect(readCanvasRgba(document, '#ff0000')).to.deep.equal([255, 0, 0, 1]);
+    expect(readCanvasRgba(document, 'rebeccapurple')).to.deep.equal([102, 51, 153, 1]);
+    expect(readCanvasRgba(document, 'hsl(120 100% 50%)')).to.deep.equal([0, 255, 0, 1]);
+    const mixed = readCanvasRgba(document, 'color-mix(in srgb, red 50%, blue 50%)')!;
+    expect(mixed[0]).to.be.closeTo(128, 1);
+    expect(mixed[2]).to.be.closeTo(128, 1);
+  });
+  it('keeps alpha', () => {
+    expect(readCanvasRgba(document, 'rgb(0 0 0 / 0.5)')![3]).to.be.closeTo(0.5, 0.01);
+    expect(readCanvasRgba(document, 'transparent')![3]).to.equal(0);
+  });
+  it('returns undefined for invalid values and unresolved variables', () => {
+    expect(readCanvasRgba(document, 'not-a-color')).to.equal(undefined);
+    expect(readCanvasRgba(document, 'var(--missing)')).to.equal(undefined);
+    expect(readCanvasRgba(document, '')).to.equal(undefined);
+  });
+  it('does not mistake a color equal to a probe base for invalid', () => {
+    expect(readCanvasRgba(document, '#010203')).to.deep.equal([1, 2, 3, 1]);
+  });
+  it('serializes to rgb/rgba strings', () => {
+    expect(toRgbaString([1, 2, 3, 1])).to.equal('rgb(1, 2, 3)');
+    expect(toRgbaString([1, 2, 3, 0.5])).to.equal('rgba(1, 2, 3, 0.5)');
+    expect(toRgbaString([300, -4, NaN, 2])).to.equal('rgb(255, 0, 0)');
+  });
 });

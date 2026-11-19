@@ -49,7 +49,7 @@ and no runtime dependency on either project.
   ([`locales.json`](./locales.json), [import guide](./llms/shared/localization-and-rtl.md#ready-made-catalogs-aceshootinglyra-translationslocalejs)) and
   [typography utilities](./llms/shared.md#typography).
 
-The [roadmap](../../docs/roadmap.md#roadmap-index-and-release-status) tracks upcoming work; the
+The [roadmap](../../docs/roadmap.md#version-plan) tracks upcoming work; the
 [changelog](CHANGELOG.md) and [archive](../../docs/changelog) hold per-version changes and older upgrade notes.
 
 ## Upgrading

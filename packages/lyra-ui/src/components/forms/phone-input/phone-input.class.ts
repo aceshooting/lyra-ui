@@ -10,6 +10,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
@@ -635,9 +636,16 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     if (this.flags && !LyraPhoneInput.flagRegistration) {
       // Dynamic (not static) so the flag/skeleton modules stay out of every bundle that never
       // enables flags; the rendered <lr-flag> upgrades in place once the registration lands.
-      LyraPhoneInput.flagRegistration = import('../../media/flag/flag.js').catch((error) => {
-        console.warn('<lr-phone-input> failed to register <lr-flag> for its flags option:', error);
+      const registration = import('../../media/flag/flag.js').catch((error) => {
+        // A transient failure (network, chunk 404) must not disable flags for the whole session:
+        // the next update retries. The notice is a development-only diagnostic.
+        if (LyraPhoneInput.flagRegistration === registration) LyraPhoneInput.flagRegistration = undefined;
+        devWarnOnce(
+          'phone-input-flag-registration',
+          `<lr-phone-input> failed to register <lr-flag> for its flags option (${error instanceof Error ? error.message : String(error)}).`,
+        );
       });
+      LyraPhoneInput.flagRegistration = registration;
     }
     if (!this.hasUpdated) {
       // Browser-only mounts still seed before their first paint. During hydration the base
@@ -730,6 +738,12 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.touched = true;
     relayNativeEvent(this, event);
     this.emit('lr-change', this.eventDetail);
+  };
+
+  /** The native select's own `input` is composed and would reach the host before the country is
+   *  applied; the host's single `input` is dispatched from `onCountryChange` once state is current. */
+  private onCountrySelectInput = (event: Event): void => {
+    event.stopPropagation();
   };
 
   private onCountryChange = (event: Event): void => {
@@ -874,6 +888,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
               .value=${country}
               aria-readonly=${this.readonly ? 'true' : 'false'}
               ?disabled=${this.effectiveDisabled || this.readonly || rows.length === 0}
+              @input=${this.onCountrySelectInput}
               @change=${this.onCountryChange}
             >
               ${rows.length === 0

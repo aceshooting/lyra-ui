@@ -91,3 +91,20 @@ export function normalizeReflectedOptionalSize(
 ): LyraSize | undefined {
   return optionalSizeConverter.normalizeReflected(host, 'size', value);
 }
+
+/**
+ * Setter body for an opt-in reflected `size`: normalizes `next` (an unsupported value resolves to
+ * absent and strips a stale attribute), skips an unchanged write, otherwise hands the result to
+ * `store` and requests the update. `store` runs BEFORE `requestUpdate`, which reads the getter.
+ */
+export function writeOptionalSize(
+  host: Element & { requestUpdate(name: string, old: unknown): void },
+  previous: LyraSize | undefined,
+  next: unknown,
+  store: (size: LyraSize | undefined) => void,
+): void {
+  const normalized = normalizeReflectedOptionalSize(host, next);
+  if (previous === normalized) return;
+  store(normalized);
+  host.requestUpdate('size', previous);
+}

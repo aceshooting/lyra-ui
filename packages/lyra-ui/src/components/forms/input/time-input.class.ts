@@ -10,6 +10,7 @@ import {
   type TemplateResult,
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
@@ -97,6 +98,10 @@ interface TimeSegmentModel {
   twelveHour: boolean;
   labels?: Record<DayPeriod, string>;
 }
+
+/** Pure per locale | hour format | seconds, so every instance shares one model (bounded: a page uses a handful of locales). */
+const SEGMENT_MODELS = new Map<string, TimeSegmentModel>();
+const SEGMENT_MODEL_LIMIT = 64;
 
 export interface LyraTimeInputEventMap {
   input: InputEvent;
@@ -631,11 +636,17 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const locale = this.effectiveLocale;
     const key = `${locale}|${this.hourFormat}|${this.includeSeconds}`;
     if (this.segmentModelCache?.key !== key) {
-      const pattern = localeTimePattern(locale, this.hourFormat, this.includeSeconds);
-      const order = pattern
-        .filter((part): part is TimePatternPart & { type: SegmentName } => part.type !== 'literal')
-        .map((part) => part.type);
-      this.segmentModelCache = { key, pattern, order, twelveHour: order.includes('dayPeriod') };
+      let model = SEGMENT_MODELS.get(key);
+      if (!model) {
+        const pattern = localeTimePattern(locale, this.hourFormat, this.includeSeconds);
+        const order = pattern
+          .filter((part): part is TimePatternPart & { type: SegmentName } => part.type !== 'literal')
+          .map((part) => part.type);
+        model = { key, pattern, order, twelveHour: order.includes('dayPeriod') };
+        if (SEGMENT_MODELS.size >= SEGMENT_MODEL_LIMIT) SEGMENT_MODELS.clear();
+        SEGMENT_MODELS.set(key, model);
+      }
+      this.segmentModelCache = model;
     }
     return this.segmentModelCache;
   }
@@ -905,6 +916,22 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     }
   }
 
+  /** The period a typed character selects: Latin `a`/`p` always, plus the first letter of the
+   *  displayed localized labels (unless both labels share it, which would be ambiguous). */
+  private dayPeriodForKey(key: string): DayPeriod | undefined {
+    if (key.length === 0 || key.length > 4) return undefined;
+    const typed = key.toLocaleLowerCase(this.effectiveLocale);
+    if (typed === 'a') return 'am';
+    if (typed === 'p') return 'pm';
+    const first = (label: string): string | undefined => Array.from(label)[0]?.toLocaleLowerCase(this.effectiveLocale);
+    const { am, pm } = this.periodLabels;
+    const amKey = first(am);
+    const pmKey = first(pm);
+    if (!amKey || !pmKey || amKey === pmKey) return undefined;
+    if (typed === amKey) return 'am';
+    return typed === pmKey ? 'pm' : undefined;
+  }
+
   private stepSegment(name: SegmentName, delta: -1 | 1): void {
     const bounds = this.segmentBounds(name);
     const current = this.segmentNumericValue(name);
@@ -925,15 +952,17 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       void this.show();
       return;
     }
+    if (shouldIgnoreNavigationKey(event)) return;
     const digit = this.inputDigit(event.key);
-    if (digit !== undefined && !event.ctrlKey && !event.metaKey && !event.altKey && !this.readonly) {
+    if (digit !== undefined && !this.readonly) {
       event.preventDefault();
       this.acceptDigit(name, digit);
       return;
     }
-    if (name === 'dayPeriod' && !this.readonly && (event.key.toLowerCase() === 'a' || event.key.toLowerCase() === 'p')) {
+    const typedPeriod = name === 'dayPeriod' && !this.readonly ? this.dayPeriodForKey(event.key) : undefined;
+    if (typedPeriod) {
       event.preventDefault();
-      this.setDraftSegment(name, event.key.toLowerCase() === 'a' ? 'am' : 'pm');
+      this.setDraftSegment(name, typedPeriod);
       return;
     }
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -1060,6 +1089,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       if (event.defaultPrevented) {
         this.syncOpenAttribute();
         return Promise.resolve();
+      }
+      // A synchronous listener may have disabled, made read-only or itself toggled the picker; the
+      // request is re-validated against the live state instead of committing the stale decision.
+      if (this._open === next || (next && (this.liveDisabled || this.readonly))) {
+        this.syncOpenAttribute();
+        return this._open === next ? this.visibilityPromise : Promise.resolve();
       }
     }
     this.restoreFocusOnClose = restoreFocus;
@@ -1579,9 +1614,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             aria-labelledby=${hostAccessibleName === null && hasLabel ? this.labelId : nothing}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${String(invalid)}
-            aria-controls=${this.popupId}
-            aria-haspopup="dialog"
-            aria-expanded=${String(this.open)}
           >${this.pattern.map((part) => this.renderPatternPart(part, invalid))}</div>
           ${showClear
             ? html`

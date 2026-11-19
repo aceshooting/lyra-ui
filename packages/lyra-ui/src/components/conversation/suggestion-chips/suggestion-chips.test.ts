@@ -713,3 +713,11 @@ it('moves real focus to the roving stop when a surviving suggestion becomes disa
   expect(after.tabIndex).to.equal(0);
   await waitUntil(() => el.shadowRoot!.activeElement === after, 'focus moved to the enabled chip');
 });
+
+it('wraps a single unbreakable label token instead of clipping it', async () => {
+  const el = (await fixture(html`<lr-suggestion-chips style="inline-size:140px" .suggestions=${[{ suggestionId: 'a', label: 'ThisUnbrokenSuggestionLabelCannotWrapAtWordBoundaries' }]}></lr-suggestion-chips>`)) as HTMLElement;
+  await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="chip-label"]')!;
+  expect(getComputedStyle(label).overflowWrap).to.equal('anywhere');
+  expect(label.scrollWidth).to.be.at.most(label.clientWidth + 1);
+});

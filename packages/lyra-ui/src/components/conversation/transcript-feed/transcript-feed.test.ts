@@ -770,3 +770,10 @@ for (const connection of ['constructed', 'connected before rendering'] as const)
     expect(transitions).to.equal(0);
   });
 }
+
+it('isolates caller-authored speaker names with dir="auto"', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [{ id: '1', speaker: 'مستخدم', text: 'Hello' }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="speaker"]')!.getAttribute('dir')).to.equal('auto');
+});

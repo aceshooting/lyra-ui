@@ -755,11 +755,17 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
                 variant="neutral"
                 aria-label=${this.localize('messagePartRetry')}
                 ?disabled=${this.disabled}
-                @click=${() => { if (!this.disabled) this.emit('lr-part-retry', { part }); }}
+                @click=${() => this.requestRetry(part)}
                 >${this.localize('retry')}</lr-button
               >`
             : nothing}`;
     }
+  }
+
+  private requestRetry(part: MessagePart): void {
+    const current = this.renderedParts.find(candidate => candidate.id === part.id);
+    if (this.disabled || current !== part) return;
+    this.emit('lr-part-retry', { part });
   }
 
   private resumeDispatching = false;
@@ -815,7 +821,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     if (this.renderPart) {
       parts.forEach((part, index) => {
         if (part.type === 'reasoning' && this.withoutReasoning) return;
-        const rendered = this.renderPart?.(part, index);
+        let rendered: unknown;
+        try {
+          rendered = this.renderPart?.(part, index);
+        } catch {
+          rendered = undefined;
+        }
         if (rendered !== undefined) custom.set(part.id, rendered);
       });
     }

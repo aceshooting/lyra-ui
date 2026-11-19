@@ -5,6 +5,7 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 import { FormControlController } from '../../../internal/form-control-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -739,7 +740,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     // blocked by the live disabled guard in
     // onPointerDown, and disabled handles carry `tabindex="-1"`, but a
     // pre-existing focus can bypass both of those).
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || shouldIgnoreNavigationKey(e)) return;
     const current =
       handle === 'start'
         ? finiteRange(this.start, this.domain().lo)

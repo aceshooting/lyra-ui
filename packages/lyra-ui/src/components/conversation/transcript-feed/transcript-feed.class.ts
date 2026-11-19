@@ -293,7 +293,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return html`
       <div part=${parts.join(' ')} ?data-interim=${interim}>
         ${showSpeaker && typeof entry.speaker === 'string' && entry.speaker
-          ? html`<span part="speaker">${entry.speaker}</span>`
+          ? html`<span part="speaker" dir="auto">${entry.speaker}</span>`
           : nothing}
         <span part="text" dir="auto">${entry.text}</span>
         ${interim ? html`<span class="sr-only">${this.localize('transcriptFeedInterim')}</span>` : nothing}

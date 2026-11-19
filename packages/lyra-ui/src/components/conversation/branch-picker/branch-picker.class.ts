@@ -188,7 +188,20 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // A reparent that changed nothing must not silence the next genuine navigation; only an index
+    // change queued while detached is a mount-time update to swallow.
+    if (this.indexAtDisconnect !== undefined) {
+      this.isMounting = this.index !== this.indexAtDisconnect && this.isUpdatePending;
+      this.indexAtDisconnect = undefined;
+    }
+  }
+
+  private indexAtDisconnect?: number;
+
   override disconnectedCallback(): void {
+    this.indexAtDisconnect = this.hasUpdated ? this.index : undefined;
     this.isMounting = true;
     this.releaseToolbarActions();
     super.disconnectedCallback();

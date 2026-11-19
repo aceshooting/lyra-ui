@@ -16,6 +16,17 @@ export function shouldIgnoreNavigationKey(event: KeyboardEvent): boolean {
   return event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey;
 }
 
+/** Whether a keydown is the browser's auto-repeat of a held key. */
+export function isRepeatedActivationKey(event: KeyboardEvent): boolean {
+  return event.repeat === true;
+}
+
+/** One guard for a one-shot Enter/Space/Arrow activation: composition and browser or system
+ *  shortcuts (see `shouldIgnoreNavigationKey`) plus auto-repeat, so a held key activates once. */
+export function shouldIgnoreActivationKey(event: KeyboardEvent): boolean {
+  return shouldIgnoreNavigationKey(event) || isRepeatedActivationKey(event);
+}
+
 /** Resolves a list's next index without owning its focus, selection, or activation policy. */
 export function resolveListMove(event: KeyboardEvent | string, options: ListMoveOptions): number | null {
   if (typeof event !== 'string' && shouldIgnoreNavigationKey(event)) return null;

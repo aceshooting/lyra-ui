@@ -2192,6 +2192,21 @@ describe("data mode", () => {
       expect(firstRow.shadowRoot!.activeElement != null).to.equal(true);
     });
 
+    it("ignores a modified or composing ArrowDown in the search field", async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
+      )) as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+      for (const init of [{ altKey: true }, { ctrlKey: true }, { isComposing: true }]) {
+        const event = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, composed: true, cancelable: true, ...init });
+        input.dispatchEvent(event);
+        expect(event.defaultPrevented).to.equal(false);
+      }
+      expect(el.shadowRoot!.activeElement === input || el.shadowRoot!.activeElement == null).to.equal(true);
+    });
+
     it("scrolls back to and focuses the first row when ArrowDown starts from a virtualized search result window", async () => {
       const wrapper = await fixture(html`
         <div>
@@ -4821,4 +4836,49 @@ it("resolves a host aria-describedby onto its region owner", async () => {
   await waitUntil(() => ids().includes("host-hint"), "the host description reaches the role owner");
   host.removeAttribute("aria-describedby");
   await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
+});
+
+describe("sticky group header paint", () => {
+  it("defaults to an opaque surface and honors the public token", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:300px; --lr-thread-list-group-header-bg: rgb(1, 2, 3)" .threads=${threads}></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector("lr-virtual-list") as HTMLElement;
+    await waitUntil(() => list.shadowRoot!.querySelector('[part~="group-header"]') != null, "no group header rendered");
+    const header = list.shadowRoot!.querySelector('[part~="group-header"]')!;
+    expect(getComputedStyle(header).backgroundColor).to.equal("rgb(1, 2, 3)");
+  });
+});
+
+describe("lr-thread-list search folding and filter containment", () => {
+  const search = async (el: LyraThreadList, value: string) => {
+    const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event("input"));
+    await el.updateComplete;
+  };
+
+  it("finds an accented title with an unaccented query", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" searchable
+        .threads=${[{ id: "c1", title: "Café plans" }, { id: "c2", title: "Other" }]}></lr-thread-list>`,
+    )) as LyraThreadList;
+    await search(el, "cafe");
+    expect(renderedThreadIds(el)).to.deep.equal(["c1"]);
+  });
+
+  it("treats a throwing custom filter as no match instead of breaking the render", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" searchable
+        .threads=${[{ id: "a", title: "A" }, { id: "b", title: "B" }]}
+        .filter=${(t: { id: string }) => {
+          if (t.id === "a") throw new Error("boom");
+          return true;
+        }}></lr-thread-list>`,
+    )) as LyraThreadList;
+    await search(el, "x");
+    expect(renderedThreadIds(el)).to.deep.equal(["b"]);
+  });
 });

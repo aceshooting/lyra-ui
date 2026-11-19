@@ -1663,3 +1663,31 @@ it("stops the submit button reacting to a real hover the moment it becomes disab
     await resetMouse();
   }
 });
+
+it('ignores Escape while an input method is composing or a modifier is held', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback .detail=${{ reasons, commentable: true }}></lr-message-feedback>`
+  )) as LyraMessageFeedback;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="down-button"]')!.click();
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+  expect(panel.hasAttribute('data-open')).to.equal(true);
+  for (const init of [{ isComposing: true }, { ctrlKey: true }]) {
+    panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, ...init }));
+    await el.updateComplete;
+    expect(panel.hasAttribute('data-open')).to.equal(true);
+  }
+  panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(panel.hasAttribute('data-open')).to.equal(false);
+});
+
+it('does not request persistence when a synchronous change listener disables the control', async () => {
+  const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
+  let requests = 0;
+  el.addEventListener('lr-feedback-submit-request', () => requests++);
+  el.addEventListener('lr-feedback-change', () => { el.disabled = true; });
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="up-button"]')!.click();
+  await el.updateComplete;
+  expect(requests).to.equal(0);
+});

@@ -113,7 +113,9 @@ export const styles = css`
   /* State in the part name -- ::part(segment)[data-active] never matches. */
   [part~='active'] {
     border-color: var(--lr-otp-input-active-border-color, var(--lr-focus-ring-color));
-    box-shadow: 0 0 0 var(--lr-focus-ring-width) var(--lr-otp-input-active-ring-color, var(--lr-focus-ring-color));
+    /* Inset: the segment row scrolls (overflow clips both axes), so an outer ring would be cut off
+       on the row's edge segments. */
+    box-shadow: inset 0 0 0 var(--lr-focus-ring-width) var(--lr-otp-input-active-ring-color, var(--lr-focus-ring-color));
   }
   [part~='invalid'] {
     border-color: var(

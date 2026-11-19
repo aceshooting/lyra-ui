@@ -6237,7 +6237,7 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
   `gutter` part, which otherwise renders one row per `\n`-separated line.
-- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
+- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press (a selection spanning several lines indents each of its lines and stays selected; an insertion never exceeds `maxlength`) and the tab width
   shared by the native textarea and text measurement. Explicit property/attribute assignment wins
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
   on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
@@ -8312,7 +8312,8 @@ must never be mirrored.
 - `form`, `validity`, `validationMessage` (read-only) — the native form-control readbacks.
 
 **Methods:** `clear()` removes every stroke without firing events. `checkValidity()`,
-`reportValidity()` and `setCustomValidity(message)` follow the native contract.
+`reportValidity()` and `setCustomValidity(message)` follow the native contract. `focus(options?)`
+and `click()` focus the drawing surface (both do nothing while disabled), and `blur()` blurs it.
 
 **Events:**
 

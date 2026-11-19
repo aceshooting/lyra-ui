@@ -25,7 +25,7 @@ export const styles = css`
       var(--lr-size-1-5rem) *
         var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
     );
-    --_lr-preset-hover-bg: var(--lr-time-range-preset-hover-bg, var(--lr-color-surface));
+    --_lr-preset-hover-bg: var(--lr-time-range-preset-hover-bg);
     --_lr-preset-pressed-base: var(--lr-color-surface);
     --_lr-preset-hover-border-color: var(--lr-time-range-preset-hover-border-color);
     --_lr-preset-pressed-bg: var(--lr-time-range-preset-pressed-bg);
@@ -149,6 +149,7 @@ export const styles = css`
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;
+    transition: var(--lr-transition-interactive);
   }
   [part^="handle"][data-at-domain-start] {
     transform: translateX(0);

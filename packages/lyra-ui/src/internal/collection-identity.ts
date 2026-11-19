@@ -16,3 +16,17 @@ export function firstByIdentity<T>(items: readonly T[], identity: (item: T) => u
   }
   return projected;
 }
+
+const memoized = new WeakMap<readonly unknown[], WeakMap<object, unknown[]>>();
+
+/** {@link firstByIdentity} memoized per source array identity and (hoisted) `identity` function,
+ * so a projection is recomputed only when the assigned array or the reader changes. The cache
+ * assumes the array is replaced, not mutated in place. */
+export function firstByIdentityMemo<T>(items: readonly T[], identity: (item: T) => unknown): T[] {
+  if (!Array.isArray(items)) return firstByIdentity(items, identity);
+  let byIdentity = memoized.get(items);
+  if (!byIdentity) memoized.set(items, (byIdentity = new WeakMap()));
+  let projected = byIdentity.get(identity) as T[] | undefined;
+  if (!projected) byIdentity.set(identity, (projected = firstByIdentity(items, identity)));
+  return projected;
+}

@@ -3,6 +3,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
@@ -775,7 +776,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled || event.isComposing || event.keyCode === 229) return;
+    if (this.effectiveDisabled || shouldIgnoreNavigationKey(event)) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       const physical = event.key === 'ArrowRight' ? 1 : -1;

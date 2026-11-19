@@ -83,4 +83,79 @@ describe('createOptionalPeerLoader', () => {
     });
     expect(messages).to.deep.equal(['test peer unavailable']);
   });
+  describe('cache: "generation"', () => {
+    const options = (load: () => Promise<unknown>, key: string) => ({
+      load,
+      isCapability: isGreeter,
+      warningKey: key,
+      warning: 'test peer unavailable',
+      cache: 'generation' as const,
+    });
+
+    it('retries a transient import failure but keeps a successful load', async () => {
+      let attempt = 0;
+      const loader = createOptionalPeerLoader(
+        options(() => (++attempt === 1 ? Promise.reject(new Error('chunk offline')) : Promise.resolve(greeter)), 'lyra-test-gen-transient'),
+      );
+      await devWarnings(async () => {
+        expect(await loader.load()).to.equal(null);
+        expect((await loader.load()) === greeter).to.equal(true);
+        expect((await loader.load()) === greeter).to.equal(true);
+      });
+      expect(attempt).to.equal(2);
+    });
+
+    it('caches a module that lacks the capability instead of re-importing it', async () => {
+      let imports = 0;
+      const loader = createOptionalPeerLoader(
+        options(() => {
+          imports += 1;
+          return Promise.resolve({ default: { greet: 1 } });
+        }, 'lyra-test-gen-invalid'),
+      );
+      await devWarnings(async () => {
+        expect(await loader.load()).to.equal(null);
+        expect(await loader.load()).to.equal(null);
+      });
+      expect(imports).to.equal(1);
+    });
+
+    it('reset() forgets the cached result and a stale in-flight load cannot repopulate it', async () => {
+      let imports = 0;
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      const loader = createOptionalPeerLoader(
+        options(() => {
+          imports += 1;
+          return imports === 1 ? gate.then(() => greeter) : Promise.resolve({ greet: () => 'second' });
+        }, 'lyra-test-gen-reset'),
+      );
+      const first = loader.load();
+      loader.reset();
+      const second = await loader.load();
+      release();
+      expect((await first) === greeter).to.equal(true);
+      expect(second?.greet()).to.equal('second');
+      expect((await loader.load()) === second).to.equal(true);
+      expect(imports).to.equal(2);
+    });
+  });
+
+  it('keeps the default success-only behaviour: an invalid module is retried', async () => {
+    let imports = 0;
+    const loader = createOptionalPeerLoader({
+      load: () => {
+        imports += 1;
+        return Promise.resolve({ default: { greet: 1 } });
+      },
+      isCapability: isGreeter,
+      warningKey: 'lyra-test-peer-default-invalid',
+      warning: 'test peer unavailable',
+    });
+    await devWarnings(async () => {
+      await loader.get();
+      await loader.get();
+    });
+    expect(imports).to.equal(2);
+  });
 });

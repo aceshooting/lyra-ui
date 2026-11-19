@@ -1604,3 +1604,20 @@ it("ignores keys a slotted control already handled, that come from a text field,
   expect(menuKey.defaultPrevented, "a menu item is not a roving stop").to.be.false;
   expect(document.activeElement === item).to.be.true;
 });
+
+it("binds reveal-on-interaction to the host when the toolbar is a direct child of a shadow root", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  try {
+    const root = host.attachShadow({ mode: "open" });
+    const actions = document.createElement("lr-message-actions") as LyraMessageActions;
+    actions.revealOnInteraction = true;
+    root.appendChild(actions);
+    await actions.updateComplete;
+    expect(actions.hasAttribute("data-revealed")).to.be.false;
+    host.dispatchEvent(new PointerEvent("pointerenter"));
+    await waitUntil(() => actions.hasAttribute("data-revealed"), "hovering the shadow host reveals the toolbar");
+  } finally {
+    host.remove();
+  }
+});

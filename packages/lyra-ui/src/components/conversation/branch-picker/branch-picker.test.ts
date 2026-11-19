@@ -413,3 +413,15 @@ it('preserves focus the consumer moved before applying a branch change', async (
   expect(el.index).to.equal(2);
   expect(document.activeElement === outside).to.equal(true);
 });
+
+it('announces the next navigation after a reparent that changed nothing', async () => {
+  const wrapper = (await fixture(html`<div><lr-branch-picker count="3"></lr-branch-picker></div>`)) as HTMLElement;
+  const el = wrapper.querySelector('lr-branch-picker') as LyraBranchPicker;
+  wrapper.removeChild(el);
+  wrapper.appendChild(el);
+  await el.updateComplete;
+  el.index = 1;
+  await el.updateComplete;
+  const region = el.shadowRoot!.querySelector('lr-live-region')!;
+  await waitUntil(() => (region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '') !== '', 'position never announced');
+});

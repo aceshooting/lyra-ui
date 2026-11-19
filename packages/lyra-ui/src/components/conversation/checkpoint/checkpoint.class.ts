@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -116,7 +118,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   private confirmingCheckpointId = '';
 
   private get computedLabel(): string {
-    return this.label || this.localize('checkpointLabel');
+    return normalizeLabel(this.label) ?? this.localize('checkpointLabel');
   }
 
   private get normalizedTimestamp(): Date | undefined {
@@ -172,7 +174,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   private cancelStaleConfirmation(): boolean {
     if (!this.confirming || this.confirmingCheckpointId === this.checkpointId) return false;
-    const focused = this.shadowRoot?.activeElement?.closest('[part="confirm-group"]');
+    const focused = shadowFocusTarget(this)?.closest('[part="confirm-group"]');
     this.revertToRestore(Boolean(focused));
     return true;
   }

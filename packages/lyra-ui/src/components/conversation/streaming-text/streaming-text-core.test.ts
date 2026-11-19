@@ -425,3 +425,16 @@ describe('canonical code-block-header spelling', () => {
   });
 
 });
+
+describe('stable languages identity', () => {
+  it('hands the composed markdown the same empty languages object across renders', async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text-core content-mode="markdown" content="a"></lr-streaming-text-core>`,
+    )) as LyraStreamingTextCore;
+    const markdown = el.shadowRoot!.querySelector('lr-markdown-core') as unknown as { languages: unknown };
+    const first = markdown.languages;
+    el.content = 'ab';
+    await el.updateComplete;
+    expect(markdown.languages === first).to.equal(true);
+  });
+});

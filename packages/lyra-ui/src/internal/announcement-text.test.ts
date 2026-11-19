@@ -1,5 +1,9 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { html as litHtml } from 'lit';
+import { LyraElement } from './lyra-element.js';
+import { defineElement } from './prefix.js';
 import {
+  SlottedAnnouncementController,
   composedAccessibilityText,
   composedAccessibilityTextResult,
 } from './announcement-text.js';
@@ -448,4 +452,86 @@ it('does not report depth truncation for an empty leaf at the configured depth',
 
   expect(result.text).to.equal('');
   expect(result.truncated).to.equal(false);
+});
+
+class AnnouncementProbe extends LyraElement {
+  announced: string[] = [];
+  armedCount = 0;
+  allowed = true;
+  readonly live = new SlottedAnnouncementController(this, {
+    feeds: (top) => top.nodeType !== 1 || !(top as Element).getAttribute('slot'),
+    text: (controller) => {
+      controller.resetRoots();
+      return [...this.childNodes]
+        .filter((node) => node.nodeType !== 1 || !(node as Element).getAttribute('slot'))
+        .map((node) => controller.collect(node))
+        .join(' ').replace(/\s+/g, ' ').trim();
+    },
+    announce: (text) => this.announced.push(text),
+    canAnnounce: () => this.allowed,
+    armed: () => { this.armedCount++; },
+  });
+
+  override render() {
+    return litHtml`<slot></slot>`;
+  }
+}
+defineElement('announcement-probe', AnnouncementProbe);
+
+describe('SlottedAnnouncementController', () => {
+  async function armed(markup = html`<lr-announcement-probe><b>Hello</b></lr-announcement-probe>`) {
+    const host = await fixture<AnnouncementProbe>(markup);
+    await waitUntil(() => host.live.armed, 'controller arms');
+    return host;
+  }
+
+  it('does not announce the first mount, then announces later text changes', async () => {
+    const host = await armed();
+    expect(host.announced).to.deep.equal([]);
+    expect(host.armedCount).to.equal(1);
+    host.querySelector('b')!.textContent = 'Changed';
+    await waitUntil(() => host.announced.length === 1);
+    expect(host.announced).to.deep.equal(['Changed']);
+  });
+
+  it('ignores slotted children outside the fed slots and hidden text', async () => {
+    const host = await armed(html`<lr-announcement-probe><b>Hello</b><i slot="x">Other</i></lr-announcement-probe>`);
+    host.querySelector('i')!.textContent = 'Other changed';
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(host.announced).to.deep.equal([]);
+    host.querySelector('b')!.hidden = true;
+    await waitUntil(() => host.announced.length === 1);
+    expect(host.announced).to.deep.equal(['']);
+  });
+
+  it('honours canAnnounce and stays silent after a reconnect until re-armed', async () => {
+    const host = await armed();
+    host.allowed = false;
+    host.querySelector('b')!.textContent = 'Muted';
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(host.announced).to.deep.equal([]);
+    host.allowed = true;
+    const parent = host.parentNode!;
+    host.remove();
+    expect(host.live.armed).to.equal(false);
+    parent.append(host);
+    await waitUntil(() => host.live.armed);
+    expect(host.announced).to.deep.equal([]);
+    expect(host.armedCount).to.equal(2);
+  });
+
+  it('ignores a stale arming after the host is disconnected before it settles', async () => {
+    const host = document.createElement('lr-announcement-probe') as AnnouncementProbe;
+    document.body.append(host);
+    host.remove();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(host.live.armed).to.equal(false);
+    expect(host.armedCount).to.equal(0);
+  });
+
+  it('forces an announcement of unchanged text', async () => {
+    const host = await armed();
+    host.live.announceCurrent(true);
+    expect(host.announced).to.deep.equal(['Hello']);
+  });
 });

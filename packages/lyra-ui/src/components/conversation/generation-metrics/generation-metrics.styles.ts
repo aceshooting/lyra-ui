@@ -40,7 +40,7 @@ export const styles = css`
      no dangling double gap; the dot only ever precedes a segment that is present. */
   [part='tokens']::before,
   [part='throughput']::before {
-    content: '·';
+    content: '·' / '';
     margin-inline: var(--lr-size-0-4em);
     opacity: 0.6;
   }

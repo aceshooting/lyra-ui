@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { TypeAheadBuffer } from './type-ahead-buffer.js';
+import { TypeAheadBuffer, type TypeAheadMemo } from './type-ahead-buffer.js';
 
 describe('type-ahead buffer', () => {
   it('matches from after the active row and skips unavailable matches', () => {
@@ -22,5 +22,44 @@ describe('type-ahead buffer', () => {
     expect(buffer.accepts(new KeyboardEvent('keydown', { key: 'a' }))).to.equal(true);
     expect(buffer.accepts(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true }))).to.equal(false);
     expect(buffer.accepts(new KeyboardEvent('keydown', { key: 'a', isComposing: true }))).to.equal(false);
+  });
+
+  it('folds each label once per label and locale when given a memo', () => {
+    const buffer = new TypeAheadBuffer(document.createElement('div'));
+    const rows = [{ label: 'Alpha' }, { label: 'Bravo' }];
+    let reads = 0;
+    const label = (row: { label: string }): string => {
+      reads++;
+      return row.label;
+    };
+    const memo: TypeAheadMemo = new WeakMap();
+    buffer.add('b', 'en');
+    expect(buffer.match(rows, -1, label, 'en', () => true, memo)).to.equal(1);
+    const first = memo.get(rows[1]!)!;
+    expect(first.folded).to.equal('bravo');
+    expect(buffer.match(rows, -1, label, 'en', () => true, memo)).to.equal(1);
+    expect(memo.get(rows[1]!)).to.equal(first);
+    rows[1]!.label = 'Bison';
+    expect(buffer.match(rows, -1, label, 'en', () => true, memo)).to.equal(1);
+    expect(memo.get(rows[1]!)).to.not.equal(first);
+    expect(memo.get(rows[1]!)!.folded).to.equal('bison');
+    expect(reads).to.be.greaterThan(0);
+  });
+
+  it('folds with the locale (Turkish dotted capital I) and refolds on a locale change', () => {
+    const buffer = new TypeAheadBuffer(document.createElement('div'));
+    const rows = [{ label: 'Işık' }];
+    const memo: TypeAheadMemo = new WeakMap();
+    buffer.add('ı', 'en');
+    expect(buffer.match(rows, -1, r => r.label, 'en', () => true, memo)).to.equal(null);
+    buffer.clear();
+    buffer.add('ı', 'tr');
+    expect(buffer.match(rows, -1, r => r.label, 'tr', () => true, memo)).to.equal(0);
+  });
+
+  it('matches primitive items without a memo entry', () => {
+    const buffer = new TypeAheadBuffer(document.createElement('div'));
+    buffer.add('b', 'en');
+    expect(buffer.match(['a', 'b'], -1, x => x, 'en', () => true, new WeakMap())).to.equal(1);
   });
 });

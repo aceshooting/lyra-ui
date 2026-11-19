@@ -482,3 +482,20 @@ describe('themeable stagger delays', () => {
     expect(getComputedStyle(dots[2]!).animationDelay).to.equal('0.6s');
   });
 });
+
+it('does not re-announce an unchanged label when reparented', async () => {
+  const wrapper = (await fixture(html`<div><lr-typing-indicator label="Assistant typing"></lr-typing-indicator></div>`)) as HTMLElement;
+  const el = wrapper.querySelector('lr-typing-indicator') as LyraTypingIndicator;
+  await el.updateComplete;
+  const seen: string[] = [];
+  const observer = new MutationObserver((records) => {
+    for (const record of records) for (const node of record.addedNodes) seen.push(node.textContent ?? '');
+  });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  wrapper.removeChild(el);
+  wrapper.appendChild(el);
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  observer.disconnect();
+  expect(seen.filter((text) => text === 'Assistant typing')).to.deep.equal([]);
+});

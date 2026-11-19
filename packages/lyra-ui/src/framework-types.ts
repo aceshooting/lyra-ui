@@ -12755,6 +12755,7 @@ export interface LyraComponentTypeMap {
       | '--lr-thread-list-excerpt-highlight-color'
       | '--lr-thread-list-excerpt-highlight-padding'
       | '--lr-thread-list-excerpt-highlight-radius'
+      | '--lr-thread-list-group-header-bg'
       | '--lr-thread-list-group-toggle-active-bg'
       | '--lr-thread-list-group-toggle-active-color'
       | '--lr-thread-list-group-toggle-hover-bg'

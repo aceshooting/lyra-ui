@@ -9828,7 +9828,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 967,
+              "line": 973,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10410,7 +10410,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.class.ts",
-              "line": 143,
+              "line": 145,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11926,8 +11926,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/code-editor/code-editor.test.ts",
-              "test": "leaves composing Tab with the input method without replacing selected code",
+              "file": "src/components/forms/code-editor/code-editor-indent-fit.test.ts",
+              "test": "indents every line of a multi-line selection and keeps the selection instead of replacing it",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -12048,6 +12048,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/code-editor/code-editor-indent-fit.test.ts",
           "src/components/forms/code-editor/code-editor-remediation.test.ts",
           "src/components/forms/code-editor/code-editor.test.ts"
         ],
@@ -14945,7 +14946,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 435,
+              "line": 442,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19694,7 +19695,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -19786,10 +19786,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -19897,7 +19897,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -22551,7 +22551,6 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
-          "src/components/utility/export-button/csv.test.ts",
           "src/components/utility/export-button/export-button-closed-layout.test.ts",
           "src/components/utility/export-button/export-button-collection-boundaries.test.ts",
           "src/components/utility/export-button/export-button-menu-toggling.test.ts",
@@ -29178,7 +29177,9 @@
           "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
+          "src/components/forms/input/text-controls-modifier-keys.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-locale-request.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
@@ -35429,7 +35430,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 771,
+              "line": 772,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37321,7 +37322,9 @@
           "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
+          "src/components/forms/input/text-controls-modifier-keys.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-locale-request.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
@@ -38556,7 +38559,9 @@
           "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
+          "src/components/forms/input/text-controls-modifier-keys.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-locale-request.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
@@ -38955,7 +38960,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 352,
+              "line": 353,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40699,6 +40704,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/phone-input/phone-input-country-events.test.ts",
           "src/components/forms/phone-input/phone-input-remediation.test.ts",
           "src/components/forms/phone-input/phone-input.test.ts",
           "src/components/forms/phone-input/phone-number-adapter.test.ts"
@@ -41649,7 +41655,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -41795,10 +41800,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -41904,7 +41909,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -49665,8 +49670,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/signature-pad/signature-pad-modifier-keys.test.ts",
-              "test": "leaves ${modifier} chords to the platform instead of drawing",
+              "file": "src/components/forms/signature-pad/signature-pad-measured-focus.test.ts",
+              "test": "lowers and lifts the pen once for a held Space or Enter",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -49787,6 +49792,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/signature-pad/signature-pad-measured-focus.test.ts",
           "src/components/forms/signature-pad/signature-pad-modifier-keys.test.ts",
           "src/components/forms/signature-pad/signature-pad-public-stroke-boundaries.test.ts",
           "src/components/forms/signature-pad/signature-pad-state-restoration.test.ts",
@@ -55913,6 +55919,7 @@
         "tests": [
           "src/components/forms/textarea/textarea-count-debounce.test.ts",
           "src/components/forms/textarea/textarea-remediation.test.ts",
+          "src/components/forms/textarea/textarea-rows-ime.test.ts",
           "src/components/forms/textarea/textarea.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -56310,7 +56317,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 1015,
+              "line": 1016,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56567,7 +56574,9 @@
           "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
+          "src/components/forms/input/text-controls-modifier-keys.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-locale-request.test.ts",
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
@@ -56762,6 +56771,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/time-range/time-range-form-lifecycle.test.ts",
+          "src/components/forms/time-range/time-range-preset-hover.test.ts",
           "src/components/forms/time-range/time-range-remediation.test.ts",
           "src/components/forms/time-range/time-range-rendering-a11y.test.ts",
           "src/components/forms/time-range/time-range.test.ts"
@@ -58310,6 +58320,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/token-input/token-input-remediation.test.ts",
+          "src/components/forms/token-input/token-input-request-commit.test.ts",
           "src/components/forms/token-input/token-input-scale.test.ts",
           "src/components/forms/token-input/token-input.test.ts"
         ],
@@ -59839,7 +59850,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -59931,10 +59941,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -60040,7 +60050,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",

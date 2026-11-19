@@ -554,24 +554,47 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       }
       if (this.readonly) return;
       event.preventDefault();
-      const target = event.target as HTMLTextAreaElement;
-      const start = target.selectionStart;
-      target.setRangeText(
-        ' '.repeat(this.indentWidth),
-        start,
-        target.selectionEnd,
-        'end',
-      );
-      this.value = target.value;
-      dispatchNativeInputEvent(this, {
-        data: ' '.repeat(this.indentWidth),
-        inputType: 'insertText',
-      });
-      this.emit('lr-input', { value: this.value });
+      this.indentSelection(event.target as HTMLTextAreaElement);
       return;
     }
     this.tabBypassArmed = false;
   };
+  /** Tab inserts one indent at the caret, replaces a selection that stays within one line, and
+   *  indents every line a multi-line selection touches (keeping the selection). Growth never
+   *  exceeds `maxlength`, the way native typing is refused at the limit. */
+  private indentSelection(target: HTMLTextAreaElement): void {
+    const indent = ' '.repeat(this.indentWidth);
+    const { value, selectionStart: start, selectionEnd: end } = target;
+    const limit = this.maxlength;
+    const room = limit === undefined ? Number.POSITIVE_INFINITY : Math.max(0, limit - value.length);
+    const selected = value.slice(start, end);
+    let inserted = '';
+    if (!selected.includes('\n')) {
+      inserted = indent.slice(0, room + selected.length);
+      if (inserted === '' && selected === '') return;
+      target.setRangeText(inserted, start, end, 'end');
+    } else {
+      const first = value.lastIndexOf('\n', start - 1) + 1;
+      const starts = [first];
+      for (let index = first + 1; index < end; index++) {
+        if (value.charCodeAt(index - 1) === 10) starts.push(index);
+      }
+      if (indent.length * starts.length > room) return;
+      const indented = starts
+        .map((lineStart, at) => value.slice(lineStart, starts[at + 1] ?? end))
+        .map((line) => indent + line)
+        .join('');
+      target.setRangeText(indented, first, end, 'preserve');
+      target.setSelectionRange(
+        start === first ? start : start + indent.length,
+        end + indent.length * starts.length,
+      );
+      inserted = indent;
+    }
+    this.value = target.value;
+    dispatchNativeInputEvent(this, { data: inserted, inputType: 'insertText' });
+    this.emit('lr-input', { value: this.value });
+  }
   private onCaretChange = (): void => {
     this.syncCaretOffset();
   };
@@ -717,28 +740,31 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     return offsets;
   }
 
-  /** Measures logical line starts without creating one DOM node per source line. */
-  private wrappedLineOffset(offset: number): number {
+  /** Measures logical line starts without creating one DOM node per source line. The text-node list,
+   * the Range and the first row's top are read once, then reused for every offset of one pass. */
+  private lineOffsetMeasurer(): (offset: number) => number {
     const measure = this.renderRoot.querySelector<HTMLElement>('.editor-measure');
-    if (!measure) return 0;
+    if (!measure) return () => 0;
     const nodes = Array.from(measure.childNodes).filter((node) => node.nodeType === 3);
-    const range = this.ownerDocument.createRange();
     const first = nodes.find((node) => (node.textContent?.length ?? 0) > 0);
-    if (!first) return 0;
+    if (!first) return () => 0;
+    const range = this.ownerDocument.createRange();
     range.setStart(first, 0);
     range.setEnd(first, 1);
     const firstTop = range.getBoundingClientRect().top;
-    let remaining = offset;
-    for (const node of nodes) {
-      const length = node.textContent?.length ?? 0;
-      if (remaining < length) {
-        range.setStart(node, remaining);
-        range.setEnd(node, remaining + 1);
-        return range.getBoundingClientRect().top - firstTop;
+    return (offset) => {
+      let remaining = offset;
+      for (const node of nodes) {
+        const length = node.textContent?.length ?? 0;
+        if (remaining < length) {
+          range.setStart(node, remaining);
+          range.setEnd(node, remaining + 1);
+          return range.getBoundingClientRect().top - firstTop;
+        }
+        remaining -= length;
       }
-      remaining -= length;
-    }
-    return 0;
+      return 0;
+    };
   }
 
   private syncGutterGeometry(): void {
@@ -747,8 +773,9 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const start = Math.min(this.gutterWindowStart, Math.max(0, this.countLines() - 1));
     const offsets = this.wrapsText ? this.lineStarts() : undefined;
     // Finish geometry reads before writing any row styles, keeping layout work in one phase.
+    const measureOffset = offsets ? this.lineOffsetMeasurer() : undefined;
     const positions = offsets
-      ? Array.from(lines, (_line, index) => this.wrappedLineOffset(offsets[start + index] ?? 0))
+      ? Array.from(lines, (_line, index) => measureOffset!(offsets[start + index] ?? 0))
       : undefined;
     const height = this.renderRoot.querySelector<HTMLElement>('.editor-measure')?.getBoundingClientRect().height;
     if (height !== undefined) this.gutter?.style.setProperty('block-size', `${height}px`);
@@ -760,7 +787,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
 
   private observeTextGeometry(): void {
-    if (this.withoutLineNumbers || !this.isConnected) {
+    if ((this.withoutLineNumbers && this.resize !== 'auto') || !this.isConnected) {
       this.textGeometryObserver?.disconnect();
       this.textGeometryObserver = undefined;
       return;
@@ -770,10 +797,20 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const ownerDocument = this.ownerDocument;
     const Observer = ownerDocument.defaultView?.ResizeObserver;
     if (!measure || !Observer) return;
-    const observer = new Observer(() => {
+    let observedInlineSize: number | undefined;
+    const observer = new Observer((entries) => {
       if (!this.isConnected || this.ownerDocument !== ownerDocument || this.textGeometryObserver !== observer) return;
-      this.onEditorScroll();
-      this.syncGutterGeometry();
+      if (!this.withoutLineNumbers) {
+        this.onEditorScroll();
+        this.syncGutterGeometry();
+      }
+      // A width change re-wraps the text, so an auto-fitting editor refits to the new line count.
+      const inlineSize = entries[entries.length - 1]?.contentRect.width;
+      if (inlineSize !== undefined && inlineSize !== observedInlineSize) {
+        const settled = observedInlineSize !== undefined;
+        observedInlineSize = inlineSize;
+        if (settled && this.resize === 'auto') this.fitToContent();
+      }
     });
     this.textGeometryObserver = observer;
     observer.observe(measure);
@@ -792,11 +829,12 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     let firstVisible = Math.floor(this.editor.scrollTop / lineHeight);
     if (this.wrapsText) {
       const offsets = this.lineStarts();
+      const measureOffset = this.lineOffsetMeasurer();
       let low = 0;
       let high = offsets.length - 1;
       while (low < high) {
         const middle = Math.ceil((low + high) / 2);
-        if (this.wrappedLineOffset(offsets[middle]!) <= this.editor.scrollTop) low = middle;
+        if (measureOffset(offsets[middle]!) <= this.editor.scrollTop) low = middle;
         else high = middle - 1;
       }
       firstVisible = low;

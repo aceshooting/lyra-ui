@@ -292,6 +292,9 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
       if (this.status === 'running') {
         if (this.validStartedAt == null) this.fallbackStartMs = Date.now();
         this.elapsedMs = this.computeElapsedMs();
+      } else if (this.status === 'complete' && changed.get('status') === 'running') {
+        // Freeze the final reading at the instant the run completes, not at the last 1s tick.
+        this.elapsedMs = this.computeElapsedMs();
       } else if (this.status === 'idle') {
         this.fallbackStartMs = undefined;
         this.elapsedMs = 0;

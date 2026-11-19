@@ -61,7 +61,7 @@ wants; `accessibleLabel: string | null = null` (attribute `aria-label`);
 `toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected, including the
 default — every instance carries `tool-display="chip"` until set, like `content-mode="markdown"`).
 `renderPart` is called exactly once per rendered part, in order, in both tool displays, and its
-output is the host's own: it is never masked by `redactedFields`.
+output is the host's own: it is never masked by `redactedFields`. A `renderPart` that throws falls back to the built-in rendering of that part.
 
 `widgetRegistry: LyraWidgetTypeRegistry = DEFAULT_WIDGET_TYPE_REGISTRY` (property only) forwards
 an immutable registry created by `createWidgetTypeRegistry()` to every built-in widget part.

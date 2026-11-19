@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import {
@@ -12,6 +13,7 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { pencilIcon } from '../../../internal/icons.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { formatTimeOfDay, getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { styles } from './conversation-item.styles.js';
 import { autocorrectConverter, normalizeAutocorrect, spellcheckConverter } from '../../../internal/converters.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -297,6 +299,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     if (changed.has('withoutRename') && this.withoutRename && this.renaming) {
       this.cancelRename();
     }
+    // A draft belongs to the conversation it was started on: a recycled row (virtual list) that is
+    // handed another conversation must not commit that draft under the new id.
+    if (changed.has('conversationId') && this.renaming && this.hasUpdated) {
+      this.cancelRename();
+    }
     setCustomState(this.internals, 'menu-open', this.actionsOverlay.open);
   }
 
@@ -377,7 +384,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   };
 
   private onOptionKeyDown = (e: KeyboardEvent): void => {
-    if (this.renaming) return;
+    if (this.renaming || shouldIgnoreActivationKey(e)) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       // Space would otherwise scroll the page, same as lr-checkbox/lr-switch.
       e.preventDefault();
@@ -489,7 +496,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
             : { month: 'short', day: 'numeric', year: 'numeric' }
         ).format(date);
       });
-    const displayLabel = this.label || this.localize('untitledConversation');
+    const displayLabel = normalizeLabel(this.label) ?? this.localize('untitledConversation');
     const showRenameButton = !this.withoutRename && !this.renaming;
     // Shared between the rename button and the input it opens: the input is
     // where focus actually lands, so it needs the same row-specific

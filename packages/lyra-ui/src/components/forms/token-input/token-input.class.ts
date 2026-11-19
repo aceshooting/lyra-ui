@@ -7,6 +7,7 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -814,9 +815,24 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
         value: added[added.length - 1]!,
         values: Object.freeze([...added]),
       });
+    const before = this.value;
     const request = this.emit('lr-token-add-request', addDetail(), { cancelable: true });
     if (request.defaultPrevented) return;
-    this.updateValue(next);
+    // A listener may have written `value` itself (the controlled pattern), disabled the field or
+    // detached it; the commit rebuilds from the live list instead of overwriting that write.
+    if (!this.isConnected || this.liveDisabled || this.readonly) return;
+    if (this.value !== before) {
+      const live = [...this.value];
+      const liveSeen = this.allowDuplicates ? null : new Set(live);
+      for (const token of added) {
+        if (liveSeen?.has(token)) continue;
+        liveSeen?.add(token);
+        live.push(token);
+      }
+      this.updateValue(live);
+    } else {
+      this.updateValue(next);
+    }
     this.draft = '';
   }
 
@@ -877,6 +893,12 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
       { cancelable: true }
     );
     if (request.defaultPrevented) return;
+    if (!this.isConnected || this.liveDisabled || this.readonly) return;
+    // The listener may have rewritten `value`; remove the token where it now sits, not by a stale index.
+    if (this.value[index] !== removed) {
+      index = this.value.indexOf(removed);
+      if (index < 0) return;
+    }
     // Removing a token reindexes every later one, so an editor left open over the old indices would
     // commit against the wrong token.
     if (this.editingIndex >= 0) {
@@ -960,11 +982,17 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
       { cancelable: true }
     );
     if (request.defaultPrevented) return;
-    if (restoreFocus) this.focusTokenPending = index;
+    // A listener may have rewritten `value`, disabled the field or removed it. Re-read the live
+    // state rather than writing the pre-listener index/list over the host's own update.
+    const liveIndex =
+      this.value[index] === previousValue ? index : this.value.indexOf(previousValue);
+    const stillEditable = this.isConnected && !this.liveDisabled && !this.readonly;
+    if (restoreFocus && liveIndex >= 0) this.focusTokenPending = liveIndex;
     this.editingIndex = -1;
     this.editDraft = '';
+    if (!stillEditable || liveIndex < 0) return;
     this.updateValue(
-      this.value.map((token, i) => (i === index ? next : token))
+      this.value.map((token, i) => (i === liveIndex ? next : token))
     );
   }
 
@@ -976,7 +1004,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   }
 
   private onTokenKeyDown(event: KeyboardEvent, index: number): void {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || shouldIgnoreNavigationKey(event)) return;
     // ArrowLeft/ArrowRight mean previous/next *visually*, so they swap under RTL.
     const rtl = this.effectiveDirection === 'rtl';
     const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
@@ -1075,6 +1103,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     // not fire for a keystroke that was aimed at the text being edited.
     else if (
       event.key === 'Backspace' &&
+      !event.repeat &&
       !this.draft &&
       this.value.length &&
       this.editingIndex < 0

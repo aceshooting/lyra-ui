@@ -95,6 +95,19 @@ describe('lr-chat-viewport live-settle', () => {
     expect(sinkTexts('polite')).to.have.length(2);
   });
 
+  it('announces a message whose markup claims to be busy forever after a bounded wait', async () => {
+    const viewport = await fixture<LyraChatViewport>(
+      html`<lr-chat-viewport live="polite" live-settle="50"></lr-chat-viewport>`,
+    );
+    const stuck = document.createElement('div');
+    stuck.setAttribute('aria-busy', 'true');
+    stuck.textContent = 'Never settles';
+    viewport.append(stuck);
+    await waitUntil(() => sinkTexts('polite').includes('Never settles'), 'the stuck-busy child is announced', {
+      timeout: 9000,
+    });
+  }).timeout(12000);
+
   it('drops pending announcements for removed children, live="off", and disconnect', async () => {
     const viewport = await fixture<LyraChatViewport>(
       html`<lr-chat-viewport live="polite" live-settle=${SETTLE}></lr-chat-viewport>`,

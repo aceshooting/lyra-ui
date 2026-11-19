@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 45 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 45 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -135,7 +135,7 @@ values remain unambiguous.
 
 Display fields are captured when `threads` is assigned. After a change, create and assign a new
 collection; changing an assigned record or mutating the assigned array does not update the view.
-`filter`, `groupBy`, row callbacks, and group contexts receive the original source records.
+`filter`, `groupBy`, row callbacks, and group contexts receive the original source records. A `filter` that throws counts as no match for that row. The built-in search ignores case and accents.
 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
@@ -323,6 +323,9 @@ lr-thread-list::part(row-actions) {
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list's generic mark hook, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
+
+**Sticky group header:** `--lr-thread-list-group-header-bg` (default `var(--lr-color-surface)`) keeps
+the pinned header opaque over scrolled rows.
 
 **Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default
 `var(--lr-color-surface-raised)`), `--lr-thread-list-group-toggle-hover-color` (default

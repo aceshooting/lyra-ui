@@ -1,7 +1,7 @@
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
 import { SourcePageController, type SourcePageState } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
-import { createHaystackMemo } from '../../../internal/search-haystack.js';
+import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
@@ -30,6 +30,7 @@ import type {
   LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './thread-list.styles.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -43,7 +44,6 @@ import {
 import {
   getDateTimeFormat,
   getNumberFormat,
-  resolveIntlLocale,
 } from '../../../internal/intl-cache.js';
 import {
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -419,6 +419,7 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @cssprop [--lr-thread-list-search-clear-size=var(--lr-size-1-5rem)] - Box size of the search
  *   field's clear button. Deliberately not tiered by `size`: it is a tap target floored at the
  *   shared minimum target size, not a text box.
+ * @cssprop [--lr-thread-list-group-header-bg=var(--lr-color-surface)] - Group header background; sticky headers stay opaque so scrolled rows never show through.
  * @cssprop [--lr-thread-list-group-toggle-hover-bg=var(--lr-color-surface-raised)] - Group-toggle hover background.
  * @cssprop [--lr-thread-list-group-toggle-hover-color=var(--lr-color-text)] - Group-toggle hover foreground.
  * @cssprop [--lr-thread-list-group-toggle-active-bg=color-mix(in oklab, var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Group-toggle pressed background.
@@ -1099,16 +1100,25 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return Object.freeze(threads.map((thread) => this.sourceThread(thread)));
   }
 
-  private readonly titleHaystacks = createHaystackMemo<LyraChatThread>((thread, locale) => thread.title.toLocaleLowerCase(resolveIntlLocale(locale)));
-  private readonly excerptHaystacks = createHaystackMemo<LyraChatThread>((thread, locale) => (thread.excerpt ?? '').toLocaleLowerCase(resolveIntlLocale(locale)));
+  private readonly titleHaystacks = createHaystackMemo<LyraChatThread>((thread, locale) => foldSearchText(thread.title, locale));
+  private readonly excerptHaystacks = createHaystackMemo<LyraChatThread>((thread, locale) => foldSearchText(thread.excerpt ?? '', locale));
 
   private get visibleThreads(): LyraChatThread[] {
     const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
+    const needle = q && !this.filter ? prepareNeedle(this.searchText, this.effectiveLocale) : '';
     const threads = this.normalizedThreads;
     const titles = q && !this.filter ? this.titleHaystacks(threads, this.effectiveLocale) : [];
     const excerpts = q && !this.filter ? this.excerptHaystacks(threads, this.effectiveLocale) : [];
     return threads.filter((thread, index) => (this.withArchived || !thread.archived) &&
-      (!q || (this.filter ? this.filter(this.sourceThread(thread), q) : titles[index]!.includes(q) || excerpts[index]!.includes(q))));
+      (!q || (this.filter ? this.matchesCustomFilter(thread, q) : titles[index]!.includes(needle) || excerpts[index]!.includes(needle))));
+  }
+
+  private matchesCustomFilter(thread: LyraChatThread, query: string): boolean {
+    try {
+      return Boolean(this.filter?.(this.sourceThread(thread), query));
+    } catch {
+      return false;
+    }
   }
 
   private bucketFor(thread: LyraChatThread, today: number): ThreadBucketKey {
@@ -1328,7 +1338,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private onSearchKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'ArrowDown') return;
+    if (e.key !== 'ArrowDown' || shouldIgnoreNavigationKey(e)) return;
     const focusGeneration = ++this.focusTaskGeneration;
     this.stopPendingFocus?.();
     const rows = this.navigableRows();
@@ -1518,7 +1528,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     // A control inside a row already consumed this key -- an open `renderActions` `lr-menu` moving
     // between its own items, or a dropdown trigger opening its menu. Row navigation on top of that
     // would pull focus out of the menu it just moved within.
-    if (e.defaultPrevented) return;
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     const origin = e.composedPath()[0];
     if (
       (origin as Partial<Node> | undefined)?.nodeType === 1 &&

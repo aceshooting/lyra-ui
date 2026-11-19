@@ -72,3 +72,49 @@ export function resolveCanvasColors(
   }
   return resolved;
 }
+
+/** An sRGB colour as `[r, g, b, a]`: channels 0-255, alpha 0-1. */
+export type CanvasRgba = readonly [number, number, number, number];
+
+const READBACK_BASES = ['#010203', '#040506'] as const;
+
+/**
+ * Reads any CSS colour the canvas understands (named, hex, `hsl()`, `color-mix()`, `oklch()`, ...)
+ * back as sRGB `[r, g, b, a]` by painting one pixel. Returns `undefined` for an invalid value, an
+ * unresolved `var()`, or a document without a canvas. Canvas silently keeps its previous fill on
+ * an invalid assignment, so the colour is painted over two different base fills; differing
+ * results mean the assignment was rejected.
+ */
+export function readCanvasRgba(doc: Document, css: string): CanvasRgba | undefined {
+  let ctx: CanvasRenderingContext2D | null;
+  try {
+    const canvas = doc.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
+  } catch {
+    return undefined;
+  }
+  if (!ctx) return undefined;
+  const pixels: Uint8ClampedArray[] = [];
+  for (const base of READBACK_BASES) {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = base;
+    ctx.fillStyle = css;
+    ctx.fillRect(0, 0, 1, 1);
+    pixels.push(ctx.getImageData(0, 0, 1, 1).data);
+  }
+  const [first, second] = pixels as [Uint8ClampedArray, Uint8ClampedArray];
+  for (let i = 0; i < 4; i++) if (first[i] !== second[i]) return undefined;
+  return [first[0]!, first[1]!, first[2]!, first[3]! / 255];
+}
+
+/** Serializes a colour as a comma-form `rgb()`/`rgba()` string (alpha omitted when opaque). */
+export function toRgbaString(color: CanvasRgba): string {
+  const [r, g, b, a] = color;
+  const channel = (v: number): number => Math.min(255, Math.max(0, Math.round(Number.isFinite(v) ? v : 0)));
+  const alpha = Math.min(1, Math.max(0, Number.isFinite(a) ? a : 1));
+  return alpha >= 1
+    ? `rgb(${channel(r)}, ${channel(g)}, ${channel(b)})`
+    : `rgba(${channel(r)}, ${channel(g)}, ${channel(b)}, ${Number(alpha.toFixed(3))})`;
+}

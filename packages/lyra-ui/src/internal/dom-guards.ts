@@ -83,3 +83,67 @@ export function isDateObject(value: unknown): value is Date {
     return false;
   }
 }
+
+/** Realm-neutral Element brand check (any namespace). Hostile and structural lookalikes fail closed. */
+export function isElementNode(value: unknown): value is Element {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return false;
+  try {
+    const candidate = value as Element;
+    if (candidate.nodeType !== 1) return false;
+    const ElementConstructor = candidate.ownerDocument?.defaultView?.Element ??
+      (typeof Element === 'undefined' ? undefined : Element);
+    if (!ElementConstructor) return false;
+    ElementConstructor.prototype.getAttribute.call(candidate, 'data-lyra-brand-probe');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Realm-neutral ShadowRoot check: a DocumentFragment-branded node whose `host` is an element. */
+export function isShadowRoot(value: unknown): value is ShadowRoot {
+  if (typeof value !== 'object' || value === null) return false;
+  try {
+    const candidate = value as ShadowRoot;
+    if (candidate.nodeType !== 11) return false;
+    const FragmentConstructor = candidate.ownerDocument?.defaultView?.DocumentFragment ??
+      (typeof DocumentFragment === 'undefined' ? undefined : DocumentFragment);
+    if (!FragmentConstructor) return false;
+    FragmentConstructor.prototype.getElementById.call(candidate, '');
+    return isElementNode(candidate.host);
+  } catch {
+    return false;
+  }
+}
+
+const DEFAULT_SOME_NODE_MAX_NODES = 100_000;
+
+/**
+ * True when `predicate` accepts `root` or any light-DOM descendant (document order, iterative so
+ * depth cannot overflow the stack, bounded by `maxNodes`). A throwing predicate counts as no match.
+ */
+export function someNode(
+  root: Node,
+  predicate: (node: Node) => boolean,
+  maxNodes = DEFAULT_SOME_NODE_MAX_NODES,
+): boolean {
+  const stack: Node[] = [root];
+  let visited = 0;
+  while (stack.length > 0 && visited < maxNodes) {
+    const node = stack.pop()!;
+    visited += 1;
+    try {
+      if (predicate(node)) return true;
+      const children = node.childNodes;
+      for (let index = children.length - 1; index >= 0; index -= 1) stack.push(children[index]!);
+    } catch {
+      // A hostile node cannot be inspected; keep scanning its siblings.
+    }
+  }
+  return false;
+}
+
+/** True when `element` or a light-DOM descendant is a `<slot>`. */
+export function containsSlot(element: Element): boolean {
+  return someNode(element, (node) => isElementNode(node) && node.localName === 'slot');
+}

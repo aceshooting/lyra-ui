@@ -52,6 +52,14 @@ export interface OptionalPeerLoaderOptions<Capability> {
   readonly warningKey: string;
   /** Fixed development diagnostic; importer errors are never included (they can carry paths). */
   readonly warning: string;
+  /**
+   * Cache policy. `'success-only'` (default) keeps only an in-flight or successful load, so every
+   * failure (import rejection or unusable module) is retried by the next call. `'generation'`
+   * additionally keeps a module that imported but lacks the capability (a permanent condition)
+   * while still retrying an import rejection (a transient network/chunk failure); {@link
+   * OptionalPeerLoader.reset} starts a new generation.
+   */
+  readonly cache?: 'success-only' | 'generation';
 }
 
 export interface OptionalPeerLoader<Capability> {
@@ -62,6 +70,10 @@ export interface OptionalPeerLoader<Capability> {
   get(): Promise<Capability | null>;
   /** Forgets the shared load. */
   clear(): void;
+  /** Alias of {@link OptionalPeerLoader.get}. */
+  load(): Promise<Capability | null>;
+  /** Alias of {@link OptionalPeerLoader.clear}; an older in-flight load can no longer repopulate the cache. */
+  reset(): void;
   /** Replaces the shared import (tests simulating a missing peer); `undefined` restores `load`. */
   override(importer?: () => Promise<unknown>): void;
 }
@@ -75,37 +87,52 @@ export function createOptionalPeerLoader<Capability>(
   options: OptionalPeerLoaderOptions<Capability>,
 ): OptionalPeerLoader<Capability> {
   let shared: Promise<Capability | null> | undefined;
+  let generation = 0;
   let importerOverride: (() => Promise<unknown>) | undefined;
-  const loadWith = async (importer = importerOverride ?? options.load): Promise<Capability | null> => {
+  const keepInvalid = options.cache === 'generation';
+  /** `transient` is true for an import rejection, false for a module that imported but is unusable. */
+  const attempt = async (
+    importer: () => Promise<unknown>,
+  ): Promise<{ capability: Capability | null; transient: boolean }> => {
     let module: unknown;
     try {
       module = await importer();
     } catch {
       devWarnOnce(options.warningKey, options.warning);
-      return null;
+      return { capability: null, transient: true };
     }
     const capability = resolveOptionalPeerCapability(module, options.isCapability);
     if (capability === null) devWarnOnce(options.warningKey, options.warning);
-    return capability;
+    return { capability, transient: false };
+  };
+  const loadWith = async (importer = importerOverride ?? options.load): Promise<Capability | null> =>
+    (await attempt(importer)).capability;
+  const get = (): Promise<Capability | null> => {
+    if (!shared) {
+      const started = generation;
+      const pending = attempt(importerOverride ?? options.load);
+      const result = pending.then((outcome) => outcome.capability);
+      shared = result;
+      void pending.then((outcome) => {
+        const keep = outcome.capability !== null || (keepInvalid && !outcome.transient);
+        if (!keep && shared === result && generation === started) shared = undefined;
+      });
+    }
+    return shared;
+  };
+  const clear = () => {
+    generation += 1;
+    shared = undefined;
   };
   return {
     loadWith,
-    get() {
-      if (!shared) {
-        const pending = loadWith();
-        shared = pending;
-        void pending.then((capability) => {
-          if (capability === null && shared === pending) shared = undefined;
-        });
-      }
-      return shared;
-    },
-    clear() {
-      shared = undefined;
-    },
+    get,
+    load: get,
+    clear,
+    reset: clear,
     override(importer) {
       importerOverride = importer;
-      shared = undefined;
+      clear();
     },
   };
 }

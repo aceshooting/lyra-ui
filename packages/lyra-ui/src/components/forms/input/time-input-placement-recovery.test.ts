@@ -9,7 +9,7 @@ function expectClosed(picker: LyraTimeInput): void {
   expect(picker.open).to.equal(false);
   expect(picker.hasAttribute('open')).to.equal(false);
   expect(picker.matches(':state(open)')).to.equal(false);
-  expect(root.querySelector('[part="input"]')!.getAttribute('aria-expanded')).to.equal('false');
+  expect(root.querySelector('[part="input"]')!.hasAttribute('aria-expanded')).to.equal(false);
   expect(root.querySelector('[part="expand-button"]')!.getAttribute('aria-expanded')).to.equal('false');
   expect(popup.hidden).to.equal(true);
   expect(getComputedStyle(popup).display).to.equal('none');

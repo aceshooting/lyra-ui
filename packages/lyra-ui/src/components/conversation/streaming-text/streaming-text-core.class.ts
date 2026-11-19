@@ -11,6 +11,9 @@ export {
   type StreamingTextContentMode,
 } from './streaming-text-base.class.js';
 
+/** Stable identity for the no-languages case, so the composed Markdown keeps its highlight state across renders. */
+const EMPTY_LANGUAGES: Readonly<Record<string, never>> = Object.freeze({});
+
 /** `<lr-streaming-text-core>`'s event surface. Identical to `<lr-streaming-text>`'s, because the
  *  two differ only in which Markdown element Markdown mode composes; it is named per tag so a
  *  consumer can annotate a handler against this element without reaching for its sibling's map. */
@@ -101,7 +104,7 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .streaming=${this.streaming}
       .streamingRender=${this.streamingRender}
       .codeBlockHeader=${this.codeBlockHeader}
-      .languages=${this.markdownLanguages ?? {}}
+      .languages=${this.markdownLanguages ?? EMPTY_LANGUAGES}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}
       .withoutGfm=${this.withoutGfm}

@@ -246,7 +246,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // template below) -- the browser's own "rules for parsing non-negative integers" fall back to
   // its default for an invalid value instead of throwing, and this file performs no arithmetic on
   // `rows` itself (fitToContent() measures the live DOM scrollHeight, not this property).
-  @property({ type: Number }) rows = 4;
+  @property({ type: Number, useDefault: true }) rows = 4;
   /** Native CSS `resize` behavior for the textarea (`'none'`, `'vertical'`, `'horizontal'`,
    *  `'both'`), plus `'auto'`: a `ResizeObserver`-driven grow-to-content mode with no manual drag
    *  handle (mirrors `wa-textarea`'s `resize="auto"`). An invalid runtime value falls back to
@@ -809,7 +809,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       event.stopPropagation();
       return;
     }
-    if (event.key === 'Enter') this.settledDebounce.flush();
+    if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) this.settledDebounce.flush();
   };
 
   override render(): TemplateResult {

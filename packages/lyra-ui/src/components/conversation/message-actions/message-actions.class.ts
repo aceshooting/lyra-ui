@@ -488,9 +488,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   private bindHoverTarget(): void {
     this.unbindHoverTarget();
+    const parent = this.parentNode;
     const target =
       (this.closest(tag('chat-message')) as HTMLElement | null) ??
-      this.parentElement;
+      (parent instanceof ShadowRoot ? parent.host as HTMLElement : this.parentElement);
     if (!target) return;
     this.hoverTarget = target;
     target.addEventListener('pointerenter', this.onHoverTargetEnter);
@@ -905,7 +906,6 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
           @slotchange=${this.onSlotChange}
           @lr-toolbar-actions-change=${this.onToolbarActionsChange}
           @lr-feedback-change=${this.containSlottedFeedbackEvent}
-          @lr-feedback-submit=${this.containSlottedFeedbackEvent}
           @lr-feedback-submit-request=${this.containSlottedFeedbackEvent}
         ></slot>
       </div>

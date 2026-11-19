@@ -757,3 +757,18 @@ it("derives throughput from the live elapsed time between ticks, not the last wh
   await el.updateComplete;
   expect(throughputText(el), "past one live second, before the next tick").to.not.equal(null);
 });
+
+it("captures the final elapsed reading at the instant the run completes", async () => {
+  const el = (await fixture(
+    html`<lr-generation-metrics></lr-generation-metrics>`
+  )) as LyraGenerationMetrics;
+  el.startedAt = Date.now() - 5000;
+  el.status = "running";
+  await el.updateComplete;
+  expect(parseElapsedSeconds(elapsedText(el))).to.be.within(4.9, 5.5);
+  // Move the clock forward without a tick: completion must still read the real elapsed time.
+  el.startedAt = Date.now() - 8000;
+  el.status = "complete";
+  await el.updateComplete;
+  expect(parseElapsedSeconds(elapsedText(el))).to.be.within(7.9, 8.5);
+});

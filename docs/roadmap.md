@@ -1,163 +1,112 @@
 # Lyra UI roadmap
 
-This roadmap sets the project's direction for the next year, from October 2026 through
-October 2027. Version targets express delivery order and scope, not guaranteed dates; conditional
-work remains subject to its stated demand and qualification requirements.
-
-## Roadmap index and release status
-
-Release and publication state is established by the package changelog
+This roadmap plans the library and its companion packages from 31.3 through 33.0. Version targets
+express delivery order and scope, not dates; conditional work remains subject to its stated demand
+and qualification. What has shipped is recorded in the changelogs
 ([`packages/lyra-ui/CHANGELOG.md`](../packages/lyra-ui/CHANGELOG.md), older majors in
-[`changelog/`](changelog/)), published package metadata and release evidence, not by this page.
-This page records what shipped, the standing contracts that still govern changes, and what is
-still open.
+[`changelog/`](changelog/)), the GitHub releases and the published packages, not on this page.
 
-- **Generative UI and shared dashboards:** [Lyra Gen program](roadmap/generative-ui.md),
-  [detailed backlog](roadmap/generative-ui-backlog.md),
-  [evaluation and performance](roadmap/generative-ui-evaluation.md), and
-  [website, showcases and live generation](roadmap/generative-ui-website.md). Lyra Gen
-  1.0.0 is the stable release, following the experimental
-  [0.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0). It includes interactive
-  chat, bounded generation contracts, protocol adapters and saved dashboard workflows; its numerical
-  timing and memory campaign follows the release.
-  The detailed backlog separates implemented scope, outstanding qualification and conditional
-  capabilities; a recorded website demo is published and hosted live generation remains planned.
-- **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
-  [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
-  `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
-- **30.0.0 delivery records** (remaining follow-up status kept in each file): [WebGL 3D views](roadmap/lyra-3d.md) in
-  the optional `@aceshooting/lyra-3d` companion, [map adoption](roadmap/map-adoption.md) for
-  `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md); plus
-  [test health](roadmap/test-health.md) (coverage, speed, flakiness).
-- **After 30.1.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
-  Planned and unstarted; outside the 30.1.0 release gate, with no assigned version or date.
-- **30.2.0 published maintenance:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Published on 2026-10-25 with corrections, consolidations and asynchronous model loading; all nineteen selected items are delivered, including website production delivery. Affected companions version independently.
-- **30.3.0 published:** [Lyra UI](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.3.0),
-  [IDE](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ide%4030.3.0) and
-  [translations](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-translations%4030.3.0).
-- **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
+The `fixed` release group (`lyra-ui`, `lyra-ide`, `lyra-translations`) shares one version. Companions
+version independently: lyra-map 2.x, lyra-3d 1.x, lyra-gen 1.x, lyra-docs 0.x (experimental) and
+lyra-flags 2.x.
 
-## Published 30.0.0, 30.1.0 and current maintenance
+## Principles for 31.3–33.0
 
-[30.0.0 was published on 2026-10-24](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0)
-and ships 310 components, with
-lyra-ui, lyra-ide and lyra-translations at 30.0.0, lyra-map at 1.3.0, lyra-3d at 1.0.0,
-lyra-flags at 2.3.1 and the experimental lyra-docs editor at 0.6.3. The versioned release
-qualification and protected publication are complete. Consumer migration follows the release;
-a completed controller prototype does not establish a completed application migration.
+1. **Correct behaviour first.** A correction that changes a documented or test-pinned contract is
+   not avoided to keep a release minor; it is staged through the
+   [deprecation contract](#deprecation-rename-and-removal).
+2. **Coexist, then remove.** Where the old and the correct behaviour can coexist, the correct one
+   ships in a minor and the old one is deprecated with a replacement, a development warning where
+   usage is cheaply observable, and a migration rewrite or review entry. It is removed no earlier
+   than the major after the next one: a deprecation published in 31.x survives all of 32.x and is
+   removed in 33.0.0.
+3. **Change directly only when the two cannot coexist** — when the old behaviour is itself an
+   accessibility or correctness defect that no consumer can legitimately rely on. Such a change lands
+   in the next major with a migration note, never silently in a minor.
+4. **Corrections before features.** Open correctness, accessibility and security work is scheduled
+   ahead of new capability; generative UI then takes priority over new 3D and document features.
+5. **No budget raised to absorb growth.** Size is recovered by consolidation and lazy loading.
 
-The release includes immutable identity collections, map adoption, opt-in WebGL views,
-`lr-chart-3d`, `lr-model-viewer`, GPU-side graph projection, deprecated-API removal with migration
-support, repository hygiene, Lit template checks and Quality tools gates. Recorded real-GPU
-measurements meet the point targets (100k and 1M points at 60 fps) and graph target (10k nodes and
-30k edges at 60 fps) on the measured hardware. The document engine is 2.32.0. The highlighter
-defaults to JavaScript, with Oniguruma available through an explicit factory. The video hover
-quarantine was removed with browser verification.
+## Version plan
 
-Current maintenance runtime comparisons retain mixed advisory timing observations, recorded in the
-current changelog. They do not establish a performance pass. The automated A/B benchmark passed for
-30.1.0 and remains required for future release candidates.
+| Version | Kind | Scope |
+|---|---|---|
+| **31.3.0** | minor | Library-wide corrections and consolidation (see [below](#3130--corrections-and-consolidation)); first deprecations; core bundle back under budget. |
+| **31.4.0** | minor | Delivery size, source and guide accuracy, test health targets. |
+| **31.5.0** | minor | Additive library support for Lyra Gen interoperability and geospatial scenes P1; viewer consolidation deprecations if lyra-docs qualifies. |
+| **32.0.0** | major | Direct contract corrections that cannot coexist; `lyra-v31` migration profile. |
+| **32.x** | minors | Geospatial scenes P2, lyra-3d visuals and scale, on-demand look, additional catalogs. |
+| **33.0.0** | major | Removal of everything deprecated in 31.x (and in 32.x once its window has passed). |
 
-The historical raw UI line-coverage observation reached 99.800335%; this is distinct from
-Codecov's full-hit coverage. The Codecov 99.80% goal remains open; exact-commit totals and the
-unchanged raw coverage floors are recorded in [test health](roadmap/test-health.md).
+### 31.3.0 — corrections and consolidation
 
-lyra-ui 30.1.0, lyra-ide 30.1.0 and lyra-translations 30.1.0 were published on 2026-10-25
-from [the versioned commit](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07).
-The [lyra-ui release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.1.0),
-[lyra-ide release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ide%4030.1.0) and
-[lyra-translations release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-translations%4030.1.0)
-were verified against their npm packages and provenance.
-
-The minor release adds cross-axis boundary containment, map control styling parts and experimental
-independently owned `lr-map-anchor` panels. It also adds popup lifecycle notifications for
-`lr-locale-picker` and declarative ordering of existing basemap layers through
-`styleOverrides.before`. Maintenance corrections cover map URL-style readiness, absent basemap
-override targets, anchor visibility and direction changes, scoped theme restoration, file-tree reveal
-cancellation, select initialization, dialog ownership, focus restoration, heatmap exports, neighbor
-pagination and text-only agent message updates. Chart loading and progressive Markdown corrections
-also ship in 30.1.0. The new anchor brings the source inventory to 311 components and remains
-experimental.
-
-The integrated map and SSR suite passed 1,940 cases in each of Chromium, Firefox with WebGL, and
-WebKit, including basemap ordering, restoration and absent-target deferral. The locale-picker suite
-passed 133 cases in each engine, including vetoes, forced closes, rapid reversals and reconnects.
-The final versioned commit passed the complete release qualification; details and run links are in
-[test health](roadmap/test-health.md#current-3010-qualification). The published UI coverage value
-is 99.34%; the release retained and improved on the 30.0.0 baseline. The 99.74% and 99.80% goals
-remain open. The historical WebKit PDF timeout remains unexplained; passing focused reproductions
-establish no fix. Geospatial scenes remain unstarted and unassigned to a release.
-
-## Published 30.2 maintenance
-
-Delivered versions: [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0); [lyra-ide 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ide%4030.2.0); [lyra-translations 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-translations%4030.2.0); [lyra-map 1.3.1](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-map%401.3.1); [lyra-3d 1.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-3d%401.1.0); [lyra-docs 0.6.4](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-docs%400.6.4). lyra-flags remains at 2.3.1.
-
-All nineteen selected items have separate source, exercised-evidence and retained-limit records in
-the [maintenance status table](roadmap/30.2-maintenance.md#implementation-status). Map metadata
-preflight and preparation-runtime changes pass focused package and three-engine checks. The
-affected UI slice passes in Chromium, Firefox and WebKit; shared coverage/import-analysis tooling
-and hierarchy, chart and label helpers retain their characterization checks. Experimental maturity
-wording and localized catalog copy are corrected and deployed. Website qualification passes 71 locale checks and 311 component examples
-in each of five browser channels; live production and release freshness checks
-confirm 30.2.0 and 311 components.
-
-Shared synchronous admission, all-format asynchronous loading and UI adoption are implemented
-and reviewed. The latest 3D cleanup passes 686 unit checks and 106 packed cases in each of
-Chromium, Firefox and WebKit. Complete
-3D coverage reaches 100% lines/statements and 97.95% branches after the five additional critical
-worker-error and resource-cleanup tests. Complete UI coverage records 99.85% lines/statements,
-97.64% branches and 99.47% functions; raw coverage does not establish the Codecov full-hit result.
-
-Actual public synchronous GLB admission still costs about 44–49 ms against a roughly 12 ms
-baseline, with the required public changeset explanation under the advisory timing policy.
-Graph fallback preserves exact paired outputs and near-baseline large-workload throughput;
-twelve trusted interruption cases preserve exact replacement/disposal behavior during initialization
-before the first completed iteration. Three model cold-load pairs retain exact pixels/positions and
-request boundaries; the initial artifact gzip estimate falls from 181,525 to 170,847 bytes, but later
-format loads are slower. Dense upload fragmentation is corrected; the
-final full GPU campaign passes 48 runs, 24 pairs and 120 exact-output stages, retaining the disclosed
-CPU overhead. Document navigation has matching deterministic paired fixtures and a completed
-three-engine browser campaign, with its allocation tradeoff retained.
-
-Final candidate lint/spelling, metadata, architecture, quality generation and UI/companion
-package/bundle checks pass with the approved budget changes. The same-harness quick comparison
-passes all 15 scenarios and functional/count assertions but has 12 timing regressions and eight
-improvements across 150 metrics; advisory timing disclosure remains required. No selected
-implementation work remains. The final asynchronous model campaign passes 42 hardware-browser
-cases at 100k/1M vertices, including six trusted cancellations preserving the prior scene. Eight of
-eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms; 1M XYZ/PLY
-reaches 253–283 ms. Parser causation is unproven, and sampled main-realm heap excludes worker, GPU
-and whole-process peaks. No blanket absence of jank or performance improvement is claimed. Published on 2026-10-25 from
-[the versioned release commit](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
-Version stamping and version-stamped budget checks are complete. Exact-commit
-[CI](https://github.com/aceshooting/lyra-ui/actions/runs/40228786282) (43 successful jobs),
-[Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/40228792306) (17 successful jobs),
-[Full engine](https://github.com/aceshooting/lyra-ui/actions/runs/40228794063) (17 successful jobs), and
-[Quality tools](https://github.com/aceshooting/lyra-ui/actions/runs/40228795669) (all four jobs, including mutation testing
-and the A/B benchmark) pass. [CodeQL](https://github.com/aceshooting/lyra-ui/actions/runs/40228786249) and
-[Scorecard](https://github.com/aceshooting/lyra-ui/actions/runs/40228786316) pass.
-The [Release workflow](https://github.com/aceshooting/lyra-ui/actions/runs/40230882903) and all six package publications
-succeeded; npm package bytes match the GitHub release assets and verified provenance.
-
-## Shipped
-
-| Release | Delivered |
+| Area | Content |
 |---|---|
-| 21.1.0 | Deprecation records for the Lyra-only aliases removed in 23.0.0; `lr-app-rail` fallback focus target; `lr-map` fit-to-bounds; script-aware regional locale fallback. |
-| 22.0.0 | Independent persisted look, surface, density, mode and accent choices; Material-inspired look and glass surfaces; contrast, motion, typography, shape, elevation and chart-palette foundations; 34 additional translation catalogs with lazy loading, delta catalogs and a review-provenance manifest; agentic components (change review, questions, permissions, connectors, background runs, research progress, budget); lighter component cores; Node 22 and Popover API baseline. |
-| 22.1.0 | Deprecation notices and migration coverage for package-root component-class exports. |
-| 23.0.0 | Storybook theme builder (import/export, contrast diagnostics) and three optional looks (data, terminal, high contrast); removal of the eligible v21 aliases, entry points and types; `lyra-v21` and `lyra-v22` migration profiles retained. |
-| 24.0.0 | Removal of the eligible v22 compatibility APIs; implementation and test consolidation; documentation refresh. |
-| 25.0.0 | Shadcn, Glass, Emerald and System mode become the built-in appearance defaults; user-controlled Glass opacity. See `changelog/v25.md` for 25.x. |
-| 26.0.0 | Native `input`/`change` plus typed `lr-input`/`lr-change` across form controls; shared form-control size ladder; resize and focus event alignment; pickers mount options lazily. |
-| 27.0.0 | Editor data split into `@aceshooting/lyra-ide` and locale catalogs into `@aceshooting/lyra-translations`; agent skill bundled in the lyra-ui package (`npx lyra-ui init-agents`). |
-| 28.0.0 | One document-level design-token layer declared once per document and re-derived only at theme scopes (RFC 0002), with `adoptLyraTokens()` and `lyra-ui-migrate --rule=theme-scopes`; see `changelog/v28.md` for 28.x. |
-| 29.0.0 | Map and document editing load on demand: `lr-map` defaults to the optional `@aceshooting/lyra-map` companion, and the document editor bundles its engine internally. |
-| 29.2.0 | Regional difference catalogs `en-GB`, `es-419`, `fr-CA` and `zh-HK`; `@aceshooting/lyra-map` 1.2.0 on MapLibre 6.15; code-block highlighting without `Element.part`; dialog and tooltip focus and positioning fixes; test-stability fixes. |
-| 29.2.1 | Release and quality hardening: publishing fails unless npm serves the released tarball, `pnpm release:budgets` checks size budgets before the release commit, load-tolerant scale-test budgets, broader behavioural coverage with provably dead guards removed. No public API change. |
-| 30.0.0 | 310 components; immutable identity collections and migration support; expanded map adoption with lyra-map 1.3.0; optional WebGL views, `lr-chart-3d` and `lr-model-viewer` with lyra-3d 1.0.0; document-engine and release-quality updates. |
-| [30.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.1.0) | Experimental independent map anchors; cross-axis positioning and map-control styling; locale-picker lifecycle events; declarative basemap ordering; maintenance corrections. lyra-ui, lyra-ide and lyra-translations 30.1.0. Exact-commit qualification and verified npm publication completed 2026-10-25. |
-| 30.2.0 | [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0); IDE/translations 30.2.0, map 1.3.1, 3D 1.1.0 and experimental docs 0.6.4. All nineteen selected items delivered, including website production delivery. |
+| Corrections | Keyboard and focus handling, accessible names and live announcements, event and state lifecycles, stale asynchronous results, numeric guards, RTL and localization gaps, forced-colors support and hover/focus parity across all eleven component families. |
+| Consolidation | Shared internal helpers for list navigation, type-ahead, accessible-name resolution, focus repair, bidirectional text, scroll regions, owned observers, form-control state, validation, formatting, copy actions, pointer capture, remote viewer sources and map handlers replace duplicated per-component copies. No public API is removed. |
+| Additive API | New properties, events and parts where a correction needs a public surface, each with JSDoc, tests, a story, the family guide and regenerated editor data and event types. |
+| Deprecations | Contracts superseded by a correction that can coexist with it; their removal clock starts at publication. |
+| Size | The core registration bundle returns under its existing budget. |
+| Localization | New strings ship translated in every full catalog. |
+| Companions | lyra-map, lyra-3d and lyra-docs patch releases only where a correction reaches them. |
+
+### 31.4.0 — size, accuracy and test health
+
+- Per-component delivery cost ranked by bytes saved: remaining duplicated code, heavy import chains,
+  lazy registration and chunk candidates, each verified by size, budgets, the full suite and the
+  A/B benchmark. Lands in 31.3.0 instead if it is ready without delaying the corrections.
+- Source-comment tidiness (narrative and restated code removed; `dist` already strips comments) and
+  an accuracy pass over the consumer guides and generated references.
+- [Test health](roadmap/test-health.md): the Codecov full-hit goal of 99.80%, CI wall-clock under
+  15 minutes, and the remaining WebKit and Firefox lane hot spots.
+
+### 31.5.0 — enabling the next programs (additive)
+
+- Library hooks required by [Lyra Gen interoperability](roadmap/generative-ui.md#delivery-sequence)
+  (A2UI, MCP Apps, transport adapters, structured streaming) and persistent dashboards; Lyra Gen
+  itself ships independently in 1.x minors.
+- [Geospatial scenes P1](roadmap/geospatial-scenes.md#p1): typed globe and terrain configuration,
+  altitude-aware geometry and models, and a shared simulation clock around `lr-sequence-playback`,
+  with lyra-map 2.x minors where the engine needs them.
+- Conditional: once `@aceshooting/lyra-docs` qualifies its viewer parity, lyra-ui's document viewers
+  are deprecated in favour of the lyra-docs entry points (both keep working throughout 32.x).
+
+### 32.0.0 — direct contract corrections (major)
+
+- Corrections whose old behaviour cannot coexist with the correct one, each with a migration note
+  and, where mechanical, a rewrite in a new `lyra-v31` migration profile; older profiles stay for
+  consumers skipping majors.
+- No 31.x deprecation is removed in 32.0.0.
+
+### 32.x — features (minors, additive)
+
+- [Geospatial scenes P2](roadmap/geospatial-scenes.md#p2): custom 3D layers, camera tours and
+  tracking, and a network-monitoring showcase.
+- [lyra-3d 1.x](roadmap/lyra-3d.md#later-lyra-3d-1x): curved edges, DAG layouts, a custom node
+  renderer and optional glow, then 100k graph nodes behind a performance gate; WebXR only on demand.
+- A restrained Fluent-informed look, only on consumer demand.
+- Additional full catalogs, last: `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt` and Serbian Cyrillic
+  and Latin, about 1,600 messages each; Luxembourgish only when a reviewer and application demand exist.
+
+### 33.0.0 — deprecation removals (major)
+
+- Removal of the APIs and behaviours deprecated in 31.x (and any 32.x deprecation whose window has
+  passed). Old usage is run through the migration tool and the migrated fixture compiled and rendered
+  before removal; dead code, types, CSS, manifest and editor entries and docs go in the same change.
+- Conditional: removal of the deprecated lyra-ui document viewers once lyra-docs 1.0.0 has shipped.
+
+### Independent companion programs
+
+| Program | Plan |
+|---|---|
+| [Lyra Gen](roadmap/generative-ui.md) | 1.x minors: interoperability, then [persistent dashboards](roadmap/generative-ui.md#saved-document-and-sharing-contract); [evaluation campaigns](roadmap/generative-ui-evaluation.md); [website and live generation](roadmap/generative-ui-website.md) last. Advanced capabilities after feasibility ([backlog](roadmap/generative-ui-backlog.md)). |
+| [lyra-docs](roadmap/document-editing.md) | Phases 4 to 8 (pagination and Word fidelity, agent operations, review and tracked changes, collaboration and history, export and final qualification) toward 1.0.0, which also consolidates document viewers and editors ([qualification record](roadmap/document-editing-feasibility.md)). |
+| [lyra-map](roadmap/map-adoption.md) | 2.x minors for geospatial scenes and open map requests. |
+| [lyra-3d](roadmap/lyra-3d.md) | 1.x minors as above. |
+
+Every release, library or companion, passes its own qualification on the exact release commit, and
+maintained consumers are upgraded afterwards as described in
+[consumer rollout](#consumer-rollout-after-a-release).
 
 ## Standing contracts
 
@@ -254,49 +203,3 @@ translated, with self-canonical URLs, reciprocal `hreflang`, correct `lang`/`dir
 Search, component pages and agent-facing indexes derive from the published library's metadata, never
 a competing hand-written API inventory.
 
-## Next
-
-Generative UI is the next product workstream after maintenance follow-ups and takes priority over
-new lyra-3d and lyra-docs features. The [Lyra Gen roadmap](roadmap/generative-ui.md#delivery-sequence)
-retains existing map, 3D and document commitments while defining its own stages, qualification gates
-and independently versioned companion; correctness and security maintenance continues across packages.
-Remaining generative capabilities and website deliveries retain their stated acceptance criteria.
-No benchmark superiority or protocol conformance is established by this roadmap.
-
-The original delivery sequence and target versions are retained below; current status is recorded
-in the linked roadmaps. Targets follow semantic versioning and the `fixed` release group (`lyra-ui`,
-`lyra-ide` and `lyra-translations` share one version); companion packages version independently.
-A target moves only when scope changes, never to absorb a slip.
-
-| Target | Package versions | Scope |
-|---|---|---|
-| 30.3 target / independent | lyra-ui, lyra-ide and lyra-translations minor where needed; lyra-gen 0.1–0.2 | [Foundations and interactive chat](roadmap/generative-ui.md): Lyra Markup, reviewed catalogs, forms, data references, stable state, diagnostics and measured streaming improvements |
-| following minors / independent | lyra-gen 0.3; required library changes additive | [Interoperability](roadmap/generative-ui.md#compatibility-and-safety): qualified A2UI, official MCP Apps, transport adapters and structured outputs |
-| independent | lyra-gen 0.4 toward 1.0; affected companions independently | [Persistent application dashboards](roadmap/generative-ui.md#saved-document-and-sharing-contract): live/linked data, save and embed, permissions, shared publishing, revisions, conflict handling and export |
-| alongside qualified capabilities | public website | [Marketing, demo gallery, live chat, generation playground and comparisons](roadmap/generative-ui-website.md), with reproducible evidence and explicit live/recorded modes |
-| conditional | lyra-gen later releases | [Advanced capabilities](roadmap/generative-ui-backlog.md): sandboxed execution, real-time collaboration, additional output targets and multimodal integrations after feasibility |
-| 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
-| independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
-| on demand | lyra-ui minor | Fluent-informed look |
-| last | lyra-ui minors | Additional full catalogs |
-
-1. **30.2.0 maintenance delivered:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md) published on 2026-10-25. Website production delivery is complete; retained measurement limits remain authoritative.
-2. **Lyra Gen foundations and interactive chat first:** deliver the [generative UI stages](roadmap/generative-ui.md#delivery-sequence), with the qualified chat milestone taking priority over new 3D/document features; reassess companion scheduling after that milestone.
-3. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
-   optional glow, then 100k graph nodes with a performance gate.
-4. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
-   (pagination and Word fidelity), 0.8.0 phase 5 (agent-friendly document operations), 0.9.0 to
-   0.11.0 phases 6 to 8 in [document-editing.md](roadmap/document-editing.md), and 1.0.0 once
-   qualified, including the consolidation of document viewers and editors in `@aceshooting/lyra-docs`.
-5. **A restrained Fluent-informed look,** only on consumer demand, in a minor release.
-6. **Additional full catalogs (last):** `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, Serbian
-   Cyrillic and Latin (script-aware coverage), about 1,600 messages each, in minor releases;
-   Luxembourgish (`lb`) only when a reviewer and application demand exist.
-
-## After 30.1.0: geospatial scenes
-
-The [geospatial scenes plan](roadmap/geospatial-scenes.md) builds on the existing globe and terrain
-engine support and `lr-sequence-playback`. P1 covers typed globe/terrain settings and controls,
-altitude-aware geometry and models, and a shared simulation clock. P2 covers custom 3D layers,
-camera tours and tracking, and a generic network-monitoring showcase. All six items are planned
-and unstarted, with no assigned release version or date; none was included in 30.1.0.

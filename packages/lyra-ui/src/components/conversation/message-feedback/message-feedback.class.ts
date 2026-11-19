@@ -31,6 +31,7 @@ import {
 } from '../../../internal/converters.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
@@ -523,6 +524,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     }
   }
 
+  /** A synchronous `lr-feedback-change` listener may rewrite the rating, disable or detach this
+   *  control; a follow-on persistence request must not act on that stale interaction. */
+  private feedbackIsCurrent(rating: MessageFeedbackValue): boolean {
+    return this.isConnected && !this.disabled && !this.pending && this.rating === rating;
+  }
+
   private setRatingFromInteraction(rating: MessageFeedbackValue): void {
     this.pendingInternalRating = { rating };
     this.rating = rating;
@@ -538,6 +545,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         this.selectedReasonIds = [];
         this.commentDraft = '';
         this.emit('lr-feedback-change', { rating: null });
+        if (!this.feedbackIsCurrent(null)) return;
         this.requestSubmission({ rating: null, reasonIds: [], comment: '' }, previousRating, true);
         return;
       }
@@ -549,6 +557,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
       }
       this.setRatingFromInteraction(null);
       this.emit('lr-feedback-change', { rating: null });
+      if (!this.feedbackIsCurrent(null)) return;
       this.requestSubmission({ rating: null, reasonIds: [], comment: '' }, previousRating, false);
       return;
     }
@@ -557,7 +566,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.setRatingFromInteraction(next);
     this.panelOpen = this.detailApplies(next) && this.hasDetailContent;
     this.emit('lr-feedback-change', { rating: next });
-    if (!this.panelOpen) {
+    if (!this.panelOpen && this.feedbackIsCurrent(next)) {
       this.requestSubmission({ rating: next, reasonIds: [], comment: '' }, previousRating, false);
     }
   }
@@ -573,7 +582,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   }
 
   private onPanelKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Escape') return;
+    if (e.key !== 'Escape' || shouldIgnoreNavigationKey(e)) return;
     e.stopPropagation();
     this.closePanel();
   };

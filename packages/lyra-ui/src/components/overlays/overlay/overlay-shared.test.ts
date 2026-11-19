@@ -8,7 +8,7 @@ import {
   OverlayTransitionGate,
   resolveOverlayTriggerById,
   settleOverlayTransition,
-} from './overlay-shared.js';
+} from '../../../internal/overlay-shared.js';
 
 it('replaces a pending overlay delay without committing the old direction', async () => {
   const timer = new OverlayDelayTimer();
