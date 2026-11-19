@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Tööriista parameetrite skeemid toetavad kuni {fields} välja ja kuni {options} valikut välja kohta.',
   testResultsLimit: 'Kuvatakse ainult esimesed {count} testitulemust.',
   toolTimelineLimit: 'Kuvatakse kuni {count} tööriistakutset.',
+  toolTimelineLoadError: 'Tööriista vaadet ei õnnestunud laadida.',
   toolSelectLimit: 'Kuvatakse ainult esimesed {count} tööriista.',
   testResultsInputTooLarge: 'Testitulemuste üksikasjad ületavad kuvamispiirangu.',
   toolCall: 'Tööriistakutse',

@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Susa ukuphina ukuzulazula',
   appRailItemCollapse: 'Goqa u-{label}',
   appRailItemExpand: 'Nweba u-{label}',
+  appRailItemToggle: 'Bonisa noma ufihle u-{label}',
+  appRailGroupToggle: 'Iqembu lokuzulazula',
   resizeValuePercent: 'Amaphesenti angu-{value}',
   commandPaletteLabel: 'Iphalethi yemiyalo',
   commandPalettePlaceholder: 'Sesha imiyalo…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} umyalo',
     other: '{count} imiyalo',
   },
+  tabCloseAction: 'Vala u-{label}',
+  stepperStateCompleted: 'Kuqediwe',
+  stepperStateError: 'Iphutha',
+  stepperStatePending: 'Akuqalwa',
+  stepperStateLocked: 'Kukhiyiwe',
   commandPaletteInputLimit: 'Eminye imiyalo ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
 };
 

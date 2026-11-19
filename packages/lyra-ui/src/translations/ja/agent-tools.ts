@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ツールパラメータのスキーマでは、フィールドは最大 {fields} 件、各フィールドの選択肢は最大 {options} 件までサポートされます。',
   testResultsLimit: '最初の {count} 件のテスト結果のみを表示しています。',
   toolTimelineLimit: 'ツール呼び出しは最大 {count} 件まで表示されます。',
+  toolTimelineLoadError: 'ツールビューを読み込めませんでした。',
   toolSelectLimit: '最初の {count} 件のツールのみを表示しています。',
   testResultsInputTooLarge: 'テスト結果の詳細が表示上限を超えています。',
   toolCall: 'ツール呼び出し',

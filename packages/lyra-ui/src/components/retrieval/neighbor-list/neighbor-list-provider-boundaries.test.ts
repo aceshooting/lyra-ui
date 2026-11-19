@@ -180,3 +180,12 @@ describe('neighbor-list reveal against a provider that turns hostile mid-reveal'
     expect(revealed).to.equal(false);
   });
 });
+
+it('keeps the visible node text inside a source row accessible name', async () => {
+  const source = { revision: 1, records: { revision: 1,
+    query: async () => ({ rows: [{ key: 'node:a', order: 0, value: { kind: 'node' as const, value: { id: 'a', label: 'Marie', accessibleLabel: 'Physicist', type: 'person' } } }], total: 1, summary: { nodes: 1, edges: 0 } }),
+    locate: async () => null, lookup: async () => [] }, scene: async () => { throw new Error('unused'); } };
+  const el = await fixture<LyraNeighborList>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:c'}></lr-neighbor-list>`);
+  await waitUntil(() => el.shadowRoot!.querySelector('[data-source-key]'));
+  expect(el.shadowRoot!.querySelector('[data-source-key]')!.getAttribute('aria-label')).to.equal('Marie Physicist');
+});

@@ -5,7 +5,7 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part~="base"] {
     display: block;
@@ -16,7 +16,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-breadcrumb-gap, var(--lr-space-xs));
     margin: 0;
     padding: 0;
     min-inline-size: 0;

@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'เลือกอย่างน้อยหนึ่งตัวเลือก',
   tokenInputRequired: 'ป้อนค่าอย่างน้อยหนึ่งค่า',
   tokenInputEditWithContext: 'แก้ไข {label}',
+  tokenInputLabel: 'โทเคน',
   iconButtonLabel: 'ปุ่ม',
   codeEditorLabel: 'ตัวแก้ไขโค้ด',
   switchRequired: 'โปรดเปิดตัวเลือกนี้',
@@ -112,6 +113,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'วางปากกาแล้ว',
   signaturePadPenUp: 'ยกปากกาแล้ว',
+  signaturePadDrawingLimit: 'ถึงขีดจำกัดการวาดแล้ว',
   localePickerInputLimit: 'มีเฉพาะรายการภาษาและภูมิภาค 512 รายการแรกเท่านั้น',
   emojiPickerInputLimit: 'ละข้อมูลอีโมจิบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า',
 };

@@ -120,6 +120,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Mogħdija',
   pathNodeStatus: '{label}, nodu {position} minn {total}',
   pathRelationStatus: '{relation}, relazzjoni',
+  pathRelationForward: 'immirat lejn in-nodu li jmiss',
+  pathRelationReverse: 'immirat lejn in-nodu preċedenti',
   neighborListLabel: 'Relazzjonijiet',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Espandi {label} fil-graff',

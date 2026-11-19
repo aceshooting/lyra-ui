@@ -17,7 +17,7 @@ export const styles = css`
   [part='legend'] {
     max-inline-size: 100%;
     padding-inline: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-lg);
+    font-size: var(--lr-decision-legend-font-size, var(--lr-font-size-lg));
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
@@ -78,6 +78,12 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  [part='status']:where([data-status='error']) {
+    color: var(--lr-decision-negative-color, var(--lr-color-danger));
+  }
+  [part='status']:where([data-status='connected']) {
+    color: var(--lr-decision-positive-color, var(--lr-color-success));
+  }
   /* no-hover-state: a read-only status that only takes focus by script. */
   [part='status']:focus-visible {
     ${focusRing}

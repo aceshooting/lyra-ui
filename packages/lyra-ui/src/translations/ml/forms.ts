@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'കുറഞ്ഞത് ഒരു ഓപ്ഷനെങ്കിലും തിരഞ്ഞെടുക്കുക.',
   tokenInputRequired: 'കുറഞ്ഞത് ഒരു മൂല്യമെങ്കിലും നൽകുക.',
   tokenInputEditWithContext: '{label} തിരുത്തുക',
+  tokenInputLabel: 'ടോക്കണുകൾ',
   iconButtonLabel: 'ബട്ടൺ',
   codeEditorLabel: 'കോഡ് എഡിറ്റർ',
   switchRequired: 'ഇത് ഓൺ ചെയ്യുക.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'പേന താഴെ',
   signaturePadPenUp: 'പേന മുകളിൽ',
+  signaturePadDrawingLimit: 'വരയ്ക്കാനുള്ള പരിധിയിലെത്തി.',
   localePickerInputLimit: 'ആദ്യത്തെ 512 ഭാഷാ-പ്രദേശ ക്രമീകരണ എൻട്രികൾ മാത്രമേ ലഭ്യമാകൂ.',
   emojiPickerInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ചില ഇമോജി ഡാറ്റ ഒഴിവാക്കി.',
 };

@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'رهنمائي کان پن هٽايو',
   appRailItemCollapse: '{label} سميٽيو',
   appRailItemExpand: '{label} وڌايو',
+  appRailItemToggle: '{label} ڏيکاريو يا لڪايو',
+  appRailGroupToggle: 'رهنمائي جو گروپ',
   resizeValuePercent: '{value} سيڪڙو',
   commandPaletteLabel: 'ڪمانڊ پيلٽ',
   commandPalettePlaceholder: 'ڪمانڊ ڳوليو…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} حڪم',
     other: '{count} حڪم',
   },
+  tabCloseAction: '{label} بند ڪريو',
+  stepperStateCompleted: 'مڪمل',
+  stepperStateError: 'غلطي',
+  stepperStatePending: 'شروع نه ٿيو',
+  stepperStateLocked: 'بند ڪيل',
   commandPaletteInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ڪجهه حڪم ڇڏيا ويا آهن.',
 };
 

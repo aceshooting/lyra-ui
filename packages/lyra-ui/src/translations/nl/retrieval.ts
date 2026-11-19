@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Pad',
   pathNodeStatus: '{label}, knooppunt {position} van {total}',
   pathRelationStatus: '{relation}, relatie',
+  pathRelationForward: 'gericht op het volgende knooppunt',
+  pathRelationReverse: 'gericht op het vorige knooppunt',
   neighborListLabel: 'Relaties',
   neighborRowLabel: '{label}, {relation}, richting {direction}',
   neighborExpand: '{label} uitvouwen in grafiek',

@@ -126,6 +126,10 @@ describe('lr-knowledge-graph-explorer derived bindings', () => {
     expect(buttons().length).to.equal(50);
     expect(buttons().filter((button) => button.tabIndex === 0).length).to.equal(1);
     await focusByKeyboard(buttons()[0]!);
+    const composing = new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 229, bubbles: true, cancelable: true });
+    buttons()[0]!.dispatchEvent(composing);
+    expect(composing.defaultPrevented).to.equal(false);
+    expect(explorer.shadowRoot!.activeElement === buttons()[0]).to.equal(true);
     await sendKeys({ press: 'ArrowDown' });
     await explorer.updateComplete;
     expect(explorer.shadowRoot!.activeElement === buttons()[1], 'focus moved down').to.equal(true);

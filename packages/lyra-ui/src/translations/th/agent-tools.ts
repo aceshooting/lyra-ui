@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'สคีมาพารามิเตอร์เครื่องมือรองรับได้สูงสุด {fields} ฟิลด์และ {options} ตัวเลือกต่อฟิลด์',
   testResultsLimit: 'แสดงเฉพาะผลการทดสอบ {count} รายการแรก',
   toolTimelineLimit: 'แสดงการเรียกใช้เครื่องมือไม่เกิน {count} รายการ',
+  toolTimelineLoadError: 'โหลดมุมมองเครื่องมือไม่สำเร็จ',
   toolSelectLimit: 'แสดงเฉพาะเครื่องมือ {count} รายการแรก',
   testResultsInputTooLarge: 'รายละเอียดผลการทดสอบเกินขีดจำกัดการแสดงผล',
   toolCall: 'การเรียกใช้เครื่องมือ',

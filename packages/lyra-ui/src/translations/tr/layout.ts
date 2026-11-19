@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Gezinme menüsünün sabitlemesini kaldır',
   appRailItemCollapse: '{label} öğesini daralt',
   appRailItemExpand: '{label} öğesini genişlet',
+  appRailItemToggle: '{label} öğesini göster veya gizle',
+  appRailGroupToggle: 'Gezinme grubu',
   resizeValuePercent: 'yüzde {value}',
   commandPaletteLabel: 'Komut paleti',
   commandPalettePlaceholder: 'Komutlarda ara…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} komutu',
     other: '{count} komut',
   },
+  tabCloseAction: '{label} sekmesini kapat',
+  stepperStateCompleted: 'Tamamlandı',
+  stepperStateError: 'Hata',
+  stepperStatePending: 'Başlamadı',
+  stepperStateLocked: 'Kilitli',
   commandPaletteInputLimit: 'Girdi sınırına ulaşıldığı için bazı komutlar atlandı.',
 };
 

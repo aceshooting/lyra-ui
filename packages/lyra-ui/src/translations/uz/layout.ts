@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Navigatsiyani mahkamdan chiqarish',
   appRailItemCollapse: '{label}ni yigʻish',
   appRailItemExpand: '{label}ni yoyish',
+  appRailItemToggle: '{label}ni koʻrsatish yoki yashirish',
+  appRailGroupToggle: 'Navigatsiya guruhi',
   resizeValuePercent: '{value} foiz',
   commandPaletteLabel: 'Buyruqlar palitrasi',
   commandPalettePlaceholder: 'Buyruqlarni qidirish…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} buyrugʻi',
     other: '{count} ta buyruq',
   },
+  tabCloseAction: '{label}ni yopish',
+  stepperStateCompleted: 'Bajarildi',
+  stepperStateError: 'Xato',
+  stepperStatePending: 'Boshlanmagan',
+  stepperStateLocked: 'Qulflangan',
   commandPaletteInputLimit: 'Kiritish chegarasiga yetilgani sababli ayrim buyruqlar tushirib qoldirildi.',
 };
 

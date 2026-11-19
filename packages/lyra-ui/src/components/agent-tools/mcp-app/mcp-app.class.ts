@@ -248,6 +248,7 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * @event lr-mcp-log - The frame sent a diagnostic value.
  * @event lr-mcp-resize - The frame requested a clamped height.
  * @csspart base - The sandbox frame wrapper.
+ * @cssprop --lr-mcp-app-frame-height - Overrides the computed frame block size.
  * @csspart frame - The sandboxed iframe.
  * @csspart loading - The pre-load status.
  * @csspart error - The invalid-resource error.
@@ -393,8 +394,13 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     }
   }
 
-  private createFrameNonce(): string {
-    return crypto.randomUUID();
+  private createFrameNonce(): string | undefined {
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    } catch {
+      return undefined;
+    }
   }
 
   private onLoad(
@@ -416,7 +422,6 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       this.invalidateFrame();
       return;
     }
-    this.frameNonce ??= this.createFrameNonce();
     const frame = event.currentTarget as HTMLIFrameElement;
     const port = new MessageChannel();
     this.framePort = port.port1;
@@ -528,10 +533,16 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     transferPort?: MessagePort,
   ): void {
     const nonce = this.frameNonce;
-    if (typeof nonce !== 'string') return;
+    if (typeof nonce !== 'string') {
+      transferPort?.close();
+      return;
+    }
     if (transferPort) {
       const target = frame?.contentWindow;
-      if (!target) return;
+      if (!target) {
+        transferPort.close();
+        return;
+      }
       target.postMessage({ ...message, nonce }, '*', [transferPort]);
       return;
     }
@@ -614,7 +625,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
 
   override render(): TemplateResult {
     const resource = resolveResource(this.resource);
-    if (!resource) {
+    if (!resource || !this.frameNonce) {
       return html`<div part="base"><p part="error">${this.localize('mcpAppUnavailable')}</p></div>`;
     }
     const propertyLabel = !this.hasAttribute('aria-label') && typeof this.accessibleLabel === 'string'
@@ -635,7 +646,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
           allow=${permissionPolicy(resource.resource.permissions)}
           src=${this.protocol === 'mcp-apps' ? nothing : resource.src ?? nothing}
           .srcdoc=${this.protocol === 'mcp-apps' ? this.proxyDocument(resource) : resource.html ? withCsp(resource.html, resource.resource.csp) : nothing}
-          style=${styleMap({ height: `${this.frameHeight}px` })}
+          style=${styleMap({ '--_lr-mcp-app-frame-height': `${this.frameHeight}px` })}
           @load=${(event: Event) => this.onLoad(event, frameGeneration, resource)}
         ></iframe>`,
       )}

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Schemele parametrilor de instrument admit cel mult {fields} câmpuri și {options} opțiuni pe câmp.',
   testResultsLimit: 'Sunt afișate doar primele {count} rezultate de test.',
   toolTimelineLimit: 'Sunt afișate cel mult {count} apeluri de instrumente.',
+  toolTimelineLoadError: 'Nu s-a putut încărca vizualizarea instrumentului.',
   toolSelectLimit: 'Sunt afișate doar primele {count} instrumente.',
   testResultsInputTooLarge: 'Detaliile rezultatelor testelor depășesc limita de afișare.',
   toolCall: 'Apel de instrument',

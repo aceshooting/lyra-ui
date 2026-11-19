@@ -181,3 +181,10 @@ describe('lr-permission-grant', () => {
     expect(fieldset.scrollWidth).to.be.at.most(fieldset.clientWidth);
   });
 });
+
+describe('lr-permission-grant bidi', () => {
+  it('renders the scope as left-to-right text in a right-to-left host', async () => {
+    const el = await fixture<LyraPermissionGrant>(html`<lr-permission-grant dir="rtl" scope="accounts:read"></lr-permission-grant>`);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="scope"]')!).direction).to.equal('ltr');
+  });
+});

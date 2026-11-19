@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'د لارموندنې ټنګېدل لرې کول',
   appRailItemCollapse: '{label} راټولول',
   appRailItemExpand: '{label} غځول',
+  appRailItemToggle: '{label} ښکاره یا پټ کړئ',
+  appRailGroupToggle: 'د لارموندنې ډله',
   resizeValuePercent: '{value} سلنه',
   commandPaletteLabel: 'د امرونو تخته',
   commandPalettePlaceholder: 'امرونه ولټوئ…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} کمانډ',
     other: '{count} حکمونه',
   },
+  tabCloseAction: '{label} وتړئ',
+  stepperStateCompleted: 'بشپړ شو',
+  stepperStateError: 'تېروتنه',
+  stepperStatePending: 'نه دی پیل شوی',
+  stepperStateLocked: 'بند شوی',
   commandPaletteInputLimit: 'د ننوتلو حد ته د رسېدو له امله ځینې امرونه پرېښودل شوي دي.',
 };
 

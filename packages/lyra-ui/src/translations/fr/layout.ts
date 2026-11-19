@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Désépingler la navigation',
   appRailItemCollapse: 'Réduire {label}',
   appRailItemExpand: 'Développer {label}',
+  appRailItemToggle: 'Développer ou réduire {label}',
+  appRailGroupToggle: 'Groupe de navigation',
   resizeValuePercent: '{value} pour cent',
   commandPaletteLabel: 'Palette de commandes',
   commandPalettePlaceholder: 'Rechercher des commandes…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     many: '{count} commandes',
     other: '{count} commandes',
   },
+  tabCloseAction: 'Fermer {label}',
+  stepperStateCompleted: 'Terminé',
+  stepperStateError: 'Erreur',
+  stepperStatePending: 'Non commencé',
+  stepperStateLocked: 'Verrouillé',
   commandPaletteInputLimit: 'La limite d’entrée a été atteinte. Éléments omis : commandes.',
 };
 

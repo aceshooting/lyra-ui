@@ -134,7 +134,7 @@ export const styles = css`
     color: var(--lr-color-text);
     background: var(--lr-color-surface);
   }
-  [part='row']:where([aria-selected='true']) { font-weight: var(--lr-font-weight-bold); }
+  [part='row']:where([aria-selected='true']) { background: var(--lr-embedding-explorer-row-selected-fill, var(--lr-color-brand-fill-quiet)); font-weight: var(--lr-font-weight-bold); }
   [part='row']:hover { text-decoration: underline; }
   [part='row']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
   [part='row']:active { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); }
@@ -154,39 +154,12 @@ export const styles = css`
   [part='page-button']:hover { text-decoration: underline; }
   [part='page-button']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
   [part='page-button']:active { border-color: var(--lr-color-brand); }
-  [part='page-button']:disabled { cursor: default; opacity: var(--lr-opacity-disabled); }
+  [part='page-button']:disabled { background: var(--lr-embedding-explorer-page-disabled-fill, var(--lr-color-surface)); cursor: default; opacity: var(--lr-opacity-disabled); }
 
 
-  [part='legend'] {
-    display: flex;
-    flex-wrap: wrap;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    gap: var(--lr-space-s);
-    align-items: center;
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
-  }
+  lr-graph-legend::part(item) { padding: 0; color: var(--lr-color-text-quiet); }
+  lr-graph-legend::part(label) { overflow-wrap: anywhere; white-space: normal; }
 
-  [part='legend-item'] {
-    display: inline-flex;
-    align-items: center;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    gap: var(--lr-space-2xs);
-  }
-
-  [part='legend-swatch'] {
-    inline-size: var(--lr-size-0-75rem);
-    block-size: var(--lr-size-0-75rem);
-    border-radius: var(--lr-radius-xs);
-    flex: none;
-  }
-
-  [part='legend-label'] {
-    min-inline-size: 0;
-    overflow-wrap: anywhere;
-  }
 
   [part='empty'] {
     margin: 0;
@@ -198,6 +171,11 @@ export const styles = css`
   @container ${compactContainerQuery} {
     [part='plot'] {
       min-block-size: var(--lr-size-12rem);
+    }
+  }
+  @media (forced-colors: active) {
+    .point-marker {
+      forced-color-adjust: none;
     }
   }
 `;

@@ -9,6 +9,7 @@ export const styles = css`
   }
 
   [part='base'] {
+    position: relative;
     min-inline-size: 0;
     overflow: hidden;
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
@@ -17,6 +18,7 @@ export const styles = css`
   }
 
   [part='frame'] {
+    block-size: var(--lr-mcp-app-frame-height, var(--_lr-mcp-app-frame-height));
     display: block;
     inline-size: 100%;
     border: 0;
@@ -30,6 +32,11 @@ export const styles = css`
   }
 
   [part='loading'] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    pointer-events: none;
+    background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
   }
 

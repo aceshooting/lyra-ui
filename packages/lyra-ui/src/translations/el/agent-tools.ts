@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Τα σχήματα παραμέτρων εργαλείων υποστηρίζουν έως {fields} πεδία και {options} επιλογές ανά πεδίο.',
   testResultsLimit: 'Εμφανίζονται μόνο τα πρώτα {count} αποτελέσματα δοκιμών.',
   toolTimelineLimit: 'Εμφανίζονται έως {count} κλήσεις εργαλείων.',
+  toolTimelineLoadError: 'Δεν ήταν δυνατή η φόρτωση της προβολής εργαλείου.',
   toolSelectLimit: 'Εμφανίζονται μόνο τα πρώτα {count} εργαλεία.',
   testResultsInputTooLarge: 'Οι λεπτομέρειες των αποτελεσμάτων δοκιμών υπερβαίνουν το όριο εμφάνισης.',
   toolCall: 'Κλήση εργαλείου',

@@ -76,3 +76,14 @@ it('fails closed on an entry whose redaction list hides a field behind an access
   expect(reads).to.equal(0);
   expect(el.shadowRoot!.textContent).not.to.include('sk-live');
 });
+
+it('contains the nested dialog decision-settled notification', async () => {
+  const entries: ToolTimelineEntry[] = [{ id: 'call-1', name: 'write_file', status: 'pending', needsApproval: true, args: {} }];
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`);
+  const seen: string[] = [];
+  el.addEventListener('lr-decision-settled', () => seen.push('host'));
+  document.addEventListener('lr-decision-settled', () => seen.push('document'), { once: true });
+  dialog(el).dispatchEvent(new CustomEvent('lr-decision-settled', { bubbles: true, composed: true, detail: { decision: 'approved' } }));
+  expect(seen).to.deep.equal([]);
+  document.dispatchEvent(new CustomEvent('lr-decision-settled'));
+});

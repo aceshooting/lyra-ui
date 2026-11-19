@@ -15,6 +15,7 @@ expectLocaleFallback('de-DE', [
   'edit',
   'envListValueHidden',
   'jsonObject',
+  'jsonViewerLabel',
   'statusSuccess',
   'toolApprovalGenericTool',
   'toolApprovalHeading',
@@ -140,7 +141,8 @@ it('exposes a vetoed approval at the timeline boundary and lets a host revert it
   const retry = oneEvent(el, 'lr-tool-approval-decide-request');
   approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
   const event = (await retry) as CustomEvent<ToolTimelineApprovalDetail>;
-  expect(event.detail).to.deep.equal({ invocationId: 'call-1', approved: true, args: { path: '/workspace/retry.md' } });
+  expect(typeof event.detail.waitUntil).to.equal('function');
+  expect(event.detail).to.deep.equal({ invocationId: 'call-1', approved: true, args: { path: '/workspace/retry.md' }, waitUntil: event.detail.waitUntil });
   await el.updateComplete;
   expect(approvalDialog.open).to.be.false;
 });
@@ -577,7 +579,8 @@ it('emits lr-tool-approval-decide-request with approved:true and the dialog args
   const listener = oneEvent(el, 'lr-tool-approval-decide-request');
   dialog(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
   const event = (await listener) as CustomEvent<ToolTimelineApprovalDetail>;
-  expect(event.detail).to.deep.equal({ invocationId: 'call-approve', approved: true, args: { path: '/tmp/x' } });
+  expect(typeof event.detail.waitUntil).to.equal('function');
+  expect(event.detail).to.deep.equal({ invocationId: 'call-approve', approved: true, args: { path: '/tmp/x' }, waitUntil: event.detail.waitUntil });
   await el.updateComplete;
   expect(dialog(el).open).to.be.false;
 });
@@ -591,7 +594,8 @@ it('emits lr-tool-approval-decide-request with approved:false (no args) on deny'
   const listener = oneEvent(el, 'lr-tool-approval-decide-request');
   dialog(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
   const event = (await listener) as CustomEvent<ToolTimelineApprovalDetail>;
-  expect(event.detail).to.deep.equal({ invocationId: 'call-deny', approved: false });
+  expect(typeof event.detail.waitUntil).to.equal('function');
+  expect(event.detail).to.deep.equal({ invocationId: 'call-deny', approved: false, waitUntil: event.detail.waitUntil });
 });
 
 it('lr-tool-approval-decide-request reports cancelable:true, and only a prevented listener keeps the dialog open', async () => {
@@ -1196,17 +1200,16 @@ describe('lr-tool-timeline grouped disclosure', () => {
     await group.updateComplete;
     expect(group.open).to.equal(false);
     const summary = group.querySelector('[slot="summary"]')!;
-    expect(summary.textContent).to.include('Used Search and Read');
-    expect(summary.textContent).to.include('Running');
+    expect(summary.textContent).to.include('Using Search and Read');
     const control = group.shadowRoot!.querySelector('summary')!;
     control.click();
     await group.updateComplete;
     expect(control.getAttribute('aria-expanded')).to.equal('true');
     expect(group.querySelectorAll('[part="entry"]').length).to.equal(3);
     el.entries = [makeEntry({ status: 'error' }), ...entries];
-    el.strings = { toolCallBlockHeaderSuccess: 'Tools ({name})' };
+    el.strings = { toolCallBlockHeaderError: 'Tools failed ({name})' };
     await el.updateComplete;
-    expect(summary.textContent).to.include('Tools (');
+    expect(summary.textContent).to.include('Tools failed (');
     expect(summary.getAttribute('data-status')).to.equal('error');
     expect(group.open).to.equal(true);
     el.groupSummary = 'Research';
@@ -1215,16 +1218,30 @@ describe('lr-tool-timeline grouped disclosure', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('words the group header by its worst status instead of always saying Used', async () => {
+    const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline grouped
+      .entries=${[makeEntry({ id: 'a', displayName: 'Search', status: 'error' }), makeEntry({ id: 'b', displayName: 'Read' })]}
+    ></lr-tool-timeline>`);
+    const summary = el.shadowRoot!.querySelector('[part="group-summary"]')!;
+    expect(summary.textContent).to.include('Failed to use');
+    expect(summary.textContent).to.not.include('Used ');
+    expect(summary.querySelector('.sr-only') === null).to.equal(true);
+  });
+
   it('preserves a slotted summary and its status when entries change', async () => {
     const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline grouped group-summary="Fallback"
       .entries=${[makeEntry({ status: 'pending' })]}
     ><span slot="summary">Research steps</span></lr-tool-timeline>`);
     const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="summary"]')!;
     expect(slot.assignedElements()[0]?.textContent).to.equal('Research steps');
+    el.groupSummary = '';
     for (const status of ['denied', 'running', 'pending', 'incomplete', 'success'] as const) {
       el.entries = [makeEntry({ status }), makeEntry({ id: 'other' })];
       await el.updateComplete;
       expect(slot.parentElement?.dataset['status']).to.equal(status);
+      expect(slot.parentElement?.querySelector('.sr-only')?.textContent?.trim()).to.equal(
+        status === 'success' ? 'Success' : status[0]!.toUpperCase() + status.slice(1),
+      );
     }
     el.entries = [];
     await el.updateComplete;

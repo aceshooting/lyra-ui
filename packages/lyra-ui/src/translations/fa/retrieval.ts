@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'مسیر',
   pathNodeStatus: '{label}، گره {position} از {total}',
   pathRelationStatus: '{relation}، رابطه',
+  pathRelationForward: 'هدایت‌شده به گره بعدی',
+  pathRelationReverse: 'هدایت‌شده به گره قبلی',
   neighborListLabel: 'روابط',
   neighborRowLabel: '{label}، {relation}، {direction}',
   neighborExpand: 'گسترش {label} در گراف',

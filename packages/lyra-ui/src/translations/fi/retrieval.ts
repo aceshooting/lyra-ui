@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Polku',
   pathNodeStatus: '{label}, solmu {position}/{total}',
   pathRelationStatus: '{relation}, suhde',
+  pathRelationForward: 'suunnattu seuraavaan solmuun',
+  pathRelationReverse: 'suunnattu edelliseen solmuun',
   neighborListLabel: 'Suhteet',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Laajenna graafissa: {label}',

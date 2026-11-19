@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Sinusuportahan ng schema ng parameter ng tool ang hanggang {fields} field at {options} pagpipilian bawat field.',
   testResultsLimit: 'Ang unang {count} resulta ng test lang ang ipinapakita.',
   toolTimelineLimit: 'Hanggang {count} tawag ng tool lang ang ipinapakita.',
+  toolTimelineLoadError: 'Hindi ma-load ang view ng tool.',
   toolSelectLimit: 'Ang unang {count} tool lang ang ipinapakita.',
   testResultsInputTooLarge: 'Lampas sa limitasyon ng pagpapakita ang mga detalye ng resulta ng pagsubok.',
   toolCall: 'Tawag ng tool',

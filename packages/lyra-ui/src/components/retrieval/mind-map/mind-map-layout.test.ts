@@ -1,7 +1,8 @@
+import { snapshotMindMapTopics } from './mind-map-model.js';
 import { expect } from '@open-wc/testing';
 import {
   decimateMindMapLayout,
-  layoutMindMap,
+  createMindMapLayout,
   type LyraTopic,
 } from './mind-map-layout.js';
 import {
@@ -61,14 +62,14 @@ describe('retrieval identity helpers', () => {
 });
 
 it('returns an empty result for an empty topics array', () => {
-  const result = layoutMindMap([], 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout([])('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   expect(result.placed).to.deep.equal([]);
   expect(result.links).to.deep.equal([]);
 });
 
 it('places a single root with no synthetic hub, at depth 0', () => {
   const topics: LyraTopic[] = [{ id: 'root', label: 'Root' }];
-  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   expect(result.placed.length).to.equal(1);
   expect(result.placed[0]!.id).to.equal('root');
   expect(result.placed[0]!.depth).to.equal(0);
@@ -79,7 +80,7 @@ it('wraps multiple roots in an implicit hub whose label is the given hubLabel', 
     { id: 'a', label: 'A' },
     { id: 'b', label: 'B' },
   ];
-  const result = layoutMindMap(topics, 'My Mind Map', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout(topics)('My Mind Map', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   const hub = result.placed.find((p) => p.depth === 0)!;
   expect(hub.label).to.equal('My Mind Map');
   expect(result.placed.length).to.equal(3); // hub + a + b
@@ -91,7 +92,7 @@ it('keeps the synthetic hub distinct when a caller owns the usual hub spelling',
     { id: '__hub__', label: 'Caller hub' },
     { id: 'other', label: 'Other' },
   ];
-  const result = layoutMindMap(topics, 'Synthetic hub', {
+  const result = createMindMapLayout(topics)('Synthetic hub', {
     ringGap: 96,
     rtl: false,
     isExpanded: alwaysExpanded,
@@ -119,7 +120,7 @@ it('drops invalid and later duplicate identities across the complete hierarchy',
     { id: 'shared', label: 'Duplicate in another branch' },
   ] as unknown as LyraTopic[];
 
-  const result = layoutMindMap(topics, 'Hub', {
+  const result = createMindMapLayout(topics)('Hub', {
     ringGap: 96,
     rtl: false,
     isExpanded: alwaysExpanded,
@@ -139,7 +140,7 @@ it('treats a non-array runtime children collection as an empty branch', () => {
     children: { 0: { id: 'hidden', label: 'Hidden' }, length: 1 },
   }] as unknown as LyraTopic[];
 
-  const result = layoutMindMap(topics, 'Hub', {
+  const result = createMindMapLayout(topics)('Hub', {
     ringGap: 96,
     rtl: false,
     isExpanded: alwaysExpanded,
@@ -153,7 +154,7 @@ it("subdivides a parent arc proportionally to each child subtree's visible leaf 
   const topics: LyraTopic[] = [
     { id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }, { id: 'c2', label: 'C2' }] },
   ];
-  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   const c1 = result.placed.find((p) => p.id === 'c1')!;
   const c2 = result.placed.find((p) => p.id === 'c2')!;
   expect(c1.angle).to.be.closeTo(Math.PI / 2, 0.0001);
@@ -162,7 +163,7 @@ it("subdivides a parent arc proportionally to each child subtree's visible leaf 
 
 it("sibling order runs clockwise from 12 o'clock (angle 0) in LTR", () => {
   const topics: LyraTopic[] = [{ id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }] }];
-  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   const c1 = result.placed.find((p) => p.id === 'c1')!;
   // A single child fills the whole [0, 2*pi) span -- its midpoint is pi.
   expect(c1.angle).to.be.closeTo(Math.PI, 0.0001);
@@ -179,7 +180,7 @@ it("a collapsed node stops recursion and counts as one leaf for its ancestor's a
       ],
     },
   ];
-  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: (id) => id !== 'collapsed' });
+  const result = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: (id) => id !== 'collapsed' });
   expect(result.placed.find((p) => p.id === 'hidden')).to.equal(undefined);
   const collapsed = result.placed.find((p) => p.id === 'collapsed')!;
   expect(collapsed.hasChildren).to.be.true;
@@ -193,8 +194,8 @@ it("a collapsed node stops recursion and counts as one leaf for its ancestor's a
 
 it('mirrors x horizontally under rtl for the same angle', () => {
   const topics: LyraTopic[] = [{ id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }, { id: 'c2', label: 'C2' }] }];
-  const ltr = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
-  const rtl = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: true, isExpanded: alwaysExpanded });
+  const ltr = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const rtl = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: true, isExpanded: alwaysExpanded });
   const ltrC1 = ltr.placed.find((p) => p.id === 'c1')!;
   const rtlC1 = rtl.placed.find((p) => p.id === 'c1')!;
   expect(ltrC1.x).to.be.greaterThan(ltr.centerX);
@@ -203,7 +204,7 @@ it('mirrors x horizontally under rtl for the same angle', () => {
 
 it('auto-fits width/height to the laid-out extent, and every placed point stays within it', () => {
   const topics: LyraTopic[] = [{ id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }] }];
-  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   expect(result.width).to.be.greaterThan(0);
   expect(result.height).to.be.greaterThan(0);
   for (const p of result.placed) {
@@ -220,7 +221,7 @@ it('does not throw a call-stack RangeError laying out a very large flat topic li
       children: Array.from({ length: 150_000 }, (_, i) => ({ id: `t${i}`, label: `Topic ${i}` })),
     },
   ];
-  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  const result = createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
   expect(result.placed.length).to.equal(150_001); // root + 150,000 children
   expect(result.width).to.be.a('number').greaterThan(0);
   expect(result.height).to.be.a('number').greaterThan(0);
@@ -230,7 +231,7 @@ it('does not throw a call-stack RangeError laying out a very large flat topic li
 
 describe('decimateMindMapLayout', () => {
   const layoutOf = (topics: LyraTopic[]) =>
-    layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+    createMindMapLayout(topics)('Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
 
   it('is a no-op at or below the cap', () => {
     const { placed, links } = layoutOf([
@@ -351,11 +352,29 @@ describe('layoutMindMap cost', () => {
     for (let depth = 199; depth >= 0; depth -= 1)
       chain = { id: `t-${depth}`, label: `Topic ${depth}`, children: [chain] };
     let calls = 0;
-    layoutMindMap([chain], 'Hub', {
+    createMindMapLayout([chain])('Hub', {
       ringGap: 10,
       rtl: false,
       isExpanded: () => (calls += 1) > 0,
     });
     expect(calls).to.be.below(3 * 201);
   });
+});
+
+describe('label-aware padding', () => {
+  it('widens the viewBox so a long outermost label is not clipped', () => {
+    const long = 'L'.repeat(60);
+    const layout = createMindMapLayout([{ id: 'r', label: 'Root', children: [{ id: 'a', label: long }] }])('Hub', { ringGap: 96, rtl: false, isExpanded: () => true });
+    const a = layout.placed.find((p) => p.id === 'a')!;
+    expect(a.x - (long.length * 8) / 2).to.be.at.least(-0.5);
+    expect(a.x + (long.length * 8) / 2).to.be.at.most(layout.width + 0.5);
+  });
+});
+
+it('ignores revoked arrays and reads topic lengths without invoking getters', () => {
+  const revoked = Proxy.revocable([], {});
+  revoked.revoke();
+  expect(snapshotMindMapTopics(revoked.proxy).topics.length).to.equal(0);
+  const children = new Proxy([], {get() { throw new Error('Unexpected property read'); }});
+  expect(snapshotMindMapTopics([{id:'r',label:'R',children}]).topics).to.deep.equal([{id:'r',label:'R',children:[]}]);
 });

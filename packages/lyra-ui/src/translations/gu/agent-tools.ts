@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ટૂલ પેરામીટરની સ્કીમા વધુમાં વધુ {fields} ક્ષેત્ર અને દરેક ક્ષેત્ર માટે {options} વિકલ્પો સમર્થિત કરે છે.',
   testResultsLimit: 'ફક્ત પ્રથમ {count} પરીક્ષણ પરિણામો બતાવવામાં આવે છે.',
   toolTimelineLimit: 'વધુમાં વધુ {count} ટૂલ કૉલ બતાવવામાં આવે છે.',
+  toolTimelineLoadError: 'ટૂલનું દૃશ્ય લોડ કરી શકાયું નથી.',
   toolSelectLimit: 'ફક્ત પ્રથમ {count} ટૂલ બતાવવામાં આવે છે.',
   testResultsInputTooLarge: 'પરીક્ષણ પરિણામોની વિગતો દર્શાવવાની મર્યાદા વટાવે છે.',
   toolCall: 'ટૂલ કૉલ',

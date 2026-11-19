@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ٹول پیرامیٹر سکیمیاں وچ ودھ توں ودھ {fields} فیلڈ تے فی فیلڈ {options} اختیار ہو سکدے نیں۔',
   testResultsLimit: 'صرف پہلے {count} ٹیسٹ نتیجے وکھائے گئے نیں۔',
   toolTimelineLimit: 'ودھ توں ودھ {count} ٹول کال وکھائیاں گئیاں نیں۔',
+  toolTimelineLoadError: 'ٹول دا ویو لوڈ نئیں ہو سکیا۔',
   toolSelectLimit: 'صرف پہلے {count} ٹول وکھائے گئے نیں۔',
   testResultsInputTooLarge: 'ٹیسٹ نتیجیاں دی تفصیل وکھاؤن دی حد توں ودھ اے۔',
   toolCall: 'ٹول کال',

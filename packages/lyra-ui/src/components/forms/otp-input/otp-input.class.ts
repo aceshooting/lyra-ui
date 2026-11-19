@@ -1,3 +1,6 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -5,7 +8,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation, isLiveDisabled } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -16,7 +19,6 @@ import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './otp-input.styles.js';
 import {
-  dispatchNativeEvent,
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
@@ -152,6 +154,7 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required field is genuinely invalid, but colouring it red
  * before the user has entered a digit is hostile.
+ * @cssprop [--lr-otp-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart base - The outer wrapper; retained alias for `form-control`.
  * @csspart form-control - The outer wrapper; shared form-control alias for `base`.
  * @csspart label - The field label; retained alias for `form-control-label`.
@@ -296,16 +299,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @state() private focused = false;
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   /** Intrinsic invalid styling is only shown once the user has actually engaged with the field. */
   @state() private touched = false;
 
   @query('[part="control"]') private control?: HTMLInputElement;
 
   private readonly labelId = nextId('otp-input-label');
-  private readonly hintId = nextId('otp-input-hint');
-  private readonly errorId = nextId('otp-input-error');
+  private readonly supportingId = nextId('otp');
   @state() private activeSegmentIndex = 0;
   private segmentValues: string[] = [];
   /** The latest segment edit or raw `value` assignment before length/format truncation.
@@ -567,13 +567,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this.control?.focus(options);
+    if (!isLiveDisabled(this)) this.control?.focus(options);
   }
   override blur(): void {
     this.control?.blur();
   }
   override click(): void {
-    if (!this.effectiveDisabled) this.control?.click();
+    if (!isLiveDisabled(this)) this.control?.click();
   }
   /** Selects the whole compact code. Fixed-cell typing or deletion honors the selected range. */
   select(): void {
@@ -636,14 +636,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
   /** Clear the code (`input`, `change`, `lr-clear`); inert while blank, disabled or readonly. */
   clear(): void {
-    if (!this.value || this.effectiveDisabled || this.readonly) return;
+    if (!this.value || isLiveDisabled(this) || this.readonly) return;
     this.segmentEditPendingChange = false;
     this.value = '';
     if (this.control) this.control.value = '';
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
     this.emit('lr-input', { value: '' });
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: '' });
+    emitValueEvents(this, 'change', { value: '' }, (detail) => this.emit('lr-change', detail));
     this.emit('lr-clear');
   }
 
@@ -776,7 +775,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled || shouldIgnoreNavigationKey(event)) return;
+    if (isLiveDisabled(this) || shouldIgnoreNavigationKey(event)) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       const physical = event.key === 'ArrowRight' ? 1 : -1;
@@ -829,7 +828,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
 
   private onPaste = (event: ClipboardEvent): void => {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     const pasted = this.sanitize(event.clipboardData?.getData('text') ?? '');
     event.preventDefault();
     if (!pasted) return;
@@ -849,8 +848,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     if (!this.segmentEditPendingChange) return;
     this.segmentEditPendingChange = false;
     const value = this.value;
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value });
+    emitValueEvents(this, 'change', { value }, (detail) => this.emit('lr-change', detail));
   }
 
   private onFocus = (event: FocusEvent): void => {
@@ -886,18 +884,20 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override render(): TemplateResult {
-    const hasLabel = Boolean(this.label) || this.hasLabelSlot || this.withLabel;
-    const hasHint = Boolean(this.hint) || this.hasHintSlot || this.withHint;
-    const hasError = Boolean(this.errorText) || this.hasErrorSlot;
+    const hasNamedLabel = Boolean(normalizeLabel(this.label)) || this.hasLabelSlot;
+    const hasLabel = hasNamedLabel || this.withLabel;
+    const supporting = {
+      presence: { has: (name: string) => name !== 'help-text' && this.slotPresence.has(name) },
+      idPrefix: this.supportingId,
+      hint: this.hint,
+      errorText: this.errorText,
+      withHint: this.withHint,
+    };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
     const intrinsicInvalid = this.touched && !this.validity.valid;
     const ariaInvalid = hasError || intrinsicInvalid;
-    const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
-    // The control's own name below is presence-based (`hostAriaLabel`), so `aria-label=""` stays an
-    // explicit "the host supplies no name". This companion association is deliberately
-    // truthiness-based instead: it asks whether the host already supplies a *real* name, and an
-    // empty one supplies none. Suppressing the host name must not orphan a rendered visible label
-    // from the control it names, so the labelledby association survives `aria-label=""`.
-    const labelledBy = hasLabel && !this.getAttribute('aria-label') ? this.labelId : nothing;
+    const hostLabel = hostAriaLabel(this);
+    const labelledBy = hasNamedLabel && !hostLabel ? this.labelId : nothing;
     let segmentIndex = -1;
 
     return html`
@@ -927,7 +927,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
             ?required=${this.required}
-            aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.localize('otpInputLabel'))}
+            aria-label=${hostLabel ?? (hasNamedLabel ? nothing : this.localize('otpInputLabel'))}
             aria-labelledby=${labelledBy}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${ariaInvalid ? 'true' : 'false'}
@@ -942,12 +942,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
             @blur=${this.onBlur}
           />
         </div>
-        <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint"></slot>
-        </div>
+        ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
       </div>
     `;
   }

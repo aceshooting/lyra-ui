@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Tool parameter schema fit get maximum {fields} fields and {options} choices for each field.',
   testResultsLimit: 'Na only di first {count} test results dem show.',
   toolTimelineLimit: 'Na maximum {count} tool calls dem show.',
+  toolTimelineLoadError: 'Di tool view no fit load.',
   toolSelectLimit: 'Na only di first {count} tools dem show.',
   testResultsInputTooLarge: 'Di test result details pass di display limit.',
   toolCall: 'Call tool',

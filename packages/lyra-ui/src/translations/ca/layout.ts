@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Deixa de fixar la navegació',
   appRailItemCollapse: 'Replega {label}',
   appRailItemExpand: 'Desplega {label}',
+  appRailItemToggle: 'Desplega o replega {label}',
+  appRailGroupToggle: 'Grup de navegació',
   resizeValuePercent: '{value} per cent',
   commandPaletteLabel: 'Paleta d’ordres',
   commandPalettePlaceholder: 'Cerca ordres…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} ordre',
     other: '{count} ordres',
   },
+  tabCloseAction: 'Tanca {label}',
+  stepperStateCompleted: 'Completat',
+  stepperStateError: 'Error',
+  stepperStatePending: 'No iniciat',
+  stepperStateLocked: 'Bloquejat',
   commandPaletteInputLimit: 'S’han omès algunes ordres perquè s’ha arribat a un límit d’entrada.',
 };
 

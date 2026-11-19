@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Pilih paling ora siji pilihan.',
   tokenInputRequired: 'Lebokake paling ora siji nilai.',
   tokenInputEditWithContext: 'Sunting {label}',
+  tokenInputLabel: 'Token',
   iconButtonLabel: 'Tombol',
   codeEditorLabel: 'Panyunting kode',
   switchRequired: 'Uripake iki.',
@@ -112,6 +113,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pulpen mudhun',
   signaturePadPenUp: 'Pulpen munggah',
+  signaturePadDrawingLimit: 'Wates nggambar wis tekan.',
   localePickerInputLimit: 'Mung 512 entri setelan basa lan wilayah sing kapisan sing kasedhiya.',
   emojiPickerInputLimit: 'Sawetara data emoji ora dilebokake amarga wates input wis tekan.',
 };

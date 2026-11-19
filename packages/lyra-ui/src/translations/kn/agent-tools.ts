@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ಟೂಲ್ ಪ್ಯಾರಾಮೀಟರ್ ಸ್ಕೀಮಾಗಳು ಗರಿಷ್ಠ {fields} ಕ್ಷೇತ್ರಗಳು ಮತ್ತು ಪ್ರತಿ ಕ್ಷೇತ್ರಕ್ಕೆ {options} ಆಯ್ಕೆಗಳನ್ನು ಬೆಂಬಲಿಸುತ್ತವೆ.',
   testResultsLimit: 'ಮೊದಲ {count} ಪರೀಕ್ಷಾ ಫಲಿತಾಂಶಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   toolTimelineLimit: 'ಗರಿಷ್ಠ {count} ಟೂಲ್ ಕರೆಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
+  toolTimelineLoadError: 'ಟೂಲ್ ವೀಕ್ಷಣೆಯನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ.',
   toolSelectLimit: 'ಮೊದಲ {count} ಟೂಲ್‌ಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   testResultsInputTooLarge: 'ಪರೀಕ್ಷಾ ಫಲಿತಾಂಶಗಳ ವಿವರಗಳು ಪ್ರದರ್ಶನ ಮಿತಿಯನ್ನು ಮೀರಿವೆ.',
   toolCall: 'ಟೂಲ್ ಕರೆ',

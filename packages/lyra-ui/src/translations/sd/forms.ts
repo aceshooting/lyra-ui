@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'گهٽ ۾ گهٽ هڪ اختيار چونڊيو.',
   tokenInputRequired: 'گهٽ ۾ گهٽ هڪ قدر داخل ڪريو.',
   tokenInputEditWithContext: '{label} ۾ ترميم ڪريو',
+  tokenInputLabel: 'ٽوڪن',
   iconButtonLabel: 'بٽڻ',
   codeEditorLabel: 'ڪوڊ ايڊيٽر',
   switchRequired: 'مهرباني ڪري هي چالو ڪريو.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم هيٺ',
   signaturePadPenUp: 'قلم مٿي',
+  signaturePadDrawingLimit: 'ڊرائنگ جي حد پوري ٿي وئي آهي.',
   localePickerInputLimit: 'ٻولي ۽ علائقي جون صرف پهرين 512 داخلائون موجود آهن.',
   emojiPickerInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ايموجي جي ڪجهه ڊيٽا ڇڏي وئي آهي.',
 };

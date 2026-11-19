@@ -1622,6 +1622,21 @@ describe("lr-segmented auto-reveal", () => {
     expect(checked?.getAttribute("data-value")).to.equal("week");
   });
 
+  it('reveals either edge within the scaled track content box', async () => {
+    const { el, base } = await overflowing();
+    el.style.transform = 'scale(1.5)';
+    el.setAttribute('data-lr-motion', 'reduce');
+    base.style.border = '8px solid';
+    const button = base.querySelector<HTMLElement>('[data-value="v15"]')!;
+    el.scrollToValue('v15');
+    const contentLeft = () => base.getBoundingClientRect().left + base.clientLeft * 1.5;
+    await waitUntil(() => Math.abs(button.getBoundingClientRect().right - contentLeft() - base.clientWidth * 1.5) < 2);
+    base.scrollLeft = base.scrollWidth;
+    el.scrollToValue('v15');
+    await waitUntil(() => Math.abs(button.getBoundingClientRect().left - contentLeft()) < 2);
+    expect(el.value).not.to.equal('v15');
+  });
+
   it("scrollToValue() reveals a segment without selecting it", async () => {
     const { scroller, el, base } = await overflowing();
     el.scrollToValue("v29");

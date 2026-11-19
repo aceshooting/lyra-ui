@@ -5,7 +5,7 @@ import './neighbor-list.js';
 // lr-neighbor-list registers its virtualizer lazily (see neighbor-list-lazy.test.ts); these cases need it now.
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched,  resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const rows: LyraNeighborRow[] = [
   {
@@ -804,4 +804,116 @@ it('keeps a stable items reference and keyFunction/group content on the composed
     virtual.groups.map((g) => ({ key: g.key, label: g.label, startIndex: g.startIndex })),
     'groups content'
   ).to.deep.equal(groups);
+});
+
+it('lets a long node label shrink instead of widening its row', async () => {
+  const long = 'W'.repeat(200);
+  const el = await fixture<LyraNeighborList>(html`<div style="inline-size: 240px"><lr-neighbor-list .rows=${[{ node: { id: 'a', label: long }, relation: 'knows', direction: 'out' }]}></lr-neighbor-list></div>`).then((w) => w.querySelector<LyraNeighborList>('lr-neighbor-list')!);
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="node-label"]')!;
+  expect(label.getBoundingClientRect().width).to.be.at.most(241);
+});
+
+it('retains each relation and direction to the same neighbor once', async () => {
+  const node = { id: 'same', label: 'Same' };
+  const rows = [
+    { node, relation: 'owns', direction: 'out' },
+    { node, relation: 'owns', direction: 'in' },
+    { node, relation: 'uses', direction: 'out' },
+    { node, relation: 'owns', direction: 'out' },
+    { node: { id: ' ' }, relation: 'owns', direction: 'in' },
+  ];
+  const list = await fixture<LyraNeighborList>(html`<lr-neighbor-list group-by-relation .rows=${rows}></lr-neighbor-list>`);
+  expect([...list.shadowRoot!.querySelectorAll('[part="relation"]')].map(el => el.textContent?.trim())).to.deep.equal(['owns', 'owns', 'uses']);
+  list.virtualizeAt = 0;
+  await list.updateComplete;
+  await customElements.whenDefined('lr-virtual-list');
+  const virtual = list.shadowRoot!.querySelector('lr-virtual-list')!;
+  expect(new Set(virtual.items.map((item, index) => virtual.keyFunction!(item, index))).size).to.equal(3);
+});
+
+it('falls back to a localized group name for whitespace and preserves an explicit empty label', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-neighbor-list']>(html`<lr-neighbor-list label="   "></lr-neighbor-list>`);
+  const name = () => el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+  expect(name()).to.equal('Relationships');
+  el.label = '';
+  await el.updateComplete;
+  expect(name()).to.equal('');
+});
+
+it('fits long relation and node text beside an expand button in a narrow row', async () => {
+  const list = await fixture<LyraNeighborList>(html`<lr-neighbor-list expandable style="width:180px"
+    .rows=${[{relation:'long'.repeat(30),direction:'out',node:{id:'id'.repeat(60)}}]}></lr-neighbor-list>`);
+  const row = list.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+  expect(row.scrollWidth).to.be.at.most(row.clientWidth + 1);
+  expect(row.querySelector('button')!.getBoundingClientRect().width).to.be.at.least(24);
+});
+
+for (const virtualizeAt of [0, 100]) {
+  it(`keeps one tab stop and reaches both actions in the last row at virtualize-at=${virtualizeAt}`, async () => {
+    const el = await fixture<LyraNeighborList>(html`<lr-neighbor-list expandable .rows=${rows} .virtualizeAt=${virtualizeAt}></lr-neighbor-list>`);
+    const virtual = el.shadowRoot!.querySelector('lr-virtual-list');
+    if (virtual) { await customElements.whenDefined('lr-virtual-list'); await virtual.updateComplete; }
+    const root = virtual?.shadowRoot ?? el.shadowRoot!;
+    const buttons = () => [...root.querySelectorAll<HTMLButtonElement>('button[part]')];
+    const stops = () => buttons().filter(b => b.tabIndex === 0);
+    expect(stops().length).to.equal(1);
+    stops()[0]!.dispatchEvent(new KeyboardEvent('keydown', {key:'End',bubbles:true,composed:true}));
+    await waitUntil(() => root.activeElement === buttons().at(-2));
+    buttons().at(-2)!.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight',bubbles:true,composed:true}));
+    await waitUntil(() => root.activeElement === buttons().at(-1));
+    expect(stops().length).to.equal(1);
+  });
+}
+
+it('paints the configured hover fill on its node-label', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-neighbor-list']>(html`<lr-neighbor-list .rows=${rows} style="--lr-neighbor-list-node-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-neighbor-list>`);
+  const button = el.shadowRoot!.querySelector('[part="node-label"]')!;
+  await hoverUntilMatched(button, 'hover the control');
+  await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
+});
+
+it('preserves modified navigation and roves between actions in RTL', async () => {
+  const el = await fixture<LyraNeighborList>(html`<lr-neighbor-list dir="rtl" expandable .rows=${rows}></lr-neighbor-list>`);
+  const first = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="node-label"]')!;
+  const expand = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="expand-button"]')!;
+  const key = (target: HTMLElement, value: string, modified = false) => {
+    const event = new KeyboardEvent('keydown', { key: value, ctrlKey: modified, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  expect(key(first, 'ArrowDown', true)).to.equal(false);
+  expect(key(first, 'PageDown')).to.equal(false);
+  expect(key(first, 'ArrowLeft')).to.equal(true);
+  await waitUntil(() => el.shadowRoot!.activeElement === expand);
+  expect(key(expand, 'ArrowRight')).to.equal(true);
+  await waitUntil(() => el.shadowRoot!.activeElement === first);
+  el.expandable = false;
+  await el.updateComplete;
+  expect(key(first, 'ArrowLeft')).to.equal(false);
+  key(first, 'End');
+  el.remove();
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('keeps a tab stop in the visible virtual rows after scrolling in either direction', async () => {
+  const items = Array.from({ length: 100 }, (_, i) => ({ node: { id: String(i) }, relation: 'knows', direction: 'out' }));
+  const list = await fixture<LyraNeighborList>(html`<lr-neighbor-list virtualize-at="0" .rows=${items}></lr-neighbor-list>`);
+  await customElements.whenDefined('lr-virtual-list');
+  const virtual = list.shadowRoot!.querySelector('lr-virtual-list')!;
+  await virtual.updateComplete;
+  const active = () => Number(virtual.shadowRoot!.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.dataset['row']);
+  expect(active()).to.equal(0);
+  virtual.scrollToIndex(95, { align: 'start', behavior: 'auto' });
+  await waitUntil(() => active() > 30, 'the tab stop follows the visible rows');
+  virtual.scrollToIndex(0, { align: 'start', behavior: 'auto' });
+  await waitUntil(() => active() === 0, 'the tab stop returns to the first row');
+  const button = (row: number) => virtual.shadowRoot!.querySelector<HTMLButtonElement>(`button[data-row="${row}"]`);
+  const end = items.length - 1;
+  expect(button(end) === null).to.equal(true);
+  button(0)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await waitUntil(() => active() === end && virtual.shadowRoot!.activeElement === button(end), 'End focuses the newly mounted last row');
+  button(end)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  await waitUntil(() => active() === 0 && virtual.shadowRoot!.activeElement === button(0), 'Home focuses the newly mounted first row');
 });

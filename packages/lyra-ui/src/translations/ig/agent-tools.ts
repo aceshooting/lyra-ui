@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Atụmatụ paramita ngwa ọrụ na-akwado ihe ruru oghere {fields} na nhọrọ {options} n’ime oghere ọ bụla.',
   testResultsLimit: 'A na-egosi naanị nsonaazụ ule {count} mbụ.',
   toolTimelineLimit: 'Ọnụọgụ oku ngwa ọrụ a na-egosi agaghị agafe {count}.',
+  toolTimelineLoadError: 'Enweghị ike ibunye ihuenyo ngwa ọrụ.',
   toolSelectLimit: 'A na-egosi naanị ngwa ọrụ {count} mbụ.',
   testResultsInputTooLarge: 'Nkọwa nsonaazụ ule gafere oke ngosi.',
   toolCall: 'Oku ngwa ọrụ',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Schémata parametrů nástroje podporují nejvýše {fields} polí a {options} možností na pole.',
   testResultsLimit: 'Zobrazeno je pouze prvních {count} výsledků testů.',
   toolTimelineLimit: 'Zobrazeno je nejvýše {count} volání nástrojů.',
+  toolTimelineLoadError: 'Zobrazení nástroje se nepodařilo načíst.',
   toolSelectLimit: 'Zobrazeno je pouze prvních {count} nástrojů.',
   testResultsInputTooLarge: 'Podrobnosti výsledků testů překračují limit zobrazení.',
   toolCall: 'Volání nástroje',

@@ -5,7 +5,7 @@ import type { PropertyValues } from "lit";
 import "./token-input.js";
 import "../button/button.js";
 import type { LyraTokenInput } from "./token-input.js";
-import { styles } from "./token-input.styles.js";
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   hoverUntilMatched,
@@ -1296,11 +1296,6 @@ it("cascades disabled state from an ancestor fieldset without mutating the disab
   expect(el.effectiveDisabled).to.be.false;
   expect(input.disabled).to.be.false;
   expect(getComputedStyle(el).opacity).to.equal("1");
-});
-
-it("gives the editable token-label a hover state matching its focus-visible ring and pointer cursor", async () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='token-label'\]:hover\s*\{[^}]*background:/);
 });
 
 it("focuses the draft input on host click(), mirroring lr-combobox's click forwarding", async () => {
@@ -2604,16 +2599,33 @@ describe("delimiter", () => {
   });
 });
 
-it("colors placeholder text on both editable fields and gives the remove button hover/focus", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(
-    /\[part='input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/
-  );
-  expect(css).to.match(
-    /\[part='token-editor'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/
-  );
-  expect(css).to.match(/\[part='remove'\]:hover\s*\{[^}]*background:/);
-  expect(css).to.match(/\[part='remove'\]:focus-visible\s*\{[^}]*outline:/);
+it('paints both placeholders and gives the remove action feedback on hover and keyboard focus', async () => {
+  const el = await fixture<LyraTokenInput>(html`
+    <lr-token-input editable placeholder="Add token"
+      style="--lr-color-text-quiet: rgb(12, 34, 56); --lr-token-input-remove-hover-bg: rgb(1, 2, 3)"
+      .value=${['alpha']}></lr-token-input>
+  `);
+  const draft = el.shadowRoot!.querySelector<HTMLInputElement>('#input')!;
+  expect(getComputedStyle(draft, '::placeholder').color).to.equal('rgb(12, 34, 56)');
+  const label = tokenLabel(el, 0);
+  await focusByKeyboard(label);
+  label.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  const textEditor = editor(el)!;
+  textEditor.placeholder = 'Edit token';
+  expect(getComputedStyle(textEditor, '::placeholder').color).to.equal('rgb(12, 34, 56)');
+
+  textEditor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  const remove = removeButtons(el)[0]!;
+  await focusByKeyboard(remove);
+  expect(getComputedStyle(remove).outlineStyle).to.equal('solid');
+  try {
+    await hoverUntilMatched(remove, 'the remove action receives the pointer');
+    await waitUntil(() => getComputedStyle(remove).backgroundColor === 'rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 // -- Degraded-DOM form-association fallback ---------------------------------

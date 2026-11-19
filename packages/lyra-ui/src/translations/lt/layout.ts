@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Atsegti naršymą',
   appRailItemCollapse: 'Suskleisti {label}',
   appRailItemExpand: 'Išskleisti {label}',
+  appRailItemToggle: 'Suskleisti arba išskleisti {label}',
+  appRailGroupToggle: 'Naršymo grupė',
   resizeValuePercent: '{value} procentų',
   commandPaletteLabel: 'Komandų paletė',
   commandPalettePlaceholder: 'Ieškoti komandų…',
@@ -65,6 +67,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} komanda',
     other: '{count} komandų',
   },
+  tabCloseAction: 'Uždaryti {label}',
+  stepperStateCompleted: 'Užbaigta',
+  stepperStateError: 'Klaida',
+  stepperStatePending: 'Nepradėta',
+  stepperStateLocked: 'Užrakinta',
   commandPaletteInputLimit: 'Kai kurios komandos praleistos, nes pasiekta įvesties riba.',
 };
 

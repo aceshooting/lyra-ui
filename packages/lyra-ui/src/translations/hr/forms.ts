@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Odaberite barem jednu mogućnost.',
   tokenInputRequired: 'Unesite barem jednu vrijednost.',
   tokenInputEditWithContext: 'Uredi: {label}',
+  tokenInputLabel: 'Tokeni',
   iconButtonLabel: 'Gumb',
   codeEditorLabel: 'Uređivač koda',
   switchRequired: 'Uključite ovu mogućnost.',
@@ -118,6 +119,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Olovka dolje',
   signaturePadPenUp: 'Olovka gore',
+  signaturePadDrawingLimit: 'Dosegnuto je ograničenje crtanja.',
   localePickerInputLimit: 'Dostupno je samo prvih 512 stavki jezičnih i regionalnih postavki.',
   emojiPickerInputLimit: 'Neki podaci emojija izostavljeni su jer je dosegnuto ograničenje ulaza.',
 };

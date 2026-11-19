@@ -226,3 +226,8 @@ export const ExternalDescription: StoryObj = {
     </div>
   `,
 };
+
+export const PlaceholderColor: StoryObj = {
+  render: () => html`<lr-otp-input label="Verification code" with-mask
+    style="--lr-otp-input-placeholder-color: var(--lr-color-neutral)"></lr-otp-input>`,
+};

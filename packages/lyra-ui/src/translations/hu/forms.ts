@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Válasszon legalább egy lehetőséget.',
   tokenInputRequired: 'Adjon meg legalább egy értéket.',
   tokenInputEditWithContext: 'Szerkesztés: {label}',
+  tokenInputLabel: 'Tokenek',
   iconButtonLabel: 'Gomb',
   codeEditorLabel: 'Kódszerkesztő',
   switchRequired: 'Kapcsolja be ezt a beállítást.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Toll lent',
   signaturePadPenUp: 'Toll fent',
+  signaturePadDrawingLimit: 'A rajzolási korlát betelt.',
   localePickerInputLimit: 'Csak az első 512 nyelvi és területi beállítás érhető el.',
   emojiPickerInputLimit: 'A bemeneti korlát elérése miatt egyes emojiadatok kimaradtak.',
 };

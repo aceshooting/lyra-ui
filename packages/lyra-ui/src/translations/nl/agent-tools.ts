@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Schema’s voor toolparameters ondersteunen maximaal {fields} velden en {options} keuzes per veld.',
   testResultsLimit: 'Alleen de eerste {count} testresultaten worden weergegeven.',
   toolTimelineLimit: 'Er worden maximaal {count} toolaanroepen weergegeven.',
+  toolTimelineLoadError: 'De toolweergave kon niet worden geladen.',
   toolSelectLimit: 'Alleen de eerste {count} tools worden weergegeven.',
   testResultsInputTooLarge: 'De details van de testresultaten overschrijden de weergavelimiet.',
   toolCall: 'Toolaanroep',

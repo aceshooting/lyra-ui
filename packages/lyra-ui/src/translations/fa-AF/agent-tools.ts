@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'طرح پارامتر ابزار برای هر خانه حداکثر {fields} خانه و {options} گزینه را پشتیبانی می‌کند.',
   testResultsLimit: 'تنها نخستین {count} نتیجهٔ آزمایش نمایش داده می‌شود.',
   toolTimelineLimit: 'حداکثر {count} فراخوانی ابزار نمایش داده می‌شود.',
+  toolTimelineLoadError: 'بارگذاری نمای ابزار ممکن نشد.',
   toolSelectLimit: 'تنها نخستین {count} ابزار نمایش داده می‌شود.',
   testResultsInputTooLarge: 'جزئیات نتایج آزمایش از حد نمایش بیشتر است.',
   toolCall: 'فراخوانی ابزار',

@@ -1,3 +1,5 @@
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
 import type { RangeDragState } from '../../../internal/range-drag.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
@@ -390,7 +392,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
 
   /** True when focus moves between the two handles, which is not the control gaining or losing focus. */
   private movesBetweenHandles(related: EventTarget | null): boolean {
-    return related instanceof Element && related.matches('[part="handle-start"], [part="handle-end"]') &&
+    return isElementNode(related) && related.matches('[part="handle-start"], [part="handle-end"]') &&
       this.renderRoot.contains(related);
   }
 
@@ -446,11 +448,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
 
   /** `checkValidity()`, plus the browser's own validation UI on failure. */
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
-    // point, so it counts as interaction for the `user-*` custom states.
-    this.markInteracted();
-    return this.internals.reportValidity();
+    return this.validityController.reportValidity(this.markInteracted);
   }
 
   /**
@@ -1010,7 +1008,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
           part="handle-start"
           role="slider"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-label=${this.startLabel ?? this.localize('rangeStart')}
+          aria-label=${this.startLabel === '' ? '' : normalizeLabel(this.startLabel) ?? this.localize('rangeStart')}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
           aria-valuemin=${startBounds.min}
@@ -1030,7 +1028,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
           part="handle-end"
           role="slider"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-label=${this.endLabel ?? this.localize('rangeEnd')}
+          aria-label=${this.endLabel === '' ? '' : normalizeLabel(this.endLabel) ?? this.localize('rangeEnd')}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
           aria-valuemin=${endBounds.min}

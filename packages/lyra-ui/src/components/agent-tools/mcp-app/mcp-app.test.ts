@@ -250,7 +250,7 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   );
   expect((await resize).detail.height).to.equal(500);
   await el.updateComplete;
-  expect(iframe.style.height).to.equal('500px');
+  expect(getComputedStyle(iframe).height).to.equal('500px');
 
   let leaked = false;
   el.addEventListener('lr-mcp-tool-call', () => {
@@ -832,7 +832,7 @@ it('invalidates tool-result correlation when a connected frame is adopted or rec
 });
 
 describe('CSS-length height and max-height', () => {
-  const frameHeight = (el: LyraMcpApp): string => el.shadowRoot!.querySelector('iframe')!.style.height;
+  const frameHeight = (el: LyraMcpApp): string => getComputedStyle(el.shadowRoot!.querySelector('iframe')!).height;
   const rootPx = (): number => Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
 
   it('keeps a numeric height attribute a number, as before', async () => {
@@ -876,7 +876,7 @@ describe('CSS-length height and max-height', () => {
     );
     expect((await resize).detail.height).to.equal(25 * root);
     await el.updateComplete;
-    expect(iframe.style.height).to.equal(`${25 * root}px`);
+    expect(getComputedStyle(iframe).height).to.equal(`${25 * root}px`);
   });
 
   it('falls back to the defaults for an unresolvable length', async () => {

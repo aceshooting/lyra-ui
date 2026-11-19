@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Navigáció rögzítésének feloldása',
   appRailItemCollapse: 'Összecsukás: {label}',
   appRailItemExpand: 'Kibontás: {label}',
+  appRailItemToggle: 'Megjelenítés vagy elrejtés: {label}',
+  appRailGroupToggle: 'Navigációs csoport',
   resizeValuePercent: '{value} százalék',
   commandPaletteLabel: 'Parancspaletta',
   commandPalettePlaceholder: 'Parancsok keresése…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} parancsot',
     other: '{count} parancsot',
   },
+  tabCloseAction: 'Bezárás: {label}',
+  stepperStateCompleted: 'Befejezve',
+  stepperStateError: 'Hiba',
+  stepperStatePending: 'Nincs elkezdve',
+  stepperStateLocked: 'Zárolva',
   commandPaletteInputLimit: 'A bemeneti korlát elérése miatt egyes parancsok kimaradtak.',
 };
 

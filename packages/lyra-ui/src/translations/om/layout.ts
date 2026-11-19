@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Sochii maxxansa baasi',
   appRailItemCollapse: '{label} cufi',
   appRailItemExpand: '{label} bani',
+  appRailItemToggle: '{label} agarsiisi yookaan dhoksi',
+  appRailGroupToggle: 'Garee sochii',
   resizeValuePercent: '{value} dhibbeentaa',
   commandPaletteLabel: 'Tarree ajajaa',
   commandPalettePlaceholder: 'Ajajoota barbaadi…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} ajaja',
     other: '{count} ajajoota',
   },
+  tabCloseAction: '{label} cufi',
+  stepperStateCompleted: 'Xumurameera',
+  stepperStateError: 'Dogoggora',
+  stepperStatePending: 'Hin jalqabamne',
+  stepperStateLocked: 'Cufameera',
   commandPaletteInputLimit: 'Ajajoonni tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
 };
 

@@ -235,3 +235,12 @@ it('rejects a diagram activation when provider key resolution replaces the sourc
  await waitUntil(() => events.length === 1);
  expect(events).to.deep.equal(['n9']);
 });
+
+it('fits the source-mode diagram into its box instead of cropping it',async()=>{
+ const data=provider(20);const wrap=await fixture<HTMLDivElement>(html`<div style="inline-size:900px"><lr-mind-map .treeSource=${data.source}></lr-mind-map></div>`);
+ const el=wrap.querySelector<MapElement>('lr-mind-map')!;await ready(el);
+ await waitUntil(()=>el.shadowRoot!.querySelectorAll('[part="node"]').length>1);
+ const box=el.shadowRoot!.querySelector<HTMLElement>('[part="source-diagram"]')!;
+ const svg=el.shadowRoot!.querySelector<SVGElement>('[part="svg"]')!;
+ expect(svg.getBoundingClientRect().height).to.be.at.most(box.clientHeight+1);
+});

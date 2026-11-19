@@ -114,7 +114,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part="textarea"]::placeholder {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-textarea-placeholder-color, var(--lr-color-text-quiet));
   }
 
   [part="footer"] {

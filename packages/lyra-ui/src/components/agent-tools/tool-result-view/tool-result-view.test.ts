@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { html as litHtml } from 'lit';
@@ -243,6 +244,7 @@ it('shows a lr-skeleton while an async load() is pending, then renders its resol
   expect(base(el).getAttribute('aria-busy')).to.equal('true');
   expect(skeleton.announce, 'the parent owns busy state; the visual skeleton is decorative').to.be.false;
   expect(base(el).querySelector('.sr-only')?.textContent?.trim()).to.equal('Chargement du résultat…');
+  expect(sinkTexts('polite'), 'a lazy renderer load is announced politely').to.include('Chargement du résultat…');
   expect(el.shadowRoot!.querySelectorAll(activeLiveSelector).length).to.equal(0);
   expect(skeleton.shadowRoot!.querySelectorAll(activeLiveSelector).length).to.equal(0);
 
@@ -648,4 +650,23 @@ it('gives each fallback-text line its own first-strong direction under RTL', asy
   // WebKit resolves `unicode-bidi: plaintext` once from the block's first strong character rather
   // than per line, so the per-line right-to-left behavior is asserted only where engines implement it.
   if (!isWebKit) expect((box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth)) - glyphRect(pre, 'تم').right).to.be.at.most(2);
+});
+
+it('announces loading in the destination document after adoption', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const doc = frame.contentDocument!;
+  const view = await fixture<LyraToolResultView>(html`<lr-tool-result-view .strings=${{ loading: 'Loading the adopted result' }}></lr-tool-result-view>`);
+  let finish!: (value: DirectToolRendererDefinition) => void;
+  registerToolRenderer('adopted', { load: () => new Promise(resolve => { finish = resolve; }) });
+  doc.body.append(doc.adoptNode(view));
+  try {
+    view.toolName = 'adopted';
+    await view.updateComplete;
+    expect(sinkTexts('polite', doc)).to.include('Loading the adopted result');
+    expect(sinkTexts('polite')).not.to.include('Loading the adopted result');
+    finish({ render: () => litHtml`<p>Done</p>` });
+    await waitUntil(() => base(view).textContent?.trim() === 'Done');
+  } finally {
+    view.remove();
+  }
 });

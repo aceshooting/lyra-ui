@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'تدعم مخططات معلمات الأداة ما يصل إلى {fields} حقلاً و{options} خيارًا لكل حقل.',
   testResultsLimit: 'يتم عرض أول {count} نتيجة اختبار فقط.',
   toolTimelineLimit: 'يتم عرض {count} استدعاء أداة كحد أقصى.',
+  toolTimelineLoadError: 'تعذّر تحميل عرض الأداة.',
   toolSelectLimit: 'يتم عرض أول {count} أداة فقط.',
   testResultsInputTooLarge: 'تفاصيل نتائج الاختبار تتجاوز حد العرض.',
   toolCall: 'استدعاء أداة',

@@ -38,7 +38,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   button[part~='item']:hover {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-graph-legend-item-hover-fill, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   button[part~='item']:active {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -57,6 +57,8 @@ export const styles = css`
     color: var(--lr-graph-legend-hidden-color, var(--lr-color-text-quiet));
   }
   [part='swatch'] {
+    inline-size: 0.75em;
+    block-size: 0.75em;
     flex: 0 0 auto;
     display: block;
     color: var(--lr-color-text);
@@ -70,5 +72,10 @@ export const styles = css`
   [part='count'] {
     color: var(--lr-color-text-quiet);
     font-variant-numeric: tabular-nums;
+  }
+  @media (forced-colors: active) {
+    [part='swatch'] {
+      forced-color-adjust: none;
+    }
   }
 `;

@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A chronological list of an agent run\'s tool calls, composing `<lr-tool-call-chip>` and `<lr-tool-result-view>` per entry plus one shared `<lr-tool-approval-dialog>` for entries gated behind a human decision. Duplicate `(sourceKey,id)` pairs normalize first-wins and foreign statuses normalize to pending. At most 500 entries mount while open/reviewed identities are reserved. `redactedFields` work is deferred until disclosure, memoized, and bounded; it masks only the read-only detail view, while approval always sees the real arguments.',
+          'Review open and close events identify the invocation. A decision listener can defer completion with waitUntil. A chronological list of an agent run\'s tool calls, composing `<lr-tool-call-chip>` and `<lr-tool-result-view>` per entry plus one shared `<lr-tool-approval-dialog>` for entries gated behind a human decision. Duplicate `(sourceKey,id)` pairs normalize first-wins and foreign statuses normalize to pending. At most 500 entries mount while open/reviewed identities are reserved. `redactedFields` work is deferred until disclosure, memoized, and bounded; it masks only the read-only detail view, while approval always sees the real arguments.',
       },
     },
   },

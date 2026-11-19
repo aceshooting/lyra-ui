@@ -116,6 +116,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Ceļš',
   pathNodeStatus: '{label}, mezgls {position} no {total}',
   pathRelationStatus: '{relation}, relācija',
+  pathRelationForward: 'virzīts uz nākamo mezglu',
+  pathRelationReverse: 'virzīts uz iepriekšējo mezglu',
   neighborListLabel: 'Relācijas',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Izvērst {label} grafā',

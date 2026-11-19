@@ -1,3 +1,4 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
@@ -14,7 +15,6 @@ import {
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { isRtl } from '../../../internal/rtl.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -93,6 +93,7 @@ const NAV_KEYS = new Set([
  * @csspart source-error - Source failure and retry status.
  * @csspart base - The wrapper.
  * @csspart svg - The single-tab-stop SVG focus target.
+ * @csspart disclosure - Plus or minus on a topic with children.
  * @csspart node - A topic node group.
  * @csspart node-label - A topic's label text.
  * @csspart link - A parent-child connector.
@@ -106,6 +107,10 @@ const NAV_KEYS = new Set([
  *   subtree-size-weighted sample of the full visible set (never floating nodes with no path back
  *   to the root), so both the SVG and the parallel sr-only tree stay representative above the cap.
  * @cssprop [--lr-mind-map-ring-gap=6rem] - Radius step per depth ring.
+ * @cssprop [--lr-mind-map-source-block-size=20rem] - Block size of the diagram box in source mode;
+ * the diagram scales to fit it and scrolls when it still overflows.
+ * @cssprop [--lr-mind-map-label-halo=var(--lr-color-surface)] - Halo stroke behind topic labels so
+ * neighbouring labels stay legible where they meet.
  * @cssprop [--lr-mind-map-node-hover-halo=var(--lr-color-brand-quiet)] - Stroke color of the
  * hover halo drawn around a topic node's dot, giving mouse users the same "this is clickable"
  * feedback keyboard users get from the drawn focus ring.
@@ -273,7 +278,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       }
       if (!this.layoutInvalidated && connected.size === previous.size && [...connected].every(([key, row]) => previous.get(key) === row) && this.sourceDiagramCurrent()) return;
       const layout = createMindMapLayout(root ? [topics.get(root.key)!] : [])(this.label ?? this.localize('mindMapLabel'), {
-        ringGap: this.ringGapPx(), rtl: isRtl(this), isExpanded: id => connected.get(id)?.expanded ?? false,
+        ringGap: this.ringGapPx(), rtl: this.effectiveDirection === 'rtl', isExpanded: id => connected.get(id)!.expanded,
       });
       if (!current()) return;
       this.sourceDiagramRows = connected; this.sourceDiagramCurrent = current;
@@ -336,9 +341,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   private topicsTruncated = false;
   private resizeObserver?: ResizeObserver;
   private resizeObserverDocument?: Document;
-  private resizeRafId?: number;
-  private resizeRafOwner?: Window;
-  private resizeRafDocument?: Document;
+  private readonly resizeFrame = new OwnedFrame(this);
   private ownerRealmGeneration = 0;
   private observedSize = '';
   private layoutInvalidated = true;
@@ -377,28 +380,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       const size = rect ? `${rect.width}:${rect.height}` : '';
       if (size && size === this.observedSize) return;
       this.observedSize = size;
-      if (this.resizeRafId != null)
-        this.resizeRafOwner?.cancelAnimationFrame(this.resizeRafId);
-      const handle = ownerWindow.requestAnimationFrame(() => {
-        if (
-          this.resizeRafId !== handle ||
-          this.resizeRafOwner !== ownerWindow ||
-          this.resizeRafDocument !== ownerDocument ||
-          this.ownerRealmGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) {
-          return;
-        }
-        this.resizeRafId = undefined;
-        this.resizeRafOwner = undefined;
-        this.resizeRafDocument = undefined;
+      this.resizeFrame.schedule(() => {
         this.layoutInvalidated = true;
         this.requestUpdate('layout', false);
       });
-      this.resizeRafId = handle;
-      this.resizeRafOwner = ownerWindow;
-      this.resizeRafDocument = ownerDocument;
     });
     this.resizeObserver = observer;
     this.resizeObserverDocument = ownerDocument;
@@ -424,11 +409,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private resetResizeWork(): void {
     this.ownerRealmGeneration += 1;
-    if (this.resizeRafId != null)
-      this.resizeRafOwner?.cancelAnimationFrame(this.resizeRafId);
-    this.resizeRafId = undefined;
-    this.resizeRafOwner = undefined;
-    this.resizeRafDocument = undefined;
+    this.resizeFrame.cancel();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.resizeObserverDocument = undefined;
@@ -485,7 +466,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       this.label == null ? this.localize('mindMapLabel') : this.label;
     const fullLayout = this.topicLayout.compute(hubLabel, {
       ringGap: this.ringGapPx(),
-      rtl: isRtl(this),
+      rtl: this.effectiveDirection === 'rtl',
       isExpanded: (id, depth) => this.isExpanded(id, depth),
     });
     this.laidOutInputs = this.layoutInputs();
@@ -515,7 +496,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     const hubLabel =
       this.label == null ? this.localize('mindMapLabel') : this.label;
     // The ring gap is re-read only by a relayout (connect, resize, dir/lang, structural change).
-    const context = `${hubLabel}\u0000${isRtl(this) ? 'rtl' : 'ltr'}`;
+    const context = `${hubLabel}\u0000${this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr'}`;
     const structuralChange =
       changed.has('topics') ||
       changed.has('expandDepth') ||
@@ -611,7 +592,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       const row = this.sourceDiagramRows.get(this.focusedId ?? '') ?? this.sourceDiagramRows.values().next().value;
       if (!row) return;
       const index = this.sourceControl.window.source.indexOfKey?.(row.key);
-      if (typeof index === 'number' && index >= 0) this.sourceControl.keydown(e, row, index, isRtl(this), selected => this.selectSourceRow(selected));
+      if (typeof index === 'number' && index >= 0) this.sourceControl.keydown(e, row, index, this.effectiveDirection === 'rtl', selected => this.selectSourceRow(selected));
       return;
     }
     const placed = this.cachedLayout.placed;
@@ -644,7 +625,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       if (child) this.focusNodeById(child.id);
       return;
     }
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     if (
@@ -696,7 +677,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       from.x - layout.centerX,
       from.y - layout.centerY
     );
-    const dir = isRtl(this) ? -1 : 1;
+    const dir = this.effectiveDirection === 'rtl' ? -1 : 1;
     return {
       x: layout.centerX + dir * parentR * Math.sin(to.angle),
       y: layout.centerY - parentR * Math.cos(to.angle),
@@ -811,7 +792,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
                   focusable="false"
                   vector-effect="non-scaling-stroke"
                 ></line>
-                <circle r="4" aria-hidden="true"></circle>
+                <circle r=${node.hasChildren ? 6 : 4} aria-hidden="true"></circle>
+                ${node.hasChildren ? svg`<path part="disclosure" aria-hidden="true" d=${node.expanded ? 'M-2 0h4' : 'M-2 0h4M0 -2v4'}></path>` : nothing}
                 <text part="node-label" aria-hidden="true" text-anchor="middle" dy="-8">${
                   node.label
                 }</text>

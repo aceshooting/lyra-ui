@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
   formControlTextWrap,
@@ -92,6 +92,12 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
+  }
+  :host([dir='ltr' i]) [part='input'][dir='auto'] {
+    direction: ltr;
+  }
+  :host([dir='rtl' i]) [part='input'][dir='auto'] {
+    direction: rtl;
   }
   [part='input']::placeholder {
     color: var(--lr-input-placeholder-color, var(--lr-input-action-color, var(--lr-color-text-quiet)));
@@ -190,9 +196,7 @@ export const styles = css`
     min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
-    /* Hover/active below repaint color, and active also fills a background, so both channels
-       need to ease; without this these buttons' paint snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='password-toggle']:not(:disabled):hover {
     color: var(--lr-input-action-hover-color, var(--lr-color-text));

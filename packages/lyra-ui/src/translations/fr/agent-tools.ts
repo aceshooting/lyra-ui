@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Les schémas de paramètres d’outil prennent en charge au maximum {fields} champs et {options} choix par champ.',
   testResultsLimit: 'Seuls les {count} premiers résultats de test sont affichés.',
   toolTimelineLimit: 'Au maximum {count} appels d’outil sont affichés.',
+  toolTimelineLoadError: 'Impossible de charger la vue de l’outil.',
   toolSelectLimit: 'Seuls les {count} premiers outils sont affichés.',
   testResultsInputTooLarge: 'Les détails des résultats des tests dépassent la limite d’affichage.',
   toolCall: 'Appel d’outil',

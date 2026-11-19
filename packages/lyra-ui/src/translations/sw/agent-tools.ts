@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Schema za vigezo vya zana zinaweza kuwa na sehemu zisizozidi {fields} na chaguo {options} kwa kila sehemu.',
   testResultsLimit: 'Matokeo {count} ya kwanza ya jaribio pekee ndiyo yanaonyeshwa.',
   toolTimelineLimit: 'Hadi miito {count} ya zana ndiyo inayoonyeshwa.',
+  toolTimelineLoadError: 'Mwonekano wa zana haukuweza kupakiwa.',
   toolSelectLimit: 'Zana {count} za kwanza pekee ndizo zinazoonyeshwa.',
   testResultsInputTooLarge: 'Maelezo ya matokeo ya majaribio yanazidi kikomo cha uonyeshaji.',
   toolCall: 'Wito wa zana',

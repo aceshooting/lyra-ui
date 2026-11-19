@@ -297,3 +297,8 @@ export const AuthoredCopy: StoryObj = {
     ></lr-phone-input>
   `,
 };
+
+export const PlaceholderColor: Story = {
+  render: () => html`<lr-phone-input label="Phone" placeholder="Enter a value"
+    style="--lr-phone-input-placeholder-color: var(--lr-color-neutral)"></lr-phone-input>`,
+};

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Az eszközparaméter-sémák legfeljebb {fields} mezőt és mezőnként {options} választási lehetőséget támogatnak.',
   testResultsLimit: 'Csak az első {count} teszteredmény látható.',
   toolTimelineLimit: 'Legfeljebb {count} eszközhívás látható.',
+  toolTimelineLoadError: 'Nem sikerült betölteni az eszköznézetet.',
   toolSelectLimit: 'Csak az első {count} eszköz látható.',
   testResultsInputTooLarge: 'A teszteredmények részletei meghaladják a megjelenítési korlátot.',
   toolCall: 'Eszközhívás',

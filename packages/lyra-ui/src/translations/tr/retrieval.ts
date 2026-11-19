@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Yol',
   pathNodeStatus: '{label}, {total} düğümden {position}. düğüm',
   pathRelationStatus: '{relation}, ilişki',
+  pathRelationForward: 'sonraki düğüme yönelik',
+  pathRelationReverse: 'önceki düğüme yönelik',
   neighborListLabel: 'İlişkiler',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Grafikte {label} öğesini genişlet',

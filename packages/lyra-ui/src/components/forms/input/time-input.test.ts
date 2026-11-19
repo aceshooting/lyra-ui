@@ -68,7 +68,7 @@ describe('lr-time-input segmented field', () => {
     try {
       await hoverUntilMatched(target, 'the pointer reached the focused hour segment');
       expect(target.matches(':focus-visible:hover')).to.be.true;
-      expect(getComputedStyle(target).backgroundColor).to.equal('rgb(4, 5, 6)');
+      await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(4, 5, 6)');
     } finally {
       await resetMouse();
     }
@@ -2365,7 +2365,7 @@ describe('lr-time-input action and placeholder colors', () => {
       'rgb(255, 0, 0)',
     );
     el.style.setProperty('--lr-time-input-placeholder-color', 'rgb(0, 0, 255)');
-    expect(color('[data-segment="minute"]')).to.equal('rgb(0, 0, 255)');
+    await waitUntil(() => color('[data-segment="minute"]') === 'rgb(0, 0, 255)');
     expect(color('[part="expand-button"]')).to.equal('rgb(255, 0, 0)');
   });
 });

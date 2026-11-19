@@ -1,9 +1,9 @@
-import { resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
-import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
+import { TypeAheadBuffer, type TypeAheadMemo } from '../../../internal/type-ahead-buffer.js';
+import { isRovingTargetAvailable, isRepeatedActivationKey, shouldIgnoreNavigationKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import {
   activateNonmodalOverlay, composedContains, deepActiveElement, type OverlayHandle,
@@ -36,6 +36,12 @@ export interface LyraMenubarEventMap {
  * @slot - lr-menubar-item elements only; other content is invalid inside the menubar role.
  * @csspart base - The horizontal, wrapping menubar container.
  * @event {CustomEvent<MenuItemSelectDetail>} lr-select - Cancelable selection bubbling from the owning menu. Prevent default to keep it open.
+ * @cssprop [--lr-menubar-gap] - Gap override.
+ * @cssprop [--lr-menubar-padding] - Padding override.
+ * @cssprop [--lr-menubar-bg] - Bg override.
+ * @cssprop [--lr-menubar-border] - Border override.
+ * @cssprop [--lr-menubar-radius] - Radius override.
+ * @cssprop [--lr-menubar-shadow] - Shadow override.
  * @cssprop --lr-menu-min-inline-size - Inherited minimum width of every slotted menu.
  * @cssprop --lr-menu-max-inline-size - Inherited maximum width of every slotted menu.
  * @status experimental
@@ -50,10 +56,17 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
   static override styles = [LyraElement.styles, sizes, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
+  );
 
   /** Accessible name; a host aria-label takes precedence, including an explicit empty value. A
    *  supplied string, including an empty one, is literal; only absence uses the localized "Menu". */
   @property() label?: string;
+
+  /** Accessible name taking precedence over the label fallback. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /**
    * Shows every menu this bar opens, nested submenus included, in the browser top layer wherever
    * the native Popover API exists, so it paints above every page layer whatever the stacking
@@ -75,16 +88,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   private overlayHandle?: OverlayHandle;
   private itemObserver?: MutationObserver;
   private readonly typeBuffer = new TypeAheadBuffer(this);
-  private readonly typeAheadLabels = new WeakMap<LyraMenubarItem, { label: string; locale: string; folded: string }>();
-
-  private foldedTypeAheadLabel(item: LyraMenubarItem, locale: string): string {
-    const label = item.textLabel;
-    const previous = this.typeAheadLabels.get(item);
-    if (previous?.label === label && previous.locale === locale) return previous.folded;
-    const folded = label.toLocaleLowerCase(resolveIntlLocale(locale));
-    this.typeAheadLabels.set(item, { label, locale, folded });
-    return folded;
-  }
+  private readonly typeAheadLabels: TypeAheadMemo = new WeakMap();
   private focusedItem: LyraMenubarItem | null = null;
   private readonly owner: MenubarItemOwner = {
     menuStateChanged: (item, open) => this.menuStateChanged(item as LyraMenubarItem, open),
@@ -115,7 +119,6 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     this.collapse();
     this.typeBuffer.clear();
     this.itemObserver?.disconnect(); this.itemObserver = undefined;
-    this.ownerDocument.removeEventListener('focusin', this.onDocumentFocus, true);
     for (const item of this.items) item[menubarItemOwner](null, this.owner);
     this.focusedItem = null;
     super.disconnectedCallback();
@@ -186,6 +189,8 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     if (focus) { this.focusedItem = item; item.focus({ preventScroll: true }); }
   }
 
+  private focusDocument?: Document;
+
   private registerOverlay(): void {
     if (this.overlayHandle) return;
     this.overlayHandle = activateNonmodalOverlay({
@@ -196,7 +201,8 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
         return isHtmlElement(active) && active !== this.ownerDocument.body && active !== this.ownerDocument.documentElement ? active : null;
       },
     });
-    this.ownerDocument.addEventListener('focusin', this.onDocumentFocus, true);
+    this.focusDocument = this.ownerDocument;
+    this.focusDocument.addEventListener('focusin', this.onDocumentFocus, true);
   }
 
   private open(item: LyraMenubarItem, focus: MenuFocusTarget): void {
@@ -221,7 +227,8 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   private collapse(): void {
     const item = this.expandedItem;
     this.expandedItem = null;
-    this.ownerDocument.removeEventListener('focusin', this.onDocumentFocus, true);
+    this.focusDocument?.removeEventListener('focusin', this.onDocumentFocus, true);
+    this.focusDocument = undefined;
     const handle = this.overlayHandle; this.overlayHandle = undefined;
     handle?.deactivate();
     if (item) void item.closeMenu();
@@ -269,7 +276,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const found = this.eventItem(event); if (!found) return;
     const { item, inMenu } = found;
     if (inMenu) {
@@ -290,24 +297,35 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     });
     if (nextIndex !== null) next = navigable[nextIndex];
     else if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
-      if (item.hasMenu) { event.preventDefault(); this.open(item, event.key === 'ArrowUp' ? 'last' : 'first'); }
-      else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); item.click(); }
+      const openWithArrow = event.key === 'ArrowDown' || event.key === 'ArrowUp';
+      if (!item.hasMenu && openWithArrow) return;
+      event.preventDefault();
+      if (isRepeatedActivationKey(event) && !openWithArrow) return;
+      if (item.hasMenu) this.open(item, event.key === 'ArrowUp' ? 'last' : 'first');
+      else item.click();
       return;
     } else if (this.typeBuffer.accepts(event)) {
       this.typeBuffer.add(event.key, this.effectiveLocale);
-      const locale = resolveIntlLocale(this.effectiveLocale);
-      let match: number | null = null;
-      for (let step = 1; step <= navigable.length; step++) {
-        const candidate = ((index + step) % navigable.length + navigable.length) % navigable.length;
-        if (this.foldedTypeAheadLabel(navigable[candidate]!, locale).startsWith(this.typeBuffer.text)) { match = candidate; break; }
-      }
+      const match = this.typeBuffer.match(
+        navigable,
+        index,
+        (candidate) => candidate.textLabel,
+        this.effectiveLocale,
+        undefined,
+        this.typeAheadLabels,
+      );
       if (match !== null) next = navigable[match];
     }
     if (next) { event.preventDefault(); this.move(next); }
   };
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
+
   override render(): TemplateResult {
-    return html`<div part="base" role="menubar" aria-label=${this.getAttribute('aria-label') ?? this.label ?? this.localize('menuLabel')}><slot @slotchange=${this.syncItems}></slot></div>`;
+    return html`<div part="base" role="menubar" aria-label=${this.getAttribute('aria-label') ?? this.accessibleLabel ?? this.label ?? this.localize('menuLabel')}><slot @slotchange=${this.syncItems}></slot></div>`;
   }
 }
 

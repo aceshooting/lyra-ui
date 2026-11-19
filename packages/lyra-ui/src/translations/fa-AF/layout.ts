@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'برداشتن پین راهبری',
   appRailItemCollapse: 'جمع‌کردن {label}',
   appRailItemExpand: 'بازکردن {label}',
+  appRailItemToggle: 'نمایش یا پنهان کردن {label}',
+  appRailGroupToggle: 'گروه راهبری',
   resizeValuePercent: '{value} درصد',
   commandPaletteLabel: 'صفحه‌کلید فرمان',
   commandPalettePlaceholder: 'فرمان‌ها را جست‌وجو کنید…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: 'دستور {count}',
     other: '{count} دستورات',
   },
+  tabCloseAction: 'بستن {label}',
+  stepperStateCompleted: 'تکمیل شد',
+  stepperStateError: 'خطا',
+  stepperStatePending: 'آغاز نشده',
+  stepperStateLocked: 'قفل شده',
   commandPaletteInputLimit: 'برخی فرمان‌ها به‌دلیل رسیدن به حد ورودی حذف شدند.',
 };
 

@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'ቢያንስ አንድ አማራጭ ይምረጡ።',
   tokenInputRequired: 'ቢያንስ አንድ ዋጋ ያስገቡ።',
   tokenInputEditWithContext: '{label}ን አርትዕ',
+  tokenInputLabel: 'ቶከኖች',
   iconButtonLabel: 'አዝራር',
   codeEditorLabel: 'የኮድ አርታዒ',
   switchRequired: 'እባክዎ ይህን ያብሩ።',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'እስክሪብቶ ወርዷል',
   signaturePadPenUp: 'እስክሪብቶ ተነስቷል',
+  signaturePadDrawingLimit: 'የመሳል ገደቡ ላይ ደርሰዋል።',
   localePickerInputLimit: 'የመጀመሪያዎቹ 512 የቋንቋና ክልል ግቤቶች ብቻ ይገኛሉ።',
   emojiPickerInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የኢሞጂ ውሂብ ተወግዷል።',
 };

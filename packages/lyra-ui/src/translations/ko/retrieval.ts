@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: '경로',
   pathNodeStatus: '{label}, 전체 노드 {total}개 중 {position}번째',
   pathRelationStatus: '{relation}, 관계',
+  pathRelationForward: '다음 노드를 향함',
+  pathRelationReverse: '이전 노드를 향함',
   neighborListLabel: '관계들',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: '그래프에서 {label} 확장',

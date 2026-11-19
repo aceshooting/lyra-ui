@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Díphionnáil an nascleanúint',
   appRailItemCollapse: 'Laghdaigh {label}',
   appRailItemExpand: 'Leathnaigh {label}',
+  appRailItemToggle: 'Taispeáin nó folaigh {label}',
+  appRailGroupToggle: 'Grúpa nascleanúna',
   resizeValuePercent: '{value} faoin gcéad',
   commandPaletteLabel: 'Pailéad orduithe',
   commandPalettePlaceholder: 'Cuardaigh orduithe…',
@@ -66,6 +68,11 @@ const strings: LyraLocaleStrings = {
     other: '{count} ordú',
     two: '{count} ordú',
   },
+  tabCloseAction: 'Dún {label}',
+  stepperStateCompleted: 'Críochnaithe',
+  stepperStateError: 'Earráid',
+  stepperStatePending: 'Gan tosú',
+  stepperStateLocked: 'Faoi ghlas',
   commandPaletteInputLimit: 'Fágadh roinnt orduithe ar lár mar gur sroicheadh teorainn ionchuir.',
 };
 

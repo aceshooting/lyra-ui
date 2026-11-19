@@ -2037,6 +2037,8 @@ and `dateTimeFormat(locale, options)`.
 
 ## `lr-textarea`
 
+`--lr-textarea-placeholder-color` styles the native placeholder and defaults to `--lr-color-text-quiet`.
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
@@ -3570,8 +3572,9 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-**Events:** native `input` on user edits and native `change` on a complete commit; compatibility
-aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
+**Events:** native `input` on user edits and native `change` when the committed value changes,
+including when clearing a segment changes a previously complete time to an empty value.
+The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
 `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
@@ -3777,6 +3780,8 @@ entry for the flush and cancellation rules.
 ---
 
 ## `lr-phone-input`
+
+`--lr-phone-input-placeholder-color` styles the native placeholder and defaults to `--lr-color-text-quiet`.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
@@ -4116,10 +4121,10 @@ semantics.
   never shrinks below 24px (WCAG 2.5.8)
 - `disabled: boolean = false` (reflected)
 - `startLabel?: string` (attribute `start-label`) — caller-owned `aria-label` override for the start
-  handle; absence resolves localized `rangeStart` (`"Range start"` in English), while every
-  supplied string — including `"Range start"` and `""` — remains literal
-- `endLabel?: string` (attribute `end-label`) — equivalent override for the end handle; absence
-  resolves localized `rangeEnd` (`"Range end"` in English)
+  handle. Omitted or whitespace-only labels use localized `rangeStart` (`"Range start"` in English).
+  An explicit `""` remains an opt-out.
+- `endLabel?: string` (attribute `end-label`) — equivalent override for the end handle, with
+  localized `rangeEnd` (`"Range end"` in English) as its fallback.
 - `valueFormatter?: TimeRangeValueFormatter` (attribute: false) — maps each finite, clamped
   `aria-valuenow` to optional human-readable `aria-valuetext`; called as
   `(value, handle: TimeRangeHandle)`, where `TimeRangeHandle = 'start' | 'end'`. The formatter may
@@ -5752,7 +5757,8 @@ required-field marker" above), not a copy of it, so `--lr-form-control-required-
 here too.
 `segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
 
-**Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
+**Themeable custom properties:** `--lr-otp-input-placeholder-color` styles empty mask glyphs
+and defaults to `--lr-color-text-quiet`. `--mask-char` (mapped mask-glyph alias, defaulting to the retained
 `--lr-otp-input-mask-char`; the value must be a _quoted_ CSS string), `--segment-border-radius`
 (default `var(--lr-form-control-radius, var(--lr-radius))`), `--segment-gap` (default
 `var(--lr-space-xs)`, ignored by `contained`), and `--segment-size` (default `2.5em` at standalone
@@ -6101,10 +6107,15 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) — zero leaves every token mounted,
-preserving the default. Positive values bound mounted tokens while retaining the focused or editing
-token; `token-overflow` displays a localized count for the rest. Non-finite values restore the
-unlimited default. The value array and form submission still include every token.
+`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) bounds the number of mounted
+tokens while retaining the focused or editing token. `token-overflow` displays a localized count
+for the rest. Set `max-tokens-visible="0"` to mount every token. Non-finite values restore the
+200-token default. The value array and form submission include every token.
+The native text hints `autocomplete`, `inputmode` (`inputMode`), and `enterkeyhint`
+(`enterKeyHint`) go to both the draft input and the inline token editor. Empty values leave the
+optional native attributes unset. The default accessible name is localized as "Tokens" when the
+field has no label, accessible-name override, or nonblank placeholder.
+
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
 `start`/`end`.
@@ -6203,7 +6214,9 @@ above, not a copy of it, so `--lr-form-control-required-content`,
 here exactly as they do on `lr-input`. It marks the control, not an individual token. With no label
 text the part is hidden and no glyph is painted.
 
-**Themeable custom properties:** `--lr-token-input-padding` (the input-wrapper padding, scaled by
+**Themeable custom properties:** `--lr-token-input-placeholder-color` defaults to
+`--lr-color-text-quiet` and styles both native placeholders.
+`--lr-token-input-padding` (the input-wrapper padding, scaled by
 `size`), `--lr-token-input-font-size` (the input-wrapper and token font size, scaled by `size`),
 `--lr-token-input-control-min-height` (the input-wrapper's block-size floor, scaled by `size`),
 `--lr-token-input-control-height` (exact input-wrapper height — undeclared by default, leaving the
@@ -6263,17 +6276,21 @@ adoption keep that relationship current.
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
 optional line-number gutter. No syntax highlighting: `language` is metadata only.
 
+Code and its caret measurements use left-to-right base direction. The surrounding frame and
+gutter placement follow the application direction.
+
 **Properties:**
 
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
   `gutter` part, which otherwise renders one row per `\n`-separated line.
-- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press (a selection spanning several lines indents each of its lines and stays selected; an insertion never exceeds `maxlength`) and the tab width
+- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
   shared by the native textarea and text measurement. Explicit property/attribute assignment wins
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
   on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
   empty the insert nor throw out of `String.repeat()`.
+  Tab indents the selected lines and preserves the selection within `maxlength`.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
@@ -8325,6 +8342,9 @@ must never be mirrored.
 
 **Properties:**
 
+- `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing
+  and clearing. Setting it discards an in-progress stroke.
+
 - `name: string = ''` (reflected) — the form entry name.
 - `label: string = ''` — visible label text, before the `label` slot.
 - `hint: string = ''` — hint text, before the `hint` slot.
@@ -8336,6 +8356,8 @@ must never be mirrored.
   restore one: own data is copied without invoking accessors or iterators, non-finite points are
   dropped, and coordinates are clamped to 0–1. Only the first `SIGNATURE_PAD_MAX_STROKES` (256)
   stroke positions and `SIGNATURE_PAD_MAX_POINTS` (2048) point positions per stroke are inspected.
+  Drawing follows the same limits. A polite announcement reports a refused stroke or the first
+  refused point in the active stroke.
   Assigning the current array is a no-op.
 - `value: string` (read-only) — PNG data URL, `''` while empty: black ink on a transparent
   background, 1024 px on the long side at the surface's last measured aspect ratio (3:1 before the
@@ -8348,6 +8370,8 @@ must never be mirrored.
 and `click()` focus the drawing surface (both do nothing while disabled), and `blur()` blurs it.
 
 **Events:**
+
+- `lr-clear` follows the change pair when the user empties the pad with its Clear button.
 
 - `change` — native event, after the user finishes a stroke or clears the pad. Releasing the
   pointer, cancelling it, or losing capture commits the portion drawn so far exactly once. Lifting

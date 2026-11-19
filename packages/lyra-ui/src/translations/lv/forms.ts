@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Atlasiet vismaz vienu opciju.',
   tokenInputRequired: 'Ievadiet vismaz vienu vērtību.',
   tokenInputEditWithContext: 'Rediģēt {label}',
+  tokenInputLabel: 'Marķieri',
   iconButtonLabel: 'Poga',
   codeEditorLabel: 'Koda redaktors',
   switchRequired: 'Lūdzu, ieslēdziet šo.',
@@ -118,6 +119,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pildspalva nolaista',
   signaturePadPenUp: 'Pildspalva pacelta',
+  signaturePadDrawingLimit: 'Sasniegts zīmēšanas ierobežojums.',
   localePickerInputLimit: 'Pieejami tikai pirmie 512 lokalizācijas ieraksti.',
   emojiPickerInputLimit: 'Daži emocijzīmju dati tika izlaisti, jo tika sasniegts ievades ierobežojums.',
 };

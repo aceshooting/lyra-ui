@@ -118,6 +118,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Kelias',
   pathNodeStatus: '{label}, mazgas {position} iš {total}',
   pathRelationStatus: '{relation}, ryšys',
+  pathRelationForward: 'nukreipta į kitą mazgą',
+  pathRelationReverse: 'nukreipta į ankstesnį mazgą',
   neighborListLabel: 'Ryšiai',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Išskleisti {label} grafe',

@@ -151,7 +151,7 @@ it('revokes a pending global reveal on query change, provider removal and reconn
   await ready(graph, 'node:0');
   const pending = graph.revealSourceKey('node:999999');
   await waitUntil(() => !!locate);
-  const search = graph.shadowRoot!.querySelector<HTMLInputElement>('[data-source-search]')!;
+  const search = graph.shadowRoot!.querySelector<HTMLInputElement>('[part="source-search"]')!;
   search.value = 'new'; search.dispatchEvent(new Event('input', { bubbles: true }));
   locate(999999);
   expect(await pending).to.equal(false);
@@ -259,7 +259,8 @@ it('provides localized source names, host naming and bounded keyboard endpoints'
   const graph = await fixture<SourceGraph>(html`<lr-graph view="list" aria-label="Relations" .graphSource=${data.source} .strings=${{ graphSourceRecords: 'Enregistrements', graphSourceNodes: 'Sommets' }}></lr-graph>`);
   await ready(graph, 'node:0');
   const navigator = graph.shadowRoot!.querySelector('[part="source-navigator"]')!;
-  expect(navigator.getAttribute('aria-label')).to.equal('Relations');
+  expect(graph.getAttribute('aria-label')).to.equal('Relations');
+  expect(navigator.getAttribute('aria-label')).to.equal('Enregistrements');
   expect(graph.shadowRoot!.querySelector('[data-source-kind]')!.getAttribute('aria-label')).to.equal('Enregistrements');
   row(graph, 'node:0')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   await graph.updateComplete;
@@ -393,7 +394,7 @@ it('revokes incident controls before render on page/query changes and removal', 
     const old = graph.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-incident="node:0"]')!;
     if (change === 'page') graph.sourcePage = 1;
     else if (change === 'query') {
-      const input = graph.shadowRoot!.querySelector<HTMLInputElement>('[data-source-search]')!;
+      const input = graph.shadowRoot!.querySelector<HTMLInputElement>('[part="source-search"]')!;
       input.value = 'new'; input.dispatchEvent(new Event('input', { bubbles: true }));
     } else graph.remove();
     old.click(); await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 30));
@@ -707,4 +708,112 @@ describe('global reveal boundaries', () => {
     expect(activations).to.equal(0);
     expect(data.scenes.length).to.equal(scenes);
   });
+});
+
+it('exposes themed source controls and clears the search through the localized action', async () => {
+  const data = provider();
+  const graph = await fixture<SourceGraph>(html`<lr-graph label="Network" view="list" .strings=${{clear:'Reset filter'}} .graphSource=${data.source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const root = graph.shadowRoot!;
+  expect(root.querySelector('[part="source-navigator"]')!.getAttribute('aria-label')).to.equal('Graph records');
+  expect(root.querySelector('[part="source-kind"]')?.localName).to.equal('select');
+  const input = root.querySelector<HTMLInputElement>('[part="source-search"]')!;
+  expect(input.spellcheck).to.equal(false);
+  expect(input.autocomplete).to.equal('off');
+  input.value = 'sample'; input.dispatchEvent(new Event('input'));
+  await graph.updateComplete;
+  const clear = root.querySelector<HTMLButtonElement>('[part="search-clear"]')!;
+  expect(clear.getAttribute('aria-label')).to.equal('Reset filter');
+  clear.click();
+  await ready(graph, 'node:0');
+  expect(input.value).to.equal('');
+  root.querySelector<HTMLButtonElement>('[part="source-incident"]')!.click();
+  await ready(graph, 'edge:0');
+  expect(root.querySelector('[part="source-direction"]')?.localName).to.equal('select');
+  root.querySelector<HTMLButtonElement>('[part="source-action"]')!.click();
+  await graph.updateComplete;
+  expect(root.querySelector('[part="source-direction"]') === null).to.equal(true);
+});
+
+it('leaves source-row navigation inactive inside an inert host', async () => {
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  graph.inert = true;
+  const key = new KeyboardEvent('keydown', {key:'ArrowDown', bubbles:true, cancelable:true});
+  row(graph, 'node:0')!.dispatchEvent(key);
+  expect(key.defaultPrevented).to.equal(false);
+});
+
+it('skips unavailable source rows when moving focus', async () => {
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .sourcePageSize=${4}
+    .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const first = row(graph, 'node:0')!;
+  row(graph, 'node:1')!.parentElement!.inert = true;
+  row(graph, 'node:2')!.disabled = true;
+  await focusByKeyboard(first);
+  first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  expect(graph.shadowRoot!.activeElement === row(graph, 'node:3')).to.equal(true);
+});
+
+it('ignores navigation from a retired source row', async () => {
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const retired = row(graph, 'node:0')!;
+  graph.graphSource = undefined;
+  await graph.updateComplete;
+  graph.graphSource = provider().source;
+  await ready(graph, 'node:0');
+  expect(retired.isConnected).to.equal(false);
+  const active = row(graph, 'node:2')!;
+  await focusByKeyboard(active);
+  const event = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true });
+  retired.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(graph.shadowRoot!.activeElement === active).to.equal(true);
+});
+
+it('leaves focus in place when a page change retires the source rows before render', async () => {
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:2');
+  const active = row(graph, 'node:2')!;
+  await focusByKeyboard(active);
+  graph.sourcePage = 1;
+  const event = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true });
+  active.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(graph.shadowRoot!.activeElement === active).to.equal(true);
+});
+
+it('makes incident edges reachable by Tab only on the current source row', async () => {
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const incident = () => [...graph.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-source-incident]')].filter(b => b.tabIndex === 0);
+  expect(incident().map(b => b.dataset['sourceIncident'])).to.deep.equal(['node:0']);
+  row(graph, 'node:0')!.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowDown',bubbles:true}));
+  await graph.updateComplete;
+  expect(incident().map(b => b.dataset['sourceIncident'])).to.deep.equal(['node:1']);
+});
+
+it('declines a reveal when a focus listener removes the graph', async () => {
+  const graph = await fixture<LyraGraph>(html`<lr-graph view="list" .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  graph.shadowRoot!.addEventListener('focusin', () => graph.remove(), { once: true });
+  expect(await graph.revealSourceKey('node:9')).to.equal(false);
+  expect(graph.isConnected).to.equal(false);
+});
+
+it('abandons a graph reveal when its scroll container is detached', async () => {
+  const graph = await fixture<LyraGraph>(html`<lr-graph view="list" .graphSource=${provider().source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const port = graph.shadowRoot!.querySelector<HTMLElement>('[part="source-navigator"]')!;
+  port.style.cssText = 'display:block;overflow:auto;max-block-size:60px';
+  const measure = port.getBoundingClientRect.bind(port);
+  port.getBoundingClientRect = () => {
+    const bounds = measure();
+    graph.remove();
+    return bounds;
+  };
+  expect(await graph.revealSourceKey('node:9')).to.equal(false);
+  expect(graph.isConnected).to.equal(false);
 });

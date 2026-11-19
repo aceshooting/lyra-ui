@@ -63,16 +63,16 @@ export const styles = css`
   }
 
   [part='toggle']:where(:hover) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--_lr-glass-brand-text, var(--lr-color-brand));
+    background: var(--lr-navigation-menu-toggle-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-navigation-menu-toggle-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
 
   [part='toggle']:where(:active) {
-    background: color-mix(
+    background: var(--lr-navigation-menu-toggle-active-bg, color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
     color: var(--lr-navigation-menu-toggle-active-color, var(--lr-color-text));
   }
 

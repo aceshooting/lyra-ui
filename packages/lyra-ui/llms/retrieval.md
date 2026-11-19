@@ -23,6 +23,8 @@ nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old
 
 ## `lr-graph`
 
+Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-fill` to customize the hovered control background.
+
 **Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
 or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests
 `@aceshooting/lyra-3d/graph` when WebGL is selected; 2D ignores this preference. Failure falls
@@ -388,8 +390,10 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 **Events:** `lr-node-activate` (`detail: { nodeId, x, y, z? }`, where `x` and `y` are the clicked node's current
 local drawing coordinates in 2D; spatial/list activation uses world x/y/z), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId,
 edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
-`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
-`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, edgeId? }`, same hover contract),
+`lr-node-leave` (`detail: { nodeId }`, hover start/end), and `lr-edge-enter`/`lr-edge-leave`
+(`detail: { sourceNodeId, targetNodeId, edgeId? }`). The SVG suppresses new hover during a drag, pan, or camera tween.
+Leaving an already-hovered node or edge still ends its hover. Canvas emits hover events on hit-identity changes and exit.
+Other events include
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
@@ -423,6 +427,8 @@ interaction surface), `spatial-instructions` (camera keyboard instructions), `sp
 visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
 `spatial-page-count` (localized total and page status), `spatial-pagination` (page controls),
 `custom-node-notice` (custom body availability/refusal), and `glow-notice` (halo availability).
+The source toolbar exposes `source-kind`, `source-search`, `search-clear`, `source-direction`, `source-action`, and `source-incident`.
+
 Source-mode parts: `source-navigator` (global query, record list and pagination), `source-row`
 (a mounted record activation button), `source-row-active` (the navigator's roving tab stop),
 `source-status` (loading, unavailable-record or error text), and `source-coverage` (full-source
@@ -602,6 +608,8 @@ polling its own `requestAnimationFrame` loop.
 
 ## `lr-node-palette`
 
+The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-fill` to customize the hovered control background.
+
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 The searchable, categorized node library for workflow editors: drag an item onto a canvas, or place
@@ -628,16 +636,15 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
   the raw property readback
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
-  reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
-  behaving exactly like a plain Arrow press
+  reordering of the catalog. With reordering off, plain arrows move focus and Ctrl/Cmd+Arrow stays available to the browser
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the listbox name. Authored host `aria-label` instead
   names the component as a whole (including explicit-empty/dynamic values) and is not cloned onto
   the listbox, which retains the distinct `label`/localized name
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
-click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item), `lr-reorder`
+click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, carrying the original item
+after placement when the palette is still connected and its `items` collection is still current), `lr-reorder`
 (`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur`
 (realm-correct native `FocusEvent`s relayed exactly once from the internal search field, preserving
 `relatedTarget` while bubbling and crossing the shadow boundary).
@@ -705,6 +712,8 @@ The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
 ---
 
 ## `lr-graph-legend`
+
+Set `--lr-graph-legend-item-hover-fill` to customize the hovered control background.
 
 A node-type legend for a paired `lr-graph`: one swatch + label + count row per node type, doubling
 as visibility filters. Never reads or writes a graph directly — the host forwards `types` in from
@@ -934,6 +943,8 @@ ancestor to change every unset entity chip beneath it.
 
 ## `lr-neighbor-list`
 
+Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-fill` to customize the hovered control background.
+
 One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
 graph data) and never mutates a graph.
@@ -1058,14 +1069,15 @@ Source-mode parts: `source-status` (loading, failure, empty or missing-center fe
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
   element is the internal virtual-list's own row wrapper (the component renders only the row's
   content into it), so a `::part(row)` rule applies once, not twice.
-- Rows with blank neighbor ids and later rows repeating the same node id are omitted first-wins
-  before grouping, virtualization, rendering, or events.
+- Rows are identified by node id, relation and direction. Each distinct relationship appears once. Blank node ids are omitted.
 - A missing, blank, or nonstring `node.type` is omitted from that row's secondary metadata instead
   of being passed to locale formatting; the neighbor label and any valid degree remain visible.
 
 ---
 
 ## `lr-path-strip`
+
+Set `--lr-path-strip-action-hover-fill` to customize the hovered control background.
 
 A linear node → relation → node chain rendering "why A connects to B" (GraphRAG local-search
 reasoning paths) as a compact, horizontally scrollable strip. One-dimensional and presentational: no
@@ -1514,6 +1526,8 @@ Plus shared tokens.
 
 ## `lr-mind-map`
 
+The `disclosure` part shows a plus on collapsed parents and a minus on expanded parents.
+
 A radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of a topic hierarchy where
 activating a topic drills in or hands the topic to the chat. Hierarchy, not network — no cross-links,
 no force simulation, no communities, no edge labels (that's `lr-graph`). Zero-dependency SVG; the
@@ -1636,6 +1650,8 @@ virtualized navigator), `source-row` (a hierarchy row with global position metad
 ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
+`--lr-mind-map-label-halo` (default `var(--lr-color-surface)`) — halo stroke behind topic labels.
+`--lr-mind-map-source-block-size` (default `20rem`) — block size of the source-mode diagram box; the diagram scales to fit it and scrolls when it still overflows.
 
 **Optional peer deps:** none.
 
@@ -2558,6 +2574,8 @@ tokens.
 
 ## `lr-knowledge-graph-explorer`
 
+The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-fill` to customize the hovered control background.
+
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
 with `{ from, to, reason }`. `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
@@ -2764,6 +2782,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
+- `lr-hidden-types-change-request` carries the proposed `{ hiddenTypes }`. Call `preventDefault()` to veto the legend change.
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.
@@ -3444,6 +3463,8 @@ source list. Either slot renders from its assigned content without requiring the
 `grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.
 
 ## `lr-embedding-explorer`
+
+The list view accepts `--lr-embedding-explorer-row-selected-fill` and `--lr-embedding-explorer-page-disabled-fill`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
 
 Accessible embedding projection viewer with a dependency-free SVG default. Coordinates are
 projected by the host; the component normalizes them, colors clusters and emits selection events.

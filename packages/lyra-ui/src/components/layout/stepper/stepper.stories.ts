@@ -146,7 +146,8 @@ export const NarrowLongLabels: Story = {
 };
 
 export const WithError: Story = {
-  render: () => html`<lr-stepper .steps=${errorSteps}></lr-stepper>`,
+  render: () => html`<lr-stepper label="Checkout progress" .steps=${errorSteps}
+    .strings=${{ stepperStateError: 'Needs attention' }}></lr-stepper>`,
 };
 
 /** Hovered, pressed, current, and error step treatments — plus the current index chip — each have

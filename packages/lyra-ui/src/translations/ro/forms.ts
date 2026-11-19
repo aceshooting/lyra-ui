@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Selectează cel puțin o opțiune.',
   tokenInputRequired: 'Introdu cel puțin o valoare.',
   tokenInputEditWithContext: 'Editează {label}',
+  tokenInputLabel: 'Tokenuri',
   iconButtonLabel: 'Buton',
   codeEditorLabel: 'Editor de cod',
   switchRequired: 'Activează această opțiune.',
@@ -118,6 +119,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Stilou jos',
   signaturePadPenUp: 'Stilou sus',
+  signaturePadDrawingLimit: 'A fost atinsă limita de desenare.',
   localePickerInputLimit: 'Sunt disponibile doar primele 512 intrări de limbă și regiune.',
   emojiPickerInputLimit: 'Unele date emoji au fost omise deoarece s-a atins o limită de intrare.',
 };

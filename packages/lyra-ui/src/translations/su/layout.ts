@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Leupaskeun sematan napigasi',
   appRailItemCollapse: 'Ciutkeun {label}',
   appRailItemExpand: 'Kembangkeun {label}',
+  appRailItemToggle: 'Témbongkeun atawa sumputkeun {label}',
+  appRailGroupToggle: 'Grup napigasi',
   resizeValuePercent: '{value} persén',
   commandPaletteLabel: 'Palét paréntah',
   commandPalettePlaceholder: 'Pilarian paréntah…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} paréntah',
   },
+  tabCloseAction: 'Tutup {label}',
+  stepperStateCompleted: 'Réngsé',
+  stepperStateError: 'Kasalahan',
+  stepperStatePending: 'Can dimimitian',
+  stepperStateLocked: 'Dikonci',
   commandPaletteInputLimit: 'Sababaraha paréntah dileungitkeun lantaran wates input geus kahontal.',
 };
 

@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Otkvači navigaciju',
   appRailItemCollapse: 'Sažmi: {label}',
   appRailItemExpand: 'Proširi: {label}',
+  appRailItemToggle: 'Sažmi ili proširi: {label}',
+  appRailGroupToggle: 'Navigacijska grupa',
   resizeValuePercent: '{value} posto',
   commandPaletteLabel: 'Paleta naredbi',
   commandPalettePlaceholder: 'Pretraži naredbe…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     few: '{count} naredbe',
     other: '{count} naredbi',
   },
+  tabCloseAction: 'Zatvori: {label}',
+  stepperStateCompleted: 'Završeno',
+  stepperStateError: 'Pogreška',
+  stepperStatePending: 'Nije započeto',
+  stepperStateLocked: 'Zaključano',
   commandPaletteInputLimit: 'Zbog ograničenja ulaza izostavljene su neke stavke: naredbe.',
 };
 

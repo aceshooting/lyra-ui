@@ -122,7 +122,7 @@ describe('token draft external descriptions', () => {
     const hint = field.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
     const error = field.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
     await waitUntil(() => descriptions(field)[0] === source);
-    expect(descriptions(field).map((el) => el.id)).to.deep.equal([source.id, hint.id, error.id]);
+    expect(descriptions(field).map((el) => el.id)).to.deep.equal([source.id, error.id, hint.id]);
     source.textContent = 'Changed';
     expect(descriptions(field)[0]?.textContent).to.equal('Changed');
     const replacement = document.createElement('span');

@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: '내비게이션 고정 해제',
   appRailItemCollapse: '{label} 접기',
   appRailItemExpand: '{label} 확장',
+  appRailItemToggle: '{label} 표시 전환',
+  appRailGroupToggle: '내비게이션 그룹',
   resizeValuePercent: '{value}퍼센트',
   commandPaletteLabel: '명령 팔레트',
   commandPalettePlaceholder: '명령 검색...',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} 명령',
   },
+  tabCloseAction: '{label} 닫기',
+  stepperStateCompleted: '완료됨',
+  stepperStateError: '오류',
+  stepperStatePending: '시작 안 됨',
+  stepperStateLocked: '잠김',
   commandPaletteInputLimit: '입력 한도에 도달하여 일부 명령이 생략되었습니다.',
 };
 

@@ -311,7 +311,7 @@ describe('canvas visibility gating (perf)', () => {
       expect(io.observedTargets).to.include(el);
       const latest = io.instances[io.instances.length - 1]!;
 
-      type Internals = { drawCanvas(): void; markCanvasDirty(): void; canvasDrawRafId?: number; viewportChangeRafId?: number };
+      type Internals = { drawCanvas(): void; markCanvasDirty(): void; canvasDrawFrame: {pending:boolean}; viewportChangeRafId?: number };
       const internals = el as unknown as Internals;
       const originalDraw = internals.drawCanvas.bind(internals);
       let drawCalls = 0;
@@ -322,7 +322,7 @@ describe('canvas visibility gating (perf)', () => {
       await twoFrames();
       // Let every in-flight frame (the settle's deferred draw, a viewport change) run to completion.
       await waitUntil(
-        () => internals.canvasDrawRafId === undefined && internals.viewportChangeRafId === undefined,
+        () => internals.canvasDrawFrame.pending === false && internals.viewportChangeRafId === undefined,
         'in-flight canvas frames drained'
       );
       await twoFrames();
@@ -948,4 +948,21 @@ describe('coverage: private-helper direct branches', () => {
     expect(halo.getAttribute('cx')).to.equal('0');
     expect(halo.getAttribute('cy')).to.equal('0');
   });
+});
+
+it('limits the SVG data list while keeping every diagram node reachable', async () => {
+  const nodes = Array.from({ length: 205 }, (_, index) => ({ id: String(index) }));
+  const el = await fixture<LyraGraph>(html`
+    <lr-graph layout="layered" .nodes=${nodes}
+      .strings=${{ graphDataListLimit: 'Showing {shown} of {total}' }}></lr-graph>
+  `);
+  const items = () => el.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]');
+  await waitUntil(() => items().length === nodes.length, 'the SVG renders every node', {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await waitUntil(() => el.shadowRoot!.activeElement === items()[204], 'End focuses the final node');
+  expect(items()[204]!.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.querySelectorAll('[part="data-list"] li').length).to.equal(200);
+  expect(el.shadowRoot!.textContent).to.include('Showing 200 of 205');
 });

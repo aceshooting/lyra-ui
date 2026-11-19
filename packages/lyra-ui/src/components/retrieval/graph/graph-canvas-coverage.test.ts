@@ -38,17 +38,23 @@ describe('coverage: canvas renderer internals', () => {
     // timeout. Every other test in this describe block that inspects canvasScene follows the same
     // pattern.
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    type Internals = { canvasDprQuery?: MediaQueryList; canvasScene?: unknown };
-    await waitUntil(
-      () => !!(el as unknown as Internals).canvasScene,
-      undefined,
-      { timeout: NODE_COUNT_TIMEOUT }
-    );
-    const query = (el as unknown as Internals).canvasDprQuery;
-    expect(query).to.exist;
-    expect((el as unknown as Internals).canvasScene).to.exist;
-    query!.dispatchEvent(new Event('change'));
-    expect((el as unknown as Internals).canvasScene).to.be.undefined; // markCanvasDirty() cleared it
+    const internal = el as unknown as { watchCanvasDpr(): void; canvasScene?: unknown };
+    await waitUntil(() => !!internal.canvasScene, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const match = window.matchMedia;
+    const queries: MediaQueryList[] = [];
+    window.matchMedia = query => {
+      const list = match.call(window, query);
+      queries.push(list);
+      return list;
+    };
+    try {
+      internal.watchCanvasDpr();
+      queries[0]!.dispatchEvent(new Event('change'));
+      expect(internal.canvasScene === undefined).to.equal(true);
+      expect(queries.length).to.equal(2);
+      queries[0]!.dispatchEvent(new Event('change'));
+      expect(queries.length).to.equal(2);
+    } finally { window.matchMedia = match; }
   });
 
   it('resolves a var(--x) node/link color to its cascaded value in the canvas scene (categorical fallback + explicit var() link color)', async () => {
@@ -248,6 +254,7 @@ describe('coverage: canvas renderer internals', () => {
     const startX = rect.left + target.x;
     const startY = rect.top + target.y;
     const capture = stubPointerCapture(canvas);
+    canvas.hasPointerCapture = id => capture.captured.has(id);
     try {
       canvas.dispatchEvent(
         new PointerEvent('pointerdown', {
@@ -280,6 +287,7 @@ describe('coverage: canvas renderer internals', () => {
       expect(target.fx).to.be.null;
       expect(target.fy).to.be.null;
     } finally {
+      Reflect.deleteProperty(canvas, 'hasPointerCapture');
       capture.restore();
     }
   });
@@ -320,6 +328,7 @@ describe('coverage: canvas renderer internals', () => {
     const captured: number[] = [];
     const released: number[] = [];
     canvas.setPointerCapture = (pointerId) => captured.push(pointerId);
+    canvas.hasPointerCapture = id => captured.includes(id) && !released.includes(id);
     canvas.releasePointerCapture = (pointerId) => released.push(pointerId);
 
     canvas.dispatchEvent(
@@ -399,7 +408,9 @@ describe('coverage: canvas renderer internals', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const released: number[] = [];
-    canvas.setPointerCapture = () => {};
+    let heldId: number | undefined;
+    canvas.setPointerCapture = id => { heldId = id; };
+    canvas.hasPointerCapture = id => id === heldId && !released.includes(id);
     canvas.releasePointerCapture = (pointerId) => released.push(pointerId);
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
@@ -1041,7 +1052,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       scheduleViewportChange: () => void;
       viewportChangeRafId?: number;
       markCanvasDirty: () => void;
-      canvasDrawRafId?: number;
+      canvasDrawFrame: {pending:boolean};
       simulation?: { stop: () => void };
       tweenCamera: (fn: () => unknown) => Promise<boolean>;
     };
@@ -1053,21 +1064,20 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     // "already scheduled" short-circuit before ever reaching the ownerWindow check this test targets.
     internal.simulation?.stop();
     await waitUntil(
-      () => internal.viewportChangeRafId === undefined && internal.canvasDrawRafId === undefined,
+      () => internal.viewportChangeRafId === undefined && internal.canvasDrawFrame.pending === false,
       'in-flight canvas frames drained'
     );
     expect(
       internal.viewportChangeRafId,
       'precondition: no frame already pending'
     ).to.be.undefined;
-    expect(internal.canvasDrawRafId, 'precondition: no frame already pending')
-      .to.be.undefined;
+    expect(internal.canvasDrawFrame.pending, 'precondition: no frame already pending').to.equal(false);
     const restore = stubNoOwnerWindow(el);
     try {
       internal.scheduleViewportChange();
       expect(internal.viewportChangeRafId).to.be.undefined;
       internal.markCanvasDirty();
-      expect(internal.canvasDrawRafId).to.be.undefined;
+      expect(internal.canvasDrawFrame.pending).to.equal(false);
       expect(await internal.tweenCamera(() => ({ k: 1, x: 0, y: 0 }))).to.equal(
         false
       );
@@ -1285,17 +1295,18 @@ describe('coverage: canvas surface setup edge cases', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    type Internals = { watchCanvasDpr: () => void; canvasDprQuery?: unknown };
-    const internal = el as unknown as Internals;
-    expect(internal.canvasDprQuery).to.exist;
+    const internal = el as unknown as { watchCanvasDpr(): void; canvasScene?: unknown };
     const original = window.matchMedia;
-    (window as unknown as { matchMedia?: unknown }).matchMedia = undefined;
+    const query = original.call(window, '(resolution: 1dppx)');
+    window.matchMedia = () => query;
     try {
-      expect(() => internal.watchCanvasDpr()).to.not.throw();
-      expect(internal.canvasDprQuery).to.be.undefined;
-    } finally {
-      window.matchMedia = original;
-    }
+      internal.watchCanvasDpr();
+      (window as unknown as {matchMedia?: unknown}).matchMedia = undefined;
+      internal.watchCanvasDpr();
+      const scene = internal.canvasScene;
+      query.dispatchEvent(new Event('change'));
+      expect(internal.canvasScene === scene).to.equal(true);
+    } finally { window.matchMedia = original; }
   });
 
   it('setUpCanvasSurface tolerates a missing 2D context and a missing tooltip element; ensureCanvasOwnerRealm skips an unchanged realm', async () => {
@@ -1370,7 +1381,18 @@ describe('coverage: canvas surface setup edge cases', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.clientWidth).to.equal(0); // precondition: the host itself is zero-sized
     expect(canvas.clientHeight).to.equal(0);
-    (el as unknown as { drawCanvas: () => void }).drawCanvas();
+    const painting = el as unknown as {
+      drawCanvas(): void; redrawPickCanvas(): void; hitTest(x: number, y: number): unknown;
+      pickCtx: CanvasRenderingContext2D;
+    };
+    painting.drawCanvas();
+    painting.redrawPickCanvas();
+    expect(painting.pickCtx.getTransform().a).to.equal(canvas.width / 333);
+    expect(painting.pickCtx.getTransform().d).to.equal(canvas.height / 222);
+    expect(painting.hitTest(0, 0)).to.equal(undefined);
+    canvas.style.width = '100px';
+    expect(canvas.getBoundingClientRect().width).to.be.greaterThan(0);
+    expect(painting.hitTest(0, 0)).to.equal(undefined);
     expect(canvas.width).to.equal(333); // dpr(1) * safeWidth fallback, not clientWidth(0)
     expect(canvas.height).to.equal(222);
   });
@@ -1632,8 +1654,12 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     target.y = 100;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    canvas.setPointerCapture = () => {};
+    let heldId: number | undefined;
+    let releaseAttempts = 0;
+    canvas.setPointerCapture = id => { heldId = id; };
+    canvas.hasPointerCapture = id => id === heldId;
     canvas.releasePointerCapture = () => {
+      releaseAttempts++;
       throw new DOMException('already released', 'InvalidStateError');
     };
     const rect = canvas.getBoundingClientRect();
@@ -1655,6 +1681,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
         })
       )
     ).to.not.throw();
+    expect(releaseAttempts).to.equal(1);
   });
 
   it('a hover over a link shows its bounded tooltip text in the canvas tooltip', async () => {

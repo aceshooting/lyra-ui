@@ -116,6 +116,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'נתיב',
   pathNodeStatus: '{label}, צומת {position} מתוך {total}',
   pathRelationStatus: '{relation}, יחס',
+  pathRelationForward: 'מכוון אל הצומת הבא',
+  pathRelationReverse: 'מכוון אל הצומת הקודם',
   neighborListLabel: 'קשרים',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'הרחב את {label} בגרף',

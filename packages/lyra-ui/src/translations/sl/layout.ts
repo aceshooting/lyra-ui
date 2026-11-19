@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Odpni navigacijo',
   appRailItemCollapse: 'Strni {label}',
   appRailItemExpand: 'Razširi {label}',
+  appRailItemToggle: 'Strni ali razširi {label}',
+  appRailGroupToggle: 'Navigacijska skupina',
   resizeValuePercent: '{value} odstotkov',
   commandPaletteLabel: 'Paleta ukazov',
   commandPalettePlaceholder: 'Iskanje ukazov …',
@@ -65,6 +67,11 @@ const strings: LyraLocaleStrings = {
     few: '{count} ukazi',
     other: '{count} ukazov',
   },
+  tabCloseAction: 'Zapri {label}',
+  stepperStateCompleted: 'Dokončano',
+  stepperStateError: 'Napaka',
+  stepperStatePending: 'Ni začeto',
+  stepperStateLocked: 'Zaklenjeno',
   commandPaletteInputLimit: 'Nekateri ukazi so bili izpuščeni, ker je bila dosežena omejitev vnosa.',
 };
 

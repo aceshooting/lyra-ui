@@ -1,3 +1,4 @@
+import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { panelListItem } from '../../../internal/layout-fragments.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { panelFrame } from '../../../internal/panel-frame.styles.js';
@@ -17,6 +18,7 @@ export const styles = css`
   [part='legend'] {
     max-inline-size: 100%;
     padding-inline: var(--lr-space-2xs);
+    font-size: var(--lr-decision-legend-font-size, var(--lr-font-size-lg));
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
@@ -61,13 +63,11 @@ export const styles = css`
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
-    min-block-size: var(--lr-icon-button-size);
-    padding-inline: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
+    min-block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
+    padding-inline: var(--lr-form-control-padding-inline);
+    ${nativeControlSurface}
+    border-radius: var(--lr-form-control-radius);
+    color-scheme: inherit;
   }
 
   [part='decision']:where(:not(:disabled)):hover {
@@ -80,6 +80,10 @@ export const styles = css`
 
   [part='decision']:focus-visible {
     ${focusRing}
+  }
+
+  [part='decision'][aria-readonly='true'] {
+    cursor: default;
   }
 
   [part='decision']:disabled {

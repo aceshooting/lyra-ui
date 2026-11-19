@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Scheman för verktygsparametrar stöder högst {fields} fält och {options} val per fält.',
   testResultsLimit: 'Endast de första {count} testresultaten visas.',
   toolTimelineLimit: 'Högst {count} verktygsanrop visas.',
+  toolTimelineLoadError: 'Det gick inte att läsa in verktygsvyn.',
   toolSelectLimit: 'Endast de första {count} verktygen visas.',
   testResultsInputTooLarge: 'Testresultatens detaljer överskrider visningsgränsen.',
   toolCall: 'Verktygsanrop',

@@ -113,6 +113,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Шлях',
   pathNodeStatus: '{label}, вузол {position} із {total}',
   pathRelationStatus: '{relation}, зв’язок',
+  pathRelationForward: 'спрямовано до наступного вузла',
+  pathRelationReverse: 'спрямовано до попереднього вузла',
   neighborListLabel: 'Зв’язки',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Розгорнути {label} у графі',

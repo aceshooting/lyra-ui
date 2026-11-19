@@ -1,3 +1,4 @@
+import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import {
@@ -36,7 +37,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import { styles } from './app-rail-item.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailItemCollapse, LYRA_DEFAULT_appRailItemExpand } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailItemToggle } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailItemToggleDetail {
@@ -110,6 +111,7 @@ export interface LyraAppRailItemEventMap {
  *   `expanded` write. `detail: LyraAppRailItemToggleDetail` (`{ expanded }` carries the proposed state,
  *   matching `<lr-app-rail-group>`'s identical event name and detail shape exactly, so a listener
  *   bound to both components' `lr-toggle-request` need not branch on which fired).
+ * A listener handling only this disclosure can filter on `event.target === event.currentTarget`.
  * @event lr-toggle - The item finished expanding or collapsing its `children`. Non-cancelable,
  *   emitted after `expanded` is written, and never emitted for a vetoed or listener-resolved
  *   request. `detail: LyraAppRailItemToggleDetail` — `expanded` is the settled state.
@@ -167,6 +169,7 @@ export interface LyraAppRailItemEventMap {
  * @cssprop [--lr-app-rail-item-color=var(--lr-color-text)] - Resting text/icon color.
  * @cssprop [--lr-app-rail-item-radius=var(--lr-radius)] - Corner radius of the row and icon-only tile.
  * @cssprop [--lr-app-rail-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
+ * @cssprop [--lr-app-rail-item-current-hover-bg] - Hover background of the current row; unset, hover mixes one tier past the current background.
  * @cssprop [--lr-app-rail-item-hover-color=var(--lr-color-brand)] - Hover text/icon color.
  * @cssprop --lr-app-rail-item-active-bg - Pressed background; defaults to the former brand-quiet
  *   active mix.
@@ -207,8 +210,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    appRailItemCollapse: LYRA_DEFAULT_appRailItemCollapse,
-    appRailItemExpand: LYRA_DEFAULT_appRailItemExpand,
+    appRailItemToggle: LYRA_DEFAULT_appRailItemToggle,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -311,7 +313,15 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   private readonly labelTextObserver = new AccessibleTextController(
     this, [], () => this.requestUpdate(), [], false,
   );
-  private childrenObserver?: MutationObserver;
+
+  constructor() {
+    super();
+    new HostChildrenObserver(this, { subtree: true, attributeFilter: ['slot'], onChange: () => {
+      this.syncOwnedChildren();
+      this.requestUpdate();
+    } });
+  }
+
   private recoverFocusAfterIconOnly = false;
   private semanticFocusRepair?: ComposedFocusRepairSnapshot;
   private focusReturnTarget?: HTMLElement;
@@ -330,34 +340,8 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncRailTopLayer();
-    this.armChildrenObserver();
-    this.syncOwnedChildren();
-  }
 
-  /** Watches the light DOM for a `children`-slotted node being added, removed, or re-slotted, so
-   *  `hasChildrenSlotted` (read fresh from `render()`, never cached) triggers a re-render at the
-   *  moment the disclosure/`[part="children"]` should appear or disappear -- including the very
-   *  first time a consumer appends a nested item after construction. `childList` catches
-   *  add/remove; the `subtree`-scoped `slot`-only `attributes` filter catches an existing child
-   *  being re-slotted into or out of `children`, mirroring what a real `slotchange` listener would
-   *  see for an always-rendered slot (this slot is instead rendered on demand, so there is no
-   *  `<slot>` element to listen on while it does not exist). Also re-syncs this item's own
-   *  `icon-only` forwarding onto whatever it owns, since either kind of mutation can change which
-   *  nodes this item owns. */
-  private armChildrenObserver(): void {
-    this.childrenObserver?.disconnect();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    this.childrenObserver = new MutationObserverCtor(() => {
-      this.syncOwnedChildren();
-      this.requestUpdate();
-    });
-    this.childrenObserver.observe(this, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['slot'],
-    });
+    this.syncOwnedChildren();
   }
 
   /** Mirrors this item's own `icon-only` state onto every `<lr-app-rail-item>` it DIRECTLY owns
@@ -576,8 +560,6 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     super.disconnectedCallback();
     this.semanticFocusRepair = undefined;
     this.focusReturnTarget = undefined;
-    this.childrenObserver?.disconnect();
-    this.childrenObserver = undefined;
     this.stopPositioning?.();
     this.stopPositioning = undefined;
     this.tooltipOverlay?.deactivate({ restoreFocus: false });
@@ -641,7 +623,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
           aria-expanded=${this._expanded ? 'true' : 'false'}
           aria-controls=${this.childrenId}
           aria-label=${this.localize(
-            this._expanded ? 'appRailItemCollapse' : 'appRailItemExpand',
+            'appRailItemToggle',
             undefined,
             { label: this.tooltipText },
           )}

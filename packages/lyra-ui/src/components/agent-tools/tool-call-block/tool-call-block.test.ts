@@ -158,7 +158,7 @@ describe('<lr-tool-call-block>', () => {
     const toggled = oneEvent(el, 'lr-toggle');
     header(el).click();
     const event = (await toggled) as CustomEvent;
-    expect(event.detail).to.deep.equal({ expanded: true, callId: 'c1' });
+    expect(event.detail).to.deep.equal({ expanded: true, callId: 'c1', invocationId: 'c1' });
     expect([event.bubbles, event.composed, event.cancelable]).to.deep.equal([true, true, false]);
     await el.updateComplete;
     expect(el.expanded).to.equal(true);
@@ -533,7 +533,7 @@ describe('<lr-tool-call-block>', () => {
       composed: true,
       detail: { toolName: 'web_search', error: 'failed' },
     }));
-    expect(events).to.deep.equal([{ toolName: 'web_search', error: 'failed', callId: 'c1' }]);
+    expect(events).to.deep.equal([{ toolName: 'web_search', error: 'failed', callId: 'c1', invocationId: 'c1' }]);
     expect(raw).to.equal(0);
 
     events.length = 0;

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'L-iskemi tal-parametri tal-għodda jappoġġaw mhux aktar minn {fields} oqsma u {options} għażliet għal kull qasam.',
   testResultsLimit: 'Qed jintwerew biss l-ewwel {count} riżultati tat-testijiet.',
   toolTimelineLimit: 'Jintwerew mhux aktar minn {count} sejħiet tal-għodda.',
+  toolTimelineLoadError: 'Il-vista tal-għodda ma setgħetx titgħabba.',
   toolSelectLimit: 'Qed jintwerew biss l-ewwel {count} għodod.',
   testResultsInputTooLarge: 'Id-dettalji tar-riżultati tat-testijiet jaqbżu l-limitu tal-wiri.',
   toolCall: 'Sejħa tal-għodda',

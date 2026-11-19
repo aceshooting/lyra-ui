@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Открепить навигацию',
   appRailItemCollapse: 'Свернуть {label}',
   appRailItemExpand: 'Развернуть {label}',
+  appRailItemToggle: 'Свернуть или развернуть {label}',
+  appRailGroupToggle: 'Группа навигации',
   resizeValuePercent: '{value} процентов',
   commandPaletteLabel: 'Палитра команд',
   commandPalettePlaceholder: 'Поиск команд…',
@@ -65,6 +67,11 @@ const strings: LyraLocaleStrings = {
     many: '{count} команд',
     other: '{count} команды',
   },
+  tabCloseAction: 'Закрыть {label}',
+  stepperStateCompleted: 'Завершено',
+  stepperStateError: 'Ошибка',
+  stepperStatePending: 'Не начато',
+  stepperStateLocked: 'Заблокировано',
   commandPaletteInputLimit: 'Некоторые команды были опущены из-за достижения ограничения на входные данные.',
 };
 

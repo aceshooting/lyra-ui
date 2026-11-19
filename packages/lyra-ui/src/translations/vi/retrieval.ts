@@ -110,6 +110,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Đường dẫn',
   pathNodeStatus: '{label}, nút {position} trên {total}',
   pathRelationStatus: '{relation}, mối quan hệ',
+  pathRelationForward: 'hướng tới nút tiếp theo',
+  pathRelationReverse: 'hướng tới nút trước đó',
   neighborListLabel: 'Mối quan hệ',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Mở rộng {label} trong đồ thị',

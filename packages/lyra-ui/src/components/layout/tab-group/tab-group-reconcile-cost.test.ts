@@ -87,6 +87,7 @@ it('repairs a removed active descriptor in former order with linear name reads',
   } finally {
     live.forEach((tab, index) => Object.defineProperty(tab, 'slotName', descriptors[index]!));
   }
+  await Promise.resolve();
   expect(group.active).to.equal(names[17]);
   expect(events).to.deep.equal([`hide:${names[16]}`, `show:${names[17]}`]);
   expect(reads).to.be.at.most(names.length * 8);

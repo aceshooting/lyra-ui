@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Откачи навигацију',
   appRailItemCollapse: 'Скупи {label}',
   appRailItemExpand: 'Прошири {label}',
+  appRailItemToggle: 'Скупи или прошири {label}',
+  appRailGroupToggle: 'Група за навигацију',
   resizeValuePercent: '{value} одсто',
   commandPaletteLabel: 'Палета команди',
   commandPalettePlaceholder: 'Претражите команде…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} команда',
     other: '{count} команди',
   },
+  tabCloseAction: 'Затвори {label}',
+  stepperStateCompleted: 'Завршено',
+  stepperStateError: 'Грешка',
+  stepperStatePending: 'Није започето',
+  stepperStateLocked: 'Закључано',
   commandPaletteInputLimit: 'Неке команде су изостављене јер је достигнуто ограничење уноса.',
 };
 

@@ -47,3 +47,8 @@ export const Readonly: Story = {
 export const Empty: Story = {
   render: () => html`<lr-permission-rules label="Workspace rules"></lr-permission-rules>`,
 };
+
+export const ControlledDecision: Story = {
+  render: () => html`<lr-permission-rules .rules=${rules}
+    @lr-permission-rule-change-request=${(event: Event) => event.preventDefault()}></lr-permission-rules>`,
+};

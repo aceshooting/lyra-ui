@@ -1,3 +1,4 @@
+import { resolveAccessibleName, labelWithVisibleText } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -32,6 +33,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAU
 export interface ToolCallBlockToggleDetail {
   expanded: boolean;
   callId: string;
+  invocationId: string;
 }
 
 /** `detail` for the re-emitted `lr-render-error`: the composed result view's own detail, plus the
@@ -40,6 +42,7 @@ export interface ToolCallBlockRenderErrorDetail {
   toolName: string;
   error: unknown;
   callId: string;
+  invocationId: string;
 }
 
 export interface LyraToolCallBlockEventMap extends LyraJsonViewerEventMap {
@@ -103,11 +106,11 @@ function argsPresent(args: unknown): boolean {
  *
  * @customElement lr-tool-call-block
  * @event lr-toggle - A header activation changed `expanded`. Not emitted for programmatic writes.
- * `detail: { expanded, callId }`.
+ * `detail: { expanded, callId, invocationId }`.
  * @event lr-render-error - Re-emitted from the composed result view with `callId` added, whenever
  * no registered renderer matches or a renderer fails. Only an expanded block renders a result view;
  * each expand, and each `result`/`args` identity change while expanded, dispatches again.
- * `detail: { toolName, error, callId }`.
+ * `detail: { toolName, error, callId, invocationId }`.
  * @event lr-copy - Passthrough from the composed arguments JSON viewer.
  * @event lr-copy-error - Passthrough from the composed arguments JSON viewer.
  * @event lr-error - Passthrough from the composed arguments JSON viewer.
@@ -284,7 +287,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   private readonly onHeaderClick = (): void => {
     this.expanded = !this.expanded;
-    this.emit('lr-toggle', { expanded: this.expanded, callId: this.callId });
+    this.emit('lr-toggle', { expanded: this.expanded, callId: this.callId, invocationId: this.callId });
   };
 
   private readonly onRenderError = (event: CustomEvent<{ toolName: string; error: unknown }>): void => {
@@ -293,6 +296,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
       toolName: event.detail.toolName,
       error: event.detail.error,
       callId: this.callId,
+      invocationId: this.callId,
     });
   };
 
@@ -387,11 +391,15 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
     const name = this.displayName || this.name || this.localize('toolCall');
     const label = this.label ?? this.localize(HEADER_KEY[status], undefined, { name });
     const duration = this.durationText();
+    const context = resolveAccessibleName(this);
+    const details = this.label != null ? this.localize(TOOL_STATUS_LABEL_KEY[status]) : '';
+    const visible = [label, details, duration].filter(Boolean).join(' ');
     return html`
       <div part="base">
         <button
           part="header"
           type="button"
+          aria-label=${context ? labelWithVisibleText(visible, context) : nothing}
           aria-expanded=${this.expanded ? 'true' : 'false'}
           aria-controls=${this.bodyId}
           @click=${this.onHeaderClick}

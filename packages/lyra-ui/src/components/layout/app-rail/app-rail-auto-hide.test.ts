@@ -332,7 +332,7 @@ describe('lr-app-rail auto-hide: pin control', () => {
     expect(seen).to.deep.equal([false]);
     const pressed = pin(el)!;
     expect(pressed.getAttribute('aria-pressed')).to.equal('true');
-    expect(pressed.getAttribute('aria-label')).to.equal('Unpin navigation');
+    expect(pressed.getAttribute('aria-label')).to.equal('Pin navigation');
     await waitUntil(() => base(el).getBoundingClientRect().width > 200, 'rail reaches the docked width', { timeout: 3000 });
     await waitUntil(() => Math.abs(el.getBoundingClientRect().width - base(el).getBoundingClientRect().width) < 1, 'docked footprint equals the rail', { timeout: 3000 });
     expect(main.getBoundingClientRect().left).to.be.greaterThan(stripMain.left + 100);
@@ -399,12 +399,12 @@ describe('lr-app-rail auto-hide: pin control', () => {
     expect(pin(el)!.getAttribute('aria-pressed')).to.equal('true');
   });
 
-  it('honors a strings override for both pin names', async () => {
+  it('honors a strings override for the pin name in both states', async () => {
     const el = await fixture<LyraAppRail>(html`
-      <lr-app-rail auto-hide force-mode="full" .strings=${{ appRailPin: 'Épingler', appRailUnpin: 'Désépingler' }}>
+      <lr-app-rail auto-hide force-mode="full" .strings=${{ appRailPin: 'Épingler' }}>
         <lr-app-rail-item href="#a" aria-label="Alpha">Alpha</lr-app-rail-item>
       </lr-app-rail>`);
-    expect(pin(el)!.getAttribute('aria-label')).to.equal('Désépingler');
+    expect(pin(el)!.getAttribute('aria-label')).to.equal('Épingler');
     el.forceMode = 'auto';
     el.preferredMode = 'icon-only';
     await el.updateComplete;

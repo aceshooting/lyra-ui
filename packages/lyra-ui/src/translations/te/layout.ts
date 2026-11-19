@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'నావిగేషన్‌ను అన్‌పిన్ చేయండి',
   appRailItemCollapse: '{label}ను ముడుచండి',
   appRailItemExpand: '{label}ను విస్తరించండి',
+  appRailItemToggle: '{label}ను చూపించండి లేదా దాచండి',
+  appRailGroupToggle: 'నావిగేషన్ సమూహం',
   resizeValuePercent: '{value} శాతం',
   commandPaletteLabel: 'కమాండ్ ప్యాలెట్',
   commandPalettePlaceholder: 'కమాండ్‌లను వెతకండి…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} ఆదేశం',
     other: '{count} ఆదేశాలు',
   },
+  tabCloseAction: '{label}ను మూసివేయండి',
+  stepperStateCompleted: 'పూర్తయింది',
+  stepperStateError: 'లోపం',
+  stepperStatePending: 'ప్రారంభం కాలేదు',
+  stepperStateLocked: 'లాక్ చేయబడింది',
   commandPaletteInputLimit: 'ఇన్‌పుట్ పరిమితి చేరుకోవడంతో కొన్ని ఆదేశాలు వదిలివేయబడ్డాయి.',
 };
 

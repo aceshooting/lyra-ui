@@ -1,3 +1,6 @@
+import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -11,19 +14,9 @@ export const styles = css`
        --lr-tool-result-dialog-overlay-color. */
     --_lr-tool-select-dialog-overlay-color: var(--lr-color-overlay);
     ${modalHostStyles}
-    align-items: center;
-    justify-content: center;
-    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(
-      var(--lr-space-l),
-      var(--lr-safe-area-inline-start)
-    );
-    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+    ${dialogChrome}
   }
-  :host([open]) {
-    display: flex;
-  }
+  ${dialogOpenHost}
   [part="backdrop"] {
     position: absolute;
     inset: 0;
@@ -40,14 +33,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     block-size: min(var(--lr-size-38rem), 100%);
-    /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
-       near-black and the dialog reads as a scrim with floating text. */
-    background: var(--lr-color-surface-overlay);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges, the
-       same role as lr-dialog and so the same elevation. */
-    box-shadow: var(--lr-shadow-xl);
+    ${overlaySurface}
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-xl));
     overflow: hidden;
   }
   [part="header"] {
@@ -107,27 +94,17 @@ export const styles = css`
     position: absolute;
     inset-block: var(--lr-space-m) 0;
     inset-inline-end: var(--lr-space-l);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    --_lr-icon-button-color-default: var(--lr-color-text-quiet);
+    --_lr-icon-button-color-hover-default: var(--lr-color-brand);
+    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    ${iconAction}
     ${iconHitTarget}
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--lr-color-text-quiet);
-    padding: var(--lr-space-xs);
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="search-clear"]:hover {
-    color: var(--lr-color-text);
+    ${iconActionHover}
   }
   [part="search-clear"]:active {
-    color: var(--lr-color-text);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ${iconActionActive}
   }
   [part="search-clear"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -160,12 +137,6 @@ export const styles = css`
   }
   [part="defaults-hint"] {
     margin: 0;
-    /* Lines the hint up under the switch's label text, not its track:
-       lr-switch's [part="base"] uses a fixed 2.25rem track inline-size plus a
-       --lr-space-s gap before its label (both in switch.styles.ts, not
-       exposed as tokens), so this indent is coupled to that fixed geometry
-       rather than derived from another component's token. */
-    padding-inline-start: calc(var(--lr-size-2-25rem) + var(--lr-space-s));
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }

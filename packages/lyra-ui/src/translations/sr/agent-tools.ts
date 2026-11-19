@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Шеме параметара алата подржавају највише {fields} поља и {options} избора по пољу.',
   testResultsLimit: 'Приказује се само првих {count} резултата тестова.',
   toolTimelineLimit: 'Приказује се највише {count} позива алата.',
+  toolTimelineLoadError: 'Приказ алата није могао да се учита.',
   toolSelectLimit: 'Приказује се само првих {count} алата.',
   testResultsInputTooLarge: 'Детаљи резултата тестова премашују ограничење приказа.',
   toolCall: 'Позив алата',

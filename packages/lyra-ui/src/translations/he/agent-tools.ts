@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'סכימות של פרמטרי כלים תומכות בעד {fields} שדות ו-{options} אפשרויות לכל שדה.',
   testResultsLimit: 'מוצגות רק {count} תוצאות הבדיקה הראשונות.',
   toolTimelineLimit: 'מוצגות לכל היותר {count} קריאות כלי.',
+  toolTimelineLoadError: 'לא ניתן היה לטעון את תצוגת הכלי.',
   toolSelectLimit: 'מוצגים רק {count} הכלים הראשונים.',
   testResultsInputTooLarge: 'פרטי תוצאות הבדיקות חורגים ממגבלת התצוגה.',
   toolCall: 'קריאת כלי',

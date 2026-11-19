@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'نیویگیشن ان پن کریں',
   appRailItemCollapse: '{label} سمیٹیں',
   appRailItemExpand: '{label} پھیلائیں',
+  appRailItemToggle: '{label} دکھائیں یا چھپائیں',
+  appRailGroupToggle: 'نیویگیشن گروپ',
   resizeValuePercent: '{value} فیصد',
   commandPaletteLabel: 'کمانڈ پیلیٹ',
   commandPalettePlaceholder: 'کمانڈز تلاش کریں…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} کمانڈ',
     other: '{count} کمانڈز',
   },
+  tabCloseAction: '{label} بند کریں',
+  stepperStateCompleted: 'مکمل',
+  stepperStateError: 'خرابی',
+  stepperStatePending: 'شروع نہیں ہوا',
+  stepperStateLocked: 'مقفل',
   commandPaletteInputLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے کچھ کمانڈز چھوڑ دی گئی ہیں۔',
 };
 

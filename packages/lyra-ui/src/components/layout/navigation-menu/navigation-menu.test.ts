@@ -906,20 +906,24 @@ describe('<lr-navigation-menu> dismissal', () => {
     expect(products.open, 'Tab away after pointercancel did not close').to.equal(false);
   });
 
-  it('closes one task after a press that left focus outside the open item without a click', async function () {
-    // WebKit never focuses a button on press, so focus stays inside the panel and the spec keeps it
-    // open there; the release path under test needs focus to land on the pressed control.
-    if (isWebKit) this.skip();
+  it('closes one task after a press that left focus outside the open item without a click', async () => {
     const menu = await menuFixture(html`<lr-navigation-menu>${items()}</lr-navigation-menu>`);
     const products = item(menu, 'products');
     base(products).click();
     await waitPlaced(products);
-    // Focus inside the panel stops the hover switch, so the press is the only thing that happens.
-    menu.querySelector<HTMLElement>('#products-a')!.focus();
-    await sendMouse({ type: 'move', position: center(base(item(menu, 'resources'))) });
+    const firstAction = products.querySelector<HTMLElement>('#products-a')!;
+    await focusByKeyboard(firstAction, firstAction.parentElement!);
+    expect(deepActive()?.id).to.equal('products-a');
+    const destination = base(item(menu, 'resources'));
+    await sendMouse({ type: 'move', position: center(destination) });
     await sendMouse({ type: 'down' });
-    await sendMouse({ type: 'move', position: farPoint() });
-    await sendMouse({ type: 'up' });
+    try {
+      await focusByKeyboard(destination);
+      expect(products.open, 'focus leaving during a held press keeps the panel open').to.equal(true);
+      await sendMouse({ type: 'move', position: farPoint() });
+    } finally {
+      await sendMouse({ type: 'up' });
+    }
     await waitUntil(() => !products.open, 'the abandoned press never closed the panel');
     expect(item(menu, 'resources').open).to.equal(false);
   });
@@ -1206,6 +1210,44 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
       expect(second!.open, `skip-delay=${value} did not behave like the default`).to.equal(true);
       await settle(menu);
     }
+  });
+
+  it('follows layout width on resize in a document without ResizeObserver', async () => {
+    const menu = await menuFixture(html`<lr-navigation-menu mobile-breakpoint="250px"
+      style="inline-size:300px; transform:scale(2)">${items()}</lr-navigation-menu>`);
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Navigation preview"></iframe>`);
+    const view = frame.contentWindow!;
+    const descriptor = Object.getOwnPropertyDescriptor(view, 'ResizeObserver')!;
+    try {
+      Object.defineProperty(view, 'ResizeObserver', { configurable: true, value: undefined });
+      view.document.body.append(view.document.adoptNode(menu));
+      menu.style.inlineSize = '180px';
+      view.dispatchEvent(new Event('resize'));
+      await waitUntil(() => menu.collapsed, 'narrow allocation shows the toggle');
+      menu.style.inlineSize = '300px';
+      view.dispatchEvent(new Event('resize'));
+      await waitUntil(() => !menu.collapsed, 'wide allocation restores the bar');
+    } finally {
+      menu.remove();
+      Object.defineProperty(view, 'ResizeObserver', descriptor);
+    }
+  });
+
+  it('measures a scaled navigation bar in layout pixels and aligns its indicator', async () => {
+    const menu = await menuFixture(html`<lr-navigation-menu indicator mobile-breakpoint="100px"
+      style="inline-size:300px; transform:scale(1.5); transform-origin:top left">${items()}</lr-navigation-menu>`);
+    const target = item(menu, 'resources');
+    base(target).click();
+    await waitPlaced(target);
+    const indicator = part(menu, 'indicator')!;
+    await waitUntil(() => {
+      const rect = indicator.getBoundingClientRect();
+      const trigger = base(target).getBoundingClientRect();
+      return Math.abs(rect.left - trigger.left) <= 1 && Math.abs(rect.width - trigger.width) <= 1;
+    }, 'indicator follows the scaled trigger');
+    menu.mobileBreakpoint = '350px';
+    await menu.updateComplete;
+    expect(menu.collapsed).to.equal(true);
   });
 
   it('tracks the open trigger with the indicator, in both directions', async () => {

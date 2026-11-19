@@ -57,7 +57,7 @@ it('interoperates with the official App SDK across tools, resources, context, di
   expect(reports.filter(report => report.stage === 'fixture-error')).to.deep.equal([]);
   await el.updateComplete;
   expect(heights).to.deep.equal([120, 420, 500]);
-  expect(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!.style.height).to.equal('500px');
+  expect(getComputedStyle(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!).height).to.equal('500px');
   expect(requests).to.deep.equal(['tools/call', 'tools/list', 'resources/list', 'resources/templates/list', 'resources/read',
     'ui/update-model-context', 'ui/message', 'ui/open-link', 'tools/call', 'tools/call']);
   expect(reports.find(report => report.stage === 'display')?.value).to.deep.equal({ mode: 'inline' });

@@ -1,5 +1,7 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { AutocorrectState, nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
-import { nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -8,7 +10,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
-import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation, isLiveDisabled } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -44,7 +46,6 @@ import {
 import {
   declaredDefaultConverter,
   autocorrectConverter,
-  normalizeAutocorrect,
   trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -143,6 +144,7 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
+ * @cssprop [--lr-phone-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart form-control - The outer form-control wrapper.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -337,16 +339,15 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the attribute,
    *  leaving the browser's own default behavior. */
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
    * boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
@@ -361,14 +362,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
-  @state() private hasCountryPrefixSlot = false;
-  @state() private hasEndSlot = false;
 
   private inputId = nextId('phone-input');
-  private hintId = nextId('phone-hint');
-  private errorId = nextId('phone-error');
+  private readonly supportingId = nextId('phone');
   private explicitCountry = '';
   /** Composing `input` was relayed without parsing; `compositionend` still has to commit it. */
   private compositionPending = false;
@@ -566,10 +562,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    *  identically-worded one: the two read the same in English today, but a locale re-wording
    *  contact-viewer's field label would otherwise silently re-label this control too. */
   private effectivePhoneLabel(hasLabel: boolean): string | typeof nothing {
-    if (this.accessibleLabel !== null) return this.accessibleLabel;
-    if (this.phoneLabel) return this.phoneLabel;
-    if (hasLabel) return nothing;
-    return this.placeholder || this.localize('phoneInputLabel');
+    if (this.accessibleLabel === '') return '';
+    const authored = normalizeLabel(this.accessibleLabel) ?? normalizeLabel(this.phoneLabel);
+    return authored ?? (hasLabel ? nothing : normalizeLabel(this.placeholder) ?? this.localize('phoneInputLabel'));
   }
 
   private get incompleteMessage(): string {
@@ -647,19 +642,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       });
       LyraPhoneInput.flagRegistration = registration;
     }
-    if (!this.hasUpdated) {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => {
-
-        this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
-          (child) => child.getAttribute('slot') === 'country-prefix' || child.getAttribute('slot') === 'start',
-        );
-        this.hasEndSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'end');
-      });
-    }
     if (
       !this.hasUpdated ||
       changed.has('countries') ||
@@ -694,7 +676,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   private onInput = (event: Event): void => {
-    if (this.liveDisabled || this.readonly) {
+    if (isLiveDisabled(this) || this.readonly) {
       event.stopPropagation();
       return;
     }
@@ -716,7 +698,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   private onCompositionEnd = (event: CompositionEvent): void => {
     // A non-composing input may already have committed it.
-    if (!this.compositionPending || this.liveDisabled || this.readonly) return;
+    if (!this.compositionPending || isLiveDisabled(this) || this.readonly) return;
     this.compositionPending = false;
     this.commitTypedText(event.currentTarget as HTMLInputElement);
     this.compositionCommitted = true;
@@ -731,7 +713,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   private onChange = (event: Event): void => {
-    if (this.liveDisabled || this.readonly) {
+    if (isLiveDisabled(this) || this.readonly) {
       event.stopPropagation();
       return;
     }
@@ -747,7 +729,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   };
 
   private onCountryChange = (event: Event): void => {
-    if (this.liveDisabled || this.readonly) {
+    if (isLiveDisabled(this) || this.readonly) {
       event.stopPropagation();
       return;
     }
@@ -767,12 +749,12 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    * candidate list sits on top of.
    */
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     submitOnEnter(this, event);
   };
 
   private onFocus = (event: FocusEvent): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -784,39 +766,18 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     // forces the browser to blur it -- plain platform behavior, not a real user interaction.
     // Unconditionally marking `touched` for it could reenter an in-flight Lit update and trip
     // Lit's dev-mode "scheduled an update after an update completed" warning.
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     relayNativeEvent(this, event);
   };
 
-  // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
-  // fix), even though the assigned child's own `slot` attribute never changed. Mirrors the
-  // light-DOM check `willUpdate()` above already uses for the same flags.
-
-  private onCountryPrefixSlotChange = (): void => {
-    this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
-      (child) => child.getAttribute('slot') === 'country-prefix' || child.getAttribute('slot') === 'start',
-    );
-  };
-
-  private onEndSlotChange = (): void => {
-    this.hasEndSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'end');
-  };
-
-  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
-  }
-
   /** Activate the internal telephone input unless the form control is effectively disabled. */
   override click(): void {
-    if (!this.liveDisabled) this.inputElement?.click();
+    if (!isLiveDisabled(this)) this.inputElement?.click();
   }
 
   /** Focus the internal telephone input unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    if (!this.liveDisabled) this.inputElement?.focus(options);
+    if (!isLiveDisabled(this)) this.inputElement?.focus(options);
   }
 
   /** Blur the internal telephone input. */
@@ -858,10 +819,16 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   override render(): TemplateResult {
-    const hasLabel = Boolean(this.label || this.hasLabelSlot || this.withLabel);
-    const hasHint = Boolean(this.hint || this.hasHintSlot || this.withHint);
-    const hasError = Boolean(this.errorText || this.hasErrorSlot);
-    const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
+    const hasNamedLabel = Boolean(normalizeLabel(this.label)) || this.hasLabelSlot;
+    const hasLabel = hasNamedLabel || this.withLabel;
+    const supporting = {
+      presence: { has: (name: string) => name !== 'help-text' && this.slotPresence.has(name) },
+      idPrefix: this.supportingId,
+      hint: this.hint,
+      errorText: this.errorText,
+      withHint: this.withHint,
+    };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
     const rows = this.availableCountries;
     const country = this.country;
     const current = rows.find((row) => row.code === country);
@@ -877,9 +844,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
           ${this.label}<slot name="label"></slot>
         </label>
         <div part="input-wrapper">
-          <span part="country-prefix" ?hidden=${!this.hasCountryPrefixSlot}>
-            <slot name="country-prefix" @slotchange=${this.onCountryPrefixSlotChange}></slot>
-            <slot name="start" @slotchange=${this.onCountryPrefixSlotChange}></slot>
+          <span part="country-prefix" ?hidden=${!this.slotPresence.has('country-prefix') && !this.slotPresence.has('start')}>
+            <slot name="country-prefix"></slot>
+            <slot name="start"></slot>
           </span>
           <span part="country">
             <select
@@ -925,7 +892,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
             autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
-            aria-label=${this.effectivePhoneLabel(hasLabel)}
+            aria-label=${this.effectivePhoneLabel(hasNamedLabel)}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
             ?required=${this.required}
@@ -939,16 +906,11 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             @focus=${this.onFocus}
             @blur=${this.onBlur}
           />
-          <span part="end" ?hidden=${!this.hasEndSlot}>
-            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          <span part="end" ?hidden=${!this.slotPresence.has('end')}>
+            <slot name="end"></slot>
           </span>
         </div>
-        <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint"></slot>
-        </div>
-        <div id=${this.errorId} part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
+        ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
       </div>
     `;
   }

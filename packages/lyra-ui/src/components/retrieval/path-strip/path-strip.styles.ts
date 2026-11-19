@@ -46,7 +46,7 @@ export const styles = css`
   }
   [part='node']:hover,
   [part='relation']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-path-strip-action-hover-fill, var(--lr-color-brand-quiet));
   }
   [part='node']:active,
   [part='relation']:active {
@@ -58,6 +58,8 @@ export const styles = css`
     margin-inline: var(--lr-size-2px);
     color: var(--lr-color-text-quiet);
   }
+  [part='arrow'][data-reverse], :host(:dir(rtl)) [part='arrow'] { transform: scaleX(-1); }
+  :host(:dir(rtl)) [part='arrow'][data-reverse] { transform: none; }
   .element-group {
     display: inline-flex;
     align-items: center;

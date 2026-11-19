@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Anulează fixarea navigării',
   appRailItemCollapse: 'Restrânge {label}',
   appRailItemExpand: 'Extinde {label}',
+  appRailItemToggle: 'Extinde sau restrânge {label}',
+  appRailGroupToggle: 'Grup de navigare',
   resizeValuePercent: '{value} la sută',
   commandPaletteLabel: 'Paletă de comenzi',
   commandPalettePlaceholder: 'Caută comenzi…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     few: '{count} comenzi',
     other: '{count} de comenzi',
   },
+  tabCloseAction: 'Închide {label}',
+  stepperStateCompleted: 'Finalizat',
+  stepperStateError: 'Eroare',
+  stepperStatePending: 'Neînceput',
+  stepperStateLocked: 'Blocat',
   commandPaletteInputLimit: 'Unele comenzi au fost omise deoarece a fost atinsă limita de intrare.',
 };
 

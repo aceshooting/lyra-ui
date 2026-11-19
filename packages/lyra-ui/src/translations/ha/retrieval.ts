@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Hanya',
   pathNodeStatus: '{label}, ƙoli {position} cikin {total}',
   pathRelationStatus: '{relation}, alaƙa',
+  pathRelationForward: 'an nufa zuwa kumburi na gaba',
+  pathRelationReverse: 'an nufa zuwa kumburi na baya',
   neighborListLabel: 'Alaƙoƙi',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Faɗaɗa {label} cikin jadawali',

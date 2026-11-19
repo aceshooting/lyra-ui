@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Tọpụ nnyagharị n’ebe ọ nọ',
   appRailItemCollapse: 'Kpọkọọ {label}',
   appRailItemExpand: 'Mụbaa {label}',
+  appRailItemToggle: 'Gosi ma ọ bụ zoo {label}',
+  appRailGroupToggle: 'Otu nnyagharị',
   resizeValuePercent: '{value} pasent',
   commandPaletteLabel: 'Ndepụta iwu',
   commandPalettePlaceholder: 'Chọọ iwu…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} nyere iwu',
   },
+  tabCloseAction: 'Mechie {label}',
+  stepperStateCompleted: 'Emechara',
+  stepperStateError: 'Njehie',
+  stepperStatePending: 'Amalitebeghị',
+  stepperStateLocked: 'Emechiri',
   commandPaletteInputLimit: 'A hapụrụ ụfọdụ iwu n\'ihi na e ruru oke ntinye.',
 };
 

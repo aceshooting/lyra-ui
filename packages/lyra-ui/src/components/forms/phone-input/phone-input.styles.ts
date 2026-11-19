@@ -1,6 +1,7 @@
 import { css } from 'lit';
 import {
   formControlLabelTypography,
+  formControlSupportingText,
   formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -17,7 +18,7 @@ export const styles = css`
     --_lr-phone-input-flag-size-default: var(--lr-font-size-lg);
     --_lr-phone-input-glyph-size-default: var(--lr-font-size-md-sm);
     --_lr-phone-input-gap-default: var(--lr-space-xs);
-    --_lr-phone-input-radius-default: var(--lr-radius);
+    --_lr-phone-input-radius-default: var(--lr-form-control-radius);
     /* The floor's six values come from the ONE shared form-control ladder
        (internal/sizes.styles.ts), not a private copy, so retuning
        --lr-theme-form-control-height-* moves this control and every sibling field together. The
@@ -82,9 +83,7 @@ export const styles = css`
 
   [part='form-control-label'][hidden],
   [part='country-prefix'][hidden],
-  [part='end'][hidden],
-  [part='hint'][hidden],
-  [part='error'][hidden] {
+  [part='end'][hidden] {
     display: none;
   }
 
@@ -264,7 +263,7 @@ export const styles = css`
   }
 
   [part='input']::placeholder {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-phone-input-placeholder-color, var(--lr-color-text-quiet));
   }
 
   [part='end'] {
@@ -274,19 +273,7 @@ export const styles = css`
     padding-inline-end: var(--lr-space-s);
   }
 
-  [part='hint'],
-  [part='error'] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-  }
-
-  [part='hint'] {
-    color: var(--lr-color-text-quiet);
-  }
-
-  [part='error'] {
-    color: var(--lr-color-danger);
-  }
+  ${formControlSupportingText}
 
   @media (forced-colors: active) {
     /* Forced colors flattens the background tint to Canvas, so the invisible select's hover/press

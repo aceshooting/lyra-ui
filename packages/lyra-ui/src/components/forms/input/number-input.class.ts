@@ -1,3 +1,4 @@
+import { isLiveDisabled } from '../../../internal/form-associated.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -256,7 +257,7 @@ export class LyraNumberInput extends LyraInput {
   };
 
   private stepFromButton(direction: 'up' | 'down'): void {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     const before = this.value;
     if (direction === 'up') this.stepUp();
     else this.stepDown();

@@ -243,3 +243,53 @@ it('announces fresh errors in the document it was moved into', async () => {
     frame.remove();
   }
 });
+
+describe('required marker and aria-required reach the nested control role owner', () => {
+  const schema = {
+    type: 'object' as const,
+    properties: {
+      mode: { type: 'string' as const, enum: ['fast', 'careful'] },
+      tags: { type: 'array' as const, items: { type: 'string' as const, enum: ['a', 'b'] } },
+      armed: { type: 'boolean' as const },
+      count: { type: 'integer' as const },
+      free: { type: 'string' as const },
+    },
+    required: ['mode', 'tags', 'armed', 'count', 'free'],
+  };
+  const optionalSchema = { ...schema, required: [] as string[] };
+
+  async function roleOwner(el: LyraToolParamForm, key: string): Promise<HTMLElement> {
+    const host = el.shadowRoot!.querySelector(`[part="field"][data-key="${key}"] > :is(lr-select, lr-number-input)`) as
+      (HTMLElement & { updateComplete: Promise<unknown> });
+    await host.updateComplete;
+    const owner = host.shadowRoot!.querySelector('[role="combobox"], input[type="text"], input[type="number"], input');
+    return owner as HTMLElement;
+  }
+
+  for (const key of ['mode', 'tags', 'armed', 'count']) {
+    it(`marks the ${key} control required for assistive tech and paints the asterisk`, async () => {
+      const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`);
+      const owner = await roleOwner(el, key);
+      expect(owner.getAttribute('aria-required'), 'inner role owner').to.equal('true');
+      const host = el.shadowRoot!.querySelector(`[part="field"][data-key="${key}"] > :is(lr-select, lr-number-input)`)!;
+      const label = host.shadowRoot!.querySelector('[part~="form-control-label"]')!;
+      expect(getComputedStyle(label, '::after').content).to.contain('*');
+    });
+
+    it(`keeps the ${key} control unmarked when the schema does not require it`, async () => {
+      const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form .schema=${optionalSchema}></lr-tool-param-form>`);
+      const owner = await roleOwner(el, key);
+      expect(owner.getAttribute('aria-required')).to.equal('false');
+    });
+  }
+});
+
+it('falls back to the property key when a schema title is blank', async () => {
+  const schema = {
+    type: 'object' as const,
+    properties: { city: { type: 'string' as const, title: '   ' }, mode: { type: 'string' as const, enum: ['a', 'b'], title: '' } },
+  };
+  const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`);
+  expect(el.shadowRoot!.querySelector('[data-key="city"] [part="label"]')!.textContent!.trim()).to.equal('city');
+  expect((el.shadowRoot!.querySelector('[data-key="mode"] lr-select') as HTMLElement & { label: string }).label).to.equal('mode');
+});

@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'कम से कम एगो विकल्प चुनीं।',
   tokenInputRequired: 'कम से कम एगो मान डालीं।',
   tokenInputEditWithContext: '{label} में बदलाव करीं',
+  tokenInputLabel: 'टोकन',
   iconButtonLabel: 'बटन',
   codeEditorLabel: 'कोड संपादक',
   switchRequired: 'कृपया एकरा चालू करीं।',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'कलम नीचे',
   signaturePadPenUp: 'कलम ऊपर',
+  signaturePadDrawingLimit: 'बनावे के सीमा पूरा हो गइल बा।',
   localePickerInputLimit: 'खाली पहिलका 512 गो भाषा-क्षेत्र प्रविष्टि उपलब्ध बा।',
   emojiPickerInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से इमोजी के कुछ डेटा छोड़ दिहल गइल बा।',
 };

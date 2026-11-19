@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Pasirinkite bent vieną parinktį.',
   tokenInputRequired: 'Įveskite bent vieną reikšmę.',
   tokenInputEditWithContext: 'Redaguoti {label}',
+  tokenInputLabel: 'Žetonai',
   iconButtonLabel: 'Mygtukas',
   codeEditorLabel: 'Kodo rengyklė',
   switchRequired: 'Įjunkite šią parinktį.',
@@ -121,6 +122,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Rašiklis nuleistas',
   signaturePadPenUp: 'Rašiklis pakeltas',
+  signaturePadDrawingLimit: 'Pasiekta piešimo riba.',
   localePickerInputLimit: 'Pasiekiami tik pirmieji 512 lokalės įrašų.',
   emojiPickerInputLimit: 'Dalis jaustukų duomenų praleista, nes pasiekta įvesties riba.',
 };

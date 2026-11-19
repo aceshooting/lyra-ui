@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Skema parameter piranti ndhukung paling akeh {fields} kolom lan {options} pilihan saben kolom.',
   testResultsLimit: 'Mung asil tes {count} kapisan sing ditampilake.',
   toolTimelineLimit: 'Paling akeh {count} panggilan piranti sing ditampilake.',
+  toolTimelineLoadError: 'Tampilan piranti ora bisa dimuat.',
   toolSelectLimit: 'Mung {count} piranti kapisan sing ditampilake.',
   testResultsInputTooLarge: 'Rincian asil tes ngluwihi wates tampilan.',
   toolCall: 'Panggilan piranti',

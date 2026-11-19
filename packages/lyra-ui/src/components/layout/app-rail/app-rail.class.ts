@@ -1,3 +1,8 @@
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
+import { layoutScale } from '../../../internal/layout-scale.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { modalHostStyles } from '../../../internal/modal-host.styles.js';
@@ -43,7 +48,7 @@ import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_appRailUnpin, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_navigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -154,6 +159,11 @@ export interface LyraAppRailEventMap {
  * violation (verified against axe), whereas an explicit `role="navigation"`
  * on a generic element can be swapped for `role="dialog"` freely.
  *
+ * @cssprop [--lr-app-rail-toggle-color] - Toggle color override.
+ * @cssprop [--lr-app-rail-toggle-bg] - Toggle background override.
+ * @cssprop [--lr-app-rail-toggle-border] - Toggle border override.
+ * @cssprop [--lr-app-rail-pin-color] - Pin color override.
+ * @cssprop [--lr-app-rail-pin-pressed-bg] - Pin pressed background override.
  * @cssprop [--lr-app-rail-frame-gap=var(--lr-space-s)] - Margin around a card frame.
  * @cssprop [--lr-app-rail-frame-radius=var(--lr-radius)] - Card-frame corner radius.
  * @cssprop [--lr-app-rail-frame-shadow=var(--lr-shadow-s)] - Card-frame elevation.
@@ -195,6 +205,7 @@ export interface LyraAppRailEventMap {
  * @event lr-toggle-request - Cancelable proposal before an interactive overlay state change.
  *   Detail carries the proposed `expanded` state. Direct property writes and
  *   forced responsive closes do not propose an interactive change.
+ * A listener handling only this disclosure can filter on `event.target === event.currentTarget`.
  * @event lr-toggle - Non-cancelable notification after an accepted or forced overlay change.
  *   Detail carries the resulting `expanded` state.
  * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
@@ -230,10 +241,10 @@ export interface LyraAppRailEventMap {
  *   is never obscured. `withoutToggle` only suppresses it in its OUTSIDE/closed position (the
  *   "open" trigger, redundant once a consumer wires an external `trigger`/`for`); it stays visible
  *   once reparented inside the open panel, since it is then the only in-panel dismiss control.
- * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
+ * @csspart backdrop - The mobile overlay's scrim. Visible while open.
  * @csspart collapse-toggle - The opt-in desktop collapse control, rendered inside
  *   `[part="header"]` only while `collapsible` is set and `mode` is not `'mobile'`. Carries the
- *   localized expand/collapse accessible name and renders `aria-expanded` in both states, so a
+ *   stable localized navigation name and renders `aria-expanded` in both states, so a
  *   screen reader announces the rail's current presentation rather than only its label.
  *   `aria-expanded` is deliberate even though collapsing removes nothing from the accessibility
  *   tree: `'icon-only'` only clips each item's `[part="label"]`/`[part="meta"]` visually, so a
@@ -273,6 +284,7 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-peek-bg=var(--lr-color-surface-overlay)] - Background of the `auto-hide`
  *   rail while peeking, kept opaque-leaning like the mobile panel because it overlays content.
  * @cssprop [--lr-app-rail-pin-hover-bg=var(--lr-color-brand-quiet)] - Pin-control hover background.
+ * @cssprop [--lr-app-rail-pin-pressed-color] - Pinned foreground, defaulting to the glass-qualified brand text colour.
  * @cssprop [--lr-app-rail-pin-hover-color=var(--lr-color-brand)] - Pin-control hover foreground.
  * @cssprop [--lr-app-rail-panel-inset-block-start=0] - Block-start (top) inset shared by
  *   `[part="panel"]` and `[part="backdrop"]` -- raise it to leave room for a fixed app bar/status
@@ -413,13 +425,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    appRailCollapse: LYRA_DEFAULT_appRailCollapse,
-    appRailExpand: LYRA_DEFAULT_appRailExpand,
     appRailPin: LYRA_DEFAULT_appRailPin,
-    appRailUnpin: LYRA_DEFAULT_appRailUnpin,
-    closeNavigation: LYRA_DEFAULT_closeNavigation,
     navigation: LYRA_DEFAULT_navigation,
-    openNavigation: LYRA_DEFAULT_openNavigation,
     resizeNavigation: LYRA_DEFAULT_resizeNavigation,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
@@ -436,6 +443,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging', 'peeking'];
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, modalHostStyles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[data-native-modal-carrier], [role="navigation"], [role="dialog"]'),
+  );
 
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
@@ -1106,7 +1117,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         this.safeMaxRailWidthPx,
       );
     }
-    return this.baseEl?.getBoundingClientRect().width ?? 240;
+    return this.baseEl?.offsetWidth ?? 240;
   }
 
   private resizeValueText(widthPx: number): string {
@@ -1293,6 +1304,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('hotkey')) this.syncHotkey();
     if (this.overlayActive) {
       this.overlayHandle?.resume();
       this.modalSurface.show();
@@ -1336,7 +1348,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // trigger really controls rather than the previous pass's [part="base"].
     this.syncExternalTriggerA11y();
     this.syncBuiltInKeyShortcuts();
-    if (this.baseEl && (this._mode !== 'mobile' || !this.baseEl.getAnimations().some(animation =>
+    if (this.baseEl?.hasAttribute('data-sliding') && (this._mode !== 'mobile' || !this.baseEl.getAnimations().some(animation =>
       'transitionProperty' in animation && animation.transitionProperty === 'transform'))) {
       this.baseEl.removeAttribute('data-sliding');
     }
@@ -1377,17 +1389,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       }
     }
     this.observeResizerPosition();
-    this.syncResizerPosition();
+    if (!this.resizerPositionObserver || changed.has('railWidth') || changed.has('frame') ||
+        changed.has('mode') || changed.has('resizable') || changed.has('dir')) this.syncResizerPosition();
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.hotkeyPlatform = undefined;
-    this.hotkeyWindow = this.ownerDocument.defaultView ?? undefined;
-    if (this.hotkeyWindow) {
-      registerHotkeyOwner(this.hotkeyWindow, this, this.acceptsHotkey);
-      this.hotkeyWindow.addEventListener('keydown', this.onHotkeyKeyDown);
-    }
+    this.syncHotkey();
     // `forceMode`'s own setter applies synchronously (see its doc) -- including for an initial
     // `force-mode` attribute, whose attributeChangedCallback reaction runs during upgrade, before
     // connectedCallback -- so `forced`/`_mode` are already correct by the time setupMediaQueries()
@@ -1432,11 +1441,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.resetPeek({ silent: true });
     this.disconnectResizerPosition();
     this.modalSurface.disconnect();
-    if (this.hotkeyWindow) {
-      this.hotkeyWindow.removeEventListener('keydown', this.onHotkeyKeyDown);
-      unregisterHotkeyOwner(this.hotkeyWindow, this);
-      this.hotkeyWindow = undefined;
-    }
+    this.unbindHotkey();
     this.baseEl?.removeAttribute('data-sliding');
     cancelDeferredFocusReturn(this);
     super.disconnectedCallback();
@@ -1454,6 +1459,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.resetPeek({ silent: true });
     this.disconnectResizerPosition();
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.teardownMediaQueries();
     this.endResizerGesture();
   }
@@ -1468,7 +1474,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!this.for) return null;
     const root = this.getRootNode() as Document | ShadowRoot;
     const found = root.getElementById?.(this.for);
-    return found instanceof HTMLElement ? found : null;
+    return isHtmlElement(found) ? found : null;
   }
 
   /** Resolves `focusFallback` when the deferred return reaches it: the element itself, or the one
@@ -1769,6 +1775,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (next !== 'mobile' && this.open) this.setOpen(false, { force: true });
   }
 
+  private readonly openWriteGuard = new VetoWriteGuard();
+  private readonly widthWriteGuard = new VetoWriteGuard();
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    // Persisted setters request an update on every assignment, including a write of the held value.
+    if (args[0] === 'open') markVetoGuardWrite(this.openWriteGuard);
+    if (args[0] === 'railWidth') markVetoGuardWrite(this.widthWriteGuard);
+    super.requestUpdate(...args);
+  }
+
   private setOpen(next: boolean, options?: { force?: boolean }): void {
     if (this.open === next) return;
     // A breakpoint/forced mode change leaving 'mobile' while open is a consistency fix-up, not a
@@ -1780,13 +1796,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       return;
     }
     const mode = this._mode;
-    const open = this.open;
-    const event = this.emit('lr-toggle-request', { expanded: next }, { cancelable: true });
-    // A listener can synchronously take ownership of mode or open while the
-    // proposal is dispatching. Do not overwrite that state after it returns.
-    if (event.defaultPrevented || this._mode !== mode || this.open !== open) return;
-    this.open = next;
-    this.emit('lr-toggle', { expanded: next });
+    requestThenCommit({
+      guard: this.openWriteGuard,
+      requestDetail: { expanded: next },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-toggle-request', detail, init),
+      commit: () => {
+        if (!this.isConnected || this._mode !== mode) return;
+        this.open = next;
+        this.emit('lr-toggle', { expanded: next });
+      },
+    });
   }
 
   private onToggleClick = (e: MouseEvent): void => {
@@ -1825,6 +1844,26 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!this.isConnected) return;
     if (this._mode === 'mobile') this.setOpen(!this.open);
     else this.toggleCollapse();
+  }
+
+  private unbindHotkey(): void {
+    if (this.hotkeyWindow) {
+      this.hotkeyWindow.removeEventListener('keydown', this.onHotkeyKeyDown);
+      unregisterHotkeyOwner(this.hotkeyWindow, this);
+      this.hotkeyWindow = undefined;
+    }
+  }
+
+  private syncHotkey(): void {
+    const view = this.isConnected && this.parsedHotkey && hasNonShiftModifier(this.parsedHotkey)
+      ? this.ownerDocument.defaultView : null;
+    if (this.hotkeyWindow === view) return;
+    this.unbindHotkey();
+    if (view) {
+      this.hotkeyWindow = view;
+      registerHotkeyOwner(view, this, this.acceptsHotkey);
+      view.addEventListener('keydown', this.onHotkeyKeyDown);
+    }
   }
 
   private hotkeyMemo?: { value: unknown; parsed: ReturnType<typeof parseHotkey> };
@@ -1977,7 +2016,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.endResizerGesture();
       return;
     }
-    const delta = separatorDelta(this.resizeStartX, e, 'inline', this.resizeRtl);
+    const delta = separatorDelta(this.resizeStartX, e, 'inline', this.resizeRtl) / layoutScale(this).x;
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
     this.requestRailResize(next, false);
   };
@@ -2006,21 +2045,26 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private requestRailResize(next: number, commit = true): boolean {
     if (!this.resizable || this._mode !== 'full' || !this.isConnected) return false;
     if (next === this.effectiveRailWidthPx) return false;
-    const event = this.emit('lr-rail-resize-request', { widthPx: next }, { cancelable: true });
-    if (!this.resizable || this._mode !== 'full' || !this.isConnected) {
-      this.endResizerGesture();
-      return false;
-    }
-    if (event.defaultPrevented) return false;
-    this.railWidth = next;
-    if (commit) this.emit('lr-rail-resize', { widthPx: next });
-    else this.resizeGestureChanged = true;
-    return true;
+    let applied = false;
+    requestThenCommit({
+      guard: this.widthWriteGuard,
+      requestDetail: { widthPx: next },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-rail-resize-request', detail, init),
+      commit: () => {
+        if (!this.resizable || this._mode !== 'full' || !this.isConnected) return;
+        this.railWidth = next;
+        applied = true;
+        if (commit) this.emit('lr-rail-resize', { widthPx: next });
+        else this.resizeGestureChanged = true;
+      },
+    });
+    if (!this.resizable || this._mode !== 'full' || !this.isConnected) this.endResizerGesture();
+    return applied;
   }
 
   private onResizerKeyDown = (e: KeyboardEvent): void => {
-    if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
-    const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
+    const rtl = this.effectiveDirection === 'rtl';
     const direction = separatorArrowDirection(e, 'inline', rtl);
     const step = 8;
     const width = this.effectiveRailWidthPx;
@@ -2055,6 +2099,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.resizerPositionObserver.observe(this.baseEl, { box: 'border-box' });
     this.resizerPositionObserver.observe(resizer, { box: 'border-box' });
     this.observedResizer = resizer;
+    this.syncResizerPosition();
   }
 
   private disconnectResizerPosition(): void {
@@ -2068,11 +2113,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!resizer || !this.baseEl || this._mode !== 'full' || !this.resizable) return;
     const hostRect = this.getBoundingClientRect();
     const baseRect = this.baseEl.getBoundingClientRect();
-    const half = resizer.getBoundingClientRect().width / 2;
-    const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
+    const half = resizer.offsetWidth / 2;
+    const rtl = this.effectiveDirection === 'rtl';
     const offset = rtl ? hostRect.right - baseRect.left : baseRect.right - hostRect.left;
-    resizer.style.setProperty('inset-inline-start', `${offset - half}px`);
+    resizer.style.setProperty('inset-inline-start', `${offset / layoutScale(this).x - half}px`);
     resizer.style.setProperty('inset-inline-end', 'auto');
+    const width = this.effectiveRailWidthPx;
+    resizer.setAttribute('aria-valuenow', String(Math.round(width)));
+    resizer.setAttribute('aria-valuetext', this.resizeValueText(width));
   }
 
   private renderResizer(): TemplateResult {
@@ -2106,12 +2154,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         type="button"
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.navId}
-        aria-label=${this.open ? this.localize('closeNavigation') : this.localize('openNavigation')}
+        aria-label=${this.localize('navigation')}
         @click=${this.onToggleClick}
       >
         ${this.open ? closeIcon() : menuIcon()}
       </button>
-      ${mobile && this.open ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}
+      ${mobile ? html`<div part="backdrop" aria-hidden="true" ?data-open=${this.open} @click=${this.onBackdropClick}></div>` : nothing}
       <div
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
@@ -2139,9 +2187,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 type="button"
                 aria-expanded=${expanded ? 'true' : 'false'}
                 aria-controls=${this.navRegionId}
-                aria-label=${expanded
-                  ? this.localize('appRailCollapse')
-                  : this.localize('appRailExpand')}
+                aria-label=${this.localize('navigation')}
                 @click=${this.onCollapseToggleClick}
               ><span part="collapse-icon" aria-hidden="true"
                 ><slot name="collapse-icon" @slotchange=${this.onCollapseIconSlotChange}>${chevronIcon()}</slot></span
@@ -2152,7 +2198,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 part="pin-button"
                 type="button"
                 aria-pressed=${pinned ? 'true' : 'false'}
-                aria-label=${pinned ? this.localize('appRailUnpin') : this.localize('appRailPin')}
+                aria-label=${this.localize('appRailPin')}
                 @click=${this.onPinClick}
               ><span part="pin-icon" aria-hidden="true"
                 ><slot name="pin-icon">${pinIcon()}</slot></span

@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Jalur',
   pathNodeStatus: '{label}, simpul {position} dari {total}',
   pathRelationStatus: '{relation}, relasi',
+  pathRelationForward: 'mengarah ke simpul berikutnya',
+  pathRelationReverse: 'mengarah ke simpul sebelumnya',
   neighborListLabel: 'Relasi',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Perluas {label} pada grafik',

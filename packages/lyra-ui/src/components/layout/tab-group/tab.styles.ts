@@ -36,19 +36,19 @@ export const styles = css`
   }
 
   [part~='close-button']:where(:hover) {
-    background: color-mix(
+    background: var(--lr-tab-close-hover-bg, color-mix(
       in oklab,
       transparent,
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    ));
   }
 
   [part~='close-button']:where(:active) {
-    background: color-mix(
+    background: var(--lr-tab-close-active-bg, color-mix(
       in oklab,
       transparent,
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ));
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'የመሣሪያ መለኪያ ስኪማዎች ቢበዛ {fields} መስኮችን እና በእያንዳንዱ መስክ {options} ምርጫዎችን ይደግፋሉ።',
   testResultsLimit: 'የመጀመሪያዎቹ {count} የሙከራ ውጤቶች ብቻ ይታያሉ።',
   toolTimelineLimit: 'ቢበዛ {count} የመሣሪያ ጥሪዎች ይታያሉ።',
+  toolTimelineLoadError: 'የመሣሪያውን እይታ መጫን አልተቻለም።',
   toolSelectLimit: 'የመጀመሪያዎቹ {count} መሣሪያዎች ብቻ ይታያሉ።',
   testResultsInputTooLarge: 'የሙከራ ውጤቶች ዝርዝር ከማሳያው ገደብ ይበልጣል።',
   toolCall: 'የመሣሪያ ጥሪ',

@@ -32,6 +32,9 @@ export type LyraBreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
  * @csspart prefix - Shoelace-compatible alias for `start`.
  * @csspart end - Wrapper around the `end` and `suffix` slots.
  * @csspart suffix - Shoelace-compatible alias for `end`.
+ * @cssprop [--lr-breadcrumb-item-separator-gap] - Separator gap override.
+ * @cssprop [--lr-breadcrumb-item-separator-color] - Separator color override.
+ * @cssprop [--lr-breadcrumb-item-hover-color] - Hover color override.
  * @cssprop [--lr-breadcrumb-current-color=var(--lr-color-text-quiet)] - Text color of the
  *   current-page item (`current`/`aria-current="page"`). Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the current item

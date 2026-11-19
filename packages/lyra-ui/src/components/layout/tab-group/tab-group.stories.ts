@@ -285,13 +285,13 @@ export const RichElementLabel: StoryObj = {
     docs: {
       description: {
         story:
-          "A rich tab label can combine decorative glyphs and a badge without creating another action. Its direct default-slot element roots are inert while projected; the real tab button is named from the accessibility-exposed text, so the aria-hidden mail glyph does not enter its name.",
+          "A rich tab label can combine decorative glyphs and a badge without creating another action. Its direct default-slot element roots are inert while projected; the descriptor’s aria-label names the real tab button.",
       },
     },
   },
   render: () => html`
-    <lr-tab-group aria-label="Mailbox panels">
-      <lr-tab panel="inbox" active>
+    <lr-tab-group label="Mailbox panels">
+      <lr-tab panel="inbox" active aria-label="Inbox, 3 unread messages">
         <span aria-hidden="true">✉</span>
         <span>Inbox</span>
         <span>3 unread</span>
@@ -309,7 +309,7 @@ export const ClosableElementTabs: StoryObj = {
     docs: {
       description: {
         story:
-          '`closable` adds the mapped close affordance without adding a second focus stop inside the real tab button. Click the glyph or focus the tab and press Delete (`aria-keyshortcuts="Delete"`); both emit the Lyra-convention `lr-close` notification. This example handles the request by removing the matching tab and panel.',
+          '`closable` adds the mapped close affordance without adding a second focus stop inside the real tab button. Click the glyph, press Delete on the focused tab, or activate its named close button with a screen reader. Each action emits `lr-close` from the tab. This example handles the request by removing the matching tab and panel.',
       },
     },
   },

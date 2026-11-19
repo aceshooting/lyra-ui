@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Lossa navigering',
   appRailItemCollapse: 'Komprimera {label}',
   appRailItemExpand: 'Expandera {label}',
+  appRailItemToggle: 'Visa eller dölj {label}',
+  appRailGroupToggle: 'Navigeringsgrupp',
   resizeValuePercent: '{value} procent',
   commandPaletteLabel: 'Kommandopalett',
   commandPalettePlaceholder: 'Sök kommandon…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} kommando',
     other: '{count} kommandon',
   },
+  tabCloseAction: 'Stäng {label}',
+  stepperStateCompleted: 'Slutfört',
+  stepperStateError: 'Fel',
+  stepperStatePending: 'Ej påbörjad',
+  stepperStateLocked: 'Låst',
   commandPaletteInputLimit: 'Vissa kommandon utelämnades eftersom indatagränsen nåddes.',
 };
 

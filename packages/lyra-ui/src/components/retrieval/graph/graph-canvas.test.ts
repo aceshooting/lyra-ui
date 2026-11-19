@@ -313,6 +313,7 @@ describe('canvas renderer — interaction and a11y', () => {
       (e) => (detail = (e as CustomEvent).detail)
     );
     const capture = stubPointerCapture(canvas);
+    canvas.hasPointerCapture = id => capture.captured.has(id);
     try {
       canvas.dispatchEvent(
         new PointerEvent('pointerdown', {
@@ -336,6 +337,7 @@ describe('canvas renderer — interaction and a11y', () => {
       expect(detail?.x).to.be.a('number');
       expect(detail?.y).to.be.a('number');
     } finally {
+      Reflect.deleteProperty(canvas, 'hasPointerCapture');
       capture.restore();
     }
   });
@@ -372,6 +374,8 @@ describe('canvas renderer — interaction and a11y', () => {
         );
       },
     });
+    let releaseAttempts = 0;
+    canvas.releasePointerCapture = () => { releaseAttempts++; };
     let detail: { nodeId: string; x: number; y: number } | undefined;
     el.addEventListener(
       'lr-node-activate',
@@ -398,7 +402,9 @@ describe('canvas renderer — interaction and a11y', () => {
       );
 
       expect(detail?.nodeId).to.equal('only');
+      expect(releaseAttempts).to.equal(0);
     } finally {
+      Reflect.deleteProperty(canvas, 'releasePointerCapture');
       if (originalSetPointerCapture)
         Object.defineProperty(
           canvas,
@@ -630,6 +636,34 @@ describe('canvas renderer — interaction and a11y', () => {
       states.push(cursor.getAttribute('aria-pressed'));
     }
     expect(states).to.deep.equal(['true', 'false', 'true']);
+  });
+
+  it('tracks the cursor in layout pixels inside a scaled canvas', async () => {
+    const el = await mountSettledCanvas();
+    el.style.transformOrigin = 'top left';
+    el.style.transform = 'scale(.5)';
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    const rect = canvas.getBoundingClientRect();
+    const api = el as unknown as { updateCanvasTooltip(hit: unknown, x: number, y: number): void };
+    api.updateCanvasTooltip({kind:'node',node:el.simNodes[0]!}, rect.left + 20, rect.top + 15);
+    const tip = el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!;
+    expect(parseFloat(tip.style.left)).to.be.closeTo(40, 1);
+    expect(parseFloat(tip.style.top)).to.be.closeTo(30, 1);
+  });
+
+  it('bounds the drawing and picking buffers for a very wide, shallow canvas', async () => {
+    const el = await mountSettledCanvas();
+    const api = el as unknown as { drawCanvas():void; redrawPickCanvas():void; pickCanvas:HTMLCanvasElement };
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    Object.defineProperty(canvas, 'clientWidth', {configurable:true,value:20_000});
+    Object.defineProperty(canvas, 'clientHeight', {configurable:true,value:20});
+    api.drawCanvas();
+    api.redrawPickCanvas();
+    expect(canvas.width).to.be.at.most(16_384);
+    expect(canvas.width * canvas.height).to.be.at.most(16_777_216);
+    expect(api.pickCanvas.width).to.equal(canvas.width);
+    expect(api.pickCanvas.height).to.equal(canvas.height);
+    expect(canvas.getContext('2d')!.getTransform().a).to.be.closeTo(canvas.width / 20_000, .001);
   });
 
   it('clamps the canvas tooltip inside the visible canvas and viewport bounds', async () => {

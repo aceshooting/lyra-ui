@@ -1,6 +1,6 @@
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { Engine3dSelection, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason, type Engine3dPreference } from '../../../internal/engine-3d.js';
-import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+import { readCanvasRgba, resolveCanvasColor, toRgbaString } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
@@ -254,17 +254,10 @@ export class EmbeddingEngineController {
   private style(): unknown {
     const view = this.host.ownerDocument.defaultView!;
     const computed = view.getComputedStyle(this.host);
-    const canvas = this.host.ownerDocument.createElement('canvas');
-    canvas.width = canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
     const color = (name: string): string => {
       const resolved = resolveCanvasColor(this.host, `var(${name})`, computed.color);
-      if (!context) return resolved;
-      context.clearRect(0, 0, 1, 1);
-      context.fillStyle = resolved;
-      context.fillRect(0, 0, 1, 1);
-      const rgba = context.getImageData(0, 0, 1, 1).data;
-      return `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]! / 255})`;
+      const rgba = readCanvasRgba(this.host.ownerDocument, resolved);
+      return rgba ? toRgbaString(rgba) : resolved;
     };
     return {
       background: color('--lr-color-surface'), foreground: color('--lr-color-text'), muted: color('--lr-color-text-quiet'),

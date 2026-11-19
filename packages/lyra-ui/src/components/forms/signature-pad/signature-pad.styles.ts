@@ -1,8 +1,10 @@
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
+  ${formControlAppearance}
   :host {
     display: block;
     overflow-wrap: anywhere;
@@ -24,9 +26,9 @@ export const styles = css`
     box-sizing: border-box;
     aspect-ratio: var(--lr-signature-pad-aspect-ratio, 3 / 1);
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--_lr-form-control-border-color);
+    border-radius: var(--lr-form-control-radius);
+    background: var(--_lr-form-control-fill);
     color: var(--lr-signature-pad-ink, var(--lr-color-text));
     cursor: crosshair;
     touch-action: none;
@@ -35,7 +37,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   /* no-pressed-state: the stroke being drawn is the press feedback */
-  [part='surface']:where([tabindex]):hover {
+  :host(:where(:not([readonly]))) [part='surface']:where([tabindex]):hover {
     border-color: var(--lr-color-text-quiet);
   }
   [part='surface']:focus-visible,
@@ -45,6 +47,7 @@ export const styles = css`
   :host(:state(user-invalid)) [part='surface'] {
     border-color: var(--lr-color-danger);
   }
+  :host([readonly]) [part='surface'] { cursor: default; }
   :host(:disabled) [part='surface'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;

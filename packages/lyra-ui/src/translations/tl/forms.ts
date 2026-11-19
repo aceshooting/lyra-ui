@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Pumili ng kahit isang opsyon.',
   tokenInputRequired: 'Maglagay ng kahit isang value.',
   tokenInputEditWithContext: 'I-edit ang {label}',
+  tokenInputLabel: 'Mga token',
   iconButtonLabel: 'Pindutan',
   codeEditorLabel: 'Editor ng code',
   switchRequired: 'Paki-on ito.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Nakababa ang panulat',
   signaturePadPenUp: 'Nakataas ang panulat',
+  signaturePadDrawingLimit: 'Naabot na ang limitasyon sa pagguhit.',
   localePickerInputLimit: 'Ang unang 512 tala ng wika at rehiyon lang ang available.',
   emojiPickerInputLimit: 'May ilang datos ng emoji na hindi isinama dahil naabot ang limitasyon sa input.',
 };

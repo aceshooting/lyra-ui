@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Velg minst ett alternativ.',
   tokenInputRequired: 'Skriv inn minst én verdi.',
   tokenInputEditWithContext: 'Rediger {label}',
+  tokenInputLabel: 'Tokener',
   iconButtonLabel: 'Knapp',
   codeEditorLabel: 'Koderedigering',
   switchRequired: 'Slå på denne.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Penn ned',
   signaturePadPenUp: 'Penn opp',
+  signaturePadDrawingLimit: 'Tegnegrensen er nådd.',
   localePickerInputLimit: 'Bare de første 512 språk- og områdeoppføringene er tilgjengelige.',
   emojiPickerInputLimit: 'Noen emojidata ble utelatt fordi en inndatagrense ble nådd.',
 };

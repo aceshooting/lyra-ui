@@ -120,6 +120,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Conair',
   pathNodeStatus: '{label}, nód {position} as {total}',
   pathRelationStatus: '{relation}, gaol',
+  pathRelationForward: 'dírithe i dtreo an chéad nóid eile',
+  pathRelationReverse: 'dírithe i dtreo an nóid roimhe seo',
   neighborListLabel: 'Gaolta',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Leathnaigh {label} sa ghraf',

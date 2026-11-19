@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'साधनाच्या पॅरामीटर स्कीमामध्ये जास्तीत जास्त {fields} क्षेत्रे आणि प्रत्येक क्षेत्रासाठी {options} पर्याय असू शकतात.',
   testResultsLimit: 'फक्त पहिले {count} चाचणी निकाल दाखवले आहेत.',
   toolTimelineLimit: 'जास्तीत जास्त {count} साधन-कॉल दाखवले आहेत.',
+  toolTimelineLoadError: 'साधनाचे दृश्य लोड करता आले नाही.',
   toolSelectLimit: 'फक्त पहिली {count} साधने दाखवली आहेत.',
   testResultsInputTooLarge: 'चाचणी निकालांचे तपशील प्रदर्शन मर्यादेपेक्षा जास्त आहेत.',
   toolCall: 'साधन-कॉल',

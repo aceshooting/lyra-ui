@@ -1,4 +1,8 @@
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -16,13 +20,13 @@ import {
   type ApprovalAction,
   type ApprovalDecision,
 } from '../approval-state.js';
-import { createWaitUntil, type ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
+import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
 import { optionalLiteralSetConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { ApprovalRequestController } from '../../../internal/approval-request-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_edit, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -68,6 +72,7 @@ export interface LyraToolApprovalDialogCloseDetail {
 export type ToolApprovalDialogWaitUntil = ApprovalWaitUntil;
 
 export interface LyraToolApprovalDialogEventMap {
+  'lr-request-close': CustomEvent<{ source: 'escape' | 'backdrop' }>;
   'lr-approve-request': CustomEvent<{ args: unknown; waitUntil: ToolApprovalDialogWaitUntil }>;
   'lr-deny-request': CustomEvent<{ waitUntil: ToolApprovalDialogWaitUntil }>;
   'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
@@ -170,6 +175,7 @@ export interface LyraToolApprovalDialogEventMap {
  * always followed by `lr-close` with reason `'deny'`.
  * @event lr-decision-settled - `detail: { decision }` (`'approved'` or `'denied'`). Emitted right after
  * the `lr-close` whose reason is `'approve'` or `'deny'`, on every path that reaches a decision.
+ * @event lr-request-close - Cancelable before Escape or backdrop dismissal. detail.source identifies the trigger.
  * @event lr-close - `detail: { reason: ToolApprovalDialogCloseReason }`. Fired exactly
  * once per dismissal — via Escape, an opted-in backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
@@ -244,20 +250,23 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
-  // `open`/`pendingAction` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
-  // "a synchronous listener wrote here" apart from "nothing wrote here" -- see
-  // `dispatchWriteGuard` below. Comparing before/after *values* cannot make that distinction:
-  // both guards only reach their check once `pendingAction` is already `null`, so a listener that
-  // writes `pendingAction = null` right back (bouncing out to an out-of-band resolution) is value-identical to a
-  // listener that touched nothing at all.
   private _open = false;
   private _pendingAction: ToolApprovalDialogPending = null;
 
-  /** Marked on every write to `open`/`pendingAction`, from any source. `onApprove`/`onDeny` open it
-   *  immediately before dispatching `lr-approve-request`/`lr-deny-request` and read it back afterward: since the
-   *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
-   *  marked it in between. */
-  private readonly dispatchWriteGuard = new VetoWriteGuard();
+  private readonly approval = new ApprovalRequestController<ApprovalAction>(this, {
+    tag: 'tool-approval-dialog',
+    pending: () => this.pendingAction,
+    setPending: action => { this.pendingAction = action; },
+    canRequest: () => !this.disabled,
+    stillOpen: () => this.open,
+    onDecide: action => this.close(action),
+  });
+
+  /** Outline level of the title. `none` preserves its text without a heading role. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
+
+  /** Prevents the reviewer from starting or editing a decision. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true })
@@ -265,7 +274,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   set open(value: boolean) {
     const previous = this._open;
     this._open = value;
-    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.approval.markWrite();
     this.requestUpdate('open', previous);
   }
 
@@ -303,8 +312,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   set pendingAction(value: ToolApprovalDialogPending) {
     const previous = this._pendingAction;
     this._pendingAction = TOOL_APPROVAL_PENDING_ACTION.normalizeReflected(this, 'pending-action', value) ?? null;
-    if (previous !== this._pendingAction) this.deferralGeneration++;
-    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.approval.pendingChanged(previous, this._pendingAction);
     this.requestUpdate('pendingAction', previous);
   }
 
@@ -326,7 +334,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: () => {
       if (!this.open || !this.overlay?.isTopmost() || this.pendingAction != null) return;
-      this.close('escape');
+      this.requestClose('escape');
     },
     onUnexpectedClose: () => {
       if (!this.open) return;
@@ -336,7 +344,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   });
   private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private overlay?: OverlayHandle;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly errorAnnouncements = new AnnouncementSinkController(this, {eager: ['assertive']});
   private suppressNextErrorAnnouncement = true;
   private readonly titleId = nextId('tool-approval-dialog-title');
   private readonly errorId = nextId('tool-approval-dialog-error');
@@ -359,7 +367,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     ) {
       // Announce only the transition into an invalid edit. Further keystrokes that remain invalid
       // keep the visible description current without repeatedly interrupting the user.
-      this.errorAnnouncementSink?.announce(this.localize('invalidJson'));
+      this.errorAnnouncements.announceAssertive(this.localize('invalidJson'));
     }
     if (changed.has('open')) {
       if (this.open) {
@@ -397,7 +405,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // them -- mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.open) this.enterTopLayer();
+    this.syncBodyRegion();
+    if (this.open) this.modalSurface.show();
     this.suppressNextErrorAnnouncement = false;
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
@@ -421,15 +430,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.errorAnnouncements.adopted();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.errorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
-      this.errorAnnouncementSink?.release();
-      this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-        document: this.ownerDocument,
-        source: this,
-      });
-    }
     if (this.hasUpdated) {
       // Treat an existing invalid draft as resting content after reconnect, including when its
       // state write was queued during the detached interval.
@@ -443,26 +450,44 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       // The shadow panel survives a same-document reparent, so restore focus before the pending
       // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
       this.overlay?.focusInitial();
-      void this.updateComplete.then(() => {
-        if (!this.open || !this.isConnected) return;
-        this.enterTopLayer();
+      this.scheduleAfterUpdate(() => {
+        if (!this.open) return;
+        this.modalSurface.show();
         this.overlay?.focusInitial();
-      });
+      }, 'modal-reconnect');
     }
-  }
-
-  /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
-  private enterTopLayer(): void {
-    this.modalSurface.show();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.disposeBodyRegion?.();
+    this.disposeBodyRegion = undefined;
+    this.bodyRegionEl = null;
     this.modalSurface.disconnect();
     this.overlay?.suspend();
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
+  }
+
+  private disposeBodyRegion?: () => void;
+  private bodyRegionEl: HTMLElement | null = null;
+  private bodyRegionName?: string;
+
+  /** Keeps the capped, scrolling body keyboard-scrollable (and named) only while it overflows. */
+  private syncBodyRegion(): void {
+    const body = this.open ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
+    const name = body ? resolveAccessibleName(
+      this,
+      this.accessibleLabel,
+      this.renderRoot.querySelector(`[id="${this.titleId}"]`)!.textContent,
+      this.toolName,
+      this.localize('toolApprovalGenericTool'),
+    ) : undefined;
+    if (body === this.bodyRegionEl && name === this.bodyRegionName) return;
+    this.disposeBodyRegion?.();
+    this.disposeBodyRegion = undefined;
+    this.bodyRegionEl = body;
+    this.bodyRegionName = name;
+    if (body) this.disposeBodyRegion = makeScrollRegionFocusable(body, name);
   }
 
   private activateOverlay(): void {
@@ -475,11 +500,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => {
         if (this.pendingAction != null) return;
-        this.close('escape');
+        this.requestClose('escape');
       },
       onBackdrop: () => {
         if (this.pendingAction != null || !this.lightDismiss) return;
-        this.close('backdrop');
+        this.requestClose('backdrop');
       },
       preferredInitialFocus: () =>
         this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]') ?? null,
@@ -518,6 +543,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.close(reason);
   }
 
+  private requestClose(source: 'escape' | 'backdrop'): void {
+    requestThenCommit({
+      requestDetail: { source },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-request-close', detail, init),
+      commit: () => this.close(source),
+    });
+  }
+
   private onBackdropClick = (): void => {
     this.overlay?.dismissBackdrop();
   };
@@ -534,7 +567,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   }
 
   private toggleEdit = (): void => {
-    if (this.pendingAction != null) return;
+    if (this.disabled || this.pendingAction != null) return;
     if (this.editing) {
       this.editing = false;
       this.draftText = '';
@@ -547,7 +580,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
 
   private onDraftInput = (e: Event): void => {
-    if (this.pendingAction != null) {
+    if (this.disabled || this.pendingAction != null) {
       e.stopPropagation();
       return;
     }
@@ -567,100 +600,34 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private onEditorFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
   private onEditorBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 
-  /** Bumped when pending ownership changes, so a stale settlement never resolves a newer one. */
-  private deferralGeneration = 0;
-
-  /** Applies a veto (`preventDefault()` or `waitUntil()`); true when the dispatch was vetoed. */
-  private settleDispatch(action: ApprovalAction, event: CustomEvent, deferrals: Promise<unknown>[]): boolean {
-    if (!event.defaultPrevented && deferrals.length === 0) return false;
-    if (this.dispatchWriteGuard.touched) {
-      // The listener resolved the state itself; absorb promises it handed over.
-      for (const deferral of deferrals) void deferral.catch(() => undefined);
-      return true;
-    }
-    this.pendingAction = action;
-    if (deferrals.length > 0) {
-      const generation = this.deferralGeneration;
-      const stillOurs = (): boolean =>
-        generation === this.deferralGeneration && this.open && this.pendingAction === action;
-      void Promise.all(deferrals).then(
-        () => { if (stillOurs()) this.close(action); },
-        () => { if (stillOurs()) this.pendingAction = null; },
-      );
-    }
-    return true;
-  }
-
-  private decisionDispatching = false;
   private onApprove = (): void => {
-    if (this.decisionDispatching) return;
-    this.decisionDispatching = true;
-    try {
-      if (this.pendingAction != null) return;
-      let currentArgs: unknown = this.args;
-      if (this.editing) {
-        // The Approve button is disabled while the draft is invalid, so
-        // this should always succeed -- the try/catch is defense-in-depth
-        // against a state desync rather than an expected path.
-        try {
-          currentArgs = JSON.parse(this.draftText);
-        } catch {
-          return;
-        }
-      }
-      // The guard above proves `pendingAction` is null right up to this point -- but `emit()` below
-      // dispatches synchronously, so a listener can still write `pendingAction` or `open` from inside it
-      // (e.g. it calls preventDefault() and resolves the decision itself out of band by calling
-      // close('approve') directly, or bounces `pendingAction` back to null immediately). A before/after
-      // *value* comparison can't detect that last case -- both are already null/true respectively, so
-      // a listener writing `pendingAction = null` reads identically to a listener that touched nothing.
-      // `dispatchWriteGuard` tracks the write itself, not its value: opened here, then marked by
-      // the `open`/`pendingAction` setters if a listener assigns either one during the synchronous `emit()`
-      // below. Only when it stays untouched did the listener leave both alone, and the built-in
-      // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
-      // listener just did.
-      this.dispatchWriteGuard.open();
-      const { waitUntil, deferrals, seal } = createWaitUntil('tool-approval-dialog');
-      const event = this.emitApproveRequest({ args: currentArgs, waitUntil });
-      seal();
-      if (this.settleDispatch('approve', event, deferrals)) return;
-      if (!this.dispatchWriteGuard.touched) this.close('approve');
-    } finally {
-      this.decisionDispatching = false;
-    }
+    let args = this.args;
+    this.approval.request('approve', waitUntil => this.emitApproveRequest({args, waitUntil}), () => {
+      if (!this.editing) return true;
+      try { args = JSON.parse(this.draftText); return true; }
+      catch { return false; }
+    });
   };
 
   private onDeny = (): void => {
-    if (this.decisionDispatching) return;
-    this.decisionDispatching = true;
-    try {
-      if (this.pendingAction != null) return;
-      this.dispatchWriteGuard.open();
-      const { waitUntil, deferrals, seal } = createWaitUntil('tool-approval-dialog');
-      const event = this.emitDenyRequest({ waitUntil });
-      seal();
-      if (this.settleDispatch('deny', event, deferrals)) return;
-      if (!this.dispatchWriteGuard.touched) this.close('deny');
-    } finally {
-      this.decisionDispatching = false;
-    }
+    this.approval.request('deny', waitUntil => this.emitDenyRequest({waitUntil}));
   };
 
   override render(): TemplateResult {
     const hasError = this.editing && this.draftInvalid;
-    const toolName = this.toolName || this.localize('toolApprovalGenericTool');
+    const toolName = normalizeLabel(this.toolName) ?? this.localize('toolApprovalGenericTool');
     const headingTemplate = this.localize('toolApprovalHeading');
     // Resolve through the normal interpolation path while preserving a distinct, themeable node
     // for every translated occurrence of the tool name.
     const headingParts = resolveLocalizedParts(headingTemplate, (marker) =>
       this.localize('toolApprovalHeading', undefined, { tool: marker }),
     );
-    const hostLabel = this.getAttribute('aria-label');
-    const panelLabel = hostLabel?.trim()
-      ? hostLabel
-      : typeof this.accessibleLabel === 'string' && this.accessibleLabel.trim()
-        ? this.accessibleLabel
-        : null;
+    const headingText = headingParts.join(toolName).trim();
+    const level = headingText && resolveHeadingLevel(this.headingLevel);
+    const heading = headingParts.map((part, index) =>
+      html`${index > 0 ? html`<span part="tool-name" dir="auto">${toolName}</span>` : nothing}${part}`,
+    );
+    const panelLabel = resolveAccessibleName(this, this.accessibleLabel, headingText ? undefined : toolName) ?? null;
     return this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -672,10 +639,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         tabindex="-1"
       >
         <div part="header">
-          <h2 id=${this.titleId}>${headingParts.map(
-            (part, index) =>
-              html`${index > 0 ? html`<span part="tool-name" dir="auto">${toolName}</span>` : nothing}${part}`,
-          )}</h2>
+          ${level ? html`<h2 aria-level=${level} id=${this.titleId}>${heading}</h2>`
+            : html`<span id=${this.titleId}>${heading}</span>`}
         </div>
         <div part="body">
           ${this.editing
@@ -692,7 +657,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   aria-label=${this.localize('toolApprovalArgsLabel')}
                   aria-invalid=${hasError ? 'true' : 'false'}
                   aria-describedby=${hasError ? this.errorId : nothing}
-                  ?readonly=${this.pendingAction != null}
+                  ?readonly=${this.disabled || this.pendingAction != null}
                   .value=${this.draftText}
                   @input=${this.onDraftInput}
                   @focus=${this.onEditorFocus}
@@ -706,7 +671,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
           <slot name="footer"></slot>
           ${renderDenyAction({
             label: this.localize('deny'), loading: this.pendingAction === 'deny',
-            disabled: this.pendingAction === 'approve', onClick: this.onDeny,
+            disabled: this.disabled || this.pendingAction === 'approve', onClick: this.onDeny,
           })}
           ${!this.readonly
             ? html`<lr-button
@@ -714,14 +679,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                 variant="neutral"
                 appearance="outlined"
                 type="button"
-                ?disabled=${this.pendingAction != null}
+                ?disabled=${this.disabled || this.pendingAction != null}
                 exportparts="base:edit-button-base, button:edit-button-base, label:edit-button-label"
                 @click=${this.toggleEdit}
               >${this.editing ? this.localize('cancel') : this.localize('edit')}</lr-button>`
             : nothing}
           ${renderApproveAction({
             label: this.localize('approve'), loading: this.pendingAction === 'approve',
-            disabled: hasError || this.pendingAction === 'deny', variant: 'brand',
+            disabled: this.disabled || hasError || this.pendingAction === 'deny', variant: 'brand',
             onClick: this.onApprove,
           })}
         </div>

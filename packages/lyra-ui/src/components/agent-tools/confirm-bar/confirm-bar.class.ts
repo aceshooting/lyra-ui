@@ -11,11 +11,9 @@ import {
   isComposedFocusAvailable,
   repairComposedFocus,
 } from '../../../internal/focus-navigation.js';
-import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import { ApprovalRequestController } from '../../../internal/approval-request-controller.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
-import '../../layout/details/details.class.js';
-import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/live-region/live-region.class.js';
 import '../../forms/button/button.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -25,7 +23,7 @@ import {
   type ApprovalAction,
   type ApprovalDecision,
 } from '../approval-state.js';
-import { createWaitUntil, type ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
+import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -228,6 +226,8 @@ function deniedIcon(): SVGTemplateResult {
  * `size` is `s` or smaller. Accepts any padding shorthand. Overridden entirely by `frame="plain"`.
  * @cssprop [--lr-confirm-bar-compact-gap=var(--lr-space-s)] - Gap between the row's items while
  * `size` is `s` or smaller.
+ * @cssprop --lr-decision-positive-color - Shared approved status color.
+ * @cssprop --lr-decision-negative-color - Shared denied status color.
  * @cssprop [--lr-confirm-bar-approved-color=var(--lr-color-success)] - `[part='status']` text/icon
  * color once `decision` is `'approved'`.
  * @cssprop [--lr-confirm-bar-denied-color=var(--lr-color-danger)] - `[part='status']` text/icon
@@ -290,19 +290,21 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when defined. */
   @property({ attribute: false }) args: unknown = undefined;
 
-  // `decision`/`pendingAction` are accessor-backed rather than plain fields so `decide()` can tell
-  // "a synchronous listener wrote here" apart from "nothing wrote here" -- see `dispatchWriteGuard`
-  // below. Comparing before/after *values* cannot make that distinction: the guard in `decide()`
-  // only reaches its check once both are already `null`, so a listener that writes
-  // `pendingAction = null` right back (bouncing out to an out-of-band resolution) is value-identical to a listener that
-  // touched nothing at all.
   private _decision: ConfirmBarDecision = null;
   private _pending: ApprovalAction | null = null;
-  /** Marked on every write to `decision`/`pendingAction`, from any source. `decide()` opens it
-   *  immediately before dispatching `lr-approve-request`/`lr-deny-request` and reads it back afterward: since the
-   *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
-   *  marked it in between. */
-  private readonly dispatchWriteGuard = new VetoWriteGuard();
+  private readonly approval = new ApprovalRequestController<ApprovalAction>(this, {
+    tag: 'confirm-bar',
+    pending: () => this.pendingAction,
+    setPending: action => { this.pendingAction = action; },
+    canRequest: () => !this.disabled && this.decision == null,
+    stillOpen: () => this.decision == null,
+    onDecide: (action, sync) => {
+      if (sync) this.handOffDecidedFocus();
+      this.decision = action === 'approve' ? 'approved' : 'denied';
+    },
+    onVeto: () => this.statusEl?.focus(),
+    onBounce: action => this.returnFocusAfterBounce(action),
+  });
 
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
    *  decision -- timeout, another reviewer -- renders identically and emits no `lr-approve-request`/`lr-deny-request`
@@ -312,7 +314,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   set decision(value: ConfirmBarDecision) {
     const previous = this._decision;
     this._decision = CONFIRM_BAR_DECISION.normalizeReflected(this, 'decision', value) ?? null;
-    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.approval.markWrite();
     this.requestUpdate('decision', previous);
   }
 
@@ -324,8 +326,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   set pendingAction(value: ApprovalAction | null) {
     const previous = this._pending;
     this._pending = CONFIRM_BAR_PENDING_ACTION.normalizeReflected(this, 'pending-action', value) ?? null;
-    if (previous !== this._pending) this.deferralGeneration++;
-    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.approval.pendingChanged(previous, this._pending);
     this.requestUpdate('pendingAction', previous);
   }
 
@@ -401,11 +402,26 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   private readonly headingId = nextId('confirm-bar-heading');
 
-  /** Changes whenever pending ownership changes, including externally held retries. */
-  private deferralGeneration = 0;
+  private argsRegistration?: Promise<unknown>;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.args !== undefined && !this.argsRegistration) this.requestUpdate();
+  }
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const settled = await super.getUpdateComplete();
+    await this.argsRegistration;
+    return settled;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.args !== undefined && this.isConnected) {
+      this.argsRegistration ??= Promise.all([
+        import('../../layout/details/details.js'), import('../../utility/json-viewer/json-viewer.js'),
+      ]).catch(() => { this.argsRegistration = undefined; });
+    }
     if (!this.hasUpdated) {
       const defaultSlotNodes = Array.from(this.childNodes).filter(
         (node) => node.nodeType !== Node.ELEMENT_NODE || !(node as Element).getAttribute('slot'),
@@ -419,6 +435,15 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       this.pendingAction != null
     ) {
       this.handOffDecidedFocus();
+      this.pendingAction = null;
+    }
+    // A replacement proposal must acquire its own approval.
+    if (
+      this.hasUpdated &&
+      this.decision == null &&
+      this.pendingAction != null &&
+      (changed.has('toolName') || changed.has('heading') || changed.has('args'))
+    ) {
       this.pendingAction = null;
     }
   }
@@ -475,95 +500,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     }
   };
 
-  private decisionDispatching = false;
   private decide(next: 'approved' | 'denied'): void {
-    if (this.decisionDispatching) return;
-    this.decisionDispatching = true;
-    try {
-      if (this.disabled || this.decision != null || this.pendingAction != null) return;
-      // ExtendableEvent's own rule, for the same reason: `waitUntil()` extends *this dispatch*, so it
-      // is only meaningful while listeners are running. A reference captured and called later cannot
-      // retroactively reopen a decision that already finalized, and silently pretending otherwise
-      // would leave a bar stuck pending with nothing watching the promise.
-      const { waitUntil, deferrals, seal } = createWaitUntil('confirm-bar');
-      // The guard above proves both are null right up to this point -- but `emit()` below dispatches
-      // synchronously, so a listener can still write either one from inside it (e.g. it calls
-      // preventDefault() and resolves the decision itself out of band, or bounces `pendingAction` back to
-      // null immediately). A before/after *value* comparison can't detect that last case -- both are
-      // already null, so a listener writing `pendingAction = null` reads identically to a listener that
-      // touched nothing. `dispatchWriteGuard` tracks the write itself, not its value: opened here,
-      // then marked by the `decision`/`pendingAction` setters if a listener assigns either one during the
-      // synchronous `emit()` below. Only when it stays untouched did the listener leave both alone,
-      // and the built-in "awaiting the host" pending state applies; otherwise it would silently
-      // clobber whatever the listener just did. `waitUntil()` composes with that rule rather than
-      // bypassing it: a listener that both defers and resolves the state itself has resolved it, and
-      // the promise is then nobody's business but its own.
-      this.dispatchWriteGuard.open();
-      const event =
-        next === 'approved'
-          ? this.emitApproveRequest({ args: this.args, waitUntil })
-          : this.emitDenyRequest({ waitUntil });
-      seal();
-      const listenerResolvedItself = this.dispatchWriteGuard.touched;
-      // `waitUntil()` is a veto in its own right -- it says "not yet" as plainly as preventDefault()
-      // does -- so it takes the same branch without the listener having to call both.
-      if (deferrals.length > 0 || event.defaultPrevented) {
-        // Same handoff as the synchronous path below, and for the same reason: `?loading` on the
-        // just-activated button makes `lr-button`'s internal native `<button>` genuinely `disabled`,
-        // and a browser blurs a focused element the instant it becomes disabled. Without moving
-        // focus first, a keyboard user who activated Approve/Deny would be silently dropped to
-        // <body> for the whole duration of the host's async work. Ordered before the `pendingAction` write
-        // so the button is still focusable when focus leaves it. `[part="status"]` and not
-        // `returnFocusTo`: the decision is not settled yet, so this is not the return journey.
-        this.statusEl?.focus();
-        if (listenerResolvedItself) {
-          // The listener resolved the decision itself, so its own promises are nobody's business but
-          // its own -- but the bar did accept them, and an accepted promise with nothing attached
-          // surfaces its rejection as an unhandled rejection in the host page. Absorb them rather
-          // than acting on them: this branch deliberately applies no bookkeeping.
-          for (const deferral of deferrals) void deferral.catch(() => undefined);
-          return;
-        }
-        this.pendingAction = approvalAction(next);
-        if (deferrals.length > 0) this.awaitDeferredDecision(Promise.all(deferrals), next);
-        return;
-      }
-      // Synchronous, before the property set below triggers the re-render that removes the
-      // Deny/Approve buttons -- [part="status"] is always present in the DOM, so this never leaves a
-      // gap where focus would otherwise fall back to <body>. Only reached on the synchronous
-      // (non-pending) path -- an externally-set `decision` already skips this too, unchanged.
-      if (listenerResolvedItself) return;
-      this.handOffDecidedFocus();
-      this.decision = next;
-    } finally {
-      this.decisionDispatching = false;
-    }
-  }
-
-  /**
-   * The settlement half of `waitUntil()`. Every write it performs is re-checked against the state
-   * it left behind rather than applied blind: the promise settles in a later task, and by then the
-   * host may have finalized the decision out of band, bounced `pendingAction` itself, or started a whole
-   * new decision. `generation` covers that last case, which the property checks alone cannot -- a
-   * second pending decision for the same action is state-identical to the first.
-   */
-  private awaitDeferredDecision(promise: Promise<unknown>, next: 'approved' | 'denied'): void {
-    const action = approvalAction(next);
-    const generation = this.deferralGeneration;
-    const stillOurs = (): boolean =>
-      generation === this.deferralGeneration && this.decision == null && this.pendingAction === action;
-    void promise.then(
-      () => {
-        // `willUpdate()` owns the rest: it clears `pendingAction` and performs the decided-state focus
-        // handoff for every externally-finalized decision, this one included.
-        if (stillOurs()) this.decision = next;
-      },
-      () => {
-        if (!stillOurs()) return;
-        this.pendingAction = null;
-        this.returnFocusAfterBounce(action);
-      },
-    );
+    this.approval.request(approvalAction(next), waitUntil => next === 'approved'
+      ? this.emitApproveRequest({args: this.args, waitUntil})
+      : this.emitDenyRequest({waitUntil}));
   }
 
   /**

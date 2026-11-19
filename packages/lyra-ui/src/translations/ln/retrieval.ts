@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Nzela',
   pathNodeStatus: '{label}, nœud {position} kati na {total}',
   pathRelationStatus: '{relation}, boyokani',
+  pathRelationForward: 'ekendeki na nodo ya sima',
+  pathRelationReverse: 'ekendeki na nodo ya liboso',
   neighborListLabel: 'Ba relation',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Kolisá {label} na graphe',

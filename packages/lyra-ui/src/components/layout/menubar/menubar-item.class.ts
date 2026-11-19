@@ -24,17 +24,21 @@ import { styles } from './menubar-item.styles.js';
  * click listener for menu-less actions. Disabled items suppress activation, including click(),
  * although capture listeners on ancestors can still observe a dispatched click.
  *
+ * @event lr-show - The assigned menu opened.
+ * @event lr-hide - The assigned menu closed.
  * @customElement lr-menubar-item
  * @slot - Visual label. Its text names the item unless an author supplies an accessible name.
  * @slot menu - Exactly one lr-menu. The first menu is used; other assigned elements are ignored.
  * @csspart base - Visual title row.
  * @csspart label - Ellipsized label wrapper.
+ * @cssprop [--lr-menubar-item-hover-color] - Hover color override.
+ * @cssprop [--lr-menubar-item-active-color] - Active color override.
  * @cssprop [--lr-menubar-item-hover-bg=var(--lr-color-brand-quiet)] - Hover, focus-visible and open fill.
  * @cssprop [--lr-menubar-item-active-bg=color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed fill.
  * @status experimental
  * @since 21.0.0
  */
-export class LyraMenubarItem extends LyraElement {
+export class LyraMenubarItem extends LyraElement<{ 'lr-show': CustomEvent<null>; 'lr-hide': CustomEvent<null> }> {
   static override styles = [LyraElement.styles, styles];
 
   /** Prevents focus traversal and activation. */
@@ -66,7 +70,7 @@ export class LyraMenubarItem extends LyraElement {
 
   /** @internal */
   get hasMenu(): boolean { return this.attached; }
-  /** @internal */
+  /** Whether the assigned menu is open. */
   get menuOpen(): boolean { return this.expanded; }
   /** @internal */
   get menuElement(): HTMLElement | null { return this.panel; }
@@ -133,6 +137,14 @@ export class LyraMenubarItem extends LyraElement {
       collectInitialSlotAssignment(this.renderRoot.querySelector<HTMLSlotElement>('slot[name="menu"]'), () => this.syncMenu());
       this.syncLabel();
     });
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const previous = changed.get('expanded');
+    if (this.isConnected && typeof previous === 'boolean' && this.expanded !== previous) {
+      this.emit(this.expanded ? 'lr-show' : 'lr-hide', null);
+    }
   }
 
   /** @internal Opens the assigned panel, with stale asynchronous completions discarded. */

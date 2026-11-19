@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Ξεκαρφίτσωμα πλοήγησης',
   appRailItemCollapse: 'Σύμπτυξη {label}',
   appRailItemExpand: 'Ανάπτυξη {label}',
+  appRailItemToggle: 'Εμφάνιση ή απόκρυψη: {label}',
+  appRailGroupToggle: 'Ομάδα πλοήγησης',
   resizeValuePercent: '{value} τοις εκατό',
   commandPaletteLabel: 'Παλέτα εντολών',
   commandPalettePlaceholder: 'Αναζήτηση εντολών…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: 'εντολή {count}',
     other: '{count} εντολές',
   },
+  tabCloseAction: 'Κλείσιμο: {label}',
+  stepperStateCompleted: 'Ολοκληρώθηκε',
+  stepperStateError: 'Σφάλμα',
+  stepperStatePending: 'Δεν έχει ξεκινήσει',
+  stepperStateLocked: 'Κλειδωμένο',
   commandPaletteInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: εντολές.',
 };
 

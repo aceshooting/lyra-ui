@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'I-unpin ang navigation',
   appRailItemCollapse: 'Paliitin ang {label}',
   appRailItemExpand: 'Palawakin ang {label}',
+  appRailItemToggle: 'Ipakita o itago ang {label}',
+  appRailGroupToggle: 'Grupo sa navigation',
   resizeValuePercent: '{value} porsiyento',
   commandPaletteLabel: 'Palette ng command',
   commandPalettePlaceholder: 'Maghanap ng mga command…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} na utos',
     other: '{count} mga utos',
   },
+  tabCloseAction: 'Isara ang {label}',
+  stepperStateCompleted: 'Nakumpleto',
+  stepperStateError: 'Error',
+  stepperStatePending: 'Hindi pa nasimulan',
+  stepperStateLocked: 'Naka-lock',
   commandPaletteInputLimit: 'May ilang command na hindi isinama dahil naabot ang limitasyon sa input.',
 };
 

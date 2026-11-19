@@ -1478,3 +1478,32 @@ it('applies a per-node LyraGraphNode.color as the actual rendered fill', async (
     getComputedStyle(defaultEl!).fill
   );
 });
+
+for (const mode of ['isPanning','isDragging','isCameraTweening'] as const) {
+  it(`pairs a node leave during ${mode} with its preceding enter`, async () => {
+    const graph = await graphSupport.mountGraphPair();
+    const node = graph.shadowRoot!.querySelector('[part="node"]')!;
+    const events: string[] = [];
+    graph.addEventListener('lr-node-leave', e => events.push(e.detail.nodeId));
+    node.dispatchEvent(new MouseEvent('mouseenter'));
+    (graph as unknown as Record<typeof mode, boolean>)[mode] = true;
+    node.dispatchEvent(new MouseEvent('mouseleave'));
+    node.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(events).to.deep.equal(['a']);
+    expect(node.hasAttribute('data-hovered')).to.equal(false);
+  });
+
+  it(`pairs an edge leave during ${mode} with its preceding enter`, async () => {
+    const graph = await graphSupport.mountGraphPair();
+    const link = graph.shadowRoot!.querySelector('[part="link"]')!;
+    const events: string[] = [];
+    graph.addEventListener('lr-edge-enter', () => events.push('enter'));
+    graph.addEventListener('lr-edge-leave', () => events.push('leave'));
+    link.dispatchEvent(new MouseEvent('mouseenter'));
+    (graph as unknown as Record<typeof mode, boolean>)[mode] = true;
+    link.dispatchEvent(new MouseEvent('mouseleave'));
+    link.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(events).to.deep.equal(['enter', 'leave']);
+    expect(link.hasAttribute('data-hovered')).to.equal(false);
+  });
+}

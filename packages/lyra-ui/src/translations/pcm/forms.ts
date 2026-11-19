@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Select one option at least.',
   tokenInputRequired: 'Enter one value at least.',
   tokenInputEditWithContext: 'Change {label}',
+  tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Button',
   codeEditorLabel: 'Editor for code',
   switchRequired: 'Abeg turn dis on.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pen don go down',
   signaturePadPenUp: 'Pen don go up',
+  signaturePadDrawingLimit: 'You don reach di limit for drawing.',
   localePickerInputLimit: 'Na only di first 512 language and region entries dey available.',
   emojiPickerInputLimit: 'Some emoji data no enter because di input don reach im limit.',
 };

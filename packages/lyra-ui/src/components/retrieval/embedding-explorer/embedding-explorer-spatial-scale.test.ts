@@ -525,12 +525,51 @@ it('renders a legend that matches the distinct marker colors of retained spatial
     .map((marker) => marker.getAttribute('fill'));
   expect(markerColors[0]).not.to.equal(markerColors[1]);
   expect(markerColors[0]).to.equal(markerColors[2]);
-  const legend = [...root.querySelectorAll('[part="legend-item"]')].map((item) => ({
-    label: item.querySelector('[part="legend-label"]')?.textContent,
-    color: item.querySelector('circle')?.getAttribute('fill'),
+  const child = root.querySelector('lr-graph-legend')!;
+  await customElements.whenDefined('lr-graph-legend');
+  await child.updateComplete;
+  const legend = [...child.shadowRoot!.querySelectorAll('[part="item"]')].map((item) => ({
+    label: item.querySelector('[part="label"]')?.textContent,
+    color: item.querySelector('circle')?.style.fill,
   }));
   expect(legend).to.deep.equal([
     { label: 'Alpha', color: markerColors[0] },
     { label: 'Beta', color: markerColors[1] },
   ]);
+});
+
+it('leaves modified Enter and Space on a density bin to the browser', async () => {
+  const el = await spatial();
+  const bin = el.shadowRoot!.querySelector<SVGElement>('[part="bin"]')!;
+  let selected = 0;
+  el.addEventListener('lr-spatial-bin-select', () => (selected += 1));
+  for (const key of ['Enter', ' ']) {
+    for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+      bin.dispatchEvent(event);
+      expect(event.defaultPrevented, `${key} ${JSON.stringify(init)}`).to.equal(false);
+    }
+  }
+  const canceled = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  canceled.preventDefault();
+  bin.dispatchEvent(canceled);
+  expect(selected).to.equal(0);
+});
+
+it('exposes the plot as the sole named selection surface after a spatial query', async () => {
+  const el = await spatial();
+  expect(el.shadowRoot!.querySelector('[part="plot"]')!.getAttribute('aria-label')).to.be.a('string');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.equal(false);
+});
+
+it('reuses the spatial point projection when focus moves within a result', async () => {
+  const el = await spatial();
+  const model = (el as unknown as { spatial: { points(): readonly SpatialPoint[] } }).spatial;
+  const points = model.points.bind(model);
+  let reads = 0;
+  model.points = () => { reads++; return points(); };
+  el.shadowRoot!.querySelector('[data-index="0"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[tabindex="0"]')?.getAttribute('data-index')).to.equal('1');
+  expect(reads).to.equal(0);
 });

@@ -237,3 +237,16 @@ it('projects clamped curvature by original edge rows without mutating borrowed c
   const straight = admitGraphEngineColumns(columns(2)); if (!straight.ok) return;
   expect((graphEngineColumnScene(straight.value, []).data as unknown as { edgeCurvature?: Float32Array }).edgeCurvature).to.equal(undefined);
 });
+
+it('retires a renderer once when its disposer throws and opens its replacement', async () => {
+  const first = fake(), second = fake();
+  let calls = 0;
+  first.engine.dispose = () => { calls++; throw new Error('disposal failed'); };
+  const engines = [first.engine, second.engine];
+  const adapter = new GraphEngineAdapter({ available: () => true, create: async () => engines.shift()! });
+  expect(await adapter.open(request()) === first.engine).to.equal(true);
+  expect(await adapter.open(request()) === second.engine).to.equal(true);
+  adapter.close();
+  expect(calls).to.equal(1);
+  expect(second.disposals()).to.equal(1);
+});

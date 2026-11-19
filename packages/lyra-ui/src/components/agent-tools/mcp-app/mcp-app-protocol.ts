@@ -1,3 +1,5 @@
+import { opaqueId } from '../../../internal/opaque-id.js';
+
 /** The supported MCP Apps wire revision, independently implemented from its public specification. */
 const PROTOCOL_VERSION = '2026-01-26';
 const MAX_PENDING = 64;
@@ -219,7 +221,7 @@ export class McpAppSession {
     if (!valid) { this.error(id, -32602, 'Invalid request parameters'); return; }
     if (this.pending.size >= MAX_PENDING) { this.error(id, -32000, 'Too many pending requests'); return; }
     const controller = new AbortController();
-    const requestToken = crypto.randomUUID();
+    const requestToken = opaqueId();
     const timer = setTimeout(() => {
       this.error(id, -32000, 'Host request timed out');
       this.clearRequest(id, true);
@@ -274,7 +276,7 @@ export class McpAppSession {
     this.phase = 'closing';
     for (const id of this.pending.keys()) this.clearRequest(id, true);
     return new Promise(resolve => {
-      const id = `teardown:${crypto.randomUUID()}`;
+      const id = `teardown:${opaqueId()}`;
       const timer = setTimeout(() => this.close(false), 1_000);
       this.teardown = { id, resolve, timer };
       this.send({ id, method: 'ui/resource-teardown', params: {} });

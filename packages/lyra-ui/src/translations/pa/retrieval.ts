@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'ਰਸਤਾ',
   pathNodeStatus: '{label}, {total} ਨੋਡਾਂ ਵਿੱਚੋਂ {position}ਵਾਂ',
   pathRelationStatus: '{relation}, ਰਿਸ਼ਤਾ',
+  pathRelationForward: 'ਅਗਲੇ ਨੋਡ ਵੱਲ ਨਿਰਦੇਸ਼ਿਤ',
+  pathRelationReverse: 'ਪਿਛਲੇ ਨੋਡ ਵੱਲ ਨਿਰਦੇਸ਼ਿਤ',
   neighborListLabel: 'ਰਿਸ਼ਤੇ',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'ਗ੍ਰਾਫ ਵਿੱਚ {label} ਫੈਲਾਓ',

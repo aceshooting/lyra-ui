@@ -43,7 +43,7 @@ export const styles = css`
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
-  [part='source-clear']:hover { background: var(--lr-color-brand-quiet); }
+  [part='source-clear']:hover { background: var(--lr-knowledge-graph-explorer-source-action-hover-fill, var(--lr-color-brand-quiet)); }
   [part='source-clear']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='source-clear']:focus-visible { ${focusRing} }
   [part='source-status'] { overflow-wrap: anywhere; margin-block: var(--lr-space-xs); }

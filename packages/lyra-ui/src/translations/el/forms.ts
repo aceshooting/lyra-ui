@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Επιλέξτε τουλάχιστον μία επιλογή.',
   tokenInputRequired: 'Εισαγάγετε τουλάχιστον μία τιμή.',
   tokenInputEditWithContext: 'Επεξεργασία του {label}',
+  tokenInputLabel: 'Διακριτικά',
   iconButtonLabel: 'Κουμπί',
   codeEditorLabel: 'Επεξεργαστής κώδικα',
   switchRequired: 'Ενεργοποιήστε το.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Πένα κάτω',
   signaturePadPenUp: 'Πένα πάνω',
+  signaturePadDrawingLimit: 'Συμπληρώθηκε το όριο σχεδίασης.',
   localePickerInputLimit: 'Είναι διαθέσιμες μόνο οι πρώτες 512 καταχωρίσεις τοπικών ρυθμίσεων.',
   emojiPickerInputLimit: 'Ορισμένα δεδομένα emoji παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου.',
 };

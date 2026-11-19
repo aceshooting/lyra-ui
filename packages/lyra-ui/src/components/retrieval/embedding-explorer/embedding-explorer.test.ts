@@ -105,9 +105,14 @@ describe('lr-embedding-explorer', () => {
       ></lr-embedding-explorer>
     `)) as LyraEmbeddingExplorer;
     const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
+    expect(legend.localName).to.equal('lr-graph-legend');
+    await customElements.whenDefined('lr-graph-legend');
+    const child = el.shadowRoot!.querySelector('lr-graph-legend')!;
+    await child.updateComplete;
+    expect(child.withoutInteraction).to.equal(true);
     expect(legend.getAttribute('role')).to.equal('list');
     expect(
-      [...legend.querySelectorAll('[part="legend-item"]')].map((item) => ({
+      [...child.shadowRoot!.querySelectorAll('[part="item"]')].map((item) => ({
         role: item.getAttribute('role'),
         text: item.textContent?.trim(),
       }))
@@ -185,6 +190,7 @@ describe('lr-embedding-explorer', () => {
           (fill) => fill !== 'none' && fill !== 'rgba(0, 0, 0, 0)'
         )
       ).to.equal(true);
+      expectForcedColorAdjustNone(light.shadowRoot!.querySelector('.point-marker')!);
     } finally {
       await setForcedColors('none');
     }
@@ -918,4 +924,23 @@ it('prioritizes the plot label over the compatibility alias and preserves explic
   await el.updateComplete;
   expect(plot().getAttribute('aria-label')).to.equal('Vecteurs');
   await expect(el).to.be.accessible();
+});
+
+function expectForcedColorAdjustNone(element: Element): void {
+  const value = getComputedStyle(element).getPropertyValue('forced-color-adjust');
+  // WebKit does not report the property; the paint assertions elsewhere still run there.
+  if (value !== '') expect(value).to.equal('none');
+}
+
+it('relabels only the two affected markers when keyboard focus moves', async () => {
+  const points = Array.from({length:128}, (_,i) => ({id:String(i),x:i,y:i}));
+  const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`);
+  const api = el as unknown as {announceLabel(...args:unknown[]):string};
+  const label = api.announceLabel.bind(el);
+  let calls = 0;
+  api.announceLabel = (...args) => { calls++; return label(...args); };
+  el.shadowRoot!.querySelector('[data-index="0"]')!.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight',bubbles:true}));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[tabindex="0"]')?.getAttribute('data-index')).to.equal('1');
+  expect(calls).to.be.at.most(2);
 });

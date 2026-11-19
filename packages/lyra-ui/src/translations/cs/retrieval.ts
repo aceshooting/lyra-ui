@@ -118,6 +118,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Cesta',
   pathNodeStatus: '{label}, uzel {position} z {total}',
   pathRelationStatus: '{relation}, vztah',
+  pathRelationForward: 'směřuje k dalšímu uzlu',
+  pathRelationReverse: 'směřuje k předchozímu uzlu',
   neighborListLabel: 'Vztahy',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Rozbalit {label} v grafu',

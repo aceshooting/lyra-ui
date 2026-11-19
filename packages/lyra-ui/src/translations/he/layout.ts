@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'בטל הצמדת ניווט',
   appRailItemCollapse: 'כווץ {label}',
   appRailItemExpand: 'הרחב את {label}',
+  appRailItemToggle: 'הצגה או הסתרה של {label}',
+  appRailGroupToggle: 'קבוצת ניווט',
   resizeValuePercent: '{value} אחוזים',
   commandPaletteLabel: 'לוח פקודות',
   commandPalettePlaceholder: 'חפש פקודות…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     two: '{count} פקודות',
     other: '{count} פקודות',
   },
+  tabCloseAction: 'סגור את {label}',
+  stepperStateCompleted: 'הושלם',
+  stepperStateError: 'שגיאה',
+  stepperStatePending: 'לא התחיל',
+  stepperStateLocked: 'נעול',
   commandPaletteInputLimit: 'חלק מהפקודות הושמטו משום שהקלט הגיע למגבלה.',
 };
 

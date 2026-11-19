@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Roghnaigh rogha amháin ar a laghad.',
   tokenInputRequired: 'Cuir isteach luach amháin ar a laghad.',
   tokenInputEditWithContext: 'Cuir {label} in eagar',
+  tokenInputLabel: 'Comharthaí',
   iconButtonLabel: 'Cnaipe',
   codeEditorLabel: 'Eagarthóir cóid',
   switchRequired: 'Cas é seo air.',
@@ -124,6 +125,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Peann síos',
   signaturePadPenUp: 'Peann suas',
+  signaturePadDrawingLimit: 'Sroicheadh an teorainn líníochta.',
   localePickerInputLimit: 'Níl ar fáil ach an chéad 512 iontráil logchaighdeáin.',
   emojiPickerInputLimit: 'Fágadh cuid de shonraí na emoji ar lár mar gur sroicheadh teorainn ionchuir.',
 };

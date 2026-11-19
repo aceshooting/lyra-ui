@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Διαδρομή',
   pathNodeStatus: '{label}, κόμβος {position} από {total}',
   pathRelationStatus: '{relation}, σχέση',
+  pathRelationForward: 'κατευθύνεται προς τον επόμενο κόμβο',
+  pathRelationReverse: 'κατευθύνεται προς τον προηγούμενο κόμβο',
   neighborListLabel: 'Σχέσεις',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Ανάπτυξη του {label} στο γράφημα',

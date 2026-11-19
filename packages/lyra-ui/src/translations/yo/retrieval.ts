@@ -110,6 +110,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Ọ̀nà',
   pathNodeStatus: '{label}, nóòdù {position} nínú {total}',
   pathRelationStatus: '{relation}, ìbáṣepọ̀',
+  pathRelationForward: 'tí a darí sí ipò tó kàn',
+  pathRelationReverse: 'tí a darí sí ipò tó ṣáájú',
   neighborListLabel: 'Àwọn ìbáṣepọ̀',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Fẹ {label} sí i nínú graph',

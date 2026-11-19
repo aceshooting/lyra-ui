@@ -116,6 +116,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Putanja',
   pathNodeStatus: '{label}, čvor {position} od {total}',
   pathRelationStatus: '{relation}, odnos',
+  pathRelationForward: 'usmereno ka sledećem čvoru',
+  pathRelationReverse: 'usmereno ka prethodnom čvoru',
   neighborListLabel: 'Odnosi',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Proširi {label} u grafu',

@@ -8,13 +8,13 @@ export const styles = css`
   :host {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-breadcrumb-item-separator-gap, var(--lr-space-xs));
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="separator"] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-breadcrumb-item-separator-color, var(--lr-color-text-quiet));
     flex: 0 0 auto;
   }
   :host([data-lr-breadcrumb-first]) [part="separator"] {
@@ -60,6 +60,7 @@ export const styles = css`
   }
   :where(a, button)[part="base"]:hover {
     text-decoration: underline;
+    color: var(--lr-breadcrumb-item-hover-color, var(--lr-breadcrumb-item-color, var(--lr-color-text)));
   }
   :where(a, button)[part="base"]:active {
     text-decoration: underline;

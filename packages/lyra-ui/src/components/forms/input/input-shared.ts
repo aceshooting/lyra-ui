@@ -1,3 +1,6 @@
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { AutocorrectState, installNativeInputModeAliases, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -6,6 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   FormAssociated,
   isBarredFromValidation,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -23,7 +27,6 @@ import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../intern
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
-  normalizeAutocorrect,
   spellcheckConverter,
 } from '../../../internal/converters.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
@@ -339,33 +342,20 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   @property({ type: Boolean }) override autofocus = false;
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   @property() override autocapitalize = '';
-  private autocorrectValue = true;
+  private readonly autocorrectState = new AutocorrectState(this, true);
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
    * boolean. Writes accept Web Awesome's boolean IDL and Shoelace's `'on'`/`'off'` vocabulary. */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | 'off' | 'on') {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    // Attribute presence controls whether the native hint is omitted, so removing an `on`
-    // attribute must render even though the normalized boolean remains `true`.
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
-  get inputmode(): string {
-    return this.inputMode;
-  }
-  set inputmode(next: string) {
-    this.inputMode = next ?? '';
-  }
-  get enterkeyhint(): string {
-    return this.enterKeyHint;
-  }
-  set enterkeyhint(next: string) {
-    this.enterKeyHint = next ?? '';
-  }
+  declare inputmode: string;
+  declare enterkeyhint: string;
   /** Forwarded to the native `<input>`'s `min` for its constraint validation, for any `type`.
    *  Defaults to `undefined`. A numeric attribute reads back as a number, other text as a string. */
   // numeric-guard-exempt: passed straight through to the native <input min> and its own
@@ -531,11 +521,11 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   }
 
   override click(): void {
-    if (!this.effectiveDisabled) this.inputEl?.click();
+    if (!isLiveDisabled(this)) this.inputEl?.click();
   }
 
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this.inputEl?.focus(options);
+    if (!isLiveDisabled(this)) this.inputEl?.focus(options);
   }
 
   override blur(): void {
@@ -625,7 +615,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
    */
   showPicker(): void {
     const native = this.inputEl;
-    if (!native || this.effectiveDisabled || this.readonly) return;
+    if (!native || isLiveDisabled(this) || this.readonly) return;
     if (!('showPicker' in HTMLInputElement.prototype)) return;
     try {
       native.showPicker();
@@ -654,7 +644,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
 
   private applyStep(direction: 'up' | 'down', steps: number): void {
     const native = this.constraintControl;
-    if (!native || this.effectiveDisabled || this.readonly) return;
+    if (!native || isLiveDisabled(this) || this.readonly) return;
     const count = finiteCount(steps, 1);
     if (count === 0) return;
     // Property writes can precede Lit's render. Native stepping must use those current constraints
@@ -946,7 +936,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   };
 
   private onClear = (): void => {
-    if (this.effectiveDisabled || this.readonly || this.value === '') return;
+    if (isLiveDisabled(this) || this.readonly || this.value === '') return;
     this.value = '';
     if (this.inputEl) this.inputEl.value = '';
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
@@ -972,22 +962,17 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   }
 
   override render(): TemplateResult {
-    const hasHint =
-      this.slotPresence.has('hint') ||
-      this.slotPresence.has('help-text') ||
-      (this.hint ?? '').length > 0 ||
-      (this.helpText ?? '').length > 0 ||
-      this.withHint;
-    const hasError =
-      this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const hasLabel =
-      this.slotPresence.has('label') || (this.label ?? '').length > 0 || this.withLabel;
-    const describedBy = [
-      hasError ? 'input-error' : '',
-      hasHint ? 'input-hint' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const supporting = {
+      presence: this.slotPresence, idPrefix: 'input', hint: this.hint, errorText: this.errorText,
+      helpText: this.helpText, withHint: this.withHint,
+    };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
+    const hasNamedLabel = this.slotPresence.has('label') || Boolean(normalizeLabel(this.label));
+    const hasLabel = hasNamedLabel || this.withLabel;
+    const accessibleLabel = this.accessibleLabel === '' ? '' : normalizeLabel(this.accessibleLabel);
+    const name = accessibleLabel ?? (hasNamedLabel
+      ? nothing
+      : normalizeLabel(this.placeholder) ?? this.localize('inputLabel'));
     const isPassword = this.type === 'password';
     const showPasswordToggle = isPassword && this.passwordToggle;
     const nativeType = this.nativeInputType;
@@ -1017,13 +1002,11 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             id=${this.inputId}
             part="input"
             type=${nativeType}
+            dir=${this.type === 'number' ? 'ltr' : 'auto'}
             name=${this.name || nothing}
             placeholder=${this.placeholder}
             title=${this.title || nothing}
-            aria-label=${this.accessibleLabel ??
-            (hasLabel
-              ? nothing
-              : this.placeholder || this.localize('inputLabel'))}
+            aria-label=${name}
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${hasError ||
@@ -1033,11 +1016,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-              ? this.autocorrect
-                ? 'on'
-                : 'off'
-              : nothing}
+            autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
             min=${this.min ?? nothing}
@@ -1102,17 +1081,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             <slot part="suffix" name="suffix"></slot>
           </span>
         </div>
-        <div id="input-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div
-          id="input-hint"
-          part="hint form-control-help-text"
-          ?hidden=${!hasHint}
-        >
-          ${this.hint || this.helpText}<slot name="hint"></slot
-          ><slot name="help-text"></slot>
-        </div>
+        ${renderFormControlHintError({ ...supporting, hasHint, hasError, hint: this.hint || this.helpText, helpTextSlot: true })}
         <span
           id="input-required"
           class="sr-only"
@@ -1123,6 +1092,8 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     `;
   }
 }
+
+installNativeInputModeAliases(LyraInputShared.prototype);
 
 export function createInputValidators<T extends LyraInputShared>(): LyraFormValidator<T>[] {
   return [

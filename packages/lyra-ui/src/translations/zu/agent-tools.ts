@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Amaschema epharamitha yethuluzi asekela izinkambu ezingafika ku-{fields} nokukhetha okungu-{options} enkambini ngayinye.',
   testResultsLimit: 'Kuboniswa kuphela imiphumela yokuhlola engu-{count} yokuqala.',
   toolTimelineLimit: 'Amakholi amathuluzi angaphezu kuka-{count} awaboniswa.',
+  toolTimelineLoadError: 'Ukubuka ithuluzi akulayisekanga.',
   toolSelectLimit: 'Kuboniswa amathuluzi angu-{count} okuqala kuphela.',
   testResultsInputTooLarge: 'Imininingwane yemiphumela yokuhlola yeqa umkhawulo wokubonisa.',
   toolCall: 'Ikholi yethuluzi',

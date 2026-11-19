@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Lepas sematan navigasi',
   appRailItemCollapse: 'Ciutkan {label}',
   appRailItemExpand: 'Perluas {label}',
+  appRailItemToggle: 'Tampilkan atau sembunyikan {label}',
+  appRailGroupToggle: 'Grup navigasi',
   resizeValuePercent: '{value} persen',
   commandPaletteLabel: 'Palet perintah',
   commandPalettePlaceholder: 'Cari perintah…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} perintah',
   },
+  tabCloseAction: 'Tutup {label}',
+  stepperStateCompleted: 'Selesai',
+  stepperStateError: 'Galat',
+  stepperStatePending: 'Belum dimulai',
+  stepperStateLocked: 'Terkunci',
   commandPaletteInputLimit: 'Sebagian perintah dihilangkan karena batas masukan tercapai.',
 };
 

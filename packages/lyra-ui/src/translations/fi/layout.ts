@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Irrota navigoinnin kiinnitys',
   appRailItemCollapse: 'Tiivistä: {label}',
   appRailItemExpand: 'Laajenna: {label}',
+  appRailItemToggle: 'Näytä tai piilota: {label}',
+  appRailGroupToggle: 'Navigointiryhmä',
   resizeValuePercent: '{value} prosenttia',
   commandPaletteLabel: 'Komentopaletti',
   commandPalettePlaceholder: 'Hae komentoja…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count}-komento',
     other: '{count} komentoa',
   },
+  tabCloseAction: 'Sulje: {label}',
+  stepperStateCompleted: 'Valmis',
+  stepperStateError: 'Virhe',
+  stepperStatePending: 'Ei aloitettu',
+  stepperStateLocked: 'Lukittu',
   commandPaletteInputLimit: 'Osa komennoista jätettiin pois syöterajan täyttymisen vuoksi.',
 };
 

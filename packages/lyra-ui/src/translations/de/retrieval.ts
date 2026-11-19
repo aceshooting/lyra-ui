@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Pfad',
   pathNodeStatus: '{label}, Knoten {position} von {total}',
   pathRelationStatus: '{relation}, Beziehung',
+  pathRelationForward: 'zum nächsten Knoten gerichtet',
+  pathRelationReverse: 'zum vorherigen Knoten gerichtet',
   neighborListLabel: 'Beziehungen',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: '{label} im Graphen ausklappen',

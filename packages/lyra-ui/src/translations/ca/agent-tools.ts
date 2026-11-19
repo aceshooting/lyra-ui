@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Els esquemes de paràmetres d’eines admeten com a màxim {fields} camps i {options} opcions per camp.',
   testResultsLimit: 'Només es mostren els primers {count} resultats de proves.',
   toolTimelineLimit: 'Es mostren com a màxim {count} crides a eines.',
+  toolTimelineLoadError: 'No s’ha pogut carregar la vista de l’eina.',
   toolSelectLimit: 'Només es mostren les primeres {count} eines.',
   testResultsInputTooLarge: 'Els detalls dels resultats de proves superen el límit de visualització.',
   toolCall: 'Crida a eina',

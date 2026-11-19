@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ଟୁଲ୍ ପାରାମିଟର୍ ସ୍କିମା ସର୍ବାଧିକ {fields}ଟି କ୍ଷେତ୍ର ଏବଂ ପ୍ରତି କ୍ଷେତ୍ରରେ {options}ଟି ବିକଳ୍ପ ସମର୍ଥନ କରେ।',
   testResultsLimit: 'କେବଳ ପ୍ରଥମ {count}ଟି ପରୀକ୍ଷା ଫଳାଫଳ ଦେଖାଯାଏ।',
   toolTimelineLimit: 'ସର୍ବାଧିକ {count}ଟି ଟୁଲ୍ କଲ୍ ଦେଖାଯାଏ।',
+  toolTimelineLoadError: 'ଟୁଲ୍ ଦୃଶ୍ୟ ଲୋଡ୍ କରିହେଲା ନାହିଁ।',
   toolSelectLimit: 'କେବଳ ପ୍ରଥମ {count}ଟି ଟୁଲ୍ ଦେଖାଯାଏ।',
   testResultsInputTooLarge: 'ପରୀକ୍ଷା ଫଳାଫଳର ବିବରଣୀ ପ୍ରଦର୍ଶନ ସୀମା ଅତିକ୍ରମ କରିଛି।',
   toolCall: 'ଟୁଲ୍ କଲ୍',

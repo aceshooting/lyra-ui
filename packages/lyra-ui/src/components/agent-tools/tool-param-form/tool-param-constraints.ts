@@ -1,3 +1,4 @@
+import { isValidIsoDate } from '../../../internal/calendar-date.js';
 import type { ToolParamFormProperty, ToolParamStringFormat } from './tool-param-types.js';
 
 export interface ToolParamChoice { readonly value: string; readonly label: string; }
@@ -78,18 +79,8 @@ function computeValidConstraints(property: ToolParamFormProperty): boolean {
   return true;
 }
 
-function validDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]!;
-}
 function validFormat(value: string, format: ToolParamStringFormat): boolean {
-  if (format === 'date') return validDate(value);
+  if (format === 'date') return isValidIsoDate(value);
   if (format === 'email') {
     const at = value.lastIndexOf('@');
     if (at <= 0 || at !== value.indexOf('@')) return false;
@@ -105,7 +96,7 @@ function validFormat(value: string, format: ToolParamStringFormat): boolean {
     try { new URL(value); return true; } catch { return false; }
   }
   const match = /^(\d{4}-\d{2}-\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([Zz]|[+-](\d{2}):(\d{2}))$/.exec(value);
-  return !!match && validDate(match[1]!) && Number(match[2]) <= 23 && Number(match[3]) <= 59
+  return !!match && isValidIsoDate(match[1]!) && Number(match[2]) <= 23 && Number(match[3]) <= 59
     && Number(match[4]) <= 59 && (match[8] === undefined || (Number(match[7]) <= 23 && Number(match[8]) <= 59));
 }
 

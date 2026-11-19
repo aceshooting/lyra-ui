@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
@@ -150,4 +151,5 @@ export const styles = css`
        the shallowest resting chrome the library has. */
     box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow-xs));
   }
+  ${forcedColorsPart('[part="segment"][aria-checked="true"]')}
 `;

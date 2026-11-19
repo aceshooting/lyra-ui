@@ -305,6 +305,32 @@ describe('lr-approval-queue', () => {
     expect(deny.defaultPrevented).to.be.true;
   });
 
+  it('keeps a resolved row decision badge at full strength and isolates caller text', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue dir="rtl" .requests=${[
+      { id: 'call-9', toolName: 'web_search', args: {}, status: 'approved' },
+    ]}></lr-approval-queue>`);
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part="request"]')!;
+    expect(row.matches(':disabled')).to.equal(true);
+    expect(getComputedStyle(row).opacity).to.equal('1');
+    expect(Number(getComputedStyle(row.querySelector('[part="request-info"]')!).opacity)).to.be.lessThan(1);
+    expect(getComputedStyle(row.querySelector('lr-badge')!).opacity).to.equal('1');
+    expect(getComputedStyle(row.querySelector('[part="request-id"]')!).direction).to.equal('ltr');
+    expect(row.querySelector('[part="tool-name"]')!.getAttribute('dir')).to.equal('auto');
+  });
+
+  it('contains the nested dialog decision-settled notification', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `);
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    let leaked = 0;
+    el.addEventListener('lr-decision-settled', () => { leaked++; });
+    document.addEventListener('lr-decision-settled', () => { leaked++; }, { once: true });
+    dialog.dispatchEvent(new CustomEvent('lr-decision-settled', { bubbles: true, composed: true, detail: { decision: 'approved' } }));
+    expect(leaked).to.equal(0);
+    document.dispatchEvent(new CustomEvent('lr-decision-settled'));
+  });
+
   it('preserves the selected identity for close when a decision listener removes the request synchronously', async () => {
     const el = await fixture<LyraApprovalQueue>(html`
       <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
@@ -555,7 +581,8 @@ describe('lr-approval-queue', () => {
     expect(getComputedStyle(pending).cursor).to.equal('pointer');
     expect(getComputedStyle(resolved).cursor).to.equal('not-allowed');
     expect(Number(getComputedStyle(pending).opacity)).to.equal(1);
-    expect(Number(getComputedStyle(resolved).opacity)).to.be.lessThan(1);
+    expect(Number(getComputedStyle(resolved.querySelector('[part="request-info"]')!).opacity), 'the request description recedes').to.be.lessThan(1);
+    expect(getComputedStyle(resolved.querySelector('lr-badge')!).opacity, 'the decision badge stays at full strength').to.equal('1');
 
     const pendingResting = getComputedStyle(pending).backgroundColor;
     const resolvedResting = getComputedStyle(resolved).backgroundColor;

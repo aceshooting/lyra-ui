@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'دست‌کم یک گزینه را انتخاب کنید.',
   tokenInputRequired: 'دست‌کم یک مقدار وارد کنید.',
   tokenInputEditWithContext: 'ویرایش {label}',
+  tokenInputLabel: 'توکن‌ها',
   iconButtonLabel: 'دکمه',
   codeEditorLabel: 'ویرایشگر کد',
   switchRequired: 'لطفاً این را روشن کنید.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم پایین است',
   signaturePadPenUp: 'قلم بلند است',
+  signaturePadDrawingLimit: 'به حد رسم رسیده‌اید.',
   localePickerInputLimit: 'تنها ۵۱۲ ورودی نخست تنظیمات زبان و منطقه در دسترس هستند.',
   emojiPickerInputLimit: 'برخی داده‌های شکلک به‌دلیل رسیدن به حد ورودی حذف شدند.',
 };

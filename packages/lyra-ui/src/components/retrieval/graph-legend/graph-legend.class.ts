@@ -61,6 +61,7 @@ export interface LyraGraphLegendEventMap {
  *   unchanged. This request is the sole veto point for the gesture.
  * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
  *   after an accepted toggle has assigned and announced it.
+ * @cssprop --lr-graph-legend-item-hover-fill - Background of the hovered control.
  * @csspart base - The legend wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart item - One row per type — a `<button>`, or a plain `<div>` while `withoutInteraction` is
@@ -186,11 +187,12 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     ).filter(
       (type) => typeof type?.label === 'string' && type.label.trim().length > 0
     );
-    const groupLabel = retrievalSemanticLabel(
+    const list = this.withoutInteraction && this.getAttribute('role') === 'list';
+    const groupLabel = list ? null : retrievalSemanticLabel(
       this,
       this.label == null ? this.localize('graphLegendLabel') : this.label
     );
-    const groupRole = retrievalSemanticRole(this, 'group');
+    const groupRole = list ? null : retrievalSemanticRole(this, 'group');
     const hiddenTypes = new Set(canonicalIdentityList(this.hiddenTypes));
     return html`
       <div
@@ -235,7 +237,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
               >
                 ${content}
               </button>`
-            : html`<div part="item" ?data-hidden=${!visible}>${content}</div>`;
+            : html`<div part="item" role=${list ? 'listitem' : nothing} ?data-hidden=${!visible}>${content}</div>`;
         })}
       </div>
       <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>

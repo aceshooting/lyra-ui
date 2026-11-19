@@ -133,7 +133,7 @@ describe('embedding engine public lifecycle boundaries', () => {
     await ready();
     const initial = styles;
     host.style.setProperty('--lr-color-text', 'rgb(1, 2, 3)');
-    await waitUntil(() => foreground === 'rgba(1, 2, 3, 1)');
+    await waitUntil(() => foreground === 'rgb(1, 2, 3)');
     expect(styles).to.be.greaterThan(initial);
     expect(controller!.ready).to.equal(true);
     styleFailure = true;
@@ -142,6 +142,16 @@ describe('embedding engine public lifecycle boundaries', () => {
     expect(controller!.notice?.reason).to.equal('error');
     expect(disposed).to.equal(1);
     expect(controller!.ready).to.equal(false);
+  });
+
+  it('uses the resolved foreground when the canvas cannot read color channels', async () => {
+    host.style.setProperty('--lr-color-text', 'rgb(21, 43, 65)');
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = () => null;
+    try {
+      await ready();
+      expect(foreground).to.equal('rgb(21, 43, 65)');
+    } finally { HTMLCanvasElement.prototype.getContext = original; }
   });
 
   it('ignores style notifications while a context is lost and restores the retained engine afterward', async () => {

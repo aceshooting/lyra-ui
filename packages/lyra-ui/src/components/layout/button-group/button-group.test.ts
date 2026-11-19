@@ -63,7 +63,7 @@ describe('<lr-button-group>', () => {
 
   it('fits a constrained allocation and keeps wider rows compact', async () => {
     const narrow = await fixture<LyraButtonGroup>(html`
-      <lr-button-group style="inline-size: 120px;">
+      <lr-button-group style="inline-size: 80px;">
         <lr-button>Open</lr-button>
         <lr-button>Save</lr-button>
       </lr-button-group>

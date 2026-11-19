@@ -5,9 +5,12 @@ import './token-input.js';
 import type { LyraTokenInput } from './token-input.js';
 const tokens = Array.from({ length: 1000 }, (_, index) => `Token ${index}`);
 async function settle(el: LyraTokenInput) { await el.updateComplete; await nextFrame(); await el.updateComplete; }
-it('leaves the token window unlimited when unset', async () => {
-  const el = await fixture<LyraTokenInput>(html`<lr-token-input label="Tokens" .value=${tokens}></lr-token-input>`);
+it('supports an explicit unlimited window and restores the default when removed', async () => {
+  const el = await fixture<LyraTokenInput>(html`<lr-token-input label="Tokens" max-tokens-visible="0" .value=${tokens}></lr-token-input>`);
   expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).equal(1000);
+  el.removeAttribute('max-tokens-visible');
+  await settle(el);
+  expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).equal(200);
 });
 it('bounds token markup and preserves keyed survivors on removal', async () => {
   const el = await fixture<LyraTokenInput>(html`<lr-token-input label="Tokens" max-tokens-visible="10" .value=${tokens}></lr-token-input>`);

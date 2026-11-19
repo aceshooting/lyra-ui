@@ -18,7 +18,7 @@ export const styles = css`
   [part='legend'] {
     max-inline-size: 100%;
     padding-inline: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-lg);
+    font-size: var(--lr-decision-legend-font-size, var(--lr-font-size-lg));
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
@@ -46,6 +46,7 @@ export const styles = css`
 
   [part='scope'] {
     min-inline-size: 0;
+    unicode-bidi: isolate;
     overflow-wrap: anywhere;
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
@@ -57,6 +58,12 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
   }
 
+  [part='status']:where([data-status='denied']) {
+    color: var(--lr-decision-negative-color, var(--lr-color-danger));
+  }
+  [part='status']:where([data-status='granted'], [data-status='approved']) {
+    color: var(--lr-decision-positive-color, var(--lr-color-success));
+  }
   /* no-hover-state: a read-only status that only takes focus by script. */
   [part='status']:focus-visible {
     ${focusRing}

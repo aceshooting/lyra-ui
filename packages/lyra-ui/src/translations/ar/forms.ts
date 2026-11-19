@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'حدّد خيارًا واحدًا على الأقل.',
   tokenInputRequired: 'أدخل قيمة واحدة على الأقل.',
   tokenInputEditWithContext: 'تعديل {label}',
+  tokenInputLabel: 'الرموز',
   iconButtonLabel: 'زر',
   codeEditorLabel: 'محرّر الشيفرة',
   switchRequired: 'يُرجى تشغيل هذا الخيار.',
@@ -127,6 +128,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'القلم لأسفل',
   signaturePadPenUp: 'القلم لأعلى',
+  signaturePadDrawingLimit: 'تم بلوغ حد الرسم.',
   localePickerInputLimit: 'تتوفر أول 512 إدخالًا للإعدادات المحلية فقط.',
   emojiPickerInputLimit: 'حُذفت بعض بيانات الرموز التعبيرية لبلوغ حد الإدخال.',
 };

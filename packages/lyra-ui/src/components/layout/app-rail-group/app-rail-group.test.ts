@@ -28,14 +28,14 @@ function populated(): ReturnType<typeof html> {
 describe('<lr-app-rail-group>', () => {
   it('uses localized toggle names after heading removal and restores the authored heading', async () => {
     const el = await fixture<LyraAppRailGroup>(html`<lr-app-rail-group heading="Workspaces" collapsible
-      .strings=${{ expand: 'Show workspaces', collapse: 'Hide workspaces' }}></lr-app-rail-group>`);
+      .strings=${{ appRailGroupToggle: 'Workspaces' }}></lr-app-rail-group>`);
     el.removeAttribute('heading'); await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
-    expect(toggle.getAttribute('aria-label')).to.equal('Hide workspaces');
+    expect(toggle.getAttribute('aria-label')).to.equal('Workspaces');
     expect(el.shadowRoot!.querySelector('[part="heading-text"]')!.textContent?.trim()).to.equal('');
     toggle.click(); await el.updateComplete;
     expect(el.collapsed).to.equal(true);
-    expect(toggle.getAttribute('aria-label')).to.equal('Show workspaces');
+    expect(toggle.getAttribute('aria-label')).to.equal('Workspaces');
     el.setAttribute('heading', 'Restored workspaces'); await el.updateComplete;
     expect(toggle.getAttribute('aria-label')).to.equal(null);
     expect(el.shadowRoot!.querySelector('[part="heading-text"]')!.textContent?.trim()).to.equal('Restored workspaces');
@@ -476,17 +476,17 @@ describe('<lr-app-rail-group>', () => {
     const el = (await fixture<LyraAppRailGroup>(html`
       <lr-app-rail-group
         collapsible
-        .strings=${{ collapse: 'Replier', expand: 'Déplier' }}
+        .strings=${{ appRailGroupToggle: 'Navigation du groupe' }}
       ></lr-app-rail-group>
     `)) as LyraAppRailGroup;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-    expect(toggle.getAttribute('aria-label')).to.equal('Replier');
+    expect(toggle.getAttribute('aria-label')).to.equal('Navigation du groupe');
     el.collapsed = true;
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
-    ).to.equal('Déplier');
+    ).to.equal('Navigation du groupe');
   });
 });
 

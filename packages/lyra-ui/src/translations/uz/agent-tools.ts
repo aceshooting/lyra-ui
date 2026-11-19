@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Vosita parametrlari sxemasi har bir maydon uchun koʻpi bilan {fields} ta maydon va {options} ta variantni qoʻllab-quvvatlaydi.',
   testResultsLimit: 'Faqat dastlabki {count} ta test natijasi koʻrsatilmoqda.',
   toolTimelineLimit: 'Koʻpi bilan {count} ta vosita chaqiruvi koʻrsatilmoqda.',
+  toolTimelineLoadError: 'Vosita koʻrinishini yuklab boʻlmadi.',
   toolSelectLimit: 'Faqat dastlabki {count} ta vosita koʻrsatilmoqda.',
   testResultsInputTooLarge: 'Test natijalari tafsilotlari koʻrsatish chegarasidan oshib ketdi.',
   toolCall: 'Vosita chaqiruvi',

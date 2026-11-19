@@ -73,10 +73,10 @@ export const styles = css`
     display: none;
   }
   :host([decision='approved']) [part='status'] {
-    color: var(--lr-confirm-bar-approved-color, var(--lr-color-success));
+    color: var(--lr-confirm-bar-approved-color, var(--lr-decision-positive-color, var(--lr-color-success)));
   }
   :host([decision='denied']) [part='status'] {
-    color: var(--lr-confirm-bar-denied-color, var(--lr-color-danger));
+    color: var(--lr-confirm-bar-denied-color, var(--lr-decision-negative-color, var(--lr-color-danger)));
   }
   /* no-hover-state: [part='status'] is a read-only decision readout, not a pointer target; it
      takes a focus ring only because focus moves there before the buttons unmount (class doc), and

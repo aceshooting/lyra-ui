@@ -324,14 +324,14 @@ describe('lr-policy-summary', () => {
     });
   });
 
-  it('keeps the nested decision list purpose-named under non-empty and empty host labels', async () => {
+  it('names the decision list from a host label and restores its localized fallback', async () => {
     const el = (await fixture(
       html`<lr-policy-summary aria-label="Eval run 12 decisions" .decisions=${decisions}></lr-policy-summary>`,
     )) as LyraPolicySummary;
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('[part="list"]')!;
     expect(el.getAttribute('aria-label')).to.equal('Eval run 12 decisions');
-    expect(list.getAttribute('aria-label')).to.equal('Policy decisions');
+    expect(list.getAttribute('aria-label')).to.equal('Eval run 12 decisions');
 
     el.setAttribute('aria-label', '');
     await el.updateComplete;

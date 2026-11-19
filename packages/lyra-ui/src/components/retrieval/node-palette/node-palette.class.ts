@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -16,7 +17,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
+import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-types.js';
 import { styles } from './node-palette.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { renderNativeSearch } from '../../../internal/native-search.js';
@@ -194,8 +195,8 @@ export interface LyraNodePaletteEventMap {
  * @slot footer - Content below the list.
  * @event lr-palette-place - An item was placed (pointer click or Enter/Space — the click/keyboard
  *   alternative to dragging). `detail: { type }`.
- * @event lr-select - Emitted alongside `lr-palette-place` on both gestures, carrying the original
- *   admitted item object. `detail: { item }`.
+ * @event lr-select - Carries the admitted item in `detail: { item }` after placement if the
+ *   palette is connected and the placement listener retained the same items collection.
  * @event lr-reorder - `detail: { type, category, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown
  *   on the focused item requests moving it past its neighbour **inside its own category group**, so
  *   a reorder can never turn into a recategorization. `fromIndex`/`toIndex` index into `items`
@@ -206,6 +207,7 @@ export interface LyraNodePaletteEventMap {
  *   search field gains focus; preserves `relatedTarget` and crosses the shadow boundary.
  * @event blur - A realm-correct native `FocusEvent`, relayed exactly once when the internal
  *   search field loses focus; preserves `relatedTarget` and crosses the shadow boundary.
+ * @cssprop --lr-node-palette-item-hover-fill - Background of the hovered control.
  * @csspart base - The root wrapper.
  * @csspart search - The search input.
  * @csspart search-clear - The button that clears the search field, rendered only while it has a
@@ -297,11 +299,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   /** Accessible name for the actual listbox; omitted, empty, or whitespace-only values use the
    * localized default while the public property's raw readback remains unchanged. */
   @property() label?: string;
-  /**
-   * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to
-   * `false`: unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps behaving exactly like
-   * a plain Arrow press.
-   */
+  /** Enables Ctrl/Cmd+ArrowUp/ArrowDown reorder requests. With reordering off, plain arrows move focus. */
   @property({ type: Boolean, reflect: true }) reorderable = false;
   /** JS-only accessible-name override for the listbox. Setting this property does not reflect a
    * host `aria-label`; an authored host attribute, including `aria-label=""`, names only the
@@ -460,6 +458,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.isMounting = false;
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     this.announcementSink ??= acquireAnnouncementSink('polite', {
@@ -469,6 +468,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.pendingReorder = undefined;
     this.announcer.cancel();
     this.liveText = '';
     this.isMounting = true;
@@ -570,6 +570,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private onFieldKeyDown = (e: KeyboardEvent): void => {
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       // Reads the roving list as last rendered rather than recomputing it -- see the cache note
@@ -592,8 +593,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     rovingIndex: number,
     item: CanonicalPaletteItem
   ): void {
-    // Same rationale as onFieldKeyDown above: reuse the list already built for the last render
-    // instead of recomputing it on every arrow-key press.
+    if (e.defaultPrevented) return;
     const list = this.lastRenderedRovingList;
     // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching <lr-tree>'s own contract.
     // ArrowUp/ArrowDown are not direction-sensitive, so this branch is deliberately not RTL-swapped:
@@ -601,12 +601,15 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (
       this.reorderable &&
       (e.ctrlKey || e.metaKey) &&
+      !e.altKey &&
+      !e.isComposing && e.keyCode !== 229 &&
       (e.key === 'ArrowUp' || e.key === 'ArrowDown')
     ) {
       e.preventDefault();
       this.requestReorder(item, e.key === 'ArrowDown' ? 1 : -1);
       return;
     }
+    if (shouldIgnoreNavigationKey(e)) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       this.activeIndex = Math.min(list.length - 1, rovingIndex + 1);
@@ -631,7 +634,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       this.focusItem(this.activeIndex);
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      this.place(item);
+      if (!e.repeat) this.place(item);
     }
   }
 
@@ -681,6 +684,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private confirmPendingReorder(): void {
     const pending = this.pendingReorder;
     if (!pending) return;
+    this.pendingReorder = undefined;
     const group = this.groupItemsFor(pending.category);
     const position = this.indexOfOccurrence(
       group,
@@ -692,14 +696,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       pending.neighbor,
       pending.neighborOccurrence
     );
-    if (position < 0 || neighborPosition < 0) {
-      this.pendingReorder = undefined;
-      return;
-    }
-    // The request was "swap past this neighbour", so the accepted state is simply the two having
-    // traded sides. Anything else means the host has not applied it (yet).
-    if (position < neighborPosition === pending.wasBefore) return;
-    this.pendingReorder = undefined;
+    if (position < 0 || neighborPosition < 0 || (position < neighborPosition) === pending.wasBefore) return;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const text = this.localize('reorderItemMoved', undefined, {
       index: numberFormat.format(position + 1),
@@ -715,7 +712,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private place(item: CanonicalPaletteItem): void {
     if (item.disabled) return;
+    const items = this.items;
     this.emit('lr-palette-place', { type: item.type });
+    if (!this.isConnected || this.items !== items) return;
     this.emit('lr-select', { item: item.source });
   }
 

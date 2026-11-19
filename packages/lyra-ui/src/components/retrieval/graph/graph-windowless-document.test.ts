@@ -43,3 +43,21 @@ for (const view of ['3d', 'list'] as const) for (const initiallyWindowless of [f
     } finally { graph.remove(); }
   });
 }
+
+it('resolves a canvas color through the owner document after adoption', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const doc = frame.contentDocument!;
+  const graph = document.createElement('lr-graph');
+  doc.body.append(doc.adoptNode(graph));
+  const probe = doc.createElement('span');
+  graph.shadowRoot!.append(probe);
+  const view = doc.defaultView!;
+  const read = view.getComputedStyle.bind(view);
+  let reads = 0;
+  view.getComputedStyle = (...args) => { if (args[0] === probe) reads++; return read(...args); };
+  try {
+    const api = graph as unknown as {resolveCssColorWithProbe(value:string, probe:HTMLElement):string};
+    expect(api.resolveCssColorWithProbe('red', probe)).to.equal('rgb(255, 0, 0)');
+    expect(reads).to.equal(1);
+  } finally { view.getComputedStyle = read; graph.remove(); }
+});

@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'گھٹ توں گھٹ اک اختیار چنو۔',
   tokenInputRequired: 'گھٹ توں گھٹ اک قدر درج کرو۔',
   tokenInputEditWithContext: '{label} وچ ترمیم کرو',
+  tokenInputLabel: 'ٹوکن',
   iconButtonLabel: 'بٹن',
   codeEditorLabel: 'کوڈ ایڈیٹر',
   switchRequired: 'براہ کرم ایہہ چالو کرو۔',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم تھلے',
   signaturePadPenUp: 'قلم اتے',
+  signaturePadDrawingLimit: 'ڈرائنگ دی حد پوری ہو گئی اے۔',
   localePickerInputLimit: 'زبان تے علاقے دے صرف پہلے 512 اندراج دستیاب نیں۔',
   emojiPickerInputLimit: 'اِن پُٹ دی حد پوری ہون کارن ایموجی دا کجھ ڈیٹا چھڈ دتا گیا اے۔',
 };

@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Tú ìtọ́sọ́nà sílẹ̀',
   appRailItemCollapse: 'Kó {label} jọ',
   appRailItemExpand: 'Fẹ {label} sí i',
+  appRailItemToggle: 'Fi {label} hàn tàbí fi í pamọ́',
+  appRailGroupToggle: 'Ẹgbẹ́ ìtọ́sọ́nà',
   resizeValuePercent: '{value} ìdá ọgọ́rùn-ún',
   commandPaletteLabel: 'Pálẹ́ẹ̀tì àṣẹ',
   commandPalettePlaceholder: 'Wá àwọn àṣẹ…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} pase',
   },
+  tabCloseAction: 'Pa {label} dé',
+  stepperStateCompleted: 'Ó parí',
+  stepperStateError: 'Àṣìṣe',
+  stepperStatePending: 'Kò tíì bẹ̀rẹ̀',
+  stepperStateLocked: 'Títì',
   commandPaletteInputLimit: 'A yọ àwọn àṣẹ kan kúrò nítorí a ti dé ààlà ìwọlé.',
 };
 

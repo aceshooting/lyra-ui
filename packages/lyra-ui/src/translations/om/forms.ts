@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Filannoo tokko yoo xiqqaate filadhu.',
   tokenInputRequired: 'Gatii tokko yoo xiqqaate galchi.',
   tokenInputEditWithContext: '{label} gulaali',
+  tokenInputLabel: 'Tokeniiwwan',
   iconButtonLabel: 'Qabduu',
   codeEditorLabel: 'Gulaalaa koodii',
   switchRequired: 'Kana bansi.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Qalamni gadi',
   signaturePadPenUp: 'Qalamni ol',
+  signaturePadDrawingLimit: 'Daangaan fakkii kaasuu ga’eera.',
   localePickerInputLimit: 'Galmeewwan afaanii fi naannoo jalqabaa 512 qofa argamu.',
   emojiPickerInputLimit: 'Daangaan galtee waan gaʼameef daataan emoji tokko tokko hafee jira.',
 };

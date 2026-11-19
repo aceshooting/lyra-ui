@@ -221,15 +221,16 @@ for (const stage of ['page render', 'scroll'] as const) {
     } } };
     list = await fixture<List>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:center'}></lr-neighbor-list>`);
     await ready(list); const parent = list.parentNode!;
-    const scroll = Element.prototype.scrollIntoView;
+    list.style.cssText = 'overflow:auto;block-size:40px';
+    const rect = list.getBoundingClientRect.bind(list);
     let detached = false;
     const detach = () => { if (!detached) { detached = true; list.remove(); } };
-    if (stage === 'scroll') Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) { scroll.apply(this, args); detach(); };
+    if (stage === 'scroll') list.getBoundingClientRect = () => { const bounds = rect(); detach(); return bounds; };
     try {
       expect(await list.revealSourceKey('node:250')).to.equal(false);
       expect(detached).to.equal(true);
       expect(list.shadowRoot!.activeElement === null).to.equal(true);
-    } finally { Element.prototype.scrollIntoView = scroll; if (!list.isConnected) parent.appendChild(list); }
+    } finally { list.getBoundingClientRect = rect; if (!list.isConnected) parent.appendChild(list); }
     await ready(list, 'node:250');
     expect(await list.revealSourceKey('node:250')).to.equal(true);
     expect(list.shadowRoot!.activeElement === button(list, 'node:250')).to.equal(true);
@@ -266,3 +267,77 @@ for (const flaw of ['mismatched record revision', 'group metadata'] as const) {
     list.graphSource = data.source; await ready(list); expect(list.sourceTotal).to.equal(1_000_000);
   });
 }
+
+it('roves across source records and reaches the active expand action', async () => {
+  const list = await fixture<List>(html`<lr-neighbor-list expandable .graphSource=${provider().source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+  await ready(list);
+  const root = list.shadowRoot!;
+  const stops = () => [...root.querySelectorAll<HTMLButtonElement>('[part="row"] button')].filter(b => b.tabIndex === 0);
+  expect(stops().length).to.equal(1);
+  stops()[0]!.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowDown',bubbles:true}));
+  await waitUntil(() => root.activeElement === button(list, 'node:1'));
+  stops()[0]!.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight',bubbles:true}));
+  await waitUntil(() => root.activeElement?.getAttribute('part') === 'expand-button');
+  expect(stops().length).to.equal(1);
+});
+
+it('preserves an empty source label and ignores movement from a retired result', async () => {
+  const list = await fixture<List>(html`<lr-neighbor-list label="" .graphSource=${provider().source}
+    .centerKey=${'node:center'}></lr-neighbor-list>`);
+  await ready(list);
+  const first = button(list, 'node:0')!;
+  expect(list.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('');
+  list.centerKey = null;
+  await list.updateComplete;
+  const event = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
+  first.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(list.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(0);
+  list.centerKey = 'node:replacement';
+  await ready(list);
+  const active = button(list, 'node:2')!;
+  await focusByKeyboard(active);
+  const stale = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
+  first.dispatchEvent(stale);
+  expect(stale.defaultPrevented).to.equal(false);
+  await list.updateComplete;
+  expect(list.shadowRoot!.activeElement === active).to.equal(true);
+});
+
+it('retires a pending source-row focus move when the list switches back to local rows', async () => {
+  const list = await fixture<List>(html`<lr-neighbor-list
+    .rows=${[{ node: { id: 'local' }, direction: 'in', relation: 'owns' }]}
+    .graphSource=${provider().source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+  await ready(list);
+  const first = button(list, 'node:2')!;
+  await focusByKeyboard(first);
+  const event = new KeyboardEvent('keydown', { key: 'Home', cancelable: true });
+  first.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(true);
+  list.graphSource = undefined;
+  await list.updateComplete;
+  expect(list.shadowRoot!.querySelector('[part="node-label"]')?.textContent).to.include('local');
+  expect(list.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('accepts local row keys only while the local rows own navigation', async () => {
+  const list = await fixture<List>(html`<lr-neighbor-list expandable .centerKey=${'node:center'}
+    .rows=${[{ node: { id: 'local' }, direction: 'in', relation: 'owns' }]}></lr-neighbor-list>`);
+  const local = list.shadowRoot!.querySelector<HTMLButtonElement>('[part="node-label"]')!;
+  const move = () => {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    local.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  await focusByKeyboard(local);
+  expect(move()).to.equal(true);
+  await waitUntil(() => list.shadowRoot!.activeElement?.getAttribute('part') === 'expand-button');
+  list.graphSource = provider().source;
+  expect(move()).to.equal(false);
+  await ready(list);
+  const active = button(list, 'node:2')!;
+  await focusByKeyboard(active);
+  expect(move()).to.equal(false);
+  await list.updateComplete;
+  expect(list.shadowRoot!.activeElement === active).to.equal(true);
+});

@@ -1,3 +1,4 @@
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -32,10 +33,17 @@ import { styles } from './control-group.styles.js';
  */
 export class LyraControlGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
+  );
 
   /** Accessible-name fallback for the internal `role="group"` element when the host has no
    *  `aria-label`; a present host attribute wins, including an explicitly empty value. */
   @property() label = '';
+
+  /** Accessible name taking precedence over the label fallback. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Makes the host a CSS size-query container, so a consumer's own `@container` rules can react to
    *  this group's allocated width from their slotted content. The component declares no breakpoint
@@ -50,8 +58,13 @@ export class LyraControlGroup extends LyraElement {
    *  block-level parent), where that failure mode does not apply. */
   @property({ type: Boolean, reflect: true }) responsive = false;
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
+
   override render(): TemplateResult {
-    const accessibleLabel = hostAriaLabel(this) ?? (this.label || nothing);
+    const accessibleLabel = hostAriaLabel(this) ?? (this.accessibleLabel === '' ? '' : this.label || nothing);
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }
 }

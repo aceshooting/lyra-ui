@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Karaa',
   pathNodeStatus: '{label}, nodii {total} keessaa {position}',
   pathRelationStatus: '{relation}, hariiroo',
+  pathRelationForward: 'gara noodii itti aanuutti geggeeffame',
+  pathRelationReverse: 'gara noodii duraatti geggeeffame',
   neighborListLabel: 'Hariiroowwan',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: '{label} giraafii keessatti bal\'isi',

@@ -171,7 +171,7 @@ it('shows a display name in place of the tool name while the select event keeps 
   const selected = oneEvent(el, 'lr-tool-call-chip-select');
   base.click();
   const event = (await selected) as CustomEvent;
-  expect(event.detail).to.deep.equal({ name: 'read_file', callId: 'c7' });
+  expect(event.detail).to.deep.equal({ name: 'read_file', callId: 'c7', invocationId: 'c7' });
 
   el.setAttribute('display-name', '');
   await el.updateComplete;
@@ -293,7 +293,7 @@ it('emits lr-tool-call-chip-select with { name, callId } on click', async () => 
 
   setTimeout(() => base.click());
   const ev = await oneEvent(el, 'lr-tool-call-chip-select');
-  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
+  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42', invocationId: 'call-42' });
   expect(ev.bubbles).to.be.true;
   expect(ev.composed).to.be.true;
 });
@@ -305,7 +305,7 @@ it('forwards a host click() to the internal base button', async () => {
 
   setTimeout(() => el.click());
   const ev = await oneEvent(el, 'lr-tool-call-chip-select');
-  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
+  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42', invocationId: 'call-42' });
 });
 
 it('forwards host focus() and blur() to the current internal base button', async () => {

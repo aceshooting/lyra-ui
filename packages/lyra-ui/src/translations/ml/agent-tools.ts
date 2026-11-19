@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ടൂൾ പാരാമീറ്റർ സ്കീമയിൽ പരമാവധി {fields} ഫീൽഡുകളും ഓരോ ഫീൽഡിലും {options} ചോയ്സുകളും അനുവദിക്കുന്നു.',
   testResultsLimit: 'ആദ്യത്തെ {count} ടെസ്റ്റ് ഫലങ്ങൾ മാത്രമാണ് കാണിക്കുന്നത്.',
   toolTimelineLimit: 'പരമാവധി {count} ടൂൾ കോളുകളാണ് കാണിക്കുന്നത്.',
+  toolTimelineLoadError: 'ടൂൾ കാഴ്ച ലോഡ് ചെയ്യാനായില്ല.',
   toolSelectLimit: 'ആദ്യത്തെ {count} ടൂളുകൾ മാത്രമാണ് കാണിക്കുന്നത്.',
   testResultsInputTooLarge: 'പരിശോധനാഫലങ്ങളുടെ വിശദാംശങ്ങൾ പ്രദർശനപരിധി കവിയുന്നു.',
   toolCall: 'ടൂൾ കോൾ',

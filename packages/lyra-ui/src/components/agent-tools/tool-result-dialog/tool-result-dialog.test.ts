@@ -836,6 +836,35 @@ describe('lr-tool-result-dialog retired lr-maximize-change event', () => {
   });
 });
 
+describe('lr-tool-result-dialog maximize notifications', () => {
+  const clickMaximize = (el: LyraToolResultDialog): void =>
+    (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
+
+  it('notifies only after accepting a maximize request and lets the request veto restoring', async () => {
+    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
+    const requests: boolean[] = [];
+    const changes: boolean[] = [];
+    el.addEventListener('lr-maximize-change-request', (event) => requests.push(event.detail.maximized));
+    el.addEventListener('lr-after-maximize-change', event => {
+      expect(event.cancelable).to.equal(false);
+      changes.push(event.detail.maximized);
+      event.preventDefault();
+    });
+    clickMaximize(el);
+    await el.updateComplete;
+    expect(requests).to.deep.equal([true]);
+    expect(changes).to.deep.equal([true]);
+    expect(el.maximized).to.equal(true);
+
+    el.addEventListener('lr-maximize-change-request', (event) => event.preventDefault());
+    clickMaximize(el);
+    await el.updateComplete;
+    expect(requests).to.deep.equal([true, false]);
+    expect(changes).to.deep.equal([true]);
+    expect(el.maximized).to.equal(true);
+  });
+});
+
 it('returns focus to an opener the host re-shows only after lr-close', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,

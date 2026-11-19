@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'د وسیلې د پارامیټر سکیمه د هر ډګر لپاره تر {fields} ډګرونو او {options} غوراویو ملاتړ کوي.',
   testResultsLimit: 'یوازې لومړۍ {count} د ازموینې پایلې ښودل کېږي.',
   toolTimelineLimit: 'تر ټولو ډېرې {count} د وسیلې غوښتنې ښودل کېږي.',
+  toolTimelineLoadError: 'د وسیلې لید بار نه شو.',
   toolSelectLimit: 'یوازې لومړۍ {count} وسیلې ښودل کېږي.',
   testResultsInputTooLarge: 'د ازموینې د پایلو تفصیل د ښودلو له حده زیات دی.',
   toolCall: 'د وسیلې غوښتنه',

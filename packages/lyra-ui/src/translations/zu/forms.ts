@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Khetha okungenani inketho eyodwa.',
   tokenInputRequired: 'Faka okungenani inani elilodwa.',
   tokenInputEditWithContext: 'Hlela u-{label}',
+  tokenInputLabel: 'Amathokheni',
   iconButtonLabel: 'Inkinobho',
   codeEditorLabel: 'Isihleli sekhodi',
   switchRequired: 'Vula lokhu ukuze uqhubeke.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Ipeni phansi',
   signaturePadPenUp: 'Ipeni phezulu',
+  signaturePadDrawingLimit: 'Umkhawulo wokudweba ufinyelelwe.',
   localePickerInputLimit: 'Kutholakala okufakiwe kokuqala kolimi nesifunda okungu-512 kuphela.',
   emojiPickerInputLimit: 'Enye idatha yama-emoji ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
 };

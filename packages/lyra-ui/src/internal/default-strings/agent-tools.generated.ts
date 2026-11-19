@@ -291,6 +291,7 @@ export const LYRA_DEFAULT_toolSelectSummary: LyraMessage = '{selected} of {total
 export const LYRA_DEFAULT_toolTimelineDetailsFor: LyraMessage = 'Details for {name}';
 export const LYRA_DEFAULT_toolTimelineInputLimit: LyraMessage = 'Only the newest {count} of {total} tool calls are retained.';
 export const LYRA_DEFAULT_toolTimelineLimit: LyraMessage = 'At most {count} tool calls are shown.';
+export const LYRA_DEFAULT_toolTimelineLoadError: LyraMessage = 'Could not load the tool view.';
 export const LYRA_DEFAULT_traceTree: LyraMessage = 'Trace tree';
 export const LYRA_DEFAULT_traceTreeMetricLabel: LyraMessage = '{label}: {value}';
 export const LYRA_DEFAULT_traceTreeSpanStatus: LyraMessage = '{name} — {status}';

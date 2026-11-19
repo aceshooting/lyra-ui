@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Sheme parametrov orodij so omejene (največje število polj: {fields}, največje število možnosti na polje: {options}).',
   testResultsLimit: 'Prikazani so samo prvi rezultati testov (največ {count}).',
   toolTimelineLimit: 'Prikazani so samo prvi klici orodij (največ {count}).',
+  toolTimelineLoadError: 'Prikaza orodja ni bilo mogoče naložiti.',
   toolSelectLimit: 'Prikazana so samo prva orodja (največ {count}).',
   testResultsInputTooLarge: 'Podrobnosti rezultatov preizkusov presegajo omejitev prikaza.',
   toolCall: 'Klic orodja',

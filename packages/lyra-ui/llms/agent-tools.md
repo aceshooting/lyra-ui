@@ -5,6 +5,8 @@ Per-release history for this family is in `CHANGELOG.md`; the component sections
 
 ## `lr-tool-call-chip`
 
+Event details include `invocationId` alongside `callId` for correlation. Activation also emits `lr-tool-activate` with `{ invocationId }`.
+
 A compact inline pill representing one tool/function call an agent made mid-conversation, e.g.
 `web_search: Searching web…` with a `running` spinner. First-party invention (no Web Awesome
 equivalent). It owns no detail surface of its own — activating it (click or Enter/Space while
@@ -131,6 +133,8 @@ duration"`). A host `aria-label` remains on the host and is not cloned onto that
 ---
 
 ## `lr-tool-result-view`
+
+Unknown status values resolve to `success`. A committed status change emits `lr-status-change` with `{ status }`.
 
 Renders a tool call's result via whichever custom renderer a host app has registered for it,
 falling back to `<lr-json-viewer>` whenever no renderer matches, a candidate renderer's
@@ -358,6 +362,10 @@ registerToolRenderer("web_search", {
 
 ## `lr-tool-result-dialog`
 
+User dismissal emits cancelable `lr-request-close` with `{ source }` before closing. The maximize button emits `lr-after-maximize-change` with `{ maximized }` after an accepted toggle.
+
+The panel accepts `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius`, and `--lr-overlay-shadow-modal`.
+
 Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
 pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
 authored DOM locations, and closing leaves the underlying native modal open.
@@ -500,6 +508,14 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 ---
 
 ## `lr-tool-select-dialog`
+
+The polite announcement after search reports the total number of matches, including matches outside the rendered page.
+
+The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to control its place in the outline.
+
+User dismissal emits cancelable `lr-request-close` with `{ source }` before closing. The built-in search folds accents. Custom filters receive the trimmed, lowercased query.
+
+The panel accepts `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius`, and `--lr-overlay-shadow-modal`.
 
 Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
 pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
@@ -960,6 +976,14 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
 
 ## `lr-tool-approval-dialog`
 
+Escape and backdrop dismissal emit cancelable `lr-request-close` with `{ source }`. Prevent it to keep the current proposal open.
+
+The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to control its place in the outline.
+
+`disabled` blocks both decision buttons and argument editing.
+
+The panel accepts `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius`, and `--lr-overlay-shadow-modal`.
+
 Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
 pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
 authored DOM locations, and closing leaves the underlying native modal open.
@@ -1156,6 +1180,8 @@ shared composed-tree focus traversal used by the other modal families.
 
 ## `lr-tool-param-form`
 
+Parameter inputs use the shared form-control sizing tokens. Validation messages update with the active locale or `.strings` override.
+
 Its supported flat schema now additionally includes: `minLength`/`maxLength` (Unicode code points),
 `format: 'email' | 'uri' | 'date' | 'date-time'`, finite inclusive `minimum`/`maximum`, `enumNames`,
 string `oneOf: [{ const, title }]`, and `type:'array'` for multiple string-enum choices.
@@ -1322,9 +1348,9 @@ cannot follow `::part()`), so it is not a selector hook you can use from outside
 fields render as `<lr-select>` controls (number fields as `<lr-number-input>`) with their own
 label, hint and error, so `description`/`error` parts belong to text fields and the form. A choice
 error lists the displayed labels of up to 10 single-choice options, else a short invalid-selection
-message. The outer schema validator owns
-presence, so the nested control stays `.required=false` while its host receives
-`aria-required="true"` for a required property.
+message. Required fields set the nested control’s `required` property, which paints its marker and
+exposes `aria-required="true"` on the inner control. Use the aggregate form’s `checkValidity()` to
+validate JSON Schema property presence. A blank field title falls back to its property key.
 
 **CSS parts:** `base` (the aggregate `role="group"`), `field`, `label`, `control`, `description`,
 `error`, `unsupported`, `empty`.
@@ -1375,8 +1401,7 @@ difference between an absent optional property and an explicit `false`. Enum and
 descriptions/errors flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. The outer
 component owns JSON Schema validity: `required` means an own property is present, so `''`, `0`, and
 `false` are valid present values. Use `{ type: 'boolean', const: true }` together with `required`
-for a must-confirm field; the select still does not impose its own nonempty semantics, while the
-outer validator enforces both presence and the exact `true` value.
+for a must-confirm field. The outer validator enforces both presence and the exact `true` value.
 
 Visible field and root validation errors remain ordinary descriptive text. When user interaction or
 `reportValidity()` makes one or more new errors visible, their distinct messages are coalesced into
@@ -1385,7 +1410,7 @@ establish a silent baseline, so pre-existing validation state is not replayed.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
-value is a whole object: the value present on first connection is cloned as the native default, and
+value is a whole object: the value present at the first render is captured as the native default, and
 `formResetCallback()` restores a fresh clone of that default while clearing touched/interaction state.
 Consumer-set custom validity remains in force until explicitly cleared, matching native controls. The
 `formDisabledCallback(disabled)` tracks inherited fieldset state separately from the author-owned
@@ -2580,10 +2605,13 @@ diameter in a running test row without requiring an override of `lr-spinner`'s t
 
 ## `lr-confirm-bar`
 
+Set `--lr-decision-positive-color` and `--lr-decision-negative-color` to theme the two settled states across decision panels.
+
+Argument disclosure and JSON viewer elements register on the first client render with `args`. For server-rendered argument viewers, import the `details` and `json-viewer` registration entries before rendering.
+
 An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
 `lr-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
-focus. It raises the dialog's `lr-approve-request`/`lr-deny-request` events, but only the bar's
-details carry `waitUntil()`. It uses the same
+focus. Both controls emit `lr-approve-request` and `lr-deny-request` with `detail.waitUntil()`. They share the
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
 semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
@@ -3535,6 +3563,8 @@ ceiling).
 
 ## `lr-policy-summary`
 
+A nonblank host `aria-label` names the decision list. Omit it to use the localized `policySummaryLabel`.
+
 Read-only list of guardrail, permission, privacy, and tool-policy decisions with accessible
 allow, deny, or needs-review explanations.
 
@@ -3571,6 +3601,10 @@ library-wide status tokens and repainting every other surface reading them.
 
 ## `lr-tool-timeline`
 
+If a review or result view fails to load, `part="load-error"` displays `toolTimelineLoadError`. Activating the review or reopening the details retries the download.
+
+`disabled` prevents review actions. `lr-tool-approval-open` and `lr-tool-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
+
 Chronological list of agent tool/function calls composed from tool-call, result, and approval
 primitives, with retry counts and sensitive-field redaction.
 
@@ -3606,7 +3640,8 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
-- `grouped: boolean = false` (reflected) — wraps the timeline in one initially closed disclosure.
+- `grouped: boolean = false` (reflected) — wraps the timeline in one initially closed disclosure. Its
+  default summary words the group by its worst status (`toolCallBlockHeader*`), like a single call block.
   The summary lists distinct tool display names in chronological order with a locale-aware
   conjunction. The first status present in `error`, `denied`, `running`, `pending`, `incomplete`,
   `success` order supplies the group glyph and accessible status text. Empty timelines still show
@@ -3750,8 +3785,13 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 
 ## `lr-approval-queue`
 
+The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to control its place in the outline.
+
+`disabled` prevents review actions. `lr-approval-open` and `lr-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
+
 Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
-It never executes tools or persists decisions.
+The host executes tools and persists decisions. The queue reports the outcome through
+`lr-approval-close` and contains the nested dialog’s `lr-decision-settled` event.
 
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
 `{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
@@ -3793,6 +3833,8 @@ state), so the selection is announced, not merely painted. Other request rows ex
 - `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
 
 ## `lr-mcp-app`
+
+The loading message overlays the frame. Set `--lr-mcp-app-frame-height` to override the negotiated frame height.
 
 Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
 with a trusted CSP meta placed before every caller-controlled HTML token; comment and script-text
@@ -4812,6 +4854,8 @@ These named interfaces and helper signatures are available to typed integrations
 
 ## `lr-tool-call-block`
 
+Event details include `invocationId` alongside `callId` for correlation.
+
 One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware
 verb (`Used web_search`, `Failed to use web_search`, …) beside a status glyph and an optional
 duration; activating it expands the block in place to show the call's arguments, then its error,
@@ -5028,14 +5072,19 @@ question.addEventListener('lr-question-response', event => {
 
 ## `lr-permission-rules`
 
+`lr-permission-rule-change-request` carries `{ ruleId, decision }`. Cancel it to suppress the subsequent `lr-permission-rule-change` notification.
+
+Set `--lr-decision-legend-font-size` to size the panel legend.
+
 `lr-permission-rules` presents an ordered, controlled set of host-defined permission rules. Each
 rule has a stable `id`, visible `label`, optional `description`, visible caller-supplied `scope`,
 and `decision: 'allow' | 'ask' | 'deny'`. The native select emits
 `lr-permission-rule-change` with `{ ruleId, decision }`; the component never evaluates policy or
 changes the supplied decision. Reassign a new `.rules` array after host updates. Blank identities
 are skipped, duplicate identities retain the first valid item, and at most 100 rows are mounted.
-`disabled` and `readonly` both prevent interaction. `label` names the visible group; host
-`aria-label` overrides the internal fieldset name.
+`disabled` removes the decision selects from interaction; `readonly` keeps them focusable and
+announced as read-only, and refuses every change. A blank rule `label` names its select from the
+`scope`. `label` names the visible group; host `aria-label` overrides the internal fieldset name.
 
 **CSS parts:**
 
@@ -5077,6 +5126,8 @@ element.addEventListener('lr-permission-rule-change', (event) => {
 
 ## `lr-permission-grant`
 
+Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
+
 `lr-permission-grant` presents one host-defined permission request using its `requestId`, optional
 visible `label`, `description`, and caller-supplied `scope`. Its controlled `status` is `'pending'`,
 `'approved'` (alias `'granted'`), or `'denied'`; unknown values read as `'pending'`. Only a pending
@@ -5116,6 +5167,8 @@ element.addEventListener('lr-permission-decision', (event) => {
 ```
 
 ## `lr-connector-manager`
+
+Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-connector-manager` displays host-owned connector records and emits explicit requests through
 `lr-connector-action` (`{ connectorId, action: 'connect' | 'disconnect' | 'retry' }`). A

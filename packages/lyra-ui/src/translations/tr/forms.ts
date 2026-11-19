@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'En az bir seçenek belirleyin.',
   tokenInputRequired: 'En az bir değer girin.',
   tokenInputEditWithContext: '{label} öğesini düzenle',
+  tokenInputLabel: 'Belirteçler',
   iconButtonLabel: 'Düğme',
   codeEditorLabel: 'Kod düzenleyici',
   switchRequired: 'Lütfen bunu açın.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Kalem aşağıda',
   signaturePadPenUp: 'Kalem yukarıda',
+  signaturePadDrawingLimit: 'Çizim sınırına ulaşıldı.',
   localePickerInputLimit: 'Yalnızca ilk 512 dil ve bölge girdisi kullanılabilir.',
   emojiPickerInputLimit: 'Girdi sınırına ulaşıldığı için bazı emoji verileri atlandı.',
 };

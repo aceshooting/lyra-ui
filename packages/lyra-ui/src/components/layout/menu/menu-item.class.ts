@@ -1,9 +1,10 @@
+import { acquireAriaDescription, type AriaDescriptionLease } from '../../../internal/aria-controls.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import {
   html,
   nothing,
-  svg,
   type PropertyValues,
-  type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
@@ -16,7 +17,7 @@ import { AccessibleTextController } from '../../../internal/accessible-text-cont
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
+import { checkIcon, chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -42,34 +43,6 @@ export interface MenuItemChangeDetail {
   checked: boolean;
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
-// checkmark glyph to that module -- it's off limits here -- so this one-off
-// icon still reads as part of the same visual language as the rest of the
-// library's inline icons. Same approach lr-checkbox's own local
-// checkmark/indeterminate glyphs (and lr-chat-message's local retryIcon())
-// take for the identical reason.
-const GLYPH_VIEW_BOX = '0 0 24 24';
-const GLYPH_STROKE_WIDTH = '1.75';
-
-function checkmarkGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      part="checkmark"
-      width="1em"
-      height="1em"
-      viewBox=${GLYPH_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${GLYPH_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="5 12.5 10 17.5 19 6.5"></polyline></svg>
-  `;
-}
-
 /** The navigability flags `<lr-menu>` re-checks its roving tabindex against. */
 export interface MenuItemStateChangeDetail {
   /** `disabled || loading` — the item's effective `interactionDisabled`. */
@@ -79,6 +52,8 @@ export interface MenuItemStateChangeDetail {
 }
 
 export interface LyraMenuItemEventMap {
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
   'lr-menu-item-state-change': CustomEvent<MenuItemStateChangeDetail>;
   /** Cancelable proposed next `checked` value of a checkbox or radio item. */
   'lr-menu-item-change-request': CustomEvent<MenuItemChangeDetail>;
@@ -141,7 +116,7 @@ export interface LyraMenuItemEventMap {
  * `checked` is `true`. Activating a `checkbox`-type item (click, or the
  * parent's Enter/Space handling via `select()`) first fires a cancelable
  * `lr-menu-item-change-request` with the proposed next `checked` value, then mutates
- * `checked` unless a listener prevents that event. It fires
+ * `checked` unless a listener prevents the event or writes `checked` during dispatch. It fires
  * the owning menu's canonical `lr-select` afterwards either way. `type="normal"` (the default) renders and
  * behaves exactly as before this option existed — no role, rendering, or
  * event differences.
@@ -154,7 +129,7 @@ export interface LyraMenuItemEventMap {
  * semantics — though it still falls through to the owning menu's usual
  * selection, exactly like re-activating any other item. Activating an
  * *unchecked* radio fires the same cancelable `lr-menu-item-change-request` with
- * `checked: true`; once that is not prevented, this item becomes `checked`
+ * `checked: true`. When the proposal commits, this item becomes `checked`
  * and every other `type="radio"` item the *same owning `<lr-menu>`* owns
  * directly (never one owned by a nested submenu, which has its own owning
  * menu) whose `group` matches this item's `group` is unchecked directly —
@@ -162,6 +137,11 @@ export interface LyraMenuItemEventMap {
  * so every ungrouped radio row beneath one menu shares a single exclusive
  * scope unless narrowed by giving each subset its own `group` string.
  *
+ * Assigned details and suffix elements contribute to the item's accessible description alongside
+ * authored description references. The visual label supplies its accessible name.
+ *
+ * @event lr-show - The assigned menu opened.
+ * @event lr-hide - The assigned menu closed.
  * @customElement lr-menu-item
  * @slot - The item's visual label content. Its flattened subtree is inert and hidden from assistive
  *   technology; its accessible text names the host menu item.
@@ -179,7 +159,7 @@ export interface LyraMenuItemEventMap {
  * item was activated while unchecked (an already-checked radio never fires this).
  * `detail: { value, checked }` contains the item's own `value` and the
  * proposed next `checked` value, before the property mutates. Cancelable:
- * prevent it to retain the current `checked` value. The usual
+ * prevent it or assign `checked` during dispatch to resolve the request. In both cases
  * the parent menu's `lr-select` still follows, so selection and close
  * behavior are unchanged. Never fired for `type="normal"`. Unchecking a radio's group siblings
  * once this event commits fires no event of its own.
@@ -284,7 +264,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   /** Whether a `type="checkbox"`/`type="radio"` item is checked. Meaningless (ignored) for
    *  `type="normal"`. */
-  @property({ type: Boolean, reflect: true }) checked = false;
+  @property({ type: Boolean, reflect: true })
+  get checked(): boolean { return this._checked; }
+  set checked(value: boolean) {
+    markVetoGuardWrite(this.checkedGuard);
+    this._checked = value;
+  }
+  private _checked = false;
+  private readonly checkedGuard = new VetoWriteGuard();
 
   /** Narrows a `type="radio"` item's exclusive-choice scope to only the other radio items sharing
    *  this same string. Unset (the default), the scope is every `type="radio"` item the same
@@ -466,6 +453,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       )
         return;
       this.labelTextObserver.bind();
+      this.syncDetailDescription();
       this.syncSlottedLabel();
       const submenuSlot = this.renderRoot.querySelector<HTMLSlotElement>(
         'slot[name="submenu"]'
@@ -486,6 +474,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.detailDescription?.release();
+    this.detailDescription = undefined;
     super.disconnectedCallback();
     this.submenuPanelGeneration += 1;
     // Transient open state never survives a detach: the panel is a child, so it tears its own
@@ -616,27 +606,21 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       const owner = this.owningMenu;
       const connected = this.isConnected;
       const checked = !this.checked;
-      const accepted = this.proposeChecked(checked);
-      // Slot ownership can change during the proposal, before slotchange updates the cached owner.
-      if (this.isConnected !== connected || this.owningMenu !== owner ||
-          (owner && !owner.ownsItem(this)) || this.interactionDisabled || this.type !== type) return;
-      if (accepted) {
-        this.checked = checked;
-        if (type === 'radio') owner?.uncheckRadioGroup(this, this.group);
-      }
+      const stillOwned = () => this.isConnected === connected && this.owningMenu === owner &&
+        (!owner || owner.ownsItem(this)) && !this.interactionDisabled && this.type === type;
+      requestThenCommit({
+        guard: this.checkedGuard,
+        requestDetail: { value: this.value, checked },
+        emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-menu-item-change-request', detail, init),
+        commit: () => {
+          if (!stillOwned()) return;
+          this.checked = checked;
+          if (type === 'radio') owner?.uncheckRadioGroup(this, this.group);
+        },
+      });
+      if (!stillOwned()) return;
     }
     this.owningMenu?.activate(this);
-  }
-
-  /** Emits the cancelable proposal before changing checked state and reports whether it was accepted. */
-  private proposeChecked(checked: boolean): boolean {
-    const value = this.value;
-    const request = this.emit(
-      'lr-menu-item-change-request',
-      { value, checked },
-      { cancelable: true }
-    );
-    return !request.defaultPrevented;
   }
 
   /** Opens this item's submenu. A no-op without one, or while `disabled`/`loading`. `focus` uses
@@ -709,15 +693,31 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     const meaningful = (node: Node): boolean => {
       if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? '').trim() !== '';
       if (node.nodeType !== Node.ELEMENT_NODE) return false;
-      if (node instanceof HTMLSlotElement) {
-        return node.assignedNodes({ flatten: true }).some(meaningful);
+      if ((node as Element).localName === 'slot') {
+        return (node as HTMLSlotElement).assignedNodes({ flatten: true }).some(meaningful);
       }
       return true;
     };
+    this.syncDetailDescription();
     this.hasDetailsSlot = slot.assignedNodes({ flatten: true }).some(meaningful);
   }
 
+  private detailDescription?: AriaDescriptionLease;
+
+  private syncDetailDescription(): void {
+    if (!this.isConnected) return;
+    const details = Array.from(this.children).filter(child => child.slot === 'details' || child.slot === 'suffix');
+    if (details.length) {
+      if (this.detailDescription) this.detailDescription.update(details);
+      else this.detailDescription = acquireAriaDescription(this, details);
+    } else {
+      this.detailDescription?.release();
+      this.detailDescription = undefined;
+    }
+  }
+
   private onSuffixSlotChange = (): void => {
+    this.syncDetailDescription();
     this.hasSuffixSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'suffix');
   };
 
@@ -885,6 +885,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const previous = changed.get('submenuExpanded');
+    if (this.isConnected && typeof previous === 'boolean' && this.submenuExpanded !== previous) {
+      this.emit(this.submenuExpanded ? 'lr-show' : 'lr-hide', null);
+    }
     if (changed.has('submenuKind') && this.submenuKind === 'items') {
       const generated = this.renderRoot.querySelector(
         `[data-generated-submenu]`
@@ -986,7 +990,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
           >`
         : nothing}
       ${(this.type === 'checkbox' || this.type === 'radio') && this.checked
-        ? html`<span part="checked-icon">${checkmarkGlyph()}</span>`
+        ? html`<span part="checked-icon"><span part="checkmark">${checkIcon()}</span></span>`
         : nothing}
       ${this.submenuAssigned
         ? html`<span part="submenu-icon" aria-hidden="true"

@@ -4,6 +4,7 @@ import { sendMouse, sendWheel, resetMouse, hoverUntilMatched } from '../../../..
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { LyraGraph } from './graph.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const nodes = [
   { id: 'near', label: 'Near', position: { x: 0, y: 0, z: 80 } },
@@ -336,4 +337,110 @@ describe('graph spatial views', () => {
     expect(el.shadowRoot!.querySelectorAll('[data-node-id="n204"]').length).to.equal(1);
   });
 
+  it('honors a canceled zoom key on the spatial canvas', async () => {
+    const el = await mount();
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    let changes = 0;
+    el.addEventListener('lr-camera-change', () => { changes++; });
+    const event = new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true });
+    event.preventDefault();
+    canvas.dispatchEvent(event);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(changes).to.equal(0);
+  });
+
+  it('leaves a wheel to the browser when focus cannot be read', async () => {
+    const el = await mount();
+    const root = el.shadowRoot!;
+    const canvas = root.querySelector('canvas')!;
+    const wheel = new WheelEvent('wheel', { deltaY: -80, bubbles: true, cancelable: true });
+    Object.defineProperty(root, 'activeElement', { configurable: true, get() { throw new Error('focus unavailable'); } });
+    try {
+      canvas.dispatchEvent(wheel);
+      expect(wheel.defaultPrevented).to.equal(false);
+    } finally {
+      Reflect.deleteProperty(root, 'activeElement');
+    }
+  });
+
+  it('leaves modified spatial keys, such as browser zoom, to the browser', async () => {
+    const el = await mount();
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]')!;
+    let changes = 0;
+    el.addEventListener('lr-camera-change', () => (changes += 1));
+    for (const init of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true }]) {
+      for (const key of ['=', '-', '0', 'ArrowRight', 'Home']) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+        canvas.dispatchEvent(event);
+        expect(event.defaultPrevented, `${key} ${JSON.stringify(init)}`).to.equal(false);
+      }
+    }
+    expect(changes).to.equal(0);
+  });
+
+});
+
+it('keeps node fills under forced colours', async () => {
+  await setForcedColors('active');
+  try {
+    const el = await fixture<LyraGraph>(html`<lr-graph .nodes=${nodes} seed="1"></lr-graph>`);
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'nodes render', { timeout: 5000 });
+    const node = el.shadowRoot!.querySelector('[part="node"]')!;
+    expectForcedColorAdjustNone(node);
+    expect(getComputedStyle(node).fill).to.not.equal('rgb(0, 0, 0)');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('leaves modified or composing activation on a 2D node to the browser outside multiple selection', async () => {
+  const el = await fixture<LyraGraph>(html`<lr-graph .nodes=${nodes} seed="1"></lr-graph>`);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'nodes render', { timeout: 5000 });
+  let activated = 0;
+  el.addEventListener('lr-node-activate', () => { activated++; });
+  for (const mode of ['none', 'single'] as const) {
+    el.selectionMode = mode;
+    await el.updateComplete;
+    const node = el.shadowRoot!.querySelector('[part="node"]')!;
+    for (const key of ['Enter', ' ']) {
+      for (const init of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true }, { keyCode: 229 }]) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+        node.dispatchEvent(event);
+        expect(event.defaultPrevented, `${mode} ${key} ${JSON.stringify(init)}`).to.equal(false);
+      }
+    }
+    expect(activated).to.equal(0);
+  }
+  el.selectionMode = 'multiple';
+  await el.updateComplete;
+  const canceled = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true });
+  canceled.preventDefault();
+  el.shadowRoot!.querySelector('[part="node"]')!.dispatchEvent(canceled);
+  expect(activated).to.equal(0);
+  const toggle = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="node"]')!.dispatchEvent(toggle);
+  expect(toggle.defaultPrevented).to.equal(true);
+  expect(activated).to.equal(1);
+});
+
+it('exposes the keyboard-operable 3D canvas as an application and tolerates a synthetic pointer id', async () => {
+  const el = await mount();
+  const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]')!;
+  expect(canvas.getAttribute('role')).to.equal('application');
+  expect(canvas.getAttribute('aria-roledescription')).to.not.equal(null);
+  expect(() => canvas.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 99, button: 0, clientX: 4, clientY: 4 }))).to.not.throw();
+  canvas.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 99 }));
+});
+
+function expectForcedColorAdjustNone(element: Element): void {
+  const value = getComputedStyle(element).getPropertyValue('forced-color-adjust');
+  // WebKit does not report the property; the paint assertions elsewhere still run there.
+  if (value !== '') expect(value).to.equal('none');
+}
+
+it('paints the configured hover fill on its spatial-control', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-graph']>(html`<lr-graph view="list" .nodes=${[{id:'a'}]} style="--lr-graph-spatial-control-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-graph>`);
+  const button = el.shadowRoot!.querySelector('[part="spatial-control"]:not(:disabled)')!;
+  await hoverUntilMatched(button, 'hover the control');
+  await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });

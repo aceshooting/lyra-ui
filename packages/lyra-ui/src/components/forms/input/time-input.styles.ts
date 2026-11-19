@@ -1,4 +1,5 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { anchoredPopupReveal, anchoredPopupOpen } from '../../../internal/overlay-surface.styles.js';
+import { iconHitTarget, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -6,6 +7,7 @@ import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.sty
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
   formControlLabelTypography,
+  formControlSupportingText,
   formControlFocusHalo,
   formControlRequiredMarker,
   formControlLabelDisplay,
@@ -128,6 +130,7 @@ export const styles = css`
     color: inherit;
     cursor: text;
     font-variant-numeric: tabular-nums;
+    ${interactiveTransition}
     user-select: none;
   }
   /* :host(:not(:disabled)), not [part='segment']:not(:disabled) -- a segment is
@@ -179,6 +182,7 @@ export const styles = css`
     cursor: pointer;
     font: inherit;
     line-height: var(--lr-line-height-none);
+    ${interactiveTransition}
   }
   [part='clear-button']:not(:disabled):hover,
   [part='expand-button']:not(:disabled):hover {
@@ -244,19 +248,14 @@ export const styles = css`
     background: var(--lr-overlay-surface, var(--lr-color-surface-raised));
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     color: var(--lr-color-text);
-    opacity: 1;
-    transform: translateY(0);
-    visibility: visible;
-    transition-property: opacity, transform, visibility;
-    transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-duration-fast)));
-    transition-timing-function: var(--lr-easing-standard);
-  }
-  [part='popup'][data-hidden] {
-    opacity: 0;
-    transform: translateY(var(--lr-size-neg-0-25rem));
-    visibility: hidden;
+    ${anchoredPopupReveal}
     pointer-events: none;
     transition-duration: var(--_lr-motion-duration, var(--hide-duration, var(--lr-duration-fast)));
+  }
+  [part='popup']:not([data-hidden]) {
+    ${anchoredPopupOpen}
+    pointer-events: auto;
+    transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-duration-fast)));
   }
   [part='columns'] {
     display: flex;
@@ -366,24 +365,7 @@ export const styles = css`
     ${focusRing}
   }
 
-  [part='hint'],
-  [part='error'] {
-    margin-block-start: var(--lr-space-xs);
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    font-size: var(--lr-font-size-sm);
-    overflow-wrap: anywhere;
-  }
-  [part='hint'] {
-    color: var(--lr-color-text-quiet);
-  }
-  [part='error'] {
-    color: var(--lr-color-danger);
-  }
-  [part='hint'][hidden],
-  [part='error'][hidden] {
-    display: none;
-  }
+  ${formControlSupportingText}
 
   @container ${compactContainerQuery} {
     [part='popup'] {

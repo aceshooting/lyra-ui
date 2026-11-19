@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Traseu',
   pathNodeStatus: '{label}, nodul {position} din {total}',
   pathRelationStatus: '{relation}, relație',
+  pathRelationForward: 'orientat spre nodul următor',
+  pathRelationReverse: 'orientat spre nodul anterior',
   neighborListLabel: 'Relații',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Extinde {label} în graf',

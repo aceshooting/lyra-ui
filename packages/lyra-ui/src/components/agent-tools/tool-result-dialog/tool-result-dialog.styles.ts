@@ -1,3 +1,6 @@
+import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
 import { toolStatusKeyframes } from '../tool-status.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
@@ -33,19 +36,9 @@ export const styles = css`
     --_lr-tool-result-dialog-incomplete-color: var(--lr-color-text-quiet);
     --_lr-tool-result-dialog-incomplete-bg: transparent;
     ${modalHostStyles}
-    align-items: center;
-    justify-content: center;
-    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(
-      var(--lr-space-l),
-      var(--lr-safe-area-inline-start)
-    );
-    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+    ${dialogChrome}
   }
-  :host([open]) {
-    display: flex;
-  }
+  ${dialogOpenHost}
   [part="backdrop"] {
     position: absolute;
     inset: 0;
@@ -62,14 +55,8 @@ export const styles = css`
     min-inline-size: 0;
     max-block-size: 100%;
     box-sizing: border-box;
-    /* Modal-panel surface, not the page surface: in dark mode the two resolve to the same
-       near-black and the dialog reads as a scrim with floating text. */
-    background: var(--lr-color-surface-overlay);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
-       the same role as lr-dialog, so the same elevation. */
-    box-shadow: var(--lr-shadow-xl);
+    ${overlaySurface}
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-xl));
     overflow: hidden;
     transition: inline-size var(--lr-transition-base),
       block-size var(--lr-transition-base);
@@ -221,31 +208,19 @@ export const styles = css`
   }
   [part="maximize-button"],
   [part="close-button"] {
-    display: inline-flex;
-    font: inherit;
-    align-items: center;
-    justify-content: center;
+    --_lr-icon-button-color-default: var(--lr-color-text-quiet);
+    --_lr-icon-button-color-hover-default: var(--lr-color-brand);
+    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
+    ${iconAction}
     ${iconHitTarget}
-    border: none;
-    background: transparent;
-    color: var(--lr-color-text-quiet);
-    border-radius: var(--lr-radius);
-    cursor: pointer;
   }
   [part="maximize-button"]:hover,
   [part="close-button"]:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    ${iconActionHover}
   }
-  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
-     which follows the text colour -- a distinctly deeper step in both light and dark themes. */
   [part="maximize-button"]:active,
   [part="close-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    ${iconActionActive}
   }
   [part="maximize-button"]:focus-visible,
   [part="close-button"]:focus-visible {

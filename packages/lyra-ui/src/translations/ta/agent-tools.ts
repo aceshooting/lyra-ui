@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'கருவி அளவுரு ஸ்கீமாக்களில் அதிகபட்சம் {fields} புலங்களும் ஒவ்வொரு புலத்திற்கும் {options} தேர்வுகளும் இருக்கலாம்.',
   testResultsLimit: 'முதல் {count} சோதனை முடிவுகள் மட்டுமே காட்டப்படுகின்றன.',
   toolTimelineLimit: 'அதிகபட்சம் {count} கருவி அழைப்புகள் காட்டப்படுகின்றன.',
+  toolTimelineLoadError: 'கருவிக் காட்சியை ஏற்ற முடியவில்லை.',
   toolSelectLimit: 'முதல் {count} கருவிகள் மட்டுமே காட்டப்படுகின்றன.',
   testResultsInputTooLarge: 'சோதனை முடிவு விவரங்கள் காட்சி வரம்பை மீறுகின்றன.',
   toolCall: 'கருவி அழைப்பு',

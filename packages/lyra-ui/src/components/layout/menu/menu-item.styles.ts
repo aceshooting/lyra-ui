@@ -208,6 +208,7 @@ export const styles = css`
      [part='icon'] above it needs no [hidden] toggling -- there is no always-present <slot> child
      here to keep visually empty. */
   [part='checkmark'] {
+    display: inline-flex;
     flex: 0 0 auto;
     color: var(--_lr-glass-brand-text, var(--lr-color-brand));
   }

@@ -92,6 +92,12 @@ interface InternalNode {
 }
 
 const LAYOUT_PADDING = 60;
+/** Allow a full em per code point, including wide glyphs, at the default label size. */
+const LABEL_CHAR_WIDTH = 16;
+
+function labelHalfWidth(label: string): number {
+  return (Array.from(label).length * LABEL_CHAR_WIDTH) / 2;
+}
 
 function syntheticHubIdentity(topics: readonly LyraTopic[]): string {
   const ids = new Set<string>();
@@ -167,22 +173,6 @@ function place(
   });
 }
 
-/**
- * Lays out `topics` as a radial tree: root at the center, each depth ring at radius `depth *
- * ringGap`, each parent's children dividing its own inherited angular arc proportionally to their
- * visible leaf counts (a collapsed subtree counts as one leaf), sibling order running clockwise
- * from 12 o'clock in LTR (counter-clockwise in RTL, via `rtl`). Multiple roots hang off an
- * implicit `'__hub__'`-id center node labeled `hubLabel`. Pure function, no DOM access -- see
- * `<lr-mind-map>` for the component wrapping this.
- */
-export function layoutMindMap(
-  topics: readonly LyraTopic[],
-  hubLabel: string,
-  opts: MindMapLayoutOptions
-): MindMapLayoutResult {
-  return createMindMapLayout(topics)(hubLabel, opts);
-}
-
 /** @internal Prepare immutable topic identities once; each geometry pass gets fresh expansion counts. */
 export function createMindMapLayout(topics: readonly LyraTopic[]):
 (hubLabel: string, opts: MindMapLayoutOptions) => MindMapLayoutResult {
@@ -225,8 +215,13 @@ function layoutNormalizedMindMap(normalizedTopics: readonly LyraTopic[], hubLabe
   // `RangeError: Maximum call stack size exceeded` this sidesteps once topic counts get large.
   const [xLo, xHi] = minMax(placed.map((p) => p.x)) ?? [0, 0];
   const [yLo, yHi] = minMax(placed.map((p) => p.y)) ?? [0, 0];
-  const minX = xLo - LAYOUT_PADDING;
-  const maxX = xHi + LAYOUT_PADDING;
+  let minX = xLo - LAYOUT_PADDING;
+  let maxX = xHi + LAYOUT_PADDING;
+  for (const p of placed) {
+    const half = labelHalfWidth(p.label);
+    if (p.x - half < minX) minX = p.x - half;
+    if (p.x + half > maxX) maxX = p.x + half;
+  }
   const minY = yLo - LAYOUT_PADDING;
   const maxY = yHi + LAYOUT_PADDING;
 

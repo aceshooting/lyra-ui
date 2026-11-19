@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Кемінде бір нұсқаны таңдаңыз.',
   tokenInputRequired: 'Кемінде бір мән енгізіңіз.',
   tokenInputEditWithContext: 'Өңдеу: {label}',
+  tokenInputLabel: 'Токендер',
   iconButtonLabel: 'Түйме',
   codeEditorLabel: 'Код өңдегіші',
   switchRequired: 'Осы параметрді қосыңыз.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Қалам төмен',
   signaturePadPenUp: 'Қалам жоғары',
+  signaturePadDrawingLimit: 'Сызу шегіне жетті.',
   localePickerInputLimit: 'Тіл мен аймақ баптауларының алғашқы 512 жазбасы ғана қолжетімді.',
   emojiPickerInputLimit: 'Енгізу шегіне жеткендіктен, эмодзи деректерінің бір бөлігі алынып тасталды.',
 };

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './token-input.js'; import type { LyraTokenInput } from './token-input.class.js'; import type { LyraSizeStep } from '../../../internal/variants.js';
 const meta: Meta = { title: 'Token Input', component: 'lr-token-input', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
-export const Default: Story = { render: () => html`<lr-token-input label="Recipients" placeholder="Add a recipient…" .value=${['Ada', 'Grace']}></lr-token-input>` };
+export const Default: Story = { render: () => html`<lr-token-input label="Recipients" placeholder="Add a recipient…" style="--lr-token-input-placeholder-color: var(--lr-color-neutral)" .value=${['Ada', 'Grace']}></lr-token-input>` };
 
 export const BatchedPaste: Story = {
   name: 'Batched paste / delimiter commit',
@@ -228,6 +228,9 @@ export const EditingAssistance: Story = {
       spellcheck="false"
       autocapitalize="off"
       autocorrect="off"
+      autocomplete="off"
+      inputmode="text"
+      enterkeyhint="done"
       label="Exact identifiers"
       hint="Automatic spelling correction and capitalization are disabled."
       .value=${['case-sensitive-token']}

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Įrankio parametrų schemos palaiko ne daugiau kaip {fields} laukų ir {options} pasirinkimų kiekvienam laukui.',
   testResultsLimit: 'Rodomi tik pirmieji testų rezultatai: {count}.',
   toolTimelineLimit: 'Rodoma ne daugiau kaip {count} įrankių iškvietimų.',
+  toolTimelineLoadError: 'Nepavyko įkelti įrankio rodinio.',
   toolSelectLimit: 'Rodomi tik pirmieji įrankiai: {count}.',
   testResultsInputTooLarge: 'Testo rezultatų informacija viršija rodymo ribą.',
   toolCall: 'Įrankio iškvietimas',

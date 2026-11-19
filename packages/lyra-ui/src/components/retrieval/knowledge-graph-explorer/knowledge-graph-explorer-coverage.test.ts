@@ -109,3 +109,12 @@ describe('knowledge graph explorer 3D direct activation', () => {
     } finally { popover.showAt = original; }
   });
 });
+
+it('settles an activation frame refused by the owner window and can schedule the next frame', async () => {
+  const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`);
+  const frames = el as unknown as { activationGeneration: number; waitForActivationFrame(generation: number): Promise<boolean> };
+  const restore = stubRefusingOwnerWindow(el, () => true);
+  try { expect(await frames.waitForActivationFrame(frames.activationGeneration)).to.equal(false); }
+  finally { restore(); }
+  expect(await frames.waitForActivationFrame(frames.activationGeneration)).to.equal(true);
+});

@@ -18,6 +18,8 @@ import { styles } from './menu-label.styles.js';
  * @customElement lr-menu-label
  * @slot - The heading text.
  * @csspart base - The heading row.
+ * @cssprop [--lr-menu-label-color] - Color override.
+ * @cssprop [--lr-menu-label-padding] - Padding override.
  * @status stable
  * @since 8.0.0
  */

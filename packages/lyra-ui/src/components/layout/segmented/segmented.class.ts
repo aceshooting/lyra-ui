@@ -1,3 +1,8 @@
+import { finiteCount } from '../../../internal/numbers.js';
+import { layoutScale } from '../../../internal/layout-scale.js';
+import { formControlSupportingState } from '../../../internal/form-control-template.js';
+import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -5,7 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
+import { shouldIgnoreNavigationKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
@@ -34,7 +39,7 @@ const MAX_SEGMENTED_ITEMS = 256;
 /** First-valid-value-wins schema boundary. A segment's value is its selection, event, focus, and
  * keyed-render identity, so later duplicates cannot describe a second observable choice. */
 function snapshotSegmentedItems(
-  value: unknown
+  value: unknown, reportOmitted: (count: number) => void
 ): readonly Readonly<LyraSegmentedItem>[] {
   try {
     if (!Array.isArray(value)) return Object.freeze([]);
@@ -46,7 +51,9 @@ function snapshotSegmentedItems(
   const normalized: Readonly<LyraSegmentedItem>[] = [];
   let length = 0;
   try {
-    length = Math.min(value.length, MAX_SEGMENTED_ITEMS);
+    const sourceLength = finiteCount(value.length);
+    length = Math.min(sourceLength, MAX_SEGMENTED_ITEMS);
+    reportOmitted(sourceLength - length);
   } catch {
     return Object.freeze(normalized);
   }
@@ -186,10 +193,19 @@ function snapshotSegmentedItems(
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static override styles = [LyraElement.styles, sizes, scrollOverflowFadeStyles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
+    () => Array.from(this.renderRoot.querySelectorAll('[part="hint"]:not([hidden])')),
+  );
 
   private effectiveItems: readonly Readonly<LyraSegmentedItem>[] =
     Object.freeze([]);
-  private itemsSource?: unknown;
+  private readonly sources = new CollectionSourceTracker();
+  private omitted = 0;
+
+  /** Input positions beyond the 256-position limit on the latest assignment. */
+  get omittedItems(): number { return this.omitted; }
 
   /** The button row's immutable, bounded items. Later duplicate values are ignored. */
   @property({ attribute: false })
@@ -197,10 +213,10 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     return this.effectiveItems;
   }
   set items(value: readonly LyraSegmentedItem[]) {
-    if (value === this.itemsSource || value === this.effectiveItems) return;
-    this.itemsSource = value;
+    if (this.sources.isRebind('items', value, this.effectiveItems)) return;
+    this.omitted = 0;
     const previous = this.effectiveItems;
-    this.effectiveItems = snapshotSegmentedItems(value);
+    this.effectiveItems = snapshotSegmentedItems(value, count => { this.omitted = count; });
     this.requestUpdate('items', previous);
   }
 
@@ -277,10 +293,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
         this.emit('lr-change', { value: item.value });
       }
     }
-    // Every non-disabled activation reports, including the re-pick of the current value that
-    // `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry
-    // for why this one is a notification rather than a veto point.
-    this.emit('lr-activate', { value: item.value });
+    if (this.isConnected && !this.disabled && this.value === item.value && this.items.includes(item)) {
+      this.emit('lr-activate', { value: item.value });
+    }
   }
 
   private segmentButtonAt(index: number): HTMLElement | null {
@@ -303,8 +318,11 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     if (!base || !segment) return;
     const track = base.getBoundingClientRect();
     const rect = segment.getBoundingClientRect();
-    const left = rect.left < track.left ? rect.left - track.left : Math.max(0, rect.right - track.right);
-    if (left) base.scrollBy({ left, behavior: prefersReducedMotion(this) ? 'auto' : 'smooth' });
+    const scale = layoutScale(base).x;
+    const start = track.left + base.clientLeft * scale;
+    const end = start + base.clientWidth * scale;
+    const left = rect.left < start ? rect.left - start : Math.max(0, rect.right - end);
+    if (left) base.scrollBy({ left: left / scale, behavior: prefersReducedMotion(this) ? 'auto' : 'smooth' });
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -383,7 +401,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.disabled) return;
+    if (this.disabled || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     const navigable = this.items
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => !item.disabled);
@@ -417,11 +435,19 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.focusItem(target.index);
   };
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
+
   override render(): TemplateResult {
     const hostLabel = hostAriaLabel(this);
     const hasLabelSlot = this.hasNativeLabelAssignment || this.slotPresence.has('label');
     const hasLabel = hasLabelSlot || (this.label ?? '').length > 0;
-    const hasHint = this.hasNativeHintAssignment || this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const { hasHint, hintId, describedBy } = formControlSupportingState({
+      idPrefix: 'segmented', hint: this.hint, withHint: this.hasNativeHintAssignment,
+      presence: { has: name => name === 'hint' && this.slotPresence.has(name) },
+    });
     const ariaLabel = hostLabel ?? (hasLabelSlot ? nothing : this.label || nothing);
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no
@@ -450,7 +476,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
           role="radiogroup"
           aria-label=${ariaLabel}
           aria-labelledby=${hostLabel === null && hasLabelSlot ? 'segmented-label' : nothing}
-          aria-describedby=${hasHint ? 'segmented-hint' : nothing}
+          aria-describedby=${describedBy ?? nothing}
           aria-disabled=${this.disabled ? 'true' : nothing}
           @keydown=${this.onKeyDown}
         >
@@ -476,7 +502,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             </button>`
           )}
         </div>
-        <div id="segmented-hint" part="hint" ?hidden=${!hasHint}
+        <div id=${hintId} part="hint" ?hidden=${!hasHint}
           ><slot name="hint" @slotchange=${this.onFieldSlotChange}>${this.hint}</slot></div
         >
       </div>

@@ -1,3 +1,6 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { AutocorrectState, installNativeInputModeAliases } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -7,21 +10,22 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   FormAssociated,
   isBarredFromValidation,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
+import { countLines } from '../../../internal/text-lines.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { styles } from './code-editor.styles.js';
-import { sanitizeCssResize } from '../../../internal/safe-css.js';
+import { sanitizeCssResize, type LyraTextResize } from '../../../internal/safe-css.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
-  normalizeAutocorrect,
 } from '../../../internal/converters.js';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import {
@@ -43,12 +47,7 @@ export interface LyraCodeEditorEventMap {
   'lr-change': CustomEvent<{ value: string }>;
   'lr-invalid': CustomEvent<null>;
 }
-export type LyraCodeEditorResize =
-  | 'none'
-  | 'both'
-  | 'horizontal'
-  | 'vertical'
-  | 'auto';
+export type LyraCodeEditorResize = LyraTextResize;
 export type LyraCodeEditorWrap = LyraTextWrap;
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
@@ -188,16 +187,20 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  `tabSize`, else the rendered `--lr-code-editor-tab-size` when it is a plain number, else the
    *  default. A length-valued token (`40px`, `2ch`, ...) is a purely visual tab-stop metric for
    *  literal tab characters, so it is deliberately not reinterpreted as a count of spaces. */
-  private get indentWidth(): number {
-    if (this.tabSizeAssigned || !this.textarea) return this._tabSize;
-    const resolved = getComputedStyle(this.textarea).tabSize.trim();
+  private indentWidth(textarea: HTMLTextAreaElement, view: Window): number {
+    if (this.tabSizeAssigned) return this._tabSize;
+    const resolved = view.getComputedStyle(textarea).tabSize.trim();
     if (!/^\d+(?:\.\d+)?$/.test(resolved)) return this._tabSize;
     return finiteInteger(Number(resolved), this._tabSize, 1, 16);
   }
 
+  /** Visible label for the editor. */
   @property() label = '';
+  /** Supporting instructions shown below the editor. */
   @property() hint = '';
+  /** Error shown below the editor and associated with its text field. */
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Native placeholder shown when the editor is empty. */
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) readonly = false;
   private _rows = 4;
@@ -275,34 +278,21 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property() autocomplete = '';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
-  private autocorrectValue = false;
+  private readonly autocorrectState = new AutocorrectState(this, false);
   /** @default false */
   @property({ converter: autocorrectConverter, useDefault: true })
   override get autocorrect(): boolean {
-    return this.autocorrectValue;
+    return this.autocorrectState.value;
   }
   override set autocorrect(next: boolean | string) {
-    this.autocorrectValue = normalizeAutocorrect(next);
-    this.requestUpdate();
+    this.autocorrectState.set(next);
   }
-  get inputmode(): string {
-    return this.inputMode;
-  }
-  set inputmode(next: string) {
-    this.inputMode = next ?? '';
-  }
-  get enterkeyhint(): string {
-    return this.enterKeyHint;
-  }
-  set enterkeyhint(next: string) {
-    this.enterKeyHint = next ?? '';
-  }
+  declare inputmode: string;
+  declare enterkeyhint: string;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   @query('textarea') private textarea?: HTMLTextAreaElement;
   @query('[part="editor"]') private editor?: HTMLElement;
   @query('[part="gutter"]') private gutter?: HTMLElement;
@@ -311,6 +301,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @state() private caretOffset = 0;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private textGeometryObserver?: ResizeObserver;
+  private logicalLineCount?: { value: string; count: number };
   private wrappedLineStarts?: { value: string; offsets: number[] };
 
   override connectedCallback(): void {
@@ -407,15 +398,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   get input(): HTMLTextAreaElement | null {
     return this.textarea ?? null;
   }
-  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
-  }
   override click(): void {
-    if (!this.liveDisabled) this.textarea?.click();
+    if (!isLiveDisabled(this)) this.textarea?.click();
   }
   override focus(options?: FocusOptions): void {
-    if (!this.liveDisabled) this.textarea?.focus(options);
+    if (!isLiveDisabled(this)) this.textarea?.focus(options);
   }
   override blur(): void {
     this.textarea?.blur();
@@ -498,7 +485,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     return undefined;
   }
   private onInput = (event: InputEvent): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -509,7 +496,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.emit('lr-input', { value: this.value });
   };
   private onChange = (event: Event): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -518,7 +505,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.emit('lr-change', { value: this.value });
   };
   private onFocus = (event: FocusEvent): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -535,13 +522,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   // the field touched. `tabBypassArmed`/`emit('blur')` still run unconditionally: they're tab-key
   // bookkeeping and the public blur event contract, not validation state.
   private onBlur = (event: FocusEvent): void => {
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     this.tabBypassArmed = false;
     relayNativeEvent(this, event);
   };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled || event.isComposing || event.keyCode === 229) return;
+    if (isLiveDisabled(this) || event.isComposing || event.keyCode === 229) return;
     if (event.key === 'Escape') {
       this.tabBypassArmed = true;
       return;
@@ -552,29 +539,27 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         this.tabBypassArmed = false;
         return;
       }
-      if (this.readonly) return;
+      const view = this.ownerDocument.defaultView;
+      if (this.readonly || !view) return;
       event.preventDefault();
-      this.indentSelection(event.target as HTMLTextAreaElement);
+      this.indentSelection(event.target as HTMLTextAreaElement, view);
       return;
     }
     this.tabBypassArmed = false;
   };
-  /** Tab inserts one indent at the caret, replaces a selection that stays within one line, and
-   *  indents every line a multi-line selection touches (keeping the selection). Growth never
-   *  exceeds `maxlength`, the way native typing is refused at the limit. */
-  private indentSelection(target: HTMLTextAreaElement): void {
-    const indent = ' '.repeat(this.indentWidth);
-    const { value, selectionStart: start, selectionEnd: end } = target;
+  /** Tab inserts an indent at a caret or indents the selected lines and preserves the selection. */
+  private indentSelection(target: HTMLTextAreaElement, view: Window): void {
+    const indent = ' '.repeat(this.indentWidth(target, view));
+    const { value, selectionStart: start, selectionEnd: end, selectionDirection } = target;
     const limit = this.maxlength;
     const room = limit === undefined ? Number.POSITIVE_INFINITY : Math.max(0, limit - value.length);
-    const selected = value.slice(start, end);
-    let inserted = '';
-    if (!selected.includes('\n')) {
-      inserted = indent.slice(0, room + selected.length);
-      if (inserted === '' && selected === '') return;
+    let inserted = indent;
+    if (start === end) {
+      inserted = indent.slice(0, room);
+      if (inserted === '') return;
       target.setRangeText(inserted, start, end, 'end');
     } else {
-      const first = value.lastIndexOf('\n', start - 1) + 1;
+      const first = start === 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
       const starts = [first];
       for (let index = first + 1; index < end; index++) {
         if (value.charCodeAt(index - 1) === 10) starts.push(index);
@@ -588,8 +573,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       target.setSelectionRange(
         start === first ? start : start + indent.length,
         end + indent.length * starts.length,
+        selectionDirection,
       );
-      inserted = indent;
     }
     this.value = target.value;
     dispatchNativeInputEvent(this, { data: inserted, inputType: 'insertText' });
@@ -711,11 +696,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   private countLines(): number {
     if (this.withoutLineNumbers) return 0;
-    let count = 1;
-    for (let index = 0; index < this.value.length; index++) {
-      if (this.value.charCodeAt(index) === 10) count++;
+    if (this.wrapsText) return this.lineStarts().length;
+    if (this.logicalLineCount?.value !== this.value) {
+      this.logicalLineCount = { value: this.value, count: countLines(this.value) };
     }
-    return count;
+    return this.logicalLineCount.count;
   }
   private syncGutterInlinePosition(): void {
     const editor = this.editor;
@@ -902,19 +887,17 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const contentStyle = this.tabSizeAssigned
       ? { '--lr-code-editor-tab-size': String(this._tabSize) }
       : {};
-    const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
-    const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
-    const describedBy = [
-      hasError ? 'textarea-error' : '',
-      hasHint ? 'textarea-hint' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-    const label = this.hasAttribute('aria-label')
-      ? this.getAttribute('aria-label')!
-      : this.accessibleLabel ||
-        (hasLabel ? nothing : this.localize('codeEditorLabel'));
+    const hasLabel = this.hasLabelSlot || Boolean(normalizeLabel(this.label));
+    const supporting = {
+      presence: { has: (name: string) => name !== 'help-text' && this.slotPresence.has(name) },
+      idPrefix: 'textarea',
+      hint: this.hint,
+      errorText: this.errorText,
+    };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
+    const authored = this.getAttribute('aria-label');
+    const label = authored === '' ? '' : normalizeLabel(authored) ?? normalizeLabel(this.accessibleLabel)
+      ?? (hasLabel ? nothing : this.localize('codeEditorLabel'));
     const invalid =
       hasError || (this.touched && !this.internals.validity.valid);
     return html`<div part="form-control">
@@ -974,19 +957,12 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
           ></textarea>
         </div>
       </div>
-      <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>
-        ${this.hint}<slot
-          name="hint"
-        ></slot>
-      </div>
-      <div id="textarea-error" part="error" ?hidden=${!hasError}>
-        ${this.errorText}<slot
-          name="error"
-        ></slot>
-      </div>
+      ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
     </div>`;
   }
 }
+
+installNativeInputModeAliases(LyraCodeEditor.prototype);
 declare global {
   interface HTMLElementTagNameMap {
     'lr-code-editor': LyraCodeEditor;

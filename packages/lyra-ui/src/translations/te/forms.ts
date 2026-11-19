@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'కనీసం ఒక ఎంపికను ఎంచుకోండి.',
   tokenInputRequired: 'కనీసం ఒక విలువను నమోదు చేయండి.',
   tokenInputEditWithContext: '{label}ను సవరించండి',
+  tokenInputLabel: 'టోకెన్‌లు',
   iconButtonLabel: 'బటన్',
   codeEditorLabel: 'కోడ్ ఎడిటర్',
   switchRequired: 'దీన్ని ఆన్ చేయండి.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'పెన్ను కింద',
   signaturePadPenUp: 'పెన్ను పైన',
+  signaturePadDrawingLimit: 'గీయడానికి ఉన్న పరిమితిని చేరుకున్నారు.',
   localePickerInputLimit: 'మొదటి 512 భాష మరియు ప్రాంత నమోదులు మాత్రమే అందుబాటులో ఉన్నాయి.',
   emojiPickerInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొంత ఎమోజీ డేటా వదిలివేయబడింది.',
 };

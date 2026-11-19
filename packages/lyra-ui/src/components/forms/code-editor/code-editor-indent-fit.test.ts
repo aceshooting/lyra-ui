@@ -1,12 +1,13 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
 
 const textareaOf = (el: LyraCodeEditor): HTMLTextAreaElement => el.shadowRoot!.querySelector('textarea')!;
 
-function pressTab(el: LyraCodeEditor, selection: [number, number]): void {
+async function pressTab(el: LyraCodeEditor, selection: [number, number]): Promise<void> {
   const textarea = textareaOf(el);
-  textarea.focus();
+  await focusByKeyboard(textarea);
   textarea.setSelectionRange(selection[0], selection[1]);
   textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
 }
@@ -14,7 +15,7 @@ function pressTab(el: LyraCodeEditor, selection: [number, number]): void {
 describe('lr-code-editor Tab', () => {
   it('indents every line of a multi-line selection and keeps the selection instead of replacing it', async () => {
     const el = await fixture<LyraCodeEditor>(html`<lr-code-editor tab-size="2" value=${'one\ntwo\nthree'}></lr-code-editor>`);
-    pressTab(el, [0, el.value.length]);
+    await pressTab(el, [0, el.value.length]);
     expect(el.value).to.equal('  one\n  two\n  three');
     const textarea = textareaOf(el);
     expect(textarea.selectionStart).to.equal(0);
@@ -23,22 +24,54 @@ describe('lr-code-editor Tab', () => {
 
   it('does not indent a line the selection only touches at its start', async () => {
     const el = await fixture<LyraCodeEditor>(html`<lr-code-editor tab-size="2" value=${'one\ntwo\nthree'}></lr-code-editor>`);
-    pressTab(el, [2, 8]);
+    await pressTab(el, [2, 8]);
     expect(el.value).to.equal('  one\n  two\nthree');
+  });
+
+  it('indents a line with a partial selection without deleting the selected text', async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor tab-size="2" value="example"></lr-code-editor>`);
+    const textarea = textareaOf(el);
+    await focusByKeyboard(textarea);
+    textarea.setSelectionRange(1, 4, 'backward');
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(el.value).to.equal('  example');
+    expect(textarea.value.slice(textarea.selectionStart, textarea.selectionEnd)).to.equal('xam');
+    expect(textarea.selectionDirection).to.equal('backward');
+  });
+
+  it('indents a leading empty line when the selection starts at the beginning', async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor tab-size="2" .value=${'\nexample'}></lr-code-editor>`);
+    await pressTab(el, [0, el.value.length]);
+    expect(el.value).to.equal('  \n  example');
+  });
+
+  it('leaves Tab alone in a document without a browsing context', async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor value="example"></lr-code-editor>`);
+    const detached = document.implementation.createHTMLDocument();
+    detached.body.append(el);
+    await el.updateComplete;
+    const textarea = textareaOf(el);
+    textarea.setSelectionRange(0, 0);
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    textarea.dispatchEvent(tab);
+    expect(tab.defaultPrevented).to.equal(false);
+    expect(el.value).to.equal('example');
+    expect(textarea.value).to.equal('example');
+    el.remove();
   });
 
   it('never grows the value past maxlength', async () => {
     const el = await fixture<LyraCodeEditor>(html`<lr-code-editor tab-size="4" maxlength="6" value="abcde"></lr-code-editor>`);
-    pressTab(el, [5, 5]);
+    await pressTab(el, [5, 5]);
     expect(el.value).to.equal('abcde ');
     expect(el.validity.tooLong).to.equal(false);
-    pressTab(el, [6, 6]);
+    await pressTab(el, [6, 6]);
     expect(el.value).to.equal('abcde ');
     el.value = 'a\nb';
     await el.updateComplete;
     el.maxlength = 4;
     await el.updateComplete;
-    pressTab(el, [0, 3]);
+    await pressTab(el, [0, 3]);
     expect(el.value).to.equal('a\nb');
   });
 });

@@ -9,9 +9,12 @@ export const styles = css`
     display: block;
   }
   [part="source-diagram"] {
-    block-size: var(--lr-size-20rem);
+    block-size: var(--lr-mind-map-source-block-size, var(--lr-size-20rem));
     min-inline-size: 0;
-    overflow: hidden;
+    overflow: auto;
+  }
+  [part="source-diagram"] [part="base"] {
+    block-size: 100%;
   }
   [part="svg"] {
     display: block;
@@ -55,15 +58,22 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
+  [part="disclosure"] { fill: none; stroke: var(--lr-color-surface); pointer-events: none; }
   [part="node-label"] {
     fill: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
+    paint-order: stroke;
+    stroke: var(--lr-mind-map-label-halo, var(--lr-color-surface));
+    stroke-width: var(--lr-border-width-thick);
   }
   [part="focus-ring"] {
     fill: none;
     stroke: var(--lr-focus-ring-color);
     stroke-width: var(--lr-focus-ring-width);
     pointer-events: none;
+  }
+  [part="svg"]:not(:focus-visible) [part="focus-ring"] {
+    display: none;
   }
   [part="empty"] {
     padding: var(--lr-space-m);

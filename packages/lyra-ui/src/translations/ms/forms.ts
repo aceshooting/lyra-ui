@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Pilih sekurang-kurangnya satu pilihan.',
   tokenInputRequired: 'Masukkan sekurang-kurangnya satu nilai.',
   tokenInputEditWithContext: 'Sunting {label}',
+  tokenInputLabel: 'Token',
   iconButtonLabel: 'Butang',
   codeEditorLabel: 'Editor kod',
   switchRequired: 'Sila hidupkan ini.',
@@ -112,6 +113,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pen diturunkan',
   signaturePadPenUp: 'Pen diangkat',
+  signaturePadDrawingLimit: 'Had lukisan dicapai.',
   localePickerInputLimit: 'Hanya 512 entri tetapan bahasa dan wilayah pertama tersedia.',
   emojiPickerInputLimit: 'Sebahagian data emoji telah digugurkan kerana had input dicapai.',
 };

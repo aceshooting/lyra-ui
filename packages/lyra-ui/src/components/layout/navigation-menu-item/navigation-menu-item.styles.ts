@@ -41,7 +41,7 @@ export const styles = css`
     font-weight: var(--lr-navigation-menu-item-font-weight, var(--lr-font-weight-medium));
     text-align: start;
     text-decoration: none;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
@@ -55,6 +55,17 @@ export const styles = css`
 
   [part~='base']:where([data-layout='stacked']) [part='expand-icon'] {
     margin-inline-start: auto;
+  }
+
+  [part~='base-current'] {
+    color: var(--lr-navigation-menu-item-current-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
+    font-weight: var(--lr-navigation-menu-item-current-font-weight, var(--lr-font-weight-semibold));
+    transition: var(--lr-transition-interactive);
+  }
+
+  [part~='base-open'] {
+    background: var(--lr-navigation-menu-item-open-bg, var(--lr-color-brand-quiet));
+    transition: var(--lr-transition-interactive);
   }
 
   [part~='base']:where(:hover) {
@@ -73,43 +84,6 @@ export const styles = css`
   [part~='base']:where(:focus-visible) {
     outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
-  }
-
-  [part~='base-current'] {
-    color: var(--lr-navigation-menu-item-current-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
-    font-weight: var(--lr-navigation-menu-item-current-font-weight, var(--lr-font-weight-semibold));
-    transition: var(--lr-transition-interactive);
-  }
-
-  [part~='base-current']:where(:hover) {
-    background: var(--lr-navigation-menu-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-navigation-menu-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
-  }
-
-  [part~='base-current']:where(:active) {
-    background: var(
-      --lr-navigation-menu-item-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
-    );
-    color: var(--lr-navigation-menu-item-active-color, var(--lr-color-text));
-  }
-
-  [part~='base-open'] {
-    background: var(--lr-navigation-menu-item-open-bg, var(--lr-color-brand-quiet));
-    transition: var(--lr-transition-interactive);
-  }
-
-  [part~='base-open']:where(:hover) {
-    background: var(--lr-navigation-menu-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-navigation-menu-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
-  }
-
-  [part~='base-open']:where(:active) {
-    background: var(
-      --lr-navigation-menu-item-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
-    );
-    color: var(--lr-navigation-menu-item-active-color, var(--lr-color-text));
   }
 
   [part='start'],

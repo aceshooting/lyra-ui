@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ٹول پیرامیٹر اسکیمہ میں زیادہ سے زیادہ {fields} فیلڈز اور ہر فیلڈ کے لیے {options} انتخاب ہو سکتے ہیں۔',
   testResultsLimit: 'صرف پہلے {count} ٹیسٹ کے نتائج دکھائے گئے ہیں۔',
   toolTimelineLimit: 'زیادہ سے زیادہ {count} ٹول کالز دکھائی گئی ہیں۔',
+  toolTimelineLoadError: 'ٹول کا منظر لوڈ نہیں ہو سکا۔',
   toolSelectLimit: 'صرف پہلے {count} ٹولز دکھائے گئے ہیں۔',
   testResultsInputTooLarge: 'ٹیسٹ کے نتائج کی تفصیلات نمائش کی حد سے زیادہ ہیں۔',
   toolCall: 'ٹول کال',

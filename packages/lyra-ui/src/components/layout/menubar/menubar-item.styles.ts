@@ -39,9 +39,11 @@ export const styles = css`
   :host(:where(:focus-visible)) [part='base'],
   :host(:where([aria-expanded='true'])) [part='base'] {
     background: var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-menubar-item-hover-color, var(--lr-color-text));
   }
   :host(:where(:active:not([disabled]))) [part='base'] {
     background: var(--lr-menubar-item-active-bg, color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    color: var(--lr-menubar-item-active-color, var(--lr-color-text));
   }
   :host(:focus-visible) [part='base'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

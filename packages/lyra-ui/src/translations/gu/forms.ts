@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'ઓછામાં ઓછો એક વિકલ્પ પસંદ કરો.',
   tokenInputRequired: 'ઓછામાં ઓછું એક મૂલ્ય દાખલ કરો.',
   tokenInputEditWithContext: '{label} સંપાદિત કરો',
+  tokenInputLabel: 'ટોકન',
   iconButtonLabel: 'બટન',
   codeEditorLabel: 'કોડ સંપાદક',
   switchRequired: 'આ ચાલુ કરો.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'પેન નીચે',
   signaturePadPenUp: 'પેન ઉપર',
+  signaturePadDrawingLimit: 'દોરવાની મર્યાદા પહોંચી ગઈ છે.',
   localePickerInputLimit: 'ફક્ત પ્રથમ 512 ભાષા અને પ્રદેશ સેટિંગ્સની એન્ટ્રીઓ ઉપલબ્ધ છે.',
   emojiPickerInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી ઇમોજીનો કેટલોક ડેટા છોડી દેવાયો છે.',
 };

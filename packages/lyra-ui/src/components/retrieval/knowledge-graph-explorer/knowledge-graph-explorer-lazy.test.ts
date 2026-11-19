@@ -3,7 +3,19 @@ import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.clas
 import './knowledge-graph-explorer.js';
 describe('optional explorer children', function () {
  this.retries(0);
- it('loads the path child only when its data is present', async () => {
+ it('registers detail components when the first selected entity appears', async () => {
+  const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer .nodes=${[{id:'a',label:'Alpha'}]}></lr-knowledge-graph-explorer>`);
+  expect(customElements.get('lr-entity-card') === undefined).to.equal(true);
+  expect(customElements.get('lr-neighbor-list') === undefined).to.equal(true);
+  el.selectedNodeId = 'a';
+  await el.updateComplete;
+  const card = el.shadowRoot!.querySelector('lr-entity-card')!;
+  expect(card.matches(':defined')).to.equal(true);
+  expect(card.entity?.label).to.equal('Alpha');
+  expect(el.shadowRoot!.querySelector('lr-neighbor-list')?.matches(':defined')).to.equal(true);
+});
+
+it('loads the path child only when its data is present', async () => {
   expect(customElements.get('lr-path-strip')===undefined).to.equal(true);
   const el=await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer .nodes=${[{id:'a',label:'A'}]}></lr-knowledge-graph-explorer>`);
   el.pinnedNodeIds=['a'];await el.updateComplete;

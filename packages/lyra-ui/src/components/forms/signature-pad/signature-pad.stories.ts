@@ -48,3 +48,7 @@ export const NarrowPanel: StoryObj = {
     </div>
   `,
 };
+
+export const Readonly: StoryObj = {
+  render: () => html`<lr-signature-pad label="Signature" readonly .strokes=${SIGNATURE}></lr-signature-pad>`,
+};

@@ -1,3 +1,5 @@
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -14,19 +16,9 @@ export const styles = css`
        gets that viewer's monospace treatment. */
     --_lr-tool-approval-dialog-mono-font: var(--lr-font-mono);
     ${modalHostStyles}
-    align-items: center;
-    justify-content: center;
-    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(
-      var(--lr-space-l),
-      var(--lr-safe-area-inline-start)
-    );
-    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+    ${dialogChrome}
   }
-  :host([open]) {
-    display: flex;
-  }
+  ${dialogOpenHost}
   [part="backdrop"] {
     position: absolute;
     inset: 0;
@@ -41,20 +33,14 @@ export const styles = css`
     flex-direction: column;
     inline-size: min(var(--lr-size-32rem), 100%);
     max-block-size: min(var(--lr-size-36rem), 100%);
-    /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
-       near-black and the dialog reads as a scrim with floating text instead of a panel. */
-    background: var(--lr-color-surface-overlay);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
-       the same role as lr-dialog, so the same elevation. */
-    box-shadow: var(--lr-shadow-xl);
+    ${overlaySurface}
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-xl));
     overflow: hidden;
   }
   [part="header"] {
     padding: var(--lr-space-l) var(--lr-space-l) 0;
   }
-  [part="header"] h2 {
+  [part="header"] > :first-child {
     margin: 0;
     font-size: var(--lr-size-1-0625rem);
     font-weight: var(--lr-font-weight-semibold);
@@ -86,6 +72,9 @@ export const styles = css`
     min-block-size: 0;
   }
   [part="args-editor"] {
+    /* JSON is left-to-right notation whatever the surrounding direction. */
+    direction: ltr;
+    text-align: start;
     flex: 1 1 auto;
     min-block-size: var(--lr-size-10rem);
     box-sizing: border-box;

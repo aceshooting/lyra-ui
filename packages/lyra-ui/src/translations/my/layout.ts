@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'လမ်းညွှန်မှု ပင်ဖြုတ်ရန်',
   appRailItemCollapse: '{label} ကို ခေါက်သိမ်းရန်',
   appRailItemExpand: '{label} ကို ချဲ့ရန်',
+  appRailItemToggle: '{label} ကို ပြရန် သို့မဟုတ် ဖျောက်ရန်',
+  appRailGroupToggle: 'လမ်းညွှန် အုပ်စု',
   resizeValuePercent: '{value} ရာခိုင်နှုန်း',
   commandPaletteLabel: 'အမိန့်ပေးဘောင်',
   commandPalettePlaceholder: 'အမိန့်များ ရှာရန်…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} အမိန့်များ',
   },
+  tabCloseAction: '{label} ကို ပိတ်ရန်',
+  stepperStateCompleted: 'ပြီးသွားပြီ',
+  stepperStateError: 'အမှား',
+  stepperStatePending: 'မစသေးပါ',
+  stepperStateLocked: 'သော့ခတ်ထားသည်',
   commandPaletteInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အမိန့်များ အချို့ကို ချန်လှပ်ထားသည်။',
 };
 

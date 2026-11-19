@@ -51,7 +51,7 @@ describe('MCP app public port and resource boundaries', () => {
     expect(calls).to.deep.equal(['current']);
     expect(heights).to.deep.equal([280]);
     expect(replies).to.deep.equal([[{ accepted: true }]]);
-    expect(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!.style.height).to.equal('280px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!).height).to.equal('280px');
   });
 
   it('remounts equal-looking documents when cyclic metadata prevents proving document equivalence', async () => {
@@ -85,12 +85,12 @@ describe('MCP app public port and resource boundaries', () => {
     }
     el.resource = { uri: 'ui://valid-document', html: '<p>Loaded</p>' };
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!.style.height).to.equal('240px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!).height).to.equal('240px');
     el.removeAttribute('height');
     el.removeAttribute('max-height');
     await el.updateComplete;
     expect(el.height).to.equal(null);
     expect(el.maxHeight).to.equal(null);
-    expect(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!.style.height).to.equal('320px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!).height).to.equal('320px');
   });
 });

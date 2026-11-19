@@ -1,3 +1,4 @@
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { css } from 'lit';
 import {
   formControlLabelTypography,
@@ -6,6 +7,7 @@ import {
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
 export const styles = css`
+  ${formControlAppearance}
   :host {
     display: block;
     /* No default block-size: an unsized host stays content-sized, and an explicit host block-size
@@ -99,9 +101,9 @@ export const styles = css`
        ancestor or :root value still wins -- the hover/invalid borders below already had their
        own hooks; the resting state it spends most of its life in did not. */
     border: var(--lr-border-width-thin) solid
-      var(--lr-code-editor-border, var(--lr-color-border));
-    border-radius: var(--lr-code-editor-radius, var(--lr-radius));
-    background: var(--lr-code-editor-fill, var(--lr-color-surface));
+      var(--lr-code-editor-border, var(--_lr-form-control-border-color));
+    border-radius: var(--lr-code-editor-radius, var(--lr-form-control-radius));
+    background: var(--lr-code-editor-fill, var(--_lr-form-control-fill));
     /* Hover below only repaints border-color, so that is all this needs; without it this frame's
        edge snaps while lr-button/lr-icon-button ease. */
     transition: border-color var(--lr-transition-fast);
@@ -150,6 +152,7 @@ export const styles = css`
     min-block-size: 100%;
   }
   .editor-measure {
+    direction: ltr;
     display: block;
     box-sizing: border-box;
     inline-size: max-content;
@@ -209,6 +212,7 @@ export const styles = css`
      and measurement inherit the same width. An untouched tabSize leaves
      a host-level override in charge instead of losing to an inline tab-size declaration. */
   [part='textarea'] {
+    direction: ltr;
     display: block;
     position: absolute;
     inset: 0;

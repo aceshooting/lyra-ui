@@ -1,0 +1,27 @@
+---
+'@aceshooting/lyra-ui': major
+---
+
+- `lr-mcp-app` no longer throws on pages served over plain HTTP, closes a bootstrap port it cannot deliver, and shows its unavailable state if the browser cannot provide secure random bytes.
+- `lr-tool-param-form` marks required enum, array, boolean and number fields as required for assistive technology and paints the required marker, and falls back to the property key for a blank schema title.
+- Listen for `lr-approval-close` on an approval queue or `lr-tool-approval-close` on a timeline when review ends. The nested dialog's `lr-decision-settled` notification stays inside each component.
+- `lr-confirm-bar` drops a pending `waitUntil()` decision when the proposal is rebound, so a late save can no longer decide the new proposal.
+- `lr-tool-result-dialog`, `lr-tool-approval-dialog` and `lr-tool-select-dialog` make their capped body a named keyboard tab stop only while it overflows.
+- `lr-permission-rules` keeps a read-only decision focusable, names a rule with a blank label from its scope, and isolates the scope text.
+- `lr-tool-timeline` words a grouped summary by status. Set `groupSummary` or the `summary` slot to use the same wording across statuses.
+- `lr-tool-result-view` announces a lazily loaded renderer.
+- `lr-approval-queue` keeps the decision badge of a resolved request at full strength, isolates the tool name and request id, and `lr-permission-grant` and the approval dialog's JSON editor stay left-to-right in right-to-left pages.
+- `lr-policy-summary` forwards a nonblank host `aria-label` to the decision list. Omit the attribute to retain the localized list name.
+- Tool dialogs share overlay surface, border, radius and shadow tokens. The result and search actions use the icon-button theme.
+- Tool selection matches accents, announces the filtered count, and reuses search results while updating selection.
+- Tool approval, selection and result dialogs support cancelable user dismissal. Result dialogs report an accepted maximize or restore action.
+- Approval queues and timelines report when a review opens or closes. Dismissing nested content keeps the review open. Both wrappers forward deferred approval decisions. Set `disabled` to prevent decisions.
+- Approval queues, tool approval dialogs and tool selection dialogs support configurable heading levels.
+- Tool call activation, disclosure and render failures carry correlated invocation identifiers. Chip categories and request identifiers are included in control names.
+- Timeline loading failures show a localized message and retry on the next review or disclosure. Result views report normalized status changes.
+- Parameter forms refresh translated validation messages and capture values bound before first render as the reset default.
+- Native parameter and permission controls follow form-control sizing. Permission rules support cancelable changes.
+- Decision panels share legend and status theme controls. Selected approvals and timeline markers remain visible in forced colors.
+- Tool call blocks preserve renderer wrapping. Tool chips keep decorative separators out of the accessible name.
+- Confirmation bars load argument viewers on demand. Server renderers that use these viewers can import the `details` and `json-viewer` entries explicitly.
+- Embedded app loading feedback preserves frame layout and supports a CSS height override.

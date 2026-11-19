@@ -113,6 +113,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Ścieżka',
   pathNodeStatus: '{label}, węzeł {position} z {total}',
   pathRelationStatus: '{relation}, relacja',
+  pathRelationForward: 'skierowane do następnego węzła',
+  pathRelationReverse: 'skierowane do poprzedniego węzła',
   neighborListLabel: 'Relacje',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Rozwiń {label} w grafie',

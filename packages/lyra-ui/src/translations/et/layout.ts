@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Vabasta navigeerimine',
   appRailItemCollapse: 'Ahenda {label}',
   appRailItemExpand: 'Laienda {label}',
+  appRailItemToggle: 'Näita või peida {label}',
+  appRailGroupToggle: 'Navigeerimisrühm',
   resizeValuePercent: '{value} protsenti',
   commandPaletteLabel: 'Käsupalett',
   commandPalettePlaceholder: 'Otsi käske…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} käsk',
     other: '{count} käsku',
   },
+  tabCloseAction: 'Sulge {label}',
+  stepperStateCompleted: 'Lõpetatud',
+  stepperStateError: 'Viga',
+  stepperStatePending: 'Alustamata',
+  stepperStateLocked: 'Lukustatud',
   commandPaletteInputLimit: 'Osa käske jäeti välja, kuna sisendi piirang sai täis.',
 };
 

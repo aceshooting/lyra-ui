@@ -1,3 +1,5 @@
+import { visuallyHidden } from '../../../internal/a11y.js';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { scrollOverflowFade } from '../../../internal/scroll-overflow.styles.js';
 import { css } from 'lit';
@@ -13,6 +15,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     gap: var(--lr-space-m);
+    padding-inline: var(--lr-size-1px);
     /* overflow-y is paired explicitly with every overflow-x here and below: per the CSS overflow
        spec, pinning one axis to a non-'visible' value forces the other axis's used value to 'auto'
        when unset, painting a phantom scrollbar on classic (non-overlay) scrollbar platforms even
@@ -168,11 +171,15 @@ export const styles = css`
     color: var(--lr-stepper-current-index-color, var(--lr-color-on-brand));
   }
   [part="step-check"] {
+    display: inline-flex;
     color: var(--lr-color-success);
     flex: 0 0 auto;
   }
   [part="step-label"] {
     white-space: nowrap;
+  }
+  .visually-hidden {
+    ${visuallyHidden}
   }
   :host([wrap-labels][orientation="vertical"]) [part="step-label"],
   :host([wrap-labels][data-effective-orientation="vertical"])
@@ -201,4 +208,5 @@ export const styles = css`
       mask-image: none;
     }
   }
+  ${forcedColorsPart('[part="step"][aria-current="step"]')}
 `;

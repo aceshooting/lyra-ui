@@ -15,19 +15,19 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-menubar-gap, var(--lr-space-xs));
     box-sizing: border-box;
-    padding: var(--lr-form-control-padding-block);
+    padding: var(--lr-menubar-padding, var(--lr-form-control-padding-block));
     min-block-size: var(--lr-form-control-height);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow-xs);
+    background: var(--lr-menubar-bg, var(--lr-color-surface));
+    border: var(--lr-menubar-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
+    border-radius: var(--lr-menubar-radius, var(--lr-radius));
+    box-shadow: var(--lr-menubar-shadow, var(--lr-shadow-xs));
   }
   :host([frame='plain']) [part='base'] {
     background: transparent;
     border-color: transparent;
     box-shadow: none;
   }
-  ${glassSurface(':host(:not([frame="plain"])) [part="base"]', css`var(--lr-color-surface)`)}
+  ${glassSurface(':host(:not([frame="plain"])) [part="base"]', css`var(--lr-menubar-bg, var(--lr-color-surface))`)}
 `;

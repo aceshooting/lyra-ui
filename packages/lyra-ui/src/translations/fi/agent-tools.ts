@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Työkaluparametrien skeemat tukevat enintään {fields} kenttää ja {options} vaihtoehtoa kenttää kohden.',
   testResultsLimit: 'Vain ensimmäiset {count} testitulosta näytetään.',
   toolTimelineLimit: 'Enintään {count} työkalukutsua näytetään.',
+  toolTimelineLoadError: 'Työkalunäkymän lataaminen epäonnistui.',
   toolSelectLimit: 'Vain ensimmäiset {count} työkalua näytetään.',
   testResultsInputTooLarge: 'Testitulosten yksityiskohdat ylittävät näyttörajan.',
   toolCall: 'Työkalukutsu',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Tsarin sigogin kayan aiki ba zai wuce filaye {fields} da zaɓuɓɓuka {options} a kowane fili ba.',
   testResultsLimit: 'Ana nuna sakamakon gwaji {count} na farko kawai.',
   toolTimelineLimit: 'Kiran kayan aiki da ake nunawa bai wuce {count} ba.',
+  toolTimelineLoadError: 'Ba a iya loda allon kayan aiki ba.',
   toolSelectLimit: 'Ana nuna kayan aiki {count} na farko kawai.',
   testResultsInputTooLarge: 'Bayanan dalla-dalla na sakamakon gwaji sun wuce iyakar nunawa.',
   toolCall: 'Kiran kayan aiki',

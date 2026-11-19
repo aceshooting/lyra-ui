@@ -1,5 +1,6 @@
+import { hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import './knowledge-graph-explorer.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
@@ -30,12 +31,15 @@ for (const renderer of ['svg', 'canvas'] as const) {
     expect(data.queries.some(request => request.query.centerKey !== null), 'closed details do not request neighbors').to.equal(false);
     const selections: unknown[] = [];
     el.addEventListener('lr-selection-change', event => selections.push(event.detail));
+    const popover = el.shadowRoot!.querySelector<LyraPopover>('[part="detail-popover"]')!;
+    const shown = oneEvent(popover, 'lr-after-show');
     el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new CustomEvent('lr-entity-select', {
       detail: { entityId: '9' }, bubbles: true, composed: true,
     }));
-    const popover = el.shadowRoot!.querySelector<LyraPopover>('[part="detail-popover"]')!;
-    await waitUntil(() => popover.open && data.queries.some(request => request.query.centerKey === 'node:9'), 'source details open');
+    await shown;
     await el.updateComplete;
+    expect(popover.open).to.equal(true);
+    await waitUntil(() => data.queries.some(request => request.query.centerKey === 'node:9'), 'neighbors requested for the open details');
     const card = el.shadowRoot!.querySelector<LyraEntityCard>('[part="detail-card"]')!;
     await card.updateComplete;
     expect(card.entity?.id).to.equal('9');
@@ -61,7 +65,7 @@ it('composes one global navigator and forwards million-node and edge reveal',asy
  expect(await el.revealSourceKey('node:999999')).to.equal(true);expect(el.sourcePage).to.equal(9999);
  expect(await el.revealSourceKey('edge:999999')).to.equal(true);expect(el.sourceTotal).to.equal(1_000_000);
  expect(graph(el).shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(100);
- expect(graph(el).shadowRoot!.querySelectorAll('[data-source-search]').length).to.equal(0);
+ expect(graph(el).shadowRoot!.querySelectorAll('[part="source-search"]').length).to.equal(0);
  expect(data.read).to.equal(500);expect(data.queries.length).to.equal(5);
  recordScaleMeasurement('lr-knowledge-graph-explorer', 'n=1000000 source node and edge reveal', {
   sourceTotal: el.sourceTotal!, providerQueries: data.queries.length, providerRowsRead: data.read,
@@ -324,4 +328,11 @@ it('reports a zero match count for a whitespace-only source search intent', asyn
   el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(new CustomEvent('lr-input', { detail: { value: '   ' }, bubbles: true, composed: true }));
   await waitUntil(() => events.length === 1, 'whitespace search accepted');
   expect(events[0]).to.deep.equal({ query: '   ', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+});
+
+it('paints the configured hover fill on its source-clear', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-knowledge-graph-explorer']>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${provider().source} .nodeTypes=${[{id:'person',label:'Person'}]} .hiddenTypes=${['person']} style="--lr-knowledge-graph-explorer-source-action-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-knowledge-graph-explorer>`);
+  const button = el.shadowRoot!.querySelector('[part="source-clear"]')!;
+  await hoverUntilMatched(button, 'hover the control');
+  await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });

@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Odepnout navigaci',
   appRailItemCollapse: 'Sbalit {label}',
   appRailItemExpand: 'Rozbalit {label}',
+  appRailItemToggle: 'Sbalit nebo rozbalit {label}',
+  appRailGroupToggle: 'Navigační skupina',
   resizeValuePercent: '{value} procent',
   commandPaletteLabel: 'Paleta příkazů',
   commandPalettePlaceholder: 'Hledat příkazy…',
@@ -65,6 +67,11 @@ const strings: LyraLocaleStrings = {
     many: '{count} příkazu',
     other: '{count} příkazů',
   },
+  tabCloseAction: 'Zavřít {label}',
+  stepperStateCompleted: 'Dokončeno',
+  stepperStateError: 'Chyba',
+  stepperStatePending: 'Nezahájeno',
+  stepperStateLocked: 'Uzamčeno',
   commandPaletteInputLimit: 'Kvůli dosažení limitu vstupu byly vynechány některé položky: příkazy.',
 };
 

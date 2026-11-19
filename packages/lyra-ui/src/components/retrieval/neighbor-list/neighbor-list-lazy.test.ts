@@ -23,3 +23,17 @@ it('registers lr-virtual-list only once a list first needs it', async () => {
     { timeout: 5000 }
   );
 });
+
+it('loads the pager when source navigation first needs it', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-neighbor-list']>(html`<lr-neighbor-list></lr-neighbor-list>`);
+  expect(customElements.get('lr-pagination') === undefined).to.equal(true);
+  el.centerKey = 'node:a';
+  el.graphSource = { revision: 1, records: { revision: 1,
+    query: async () => ({rows: [], total: 0, summary: {nodes:0, edges:0}}), lookup: async () => [], locate: async () => null },
+    scene: async () => ({nodes:[], edges:[], total:{nodes:0, edges:0}, coverage:'complete', worldBounds:null}) };
+  await el.updateComplete;
+  await waitUntil(() => !!customElements.get('lr-pagination'), 'source pager registers');
+  const pager = el.shadowRoot!.querySelector('lr-pagination')!;
+  expect(pager.matches(':defined')).to.equal(true);
+  expect(pager.page).to.equal(1);
+});

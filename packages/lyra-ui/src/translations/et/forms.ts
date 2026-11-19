@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Valige vähemalt üks valik.',
   tokenInputRequired: 'Sisestage vähemalt üks väärtus.',
   tokenInputEditWithContext: 'Muuda {label}',
+  tokenInputLabel: 'Tokenid',
   iconButtonLabel: 'Nupp',
   codeEditorLabel: 'Koodiredaktor',
   switchRequired: 'Lülitage see sisse.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pliiats all',
   signaturePadPenUp: 'Pliiats üleval',
+  signaturePadDrawingLimit: 'Joonistamise piirang on saavutatud.',
   localePickerInputLimit: 'Saadaval on ainult esimesed 512 lokaadikirjet.',
   emojiPickerInputLimit: 'Osa emotikonide andmeid jäeti välja, kuna sisendi piirang sai täis.',
 };

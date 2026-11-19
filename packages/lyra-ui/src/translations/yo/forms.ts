@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Yan ó kéré tán àṣàyàn kan.',
   tokenInputRequired: 'Tẹ ó kéré tán iye kan sí i.',
   tokenInputEditWithContext: 'Ṣàtúnṣe {label}',
+  tokenInputLabel: 'Àwọn àmì',
   iconButtonLabel: 'Bọ́tìnì',
   codeEditorLabel: 'Olóòtú kóòdù',
   switchRequired: 'Jọ̀wọ́ tan èyí sí i.',
@@ -112,6 +113,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Ìkọ̀wé wà nísàlẹ̀',
   signaturePadPenUp: 'Ìkọ̀wé wà lókè',
+  signaturePadDrawingLimit: 'A ti dé ààlà yíya.',
   localePickerInputLimit: 'Àwọn àkọsílẹ̀ èdè àti agbègbè 512 àkọ́kọ́ nìkan ló wà.',
   emojiPickerInputLimit: 'A fi díẹ̀ lára dátà emoji sílẹ̀ nítorí pé a ti dé ààlà ìwọlé.',
 };

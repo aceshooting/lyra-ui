@@ -136,6 +136,8 @@ export const styles = css`
     grid-template-columns: minmax(0, 1fr);
     gap: var(--lr-space-s);
     min-inline-size: 0;
+  }
+  [part='error'] p, [part='empty'], [part$='-label'] {
     overflow-wrap: anywhere;
   }
   [part='body'][hidden] {

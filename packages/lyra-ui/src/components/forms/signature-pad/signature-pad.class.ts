@@ -1,3 +1,6 @@
+import { sizes } from '../../../internal/sizes.styles.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -25,7 +28,7 @@ import { styles } from './signature-pad.styles.js';
 import { SIGNATURE_PAD_MAX_STROKES, SIGNATURE_PAD_MAX_POINTS } from './signature-pad-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_signaturePad, LYRA_DEFAULT_signaturePadEmpty, LYRA_DEFAULT_signaturePadInstructions, LYRA_DEFAULT_signaturePadLabel, LYRA_DEFAULT_signaturePadPenDown, LYRA_DEFAULT_signaturePadPenUp, LYRA_DEFAULT_signaturePadSigned } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_signaturePad, LYRA_DEFAULT_signaturePadDrawingLimit, LYRA_DEFAULT_signaturePadEmpty, LYRA_DEFAULT_signaturePadInstructions, LYRA_DEFAULT_signaturePadLabel, LYRA_DEFAULT_signaturePadPenDown, LYRA_DEFAULT_signaturePadPenUp, LYRA_DEFAULT_signaturePadSigned } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -38,6 +41,7 @@ export type SignatureStroke = ReadonlyArray<readonly [number, number]>;
 export interface LyraSignaturePadEventMap {
   change: Event;
   'lr-change': CustomEvent<null>;
+  'lr-clear': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 
@@ -64,10 +68,16 @@ function normalizeStrokes(input: unknown): readonly SignatureStroke[] {
   }, SIGNATURE_PAD_MAX_STROKES, EMPTY);
 }
 
+const strokePathData = new WeakMap<SignatureStroke, string>();
+
 /** A polyline ending on a zero-length segment, so a single point still draws a round dot. */
 function pathData(stroke: SignatureStroke): string {
+  const cached = strokePathData.get(stroke);
+  if (cached !== undefined) return cached;
   const points = stroke.map(([x, y]) => `${x} ${y}`);
-  return `M${points.join('L')}L${points[points.length - 1]}`;
+  const path = `M${points.join('L')}L${points[points.length - 1]}`;
+  strokePathData.set(stroke, path);
+  return path;
 }
 
 /**
@@ -86,6 +96,7 @@ function pathData(stroke: SignatureStroke): string {
  * @customElement lr-signature-pad
  * @event change - Native event fired when the user finishes a stroke or clears the pad.
  * @event lr-change - Fired with every `change`. Programmatic changes fire neither.
+ * @event lr-clear - Fired after the change pair when the clear button empties the pad.
  * @event lr-invalid - The pad failed a validity check. Cancelable: `preventDefault()` also cancels the
  * native `invalid` event behind it.
  * @slot label - Rich label content, after the `label` text.
@@ -127,6 +138,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     signaturePad: LYRA_DEFAULT_signaturePad,
     signaturePadEmpty: LYRA_DEFAULT_signaturePadEmpty,
+    signaturePadDrawingLimit: LYRA_DEFAULT_signaturePadDrawingLimit,
     signaturePadInstructions: LYRA_DEFAULT_signaturePadInstructions,
     signaturePadLabel: LYRA_DEFAULT_signaturePadLabel,
     signaturePadPenDown: LYRA_DEFAULT_signaturePadPenDown,
@@ -136,7 +148,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   static override properties = {
     name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     required: { type: Boolean, reflect: true, noAccessor: true },
@@ -161,11 +173,14 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   private _name = '';
   private _required = false;
   private _disabled = false;
+  private _readonly = false;
   private fieldsetDisabled = false;
   private hasInteracted = false;
   private _strokes = EMPTY;
   private dataUrl?: string;
   private active?: Point[];
+  private activePath: SVGPathElement | null = null;
+  private activePathData = '';
   private pointerId?: number;
   private rect?: DOMRect;
   /** Last measured width-to-height ratio of the surface. */
@@ -203,6 +218,21 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     this.toggleAttribute('required', this._required);
     this.updateValidity();
     this.requestUpdate('required', old);
+  }
+
+  /**
+   * Blocks user drawing and clearing while retaining focus and form submission.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true })
+  get readonly(): boolean {
+    return this._readonly;
+  }
+  set readonly(value: boolean) {
+    const previous = this._readonly;
+    this._readonly = Boolean(value);
+    if (this._readonly && this.active) this.cancelStroke();
+    this.requestUpdate('readonly', previous);
   }
 
   /** Blocks drawing and clearing and removes the surface from the tab order. */
@@ -299,6 +329,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
+    this.activePath = this.renderRoot.querySelector<SVGPathElement>('path.active');
     const surface = this.surface;
     if (surface) this.surfaceObserver.observe(surface);
   }
@@ -419,20 +450,37 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     return canvas.toDataURL();
   }
 
+  private announceDrawingLimit(): void {
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.sink.announce(this.localize('signaturePadDrawingLimit'));
+  }
+
   private begin(point: Point): boolean {
-    if (this._strokes.length >= SIGNATURE_PAD_MAX_STROKES) return false;
+    if (this._strokes.length >= SIGNATURE_PAD_MAX_STROKES) {
+      this.announceDrawingLimit();
+      return false;
+    }
+    this.pointLimitAnnounced = false;
     this.active = [point];
-    this.paintActive();
+    this.writeActivePath('M', point);
     return true;
   }
+
+  private pointLimitAnnounced = false;
 
   private extend(point: Point): void {
     const stroke = this.active;
     const last = stroke?.[stroke.length - 1];
-    if (!stroke || !last || stroke.length >= SIGNATURE_PAD_MAX_POINTS) return;
-    if (Math.hypot(point[0] - last[0], point[1] - last[1]) < MIN_DISTANCE) return;
+    if (!stroke || !last || Math.hypot(point[0] - last[0], point[1] - last[1]) < MIN_DISTANCE) return;
+    if (stroke.length >= SIGNATURE_PAD_MAX_POINTS) {
+      if (!this.pointLimitAnnounced) {
+        this.pointLimitAnnounced = true;
+        this.announceDrawingLimit();
+      }
+      return;
+    }
     stroke.push(point);
-    this.paintActive();
+    this.writeActivePath('L', point);
   }
 
   private commit(): void {
@@ -445,14 +493,14 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   private cancelStroke(): void {
     this.active = this.pointerId = undefined;
     this.penDown = false;
-    this.paintActive();
+    this.activePathData = '';
+    this.activePath?.removeAttribute('d');
   }
 
-  /** Paints the stroke in progress directly, so drawing never re-renders the pad. */
-  private paintActive(): void {
-    const path = this.renderRoot?.querySelector('.active');
-    if (this.active) path?.setAttribute('d', pathData(this.active));
-    else path?.removeAttribute('d');
+  private writeActivePath(command: 'M' | 'L', [x, y]: Point): void {
+    const point = `${x} ${y}`;
+    this.activePathData += `${command}${point}`;
+    this.activePath?.setAttribute('d', `${this.activePathData}L${point}`);
   }
 
   private userChange(): void {
@@ -462,7 +510,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   }
 
   private onPointerDown(event: PointerEvent): void {
-    if (this.inactive || this.active || !event.isPrimary || event.button !== 0) return;
+    if (this.inactive || this.readonly || this.active || !event.isPrimary || event.button !== 0) return;
     const surface = event.currentTarget as HTMLElement;
     const rect = (this.rect = surface.getBoundingClientRect());
     if (!rect.width || !rect.height || !this.begin(this.point(event))) return;
@@ -490,7 +538,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
-    if (this.inactive || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (this.inactive || this.readonly || event.altKey || event.ctrlKey || event.metaKey) return;
     const step = event.shiftKey ? 0.1 : 0.01;
     const [x, y] = this.cursor;
     const moves: Record<string, [number, number] | undefined> = {
@@ -534,16 +582,25 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   }
 
   private onClear(): void {
+    if (this.inactive || this.readonly || this._strokes.length === 0) return;
     this.applyStrokes(EMPTY);
     this.userChange();
+    this.emit('lr-clear');
     this.surface?.focus();
   }
 
   override render(): TemplateResult {
-    const hasLabel = !!this.label || this.slots.has('label');
-    const hasHint = !!this.hint || this.slots.has('hint');
-    const hasError = !!this.errorText || this.slots.has('error');
-    const hostLabel = this.getAttribute('aria-label');
+    const hasLabel = Boolean(normalizeLabel(this.label)) || this.slots.has('label');
+    const supporting = {
+      presence: { has: (name: string) => name !== 'help-text' && this.slots.has(name) },
+      idPrefix: 'signature',
+      hint: this.hint,
+      errorText: this.errorText,
+      extraDescribedBy: ['instructions', 'status'],
+    };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
+    const authored = this.getAttribute('aria-label');
+    const hostLabel = authored === '' ? '' : normalizeLabel(authored);
     const count = this._strokes.length;
     const [x, y] = this.cursor;
     return html`
@@ -557,8 +614,8 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
             tabindex=${this.inactive ? nothing : 0}
             aria-roledescription=${this.localize('signaturePad')}
             aria-label=${hostLabel ?? (hasLabel ? nothing : this.localize('signaturePadLabel'))}
-            aria-labelledby=${hostLabel === null && hasLabel ? 'label' : nothing}
-            aria-describedby=${[hasError && 'error', hasHint && 'hint', 'instructions', 'status'].filter(Boolean).join(' ')}
+            aria-labelledby=${hostLabel === undefined && hasLabel ? 'label' : nothing}
+            aria-describedby=${describedBy}
             aria-disabled=${this.inactive ? 'true' : 'false'}
             aria-invalid=${hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
             @pointerdown=${this.onPointerDown}
@@ -579,10 +636,9 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
               style=${styleMap({ left: `${x * 100}%`, top: `${y * 100}%` })}
             ></span>
           </div>
-          <button part="clear-button" type="button" ?disabled=${this.inactive || !count} @click=${this.onClear}>${this.localize('clear')}</button>
+          <button part="clear-button" type="button" ?disabled=${this.inactive || this.readonly || !count} @click=${this.onClear}>${this.localize('clear')}</button>
         </div>
-        <div id="error" part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error"></slot></div>
-        <div id="hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint"></slot></div>
+        ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
         <span id="instructions" hidden>${this.localize('signaturePadInstructions')}</span>
         <span id="status" hidden>${count
           ? this.localize('signaturePadSigned', undefined, { count })

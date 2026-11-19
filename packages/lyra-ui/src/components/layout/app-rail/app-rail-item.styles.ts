@@ -1,5 +1,8 @@
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 
 export const styles = css`
@@ -67,6 +70,18 @@ export const styles = css`
   [part="base"]:not([aria-disabled="true"]):hover {
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
+  }
+  /* The current row paints the same brand-quiet fill hover does, so hover steps one mix tier past
+     the current fill instead of repainting it unchanged. */
+  [part="base"][aria-current="page"]:not([aria-disabled="true"]):hover:not(:active) {
+    background: var(
+      --lr-app-rail-item-current-hover-bg,
+      color-mix(
+        in oklab,
+        var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
+    );
   }
   /* Pressed travels further along hover's own axis: the same brand-quiet fill mixed toward
      --lr-color-mix-partner, which follows the text colour, so it deepens on a light theme and
@@ -155,15 +170,7 @@ export const styles = css`
     white-space: nowrap;
   }
   :host([icon-only]) [part="label"] {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    padding: 0;
-    margin: var(--lr-size-neg-1px);
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    ${visuallyHidden}
   }
   :host([icon-only]) [part="base"] {
     justify-content: center;
@@ -309,14 +316,14 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-text);
-    color: var(--lr-color-surface);
+    ${overlaySurface}
+    color: var(--lr-color-text);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     font-size: var(--lr-font-size-sm);
     box-sizing: border-box;
     max-inline-size: var(
       --lr-positioner-available-inline-size,
-      calc(100vw - 2 * var(--lr-space-s))
+      var(--lr-popover-viewport-clamp, calc(100vw - 2 * var(--lr-space-s)))
     );
     overflow-wrap: anywhere;
     white-space: normal;
@@ -326,4 +333,5 @@ export const styles = css`
   :host([icon-only]) [part="children"] {
     display: none;
   }
+  ${forcedColorsPart('[part="base"][aria-current="page"]')}
 `;

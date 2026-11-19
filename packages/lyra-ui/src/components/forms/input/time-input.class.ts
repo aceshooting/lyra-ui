@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -413,8 +415,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @state() private touched = false;
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private get hasStartSlot(): boolean { return this.slotPresence.has('start'); }
   private get hasEndSlot(): boolean { return this.slotPresence.has('end'); }
   private get hasFooterSlot(): boolean { return this.slotPresence.has('footer'); }
@@ -463,8 +463,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private pickerGridMilliseconds: number[] = [];
   private inputId = nextId('time-input');
   private labelId = nextId('time-input-label');
-  private hintId = nextId('time-input-hint');
-  private errorId = nextId('time-input-error');
+  private readonly supportingId = nextId('time');
   private requiredDescriptionId = nextId('time-input-required');
   private popupId = nextId('time-input-popup');
   private readonly hostDescription = new HostDescriptionController(
@@ -861,7 +860,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.syncComponentStates();
     dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
     this.emit('lr-input', { value: this.value });
-    if (next !== '' && next !== before) {
+    if (next !== before) {
       dispatchNativeEvent(this, 'change');
       this.emit('lr-change', { value: this.value });
     }
@@ -1587,13 +1586,21 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override render(): TemplateResult {
-    const hasLabel = this.withLabel || (this.label ?? '').length > 0 || this.hasLabelSlot;
-    const hasHint = this.withHint || (this.hint ?? '').length > 0 || this.hasHintSlot;
-    const hasError = this.hasErrorSlot || Boolean(this.errorText);
-    const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
+    const visibleName = normalizeLabel(this.label);
+    const hasNamedLabel = Boolean(visibleName) || this.hasLabelSlot;
+    const hasLabel = hasNamedLabel || this.withLabel;
+    const supporting = {
+      presence: { has: (name: string) => name !== 'help-text' && this.slotPresence.has(name) },
+      idPrefix: this.supportingId,
+      hint: this.hint,
+      errorText: this.errorText,
+      withHint: this.withHint,
+    };
+    const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
     const invalid = hasError || (this.touched && !this.validity.valid);
-    const hostAccessibleName = this.getAttribute('aria-label');
-    const accessibleName = hostAccessibleName ?? (this.label || this.localize('timeInputLabel'));
+    const authored = this.getAttribute('aria-label');
+    const hostAccessibleName = authored === '' ? '' : normalizeLabel(authored);
+    const accessibleName = hostAccessibleName ?? visibleName ?? this.localize('timeInputLabel');
     const showClear = (this.clearable || this.withClear) && (this.value !== '' || this.draftHasAny);
     const nativeStep = this.step === 'any' ? 'any' : String(this.step);
 
@@ -1610,8 +1617,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             id=${this.inputId}
             part="input"
             role="group"
-            aria-label=${hostAccessibleName !== null || !hasLabel ? accessibleName : nothing}
-            aria-labelledby=${hostAccessibleName === null && hasLabel ? this.labelId : nothing}
+            aria-label=${hostAccessibleName !== undefined || !hasNamedLabel ? accessibleName : nothing}
+            aria-labelledby=${hostAccessibleName === undefined && hasNamedLabel ? this.labelId : nothing}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${String(invalid)}
           >${this.pattern.map((part) => this.renderPatternPart(part, invalid))}</div>
@@ -1662,12 +1669,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
                 >${this.localize('timeInputNow')}</button>`
               : html`<slot name="footer"></slot>`}
         </div>
-        <div id=${this.errorId} part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint"></slot>
-        </div>
+        ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
         <span
           id=${this.requiredDescriptionId}
           class="sr-only"

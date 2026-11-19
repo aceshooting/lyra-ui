@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Seleccioneu almenys una opció.',
   tokenInputRequired: 'Introduïu almenys un valor.',
   tokenInputEditWithContext: 'Edita {label}',
+  tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Botó',
   codeEditorLabel: 'Editor de codi',
   switchRequired: 'Activeu aquesta opció.',
@@ -118,6 +119,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Llapis avall',
   signaturePadPenUp: 'Llapis amunt',
+  signaturePadDrawingLimit: 'S’ha arribat al límit de dibuix.',
   localePickerInputLimit: 'Només hi ha disponibles les primeres 512 entrades de configuració regional.',
   emojiPickerInputLimit: 'S’han omès algunes dades d’emojis perquè s’ha arribat a un límit d’entrada.',
 };

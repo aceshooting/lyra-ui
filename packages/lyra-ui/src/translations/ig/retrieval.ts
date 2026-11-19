@@ -113,6 +113,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Ụzọ',
   pathNodeStatus: '{label}, ọnụ {position} n’ime {total}',
   pathRelationStatus: '{relation}, mmekọrịta',
+  pathRelationForward: 'e duuru gaa ọnụ na-esote',
+  pathRelationReverse: 'e duuru gaa ọnụ gara aga',
   neighborListLabel: 'Mmekọrịta',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Mụbaa {label} n’eserese',

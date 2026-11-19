@@ -1865,11 +1865,12 @@ it('uses the editor as the only 200px scrollport for a 4,883-character source in
       );
     }
 
-    editor.scrollPosition({ top: 0, left: 0 });
+    editor.scrollPosition({ top: 0, left: direction === 'rtl' ? -frame.scrollWidth : 0 });
+    const initialCaretScroll = frame.scrollLeft;
     textarea.setSelectionRange(4_803, 4_803);
     textarea.focus();
     await waitUntil(
-      () => Math.abs(frame.scrollLeft) > 1,
+      () => Math.abs(frame.scrollLeft - initialCaretScroll) > 1,
       `${direction} moving the native caret to the long-line end scrolls the editor frame`,
     );
 

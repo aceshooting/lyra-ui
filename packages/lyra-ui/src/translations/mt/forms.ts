@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Agħżel mill-inqas għażla waħda.',
   tokenInputRequired: 'Daħħal mill-inqas valur wieħed.',
   tokenInputEditWithContext: 'Editja {label}',
+  tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Buttuna',
   codeEditorLabel: 'Editur tal-kodiċi',
   switchRequired: 'Jekk jogħġbok ixgħel dan.',
@@ -124,6 +125,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pinna ’l isfel',
   signaturePadPenUp: 'Pinna ’l fuq',
+  signaturePadDrawingLimit: 'Intlaħaq il-limitu tat-tpinġija.',
   localePickerInputLimit: 'Huma disponibbli biss l-ewwel 512 entrata tal-lokal.',
   emojiPickerInputLimit: 'Parti mid-data tal-emoji tħalliet barra għax intlaħaq limitu tal-input.',
 };

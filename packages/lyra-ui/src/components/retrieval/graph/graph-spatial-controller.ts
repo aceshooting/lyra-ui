@@ -1,3 +1,8 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { readCanvasRgba } from '../../../internal/canvas-color.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { admitGraphNodeRenderer, GraphNodeRendererError, type LyraGraphNodeMesh, type LyraGraphNodeRenderer, type LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 import { yieldViewerTask } from '../../../internal/resource-loader.js';
 import { composedParentElement, isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
@@ -28,7 +33,7 @@ function selectedIds(ids: readonly string[]): ReadonlySet<string> {
   return result;
 }
 
-interface GraphSpatialHost extends Pick<HTMLElement, 'isConnected' | 'ownerDocument' | 'shadowRoot' | 'getBoundingClientRect'> {
+interface GraphSpatialHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly accessibleLabel: string | null;
   readonly label: string | null;
@@ -131,7 +136,6 @@ export class GraphSpatialController {
   private columns?: GraphEngineColumns;
   private columnScene?: GraphEngineColumnScene;
   private rgbaCache = new Map<string, readonly [number, number, number, number]>();
-  private rgbaContext?: CanvasRenderingContext2D;
   private world: SpatialWorldNode[] = [];
   private edges: readonly LyraGraphEdge[] = [];
   private items: ListItem[] = [];
@@ -148,9 +152,7 @@ export class GraphSpatialController {
   private canvas?: HTMLCanvasElement;
   private context?: CanvasRenderingContext2D;
   private builtin?: GraphBuiltin3dEngine;
-  private hoverFrame?: number;
-  private hoverFrameWindow?: Window;
-  private hoverGeneration = 0;
+  private readonly hoverFrame: OwnedFrame;
   private pendingHover?: { x: number; y: number };
 
   private paint?: GraphBuiltin3dPaint;
@@ -160,8 +162,7 @@ export class GraphSpatialController {
   private visible = true;
   /** False between observing a surface and its first intersection report. */
   private visibilityReported = true;
-  private frame?: number;
-  private frameWindow?: Window;
+  private readonly frame: OwnedFrame;
   private notifyCamera = false;
   private contextFailed = false;
   private page = 0;
@@ -171,7 +172,11 @@ export class GraphSpatialController {
   private lastKeyActivation?: { readonly id: string; readonly time: number };
   private readonly instructionsId = nextId('graph-spatial-instructions');
 
-  constructor(private readonly host: GraphSpatialHost, private readonly options: GraphSpatialOptions) { this.adapter = new GraphEngineAdapter(options.engineServices); }
+  constructor(private readonly host: GraphSpatialHost, private readonly options: GraphSpatialOptions) {
+    this.adapter = new GraphEngineAdapter(options.engineServices);
+    this.frame = new OwnedFrame(host);
+    this.hoverFrame = new OwnedFrame(host);
+  }
 
   private get itemCount(): number { return this.columnScene?.itemCount ?? this.items.length; }
   private columnItem(index: number): ListItem | undefined {
@@ -282,6 +287,11 @@ export class GraphSpatialController {
       this.enginePending = false; this.engine = engine ?? undefined;
       if (engine) { this.observeMountedEligibility(surface); const canvas = surface.querySelector('canvas:not([data-graph-labels])'); canvas?.setAttribute('aria-hidden', 'true'); this.drawEngine(true); }
       this.options.repaint();
+    }).catch(() => {
+      if (!current() || this.engineSurface !== surface) return;
+      this.closeEngine();
+      this.failEngine('error');
+      this.options.repaint();
     });
   }
   private spatialEligible(): boolean {
@@ -325,11 +335,10 @@ export class GraphSpatialController {
 
   private rgba(value: string): readonly [number, number, number, number] {
     const previous = this.rgbaCache.get(value); if (previous) return previous;
-    if (!this.rgbaContext) { const canvas = this.host.ownerDocument.createElement('canvas'); canvas.width = canvas.height = 1; this.rgbaContext = canvas.getContext('2d', { willReadFrequently: true }) ?? undefined; }
-    const ctx = this.rgbaContext; if (!ctx) throw new Error('Color canvas unavailable');
-    ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = '#000000'; ctx.fillStyle = value; ctx.fillRect(0, 0, 1, 1);
-    const [r = 0, g = 0, b = 0, a = 255] = ctx.getImageData(0, 0, 1, 1).data;
-    const result = [r / 255, g / 255, b / 255, a / 255] as const; this.rgbaCache.set(value, result); return result;
+    const color = readCanvasRgba(this.host.ownerDocument, value);
+    if (!color) throw new Error('Unavailable graph color');
+    const [r, g, b, a] = color;
+    const result = [r / 255, g / 255, b / 255, a] as const; this.rgbaCache.set(value, result); return result;
   }
   private engineState() {
     const nodes = this.columnScene?.data.nodeCount ?? this.world.length;
@@ -564,7 +573,7 @@ export class GraphSpatialController {
         ...this.edges.map((edge): ListItem => ({ kind: 'link', edge })),
         ...communities.map((community): ListItem => ({ kind: 'community', community })),
       ];
-      const focused = this.host.shadowRoot?.activeElement;
+      const focused = activeElementIn(this.host.shadowRoot);
       if (focused?.getAttribute('part') === 'spatial-list-item') {
         const id = focused.getAttribute('data-node-id');
         if (id && !this.worldById.has(id)) this.focusAfterViewChange = true;
@@ -656,9 +665,7 @@ export class GraphSpatialController {
     this.cancelHover();
     this.builtin?.dispose(); this.builtin = undefined;
     this.cancelGesture();
-    if (this.frame !== undefined) this.frameWindow?.cancelAnimationFrame(this.frame);
-    this.frame = undefined;
-    this.frameWindow = undefined;
+    this.frame.cancel();
     this.notifyCamera = false;
     this.lastKeyActivation = undefined;
     this.resize?.disconnect(); this.resize = undefined;
@@ -797,13 +804,8 @@ export class GraphSpatialController {
   }
 
   private schedule(): void {
-    if (!this.host.isConnected || this.host.view === '2d' || this.frame !== undefined || (!this.visible && !this.notifyCamera)) return;
-    const view = this.host.ownerDocument.defaultView as (Window & typeof globalThis) | null;
-    if (!view) return;
-    this.frameWindow = view;
-    this.frame = view.requestAnimationFrame(() => {
-      this.frame = undefined;
-      this.frameWindow = undefined;
+    if (!this.host.isConnected || this.host.view === '2d' || this.frame.pending || (!this.visible && !this.notifyCamera)) return;
+    this.frame.schedule(() => {
       if (!this.host.isConnected || this.host.view === '2d') return;
       if (this.visible) this.draw();
       if (this.notifyCamera) {
@@ -836,24 +838,14 @@ export class GraphSpatialController {
   }
 
   private cancelHover(): void {
-    this.hoverGeneration++;
-    if (this.hoverFrame !== undefined) this.hoverFrameWindow?.cancelAnimationFrame(this.hoverFrame);
-    this.hoverFrame = undefined;
-    this.hoverFrameWindow = undefined;
+    this.hoverFrame.cancel();
     this.pendingHover = undefined;
   }
 
   private queueHover(x: number, y: number): void {
     this.pendingHover = { x, y };
-    if (this.hoverFrame !== undefined) return;
-    const view = this.host.ownerDocument.defaultView;
-    if (!view) return;
-    const generation = this.hoverGeneration;
-    this.hoverFrameWindow = view;
-    this.hoverFrame = view.requestAnimationFrame(() => {
-      if (generation !== this.hoverGeneration) return;
-      this.hoverFrame = undefined;
-      this.hoverFrameWindow = undefined;
+    if (this.hoverFrame.pending) return;
+    this.hoverFrame.schedule(() => {
       const point = this.pendingHover;
       this.pendingHover = undefined;
       if (point && this.host.isConnected && this.host.view === '3d' && !this.gesture)
@@ -877,7 +869,7 @@ export class GraphSpatialController {
   private cancelGesture(): void {
     const gesture = this.gesture;
     this.gesture = undefined;
-    if (gesture && this.canvas?.hasPointerCapture(gesture.id)) this.canvas.releasePointerCapture(gesture.id);
+    if (gesture && this.canvas) releasePointer(this.canvas, gesture.id);
   }
 
   private readonly enginePointerDown = { capture: true, handleEvent: () => { this.engineSurface?.focus(); } };
@@ -888,7 +880,7 @@ export class GraphSpatialController {
     this.cancelHover();
     this.canvas?.focus();
     this.gesture = { id: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moved: false, pan: event.shiftKey };
-    try { this.canvas?.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers need no capture. */ }
+    if (this.canvas) capturePointer(this.canvas, event.pointerId);
     this.setHover(undefined);
   };
   private readonly pointerMove = (event: PointerEvent): void => {
@@ -914,12 +906,13 @@ export class GraphSpatialController {
   };
   private readonly pointerCancel = (event: PointerEvent): void => { this.cancelHover(); if (event.pointerId === this.gesture?.id) this.cancelGesture(); };
   private readonly wheel = (event: WheelEvent): void => {
-    if (this.selection.renderer === 'webgl') { if (this.host.shadowRoot?.activeElement !== this.engineSurface) return; event.preventDefault(); this.zoom(Math.exp(-finiteRange(event.deltaY, 0, -300, 300) * 0.002)); return; }
-    if (this.host.shadowRoot?.activeElement !== this.canvas && !this.gesture) return;
+    const focused = activeElementIn(this.host.shadowRoot);
+    if (this.selection.renderer === 'webgl' ? focused !== this.engineSurface : focused !== this.canvas && !this.gesture) return;
     event.preventDefault();
     this.zoom(Math.exp(-finiteRange(event.deltaY, 0, -300, 300) * 0.002));
   };
   private readonly keyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const direction = this.options.direction() === 'rtl' ? -1 : 1;
     const dx = event.key === 'ArrowRight' ? direction : event.key === 'ArrowLeft' ? -direction : 0;
     const dy = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
@@ -990,7 +983,7 @@ export class GraphSpatialController {
       ${this.contextFailed ? html`<p part="error">${messages['unavailable']}</p>` : nothing}
       ${this.fallback ? html`<p part="engine-notice">${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).reason)} ${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).showing)}</p>` : nothing}
       ${this.enginePending ? html`<p part="loading">${this.options.engineMessage?.('engine3dLoading')}</p>` : nothing}
-      ${this.host.view === '3d' && this.preference === 'webgl' ? html`<div data-webgl-host part="spatial-canvas" class="webgl-surface" ?hidden=${this.selection.renderer !== 'webgl'} tabindex="0" role="img"
+      ${this.host.view === '3d' && this.preference === 'webgl' ? html`<div data-webgl-host part="spatial-canvas" class="webgl-surface" ?hidden=${this.selection.renderer !== 'webgl'} tabindex="0" role="application" aria-roledescription=${messages['view3d']}
         aria-label=${this.host.accessibleLabel ?? this.host.label ?? messages['view3d']} aria-describedby=${this.instructionsId} @keydown=${this.keyDown} @wheel=${this.wheel} @pointermove=${this.enginePointerMove}
         @pointerdown=${this.enginePointerDown}><canvas data-graph-labels aria-hidden="true"></canvas></div>` : nothing}
       ${list ? html`<div part="spatial-list" tabindex="-1" @keydown=${(event: KeyboardEvent) => { if (event.key === 'Escape') this.options.clearSelection(); }}>
@@ -1013,7 +1006,7 @@ export class GraphSpatialController {
           <button type="button" part="spatial-control" data-spatial-action="next" ?disabled=${(this.page + 1) * PAGE_SIZE >= this.itemCount} @click=${() => this.changePage(1)}>${messages['next']}</button>
         </div>
       </div>` : html`<p part="spatial-instructions" id=${this.instructionsId}>${messages['instructions']}</p>
-        ${this.selection.renderer !== 'webgl' ? html`<canvas part="spatial-canvas" tabindex="0" role="img" aria-label=${this.host.accessibleLabel ?? this.host.label ?? messages['view3d']}
+        ${this.selection.renderer !== 'webgl' ? html`<canvas part="spatial-canvas" tabindex="0" role="application" aria-roledescription=${messages['view3d']} aria-label=${this.host.accessibleLabel ?? this.host.label ?? messages['view3d']}
           aria-describedby=${this.instructionsId} @pointerdown=${this.pointerDown} @pointermove=${this.pointerMove} @pointerup=${this.pointerUp}
           @pointercancel=${this.pointerCancel} @lostpointercapture=${this.pointerCancel} @pointerleave=${() => { if (!this.gesture) { this.cancelHover(); this.setHover(undefined); } }}
           @wheel=${this.wheel} @keydown=${this.keyDown} @dblclick=${(event: MouseEvent) => { const hit = this.hit(event.clientX, event.clientY); if (hit?.kind === 'node') this.options.expand(hit.id); }}

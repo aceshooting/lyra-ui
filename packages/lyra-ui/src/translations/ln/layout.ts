@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Longola navigation',
   appRailItemCollapse: 'Kitisá {label}',
   appRailItemExpand: 'Kolisá {label}',
+  appRailItemToggle: 'Lakisa to bomba {label}',
+  appRailGroupToggle: 'Etuluku ya navigation',
   resizeValuePercent: '{value} pourcent',
   commandPaletteLabel: 'Palette ya commande',
   commandPalettePlaceholder: 'Luka ba commande…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} etinda',
     other: '{count} mitindo',
   },
+  tabCloseAction: 'Kanga {label}',
+  stepperStateCompleted: 'Esili',
+  stepperStateError: 'Libunga',
+  stepperStatePending: 'Ebandaki naino te',
+  stepperStateLocked: 'Ekangami',
   commandPaletteInputLimit: 'Balongoli ndambo ya mitindo mpo motango ya kokɔtisa ekómi na ndelo.',
 };
 

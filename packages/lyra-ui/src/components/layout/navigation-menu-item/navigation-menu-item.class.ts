@@ -89,6 +89,7 @@ const SHOW_OFFSET = 'translateY(var(--lr-size-neg-0-25rem))';
  * @slot panel - Flyout content for a disclosure trigger, such as a list of links. Ignored for a
  *   link item.
  * @slot expand-icon - Replaces the caret glyph. The wrapper is inert and `aria-hidden`.
+ * A listener handling only this disclosure can filter on `event.target === event.currentTarget`.
  * @event lr-toggle - An accepted open-state change rendered. Not cancelable.
  *   `detail: { expanded: boolean, source: 'user' | 'programmatic' | 'peer' }`;
  *   `expanded` is the new state and `peer`

@@ -1803,3 +1803,26 @@ describe('lr-confirm-bar heading-level', () => {
     expect(heading(el).hasAttribute('aria-level')).to.equal(false);
   });
 });
+
+it('retires an in-flight waitUntil decision when the proposal is rebound before it settles', async () => {
+  const el = (await fixture(html`<lr-confirm-bar tool-name="first" .args=${{ a: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
+  let release!: () => void;
+  el.addEventListener('lr-approve-request', (event) => {
+    (event as CustomEvent<{ waitUntil(p: Promise<unknown>): void }>).detail.waitUntil(new Promise<void>((resolve) => { release = resolve; }));
+  });
+  let settled = 0;
+  el.addEventListener('lr-decision-settled', () => { settled++; });
+  el.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await el.updateComplete;
+  expect(el.pendingAction).to.equal('approve');
+
+  el.toolName = 'second';
+  await el.updateComplete;
+  expect(el.pendingAction, 'the new proposal starts undecided').to.equal(null);
+
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await el.updateComplete;
+  expect(el.decision, 'the stale save cannot decide the new proposal').to.equal(null);
+  expect(settled).to.equal(0);
+});

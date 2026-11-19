@@ -552,3 +552,38 @@ describe('lr-menubar name, type-ahead and top-layer', () => {
     });
   });
 });
+
+it('activates menu and menubar actions once per held key', async () => {
+  const bar = await sample();
+  const help = item(bar, 'help');
+  let clicks = 0;
+  help.addEventListener('click', () => { clicks++; });
+  for (const repeat of [false, true]) key(help, 'Enter', { repeat });
+  expect(clicks).to.equal(1);
+  const menu = await fixture(html`<lr-menu><lr-menu-item type="checkbox">Check</lr-menu-item></lr-menu>`);
+  const choice = menu.querySelector('lr-menu-item')!;
+  for (const repeat of [false, true]) key(choice, 'Enter', { repeat });
+  expect(choice.checked).to.equal(true);
+});
+
+it('reports the settled disclosure state on each menu owner', async () => {
+  const bar = await sample();
+  const file = item(bar, 'file');
+  const share = bar.querySelector<LyraMenuItem>('#share')!;
+  for (const [owner, open, close] of [
+    [file, () => file.openMenu('none'), () => file.closeMenu()],
+    [share, () => share.openSubmenu('none'), () => share.closeSubmenu()],
+  ] as const) {
+    const seen: string[] = [];
+    const record = (event: Event): void => {
+      if (event.target === owner) seen.push(event.type + '/' + owner.getAttribute('aria-expanded'));
+    };
+    owner.addEventListener('lr-show', record);
+    owner.addEventListener('lr-hide', record);
+    await file.openMenu('none');
+    await open();
+    await open();
+    await close();
+    expect(seen).to.deep.equal(['lr-show/true', 'lr-hide/false']);
+  }
+});

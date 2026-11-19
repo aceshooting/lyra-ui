@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Tacaíonn scéimrí paraiméadar uirlise le {fields} réimse ar a mhéad agus le {options} rogha ar a mhéad in aghaidh an réimse.',
   testResultsLimit: 'Ní thaispeántar ach an chéad {count} toradh tástála.',
   toolTimelineLimit: 'Taispeántar {count} glao uirlise ar a mhéad.',
+  toolTimelineLoadError: 'Níorbh fhéidir amharc na huirlise a lódáil.',
   toolSelectLimit: 'Ní thaispeántar ach an chéad {count} uirlis.',
   testResultsInputTooLarge: 'Sáraíonn sonraí na dtorthaí tástála an teorainn taispeána.',
   toolCall: 'Glao uirlise',

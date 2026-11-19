@@ -110,6 +110,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: '路径',
   pathNodeStatus: '{label}，第{position}个节点，共{total}个',
   pathRelationStatus: '{relation}，关系',
+  pathRelationForward: '指向下一个节点',
+  pathRelationReverse: '指向上一个节点',
   neighborListLabel: '关系',
   neighborRowLabel: '{label}，{relation}，{direction}',
   neighborExpand: '在图谱中展开{label}',

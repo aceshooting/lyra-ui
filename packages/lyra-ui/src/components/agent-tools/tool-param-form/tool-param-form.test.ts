@@ -156,7 +156,7 @@ it('marks a required nested lr-select through its composed control contract', as
   };
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const select = field(el, 'mode').querySelector('lr-select') as HTMLElement & { required: boolean };
-  expect(select.required).to.be.false;
+  expect(select.required).to.be.true;
   expect(select.getAttribute('aria-required')).to.equal('true');
 });
 
@@ -616,8 +616,8 @@ it('treats a required boolean as property presence, so false and true are both v
   const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { required: boolean };
   expect(
     booleanSelect.required,
-    'the outer schema validator owns presence rather than imposing nested select nonempty semantics',
-  ).to.be.false;
+    'the nested control announces and paints required while the outer schema validator stays authoritative',
+  ).to.be.true;
   expect(booleanSelect.getAttribute('aria-required')).to.equal('true');
   expect(el.checkValidity()).to.be.false;
 
@@ -1058,7 +1058,7 @@ it('supports primitive const so a must-confirm boolean is distinct from required
   expect(el.checkValidity()).to.be.false;
   await el.updateComplete;
   const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { required: boolean };
-  expect(booleanSelect.required).to.be.false;
+  expect(booleanSelect.required).to.be.true;
   expect(booleanSelect.getAttribute('aria-required')).to.equal('true');
 
   el.value = { confirm: true };
@@ -1617,7 +1617,7 @@ it('associates enum and boolean descriptions/errors without imposing must-check 
   const booleanSelect = field(el, 'confirm').querySelector('lr-select')!;
   expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error select-hint');
   expect(booleanSelect.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error select-hint');
-  expect((booleanSelect as HTMLElement & { required: boolean }).required).to.be.false;
+  expect((booleanSelect as HTMLElement & { required: boolean }).required).to.be.true;
   expect(booleanSelect.getAttribute('aria-required')).to.equal('true');
 });
 

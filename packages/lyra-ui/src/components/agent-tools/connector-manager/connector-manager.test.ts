@@ -221,3 +221,16 @@ it('leaves focus alone when the focused connector row is removed by the host', a
   expect(el.shadowRoot!.activeElement === rowPart(el, 'calendar', 'action')).to.equal(false);
   expect(el.shadowRoot!.querySelectorAll('[data-connector-id]').length).to.equal(3);
 });
+
+it('reuses admitted connector rows until the assigned collection changes', async () => {
+  const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${connectors}></lr-connector-manager>`);
+  const model = el as unknown as { readonly normalizedConnectors: AgentConnector[] };
+  const initial = model.normalizedConnectors;
+  el.label = 'Other connectors';
+  await el.updateComplete;
+  expect(model.normalizedConnectors === initial).to.equal(true);
+  el.connectors = connectors.slice(1);
+  await el.updateComplete;
+  expect(model.normalizedConnectors === initial).to.equal(false);
+  expect(model.normalizedConnectors.map(row => row.id)).to.deep.equal(connectors.slice(1).map(row => row.id));
+});

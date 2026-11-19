@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Rīku parametru shēmas atbalsta ne vairāk kā {fields} laukus un {options} izvēles katrā laukā.',
   testResultsLimit: 'Tiek rādīti tikai pirmie {count} testu rezultāti.',
   toolTimelineLimit: 'Tiek rādīti ne vairāk kā {count} rīku izsaukumi.',
+  toolTimelineLoadError: 'Neizdevās ielādēt rīka skatu.',
   toolSelectLimit: 'Tiek rādīti tikai pirmie {count} rīki.',
   testResultsInputTooLarge: 'Testu rezultātu informācija pārsniedz attēlošanas ierobežojumu.',
   toolCall: 'Rīka izsaukums',

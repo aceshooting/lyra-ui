@@ -781,7 +781,7 @@ it("binds its child observer to the adopted owner and rejects the retired callba
   interface ObserverRecord {
     callback: MutationCallback;
     disconnects: number;
-    instance: MutationObserver;
+    watchesDescriptors: boolean;
   }
   const el = (await fixture(basic())) as LyraTabGroup;
   await el.updateComplete;
@@ -795,10 +795,12 @@ it("binds its child observer to the adopted owner and rejects the retired callba
   class OwnerMutationObserver implements MutationObserver {
     private readonly record: ObserverRecord;
     constructor(callback: MutationCallback) {
-      this.record = { callback, disconnects: 0, instance: this };
+      this.record = { callback, disconnects: 0, watchesDescriptors: false };
       records.push(this.record);
     }
-    observe(): void {}
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target === el && options?.attributeFilter?.includes("panel")) this.record.watchesDescriptors = true;
+    }
     disconnect(): void {
       this.record.disconnects += 1;
     }
@@ -810,12 +812,7 @@ it("binds its child observer to the adopted owner and rejects the retired callba
 
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
-    const ownedInstance = (
-      el as unknown as { mutationObserver?: MutationObserver }
-    ).mutationObserver;
-    const adoptedObserver = records.find(
-      (record) => record.instance === ownedInstance
-    );
+    const adoptedObserver = records.find(record => record.watchesDescriptors);
     expect(
       adoptedObserver !== undefined,
       "the destination window constructs the child observer"

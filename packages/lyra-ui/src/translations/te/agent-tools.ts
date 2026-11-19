@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'టూల్ పరామితి స్కీమాల్లో గరిష్ఠంగా {fields} ఫీల్డ్‌లు, ఒక్కో ఫీల్డ్‌కు {options} ఎంపికలు ఉండవచ్చు.',
   testResultsLimit: 'మొదటి {count} పరీక్ష ఫలితాలను మాత్రమే చూపిస్తున్నారు.',
   toolTimelineLimit: 'గరిష్ఠంగా {count} టూల్ కాల్‌లను మాత్రమే చూపిస్తున్నారు.',
+  toolTimelineLoadError: 'టూల్ వీక్షణను లోడ్ చేయలేకపోయాము.',
   toolSelectLimit: 'మొదటి {count} టూల్‌లను మాత్రమే చూపిస్తున్నారు.',
   testResultsInputTooLarge: 'పరీక్ష ఫలితాల వివరాలు ప్రదర్శన పరిమితిని మించాయి.',
   toolCall: 'టూల్ కాల్',

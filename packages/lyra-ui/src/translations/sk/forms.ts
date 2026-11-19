@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Vyberte aspoň jednu možnosť.',
   tokenInputRequired: 'Zadajte aspoň jednu hodnotu.',
   tokenInputEditWithContext: 'Upraviť {label}',
+  tokenInputLabel: 'Tokeny',
   iconButtonLabel: 'Tlačidlo',
   codeEditorLabel: 'Editor kódu',
   switchRequired: 'Zapnite túto možnosť.',
@@ -121,6 +122,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pero spustené',
   signaturePadPenUp: 'Pero zdvihnuté',
+  signaturePadDrawingLimit: 'Dosiahol sa limit kreslenia.',
   localePickerInputLimit: 'K dispozícii je len prvých 512 jazykových položiek.',
   emojiPickerInputLimit: 'Časť údajov emoji bola vynechaná, pretože sa dosiahol limit vstupu.',
 };

@@ -110,6 +110,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'เส้นทาง',
   pathNodeStatus: '{label}, โหนด {position} จาก {total}',
   pathRelationStatus: '{relation}, ความสัมพันธ์',
+  pathRelationForward: 'ชี้ไปยังโหนดถัดไป',
+  pathRelationReverse: 'ชี้ไปยังโหนดก่อนหน้า',
   neighborListLabel: 'ความสัมพันธ์',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'ขยาย {label} ในกราฟ',

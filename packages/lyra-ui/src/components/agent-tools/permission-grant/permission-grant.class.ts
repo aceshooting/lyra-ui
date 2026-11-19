@@ -42,6 +42,9 @@ const DECISION_LABEL_KEY: Record<PermissionGrantDecision, string> = {
  * @event lr-permission-decision - A permission decision was requested. `detail: { requestId,
  *   decision }`. The host owns authorization and the controlled `status` value.
  * @csspart base - The fieldset and overall request group.
+ * @cssprop --lr-decision-legend-font-size - Font size of the decision panel legend.
+ * @cssprop --lr-decision-positive-color - Text color of a positive status.
+ * @cssprop --lr-decision-negative-color - Text color of a negative status.
  * @csspart legend - The visible request label.
  * @csspart description - The host-supplied request description.
  * @csspart scope-label - The localized scope label.
@@ -164,9 +167,9 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
         ${this.description ? html`<p part="description">${this.description}</p>` : nothing}
         <div part="scope-row">
           <span part="scope-label">${this.localize('permissionGrantScopeLabel')}</span>
-          <span part="scope">${this.scope}</span>
+          <span part="scope" dir="ltr">${this.scope}</span>
         </div>
-        <p part="status" tabindex="-1">${statusLabel}</p>
+        <p part="status" tabindex="-1" data-status=${status}>${statusLabel}</p>
         ${pending
           ? html`<div part="actions">
               ${(['allow-once', 'allow-session', 'deny'] as const).map((decision) => html`

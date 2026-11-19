@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware verb with a status glyph and an optional duration; expanding it reveals the arguments, then the error, then the result. `display-name` puts an application-translated tool label into that verb in place of `name`, and `status="incomplete"` marks a call that ended without a result. `redactedFields` masks dotted payload paths. `<lr-message-parts tool-display="block">` renders paired tool-call/tool-result parts through this element.',
+          'Toggle and render-error events include callId and invocationId. One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware verb with a status glyph and an optional duration; expanding it reveals the arguments, then the error, then the result. `display-name` puts an application-translated tool label into that verb in place of `name`, and `status="incomplete"` marks a call that ended without a result. `redactedFields` masks dotted payload paths. `<lr-message-parts tool-display="block">` renders paired tool-call/tool-result parts through this element.',
       },
     },
   },

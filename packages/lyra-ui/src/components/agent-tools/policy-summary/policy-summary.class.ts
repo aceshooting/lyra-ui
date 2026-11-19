@@ -1,3 +1,4 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -9,7 +10,7 @@ import '../../overlays/badge/badge.class.js';
 import '../../layout/details/details.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './policy-summary.styles.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryLimit, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -42,6 +43,10 @@ export interface PolicyDecision {
   detail?: string;
 }
 
+function admittedId(row: PolicyDecision): string | undefined {
+  return STATE_SET.has(row.state) && CATEGORY_SET.has(row.category) ? row.id : undefined;
+}
+
 /** `allow` -> success, `deny` -> danger, `needs-review` -> warning for the state badge. */
 const STATE_VARIANT: Record<PolicyDecisionState, BadgeVariant> = {
   allow: 'success',
@@ -55,7 +60,6 @@ const STATE_LABEL_KEY: Record<PolicyDecisionState, string> = {
   'needs-review': 'policySummaryStateNeedsReview',
 };
 
-const normalizedDecisionCache = new WeakMap<object, PolicyDecision[]>();
 
 const STATE_COUNT_KEY: Record<PolicyDecisionState, string> = {
   allow: 'policySummaryAllowCount',
@@ -109,9 +113,7 @@ const CATEGORY_SET = new Set<PolicyDecisionCategory>([
  * @csspart base - The root wrapper, only rendered while `decisions` is non-empty.
  * @csspart summary - The always-visible allow/deny/needs-review count row.
  * @csspart count - One state's localized count text; carries `data-state`.
- * @csspart list - The `role="list"` wrapper around every decision row. Its purpose-specific name
- *   is the localized `policySummaryLabel`; a host `aria-label` names the host and is not cloned
- *   onto this nested semantic owner.
+ * @csspart list - The `role="list"` wrapper around every decision row. A nonblank host aria-label overrides its localized name.
  * @csspart decision - One decision row (`role="listitem"`); carries `data-state` and `data-category`.
  * @csspart decision-header - The row's category/label/state-badge line.
  * @csspart category - The decision's localized category text.
@@ -177,20 +179,7 @@ export class LyraPolicySummary extends LyraElement {
   @property({ attribute: false }) decisions: readonly PolicyDecision[] = [];
 
   private get normalizedDecisions(): PolicyDecision[] {
-    const source = Array.isArray(this.decisions) ? this.decisions : [];
-    const cached = normalizedDecisionCache.get(source);
-    if (cached) return cached;
-    const decisions = source.filter((decision) => {
-      try {
-        return STATE_SET.has(decision.state) && CATEGORY_SET.has(decision.category);
-      } catch {
-        return false;
-      }
-    });
-    const normalized = firstByIdentity(decisions, (decision) => decision.id);
-    // Only a frozen owned snapshot can never change.
-    if (Object.isFrozen(source)) normalizedDecisionCache.set(source, normalized);
-    return normalized;
+    return firstByIdentityMemo(this.decisions, admittedId);
   }
 
 
@@ -244,7 +233,7 @@ export class LyraPolicySummary extends LyraElement {
         <div
           part="list"
           role="list"
-          aria-label=${this.localize('policySummaryLabel')}
+          aria-label=${resolveAccessibleName(this, this.localize('policySummaryLabel'))}
         >
           ${repeat(decisions.slice(0, MAX_RENDERED_DECISIONS), (decision) => decision.id, (decision) => this.renderDecision(decision))}
         </div>

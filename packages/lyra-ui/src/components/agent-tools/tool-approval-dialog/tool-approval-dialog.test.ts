@@ -1632,3 +1632,12 @@ it('joins the top layer above an already open lr-dialog instead of opening benea
   await el.updateComplete;
   expect(el.matches(':popover-open'), 'closing leaves the top layer').to.equal(false);
 });
+
+it('keeps the JSON args editor left-to-right inside a right-to-left dialog', async () => {
+  const el = (await fixture(
+    html`<lr-tool-approval-dialog dir="rtl" open tool-name="web_search" .args=${{ query: 'x' }}></lr-tool-approval-dialog>`,
+  )) as LyraToolApprovalDialog;
+  editButton(el).click();
+  await el.updateComplete;
+  expect(getComputedStyle(textarea(el)).direction).to.equal('ltr');
+});

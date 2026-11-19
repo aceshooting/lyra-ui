@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Parameterskjemaer for verktøy støtter maksimalt {fields} felt og {options} valg per felt.',
   testResultsLimit: 'Bare de første {count} testresultatene vises.',
   toolTimelineLimit: 'Maksimalt {count} verktøykall vises.',
+  toolTimelineLoadError: 'Kunne ikke laste inn verktøyvisningen.',
   toolSelectLimit: 'Bare de første {count} verktøyene vises.',
   testResultsInputTooLarge: 'Detaljene i testresultatene overskrider visningsgrensen.',
   toolCall: 'Verktøykall',

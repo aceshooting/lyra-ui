@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 
 export const styles = css`
   :host {
@@ -112,13 +113,7 @@ export const styles = css`
   /* The narrow rail has no room for a section title, but the group still has to keep its name:
      clipped out of layout, left in the accessibility tree, exactly as the item's own label is. */
   :host([icon-only]) [part="heading-text"] {
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    ${visuallyHidden}
   }
   :host([icon-only]) [part="toggle"] {
     justify-content: center;

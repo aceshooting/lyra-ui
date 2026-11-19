@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: '工具参数 schema 最多支持{fields}个字段，每个字段最多支持{options}个选项。',
   testResultsLimit: '仅显示前{count}个测试结果。',
   toolTimelineLimit: '最多显示{count}次工具调用。',
+  toolTimelineLoadError: '无法加载工具视图。',
   toolSelectLimit: '仅显示前{count}个工具。',
   testResultsInputTooLarge: '测试结果详情超出显示上限。',
   toolCall: '工具调用',

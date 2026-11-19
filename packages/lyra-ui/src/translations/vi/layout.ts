@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Bỏ ghim điều hướng',
   appRailItemCollapse: 'Thu gọn {label}',
   appRailItemExpand: 'Mở rộng {label}',
+  appRailItemToggle: 'Ẩn hoặc hiện {label}',
+  appRailGroupToggle: 'Nhóm điều hướng',
   resizeValuePercent: '{value} phần trăm',
   commandPaletteLabel: 'Bảng lệnh',
   commandPalettePlaceholder: 'Tìm lệnh…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} lệnh',
   },
+  tabCloseAction: 'Đóng {label}',
+  stepperStateCompleted: 'Đã hoàn tất',
+  stepperStateError: 'Lỗi',
+  stepperStatePending: 'Chưa bắt đầu',
+  stepperStateLocked: 'Đã khóa',
   commandPaletteInputLimit: 'Một số lệnh đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
 };
 

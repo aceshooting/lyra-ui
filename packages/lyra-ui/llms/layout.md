@@ -979,6 +979,8 @@ on the item itself.
 
 ## `lr-button-group`
 
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
+
 Responsive semantic grouping primitive for related action controls. It preserves the slotted
 controls and exposes `role="group"` on its internal wrapper.
 It holds no state and handles no keys; for a row of toggles with pressed state behind one tab stop,
@@ -1075,6 +1077,14 @@ including `lr-table`, `lr-virtual-list`, `lr-code-block`, and `lr-code-editor`.
 ---
 
 ## `lr-tab-group`
+
+Screen-reader users can activate the named close button for each closable tab after the tablist, including for an inactive tab. Keyboard users can press Delete on the focused tab.
+
+The `lr-tab` styling hooks include `--lr-tab-close-hover-bg`, `--lr-tab-close-active-bg`.
+
+A descriptor’s `aria-labelledby` or `aria-label` names its rendered tab. The default slot supplies the fallback name.
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
 
 A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
 
@@ -1336,6 +1346,10 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 
 ## `lr-stepper`
 
+Read `omittedSteps` after assigning `steps` for the number of input positions beyond the 256-position limit.
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
+
 Ordered multi-step wizard/form navigation: an index/label per step, independent
 `pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fully
@@ -1359,7 +1373,11 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   returned array/records never alias caller-owned objects. Duplicate step IDs are supported as
   ordered occurrences because selection detail always includes `index`; keyed rendering and focus
   restoration correlate `{ stepId, index }` so a refresh retains the focused duplicate occurrence.
-  Empty (the default) renders nothing.
+  Empty (the default) renders nothing. Each step also carries a visually hidden, localized state
+  text (`Completed`, `Error`, `Not started`, plus `Locked` for an interactive `disabled` step), so
+  progress is never conveyed by colour or an `aria-hidden` glyph alone; the current step stays
+  announced through `aria-current="step"`. The keys are `stepperStateCompleted`, `stepperStateError`,
+  `stepperStatePending` and `stepperStateLocked`. A held Enter/Space activates once.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -1583,7 +1601,8 @@ inside the real `role="tab"` button. Rendering another focusable button there wo
 nested-interactive accessibility violation and break the APG's one-stop roving-tabindex model. The
 glyph carries a localized `title`, stays out of the accessible name, and stops propagation so
 closing an inactive tab never selects it first. Keyboard users focus the same real tab button and
-press Delete, advertised through `aria-keyshortcuts`. Remove the corresponding `<lr-tab>` and
+press Delete, advertised through `aria-keyshortcuts`. A separate action following the tablist uses
+`tabCloseAction` (English `Close {label}`) for screen readers. Remove the corresponding `<lr-tab>` and
 `<lr-tab-panel>` in an `lr-close` listener; the group then reconciles selection automatically.
 
 ```html
@@ -1627,6 +1646,8 @@ properties:** `--padding` (default `0`) — inner padding on the panel's own `ba
 ---
 
 ## `lr-control-group`
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
 
 Semantic grouping for mixed controls and actions. It keeps slotted children in a wrapping
 inline-flex row and centers children with different intrinsic heights. Use it for dashboard
@@ -1841,6 +1862,8 @@ or any ancestor to retheme only the hover or pressed move affordance.
 ---
 
 ## `lr-segmented`
+
+Read `omittedItems` after assigning `items` for the number of input positions beyond the 256-position limit.
 
 Caption typography accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -2473,6 +2496,8 @@ attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_R
 
 ## `lr-app-rail`
 
+The `lr-app-rail` styling hooks include `--lr-app-rail-toggle-color`, `--lr-app-rail-toggle-bg`, `--lr-app-rail-toggle-border`, `--lr-app-rail-pin-color`, `--lr-app-rail-pin-pressed-bg`.
+
 The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 A responsive navigation rail, and the library's application sidebar, that adapts across three presentations as the _viewport_ narrows (not
@@ -2721,13 +2746,15 @@ not fired for a redundant reassignment to the mode already in effect, nor when n
 was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean }`;
 cancelable proposal before a user-triggered overlay change), and non-cancelable `lr-toggle` with
 the same detail after the accepted state change. Forced responsive closes emit only `lr-toggle`;
-direct property writes remain silent.
+direct property writes remain silent. Nested `lr-app-rail-group` and rail-item disclosures bubble
+their own `lr-toggle`/`lr-toggle-request` through the rail under the same names; a rail-level
+listener checks `event.target === rail` to tell the overlay's own pair from a nested disclosure's.
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
 that disables resizing, leaves full mode, or disconnects the rail also cancels the proposal,
-preserving any width the listener assigned and publishing no accepted resize. Assigning only
-`railWidth` does not veto the proposal. It is not fired when a consumer sets `railWidth` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
+preserving any width the listener assigned and publishing no accepted resize. Assigning
+`railWidth` inside the request listener resolves the proposal, including a write of its current value. It is not fired when a consumer sets `railWidth` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).
@@ -2757,9 +2784,9 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the decorative glyph wrapper),
+`navigation` key) and `collapse-icon` (the decorative glyph wrapper),
 `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
-while pinned and `"false"` otherwise, the name comes from the `appRailPin`/`appRailUnpin` keys, and it
+while pinned and `"false"` otherwise, the name comes from the `appRailPin` key, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
@@ -2778,7 +2805,7 @@ panel; no value can paint elevation while closed. Prefer that token over an unqu
 `--lr-app-rail-peek-shadow` (default `var(--lr-shadow-l)`) and `--lr-app-rail-peek-bg` (default
 `var(--lr-color-surface-overlay)`) restyle the `auto-hide` rail while it overlays the content; the
 overlay sits on the `--lr-layer-dropdown` layer token, below modals and popovers.
-`--lr-app-rail-pin-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-app-rail-pin-pressed-color` (defaults to the glass-qualified brand text colour when available, then `--lr-color-brand`), `--lr-app-rail-pin-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-app-rail-pin-hover-color` (default `var(--lr-color-brand)`) tint the pin control on hover.
 Motion uses the shared transition tokens and stops under `prefers-reduced-motion`.
 
@@ -3038,6 +3065,12 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 ### `lr-app-rail-item`
 
+For localized rail controls, use `navigation` for the main and collapse toggles, `appRailPin` for the pin,
+`appRailItemToggle` for an item, and `appRailGroupToggle` for a group without a heading. Each name
+stays the same as its expanded or pressed state changes.
+
+Icon-only tooltips use the shared overlay surface, border, radius, anchored shadow, and viewport clamp.
+
 An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
 set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
 removing the label from the accessibility tree.
@@ -3124,7 +3157,7 @@ names the native control, which remains the sole action).
   authored without any `children` content renders byte-identically to one authored before this
   slot existed. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
   at `[part="children"]`'s id, and a localized accessible name interpolating this item's own label
-  (`Expand {label}`/`Collapse {label}` in the default locale — no literal fallback, so a
+  (`Toggle {label}` in the default locale — no literal fallback, so a
   `registerLyraLocale()` translation or a `.strings` override always reaches it). `<lr-app-rail-group>`
   cannot express this pattern: its collapsible heading *is* the toggle, so a navigable link cannot
   live inside it without nesting an interactive element inside a button.
@@ -3186,7 +3219,7 @@ while current: unset, icon-only gets an inset ring automatically — the non-col
 current state through the indicator bar and `--lr-app-rail-item-current-font-weight`. Setting this
 token explicitly applies the same value in both presentations.
 Ordinary interaction states are independently inheritable through
-`--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
+`--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-current-hover-bg` (the current row's hover fill; unset, one mix tier past the current fill), `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
 brand/active-mix values as fallbacks.
 `--lr-app-rail-item-color` (default `var(--lr-color-text)`) sets the resting text and icon color.
@@ -3228,6 +3261,8 @@ Logical, so it mirrors under `dir="rtl"` with no separate rule.
 ---
 
 ### `lr-app-rail-group`
+
+A group with no heading uses the localized `appRailGroupToggle` name in both disclosure states.
 
 Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
 the group holds whatever it is given; there is no items array and no renderer callback, so it can
@@ -3457,6 +3492,8 @@ window.
 
 ## `lr-menu-label`
 
+The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`.
+
 A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
 
 The host takes `role="presentation"` on connect (a `role="menu"` may only contain menu-item roles,
@@ -3596,6 +3633,10 @@ dropdown owns those root-level behaviors.
 
 ### `lr-menu-item`
 
+Assigned `details` and `suffix` elements describe the item. The default slot supplies its name.
+
+The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `submenuOpen` for the current state.
+
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
 `menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
@@ -3654,15 +3695,15 @@ browser falls back to the row's own content; an `aria-label` or `aria-labelledby
 including an explicitly empty value, still wins.
 
 A checkbox activation first emits cancelable `lr-menu-item-change-request` with the proposed
-`detail: { value, checked }`. Preventing that event retains the current checked state; the owning
-menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
-activation opens its submenu and emits neither checkbox-change nor selection.
+`detail: { value, checked }`. A listener can prevent the event or assign `checked` during dispatch,
+including assigning its current value. The owning menu's `lr-select` still follows. Activating a
+submenu parent opens its submenu and emits neither checkbox-change nor selection.
 
 A `type="radio"` item works the same way, with exclusive-choice semantics layered on top:
 activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change-request`, no
 state change, matching native `<input type="radio">` — but still falls through to the owning menu's
 usual selection. Activating an unchecked radio fires `lr-menu-item-change-request` with
-`checked: true`; once not prevented, this item becomes `checked` and every other `type="radio"`
+`checked: true`. When the proposal commits, this item becomes `checked` and every other `type="radio"`
 item the same owning `<lr-menu>` owns directly whose `group` matches is unchecked directly
 (without an `lr-menu-item-change-request` of its own).
 
@@ -3809,6 +3850,10 @@ continues to produce an inline menu.
 
 ## `lr-menubar` / `lr-menubar-item`
 
+The `lr-menubar` styling hooks include `--lr-menubar-gap`, `--lr-menubar-padding`, `--lr-menubar-bg`, `--lr-menubar-border`, `--lr-menubar-radius`, `--lr-menubar-shadow`.
+
+The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
+
 A horizontal application menubar following the APG menubar pattern. Import
 `@aceshooting/lyra-ui/components/lr-menubar.js`; it registers the item and menu dependencies.
 Use only `lr-menubar-item` elements in the default slot. A title's `menu` slot takes exactly one
@@ -3863,6 +3908,10 @@ The menu width hooks `--lr-menu-min-inline-size` and `--lr-menu-max-inline-size`
 menubar or an ancestor and apply to every slotted menu.
 
 ### `lr-menubar-item`
+
+The `lr-menubar-item` styling hooks include `--lr-menubar-item-hover-color`, `--lr-menubar-item-active-color`.
+
+The item emits `lr-show` and `lr-hide` after its assigned menu changes state. Read `menuOpen` for the current state.
 
 **Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
 and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not
@@ -4794,6 +4843,10 @@ theme without requiring shared-token changes or shadow-part selectors.
 ```
 
 ## `lr-breadcrumb` and `lr-breadcrumb-item`
+
+The `lr-breadcrumb-item` styling hooks include `--lr-breadcrumb-item-separator-gap`, `--lr-breadcrumb-item-separator-color`, `--lr-breadcrumb-item-hover-color`.
+
+The `lr-breadcrumb` styling hooks include `--lr-breadcrumb-gap`.
 
 Responsive navigation trail primitives.
 
@@ -6344,6 +6397,10 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 ## `lr-navigation-menu`
+
+The `lr-navigation-menu` styling hooks include `--lr-navigation-menu-toggle-hover-bg`, `--lr-navigation-menu-toggle-hover-color`, `--lr-navigation-menu-toggle-active-bg`.
+
+Item disclosure events bubble to the menu. In a menu listener, check `event.target === event.currentTarget` before handling or canceling the menu’s own disclosure.
 
 Floating navigation disclosures follow the [shared surface treatment](shared/styles-and-tokens.md);
 inline disclosures retain their flow presentation.

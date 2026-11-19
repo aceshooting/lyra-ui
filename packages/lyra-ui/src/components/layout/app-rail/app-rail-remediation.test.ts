@@ -86,8 +86,20 @@ describe('resize request continuation', () => {
     }
   }
 
+  it('keeps the width when a request listener withdraws resizing without writing a replacement', async () => {
+    const el = await fixture<LyraAppRail>(html`<lr-app-rail force-mode="full" resizable rail-width="240"></lr-app-rail>`);
+    const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;
+    const commits: number[] = [];
+    el.addEventListener('lr-rail-resize-request', () => { el.resizable = false; });
+    el.addEventListener('lr-rail-resize', event => commits.push(event.detail.widthPx));
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(el.resizable).to.equal(false);
+    expect(el.railWidth).to.equal(240);
+    expect(commits).to.deep.equal([]);
+  });
+
   for (const veto of [false, true]) {
-    it(`keeps a width-only listener assignment ${veto ? 'when explicitly vetoed' : 'subject to normal acceptance'}`, async () => {
+    it(`keeps a width-only listener assignment ${veto ? 'when explicitly vetoed' : 'without an explicit veto'}`, async () => {
       const el = await fixture<LyraAppRail>(html`
         <lr-app-rail force-mode="full" resizable rail-width="240"></lr-app-rail>
       `);
@@ -100,8 +112,8 @@ describe('resize request continuation', () => {
       el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!.focus();
       await sendKeys({ press: 'ArrowRight' });
       await el.updateComplete;
-      expect(el.railWidth).to.equal(veto ? 300 : 248);
-      expect(commits).to.deep.equal(veto ? [] : [248]);
+      expect(el.railWidth).to.equal(300);
+      expect(commits).to.deep.equal([]);
     });
   }
 });

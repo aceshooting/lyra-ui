@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'لږ تر لږه یو انتخاب وکړئ.',
   tokenInputRequired: 'لږ تر لږه یو ارزښت دننه کړئ.',
   tokenInputEditWithContext: '{label} سمول',
+  tokenInputLabel: 'ټوکنونه',
   iconButtonLabel: 'تڼۍ',
   codeEditorLabel: 'د کوډ سمونګر',
   switchRequired: 'دا چالان کړئ.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم ښکته',
   signaturePadPenUp: 'قلم پورته',
+  signaturePadDrawingLimit: 'د انځور کښلو حد ته ورسېدئ.',
   localePickerInputLimit: 'یوازې د ژبې او سیمې لومړۍ 512 ننوتنې شته.',
   emojiPickerInputLimit: 'د ننوتو حد ته د رسېدو له امله د ایموجي ځینې معلومات پرېښودل شوي دي.',
 };

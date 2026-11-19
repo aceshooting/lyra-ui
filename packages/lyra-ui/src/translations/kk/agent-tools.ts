@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Құрал параметрлерінің схемалары ең көбі {fields} өрісті және әр өріске {options} нұсқаны қолдайды.',
   testResultsLimit: 'Тек алғашқы {count} тест нәтижесі көрсетіледі.',
   toolTimelineLimit: 'Ең көбі {count} құрал шақыруы көрсетіледі.',
+  toolTimelineLoadError: 'Құрал көрінісін жүктеу мүмкін болмады.',
   toolSelectLimit: 'Тек алғашқы {count} құрал көрсетіледі.',
   testResultsInputTooLarge: 'Сынақ нәтижелерінің мәліметтері көрсету шегінен асады.',
   toolCall: 'Құрал шақыруы',

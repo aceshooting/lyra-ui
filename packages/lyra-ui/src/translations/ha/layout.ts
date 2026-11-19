@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Cire maƙallar kewayawa',
   appRailItemCollapse: 'Rage {label}',
   appRailItemExpand: 'Faɗaɗa {label}',
+  appRailItemToggle: 'Nuna ko ɓoye {label}',
+  appRailGroupToggle: 'Rukunin kewayawa',
   resizeValuePercent: 'kashi {value}',
   commandPaletteLabel: 'Jerin umarni',
   commandPalettePlaceholder: 'Nemo umarni…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} umarni',
     other: '{count} umarni',
   },
+  tabCloseAction: 'Rufe {label}',
+  stepperStateCompleted: 'An kammala',
+  stepperStateError: 'Kuskure',
+  stepperStatePending: 'Ba a fara ba',
+  stepperStateLocked: 'A kulle',
   commandPaletteInputLimit: 'An tsallake wasu umarni saboda an kai iyakar shigarwa.',
 };
 

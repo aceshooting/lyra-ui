@@ -23,7 +23,7 @@ interface EngineProbe {
 const diagnostic = 'Companion operation refused';
 const camera = (): LyraGraphCamera => ({ yaw: 0, pitch: 0, distance: 500, target: { x: 0, y: 0, z: 0 } });
 
-function setup() {
+function setup(available = () => true) {
   const engines: EngineProbe[] = [];
   const fallbacks: Engine3dFallbackDetail[] = [];
   const activations: string[] = [];
@@ -58,7 +58,7 @@ function setup() {
   };
   class InjectedSpatial extends GraphSpatialController {
     constructor(...args: ConstructorParameters<typeof GraphSpatialController>) {
-      super(args[0], { ...args[1], engineServices: { available: () => true, create } });
+      super(args[0], { ...args[1], engineServices: { available, create } });
     }
   }
   const graph = document.createElement('lr-graph') as LyraGraph;
@@ -187,3 +187,32 @@ describe('graph companion failure recovery after a successful mount', () => {
     } finally { subject.cleanup(); }
   });
 });
+
+for (const retire of [false, true]) {
+  it(`contains a failed capability check when the graph is ${retire ? 'removed' : 'current'} and can reopen`, async () => {
+    let attempted = false;
+    const subject = setup(() => {
+      if (attempted) return true;
+      attempted = true;
+      if (retire) subject.graph.remove();
+      throw new Error(diagnostic);
+    });
+    try {
+      await fixture(subject.graph);
+      await waitUntil(() => attempted);
+      if (retire) {
+        await nextFrame();
+        expect(subject.fallbacks).to.deep.equal([]);
+        document.body.append(subject.graph);
+      } else {
+        await waitUntil(() => subject.fallbacks.length === 1);
+        expect(subject.fallbacks[0]?.reason).to.equal('error');
+        subject.graph.engine = 'builtin';
+        await subject.graph.updateComplete;
+        subject.graph.engine = 'webgl';
+      }
+      await waitUntil(() => (subject.engines[0]?.dataCalls ?? 0) > 0);
+      expect(subject.engines[0]!.disposed).to.equal(0);
+    } finally { subject.cleanup(); }
+  });
+}

@@ -4,6 +4,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
   }
   [part='source-summary'], [part='source-status'] {
     margin-block: var(--lr-space-xs);
@@ -45,6 +46,7 @@ export const styles = css`
   [part='node-label'],
   lr-virtual-list::part(node-label) {
     flex: 1 1 auto;
+    overflow-wrap: anywhere;
     display: flex;
     align-items: baseline;
     gap: var(--lr-space-xs);
@@ -65,7 +67,7 @@ export const styles = css`
   }
   [part='node-label']:hover,
   lr-virtual-list::part(node-label):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-neighbor-list-node-hover-fill, var(--lr-color-brand-quiet));
   }
   [part='node-label']:active,
   lr-virtual-list::part(node-label):active {
@@ -78,7 +80,9 @@ export const styles = css`
   }
   [part='relation'],
   lr-virtual-list::part(relation) {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }

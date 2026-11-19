@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Schema parameter tool ngarojong panglobana {fields} widang jeung {options} pilihan per widang.',
   testResultsLimit: 'Ngan {count} hasil tés munggaran nu dipintonkeun.',
   toolTimelineLimit: 'Panglobana {count} panggilan tool nu dipintonkeun.',
+  toolTimelineLoadError: 'Pintonan tool teu bisa dimuat.',
   toolSelectLimit: 'Ngan {count} tool munggaran nu dipintonkeun.',
   testResultsInputTooLarge: 'Rincian hasil tés ngaleuwihan wates tampilan.',
   toolCall: 'Panggilan tool',

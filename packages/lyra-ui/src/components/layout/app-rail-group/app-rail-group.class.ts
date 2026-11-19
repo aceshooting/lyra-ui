@@ -12,7 +12,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import { styles } from './app-rail-group.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_appRailGroupToggle } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailGroupToggleDetail {
@@ -64,6 +64,7 @@ export interface LyraAppRailGroupEventMap {
  *   `collapsed` from the listener to resolve it yourself — a write during the dispatch suppresses
  *   the default commit even when it assigns the value the property already held. Not emitted for
  *   a direct `collapsed` write. `detail: LyraAppRailGroupToggleDetail` — `expanded` is the proposed state.
+ * A listener handling only this disclosure can filter on `event.target === event.currentTarget`.
  * @event lr-toggle - The group finished expanding or collapsing. Non-cancelable, emitted after
  *   `collapsed` is written, and never emitted for a vetoed or listener-resolved request.
  *   `detail: LyraAppRailGroupToggleDetail` — `expanded` is the settled state.
@@ -114,8 +115,7 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    expand: LYRA_DEFAULT_expand,
+    appRailGroupToggle: LYRA_DEFAULT_appRailGroupToggle,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -318,7 +318,7 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
                   aria-controls=${this.contentId}
                   aria-label=${named
                     ? nothing
-                    : this.localize(this._collapsed ? 'expand' : 'collapse')}
+                    : this.localize('appRailGroupToggle')}
                   @click=${this.onToggleClick}
                 >
                   <span part="toggle-icon" aria-hidden="true">${chevronIcon()}</span>${headingContent}

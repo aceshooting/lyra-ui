@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'குறைந்தது ஒரு விருப்பத்தையாவது தேர்ந்தெடுக்கவும்.',
   tokenInputRequired: 'குறைந்தது ஒரு மதிப்பையாவது உள்ளிடவும்.',
   tokenInputEditWithContext: '{label}-ஐத் திருத்து',
+  tokenInputLabel: 'டோக்கன்கள்',
   iconButtonLabel: 'பொத்தான்',
   codeEditorLabel: 'குறியீட்டுத் திருத்தி',
   switchRequired: 'இதை இயக்கவும்.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'பேனா கீழே',
   signaturePadPenUp: 'பேனா மேலே',
+  signaturePadDrawingLimit: 'வரைதல் வரம்பை அடைந்துவிட்டது.',
   localePickerInputLimit: 'முதல் 512 மொழி மற்றும் வட்டாரப் பதிவுகள் மட்டுமே கிடைக்கின்றன.',
   emojiPickerInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில எமோஜித் தரவுகள் விடுபட்டுள்ளன.',
 };

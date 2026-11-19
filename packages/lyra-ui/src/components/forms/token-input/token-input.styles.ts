@@ -1,3 +1,4 @@
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
@@ -9,6 +10,7 @@ import {
 } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
+  ${formControlAppearance}
   :host {
     display: block;
     min-inline-size: 0;
@@ -24,7 +26,7 @@ export const styles = css`
     --_lr-token-input-token-padding: var(--lr-space-2xs) var(--lr-space-xs);
     --_lr-token-input-gap: var(--lr-space-xs);
     --_lr-token-input-token-gap: var(--lr-space-2xs);
-    --_lr-token-input-radius: var(--lr-radius);
+    --_lr-token-input-radius: var(--lr-form-control-radius);
     /* The row's height floor is the one shared form-control ladder (internal/sizes.styles.ts), so
        --lr-theme-form-control-height-* retunes this control and every sibling field together; it
        matches both tier spellings, so size="small" needs no alias rule. */
@@ -126,9 +128,9 @@ export const styles = css`
     /* Resting edge and fill as inline var() fallbacks, never :host declarations, so an ancestor or
        :root value still wins -- the same quartet lr-input/lr-textarea already publish. */
     border: var(--lr-border-width-thin) solid
-      var(--lr-token-input-border-color, var(--lr-color-border));
+      var(--lr-token-input-border-color, var(--_lr-form-control-border-color));
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
-    background: var(--lr-token-input-fill, var(--lr-color-surface));
+    background: var(--lr-token-input-fill, var(--_lr-form-control-fill));
   }
   [part="input-wrapper"]:focus-within {
     border-color: var(
@@ -156,7 +158,7 @@ export const styles = css`
     font: inherit;
   }
   [part="input"]::placeholder {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-token-input-placeholder-color, var(--lr-color-text-quiet));
   }
   /* Mirrors lr-combobox's [part='start']/[part='end'] wrappers: the span is always present so JS
      can toggle hidden -- and an author display rule beats the UA's [hidden] rule at any
@@ -294,7 +296,7 @@ export const styles = css`
     font: inherit;
   }
   [part="token-editor"]::placeholder {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-token-input-placeholder-color, var(--lr-color-text-quiet));
   }
   [part="hint"],
   [part="error"] {

@@ -164,7 +164,7 @@ it('projects the same canonical graph model through the explorer and graph', asy
   expect(graph.communities[0]!.memberIds).to.deep.equal(['node-a']);
 });
 
-it('omits blank and later duplicate entity rows before rendering or events', async () => {
+it('omits blank and duplicate relationships and activates every distinct relationship', async () => {
   const list = await fixture<LyraNeighborList>(
     html`<lr-neighbor-list></lr-neighbor-list>`
   );
@@ -176,6 +176,11 @@ it('omits blank and later duplicate entity rows before rendering or events', asy
     },
     { relation: 'blank', direction: 'out', node: { id: ' ', label: 'Blank' } },
     {
+      relation: 'first',
+      direction: 'out',
+      node: { id: 'node-a', label: 'Duplicate' },
+    },
+    {
       relation: 'later',
       direction: 'out',
       node: { id: 'node-a', label: 'Later' },
@@ -185,11 +190,15 @@ it('omits blank and later duplicate entity rows before rendering or events', asy
   const buttons = list.shadowRoot!.querySelectorAll<HTMLButtonElement>(
     '[part="node-label"]'
   );
-  expect(buttons).to.have.length(1);
-  expect(buttons[0]!.textContent).to.include('First');
-  const activation = oneEvent(list, 'lr-entity-select');
-  buttons[0]!.click();
-  expect((await activation).detail).to.deep.equal({ entityId: 'node-a' });
+  expect([...buttons].map(button => button.getAttribute('aria-label'))).to.deep.equal([
+    'First, first, Outgoing', 'Later, later, Outgoing',
+  ]);
+  expect([...buttons].map(button => button.querySelector('span:not([part])')?.textContent)).to.deep.equal(['First', 'Later']);
+  for (const button of buttons) {
+    const activation = oneEvent(list, 'lr-entity-select');
+    button.click();
+    expect((await activation).detail).to.deep.equal({ entityId: 'node-a' });
+  }
 });
 
 it('renders blank cards and chips inert while retaining first type and member rows', async () => {

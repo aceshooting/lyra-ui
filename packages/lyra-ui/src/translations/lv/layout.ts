@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Atspraust navigāciju',
   appRailItemCollapse: 'Sakļaut {label}',
   appRailItemExpand: 'Izvērst {label}',
+  appRailItemToggle: 'Sakļaut vai izvērst {label}',
+  appRailGroupToggle: 'Navigācijas grupa',
   resizeValuePercent: '{value} procenti',
   commandPaletteLabel: 'Komandu palete',
   commandPalettePlaceholder: 'Meklēt komandas…',
@@ -64,6 +66,11 @@ const strings: LyraLocaleStrings = {
     other: '{count} komandas',
     zero: '{count} komandas',
   },
+  tabCloseAction: 'Aizvērt {label}',
+  stepperStateCompleted: 'Pabeigts',
+  stepperStateError: 'Kļūda',
+  stepperStatePending: 'Nav sākts',
+  stepperStateLocked: 'Bloķēts',
   commandPaletteInputLimit: 'Dažas komandas tika izlaistas, jo tika sasniegts ievades ierobežojums.',
 };
 

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'उपकरण प्यारामिटर स्किमामा बढीमा {fields} क्षेत्र र प्रत्येक क्षेत्रमा {options} विकल्प हुन सक्छन्।',
   testResultsLimit: 'पहिला {count} परीक्षण नतिजाहरू मात्र देखाइएका छन्।',
   toolTimelineLimit: 'बढीमा {count} उपकरण कलहरू देखाइएका छन्।',
+  toolTimelineLoadError: 'उपकरणको दृश्य लोड गर्न सकिएन।',
   toolSelectLimit: 'पहिला {count} उपकरणहरू मात्र देखाइएका छन्।',
   testResultsInputTooLarge: 'परीक्षण परिणामका विवरणहरू प्रदर्शन सीमाभन्दा बढी छन्।',
   toolCall: 'उपकरण कल',

@@ -12,6 +12,8 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
+    block-size: 100%;
+    min-block-size: 0;
   }
   [part='search-field'] {
     position: relative;
@@ -34,6 +36,8 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: clip;
     min-inline-size: 0;
+    flex: 1 1 auto;
+    min-block-size: 0;
   }
   [part='group-header'] {
     padding: var(--lr-space-2xs) var(--lr-space-s);
@@ -43,9 +47,10 @@ export const styles = css`
     text-transform: uppercase;
   }
   [part='item'] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--lr-size-2px);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    row-gap: var(--lr-size-2px);
     box-sizing: border-box;
     ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -66,7 +71,7 @@ export const styles = css`
      sweep. */
   :where([part='item']):hover:where(:not([aria-disabled='true'])),
   :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
-    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
+    background: var(--lr-node-palette-item-hover-fill, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)));
   }
   /* These items are drag sources (cursor: grab above), so the press is the moment the drag starts:
      deeper fill plus the grabbing cursor. Same :where() shape as the hover rule, so the two tie at
@@ -78,6 +83,19 @@ export const styles = css`
   [part='item']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  [part='item-icon'] {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--lr-size-1-25rem);
+    margin-inline-end: var(--lr-space-xs);
+  }
+  [part='item-label'],
+  [part='item-description'] {
+    grid-column: 2;
   }
   [part='item-label'] {
     font-weight: var(--lr-font-weight-medium);

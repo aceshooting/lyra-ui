@@ -22,7 +22,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A non-empty host aria-label names the dialog before a direct accessibleLabel value; without either, the tool title names it. A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
+          'A non-empty host aria-label names the dialog before a direct accessibleLabel value; without either, the tool title names it. A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle with an lr-after-maximize-change notification) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
       },
     },
   },

@@ -343,11 +343,7 @@ it('coalesces same-tick item disabled notifications into one roving-focus reconc
   await menu.updateComplete;
   await nextFrame();
 
-  // An unfixed listener re-scans `this.items` once per item's own state-change dispatch (one
-  // call per item here). The coalesced path collapses every same-tick dispatch into one pass;
-  // the sibling `itemStateObserver` MutationObserver may still contribute one more of its own
-  // already-batched calls, so this stays a well-below-N bound rather than an exact one.
-  expect(calls).to.be.lessThan(items.length);
+  expect(calls).to.equal(1);
 });
 
 it('contains private item-state events while still repairing roving focus', async () => {
@@ -1522,29 +1518,25 @@ it('does not recreate item observation when initial collection runs after remova
   el.remove();
   await el.updateComplete;
   await Promise.resolve();
-  const state = el as unknown as { itemStateObserver?: MutationObserver };
-  expect(state.itemStateObserver === undefined, 'queued initial collection must not rearm detached observation').to.equal(true);
+  const first = el.querySelector('lr-menu-item')!;
+  first.hidden = true;
+  expect(el.querySelectorAll('lr-menu-item[tabindex="0"]').length).to.equal(0);
   parent.append(el);
-  await el.updateComplete;
-  await waitUntil(() => state.itemStateObserver !== undefined);
-  expect(el.querySelectorAll('lr-menu-item').length).to.equal(2);
+  await waitUntil(() => el.querySelectorAll('lr-menu-item[tabindex="0"]').length === 1);
+  expect(el.querySelector('lr-menu-item[tabindex="0"]')?.textContent).to.equal('Second');
 });
 
 it('rearms item-state observation when reconnecting unchanged slot members', async () => {
   const el = await fixture<LyraMenu>(html`<lr-menu><lr-menu-item>First</lr-menu-item><lr-menu-item>Second</lr-menu-item></lr-menu>`);
-  const state = el as unknown as { itemStateObserver?: MutationObserver; activeIndex: number };
-  await waitUntil(() => state.itemStateObserver !== undefined);
-  const previous = state.itemStateObserver;
   const parent = el.parentNode!;
   el.remove();
   parent.append(el);
   await el.updateComplete;
-  expect(state.itemStateObserver !== undefined && state.itemStateObserver !== previous,
-    'unchanged members still need a new observer after teardown').to.equal(true);
   const first = el.querySelector('lr-menu-item') as LyraMenuItem;
   first.disabled = true;
   await first.updateComplete;
-  await waitUntil(() => state.activeIndex === 1, 'reconnected menu must respond to disabled item state');
+  await waitUntil(() => el.querySelector('lr-menu-item[tabindex="0"]')?.textContent === 'Second',
+    'reconnected menu must respond to disabled item state');
 });
 
 it('rearms unchanged menu items without taking focus on reconnect', async () => {

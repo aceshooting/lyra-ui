@@ -1,8 +1,11 @@
+import { TOOL_CALL_STATUSES } from '../tool-status.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   findToolRenderer,
   getDefaultToolRendererRegistry,
@@ -29,12 +32,14 @@ type RenderState =
   | { kind: 'rendered'; template: unknown }
   | { kind: 'fallback' };
 
+const RESULT_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES, 'success');
 const FALLBACK_STATE: RenderState = { kind: 'fallback' };
 
 /** The two supported built-in fallback presentations. Invalid runtime values normalize to `json`. */
 export type ToolResultFallback = 'json' | 'text';
 
 export interface LyraToolResultViewEventMap {
+  'lr-status-change': CustomEvent<{status: ToolStatus}>;
   'lr-render-error': CustomEvent<{ toolName: string; error: unknown }>;
 }
 /**
@@ -70,6 +75,7 @@ export interface LyraToolResultViewEventMap {
  * update dispatch. Definition records are cloned and frozen; their callback identities are retained.
  *
  * @customElement lr-tool-result-view
+ * @event lr-status-change - A committed status change, with the normalized status in detail.status.
  * @event lr-render-error - `detail: { toolName, error }` — fired immediately
  * before falling back to `<lr-json-viewer>`, whether because no renderer
  * matched, a candidate renderer's `matches()` predicate threw during dispatch,
@@ -147,7 +153,14 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
    * later renderer that stays quiet doesn't inherit a stale outcome from a previous one. Reuses the
    * same vocabulary as `<lr-tool-result-dialog>`'s own `status` property.
    */
-  @property({ reflect: true }) status: ToolStatus = 'success';
+  @property({ reflect: true, converter: RESULT_STATUS })
+  get status(): ToolStatus { return this.statusValue; }
+  set status(value: ToolStatus) {
+    const previous = this.statusValue;
+    this.statusValue = RESULT_STATUS.normalizeReflected(this, 'status', value);
+    this.requestUpdate('status', previous);
+  }
+  private statusValue: ToolStatus = 'success';
 
   @state() private renderState: RenderState = FALLBACK_STATE;
 
@@ -156,6 +169,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // no longer current and skip writing its result over a more recent one.
   private generation = 0;
   private resolveOnConnect = false;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
 
   // A synchronous renderer may retain its context and report a status later.
   // This token keeps that callback scoped to the render invocation that
@@ -181,6 +195,21 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
       this.resolveOnConnect = true;
     }
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('status') && changed.get('status') !== undefined && changed.get('status') !== this.status) {
+      this.emit('lr-status-change', {status: this.status});
+    }
+    if (changed.has('renderState') && this.renderState.kind === 'loading' && changed.get('renderState')?.kind !== 'loading') {
+      this.announcements.announce(this.localize('loading'));
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {

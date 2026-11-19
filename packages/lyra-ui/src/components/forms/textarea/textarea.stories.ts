@@ -274,3 +274,8 @@ export const RemovableGuidance: StoryObj = {
     </div>
   `,
 };
+
+export const PlaceholderColor: Story = {
+  render: () => html`<lr-textarea label="Notes" placeholder="Enter a value"
+    style="--lr-textarea-placeholder-color: var(--lr-color-neutral)"></lr-textarea>`,
+};

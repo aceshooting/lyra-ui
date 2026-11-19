@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'टूल पैरामीटर स्कीमा में अधिकतम {fields} फील्ड आ हर फील्ड में {options} विकल्प हो सकेला।',
   testResultsLimit: 'सिर्फ पहिला {count} टेस्ट नतीजा देखावल गइल बा।',
   toolTimelineLimit: 'अधिकतम {count} टूल कॉल देखावल गइल बा।',
+  toolTimelineLoadError: 'टूल व्यू लोड ना हो सकल।',
   toolSelectLimit: 'सिर्फ पहिला {count} टूल देखावल गइल बा।',
   testResultsInputTooLarge: 'परीक्षण नतीजा के विवरण देखावे के सीमा से बेसी बा।',
   toolCall: 'टूल कॉल',

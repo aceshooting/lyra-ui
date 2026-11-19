@@ -127,8 +127,7 @@ export const styles = css`
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-04em);
   }
-  [part="category"]::after {
-    content: "·";
+  [part="category"] + [aria-hidden] {
     margin-inline-start: var(--lr-size-0-3em);
   }
   [part="name"] {
@@ -147,9 +146,6 @@ export const styles = css`
     white-space: nowrap;
     /* See [part='category']'s comment above -- same contrast rationale. */
     color: var(--lr-color-text);
-  }
-  [part="summary"]::before {
-    content: ": ";
   }
 
   [part="meta"] {

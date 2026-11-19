@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Àwọn schema pàrámítà irinṣẹ́ gba pápá tó pọ̀ jù {fields} àti àṣàyàn {options} fún pápá kọ̀ọ̀kan.',
   testResultsLimit: 'Àwọn àbájáde ìdánwò àkọ́kọ́ {count} nìkan ni a fi hàn.',
   toolTimelineLimit: 'Ìpè irinṣẹ́ tó pọ̀ jù {count} ni a fi hàn.',
+  toolTimelineLoadError: 'A kò lè gbé ojú ìwòye irinṣẹ́ wọlé.',
   toolSelectLimit: 'Àwọn irinṣẹ́ àkọ́kọ́ {count} nìkan ni a fi hàn.',
   testResultsInputTooLarge: 'Àlàyé àbájáde ìdánwò ti kọjá ààlà ìfihàn.',
   toolCall: 'Ìpè irinṣẹ́',

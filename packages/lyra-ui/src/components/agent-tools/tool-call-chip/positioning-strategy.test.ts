@@ -1,3 +1,5 @@
+import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './tool-call-chip.js';
 import type { LyraToolCallChip } from './tool-call-chip.js';
@@ -11,9 +13,10 @@ function tooltip(el: LyraToolCallChip): HTMLElement {
 async function openTooltip(wrapper: HTMLElement): Promise<LyraToolCallChip> {
   const el = wrapper.querySelector('lr-tool-call-chip') as LyraToolCallChip;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  base.dispatchEvent(new MouseEvent('mouseenter'));
+  await focusByKeyboard(base, wrapper);
   await el.updateComplete;
   await waitUntil(() => !tooltip(el).hidden, 'the tooltip never opened');
+  await loadAnchoredOverlayRuntime();
   await waitUntil(() => tooltip(el).style.left !== '', 'tooltip was never positioned');
   return el;
 }

@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Valitse vähintään yksi vaihtoehto.',
   tokenInputRequired: 'Anna vähintään yksi arvo.',
   tokenInputEditWithContext: 'Muokkaa: {label}',
+  tokenInputLabel: 'Tokenit',
   iconButtonLabel: 'Painike',
   codeEditorLabel: 'Koodieditori',
   switchRequired: 'Ota tämä käyttöön.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Kynä alhaalla',
   signaturePadPenUp: 'Kynä ylhäällä',
+  signaturePadDrawingLimit: 'Piirtoraja saavutettu.',
   localePickerInputLimit: 'Vain ensimmäiset 512 kieli- ja alueasetusmerkintää ovat käytettävissä.',
   emojiPickerInputLimit: 'Osa emojitiedoista jätettiin pois syöterajan täyttymisen vuoksi.',
 };

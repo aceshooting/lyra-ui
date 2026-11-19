@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ကိရိယာပါရာမီတာ schema တွင် အများဆုံး အကွက် {fields} ခုနှင့် အကွက်တစ်ခုလျှင် ရွေးချယ်စရာ {options} ခုအထိသာ ပံ့ပိုးသည်။',
   testResultsLimit: 'ပထမဆုံး စမ်းသပ်မှုရလဒ် {count} ခုကိုသာ ပြထားသည်။',
   toolTimelineLimit: 'ကိရိယာခေါ်ဆိုမှု {count} ခုအထိသာ ပြထားသည်။',
+  toolTimelineLoadError: 'ကိရိယာပြကွက်ကို ဖွင့်၍ မရပါ။',
   toolSelectLimit: 'ပထမဆုံး ကိရိယာ {count} ခုကိုသာ ပြထားသည်။',
   testResultsInputTooLarge: 'စမ်းသပ်မှုရလဒ် အသေးစိတ်များသည် ပြသနိုင်သည့် ကန့်သတ်ချက်ကို ကျော်လွန်နေသည်။',
   toolCall: 'ကိရိယာခေါ်ဆိုမှု',

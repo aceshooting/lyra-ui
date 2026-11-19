@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'راہنمائی توں پن لاہو',
   appRailItemCollapse: '{label} سمیٹو',
   appRailItemExpand: '{label} پھیلاؤ',
+  appRailItemToggle: '{label} وکھاؤ یا لُکاؤ',
+  appRailGroupToggle: 'راہنمائی دا گروپ',
   resizeValuePercent: '{value} فیصد',
   commandPaletteLabel: 'کمانڈ پیلیٹ',
   commandPalettePlaceholder: 'کمانڈ لبھو…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} کمانڈ',
     other: '{count} کمانڈاں',
   },
+  tabCloseAction: '{label} بند کرو',
+  stepperStateCompleted: 'مکمل',
+  stepperStateError: 'خرابی',
+  stepperStatePending: 'شروع نہیں ہویا',
+  stepperStateLocked: 'تالا لگیا',
   commandPaletteInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کجھ کمانڈ چھڈ دتیاں گئیاں نیں۔',
 };
 

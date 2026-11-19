@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Skema parameter alat mendukung paling banyak {fields} kolom dan {options} pilihan untuk setiap kolom.',
   testResultsLimit: 'Hanya {count} hasil pengujian pertama yang ditampilkan.',
   toolTimelineLimit: 'Paling banyak {count} pemanggilan alat yang ditampilkan.',
+  toolTimelineLoadError: 'Tampilan alat tidak dapat dimuat.',
   toolSelectLimit: 'Hanya {count} alat pertama yang ditampilkan.',
   testResultsInputTooLarge: 'Detail hasil pengujian melebihi batas tampilan.',
   toolCall: 'Pemanggilan alat',

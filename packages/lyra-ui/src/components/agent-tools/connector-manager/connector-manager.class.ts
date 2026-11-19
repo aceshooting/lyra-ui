@@ -8,7 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './connector-manager.styles.js';
 import '../../forms/button/button.class.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -28,6 +28,10 @@ export interface AgentConnector {
   kind: AgentConnectorKind;
   status: AgentConnectorStatus;
   error?: string;
+}
+
+function admittedId(row: AgentConnector): string | undefined {
+  return typeof row.name === 'string' && KINDS.includes(row.kind) && STATUSES.includes(row.status) ? row.id : undefined;
 }
 
 export interface LyraConnectorManagerEventMap {
@@ -71,6 +75,9 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * @event lr-connector-action - A connector action was requested. `detail: { connectorId, action }`.
  *   The host owns the operation and the controlled `connectors` array.
  * @csspart base - The fieldset and group.
+ * @cssprop --lr-decision-legend-font-size - Font size of the decision panel legend.
+ * @cssprop --lr-decision-positive-color - Text color of a positive status.
+ * @cssprop --lr-decision-negative-color - Text color of a negative status.
  * @csspart legend - The visible component label.
  * @csspart list - The connector rows.
  * @csspart connector - One connector row, keyed by `data-connector-id`.
@@ -205,21 +212,8 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     return this.normalizedConnectorsFrom(this.connectors);
   }
 
-  private normalizedConnectorsFrom(source: unknown): AgentConnector[] {
-    const connectors: readonly AgentConnector[] = Array.isArray(source) ? source : [];
-    const valid = connectors.filter((connector): connector is AgentConnector => {
-      try {
-        return Boolean(
-          connector &&
-            typeof connector.name === 'string' &&
-            KINDS.includes(connector.kind) &&
-            STATUSES.includes(connector.status),
-        );
-      } catch {
-        return false;
-      }
-    });
-    return firstByIdentity(valid, (connector) => connector.id);
+  private normalizedConnectorsFrom(source: readonly AgentConnector[]): AgentConnector[] {
+    return firstByIdentityMemo(source, admittedId);
   }
 
   private actionFor(connector: AgentConnector): ConnectorAction | null {

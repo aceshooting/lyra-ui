@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'किमान एक पर्याय निवडा.',
   tokenInputRequired: 'किमान एक मूल्य प्रविष्ट करा.',
   tokenInputEditWithContext: '{label} संपादित करा',
+  tokenInputLabel: 'टोकन',
   iconButtonLabel: 'बटण',
   codeEditorLabel: 'कोड संपादक',
   switchRequired: 'हे सुरू करा.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'पेन खाली',
   signaturePadPenUp: 'पेन वर',
+  signaturePadDrawingLimit: 'चित्र काढण्याची मर्यादा गाठली आहे.',
   localePickerInputLimit: 'फक्त पहिल्या 512 भाषा आणि प्रदेश सेटिंग्जच्या नोंदी उपलब्ध आहेत.',
   emojiPickerInputLimit: 'इनपुट मर्यादा गाठल्यामुळे काही इमोजी डेटा वगळला आहे.',
 };

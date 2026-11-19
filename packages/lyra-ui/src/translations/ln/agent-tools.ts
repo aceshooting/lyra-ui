@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Ba schéma ya paramètre ya outil endimaka mingi te koleka ba champ {fields} mpe ba choix {options} na champ moko.',
   testResultsLimit: 'Ba résultat ya test {count} ya liboso nde emonisami.',
   toolTimelineLimit: 'Ba appel ya outil {count} koleka te nde emonisami.',
+  toolTimelineLoadError: 'Tokoki te kocharger bolakisi ya esaleli.',
   toolSelectLimit: 'Ba outil {count} ya liboso nde emonisami.',
   testResultsInputTooLarge: 'Makambo ya mikemike ya ba résultats ya test eleki ndelo ya kolakisa.',
   toolCall: 'Appel ya outil',

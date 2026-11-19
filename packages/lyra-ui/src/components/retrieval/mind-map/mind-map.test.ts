@@ -4,6 +4,7 @@ import './mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -1674,4 +1675,58 @@ describe('lr-mind-map topics reassignment', () => {
     await el.updateComplete;
     expect(el.topics).to.not.equal(snapshot);
   });
+});
+
+describe('focus ring and inherited direction', () => {
+  it('draws the focus ring only while the diagram has keyboard focus', async () => {
+    const el = await fixture<LyraMindMap>(html`<lr-mind-map .topics=${topics}></lr-mind-map>`);
+    const svg = el.shadowRoot!.querySelector<SVGElement>('[part="svg"]')!;
+    await focusByKeyboard(svg as unknown as HTMLElement);
+    await el.updateComplete;
+    const ring = el.shadowRoot!.querySelector('[part="focus-ring"]')!;
+    expect(getComputedStyle(ring).display).to.not.equal('none');
+    svg.blur();
+    await el.updateComplete;
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="focus-ring"]')!).display).to.equal('none');
+  });
+
+  it('re-lays out when an ancestor flips direction after the first render', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div dir="ltr"><lr-mind-map .topics=${topics}></lr-mind-map></div>`);
+    const el = wrapper.querySelector<LyraMindMap>('lr-mind-map')!;
+    await el.updateComplete;
+    const positions = () => [...el.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')].map((n) => (n as SVGElement).style.transform);
+    const before = positions();
+    wrapper.setAttribute('dir', 'rtl');
+    await waitUntil(() => positions().join() !== before.join(), 'layout mirrored for the inherited direction');
+  });
+});
+
+it('distinguishes expanded, collapsed and leaf markers without relying on color', async () => {
+  const el = await fixture<LyraMindMap>(html`<lr-mind-map .topics=${topics}></lr-mind-map>`);
+  const symbol = (id: string) => el.shadowRoot!.querySelector(`[part="node"][data-id="${id}"] [part="disclosure"]`);
+  expect(symbol('root')?.getAttribute('d')).to.equal('M-2 0h4');
+  expect(symbol('rag')?.getAttribute('d')).to.equal('M-2 0h4M0 -2v4');
+  expect(symbol('kg') === null).to.equal(true);
+});
+
+it('fits the painted text of a wide outer label inside the diagram', async () => {
+  const label = 'W'.repeat(40);
+  const data = [{ id: 'r', label: 'Root', children: [{ id: 'm', label: 'Middle', children: [{ id: 'leaf', label }] }] }];
+  const el = await fixture<LyraMindMap>(html`<lr-mind-map expand-depth="2" .topics=${data}></lr-mind-map>`);
+  const diagram = el.shadowRoot!.querySelector<SVGSVGElement>('[part="svg"]')!;
+  const text = [...diagram.querySelectorAll<SVGTextElement>('[part="node-label"]')].find(item => item.textContent === label)!;
+  const outer = diagram.getBoundingClientRect(), inner = text.getBoundingClientRect();
+  expect(inner.width).to.be.greaterThan(0);
+  expect(inner.left).to.be.at.least(outer.left - 1);
+  expect(inner.right).to.be.at.most(outer.right + 1);
+});
+
+it('paints a configurable halo behind node label text', async () => {
+  const el = await fixture<LyraMindMap>(html`<lr-mind-map .topics=${topics}
+    style="--lr-mind-map-label-halo: rgb(23, 47, 91)"></lr-mind-map>`);
+  const label = el.shadowRoot!.querySelector<SVGTextElement>('[part="node-label"]')!;
+  const style = getComputedStyle(label);
+  expect(style.stroke).to.equal('rgb(23, 47, 91)');
+  expect(style.getPropertyValue('paint-order').split(' ')[0]).to.equal('stroke');
+  expect(Number.parseFloat(style.strokeWidth)).to.be.greaterThan(0);
 });

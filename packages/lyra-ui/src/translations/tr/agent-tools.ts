@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Araç parametresi şemaları en fazla {fields} alanı ve alan başına {options} seçenek destekler.',
   testResultsLimit: 'Yalnızca ilk {count} test sonucu gösteriliyor.',
   toolTimelineLimit: 'En fazla {count} araç çağrısı gösteriliyor.',
+  toolTimelineLoadError: 'Araç görünümü yüklenemedi.',
   toolSelectLimit: 'Yalnızca ilk {count} araç gösteriliyor.',
   testResultsInputTooLarge: 'Test sonucu ayrıntıları görüntüleme sınırını aşıyor.',
   toolCall: 'Araç çağrısı',

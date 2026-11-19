@@ -1,3 +1,5 @@
+import { visuallyHidden } from '../../../internal/a11y.js';
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS } from 'lit';
 import { tag } from '../../../internal/prefix.js';
@@ -137,6 +139,9 @@ export const styles = css`
   :host(:dir(rtl)) [part~="scroll-button-end"] [part="scroll-button-glyph"] {
     transform: scaleX(-1);
   }
+  [data-close-tab]:not(:focus) {
+    ${visuallyHidden}
+  }
   [part="tab"] {
     position: relative;
     appearance: none;
@@ -222,7 +227,7 @@ export const styles = css`
   [part="panel"] {
     min-inline-size: 0;
     padding-block-start: var(--lr-space-xs);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="body"] {
     flex: 1 1 auto;
@@ -400,4 +405,5 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
+  ${forcedColorsPart('[part="tab"][aria-selected="true"]')}
 `;

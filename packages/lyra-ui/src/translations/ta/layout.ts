@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'வழிசெலுத்தலின் பின்னை நீக்கு',
   appRailItemCollapse: '{label}-ஐச் சுருக்கு',
   appRailItemExpand: '{label}-ஐ விரி',
+  appRailItemToggle: '{label}-ஐக் காட்டு அல்லது மறை',
+  appRailGroupToggle: 'வழிசெலுத்தல் குழு',
   resizeValuePercent: '{value} சதவீதம்',
   commandPaletteLabel: 'கட்டளைப் பலகம்',
   commandPalettePlaceholder: 'கட்டளைகளைத் தேடு…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} கட்டளை',
     other: '{count} கட்டளைகள்',
   },
+  tabCloseAction: '{label}-ஐ மூடு',
+  stepperStateCompleted: 'முடிந்தது',
+  stepperStateError: 'பிழை',
+  stepperStatePending: 'தொடங்கவில்லை',
+  stepperStateLocked: 'பூட்டப்பட்டது',
   commandPaletteInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் சில கட்டளைகள் விடப்பட்டன.',
 };
 

@@ -24,7 +24,11 @@ export class GraphEngineAdapter {
   private engine?: Engine3dInstance;
   private readonly disposed = new WeakSet<Engine3dInstance>();
   constructor(private readonly services: GraphEngineAdapterServices = {}) {}
-  private release(engine: Engine3dInstance): void { if (!this.disposed.has(engine)) { this.disposed.add(engine); engine.dispose(); } }
+  private release(engine: Engine3dInstance): void {
+    if (this.disposed.has(engine)) return;
+    this.disposed.add(engine);
+    try { engine.dispose(); } catch { /* Ownership ends even when the peer cannot dispose. */ }
+  }
   close(): void { this.generation++; const previous = this.engine; this.engine = undefined; if (previous) this.release(previous); }
   async open(request: GraphEngineRequest): Promise<GraphComponentEngine | null> {
     this.close(); const generation = this.generation;

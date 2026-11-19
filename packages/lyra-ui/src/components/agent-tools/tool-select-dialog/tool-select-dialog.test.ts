@@ -38,6 +38,7 @@ expectLocaleFallback('tr', [
   'otherCategory',
   'toolCount',
   'clear',
+  'viewerSearchMatchCount',
 ]);
 it('provides rendered hover feedback for the native search input', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`

@@ -6,6 +6,7 @@ import './graph-legend.js';
 import type { LyraGraphLegend } from './graph-legend.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -663,4 +664,38 @@ describe('lr-graph-legend retired interactive alias', () => {
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
   });
+});
+
+it('keeps type colours on the swatches under forced colours', async () => {
+  await setForcedColors('active');
+  try {
+    const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+    const swatch = el.shadowRoot!.querySelectorAll('[part~="swatch"]')[1]!;
+    expectForcedColorAdjustNone(swatch);
+    expect(getComputedStyle(swatch.querySelector('rect')!).fill).to.equal('rgb(124, 58, 237)');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+function expectForcedColorAdjustNone(element: Element): void {
+  const value = getComputedStyle(element).getPropertyValue('forced-color-adjust');
+  // WebKit does not report the property; the paint assertions elsewhere still run there.
+  if (value !== '') expect(value).to.equal('none');
+}
+
+it('scales each swatch with the legend text', async () => {
+  const legend = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const swatch = legend.shadowRoot!.querySelector('[part="swatch"]')!;
+  legend.style.setProperty('--lr-font-size-sm', '16px');
+  const width = swatch.getBoundingClientRect().width;
+  legend.style.setProperty('--lr-font-size-sm', '32px');
+  expect(swatch.getBoundingClientRect().width).to.be.closeTo(width * 2, 0.1);
+});
+
+it('paints the configured hover fill on its item', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-graph-legend']>(html`<lr-graph-legend .types=${types} style="--lr-graph-legend-item-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector('button[part="item"]')!;
+  await hoverUntilMatched(button, 'hover the control');
+  await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });

@@ -1,4 +1,7 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import {
@@ -45,8 +48,10 @@ export interface LyraToolResultDialogCloseDetail {
 }
 
 export interface LyraToolResultDialogEventMap {
+  'lr-request-close': CustomEvent<{ source: 'escape' | 'backdrop' | 'close-button' }>;
   'lr-close': CustomEvent<LyraToolResultDialogCloseDetail>;
   /** Cancelable request to toggle `maximized`, fired before it changes. */
+  'lr-after-maximize-change': CustomEvent<{ readonly maximized: boolean }>;
   'lr-maximize-change-request': CustomEvent<{ readonly maximized: boolean }>;
 }
 
@@ -110,12 +115,14 @@ const TOOL_RESULT_DIALOG_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STAT
  * @slot body - The dialog's main content — typically a `<lr-tab-group>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
  * @slot footer - Optional action buttons, rendered in a bottom row.
+ * @event lr-request-close - Cancelable before user dismissal. detail.source identifies the trigger.
  * @event lr-close - `detail: { reason: ToolResultDialogCloseReason }`. Fired
  * exactly once per dismissal, via Escape, an opted-in backdrop click, the built-in
  * close button, or a `close()` call. The name is not dialog-scoped in this library: nesting this
  * dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also
  * observes this event. See `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and
  * the `event.target !== event.currentTarget` guard.
+ * @event lr-after-maximize-change - The committed maximize or restore action, with detail.maximized.
  * @event lr-maximize-change-request - Cancelable. `detail: { maximized: boolean }` (the would-be
  * new `maximized` state), fired when the header's maximize/restore toggle is clicked, *before*
  * `maximized` itself changes. Calling `preventDefault()` vetoes the toggle and leaves `maximized`
@@ -230,7 +237,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: () => {
       if (!this.open || !this.overlay?.isTopmost()) return;
-      this.close('escape');
+      this.requestClose('escape');
     },
     onUnexpectedClose: () => {
       if (!this.open) return;
@@ -261,7 +268,8 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.open) this.enterTopLayer();
+    this.syncBodyRegion();
+    if (this.open) this.modalSurface.show();
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
@@ -284,21 +292,19 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
       // The shadow panel survives a same-document reparent, so restore focus before the pending
       // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
       this.overlay?.focusInitial();
-      void this.updateComplete.then(() => {
-        if (!this.open || !this.isConnected) return;
-        this.enterTopLayer();
+      this.scheduleAfterUpdate(() => {
+        if (!this.open) return;
+        this.modalSurface.show();
         this.overlay?.focusInitial();
-      });
+      }, 'modal-reconnect');
     }
-  }
-
-  /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
-  private enterTopLayer(): void {
-    this.modalSurface.show();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.disposeBodyRegion?.();
+    this.disposeBodyRegion = undefined;
+    this.bodyRegionEl = null;
     this.modalSurface.disconnect();
     this.overlay?.suspend();
   }
@@ -344,12 +350,20 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     this.close(reason);
   }
 
+  private requestClose(source: 'escape' | 'backdrop' | 'close-button'): void {
+    requestThenCommit({
+      requestDetail: { source },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-request-close', detail, init),
+      commit: () => this.close(source),
+    });
+  }
+
   private onBackdropClick = (): void => {
     this.overlay?.dismissBackdrop();
   };
 
   private onCloseButtonClick = (): void => {
-    this.close('close-button');
+    this.requestClose('close-button');
   };
 
   private pendingMaximized?: boolean;
@@ -359,20 +373,39 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     this.pendingMaximized = next;
     try {
       const request = this.emit('lr-maximize-change-request', Object.freeze({ maximized: next }), { cancelable: true });
-      if (!request.defaultPrevented && this.pendingMaximized === next) this.maximized = next;
+      if (!request.defaultPrevented && this.pendingMaximized === next) {
+        this.maximized = next;
+        this.scheduleAfterUpdate(() => this.emit('lr-after-maximize-change', { maximized: this.maximized }), 'maximize-change');
+      }
     } finally {
       this.pendingMaximized = undefined;
     }
   };
+
+  private disposeBodyRegion?: () => void;
+  private bodyRegionEl: HTMLElement | null = null;
+  private bodyRegionName?: string;
+
+  /** Keeps the capped, scrolling body keyboard-scrollable (and named) only while it overflows. */
+  private syncBodyRegion(rearm = false): void {
+    const body = this.open ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
+    const name = body ? resolveAccessibleName(this, this.accessibleLabel, this.renderRoot.querySelector(`[id="${this.titleId}"]`)!.textContent) : undefined;
+    if (!rearm && body === this.bodyRegionEl && name === this.bodyRegionName) return;
+    this.disposeBodyRegion?.();
+    this.disposeBodyRegion = undefined;
+    this.bodyRegionEl = body;
+    this.bodyRegionName = name;
+    if (body) this.disposeBodyRegion = makeScrollRegionFocusable(body, name);
+  }
 
   private activateOverlay(): void {
     if (this.overlay?.isActive()) return;
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
-      onEscape: () => this.close('escape'),
+      onEscape: () => this.requestClose('escape'),
       onBackdrop: () => {
-        if (this.lightDismiss) this.close('backdrop');
+        if (this.lightDismiss) this.requestClose('backdrop');
       },
       lockScroll: true,
       suspendWhenUnrendered: true,
@@ -444,7 +477,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
           </div>
         </div>
         <div part="body">
-          <slot name="body"></slot>
+          <slot name="body" @slotchange=${() => this.syncBodyRegion(true)}></slot>
         </div>
         <div part="footer" ?hidden=${!this.hasFooterSlot}>
           <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>

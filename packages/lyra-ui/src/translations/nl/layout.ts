@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Navigatie losmaken',
   appRailItemCollapse: '{label} inklappen',
   appRailItemExpand: '{label} uitklappen',
+  appRailItemToggle: '{label} in- of uitklappen',
+  appRailGroupToggle: 'Navigatiegroep',
   resizeValuePercent: '{value} procent',
   commandPaletteLabel: 'Opdrachtpalet',
   commandPalettePlaceholder: 'Opdrachten zoeken…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} opdracht',
     other: '{count} opdrachten',
   },
+  tabCloseAction: '{label} sluiten',
+  stepperStateCompleted: 'Voltooid',
+  stepperStateError: 'Fout',
+  stepperStatePending: 'Niet gestart',
+  stepperStateLocked: 'Vergrendeld',
   commandPaletteInputLimit: 'Sommige opdrachten zijn weggelaten omdat de invoerlimiet is bereikt.',
 };
 

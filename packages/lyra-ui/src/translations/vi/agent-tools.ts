@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Lược đồ tham số công cụ hỗ trợ tối đa {fields} trường và {options} lựa chọn cho mỗi trường.',
   testResultsLimit: 'Chỉ hiển thị {count} kết quả kiểm thử đầu tiên.',
   toolTimelineLimit: 'Hiển thị tối đa {count} lần gọi công cụ.',
+  toolTimelineLoadError: 'Không thể tải chế độ xem công cụ.',
   toolSelectLimit: 'Chỉ hiển thị {count} công cụ đầu tiên.',
   testResultsInputTooLarge: 'Chi tiết kết quả kiểm thử vượt quá giới hạn hiển thị.',
   toolCall: 'Lần gọi công cụ',

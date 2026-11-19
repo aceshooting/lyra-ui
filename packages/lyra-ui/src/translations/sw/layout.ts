@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Ondoa urambazaji uliobandikwa',
   appRailItemCollapse: 'Kunja {label}',
   appRailItemExpand: 'Panua {label}',
+  appRailItemToggle: 'Onyesha au ficha {label}',
+  appRailGroupToggle: 'Kikundi cha urambazaji',
   resizeValuePercent: 'asilimia {value}',
   commandPaletteLabel: 'Paleti ya amri',
   commandPalettePlaceholder: 'Tafuta amri…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} amri',
     other: '{count} amri',
   },
+  tabCloseAction: 'Funga {label}',
+  stepperStateCompleted: 'Imekamilika',
+  stepperStateError: 'Hitilafu',
+  stepperStatePending: 'Haijaanza',
+  stepperStateLocked: 'Imefungwa',
   commandPaletteInputLimit: 'Baadhi ya amri zimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
 };
 

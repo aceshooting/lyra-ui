@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Skema parameter alat menyokong maksimum {fields} medan dan {options} pilihan bagi setiap medan.',
   testResultsLimit: 'Hanya {count} hasil ujian pertama dipaparkan.',
   toolTimelineLimit: 'Maksimum {count} panggilan alat dipaparkan.',
+  toolTimelineLoadError: 'Paparan alat tidak dapat dimuatkan.',
   toolSelectLimit: 'Hanya {count} alat pertama dipaparkan.',
   testResultsInputTooLarge: 'Butiran keputusan ujian melebihi had paparan.',
   toolCall: 'Panggilan alat',

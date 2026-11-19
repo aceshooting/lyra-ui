@@ -1,4 +1,7 @@
+import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
+import { StructuredFormValidityController } from '../../../internal/form-validator-runtime.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
@@ -32,10 +35,11 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import {
   getFormOwner,
   isBarredFromValidation,
+  isLiveDisabled,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamFormat, LYRA_DEFAULT_toolParamInvalidConstraint, LYRA_DEFAULT_toolParamInvalidSelection, LYRA_DEFAULT_toolParamMaxItems, LYRA_DEFAULT_toolParamMaxLength, LYRA_DEFAULT_toolParamMaximum, LYRA_DEFAULT_toolParamMinItems, LYRA_DEFAULT_toolParamMinLength, LYRA_DEFAULT_toolParamMinimum, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -89,8 +93,7 @@ export interface LyraToolParamFormEventMap {
  * than being misreported as value-serialization failures.
  *
  * Fields render in `Object.keys(schema.properties)` order (insertion order,
- * which is reliable for a plain object's string keys). A field's label is
- * `title ?? ` the property key; `description` renders as helper text below
+ * which is reliable for a plain object's string keys). A nonblank field title labels its control, with the property key as the fallback; `description` renders as helper text below
  * the control; a key listed in `required` gets a visible `*`. The outer component owns validation
  * because JSON Schema `required` means property presence, unlike HTML controls' nonempty/must-check
  * semantics. Boolean fields therefore expose explicit unset/true/false values instead of
@@ -135,7 +138,7 @@ export interface LyraToolParamFormEventMap {
  * layered on top of the primary integration contract (`value` +
  * `lr-input`/`lr-validity-change`), not a requirement: a consumer that
  * never puts this inside a `<form>` loses nothing.
- * The value present on first connection is cloned as the native default.
+ * The first render captures the bound value as the native reset default.
  * `form.reset()` restores a fresh clone of that default, clears touched and
  * interaction state, and preserves any consumer-set custom validity message,
  * matching native controls' separation between reset state and custom errors.
@@ -277,15 +280,18 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   private valueInputInvalid = false;
   private valueInputTruncated = false;
   private defaultValueSnapshot: ToolParamFormValue = Object.freeze({});
-  private defaultValueCaptured = false;
+  private validationLocale = '';
+  private validationCatalog = '';
   private _effectiveValue: ToolParamFormValue = Object.freeze({});
   private _validityFlags: ValidityStateFlags = {};
   private _disabled = false;
-  // Guards lr-validity-change so it only fires on an actual change, not on
-  // every render — `undefined` guarantees the first computed state always
-  // "changes" from it, so mounting with an unmet required field still
-  // announces `valid:false` once up front.
-  private lastValidityKey: string | undefined;
+  private readonly structuredValidity = new StructuredFormValidityController(this, {
+    baseErrorMessage: () => this.validityController.customValidityMessage || this._formError,
+    fieldErrors: () => this._errors,
+    validityController: () => this.validityController,
+    reveal: () => this.revealErrors(),
+    emit: snapshot => this.emit('lr-validity-change', snapshot),
+  });
   // Gates the `user-valid`/`user-invalid` custom states only. Deliberately
   // separate from `touchedFields`: that set is per-field and is also filled
   // wholesale by `reportValidity()` *when there are errors*, so a
@@ -295,7 +301,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   // interactive validation (`reportValidity()` or a submission attempt, via
   // `installInteractionOnInvalid()`); a silent `checkValidity()` alone never sets it.
   private hasInteracted = false;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly errorAnnouncements = new AnnouncementSinkController(this, {eager: ['assertive']});
   private visibleErrorSnapshot = new Map<string, string>();
   private suppressNextErrorAnnouncement = true;
 
@@ -386,7 +392,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
    *  control from caller code and event re-dispatch paths.
    */
   override click(): void {
-    if (this.effectiveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.focusFirstControl();
   }
 
@@ -394,7 +400,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
    *  like a regular focusable control -- see the class doc's "behaves like a regular control" note.
    */
   override focus(options?: FocusOptions): void {
-    if (this.effectiveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.focusFirstControl(options);
   }
 
@@ -406,19 +412,13 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     }
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.errorAnnouncements.adopted();
+  }
+
   override connectedCallback(): void {
-    if (!this.defaultValueCaptured) {
-      this.defaultValueSnapshot = this._value;
-      this.defaultValueCaptured = true;
-    }
     super.connectedCallback();
-    if (this.errorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
-      this.errorAnnouncementSink?.release();
-      this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-        document: this.ownerDocument,
-        source: this,
-      });
-    }
     if (this.hasUpdated) {
       this.suppressNextErrorAnnouncement = true;
       this.requestUpdate();
@@ -433,8 +433,6 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
   }
 
@@ -552,26 +550,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   /** The current effective validation errors. Intrinsic errors are keyed by their property;
    * a whole-control or caller-supplied custom error is keyed by the `base` part. */
   get errors(): Readonly<Record<string, string>> {
-    return this.publicValidityErrors();
-  }
-
-  private publicValidityErrors(): Readonly<Record<string, string>> {
-    const errors: Record<string, string> = { ...this._errors };
-    if (this.willValidate) {
-      const wholeControlError = this.validityController.customValidityMessage || this._formError;
-      if (wholeControlError) errors['base'] = this.validationMessage;
-    }
-    return Object.freeze(errors);
-  }
-
-  private publishValiditySnapshot(): void {
-    if (!this.isConnected) return;
-    const valid = !this.willValidate || this.validity.valid;
-    const errors = valid ? Object.freeze({}) : this.publicValidityErrors();
-    const key = JSON.stringify({ valid, errors });
-    if (key === this.lastValidityKey) return;
-    this.lastValidityKey = key;
-    this.emit('lr-validity-change', Object.freeze({ valid, errors }));
+    return this.structuredValidity.errors;
   }
 
   /** A schema-wide or JSON-serialization error that cannot be assigned to one field. */
@@ -711,19 +690,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
    * mirroring a native `<form>`'s `reportValidity()`.
    */
   reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // A reportValidity() call is what a submit attempt runs, so it counts as interaction for the
-    // `user-valid`/`user-invalid` states — set before syncFormState(), which is what republishes
-    // them. (A real submission attempt never calls this method -- it drives `ElementInternals`
-    // directly -- which is what `installInteractionOnInvalid()` above covers.)
-    this.hasInteracted = true;
-    this.syncFormState();
-    if (Object.keys(this._errors).length > 0) {
-      this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
-    }
-    if (this._formError) this.showFormError = true;
-    this.requestUpdate();
-    const valid = this.internals.reportValidity();
+    const valid = this.structuredValidity.reportValidity();
     if (!valid && !this.firstInvalidField() && this.missingRequiredKeys.length > 0) {
       void this.updateComplete.then(() => {
         const error = this.firstMissingPropertyError();
@@ -732,6 +699,16 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
       });
     }
     return valid;
+  }
+
+  private revealErrors(): void {
+    this.hasInteracted = true;
+    this.syncFormState();
+    if (Object.keys(this._errors).length > 0) {
+      this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
+    }
+    if (this._formError) this.showFormError = true;
+    this.requestUpdate();
   }
 
   /**
@@ -753,7 +730,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityCustomStates();
-    this.publishValiditySnapshot();
+    this.structuredValidity.publish();
     this.requestUpdate();
   }
 
@@ -848,7 +825,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
       this.validityController.setValidity(this._validityFlags, firstMessage);
     }
     this.syncValidityCustomStates();
-    this.publishValiditySnapshot();
+    this.structuredValidity.publish();
   }
 
   /**
@@ -902,9 +879,21 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     this.syncInternals(formValue);
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.hasUpdated) this.defaultValueSnapshot = this._value;
+    const locale = this.effectiveMessageLocale;
+    const catalog = lyraLocaleCatalogVersion(locale);
+    if (locale !== this.validationLocale || catalog !== this.validationCatalog || changed.has('strings')) {
+      this.validationLocale = locale;
+      this.validationCatalog = catalog;
+      this.syncFormState();
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.publishValiditySnapshot();
+    this.structuredValidity.publish();
     if (changed.has('value') || changed.has('schema') || changed.has('_errors') || changed.has('_formError')) {
       const nestedUpdates = Array.from(this.firstInvalidField()?.children ?? [])
         .filter((element) => typeof (element as unknown as Record<PropertyKey, unknown>)[VALIDITY_ANCHOR] === 'function')
@@ -925,7 +914,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
       }
       // A submit attempt can reveal several fields in one render. Speak that as one concise
       // addition instead of firing a burst of competing assertive announcements.
-      if (freshMessages.length > 0) this.errorAnnouncementSink?.announce(freshMessages.join(' '));
+      if (freshMessages.length > 0) this.errorAnnouncements.announceAssertive(freshMessages.join(' '));
     }
     this.visibleErrorSnapshot = currentErrors;
     this.suppressNextErrorAnnouncement = false;
@@ -946,7 +935,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   }
 
   private setFieldValue(key: string, val: unknown, committed = false): void {
-    if (this.effectiveDisabled) return;
+    if (isLiveDisabled(this)) return;
     // Set before the `value` assignment, whose setter republishes the custom states.
     this.hasInteracted = true;
     this.applyValue({ ...this.value, [key]: val });
@@ -988,7 +977,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     e.stopPropagation();
     const value = (e.target as LyraSelect).value;
     if (value === '') {
-      if (this.effectiveDisabled) return;
+      if (isLiveDisabled(this)) return;
       this.hasInteracted = true;
       if (this.schemaProperties[key]?.default !== undefined) {
         this.applyValue({ ...this.value, [key]: undefined });
@@ -1007,7 +996,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
 
   private onValueCommit = (event: Event): void => {
     event.stopPropagation();
-    if (!this.effectiveDisabled) emitValueEvents(this, 'change', { value: this.effectiveValue }, detail => this.emit('lr-change', detail));
+    if (!isLiveDisabled(this)) emitValueEvents(this, 'change', { value: this.effectiveValue }, detail => this.emit('lr-change', detail));
   };
 
   private stopNestedControlEvent = (e: Event): void => {
@@ -1042,7 +1031,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
         .label=${label}
         .hint=${prop.description ?? ''}
         .errorText=${errorMessage}
-        .required=${false}
+        .required=${required}
         aria-required=${required ? 'true' : 'false'}
         .multiple=${prop.type === 'array'}
         .value=${prop.type === 'array' ? (Array.isArray(effective) ? effective : []) : (typeof effective === 'string' ? effective : '')}
@@ -1093,7 +1082,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
         .label=${label}
         .hint=${prop.description ?? ''}
         .errorText=${errorMessage}
-        .required=${false}
+        .required=${required}
         aria-required=${required ? 'true' : 'false'}
         .step=${prop.type === 'integer' ? 1 : 'any'}
         .value=${numValue}
@@ -1112,7 +1101,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
         .label=${label}
         .hint=${prop.description ?? ''}
         .errorText=${errorMessage}
-        .required=${false}
+        .required=${required}
         aria-required=${required ? 'true' : 'false'}
         .value=${selected}
         ?disabled=${this.effectiveDisabled}
@@ -1141,7 +1130,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   }
 
   private renderField(key: string, prop: ToolParamFormProperty, index: number, required: boolean): TemplateResult {
-    const label = prop.title ?? key;
+    const label = normalizeLabel(prop.title) ?? key;
     const fieldId = `${this.baseId}-f${index}`;
     const descId = prop.description ? `${fieldId}-desc` : '';
     const fieldError = this._errors[key];

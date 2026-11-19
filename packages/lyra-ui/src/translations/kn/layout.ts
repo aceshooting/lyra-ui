@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'ನ್ಯಾವಿಗೇಶನ್ ಅನ್‌ಪಿನ್ ಮಾಡಿ',
   appRailItemCollapse: '{label} ಕುಗ್ಗಿಸಿ',
   appRailItemExpand: '{label} ವಿಸ್ತರಿಸಿ',
+  appRailItemToggle: '{label} ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ',
+  appRailGroupToggle: 'ನ್ಯಾವಿಗೇಶನ್ ಗುಂಪು',
   resizeValuePercent: '{value} ಪ್ರತಿಶತ',
   commandPaletteLabel: 'ಕಮಾಂಡ್ ಪ್ಯಾಲೆಟ್',
   commandPalettePlaceholder: 'ಕಮಾಂಡ್‌ಗಳನ್ನು ಹುಡುಕಿ…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} ಆಜ್ಞೆ',
     other: '{count} ಆಜ್ಞೆಗಳು',
   },
+  tabCloseAction: '{label} ಮುಚ್ಚಿ',
+  stepperStateCompleted: 'ಪೂರ್ಣಗೊಂಡಿದೆ',
+  stepperStateError: 'ದೋಷ',
+  stepperStatePending: 'ಪ್ರಾರಂಭಿಸಿಲ್ಲ',
+  stepperStateLocked: 'ಲಾಕ್ ಆಗಿದೆ',
   commandPaletteInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಅಂಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ: ಆಜ್ಞೆಗಳು.',
 };
 

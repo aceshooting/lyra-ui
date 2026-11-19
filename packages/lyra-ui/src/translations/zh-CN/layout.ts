@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: '取消固定导航',
   appRailItemCollapse: '收起{label}',
   appRailItemExpand: '展开{label}',
+  appRailItemToggle: '切换{label}的显示状态',
+  appRailGroupToggle: '导航组',
   resizeValuePercent: '百分之{value}',
   commandPaletteLabel: '命令面板',
   commandPalettePlaceholder: '搜索命令…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} 命令',
   },
+  tabCloseAction: '关闭{label}',
+  stepperStateCompleted: '已完成',
+  stepperStateError: '错误',
+  stepperStatePending: '未开始',
+  stepperStateLocked: '已锁定',
   commandPaletteInputLimit: '由于达到输入限制，部分命令已被省略。',
 };
 

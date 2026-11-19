@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Njia',
   pathNodeStatus: '{label}, nodi {position} kati ya {total}',
   pathRelationStatus: '{relation}, uhusiano',
+  pathRelationForward: 'imeelekezwa kwenye nodi inayofuata',
+  pathRelationReverse: 'imeelekezwa kwenye nodi iliyotangulia',
   neighborListLabel: 'Mahusiano',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Panua {label} kwenye grafu',

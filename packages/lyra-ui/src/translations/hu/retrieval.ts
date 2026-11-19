@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Útvonal',
   pathNodeStatus: '{label}, csomópont: {position}/{total}',
   pathRelationStatus: '{relation}, kapcsolat',
+  pathRelationForward: 'a következő csomópont felé irányított',
+  pathRelationReverse: 'az előző csomópont felé irányított',
   neighborListLabel: 'Kapcsolatok',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Kibontás a gráfban: {label}',

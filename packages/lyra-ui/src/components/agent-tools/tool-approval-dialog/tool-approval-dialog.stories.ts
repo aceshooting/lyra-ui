@@ -265,3 +265,8 @@ export const AboveNativeModal: Story = {
     </div>
   `,
 };
+
+export const DisabledReview: Story = {
+  render: (_args, context) => html`<lr-tool-approval-dialog .open=${context.viewMode !== 'docs'}
+    disabled heading-level="3" tool-name="web_search" .args=${SEARCH_ARGS}></lr-tool-approval-dialog>`,
+};

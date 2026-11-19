@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Навигацияны босату',
   appRailItemCollapse: 'Жию: {label}',
   appRailItemExpand: 'Жаю: {label}',
+  appRailItemToggle: 'Көрсету немесе жасыру: {label}',
+  appRailGroupToggle: 'Навигация тобы',
   resizeValuePercent: '{value} пайыз',
   commandPaletteLabel: 'Командалар палитрасы',
   commandPalettePlaceholder: 'Командаларды іздеу…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} пәрмені',
     other: '{count} пәрмендер',
   },
+  tabCloseAction: 'Жабу: {label}',
+  stepperStateCompleted: 'Аяқталды',
+  stepperStateError: 'Қате',
+  stepperStatePending: 'Басталмаған',
+  stepperStateLocked: 'Құлыпталған',
   commandPaletteInputLimit: 'Енгізу шегіне жеткендіктен, кейбір пәрмендер алынып тасталды.',
 };
 

@@ -1,3 +1,6 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
+import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -27,7 +30,7 @@ import {
 } from '../tool-redaction.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit, LYRA_DEFAULT_toolTimelineLoadError } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -79,6 +82,7 @@ export interface ToolTimelineEntry extends ToolInvocation {
  * arguments than the entry originally proposed.
  */
 export interface ToolTimelineApprovalDetail extends ToolApprovalEventDetail {
+  waitUntil?: ApprovalWaitUntil;
   args?: unknown;
   sourceKey?: string;
 }
@@ -98,6 +102,8 @@ export type ToolTimelineApprovalPending = ApprovalAction | null;
 
 export interface LyraToolTimelineEventMap {
   'lr-tool-approval-decide-request': CustomEvent<ToolTimelineApprovalDetail>;
+  'lr-tool-approval-open': CustomEvent<ToolTimelineActivateDetail>;
+  'lr-tool-approval-close': CustomEvent<ToolTimelineActivateDetail & {reason: string}>;
   'lr-tool-activate': CustomEvent<ToolTimelineActivateDetail>;
   'lr-tool-render-error': CustomEvent<ToolTimelineRenderErrorDetail>;
 }
@@ -124,8 +130,7 @@ interface CanonicalToolTimelineEntry {
   readonly approved?: boolean;
 }
 
-let resultViewRegistration: Promise<unknown> | undefined;
-let approvalDialogRegistration: Promise<unknown> | undefined;
+type ToolSurface = 'result' | 'approval';
 
 const MAX_RENDERED_ENTRIES = 500;
 const TOOL_STATUSES: ReadonlySet<ToolStatus> = new Set<ToolStatus>(TOOL_CALL_STATUSES);
@@ -206,6 +211,16 @@ function entryIdentity(entry: CanonicalToolTimelineEntry): string {
   return key;
 }
 
+/** Header verb per group status; the verb itself carries the state, so no extra status prefix. */
+const GROUP_HEADER_KEY = {
+  pending: 'toolCallBlockHeaderPending',
+  running: 'toolCallBlockHeaderRunning',
+  success: 'toolCallBlockHeaderSuccess',
+  error: 'toolCallBlockHeaderError',
+  denied: 'toolCallBlockHeaderDenied',
+  incomplete: 'toolCallBlockHeaderIncomplete',
+} as const satisfies Record<ToolStatus, string>;
+
 function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActivateDetail {
   const sourceKey = entrySourceKey(entry);
   return sourceKey === undefined
@@ -272,16 +287,19 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
  *
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide-request - A pending entry's approval dialog was resolved.
- *   `detail: { invocationId, approved, args? }` — `args` (the dialog's current, possibly
+ *   `detail: { invocationId, approved, args?, waitUntil }` — `args` (the dialog's current, possibly
  *   host-edited arguments) is present only when `approved` is `true`. Cancelable; preventing it
  *   preserves the pending dialog and its current argument edits, sets `pendingApproval`, and
  *   requires `finalizePendingApproval()` or `revertPendingApproval()` to settle the held action.
+ * @event lr-tool-approval-open - A review opened for the correlated invocation.
+ * @event lr-tool-approval-close - A review closed with its invocationId, optional sourceKey, and reason.
  * @event lr-tool-activate - A non-approval entry was activated. `detail: { invocationId,
  *   sourceKey? }`.
  * @event lr-tool-render-error - A nested result renderer failed. `detail: { invocationId,
  *   sourceKey?, toolName, error }`.
  * @csspart base - The root `<ol>`.
  * @slot summary - Custom summary content in grouped mode. Overrides `groupSummary`; the group status stays accessible.
+ * @csspart load-error - Localized fallback when a review or result view fails to load.
  * @csspart group - The plain disclosure wrapping the timeline in grouped mode.
  * @csspart group-summary - Group status glyph and summary text, with the aggregate status in `data-status`.
  * @csspart entry - One entry's `<li>`; carries `data-status` (the entry's `status`) and
@@ -356,10 +374,16 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
+    toolCallBlockHeaderDenied: LYRA_DEFAULT_toolCallBlockHeaderDenied,
+    toolCallBlockHeaderError: LYRA_DEFAULT_toolCallBlockHeaderError,
+    toolCallBlockHeaderIncomplete: LYRA_DEFAULT_toolCallBlockHeaderIncomplete,
+    toolCallBlockHeaderPending: LYRA_DEFAULT_toolCallBlockHeaderPending,
+    toolCallBlockHeaderRunning: LYRA_DEFAULT_toolCallBlockHeaderRunning,
     toolCallBlockHeaderSuccess: LYRA_DEFAULT_toolCallBlockHeaderSuccess,
     toolTimelineDetailsFor: LYRA_DEFAULT_toolTimelineDetailsFor,
     toolTimelineInputLimit: LYRA_DEFAULT_toolTimelineInputLimit,
     toolTimelineLimit: LYRA_DEFAULT_toolTimelineLimit,
+    toolTimelineLoadError: LYRA_DEFAULT_toolTimelineLoadError,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -376,6 +400,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   protected static readonly appendOrderedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  /** Prevents the reviewer from starting or editing a decision. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** The newest 10,000 calls are retained by identity, avoiding the shared 50,000-value deep-copy
    * budget for opaque arguments/results. The newest 500 unique calls render, with open/review
@@ -401,7 +428,6 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** The `(sourceKey,id)` identity of the entry currently under review, or `undefined` while the
    *  shared dialog is closed. */
   @state() private reviewingEntryKey?: string;
-  @state() private approvalPending: ToolTimelineApprovalPending = null;
   @state() private openedEntryIds = new Set<string>();
   private projectedEntriesCache: CanonicalToolTimelineEntry[] = [];
   private sortedEntriesCache: CanonicalToolTimelineEntry[] = [];
@@ -437,6 +463,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
   private redactionCache = new WeakMap<CanonicalToolTimelineEntry, RedactedToolDetail>();
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private readonly slotPresence = new SlotPresenceController(this);
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
 
@@ -444,6 +471,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     super.connectedCallback();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.projectionTruncated;
+    if (this.projectedEntriesCache.some(entry => entry.needsApproval)) this.ensureSurface('approval');
   }
 
   override adoptedCallback(): void {
@@ -455,30 +483,44 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
    *  otherwise. Read-only: call `finalizePendingApproval()` after persisting the controlled entry,
    *  or `revertPendingApproval()` to release the same dialog and draft for another attempt. */
   get pendingApproval(): ToolTimelineApprovalPending {
-    return this.approvalPending;
+    return this.renderRoot?.querySelector<LyraToolApprovalDialog>('[part="approval-dialog"]')?.pendingAction ?? null;
+  }
+
+  private readonly loadingSurfaces = new Map<ToolSurface, 'loading' | 'ready' | 'failed'>();
+  private loadSurface(kind: ToolSurface): Promise<unknown> {
+    return kind === 'result' ? import('../tool-result-view/tool-result-view.js') : import('../tool-approval-dialog/tool-approval-dialog.js');
+  }
+
+  private ensureSurface(kind: ToolSurface, retry = false): void {
+    if (!this.isConnected) return;
+    const state = this.loadingSurfaces.get(kind);
+    if (state && !(retry && state === 'failed')) return;
+    this.loadingSurfaces.set(kind, 'loading');
+    void this.loadSurface(kind).then(() => {
+      this.loadingSurfaces.set(kind, 'ready');
+      this.requestUpdate();
+    }, () => {
+      this.loadingSurfaces.set(kind, 'failed');
+      this.announcements.announceAssertive(this.localize('toolTimelineLoadError'));
+      this.requestUpdate();
+    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    // Registered on first need, so a timeline whose details never open never loads the result view.
-    if (this.openedEntryIds.size > 0)
-      resultViewRegistration ??= import('../tool-result-view/tool-result-view.js').catch(
-        () => (resultViewRegistration = undefined)
-      );
     if (!changed.has('entries')) return;
+    const previousReview = this.reviewingEntry;
     this.rebuildProjection();
     const projected = this.projectedEntriesCache;
-    // Registered on first need, so a timeline with no approval-gated entry never loads the dialog.
-    if (projected.some((entry) => entry.needsApproval))
-      approvalDialogRegistration ??= import('../tool-approval-dialog/tool-approval-dialog.js').catch(
-        () => (approvalDialogRegistration = undefined)
-      );
+    if (projected.some(entry => entry.needsApproval)) this.ensureSurface('approval');
     const identities = new Set(projected.map(entryIdentity));
     if (this.reviewingEntryKey !== undefined) {
       const still = projected.find((entry) => entryIdentity(entry) === this.reviewingEntryKey);
       if (!still || !(still.needsApproval && still.approved === undefined)) {
         this.reviewingEntryKey = undefined;
-        this.approvalPending = null;
+        if (previousReview) this.emit('lr-tool-approval-close', {
+          ...entryCorrelation(previousReview), reason: 'request-invalidated',
+        });
       }
     }
     const opened = new Set([...this.openedEntryIds].filter((key) => identities.has(key)));
@@ -559,7 +601,12 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   private onChipSelect(entry: CanonicalToolTimelineEntry, event: Event): void {
     event.stopPropagation();
     if (entry.needsApproval && entry.approved === undefined) {
-      this.reviewingEntryKey = entryIdentity(entry);
+      if (this.disabled) return;
+      this.ensureSurface('approval', true);
+      const key = entryIdentity(entry);
+      if (key === this.reviewingEntryKey) return;
+      this.reviewingEntryKey = key;
+      this.emit('lr-tool-approval-open', entryCorrelation(entry));
       return;
     }
     this.emit('lr-tool-activate', entryCorrelation(entry));
@@ -577,85 +624,62 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private decisionDispatching = false;
-  private onDialogApprove = (event: CustomEvent<{
- args: unknown
-  }>): void => {
-    if (this.decisionDispatching) return;
-    this.decisionDispatching = true;
-    try {
-      event.stopPropagation();
-      const entry = this.reviewingEntry;
-      if (entry === undefined) return;
-      const key = entryIdentity(entry);
-      const wrapperEvent = this.emitToolApprovalDecideRequest({
-          ...entryCorrelation(entry),
-          approved: true,
-          args: event.detail.args,
-        });
-      // Never set/keep a pending flag for an entry the host already finalized (e.g. synchronously,
-      // by reassigning `entries` from inside the listener above) -- otherwise the shared dialog would
-      // be left showing a stale pending spinner over an already-resolved entry.
-      if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
-        this.approvalPending = 'approve';
-        event.preventDefault();
-        return;
-      }
-      this.approvalPending = null;
-      this.reviewingEntryKey = undefined;
-
-    } finally {
-      this.decisionDispatching = false;
-    }
-  };
-
-  private onDialogDeny = (event: CustomEvent): void => {
-    if (this.decisionDispatching) return;
-    this.decisionDispatching = true;
-    try {
-      event.stopPropagation();
-      const entry = this.reviewingEntry;
-      if (entry === undefined) return;
-      const key = entryIdentity(entry);
-      const wrapperEvent = this.emitToolApprovalDecideRequest({ ...entryCorrelation(entry), approved: false });
-      if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
-        this.approvalPending = 'deny';
-        event.preventDefault();
-        return;
-      }
-      this.approvalPending = null;
-      this.reviewingEntryKey = undefined;
-    } finally {
-      this.decisionDispatching = false;
-    }
-  };
-
-  private onDialogClose = (event: CustomEvent): void => {
+  private onDialogDecision = (event: CustomEvent<{args?: unknown; waitUntil: ApprovalWaitUntil}>): void => {
     event.stopPropagation();
-    this.approvalPending = null;
+    const entry = this.reviewingEntry;
+    if (!entry || this.decisionDispatching || this.disabled) {
+      event.preventDefault();
+      return;
+    }
+    this.decisionDispatching = true;
+    try {
+      const approved = event.type === 'lr-approve-request';
+      const wrapper = this.emitToolApprovalDecideRequest({
+        ...entryCorrelation(entry), approved, ...(approved ? {args: event.detail.args} : {}),
+        ...(event.detail?.waitUntil ? {waitUntil: event.detail.waitUntil} : {}),
+      });
+      if (wrapper.defaultPrevented && this.entryStillNeedsApproval(entryIdentity(entry))) {
+        if (!event.detail?.waitUntil) {
+          (event.currentTarget as LyraToolApprovalDialog).pendingAction = approved ? 'approve' : 'deny';
+        }
+        event.preventDefault();
+      }
+    } finally {
+      this.decisionDispatching = false;
+    }
+  };
+
+  private onDialogClose = (event: CustomEvent<{reason: string}>): void => {
+    if (event.composedPath()[0] !== event.currentTarget) return;
+    event.stopPropagation();
+    const entry = this.reviewingEntry;
     this.reviewingEntryKey = undefined;
+    if (entry) this.emit('lr-tool-approval-close', {...entryCorrelation(entry), reason: event.detail.reason});
   };
 
   /** Completes a vetoed approval/denial after the host has persisted the controlled entry. Closes
    *  the review dialog without changing `entries`; no-op when no approval action is pending. */
   finalizePendingApproval(): void {
-    if (this.approvalPending === null) return;
-    this.approvalPending = null;
-    this.reviewingEntryKey = undefined;
+    const action = this.pendingApproval;
+    if (action) this.renderRoot.querySelector<LyraToolApprovalDialog>('[part="approval-dialog"]')?.close(action);
   }
 
   /** Releases a vetoed approval/denial after host persistence fails. Keeps the same dialog open
    *  and retains any edited arguments so the reviewer can retry; no-op when nothing is pending. */
   revertPendingApproval(): void {
-    if (this.approvalPending === null) return;
-    this.approvalPending = null;
+    const dialog = this.renderRoot?.querySelector<LyraToolApprovalDialog>('[part="approval-dialog"]');
+    if (dialog) dialog.pendingAction = null;
   }
 
   private onDetailsToggle(entry: CanonicalToolTimelineEntry, event: CustomEvent<LyraDetailsToggleDetail>): void {
     event.stopPropagation();
     const key = entryIdentity(entry);
+    if (event.detail.expanded === this.openedEntryIds.has(key)) return;
     const next = new Set(this.openedEntryIds);
-    if (event.detail.expanded) next.add(key);
-    else next.delete(key);
+    if (event.detail.expanded) {
+      this.ensureSurface('result', true);
+      next.add(key);
+    } else next.delete(key);
     this.openedEntryIds = next;
   }
 
@@ -682,7 +706,12 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return redacted;
   }
 
+  private loadError(): TemplateResult {
+    return html`<p part="load-error">${this.localize('toolTimelineLoadError')}</p>`;
+  }
+
   private openedDetailsTemplate(entry: CanonicalToolTimelineEntry, placeholder: string): TemplateResult {
+    if (this.loadingSurfaces.get('result') === 'failed') return this.loadError();
     const redacted = this.redactedEntry(entry, placeholder);
     return html`
       <lr-tool-result-view
@@ -726,6 +755,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
               .durationMs=${durationMs}
               .icon=${entry.icon ?? ''}
               call-id=${entry.id}
+              @lr-tool-activate=${this.stopOwnedEvent}
               @lr-tool-call-chip-select=${(event: Event) => this.onChipSelect(entry, event)}
             ></lr-tool-call-chip>
             ${retryCount > 0
@@ -772,7 +802,8 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const priority: readonly ToolStatus[] = ['error', 'denied', 'running', 'pending', 'incomplete'];
     const status = priority.find((candidate) => statuses.has(candidate)) ?? 'success';
     const names = new Set(entries.map((entry) => entry.displayName || entry.name));
-    const label = this.groupSummary || this.localize('toolCallBlockHeaderSuccess', undefined, {
+    // The header verb carries the group state as text, as it does on a single tool call block.
+    const label = this.groupSummary || this.localize(GROUP_HEADER_KEY[status], undefined, {
       name: getListFormat(this.effectiveLocale).format(names),
     });
     return html`<lr-details part="group" appearance="plain"
@@ -780,8 +811,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       @lr-hide=${this.stopOwnedEvent} @lr-after-hide=${this.stopOwnedEvent}
       @lr-toggle=${this.stopOwnedEvent}
     ><span slot="summary" part="group-summary" data-status=${status}
-      >${toolStatusIcon(status)}<span class="sr-only">${this.localize(TOOL_STATUS_LABEL_KEY[status])} </span
-      ><slot name="summary">${label}</slot></span
+      >${toolStatusIcon(status)}${this.groupSummary || this.slotPresence.has('summary')
+        ? html`<span class="sr-only">${this.localize(TOOL_STATUS_LABEL_KEY[status])} </span>`
+        : nothing}<slot name="summary">${label}</slot></span
     >${list}</lr-details>`;
   }
 
@@ -804,19 +836,22 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
             count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ENTRIES),
           })}</p>`
         : nothing}
+      ${this.loadingSurfaces.get('approval') === 'failed' && entries.some(entry => entry.needsApproval)
+        ? this.loadError() : nothing}
       <lr-tool-approval-dialog
         part="approval-dialog"
         tool-name=${reviewing?.name ?? ''}
         .proposalKey=${reviewing === undefined ? '' : entryIdentity(reviewing)}
         .args=${reviewing?.args ?? {}}
         .readonly=${this.approvalReadonly}
-        .pendingAction=${this.approvalPending}
+        .disabled=${this.disabled}
         .open=${reviewing !== undefined}
         @focus=${this.stopOwnedEvent}
         @blur=${this.stopOwnedEvent}
-              @lr-approve-request=${this.onDialogApprove}
-              @lr-deny-request=${this.onDialogDeny}
+        @lr-approve-request=${this.onDialogDecision}
+        @lr-deny-request=${this.onDialogDecision}
         @lr-close=${this.onDialogClose}
+        @lr-decision-settled=${this.stopOwnedEvent}
       ></lr-tool-approval-dialog>
     `;
   }

@@ -1,4 +1,10 @@
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -15,6 +21,8 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
+  projectFrozenRows,
+  isPlainDataRecord,
 } from '../../../internal/data-descriptors.js';
 import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
@@ -25,7 +33,7 @@ import { closeIcon } from '../../../internal/icons.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectLimit, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -79,6 +87,7 @@ export interface LyraToolSelectDialogCloseDetail {
 export interface LyraToolSelectDialogEventMap {
   'lr-change-request': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
   'lr-change': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
+  'lr-request-close': CustomEvent<{ source: 'escape' | 'backdrop' }>;
   'lr-close': CustomEvent<LyraToolSelectDialogCloseDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
@@ -88,8 +97,7 @@ const UNCATEGORIZED = null;
 type ToolCategoryKey = string | null;
 const MAX_RENDERED_TOOLS = 200;
 const MAX_NORMALIZED_TOOL_ENTRIES = 10_000;
-const FUNCTION_TO_STRING = Function.prototype.toString;
-const OBJECT_CONSTRUCTOR_SOURCE = FUNCTION_TO_STRING.call(Object);
+const EMPTY_ROWS = Object.freeze([]);
 
 interface CanonicalTool {
   readonly id: string;
@@ -99,68 +107,6 @@ interface CanonicalTool {
   readonly icon?: string;
   readonly disabled?: boolean;
   readonly disabledReason?: string;
-}
-
-function isRuntimeArray(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
-function ownDataArrayValues(value: unknown, limit: number): unknown[] {
-  if (!isRuntimeArray(value)) return [];
-  const length = getOwnDataDescriptor(value, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR ||
-    length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-    typeof length.value !== 'number' ||
-    !Number.isSafeInteger(length.value) ||
-    length.value < 0
-  )
-    return [];
-
-  const values: unknown[] = [];
-  for (let index = 0; index < Math.min(length.value, limit); index += 1) {
-    const entry = getOwnDataDescriptor(value, String(index));
-    if (
-      entry === MISSING_OWN_DATA_DESCRIPTOR ||
-      entry === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    values.push(entry.value);
-  }
-  return values;
-}
-
-function isPlainToolRecord(value: unknown): value is object {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return true;
-    if (Object.getPrototypeOf(prototype) !== null) return false;
-    const constructor = getOwnDataDescriptor(prototype, 'constructor');
-    if (
-      constructor === MISSING_OWN_DATA_DESCRIPTOR ||
-      constructor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof constructor.value !== 'function'
-    )
-      return false;
-    const name = getOwnDataDescriptor(constructor.value, 'name');
-    const constructorPrototype = getOwnDataDescriptor(constructor.value, 'prototype');
-    return (
-      name !== MISSING_OWN_DATA_DESCRIPTOR &&
-      name !== UNSAFE_OWN_DATA_DESCRIPTOR &&
-      name.value === 'Object' &&
-      constructorPrototype !== MISSING_OWN_DATA_DESCRIPTOR &&
-      constructorPrototype !== UNSAFE_OWN_DATA_DESCRIPTOR &&
-      constructorPrototype.value === prototype &&
-      FUNCTION_TO_STRING.call(constructor.value) === OBJECT_CONSTRUCTOR_SOURCE
-    );
-  } catch {
-    return false;
-  }
 }
 
 function requiredToolString(record: object, key: string): string | undefined {
@@ -190,7 +136,7 @@ function optionalToolBoolean(record: object, key: string): boolean | null | unde
 }
 
 function canonicalTool(value: unknown): CanonicalTool | undefined {
-  if (!isPlainToolRecord(value)) return undefined;
+  if (!isPlainDataRecord(value)) return undefined;
   const id = requiredToolString(value, 'id');
   const name = requiredToolString(value, 'name');
   const description = optionalToolString(value, 'description');
@@ -220,35 +166,12 @@ function canonicalTool(value: unknown): CanonicalTool | undefined {
 }
 
 function projectCanonicalTools(input: unknown): readonly CanonicalTool[] {
-  const tools: CanonicalTool[] = [];
-  const seen = new Set<string>();
-  for (const entry of ownDataArrayValues(input, MAX_NORMALIZED_TOOL_ENTRIES)) {
-    const tool = canonicalTool(entry);
-    if (!tool || seen.has(tool.id)) continue;
-    seen.add(tool.id);
-    tools.push(tool);
-  }
-  return Object.freeze(tools);
+  return projectFrozenRows(input, canonicalTool, MAX_NORMALIZED_TOOL_ENTRIES, EMPTY_ROWS, tool => tool.id);
 }
 
 function projectCanonicalSelectedToolIds(input: unknown): readonly string[] {
-  const ids: string[] = [];
-  const seen = new Set<string>();
-  for (const entry of ownDataArrayValues(input, MAX_NORMALIZED_TOOL_ENTRIES)) {
-    if (typeof entry !== 'string' || entry.trim().length === 0 || seen.has(entry)) continue;
-    seen.add(entry);
-    ids.push(entry);
-  }
-  return Object.freeze(ids);
-}
-
-/** Default `filter`: case-insensitive substring match against the tool's name and description. */
-function defaultFilter(tool: CanonicalTool, query: string, locale: string): boolean {
-  const intlLocale = resolveIntlLocale(locale);
-  return (
-    tool.name.toLocaleLowerCase(intlLocale).includes(query) ||
-    (tool.description ?? '').toLocaleLowerCase(intlLocale).includes(query)
-  );
+  return projectFrozenRows(input, value => typeof value === 'string' && value.trim() ? value : undefined,
+    MAX_NORMALIZED_TOOL_ENTRIES, EMPTY_ROWS, id => id);
 }
 
 interface ToolGroup {
@@ -320,6 +243,7 @@ interface ToolProjection {
  * writes its `checked` state, so a refused change shows no flip-and-snap-back.
  * @event lr-change - Noncancelable notification after an accepted selection or defaults change.
  * Carries the same complete selection detail as `lr-change-request`.
+ * @event lr-request-close - Cancelable before user dismissal. detail.source identifies the trigger.
  * @event lr-close - `detail: { reason: ToolSelectDialogCloseReason }`. Fired exactly once per dismissal,
  * via Escape, an opted-in backdrop click, or a `close()` call. The name is not dialog-scoped in
  * this library: nesting this dialog inside a consumer's own `<lr-dialog>` means that dialog's
@@ -388,6 +312,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loadMore: LYRA_DEFAULT_loadMore,
     noMatchesQuery: LYRA_DEFAULT_noMatchesQuery,
@@ -411,6 +336,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     'lr-change-request',
     'lr-change',
   ]);
+
+  /** Outline level of the title. `none` preserves its text without a heading role. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
 
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -463,7 +391,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: () => {
       if (!this.open || !this.overlay?.isTopmost()) return;
-      this.close('escape');
+      this.requestClose('escape');
     },
     onUnexpectedClose: () => {
       if (!this.open) return;
@@ -523,10 +451,21 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   // ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.open) this.enterTopLayer();
+    this.syncBodyRegion(changed.has('tools') || changed.has('query') || changed.has('renderedToolLimit'));
+    if (changed.has('query') && changed.get('query') !== undefined && this.open) {
+      const count = this.filteredGroups().total;
+      this.announcements.announcePolite(this.localize('viewerSearchMatchCount', undefined,
+        {count: this.formatLocaleNumber(count), pluralCount: count}));
+    }
+    if (this.open) this.modalSurface.show();
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   override connectedCallback(): void {
@@ -538,23 +477,37 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       // The shadow panel survives a same-document reparent, so restore focus before the pending
       // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
       this.overlay?.focusInitial();
-      void this.updateComplete.then(() => {
-        if (!this.open || !this.isConnected) return;
-        this.enterTopLayer();
+      this.scheduleAfterUpdate(() => {
+        if (!this.open) return;
+        this.modalSurface.show();
         this.overlay?.focusInitial();
-      });
+      }, 'modal-reconnect');
     }
-  }
-
-  /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
-  private enterTopLayer(): void {
-    this.modalSurface.show();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.disposeBodyRegion?.();
+    this.disposeBodyRegion = undefined;
+    this.bodyRegionEl = null;
     this.modalSurface.disconnect();
     this.overlay?.suspend();
+  }
+
+  private disposeBodyRegion?: () => void;
+  private bodyRegionEl: HTMLElement | null = null;
+  private bodyRegionName?: string;
+
+  /** Keeps the capped, scrolling body keyboard-scrollable (and named) only while it overflows. */
+  private syncBodyRegion(rearm = false): void {
+    const body = this.open ? this.renderRoot.querySelector<HTMLElement>('[part="body"]') : null;
+    const name = body ? resolveAccessibleName(this, this.accessibleLabel, this.label, this.localize('selectTools')) : undefined;
+    if (!rearm && body === this.bodyRegionEl && name === this.bodyRegionName) return;
+    this.disposeBodyRegion?.();
+    this.disposeBodyRegion = undefined;
+    this.bodyRegionEl = body;
+    this.bodyRegionName = name;
+    if (body) this.disposeBodyRegion = makeScrollRegionFocusable(body, name);
   }
 
   private activateOverlay(): void {
@@ -565,9 +518,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
-      onEscape: () => this.close('escape'),
+      onEscape: () => this.requestClose('escape'),
       onBackdrop: () => {
-        if (this.lightDismiss) this.close('backdrop');
+        if (this.lightDismiss) this.requestClose('backdrop');
       },
       lockScroll: true,
       suspendWhenUnrendered: true,
@@ -605,6 +558,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** Closes the dialog through the same reasoned lifecycle as `close()`. */
   hide(reason: ToolSelectDialogCloseReason = 'api'): void {
     this.close(reason);
+  }
+
+  private requestClose(source: 'escape' | 'backdrop'): void {
+    requestThenCommit({
+      requestDetail: { source },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-request-close', detail, init),
+      commit: () => this.close(source),
+    });
   }
 
   private onBackdropClick = (): void => {
@@ -737,41 +698,56 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     return this.canonicalSelectedToolIdsCache;
   }
 
-  /** Tools grouped by `category` (first-seen order), with an uncategorized
-   *  bucket always last, then filtered by the active search query -- a
-   *  category left with zero matches is dropped entirely rather than
-   *  rendered as an empty heading. */
-  private get projection(): ToolProjection {
+  private readonly announcements = new AnnouncementSinkController(this);
+  private readonly searchNames = createHaystackMemo<CanonicalTool>((tool, locale) => foldSearchText(tool.name, locale));
+  private readonly searchDescriptions = createHaystackMemo<CanonicalTool>((tool, locale) => foldSearchText(tool.description ?? '', locale));
+  private filteredCache?: {
+    tools: readonly CanonicalTool[];
+    locale: string;
+    q: string;
+    filter: ToolSelectFilter | null;
+    groups: ToolGroup[];
+    total: number;
+  };
+
+  private filteredGroups() {
+    const tools = this.canonicalTools;
+    const locale = this.effectiveLocale;
+    const filter = typeof this.filter === 'function' ? this.filter : null;
+    const q = filter ? this.query.trim().toLocaleLowerCase(resolveIntlLocale(locale)) : prepareNeedle(this.query, locale);
+    const cached = this.filteredCache;
+    if (cached && cached.tools === tools && cached.q === q && cached.locale === locale && cached.filter === filter) return cached;
     const order: ToolCategoryKey[] = [];
     const byCategory = new Map<ToolCategoryKey, CanonicalTool[]>();
-    for (const tool of this.canonicalTools) {
-      const category: ToolCategoryKey = tool.category?.trim() || UNCATEGORIZED;
+    const names = q && !filter ? this.searchNames(tools, locale) : [];
+    const descriptions = q && !filter ? this.searchDescriptions(tools, locale) : [];
+    for (const [index, tool] of tools.entries()) {
+      const category = tool.category?.trim() || UNCATEGORIZED;
       let bucket = byCategory.get(category);
       if (!bucket) {
         bucket = [];
         byCategory.set(category, bucket);
         if (category !== UNCATEGORIZED) order.push(category);
       }
+      if (q && filter) {
+        try {
+          if (!filter(tool, q)) continue;
+        } catch {
+          continue;
+        }
+      } else if (q && !names[index]!.includes(q) && !descriptions[index]!.includes(q)) {
+        continue;
+      }
       bucket.push(tool);
     }
     if (byCategory.has(UNCATEGORIZED)) order.push(UNCATEGORIZED);
-
-    const q = this.query.trim().toLocaleLowerCase(this.effectiveLocale);
-    const filter = typeof this.filter === 'function' ? this.filter : null;
-    const matches = q
-      ? (tool: CanonicalTool) => {
-          if (!filter) return defaultFilter(tool, q, this.effectiveLocale);
-          try {
-            return Boolean(filter(tool as ToolSelectDialogTool, q));
-          } catch {
-            return false;
-          }
-        }
-      : () => true;
-    const matchingGroups = order
-      .map((category) => ({ category, tools: byCategory.get(category)!.filter(matches) }))
-      .filter((group) => group.tools.length > 0);
+    const matchingGroups = order.map(category => ({ category, tools: byCategory.get(category)! })).filter(group => group.tools.length > 0);
     const totalMatches = matchingGroups.reduce((total, group) => total + group.tools.length, 0);
+    return this.filteredCache = { tools, locale, q, filter, groups: matchingGroups, total: totalMatches };
+  }
+
+  private get projection(): ToolProjection {
+    const { groups: matchingGroups, total: totalMatches, q } = this.filteredGroups();
     const selectedIds = new Set(this.canonicalSelectedToolIds);
     const chosenIds = new Set<string>();
     const previous = this.renderedWindow;
@@ -816,10 +792,10 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.renderedToolLimit += MAX_RENDERED_TOOLS;
     void this.updateComplete.then(() => {
       if (!this.isConnected || !this.open) return;
-      const nextTarget =
-        this.shadowRoot?.querySelector<HTMLElement>('[part="load-more"]') ??
-        this.shadowRoot?.querySelector<HTMLElement>('[part="body"]');
-      nextTarget?.focus();
+      const nextTarget = this.renderRoot.querySelector<HTMLElement>('[part="load-more"]') ??
+        this.renderRoot.querySelector<HTMLElement>('[part="body"][tabindex="0"]') ??
+        this.renderRoot.querySelector<HTMLElement>('[part="panel"]')!;
+      nextTarget.focus();
     });
   };
 
@@ -852,11 +828,12 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   private renderCategory(group: ToolGroup, selectedIds: ReadonlySet<string>): TemplateResult {
+    const level = resolveHeadingLevel(this.headingLevel);
     const headingId = this.categoryId(group.category);
     const formattedCount = getNumberFormat(this.effectiveLocale).format(group.tools.length);
     return html`
       <div part="category" role="group" aria-labelledby=${headingId}>
-        <h3 part="category-heading" id=${headingId}>
+        <div role=${level ? 'heading' : nothing} aria-level=${level ? Math.min(6, Number(level) + 1) : nothing} part="category-heading" id=${headingId}>
           ${group.category === UNCATEGORIZED ? this.localize('otherCategory') : group.category}<span
             part="category-count"
             aria-hidden="true"
@@ -867,7 +844,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
               pluralCount: group.tools.length,
             })}</span
           >
-        </h3>
+        </div>
         <ul part="category-list">
           ${repeat(group.tools, (tool) => tool.id, (tool) => this.renderTool(tool, selectedIds))}
         </ul>
@@ -876,6 +853,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   override render(): TemplateResult {
+    const level = resolveHeadingLevel(this.headingLevel);
     const projection = this.projection;
     const groups = projection.groups;
     const tools = this.canonicalTools;
@@ -911,7 +889,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
         tabindex="-1"
       >
         <div part="header">
-          <h2 part="title" id=${this.titleId} ?hidden=${label.trim().length === 0}>${label}</h2>
+          <div role=${level && label.trim() ? 'heading' : nothing} aria-level=${label.trim() ? level ?? nothing : nothing} part="title" id=${this.titleId} ?hidden=${label.trim().length === 0}>${label}</div>
           <p
             part="subtitle"
             ?hidden=${!hasTools}
@@ -965,7 +943,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             ? html`<p part="defaults-hint">${this.localize('toolSelectCustomizeHint')}</p>`
             : nothing}
         </div>
-        <div part="body" tabindex="0">
+        <div part="body">
           ${groups.length === 0
             ? html`<p part="empty">
                 ${hasTools

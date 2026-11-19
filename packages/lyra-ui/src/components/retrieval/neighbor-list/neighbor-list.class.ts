@@ -1,9 +1,10 @@
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { GraphSource } from '../graph/graph.class.js';
 import type { LyraGraphNode } from '../graph/graph-model.js';
 import type { LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
-import '../../data/pagination/pagination.class.js';
+let paginationRegistration: Promise<unknown> | undefined;
 
 export type NeighborListSource = GraphSource;
 export type NeighborSourceDirection = LyraGraphSourceQuery['direction'];
@@ -43,11 +44,13 @@ function sourceSummary(raw: unknown): LyraGraphSourceSummary {
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
+import { revealWithinScrollParent } from '../../../internal/scroll-region.js';
+import { labelWithVisibleText, normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import { firstByRetrievalIdentity, isNonBlankIdentity } from '../retrieval-identity.js';
 import { expandIcon } from '../../../internal/icons.js';
 import { finiteInteger, finiteCount } from '../../../internal/numbers.js';
 import {
@@ -57,7 +60,8 @@ import {
 } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
-import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
+import { tag } from '../../../internal/prefix.js';
+import type { LyraVirtualList, LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './neighbor-list.styles.js';
 import {
@@ -77,6 +81,10 @@ export interface LyraNeighborRow {
   relation: string;
   direction: 'in' | 'out' | 'both';
   node: LyraEntity;
+}
+
+function relationshipKey(row: LyraNeighborRow): string {
+  return isNonBlankIdentity(row?.node?.id) ? JSON.stringify([row.node.id, row.relation, row.direction]) : '';
 }
 
 export interface LyraNeighborListEventMap {
@@ -99,6 +107,7 @@ export interface LyraNeighborListEventMap {
  * @event lr-entity-select - A row's node button was activated. `detail: { entityId }`.
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
  * `detail: { nodeId }`.
+ * @cssprop --lr-neighbor-list-node-hover-fill - Background of the hovered control.
  * @csspart base - The stable root wrapper across empty, populated and virtualized states. It owns
  *   `role="group"` and the fallback name unless a non-empty host `aria-label` owns the component;
  *   a nested list owns the row semantics in non-virtualized mode.
@@ -299,8 +308,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     if (!current()) return false;
     const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(node => node.dataset['sourceKey'] === key);
     if (!target || !current()) return false;
-    target.scrollIntoView({ block: 'nearest' }); if (!current()) return false;
-    target.focus(); return current() && this.renderRoot.querySelector('[data-source-key]:focus') === target;
+    revealWithinScrollParent(target); if (!current()) return false;
+    target.focus({ preventScroll: true }); return current() && this.renderRoot.querySelector('[data-source-key]:focus') === target;
   }
   override connectedCallback(): void { super.connectedCallback(); this.sourceEpoch++; this.syncSource(); }
   override disconnectedCallback(): void {
@@ -340,8 +349,17 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     super.requestUpdate(...args);
   }
 
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    if (this.graphSource !== undefined && this.centerKey !== null) await paginationRegistration;
+    return complete;
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (this.graphSource !== undefined && this.centerKey !== null) {
+      paginationRegistration ??= import('../../data/pagination/pagination.js').catch(() => { paginationRegistration = undefined; });
+    }
     this.syncSource();
     if (this.graphSource !== undefined) {
       const state = this.sourcePages.state;
@@ -379,10 +397,10 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       this.groupDeps = groupDeps;
       this.groupsCache = this.computeGroups(this.sortedRowsCache);
     }
-    const presentationDeps = [...groupDeps, this.types, this.expandable];
+    const presentationDeps = [...groupDeps, this.types, this.expandable, this.activeRow, this.expandFocused];
     if (!this.presentationDeps || presentationDeps.some((value, index) => value !== this.presentationDeps![index])) {
       this.presentationDeps = presentationDeps;
-      this.renderRow = item => this.renderNeighborRow(item as LyraNeighborRow);
+      this.renderRow = (item, index) => this.renderNeighborRow(item as LyraNeighborRow, index);
     }
     // Registered on first need, so bundles whose lists stay short never load the virtualizer.
     if (this.sortedRowsCache.length > this.effectiveVirtualizeAt)
@@ -396,7 +414,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   }
 
   private computeSortedRows(): readonly LyraNeighborRow[] {
-    const rows = firstByRetrievalIdentity(this.rows, (row) => row?.node?.id);
+    const rows = firstByRetrievalIdentity(this.rows, relationshipKey);
     if (!this.groupByRelation) return rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
     // their original relative order.
@@ -455,13 +473,53 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   /** Row renderer handed to the virtual list; `willUpdate()` replaces it whenever a presentation
    *  input changes, so it is always assigned before the first `render()`. */
-  private renderRow!: (item: unknown) => TemplateResult;
+  private renderRow!: (item: unknown, index: number) => TemplateResult;
 
   // Stable across every render (unlike an inline arrow literal in the template) so the composed
   // `<lr-virtual-list>`'s `.keyFunction` binding never appears to change on an unrelated
   // re-render, which would otherwise force it to rebuild row identity/offsets from scratch.
   private readonly virtualListKeyFunction = (item: unknown): string =>
-    (item as LyraNeighborRow).node.id;
+    relationshipKey(item as LyraNeighborRow);
+
+  @state() private activeRow = 0;
+  @state() private expandFocused = false;
+
+  private rowTabIndex(index: number, expand: boolean, count = this.sortedRowsCache.length): number {
+    return index === Math.min(this.activeRow, count - 1) && expand === (this.expandable && this.expandFocused) ? 0 : -1;
+  }
+
+  private onRowFocus = (event: FocusEvent): void => {
+    const button = event.currentTarget as HTMLButtonElement;
+    this.activeRow = Number(button.dataset['row']);
+    this.expandFocused = button.part.contains('expand-button');
+  };
+
+  private onRowKey = async (
+    event: KeyboardEvent,
+    count = this.sortedRowsCache.length,
+    current = () => this.isConnected && this.graphSource === undefined,
+  ): Promise<void> => {
+    if (shouldIgnoreNavigationKey(event) || !current()) return;
+    const button = event.currentTarget as HTMLButtonElement;
+    const index = Number(button.dataset['row']);
+    let expand = button.part.contains('expand-button');
+    let next = resolveListMove(event, { orientation: 'vertical', count, current: index, wrap: false });
+    if (next === null) {
+      if (!this.expandable || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+      expand = event.key === (this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight');
+      next = index;
+    }
+    event.preventDefault();
+    this.activeRow = next;
+    this.expandFocused = expand;
+    const virtual = this.renderRoot.querySelector<LyraVirtualList>(tag('virtual-list'));
+    virtual?.scrollToIndex(next, { behavior: 'auto' });
+    await this.updateComplete;
+    if (virtual) await virtual.updateComplete;
+    if (!current() || this.activeRow !== next || this.expandFocused !== expand) return;
+    const root = virtual?.shadowRoot ?? this.renderRoot;
+    root.querySelector<HTMLButtonElement>(`[data-row="${next}"][part="${expand ? 'expand-button' : 'node-label'}"]`)?.focus();
+  };
 
   /** Returns only a row's *content*, not its surrounding `role="listitem"`/`part="row"` wrapper:
    *  `<lr-virtual-list>` already supplies exactly such a wrapper (exported from here as `row`) for
@@ -469,7 +527,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
    *  be matched a second time by `lr-virtual-list::part(row)` -- `::part()` uses `part~=` semantics
    *  and reaches any depth of the target shadow tree -- doubling the row's padding and divider
    *  border. The non-virtualized path below supplies the identical wrapper itself. */
-  private renderNeighborRow(row: LyraNeighborRow): TemplateResult {
+  private renderNeighborRow(row: LyraNeighborRow, index: number): TemplateResult {
     const nodeLabel = row.node.label || row.node.id;
     const directionText = this.directionText(row.direction);
     const accessibleName = this.localize('neighborRowLabel', undefined, {
@@ -500,7 +558,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     }).format(meta);
     return html`
       <button
-        part="node-label"
+        part="node-label" data-row=${index} tabindex=${this.rowTabIndex(index, false)}
+        @focus=${this.onRowFocus} @keydown=${this.onRowKey}
         type="button"
         aria-label=${accessibleName}
         aria-description=${metaText || nothing}
@@ -517,7 +576,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       </button>
       ${this.expandable
         ? html`<button
-            part="expand-button"
+            part="expand-button" data-row=${index} tabindex=${this.rowTabIndex(index, true)}
+            @focus=${this.onRowFocus} @keydown=${this.onRowKey}
             type="button"
             aria-label=${this.localize('neighborExpand', undefined, {
               label: nodeLabel,
@@ -542,7 +602,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     const current = () => sourceCurrent() && Object.is(this.sourcePage, page);
     const valid = () => current() && this.sourcePages.state === state && !this.sourceError;
     const rows = !failed && this.centerKey !== null ? state.result?.rows ?? [] : [];
-    const label = retrievalSemanticLabel(this, this.label ?? this.localize('neighborListLabel'));
+    const onRowKey = (event: KeyboardEvent) => { void this.onRowKey(event, rows.length, valid); };
+    const label = retrievalSemanticLabel(this, this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('neighborListLabel'));
     const role = retrievalSemanticRole(this, 'group');
     const status = this.centerKey === null ? this.localize('neighborSourceChoose') : failed ? this.localize('neighborSourceError') : state.pending ? this.localize('loading') : rows.length ? '' : this.localize('neighborListEmpty');
     const total = this.sourceTotal;
@@ -550,11 +611,17 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       ${status ? html`<p part="source-status">${status}</p>` : nothing}
       ${failed ? html`<button part="source-retry" type="button" @click=${() => { if (current() && this.sourcePages.state === state && (this.sourceError || Boolean(state.error))) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}
       ${total !== null ? html`<p part="source-summary">${this.localize('neighborSourceSummary', undefined, { shown: getNumberFormat(this.effectiveLocale).format(rows.length), total: getNumberFormat(this.effectiveLocale).format(total) })}</p>` : nothing}
-      <div role="list">${rows.map(row => {
-        const name = row.value.accessibleLabel || row.value.label || row.value.id;
-        return html`<div part="row" role="listitem"><button part="node-label" type="button" data-source-key=${row.key} aria-label=${name}
+      <div role="list">${rows.map((row, index) => {
+        const visible = row.value.label || row.value.id;
+        const custom = normalizeLabel(row.value.accessibleLabel);
+        const name = custom === undefined ? visible
+          : custom.toLocaleLowerCase(this.effectiveLocale).includes(visible.toLocaleLowerCase(this.effectiveLocale)) ? custom
+          : labelWithVisibleText(visible, custom);
+        return html`<div part="row" role="listitem"><button part="node-label" data-row=${index} tabindex=${this.rowTabIndex(index, false, rows.length)}
+          @focus=${this.onRowFocus} @keydown=${onRowKey} type="button" data-source-key=${row.key} aria-label=${name}
           @click=${() => { if (valid() && rows.includes(row)) this.emit('lr-entity-select', { entityId: row.value.id }); }}>${row.value.label || row.value.id}</button>
-          ${this.expandable ? html`<button part="expand-button" type="button" aria-label=${this.localize('neighborExpand', undefined, { label: name })}
+          ${this.expandable ? html`<button part="expand-button" data-row=${index} tabindex=${this.rowTabIndex(index, true, rows.length)}
+            @focus=${this.onRowFocus} @keydown=${onRowKey} type="button" aria-label=${this.localize('neighborExpand', undefined, { label: name })}
             @click=${() => { if (valid() && this.expandable && rows.includes(row)) this.emit('lr-node-expand', { nodeId: row.value.id }); }}>${expandIcon()}</button>` : nothing}</div>`;
       })}</div>
       ${this.centerKey !== null ? html`<lr-pagination format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
@@ -590,7 +657,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     const sorted = this.sortedRows();
     const label = retrievalSemanticLabel(
       this,
-      this.label == null ? this.localize('neighborListLabel') : this.label
+      this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('neighborListLabel')
     );
     const role = retrievalSemanticRole(this, 'group');
     if (sorted.length === 0) {
@@ -619,6 +686,10 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
             exportparts="row:row, node-label:node-label, direction:direction, relation:relation, node-meta:node-meta, expand-button:expand-button, group:group-header"
             .items=${guard([sorted], () => sorted)}
             .renderItem=${this.renderRow}
+            @lr-visible-range-change=${(event: CustomEvent<{start:number;end:number}>) => {
+              const {start, end} = event.detail;
+              if (this.activeRow < start || this.activeRow > end) this.activeRow = start;
+            }}
             .keyFunction=${this.virtualListKeyFunction}
             .groups=${this.groupsCache}
           ></lr-virtual-list>
@@ -648,7 +719,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
                   </div>`
                 : nothing}
               <div part="row" role="listitem">
-                ${this.renderNeighborRow(row)}
+                ${this.renderNeighborRow(row, i)}
               </div>`;
           })}
         </div>

@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './permission-rules.js';
 import type { LyraPermissionRules, PermissionRule } from './permission-rules.class.js';
@@ -60,11 +61,35 @@ describe('lr-permission-rules', () => {
     expect(el.shadowRoot!.textContent).not.to.contain('Mutated outside the component');
   });
 
-  it('disables decisions when disabled or readonly', async () => {
+  it('disables decisions when disabled, and keeps them focusable but inert when readonly', async () => {
     const disabled = await fixture<LyraPermissionRules>(html`<lr-permission-rules disabled .rules=${rules}></lr-permission-rules>`);
     expect([...disabled.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="decision"]')].every((item) => item.disabled)).to.be.true;
     const readonly = await fixture<LyraPermissionRules>(html`<lr-permission-rules readonly .rules=${rules}></lr-permission-rules>`);
-    expect([...readonly.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="decision"]')].every((item) => item.disabled)).to.be.true;
+    const readonlySelects = [...readonly.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="decision"]')];
+    expect(readonlySelects.every((item) => !item.disabled && item.getAttribute('aria-readonly') === 'true')).to.be.true;
+    await focusByKeyboard(readonlySelects[0]!);
+    expect(readonly.shadowRoot!.activeElement === readonlySelects[0], 'a readonly decision can take keyboard focus').to.be.true;
+    let changes = 0;
+    readonly.addEventListener('lr-permission-rule-change', () => changes++);
+    readonlySelects[0]!.value = 'allow';
+    readonlySelects[0]!.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(changes).to.equal(0);
+    expect(readonlySelects[0]!.value).to.equal('ask');
+  });
+
+  it('isolates the scope as left-to-right text inside a right-to-left rules list', async () => {
+    const el = await fixture<LyraPermissionRules>(html`<lr-permission-rules dir="rtl" .rules=${rules}></lr-permission-rules>`);
+    expect(el.shadowRoot!.querySelector('[part="scope"]')!.textContent).to.contain('\u2066accounts:read\u2069');
+  });
+
+  it('names a rule with a blank label from its scope', async () => {
+    const el = await fixture<LyraPermissionRules>(html`<lr-permission-rules .rules=${[{ id: 'b', label: '  ', scope: 'files:write', decision: 'ask' }]}></lr-permission-rules>`);
+    const name = el.shadowRoot!.querySelector('[part="decision"]')!.getAttribute('aria-label')!;
+    expect(name).to.contain('files:write');
+    expect(name.trim().endsWith(':')).to.equal(false);
+    el.rules = [{id: 'scope-fallback', label: ' ', scope: '  ', decision: 'ask'}];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('select')!.getAttribute('aria-label')).to.contain('scope-fallback');
   });
 
   it('does not emit changes from a stale select after host readonly state is applied', async () => {
@@ -200,4 +225,13 @@ it('keeps the native select on the original decision when the host removes the r
   expect(select.value).to.equal('ask');
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="decision"]').length).to.equal(0);
+});
+
+it('admits only rows with a label, scope and known decision before deduplicating', async () => {
+  const row = rules[0]!;
+  const el = await fixture<LyraPermissionRules>(html`<lr-permission-rules
+    .rules=${[{ ...row, label: 5 }, { ...row, scope: null }, { ...row, decision: 'other' }, row]}>
+  </lr-permission-rules>`);
+  expect(el.shadowRoot!.querySelectorAll('[part="rule"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('select')!.value).to.equal(row.decision);
 });

@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'பாதை',
   pathNodeStatus: '{label}, {total}-இல் {position}-வது முனை',
   pathRelationStatus: '{relation}, தொடர்பு',
+  pathRelationForward: 'அடுத்த கணுவை நோக்கி இயக்கப்பட்டது',
+  pathRelationReverse: 'முந்தைய கணுவை நோக்கி இயக்கப்பட்டது',
   neighborListLabel: 'தொடர்புகள்',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'வரைபடத்தில் {label}-ஐ விரி',

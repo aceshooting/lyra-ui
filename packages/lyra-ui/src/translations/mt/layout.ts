@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Neħħi l-waħħil tan-navigazzjoni',
   appRailItemCollapse: 'Ikkollassa {label}',
   appRailItemExpand: 'Espandi {label}',
+  appRailItemToggle: 'Uri jew aħbi {label}',
+  appRailGroupToggle: 'Grupp tan-navigazzjoni',
   resizeValuePercent: '{value} fil-mija',
   commandPaletteLabel: 'Paletta tal-kmandi',
   commandPalettePlaceholder: 'Fittex kmandi…',
@@ -66,6 +68,11 @@ const strings: LyraLocaleStrings = {
     other: '{count} kmand',
     two: '{count} kmandi',
   },
+  tabCloseAction: 'Agħlaq {label}',
+  stepperStateCompleted: 'Komplut',
+  stepperStateError: 'Żball',
+  stepperStatePending: 'Għadu ma nbediex',
+  stepperStateLocked: 'Imsakkar',
   commandPaletteInputLimit: 'Xi kmandi tħallew barra għax intlaħaq limitu tal-input.',
 };
 

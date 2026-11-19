@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ਟੂਲ ਪੈਰਾਮੀਟਰ ਸਕੀਮਾ ਵੱਧ ਤੋਂ ਵੱਧ {fields} ਖੇਤਰਾਂ ਅਤੇ ਹਰ ਖੇਤਰ ਲਈ {options} ਚੋਣਾਂ ਦਾ ਸਮਰਥਨ ਕਰਦੇ ਹਨ।',
   testResultsLimit: 'ਸਿਰਫ਼ ਪਹਿਲੇ {count} ਟੈਸਟ ਨਤੀਜੇ ਦਿਖਾਏ ਗਏ ਹਨ।',
   toolTimelineLimit: 'ਵੱਧ ਤੋਂ ਵੱਧ {count} ਟੂਲ ਕਾਲਾਂ ਦਿਖਾਈਆਂ ਗਈਆਂ ਹਨ।',
+  toolTimelineLoadError: 'ਟੂਲ ਦਾ ਦ੍ਰਿਸ਼ ਲੋਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।',
   toolSelectLimit: 'ਸਿਰਫ਼ ਪਹਿਲੇ {count} ਟੂਲ ਦਿਖਾਏ ਗਏ ਹਨ।',
   testResultsInputTooLarge: 'ਟੈਸਟ ਨਤੀਜਿਆਂ ਦੇ ਵੇਰਵੇ ਡਿਸਪਲੇ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹਨ।',
   toolCall: 'ਟੂਲ ਕਾਲ',

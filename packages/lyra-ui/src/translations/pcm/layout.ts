@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Unpin di navigation',
   appRailItemCollapse: 'Collapse di {label}',
   appRailItemExpand: 'Expand di {label}',
+  appRailItemToggle: 'Show or hide di {label}',
+  appRailGroupToggle: 'Group for navigation',
   resizeValuePercent: '{value} percent',
   commandPaletteLabel: 'List of commands wey you fit run',
   commandPalettePlaceholder: 'Find command wey you wan use…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} command dey',
     other: '{count} command dem dey',
   },
+  tabCloseAction: 'Close di {label}',
+  stepperStateCompleted: 'E don finish',
+  stepperStateError: 'Wahala',
+  stepperStatePending: 'E never start',
+  stepperStateLocked: 'Dem don lock am',
   commandPaletteInputLimit: 'Dem leave some command because input don reach im limit.',
 };
 

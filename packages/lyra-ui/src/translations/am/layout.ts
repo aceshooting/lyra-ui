@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'የዳሰሳ መሰካትን አንሳ',
   appRailItemCollapse: '{label} አጠቃልል',
   appRailItemExpand: '{label} አስፋ',
+  appRailItemToggle: '{label}ን አሳይ ወይም ደብቅ',
+  appRailGroupToggle: 'የዳሰሳ ቡድን',
   resizeValuePercent: '{value} በመቶ',
   commandPaletteLabel: 'የትእዛዝ ፓሌት',
   commandPalettePlaceholder: 'ትእዛዞችን ፈልግ…',
@@ -63,6 +65,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} ትዕዛዝ',
     other: '{count} ያዛል',
   },
+  tabCloseAction: '{label}ን ዝጋ',
+  stepperStateCompleted: 'ተጠናቀቀ',
+  stepperStateError: 'ስህተት',
+  stepperStatePending: 'አልተጀመረም',
+  stepperStateLocked: 'ተቆልፏል',
   commandPaletteInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ ትዕዛዞች ተወግደዋል።',
 };
 

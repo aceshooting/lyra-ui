@@ -202,4 +202,13 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
+  @media (forced-colors: active) {
+    [part="entry-marker"]::before {
+      box-sizing: border-box;
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part="entry-marker"]::after {
+      border-inline-start: var(--lr-border-width-thin) solid CanvasText;
+    }
+  }
 `;

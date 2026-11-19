@@ -91,3 +91,7 @@ export const SettledHeldDecision: Story = {
   render: () => html`<lr-approval-queue .requests=${requests}
     @lr-approval-decision-request=${persistHeldDecision}></lr-approval-queue>`,
 };
+
+export const DisabledReview: Story = {
+  render: () => html`<lr-approval-queue heading-level="3" disabled .requests=${requests}></lr-approval-queue>`,
+};

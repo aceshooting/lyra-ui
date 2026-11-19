@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'လမ်းကြောင်း',
   pathNodeStatus: '{label}, နိုဒ် {total} ခုအနက် {position} ခုမြောက်',
   pathRelationStatus: '{relation}, ဆက်နွယ်မှု',
+  pathRelationForward: 'နောက်ထပ်နိုဒ်သို့ ဦးတည်သည်',
+  pathRelationReverse: 'ယခင်နိုဒ်သို့ ဦးတည်သည်',
   neighborListLabel: 'ဆက်နွယ်မှုများ',
   neighborRowLabel: '{label}၊ {relation}၊ {direction}',
   neighborExpand: 'ဂရပ်တွင် {label} ကို ချဲ့ရန်',

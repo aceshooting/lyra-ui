@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'เลิกปักหมุดการนำทาง',
   appRailItemCollapse: 'ยุบ {label}',
   appRailItemExpand: 'ขยาย {label}',
+  appRailItemToggle: 'สลับการแสดง {label}',
+  appRailGroupToggle: 'กลุ่มการนำทาง',
   resizeValuePercent: '{value} เปอร์เซ็นต์',
   commandPaletteLabel: 'แผงคำสั่ง',
   commandPalettePlaceholder: 'ค้นหาคำสั่ง…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: 'คำสั่ง {count}',
   },
+  tabCloseAction: 'ปิด {label}',
+  stepperStateCompleted: 'เสร็จสมบูรณ์',
+  stepperStateError: 'ข้อผิดพลาด',
+  stepperStatePending: 'ยังไม่เริ่ม',
+  stepperStateLocked: 'ล็อกอยู่',
   commandPaletteInputLimit: 'คำสั่งบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
 };
 

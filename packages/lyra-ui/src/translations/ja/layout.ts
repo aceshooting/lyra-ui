@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'ナビゲーションの固定を解除',
   appRailItemCollapse: '{label} を折りたたむ',
   appRailItemExpand: '{label} を展開',
+  appRailItemToggle: '{label} の表示を切り替える',
+  appRailGroupToggle: 'ナビゲーショングループ',
   resizeValuePercent: '{value} パーセント',
   commandPaletteLabel: 'コマンドパレット',
   commandPalettePlaceholder: 'コマンドを検索…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} コマンド',
   },
+  tabCloseAction: '{label} を閉じる',
+  stepperStateCompleted: '完了',
+  stepperStateError: 'エラー',
+  stepperStatePending: '未開始',
+  stepperStateLocked: 'ロック中',
   commandPaletteInputLimit: '入力上限に達したため、コマンドの一部が省略されました。',
 };
 

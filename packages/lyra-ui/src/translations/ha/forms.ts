@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Zaɓi aƙalla zaɓi guda ɗaya.',
   tokenInputRequired: 'Shigar da aƙalla ƙima guda ɗaya.',
   tokenInputEditWithContext: 'Gyara {label}',
+  tokenInputLabel: 'Token',
   iconButtonLabel: 'Maɓalli',
   codeEditorLabel: 'Editan lambar kwamfuta',
   switchRequired: 'Da fatan kunna wannan.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Alƙalami a ƙasa',
   signaturePadPenUp: 'Alƙalami a sama',
+  signaturePadDrawingLimit: 'An kai iyakar zane.',
   localePickerInputLimit: 'Shigarwa 512 na farko na saitunan harshe da yanki kawai ake samu.',
   emojiPickerInputLimit: 'An bar wasu bayanan emoji saboda an kai iyakar shigarwa.',
 };

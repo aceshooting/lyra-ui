@@ -1,4 +1,12 @@
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
+import { revealWithinScrollParent } from '../../../internal/scroll-region.js';
+import { renderNativeSearch } from '../../../internal/native-search.js';
+import { nativeSearchStyles } from '../../../internal/native-search.styles.js';
+import { watchDevicePixelRatio } from '../../../internal/owned-observer.js';
+import { layoutScale } from '../../../internal/layout-scale.js';
+import { isRovingTargetAvailable, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 export type { LyraGraphNodeRenderContext, LyraGraphNodeMesh, LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
@@ -11,7 +19,7 @@ import type { LyraGraphSource, LyraGraphRecord, LyraGraphSourceQuery, LyraGraphS
 import { GraphSourceController } from './graph-source-controller.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
-import '../../data/pagination/pagination.class.js';
+let paginationRegistration: Promise<unknown> | undefined;
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
@@ -77,7 +85,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -109,7 +117,7 @@ import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphCustomNodesError, LYRA_DEFAULT_graphCustomNodesUnavailable, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphGlowUnavailable, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Complete host-owned node/edge catalog with bounded graph scenes. Source edges require stable IDs. */
@@ -412,7 +420,14 @@ export interface LyraGraphEventMap {
  * logical totals come from the provider; neighborhood/summary coverage is disclosed separately.
  * fit() frames the current scene, not the full source. Dragging changes local layout only.
  * Removing graphSource restores the current legacy arrays without modifying their getters.
+ * @cssprop --lr-graph-spatial-control-hover-fill - Background of the hovered control.
  * @csspart source-navigator - Global node/edge query, record list and pagination.
+ * @csspart source-kind - Record kind selector.
+ * @csspart source-search - Search input for global records.
+ * @csspart search-clear - Clears the source search.
+ * @csspart source-direction - Incident edge direction selector.
+ * @csspart source-action - Retry and return-to-all-records buttons.
+ * @csspart source-incident - Opens the node's incident edges.
  * @csspart source-row - A mounted global record activation button.
  * @csspart source-row-active - The record holding the navigator's roving tab stop.
  * @csspart source-status - Source loading, unavailable-record, and error text.
@@ -476,7 +491,7 @@ export interface LyraGraphEventMap {
  * @csspart community-label - A hull's label text.
  * @csspart live-region - The aria-hidden shadow mirror of the current graph item announcement;
  *   assistive-technology announcements use a shared light-DOM sink.
- * @csspart data-list - A visually hidden graph data list; canvas mode shows at most 200 items.
+ * @csspart data-list - A visually hidden graph data list; shows at most 200 items.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
  * @csspart limit - Localized source/retained notice when the public node or link snapshot truncates.
  * @csspart error - Static visible error shown instead of the graph when the optional `d3` peer
@@ -598,6 +613,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
     retry: LYRA_DEFAULT_retry,
+    clear: LYRA_DEFAULT_clear,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     zoomIn: LYRA_DEFAULT_zoomIn,
@@ -627,6 +643,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static override styles = [
     LyraElement.styles,
     specialistTokens,
+    nativeSearchStyles,
     styles,
     srOnly,
   ];
@@ -844,8 +861,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!current()) return false;
     const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
     if (!target) return false;
-    target.scrollIntoView({ block: 'nearest' }); if (focus) target.focus();
-    return true;
+    revealWithinScrollParent(target, { block: 'nearest' });
+    if (!current()) return false;
+    if (!focus) return true;
+    target.focus({ preventScroll: true });
+    return current() && shadowFocusTarget(this) === target;
   }
 
   private async ensureSourceScene(key: string, current: () => boolean): Promise<GraphSourceRecord | undefined> {
@@ -893,13 +913,46 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (shouldIgnoreNavigationKey(event)) return;
     const rows = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')];
     const index = rows.indexOf(event.currentTarget as HTMLButtonElement);
-    const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? rows.length - 1 :
-      event.key === 'ArrowDown' || event.key === forward ? Math.min(rows.length - 1, index + 1) :
-        event.key === 'ArrowUp' || event.key === backward ? Math.max(0, index - 1) : -1;
-    if (next < 0 || rows[next]?.disabled || rows[next]?.closest('[inert]')) return;
-    event.preventDefault(); this.sourceRovingKey = rows[next]!.dataset['sourceKey']; this.sourceState++; rows[next]!.focus();
+    const next = resolveListMove(event.key, {
+      current: index, count: rows.length, direction: this.effectiveDirection, orientation: 'both',
+      wrap: false, clamp: true, isAvailable: candidate => isRovingTargetAvailable(rows[candidate]!),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    const target = rows[next]!;
+    this.sourceRovingKey = target.dataset['sourceKey'];
+    this.sourceState++;
+    target.focus();
+  }
+
+  private renderDataList(): TemplateResult {
+    const dataCount =
+      this.simNodes.length + this.simLinks.length + this.visibleCommunities().length;
+    const shownCount = Math.min(dataCount, 200);
+    const dataItems = Array.from({ length: shownCount }, (_, i) => {
+      if (i < this.simNodes.length)
+        return this.localize('graphNode', undefined, {
+          label: this.nodeTooltipText(this.simNodes[i]!),
+        });
+      if (i < this.simNodes.length + this.simLinks.length)
+        return this.linkTooltipText(this.simLinks[i - this.simNodes.length]!);
+      return this.graphItemText(
+        this.communityIndexBase() + i - this.simNodes.length - this.simLinks.length
+      );
+    });
+    return html`
+      <ul
+        part="data-list"
+        class="sr-only"
+        aria-label=${this.localize('graphDataList')}
+      >
+        ${dataItems.map((text) => html`<li>${text}</li>`)}
+      </ul>
+      ${dataCount > shownCount ? html`<p class="sr-only" role="note">${this.localize('graphDataListLimit', undefined, {
+        shown: getNumberFormat(this.effectiveLocale).format(shownCount),
+        total: getNumberFormat(this.effectiveLocale).format(dataCount),
+      })}</p>` : nothing}
+    `;
   }
 
   private renderSourceNavigator(): TemplateResult {
@@ -915,28 +968,34 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const format = (value: number) => getNumberFormat(this.effectiveLocale, { useGrouping: false }).format(value);
     const values = summary ? { nodes: format(summary.nodes), edges: format(summary.edges), shownNodes: format(scene?.nodes.length ?? 0), shownEdges: format(scene?.edges.length ?? 0) } : undefined;
     const stop = (event: Event) => event.stopPropagation();
-    return html`<section part="source-navigator" aria-label=${this.accessibleLabel ?? this.label ?? this.localize('graphSourceRecords')} aria-busy=${state.pending ? 'true' : 'false'} tabindex="-1">
+    return html`<section part="source-navigator" aria-label=${this.localize('graphSourceRecords')} aria-busy=${state.pending ? 'true' : 'false'} tabindex="-1">
       <div class="source-toolbar">
-        <select data-source-kind aria-label=${this.localize('graphSourceRecords')} .value=${this.sourceQuery.kind} @change=${(event: Event) => this.setSourceQuery({ ...this.sourceQuery, kind: (event.target as HTMLSelectElement).value === 'edges' ? 'edges' : 'nodes' })}>
+        <select part="source-kind" data-source-kind aria-label=${this.localize('graphSourceRecords')} .value=${this.sourceQuery.kind} @change=${(event: Event) => this.setSourceQuery({ ...this.sourceQuery, kind: (event.target as HTMLSelectElement).value === 'edges' ? 'edges' : 'nodes' })}>
           <option value="nodes">${this.localize('graphSourceNodes')}</option><option value="edges">${this.localize('graphSourceEdges')}</option>
         </select>
-        ${this.sourceComposition.profile ? nothing : html`<input data-source-search type="search" aria-label=${this.localize('search')} .value=${this.sourceQuery.search} @input=${(event: Event) => this.setSourceQuery({ ...this.sourceQuery, search: (event.target as HTMLInputElement).value.slice(0, 65_536) })}>`}
-        ${this.sourceQuery.centerKey ? html`<button type="button" @click=${() => this.setSourceQuery({ ...this.sourceQuery, centerKey: null, direction: 'both' })}>${this.localize('graphSourceAllRecords')}</button>
-          <select aria-label=${this.localize('graphSourceDirection')} .value=${this.sourceQuery.direction} @change=${(event: Event) => { const value = (event.target as HTMLSelectElement).value; this.setSourceQuery({ ...this.sourceQuery, direction: value === 'in' || value === 'out' ? value : 'both' }); }}>
+        ${this.sourceComposition.profile ? nothing : html`<span class="source-search">${renderNativeSearch({
+          host: this, part: 'source-search', value: this.sourceQuery.search, label: this.localize('search'),
+          placeholder: '', clearLabel: this.localize('clear'), autocomplete: 'off', spellcheck: false,
+          onValue: search => this.setSourceQuery({ ...this.sourceQuery, search: search.slice(0, 65_536) }),
+        })}</span>`}
+        ${this.sourceQuery.centerKey ? html`<button type="button" part="source-action" @click=${() => this.setSourceQuery({ ...this.sourceQuery, centerKey: null, direction: 'both' })}>${this.localize('graphSourceAllRecords')}</button>
+          <select part="source-direction" aria-label=${this.localize('graphSourceDirection')} .value=${this.sourceQuery.direction} @change=${(event: Event) => { const value = (event.target as HTMLSelectElement).value; this.setSourceQuery({ ...this.sourceQuery, direction: value === 'in' || value === 'out' ? value : 'both' }); }}>
             <option value="both">${this.localize('graphSourceBothDirections')}</option><option value="in">${this.localize('neighborDirectionIn')}</option><option value="out">${this.localize('neighborDirectionOut')}</option>
           </select>` : nothing}
       </div>
       ${values ? html`<p part="source-coverage">${this.localize(scene ? scene.coverage === 'complete' ? 'graphSourceCoverageComplete' : scene.coverage === 'aggregate' ? 'graphSourceCoverageAggregate' : 'graphSourceCoverageNeighborhood' : 'graphSourceTotals', undefined, values)}</p>` : nothing}
       ${failed || state.pending || this.sourceMissing ? html`<p part="source-status">${this.localize(failed ? 'graphSourceRecordsError' : state.pending ? 'loading' : 'graphSourceRecordMissing')}</p>` : nothing}
-      ${failed ? html`<button type="button" @click=${() => { if (currentPage()) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}
+      ${failed ? html`<button type="button" part="source-action" @click=${() => { if (currentPage()) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}
       ${!failed && !state.pending ? html`<ul class="source-rows">${rows.length ? rows.map(record => {
         const value = record.value.value;
         const label = value.accessibleLabel || value.label || value.id;
         const selected = this.isSelected(record.value.kind === 'node' ? 'node' : 'link', value.id);
         return html`<li><button type="button" part=${`source-row${active === record.key ? ' source-row-active' : ''}`} data-source-key=${record.key}
           tabindex=${active === record.key ? '0' : '-1'} aria-pressed=${this.selectionMode === 'none' ? nothing : selected ? 'true' : 'false'}
-          @keydown=${this.onSourceRowKey} @click=${(event: MouseEvent) => this.activateSourceRecord(record, event)}>${label}</button>
-          ${record.value.kind === 'node' ? html`<button type="button" data-source-incident=${record.key} aria-label=${this.localize('graphSourceIncidentEdges', undefined, { label })}
+          @focus=${() => { queueMicrotask(() => { if (currentPage() && this.sourceRovingKey !== record.key && this.renderRoot.querySelector('[data-source-key]:focus')?.getAttribute('data-source-key') === record.key) { this.sourceRovingKey = record.key; this.sourceState++; } }); }}
+          @keydown=${(event: KeyboardEvent) => { if (currentPage()) this.onSourceRowKey(event); }}
+          @click=${(event: MouseEvent) => this.activateSourceRecord(record, event)}>${label}</button>
+          ${record.value.kind === 'node' ? html`<button type="button" part="source-incident" tabindex=${active === record.key ? '0' : '-1'} data-source-incident=${record.key} aria-label=${this.localize('graphSourceIncidentEdges', undefined, { label })}
             @click=${() => {
               if (currentPage() && !state.pending && !bindingError && this.sourceRows.includes(record))
                 this.setSourceQuery({ ...EMPTY_SOURCE_QUERY, kind: 'edges', centerKey: record.key });
@@ -1311,9 +1370,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  already-correct instance instead of replacing it (and losing its pending measurement) on
    *  every call, while still rebuilding after an adoption into another realm. */
   private hostResizeObserverDocument?: Document;
-  private canvasDprQuery?: MediaQueryList;
-  private canvasDrawRafId?: number;
-  private canvasDrawRafOwner?: BrowserWindow;
+  private stopCanvasDpr?: () => void;
+  private readonly canvasDrawFrame = new OwnedFrame(this);
   /** Gates `scheduleCanvasDraw()` -- an off-screen (scrolled away, hidden tab panel) canvas-mode
    *  instance would otherwise still pay the full redraw cost throughout its simulation settle and
    *  any drag, same problem `<lr-chart>`'s identical `visible`/`IntersectionObserver` pair
@@ -1473,6 +1531,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
+    if (this.sourceMode) await paginationRegistration;
     const pending = this.view !== '2d' ? this.spatialLoad : this.layout === 'layered' ? this.layeredLoad : undefined;
     if (pending) {
       await pending;
@@ -1754,13 +1813,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.hostResizeObserver?.disconnect();
     this.hostResizeObserver = undefined;
     this.hostResizeObserverDocument = undefined;
-    this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
-    this.canvasDprQuery = undefined;
-    if (this.canvasDrawRafId != null) {
-      this.canvasDrawRafOwner?.cancelAnimationFrame(this.canvasDrawRafId);
-      this.canvasDrawRafId = undefined;
-      this.canvasDrawRafOwner = undefined;
-    }
+    this.stopCanvasDpr?.();
+    this.stopCanvasDpr = undefined;
+    this.canvasDrawFrame.cancel();
     if (this.hoverRafId != null) {
       this.hoverRafOwner?.cancelAnimationFrame(this.hoverRafId);
       this.hoverRafId = undefined;
@@ -2554,25 +2609,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private watchCanvasDpr(): void {
-    // A MediaQueryList's `matches` is fixed at creation time, so crossing the DPR threshold it was
-    // built for means building a fresh one for the new ratio -- remove the previous instance's
-    // listener first, or it leaks (disconnectedCallback only ever cleans up whichever is current).
-    this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
-    const view = this.ownerWindow;
-    if (!view?.matchMedia) {
-      this.canvasDprQuery = undefined;
-      return;
-    }
-    this.canvasDprQuery = view.matchMedia(
-      `(resolution: ${view.devicePixelRatio}dppx)`
-    );
-    this.canvasDprQuery.addEventListener('change', this.onCanvasDprChange);
+    this.stopCanvasDpr?.();
+    this.stopCanvasDpr = watchDevicePixelRatio(this.ownerDocument.defaultView, () => this.markCanvasDirty());
   }
-
-  private onCanvasDprChange = (): void => {
-    this.watchCanvasDpr();
-    this.markCanvasDirty();
-  };
 
   private markCanvasDirty(): void {
     this.canvasScene = undefined;
@@ -2600,16 +2639,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.canvasDrawPending = true;
       return;
     }
-    if (this.canvasDrawRafId != null) return;
-    const frameOwner = this.ownerWindow;
-    if (!frameOwner) return;
-    this.canvasDrawRafOwner = frameOwner;
-    this.canvasDrawRafId = frameOwner.requestAnimationFrame(() => {
-      this.canvasDrawRafId = undefined;
-      this.canvasDrawRafOwner = undefined;
-      if (!this.isConnected || this.ownerWindow !== frameOwner) return;
-      this.drawCanvas();
-    });
+    if (this.canvasDrawFrame.pending || !this.ownerWindow) return;
+    this.canvasDrawFrame.schedule(() => this.drawCanvas());
   }
 
   /** Resolves every accepted CSS color through the live cascade before it reaches Canvas 2D.
@@ -2621,8 +2652,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (cached !== undefined) return cached;
     probe.style.color = '';
     probe.style.color = value;
-    const resolved = getComputedStyle(probe).color.trim();
-    const result = resolved || getComputedStyle(this).color || 'transparent';
+    const resolved = this.ownerWindow?.getComputedStyle(probe).color.trim();
+    const result = resolved || this.computedStyle().color || 'transparent';
     this.resolvedCssColorCache.set(value, result);
     return result;
   }
@@ -2872,27 +2903,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       ? { d: hullPathD(this.communityHull(community.members)) } : undefined;
   }
 
-  /** Sizes the backing store to the canvas's own rendered CSS box (`clientWidth`/`clientHeight`,
-   *  themselves stretched to fill the host via `[part="base"]`/`[part="canvas"]`'s `100%` sizing)
-   *  times `devicePixelRatio`, only touching `width`/`height` when the target actually changed --
-   *  reassigning either unconditionally would implicitly clear the canvas and reset its transform
-   *  on every single draw, even a pure pan/zoom repaint. Mirrors `<lr-heatmap>`'s own DPR-scaled
-   *  backing-store convention (`watchDpr()`/`onDprChange()`), adapted to `setTransform()` (an
-   *  absolute reset) rather than a relative `scale()`, since this canvas -- unlike heatmap's, which
-   *  always resizes its backing store on every draw -- only resizes conditionally. */
   private drawCanvas(): void {
     if (!this.canvasEl || !this.canvasCtx) return;
     const dpr = this.ownerWindow?.devicePixelRatio || 1;
     const w = this.canvasEl.clientWidth || this.safeWidth;
     const h = this.canvasEl.clientHeight || this.safeHeight;
-    const backingW = Math.round(w * dpr);
-    const backingH = Math.round(h * dpr);
-    if (this.canvasEl.width !== backingW || this.canvasEl.height !== backingH) {
-      this.canvasEl.width = backingW;
-      this.canvasEl.height = backingH;
-    }
+    const allocation = resolveBoundedCanvasAllocation({
+      cssWidth: w, cssHeight: h, desiredScale: dpr, maxDimension: 16_384, maxPixels: 16_777_216,
+    });
+    if (this.canvasEl.width !== allocation.pixelWidth) this.canvasEl.width = allocation.pixelWidth;
+    if (this.canvasEl.height !== allocation.pixelHeight) this.canvasEl.height = allocation.pixelHeight;
     const ctx = this.canvasCtx;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(allocation.scaleX, 0, 0, allocation.scaleY, 0, 0);
     ctx.clearRect(0, 0, w, h);
     // Reuse the cached scene for a camera-only repaint; rebuild when it was invalidated
     // (markCanvasDirty()) or when the camera crossed one of the two label-visibility zoom gates
@@ -2937,8 +2959,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.pickCanvas.height = this.canvasEl.height;
     }
     this.rebuildPickItems();
-    const dpr = this.ownerWindow?.devicePixelRatio || 1;
-    this.pickCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const scaleX = this.pickCanvas.width / (this.canvasEl.clientWidth || this.safeWidth);
+    const scaleY = this.pickCanvas.height / (this.canvasEl.clientHeight || this.safeHeight);
+    this.pickCtx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
     drawPickingScene(this.pickCtx, this.canvasCamera, {
       hulls: this.pickItems
         .filter(
@@ -2989,9 +3012,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.canvasEl || !this.pickCtx) return undefined;
     if (this.pickDirty) this.redrawPickCanvas();
     const rect = this.canvasEl.getBoundingClientRect();
-    const dpr = this.ownerWindow?.devicePixelRatio || 1;
-    const px = Math.round((clientX - rect.left) * dpr);
-    const py = Math.round((clientY - rect.top) * dpr);
+    if (!rect.width || !rect.height) return undefined;
+    const px = Math.round((clientX - rect.left) * this.pickCtx.canvas.width / rect.width);
+    const py = Math.round((clientY - rect.top) * this.pickCtx.canvas.height / rect.height);
     if (
       px < 0 ||
       py < 0 ||
@@ -3060,14 +3083,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (hit?.kind === 'node') {
       this.canvasDragNode = hit.node;
       this.canvasPointerId = e.pointerId;
-      try {
-        this.canvasEl!.setPointerCapture(e.pointerId);
-      } catch {
-        // A synthetic/non-driver pointerId (e.g. dispatched by a test) isn't a real active
-        // pointer some engines will capture -- the drag state above still tracks it via
-        // pointermove/pointerup, matching finishCanvasNodeDrag()'s equivalent guard around
-        // releasePointerCapture() below.
-      }
+      capturePointer(this.canvasEl!, e.pointerId);
       hit.node.fx = hit.node.x;
       hit.node.fy = hit.node.y;
       this.simulation?.alphaTarget(0.3).restart();
@@ -3198,13 +3214,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       node.fy = null;
     }
 
-    if (releaseCapture && this.canvasEl) {
-      try {
-        this.canvasEl.releasePointerCapture(activePointerId);
-      } catch {
-        // Capture may already have been revoked by the browser before cancellation is delivered.
-      }
-    }
+    if (releaseCapture && this.canvasEl) releasePointer(this.canvasEl, activePointerId);
 
     if (redraw) this.markCanvasDirty();
     else {
@@ -3348,11 +3358,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       hit.kind === 'node'
         ? this.nodeTooltipText(hit.node)
         : this.linkTooltipText(hit.link);
-    // `clientX - rect.left`/`clientY - rect.top` are physical viewport offsets, so they must be
-    // written to the physical `left`/`top` -- a logical `inset-inline-start` maps to `right` under
-    // RTL and would mirror the tooltip across the canvas instead of tracking the cursor.
-    let left = clientX - rect.left;
-    let top = clientY - rect.top;
+    const scale = layoutScale(this.canvasEl!);
+    let left = (clientX - rect.left) / scale.x;
+    let top = (clientY - rect.top) / scale.y;
     this.canvasTooltipEl.style.left = `${left}px`;
     this.canvasTooltipEl.style.top = `${top}px`;
     this.canvasTooltipEl.removeAttribute('hidden');
@@ -3363,10 +3371,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const maxRight = Math.min(view.innerWidth, rect.right);
     const minTop = Math.max(0, rect.top);
     const maxBottom = Math.min(view.innerHeight, rect.bottom);
-    if (tooltipRect.right > maxRight) left -= tooltipRect.right - maxRight;
-    if (tooltipRect.left < minLeft) left += minLeft - tooltipRect.left;
-    if (tooltipRect.bottom > maxBottom) top -= tooltipRect.bottom - maxBottom;
-    if (tooltipRect.top < minTop) top += minTop - tooltipRect.top;
+    if (tooltipRect.right > maxRight) left -= (tooltipRect.right - maxRight) / scale.x;
+    if (tooltipRect.left < minLeft) left += (minLeft - tooltipRect.left) / scale.x;
+    if (tooltipRect.bottom > maxBottom) top -= (tooltipRect.bottom - maxBottom) / scale.y;
+    if (tooltipRect.top < minTop) top += (minTop - tooltipRect.top) / scale.y;
     this.canvasTooltipEl.style.left = `${left}px`;
     this.canvasTooltipEl.style.top = `${top}px`;
   }
@@ -3458,7 +3466,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (args[0] === undefined) { this.explicitRefresh = true; this.sourceEpoch = (this.sourceEpoch ?? 0) + 1; this.sourceNavigation = (this.sourceNavigation ?? 0) + 1; }
     if (!this.sourceSyncing && ['sourcePage', 'sourcePageSize'].includes(String(args[0]))) {
       this.sourceNavigation = (this.sourceNavigation ?? 0) + 1;
-      const active = this.shadowRoot?.activeElement;
+      const active = activeElementIn(this.shadowRoot);
       const navigator = this.shadowRoot?.querySelector<HTMLElement>('[part="source-navigator"]');
       this.sourceRestoreFocus = navigator ? captureComposedFocusRepair(navigator, navigator) : null;
       this.sourceRestorePager = active === this.shadowRoot?.querySelector(tag('pagination'));
@@ -3506,7 +3514,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     if (this.view !== '2d' && !this.loadFailed && !this.sourceList) void this.ensureSpatial();
     if (this.view === '2d' && this.layout === 'layered' && !this.loadFailed) void this.ensureLayered();
-    super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    super.willUpdate(changed);
+    if (this.graphSource !== undefined) {
+      paginationRegistration ??= import('../../data/pagination/pagination.js').catch(() => { paginationRegistration = undefined; });
+    }
     if (changed.has('view') && this.isConnected) {
       if (this.view !== '2d') {
         this.loadGeneration += 1;
@@ -3514,9 +3525,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.cancelCameraTween();
         this.finishCanvasNodeDrag(undefined, true, false);
         this.takeCanvasPointerDown();
-        if (this.canvasDrawRafId != null) this.canvasDrawRafOwner?.cancelAnimationFrame(this.canvasDrawRafId);
-        this.canvasDrawRafId = undefined;
-        this.canvasDrawRafOwner = undefined;
+        this.canvasDrawFrame.cancel();
         if (this.hoverRafId != null) this.hoverRafOwner?.cancelAnimationFrame(this.hoverRafId);
         this.hoverRafId = undefined;
         this.hoverRafOwner = undefined;
@@ -3524,8 +3533,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         if (this.viewportChangeRafId != null) this.viewportChangeRafOwner?.cancelAnimationFrame(this.viewportChangeRafId);
         this.viewportChangeRafId = undefined;
         this.viewportChangeRafOwner = undefined;
-        this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
-        this.canvasDprQuery = undefined;
+        this.stopCanvasDpr?.();
+        this.stopCanvasDpr = undefined;
         this.intersectionObserver?.disconnect();
         this.intersectionObserver = undefined;
         this.zoomedEl = undefined;
@@ -4602,7 +4611,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onNodeLeave(node: SimNode, e: MouseEvent): void {
-    if (this.isDragging || this.isPanning || this.isCameraTweening) return;
+    if (this.svgHoverNodeId !== node.id) return;
     (e.currentTarget as SVGElement).removeAttribute('data-hovered');
     this.svgHoverNodeId = undefined;
     this.emit('lr-node-leave', { nodeId: node.id });
@@ -4640,8 +4649,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onLinkLeave(link: SimLink, e: MouseEvent): void {
-    if (this.isDragging || this.isPanning || this.isCameraTweening) return;
-    (e.currentTarget as SVGElement).removeAttribute('data-hovered');
+    const element = e.currentTarget as SVGElement;
+    if (!element.hasAttribute('data-hovered')) return;
+    element.removeAttribute('data-hovered');
     this.emitEdgeHover('leave', this.linkHoverDetail(link));
   }
 
@@ -4953,7 +4963,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     index: number,
     activate: (e: KeyboardEvent) => void
   ): void {
+    if (e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.altKey) return;
     if (e.key === 'Enter' || e.key === ' ') {
+      if (this.selectionMode !== 'multiple' && (e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
       if (e.repeat) return;
       this.onGraphItemFocus(index);
@@ -5067,20 +5079,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         else if (link) this.onLinkClick(link, event);
         else if (community) this.onCommunityClick(community.community);
       };
-      const dataCount =
-        this.simNodes.length + this.simLinks.length + this.visibleCommunities().length;
-      const shownCount = Math.min(dataCount, 200);
-      const dataItems = Array.from({ length: shownCount }, (_, i) => {
-        if (i < this.simNodes.length)
-          return this.localize('graphNode', undefined, {
-            label: this.nodeTooltipText(this.simNodes[i]!),
-          });
-        if (i < this.simNodes.length + this.simLinks.length)
-          return this.linkTooltipText(this.simLinks[i - this.simNodes.length]!);
-        return this.graphItemText(
-          this.communityIndexBase() + i - this.simNodes.length - this.simLinks.length
-        );
-      });
       return html`
         <div part="base">
           <canvas
@@ -5108,17 +5106,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               ? this.graphItemAnnouncement(this.normalizedGraphItem())
               : '')}
           </div>
-          <ul
-            part="data-list"
-            class="sr-only"
-            aria-label=${this.localize('graphDataList')}
-          >
-            ${dataItems.map((text) => html`<li>${text}</li>`)}
-          </ul>
-          ${dataCount > shownCount ? html`<p class="sr-only" role="note">${this.localize('graphDataListLimit', undefined, {
-            shown: getNumberFormat(this.effectiveLocale).format(shownCount),
-            total: getNumberFormat(this.effectiveLocale).format(dataCount),
-          })}</p>` : nothing}
+          ${this.renderDataList()}
           <div
             part="cursor-items"
             class="sr-only"
@@ -5489,34 +5477,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             ></circle>
           </g>
         </svg>
-        <ul
-          part="data-list"
-          class="sr-only"
-          aria-label=${this.localize('graphDataList')}
-        >
-          ${this.simNodes.map(
-            (node) =>
-              html`<li>
-                ${this.localize('graphNode', undefined, {
-                  label: this.nodeTooltipText(node),
-                })}
-              </li>`
-          )}
-          ${this.simLinks.map(
-            (link) => html`<li>${this.linkTooltipText(link)}</li>`
-          )}
-          ${this.visibleCommunities().map(
-            (entry) =>
-              html`<li>
-                ${this.localize('graphCommunity', undefined, {
-                  label: this.communityText(entry.community),
-                  count: getNumberFormat(this.effectiveLocale).format(
-                    entry.members.length
-                  ),
-                })}
-              </li>`
-          )}
-        </ul>
+        ${this.renderDataList()}
         ${limitNotices}
       </div>
     `;

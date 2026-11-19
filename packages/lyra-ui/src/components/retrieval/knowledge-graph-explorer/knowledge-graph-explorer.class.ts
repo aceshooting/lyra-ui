@@ -1,3 +1,6 @@
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
 import { ref } from 'lit/directives/ref.js';
 import { setGraphSourceComposition, resolveGraphSourceComposition, focusGraphSourceComposition, type GraphSourceCompositionSnapshot } from '../graph/graph-source-composition.js';
@@ -17,6 +20,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './knowledge-graph-explorer.styles.js';
@@ -52,8 +56,6 @@ export type { LyraPathElement } from '../path-strip/path-strip.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
 import '../graph/graph.class.js';
 import '../graph-legend/graph-legend.class.js';
-import '../entity-card/entity-card.class.js';
-import '../neighbor-list/neighbor-list.class.js';
 import '../../overlays/overlay/popover.class.js';
 import '../../forms/input/input.class.js';
 import '../../forms/button/button.class.js';
@@ -129,6 +131,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it
    *  back is optional and a direct host assignment stays silent. */
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
+  /** Proposed hidden types. Cancel to keep the current visibility. */
+  'lr-hidden-types-change-request': CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>;
   /** A node type's visibility changed via the composed legend. `detail: { hiddenTypes }` -- the
    *  complete updated array. This component already applies it to its own `hiddenTypes` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change`/`lr-search-change` follow,
@@ -229,6 +233,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   name; `matchCountExact` is always `true` since this component's node filter has no truncating
  *   ceiling. `activeIndex` is always `-1` because this is a live node filter.
  *   Direct host assignments do not emit.
+ * @event lr-hidden-types-change-request - Cancelable legend proposal with `detail: { hiddenTypes }`.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
  * @event lr-node-activate - Bubbles unchanged with `{ nodeId, x, y, z? }`; spatial activation
@@ -247,6 +252,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-community-activate - Bubbles straight through from the composed `lr-graph`, unmodified.
  *   `detail: { communityId }`.
  * @event lr-relation-activate - Bubbles straight through from the composed `lr-path-strip`, unmodified.
+ * @cssprop --lr-knowledge-graph-explorer-source-action-hover-fill - Background of the hovered control.
  * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart toolbar - The row wrapping the search input and the type-filter legend.
@@ -342,6 +348,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',
     'lr-pin-change',
+    'lr-hidden-types-change-request',
     'lr-hidden-types-change',
   ]);
 
@@ -638,9 +645,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     readonly LyraGraphCommunity[]
   ];
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
-  private activationFrameId?: number;
+  private readonly activationFrame = new OwnedFrame(this);
   private activationFrameOwner?: Window;
-  private activationFrameDocument?: Document;
   private activationFrameResolve?: (ready: boolean) => void;
   private activationFramePageHide?: () => void;
 
@@ -679,7 +685,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return canonicalIdentityList(this.hiddenTypes);
   }
 
-  private optionalRequest = false;
+  private optionalRequest = '';
+  private detailsReady = false;
   private optionalGeneration = 0;
   private optionalPending?: Promise<void>;
   private pathReady = false;
@@ -689,18 +696,24 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
   private ensureOptionalChildren(): void {
     const path = this.path.length > 0;
-    const request = path;
+    const details = this.graphSource !== undefined ? !!this.sourceEntity : !!this.selectedNodeId;
+    const request = `${path}:${details}`;
     if (request === this.optionalRequest) return;
     this.optionalRequest = request;
     const generation = ++this.optionalGeneration;
     this.optionalPending = undefined;
     this.optionalFailed = false;
-    if (!path || this.pathReady) return;
+    if ((!path || this.pathReady) && (!details || this.detailsReady)) return;
     if (this.hasUpdated) this.announcements.announcePolite(this.localize('loading'));
-    const pending = this.loadOptionalPath()
+    const pending = Promise.all([
+      path && !this.pathReady && this.loadOptionalPath(),
+      details && !this.detailsReady && import('../entity-card/entity-card.js'),
+      details && !this.detailsReady && import('../neighbor-list/neighbor-list.js'),
+    ])
       .then(() => {
         if (!this.isConnected || generation !== this.optionalGeneration) return;
         this.pathReady ||= path;
+        this.detailsReady ||= details;
       }, () => {
         if (!this.isConnected || generation !== this.optionalGeneration) return;
         this.optionalFailed = true;
@@ -708,7 +721,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       }).then(() => {
         if (!this.isConnected || generation !== this.optionalGeneration) return;
         this.optionalPending = undefined;
-        this.requestUpdate();
+        this.requestUpdate('optionalChildren', false);
       });
     this.optionalPending = pending;
   }
@@ -845,43 +858,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     }
 
     return new Promise<boolean>((resolve) => {
-      let settled = false;
-      const settle = (ready: boolean): void => {
-        if (settled) return;
-        settled = true;
-        resolve(ready);
-      };
-      let handle: number;
-      const onPageHide = (): void => {
-        if (
-          this.activationFrameOwner === ownerWindow &&
-          this.activationFrameDocument === ownerDocument &&
-          this.activationFrameResolve === settle
-        ) {
-          this.cancelActivationFrame();
-        }
-      };
+      const onPageHide = () => this.cancelActivationFrame();
       try {
-        handle = ownerWindow.requestAnimationFrame(() => {
-          const current =
-            this.activationFrameId === handle &&
-            this.activationFrameOwner === ownerWindow &&
-            this.activationFrameDocument === ownerDocument &&
-            this.activationFrameResolve === settle &&
-            generation === this.activationGeneration &&
-            this.isConnected &&
-            this.ownerDocument === ownerDocument;
-          if (current) this.clearActivationFrameRecord();
-          settle(current);
+        this.activationFrame.schedule(() => {
+          this.clearActivationFrameRecord();
+          resolve(generation === this.activationGeneration);
         });
       } catch {
-        settle(false);
+        resolve(false);
         return;
       }
-      this.activationFrameId = handle;
       this.activationFrameOwner = ownerWindow;
-      this.activationFrameDocument = ownerDocument;
-      this.activationFrameResolve = settle;
+      this.activationFrameResolve = resolve;
       this.activationFramePageHide = onPageHide;
       ownerWindow.addEventListener('pagehide', onPageHide, { once: true });
     });
@@ -894,20 +882,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         this.activationFramePageHide
       );
     }
-    this.activationFrameId = undefined;
     this.activationFrameOwner = undefined;
-    this.activationFrameDocument = undefined;
     this.activationFrameResolve = undefined;
     this.activationFramePageHide = undefined;
   }
 
   private cancelActivationFrame(): void {
-    const handle = this.activationFrameId;
-    const ownerWindow = this.activationFrameOwner;
     const settle = this.activationFrameResolve;
     this.clearActivationFrameRecord();
     try {
-      if (handle !== undefined) ownerWindow?.cancelAnimationFrame(handle);
+      this.activationFrame.cancel();
     } finally {
       settle?.(false);
     }
@@ -944,7 +928,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (this.sourceChild) setGraphSourceComposition(this.sourceChild, undefined);
     this.sourceChildBinding = undefined;
     ++this.optionalGeneration;
-    this.optionalRequest = false;
+    this.optionalRequest = '';
     this.optionalPending = undefined;
     this.invalidateActivation();
     this.pendingNodeId = undefined;
@@ -956,7 +940,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   override adoptedCallback(): void {
     super.adoptedCallback();
     ++this.optionalGeneration;
-    this.optionalRequest = false;
+    this.optionalRequest = '';
     this.optionalPending = undefined;
     this.invalidateActivation();
     this.announcements.adopted();
@@ -1073,7 +1057,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const memo = this.matchesMemo;
     if (memo?.[0] === query && memo[1] === locale && memo[2] === model && memo[3] === hidden)
       return memo[4];
-    const q = query.trim().toLocaleLowerCase(locale);
+    const q = prepareNeedle(query, locale);
     let matches: LyraGraphNode[] | undefined;
     if (q) {
       const hiddenTypes = new Set(hidden);
@@ -1081,7 +1065,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         (node) =>
           (node.type == null || !hiddenTypes.has(node.type)) &&
           this.searchableNamesOf(node).some((name) =>
-            name.toLocaleLowerCase(locale).includes(q)
+            foldSearchText(name, locale).includes(q)
           )
       );
     }
@@ -1180,11 +1164,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.emit('lr-hidden-types-change', { hiddenTypes: this.hiddenTypes });
   };
 
-  /** The composed legend owns its cancellable proposal. Contain the canonical request without
-   * changing whether its listeners accepted it, so the child can still assign, announce, and send
-   * its existing post event. */
-  private onVisibilityChangeProposal = (event: Event): void => {
+  private onVisibilityChangeProposal = (event: CustomEvent<{ hiddenTypes: string[] }>): void => {
     event.stopPropagation();
+    const previous = this.hiddenTypes;
+    const types = this.nodeTypes;
+    if (this.emit('lr-hidden-types-change-request', { hiddenTypes: event.detail.hiddenTypes }, { cancelable: true }).defaultPrevented ||
+        previous !== this.hiddenTypes || types !== this.nodeTypes || !this.isConnected) event.preventDefault();
   };
 
   private onSearchInput = (event: CustomEvent<{ value: string }>): void => {
@@ -1402,6 +1387,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   private onResultKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const buttons = [
       ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="search-result"] button'),
     ];
@@ -1437,7 +1423,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   override render(): TemplateResult {
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label == null ? this.localize('graphExplorerLabel') : this.label
+      this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('graphExplorerLabel')
     );
     const groupRole = retrievalSemanticRole(this, 'group');
     const matches = this.matchingNodes();

@@ -78,7 +78,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Dispatches a tool call\'s result to a custom renderer registered via `registerToolRenderer()` (exact tool-name match, then facade/shape-based `matches()` dispatch), falling back to `<lr-json-viewer>` whenever no renderer matches, a lazy `load()` rejects, or `render()` throws.',
+          'Reports normalized status changes through lr-status-change. Dispatches a tool call\'s result to a custom renderer registered via `registerToolRenderer()` (exact tool-name match, then facade/shape-based `matches()` dispatch), falling back to `<lr-json-viewer>` whenever no renderer matches, a lazy `load()` rejects, or `render()` throws.',
       },
     },
   },

@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Yoʻl',
   pathNodeStatus: '{label}, {total} tadan {position}-tugun',
   pathRelationStatus: '{relation}, aloqa',
+  pathRelationForward: 'keyingi tugunga yoʻnaltirilgan',
+  pathRelationReverse: 'oldingi tugunga yoʻnaltirilgan',
   neighborListLabel: 'Aloqalar',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Grafda {label}ni yoyish',

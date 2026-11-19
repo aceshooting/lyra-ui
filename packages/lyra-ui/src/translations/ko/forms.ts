@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: '하나 이상의 옵션을 선택하십시오.',
   tokenInputRequired: '하나 이상의 값을 입력하십시오.',
   tokenInputEditWithContext: '{label} 편집',
+  tokenInputLabel: '토큰',
   iconButtonLabel: '버튼',
   codeEditorLabel: '코드 편집기',
   switchRequired: '이 기능을 켜주세요.',
@@ -112,6 +113,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: '펜 내림',
   signaturePadPenUp: '펜 올림',
+  signaturePadDrawingLimit: '그리기 한도에 도달했습니다.',
   localePickerInputLimit: '처음 512개의 로캘 항목만 사용할 수 있습니다.',
   emojiPickerInputLimit: '입력 한도에 도달하여 일부 이모지 데이터가 생략되었습니다.',
 };

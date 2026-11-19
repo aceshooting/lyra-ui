@@ -116,6 +116,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Chemin',
   pathNodeStatus: '{label}, nœud {position} sur {total}',
   pathRelationStatus: '{relation}, relation',
+  pathRelationForward: 'orienté vers le nœud suivant',
+  pathRelationReverse: 'orienté vers le nœud précédent',
   neighborListLabel: 'Relations',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Développer {label} dans le graphe',

@@ -50,14 +50,14 @@ export const styles = css`
 
   input.control {
     box-sizing: border-box;
-    min-block-size: var(--lr-size-2-5rem);
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    min-block-size: var(--lr-form-control-height);
+    padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-form-control-radius);
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
-    font-size: var(--lr-font-size-m);
+    font-size: var(--lr-form-control-font-size);
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   input.control:focus-visible {

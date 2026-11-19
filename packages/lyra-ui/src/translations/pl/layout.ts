@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Odepnij nawigację',
   appRailItemCollapse: 'Zwiń {label}',
   appRailItemExpand: 'Rozwiń {label}',
+  appRailItemToggle: 'Zwiń lub rozwiń {label}',
+  appRailGroupToggle: 'Grupa nawigacji',
   resizeValuePercent: '{value} procent',
   commandPaletteLabel: 'Paleta poleceń',
   commandPalettePlaceholder: 'Szukaj poleceń…',
@@ -65,6 +67,11 @@ const strings: LyraLocaleStrings = {
     many: '{count} poleceń',
     other: '{count} polecenia',
   },
+  tabCloseAction: 'Zamknij {label}',
+  stepperStateCompleted: 'Ukończono',
+  stepperStateError: 'Błąd',
+  stepperStatePending: 'Nierozpoczęte',
+  stepperStateLocked: 'Zablokowane',
   commandPaletteInputLimit: 'Pominięto niektóre polecenia, ponieważ osiągnięto limit danych wejściowych.',
 };
 

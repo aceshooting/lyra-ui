@@ -462,13 +462,105 @@ it('keeps host descriptions on the focus owner alongside its changing local desc
     ? Array.from(surface.ariaDescribedByElements ?? [], element => element.id)
     : (surface.getAttribute('aria-describedby') ?? '').split(/\s+/);
   await waitUntil(() => ids().includes('signature-help'));
-  expect(ids()).to.deep.equal(['signature-help', 'hint', 'instructions', 'status']);
+  const hint = part(el, 'hint').id;
+  const error = part(el, 'error').id;
+  expect(ids()).to.deep.equal(['signature-help', hint, 'instructions', 'status']);
   el.setAttribute('aria-describedby', 'signature-policy');
   el.errorText = 'Signature required.';
   await el.updateComplete;
   await waitUntil(() => ids().includes('signature-policy'));
-  expect(ids()).to.deep.equal(['signature-policy', 'error', 'hint', 'instructions', 'status']);
+  expect(ids()).to.deep.equal(['signature-policy', error, hint, 'instructions', 'status']);
   el.removeAttribute('aria-describedby');
   await waitUntil(() => !ids().includes('signature-policy'));
-  expect(ids()).to.deep.equal(['error', 'hint', 'instructions', 'status']);
+  expect(ids()).to.deep.equal([error, hint, 'instructions', 'status']);
+});
+
+describe('signature drawing limits', () => {
+  it('announces when a new stroke cannot start', async () => {
+    const strokes = Array.from({ length: SIGNATURE_PAD_MAX_STROKES }, () => LINE[0]!);
+    const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad .strokes=${strokes}></lr-signature-pad>`);
+    const surface = part(el, 'surface');
+    const counts = countEvents(el);
+    surface.dispatchEvent(new PointerEvent('pointerdown', { isPrimary: true, pointerId: 8, button: 0 }));
+    await waitUntil(() => announced().includes('Drawing limit reached'));
+    expect(el.strokes.length).to.equal(SIGNATURE_PAD_MAX_STROKES);
+    expect(counts).to.deep.equal({ change: 0, lrChange: 0 });
+  });
+
+  it('announces once when a stroke exceeds the point limit and commits the retained points', async () => {
+    const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad></lr-signature-pad>`);
+    const surface = part(el, 'surface');
+    await focusByKeyboard(surface);
+    await sendKeys({ press: 'Space' });
+    for (let i = 0; i <= SIGNATURE_PAD_MAX_POINTS; i++) {
+      surface.dispatchEvent(new KeyboardEvent('keydown', {
+        key: i % 2 === 0 ? 'ArrowRight' : 'ArrowLeft', bubbles: true, cancelable: true,
+      }));
+    }
+    await waitUntil(() => announced().includes('Drawing limit reached'));
+    await sendKeys({ press: 'Enter' });
+    expect(el.strokes[0]?.length).to.equal(SIGNATURE_PAD_MAX_POINTS);
+  });
+});
+
+describe('signature pad readonly and clear', () => {
+  it('cancels an in-progress stroke when readonly, keeps the saved signature focusable, and blocks edits', async () => {
+    const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad .strokes=${LINE}></lr-signature-pad>`);
+    const surface = part(el, 'surface');
+    const clear = part(el, 'clear-button') as HTMLButtonElement;
+    const before = el.value;
+    const counts = countEvents(el);
+    await focusByKeyboard(surface);
+    await sendKeys({ press: 'Space' });
+    el.setAttribute('readonly', '');
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === surface).to.equal(true);
+    expect(clear.disabled).to.equal(true);
+    surface.dispatchEvent(new PointerEvent('pointerdown', { isPrimary: true, pointerId: 8, button: 0 }));
+    surface.dispatchEvent(new PointerEvent('pointerup', { isPrimary: true, pointerId: 8, button: 0 }));
+    clear.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await sendKeys({ press: 'ArrowRight' });
+    await sendKeys({ press: 'Space' });
+    expect(el.value === before, 'the saved PNG is preserved').to.equal(true);
+    expect(counts).to.deep.equal({ change: 0, lrChange: 0 });
+    el.removeAttribute('readonly');
+    await el.updateComplete;
+    await sendKeys({ press: 'Space' });
+    await sendKeys({ press: 'Enter' });
+    expect(counts).to.deep.equal({ change: 1, lrChange: 1 });
+  });
+
+  it('emits lr-clear after the change pair from the clear button', async () => {
+    const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad .strokes=${LINE}></lr-signature-pad>`);
+    const events: string[] = [];
+    for (const type of ['change', 'lr-change', 'lr-clear']) el.addEventListener(type, () => events.push(type));
+    const clear = part(el, 'clear-button');
+    clear.click();
+    clear.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(el.value).to.equal('');
+    expect(events).to.deep.equal(['change', 'lr-change', 'lr-clear']);
+  });
+});
+
+it('keeps the live and committed SVG stroke geometry through supporting text updates', async () => {
+  const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad></lr-signature-pad>`);
+  const surface = part(el, 'surface');
+  const active = el.shadowRoot!.querySelector<SVGPathElement>('path.active')!;
+  await focusByKeyboard(surface);
+  await sendKeys({ press: 'Space' });
+  expect(active.getAttribute('d')).to.equal('M0.5 0.5L0.5 0.5');
+  await sendKeys({ press: 'ArrowRight' });
+  expect(active.getAttribute('d')).to.equal('M0.5 0.5L0.51 0.5L0.51 0.5');
+  el.hint = 'Sign here';
+  await el.updateComplete;
+  expect(active.getAttribute('d')).to.equal('M0.5 0.5L0.51 0.5L0.51 0.5');
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(active.getAttribute('d')).to.equal(null);
+  const saved = el.shadowRoot!.querySelector<SVGPathElement>('path:not(.active)')!;
+  const geometry = 'M0.5 0.5L0.51 0.5L0.51 0.5';
+  expect(saved.getAttribute('d')).to.equal(geometry);
+  el.errorText = 'Review this signature';
+  await el.updateComplete;
+  expect(saved.getAttribute('d')).to.equal(geometry);
 });

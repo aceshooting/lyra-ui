@@ -1,3 +1,9 @@
+import { layoutScale } from '../../../internal/layout-scale.js';
+import { isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { AllocationObserverController, OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { DocumentPointerListener, listenUntilPointerEnd } from '../../../internal/document-pointer.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -119,6 +125,7 @@ function isAnchorWithHref(value: EventTarget): boolean {
  * @slot toggle-icon - Replaces the hamburger glyph of the collapsed-layout toggle. The wrapper is
  *   inert and `aria-hidden`.
  * @event lr-toggle-request - Cancelable user proposal to change the collapsed-layout list's expanded state.
+ * A listener handling only this disclosure can filter on `event.target === event.currentTarget`.
  * @event lr-toggle - Accepted list state change with `detail: { expanded, source }`; item toggles
  *   remain their own composed child events, distinguishable by `event.target`.
  * @csspart base - The `nav` landmark.
@@ -129,6 +136,9 @@ function isAnchorWithHref(value: EventTarget): boolean {
  * @csspart indicator - Decorative track under the open trigger, rendered only with `indicator`
  *   in the bar layout.
  * @csspart indicator-arrow - The notch inside the indicator.
+ * @cssprop [--lr-navigation-menu-toggle-hover-bg] - Toggle hover background override.
+ * @cssprop [--lr-navigation-menu-toggle-hover-color] - Toggle hover color override.
+ * @cssprop [--lr-navigation-menu-toggle-active-bg] - Toggle active background override.
  * @cssprop [--lr-navigation-menu-gap=var(--lr-space-xs)] - Gap between items, in both layouts.
  * @cssprop [--lr-navigation-menu-toggle-active-color=var(--lr-color-text)] - Text colour of the
  *   collapsed-layout toggle while it is pressed or open.
@@ -153,6 +163,10 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
+  );
 
   /** Accessible name of the `nav` landmark, mapped to the host `aria-label` attribute. Attribute
    * presence wins, so `aria-label=""` leaves the landmark deliberately unnamed; with no value the
@@ -270,16 +284,27 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   private lastCloseAt = Number.NEGATIVE_INFINITY;
   private pressActive = false;
   private pressOpenItem?: HTMLElement;
-  private pressDocument?: Document;
+  private releasePress?: () => void;
   private pressTimer?: { id: number; view: Window };
-  private lightDismissDocument?: Document;
-  private resizeObserver?: ResizeObserver;
+  private readonly outsidePress = new DocumentPointerListener(this, event => this.onDocumentPointerDown(event));
+  private readonly indicatorObserver = new OwnedResizeObserver(this, () => this.queueIndicatorMeasure());
   private observedIndicatorTargets = new Set<Element>();
   private lastInlineSize?: number;
-  private allocationFrame?: { id: number; view: Window };
+  private readonly allocationFrame = new OwnedFrame(this);
   private pendingFocus?: 'toggle' | 'first-base';
   private indicatorQueued = false;
   private lastDirection?: 'ltr' | 'rtl';
+
+  constructor() {
+    super();
+    new AllocationObserverController(this, {
+      onInlineSize: width => {
+        this.lastInlineSize = this.ownerDocument.defaultView!.ResizeObserver ? width : this.measureContentInlineSize();
+        this.allocationFrame.schedule(() => this.applyAllocation(this.lastInlineSize));
+        this.queueIndicatorMeasure();
+      },
+    });
+  }
 
   private get layout(): NavigationMenuLayout {
     return this.collapsedLayout ? 'stacked' : 'bar';
@@ -305,7 +330,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     this.addEventListener('click', this.onClickCapture, true);
     this.addEventListener('keydown', this.onKeyDown);
     this.addEventListener('focusout', this.onFocusOut);
-    this.observeAllocation();
+    if (!this.ownerDocument.defaultView?.ResizeObserver) this.applyAllocation(this.measureContentInlineSize());
+    this.observeIndicatorTargets();
     if (this.hasUpdated) {
       this.updateBrowserDerivedState(() => this.bindItems());
     }
@@ -318,9 +344,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     this.removeEventListener('click', this.onClickCapture, true);
     this.removeEventListener('keydown', this.onKeyDown);
     this.removeEventListener('focusout', this.onFocusOut);
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.cancelAllocationFrame();
+    this.indicatorObserver.clear();
+    this.allocationFrame.cancel();
     this.observedIndicatorTargets.clear();
     this.stopLightDismiss();
     this.cancelShow();
@@ -474,14 +499,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   }
 
   private isNavigable(item: HTMLElement): boolean {
-    if (
-      item.hidden ||
-      item.inert ||
-      item.closest('[inert]') !== null ||
-      item.getAttribute('aria-hidden') === 'true'
-    ) {
-      return false;
-    }
+    if (!isRovingTargetAvailable(item)) return false;
     const base = this.controllerFor(item)?.base();
     return base !== null && base !== undefined && isComposedFocusAvailable(base);
   }
@@ -700,16 +718,11 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   // Dismissal --------------------------------------------------------------------------------
 
   private startLightDismiss(): void {
-    const doc = this.ownerDocument;
-    if (!this.isConnected || this.lightDismissDocument === doc) return;
-    this.stopLightDismiss();
-    doc.addEventListener('pointerdown', this.onDocumentPointerDown, true);
-    this.lightDismissDocument = doc;
+    if (this.isConnected) this.outsidePress.bind();
   }
 
   private stopLightDismiss(): void {
-    this.lightDismissDocument?.removeEventListener('pointerdown', this.onDocumentPointerDown, true);
-    this.lightDismissDocument = undefined;
+    this.outsidePress.unbind();
   }
 
   private readonly onDocumentPointerDown = (event: PointerEvent): void => {
@@ -735,12 +748,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     this.clearPressTimer();
     this.pressActive = true;
     this.pressOpenItem = this.openItem;
-    const doc = this.ownerDocument;
-    if (this.pressDocument === doc) return;
-    this.stopPressListeners();
-    doc.addEventListener('pointerup', this.onPressEnd, true);
-    doc.addEventListener('pointercancel', this.onPressEnd, true);
-    this.pressDocument = doc;
+    this.releasePress ??= listenUntilPointerEnd(this.ownerDocument, this.onPressEnd, { capture: true });
   };
 
   /** Re-evaluates one task after the release, once the click it produces has run any switch. */
@@ -775,9 +783,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   }
 
   private stopPressListeners(): void {
-    this.pressDocument?.removeEventListener('pointerup', this.onPressEnd, true);
-    this.pressDocument?.removeEventListener('pointercancel', this.onPressEnd, true);
-    this.pressDocument = undefined;
+    this.releasePress?.();
+    this.releasePress = undefined;
   }
 
   private clearPressTimer(): void {
@@ -834,7 +841,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   // Keyboard ---------------------------------------------------------------------------------
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) {
+    if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) {
       return;
     }
     if (this.layout === 'stacked') {
@@ -976,68 +983,12 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     this.setExpanded(!this._expanded, 'user');
   };
 
-  private observeAllocation(): void {
-    const ownerDocument = this.ownerDocument;
-    const view = ownerDocument.defaultView;
-    const ResizeObserverConstructor = view?.ResizeObserver;
-    if (!ResizeObserverConstructor) return;
-    if (!this.resizeObserver) {
-      const observer = new ResizeObserverConstructor((entries) => {
-        if (
-          this.resizeObserver !== observer ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) return;
-        this.onResize(entries);
-      });
-      this.resizeObserver = observer;
-    }
-    this.resizeObserver.observe(this);
-    this.observedIndicatorTargets.clear();
-    this.observeIndicatorTargets();
-  }
-
-  private onResize(entries: ResizeObserverEntry[]): void {
-    for (const entry of entries) {
-      if (entry.target !== this) continue;
-      this.lastInlineSize = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-      this.scheduleAllocation();
-    }
-    this.queueIndicatorMeasure();
-  }
-
-  /**
-   * Applies the measured allocation on the next frame rather than inside the observer callback:
-   * the layout switch changes this host's own block size, which the observer would otherwise have
-   * to report again within the same delivery and flag as an undelivered loop.
-   */
-  private scheduleAllocation(): void {
-    if (this.allocationFrame) return;
-    const view = this.ownerDocument.defaultView;
-    if (!view) {
-      this.applyAllocation(this.lastInlineSize);
-      return;
-    }
-    const id = view.requestAnimationFrame(() => {
-      if (this.allocationFrame?.id !== id) return;
-      this.allocationFrame = undefined;
-      if (this.isConnected) this.applyAllocation(this.lastInlineSize);
-    });
-    this.allocationFrame = { id, view };
-  }
-
-  private cancelAllocationFrame(): void {
-    const frame = this.allocationFrame;
-    this.allocationFrame = undefined;
-    if (frame) frame.view.cancelAnimationFrame(frame.id);
-  }
-
   private measureContentInlineSize(): number | undefined {
     const view = this.ownerDocument.defaultView;
     if (!view || !this.isConnected) return this.lastInlineSize;
     const style = view.getComputedStyle(this);
     const edges = ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'] as const;
-    let width = this.getBoundingClientRect().width;
+    let width = this.getBoundingClientRect().width / layoutScale(this).x;
     for (const edge of edges) width -= Number.parseFloat(style[edge]) || 0;
     return Math.max(0, width);
   }
@@ -1079,8 +1030,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   // Indicator --------------------------------------------------------------------------------
 
   private observeIndicatorTargets(): void {
-    const observer = this.resizeObserver;
-    if (!observer) return;
+    const observer = this.indicatorObserver;
     const wanted = new Set<Element>();
     if (this.indicator) {
       const list = this.listElement;
@@ -1125,10 +1075,11 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     const rtl = this.effectiveDirection === 'rtl';
     const bottom =
       this._panelAnchor === 'menu' && list ? list.getBoundingClientRect().bottom : trigger.bottom;
+    const scale = layoutScale(nav);
     const next: IndicatorBox = {
-      start: rtl ? navRect.right - trigger.right : trigger.left - navRect.left,
-      size: trigger.width,
-      top: bottom - navRect.top,
+      start: (rtl ? navRect.right - trigger.right : trigger.left - navRect.left) / scale.x,
+      size: trigger.width / scale.x,
+      top: (bottom - navRect.top) / scale.y,
       visible: true,
     };
     if (
@@ -1141,6 +1092,11 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
       return;
     }
     this.indicatorBox = next;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
   }
 
   override render(): TemplateResult {

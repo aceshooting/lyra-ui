@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Indlela',
   pathNodeStatus: '{label}, ifindo {position} kwezingu-{total}',
   pathRelationStatus: '{relation}, ubudlelwano',
+  pathRelationForward: 'kuqondiswe ku-node elandelayo',
+  pathRelationReverse: 'kuqondiswe ku-node edlule',
   neighborListLabel: 'Ubudlelwano',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Nweba u-{label} kugrafu',

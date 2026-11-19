@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'ٽول پيراميٽر اسڪيمه ۾ هر فيلڊ لاءِ وڌ ۾ وڌ {fields} فيلڊ ۽ {options} چونڊون ٿي سگهن ٿيون.',
   testResultsLimit: 'رڳو پهريان {count} ٽيسٽ نتيجا ڏيکاريل آهن.',
   toolTimelineLimit: 'وڌ ۾ وڌ {count} ٽول ڪالون ڏيکاريل آهن.',
+  toolTimelineLoadError: 'ٽول جو ڏيک لوڊ نه ٿي سگهيو.',
   toolSelectLimit: 'رڳو پهريان {count} ٽول ڏيکاريل آهن.',
   testResultsInputTooLarge: 'ٽيسٽ جي نتيجن جا تفصيل ڏيکارڻ جي حد کان وڌ آهن.',
   toolCall: 'ٽول ڪال',

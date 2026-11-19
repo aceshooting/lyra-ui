@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Iskimaawwan paaraameetira meeshaa dirree {fields} fi filannoo {options} dirree tokkoof caalan hin deeggaran.',
   testResultsLimit: 'Bu\'aawwan qorannoo jalqabaa {count} qofa agarsiifameera.',
   toolTimelineLimit: 'Waamicha meeshaa {count} caalu hin agarsiifamu.',
+  toolTimelineLoadError: 'Mul’ata meeshaa fe’uun hin milkoofne.',
   toolSelectLimit: 'Meeshaalee jalqabaa {count} qofa agarsiifameera.',
   testResultsInputTooLarge: 'Balʼinni buʼaawwan qorannoo daangaa agarsiisaa caala.',
   toolCall: 'Waamicha meeshaa',

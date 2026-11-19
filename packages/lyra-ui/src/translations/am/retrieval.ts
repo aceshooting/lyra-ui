@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'መንገድ',
   pathNodeStatus: '{label}፣ ከ{total} ኖዶች {position}ኛ',
   pathRelationStatus: '{relation}፣ ግንኙነት',
+  pathRelationForward: 'ወደ ቀጣዩ መስቀለኛ ነጥብ የተመራ',
+  pathRelationReverse: 'ወደ ቀዳሚው መስቀለኛ ነጥብ የተመራ',
   neighborListLabel: 'ግንኙነቶች',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: '{label}ን በግራፉ ውስጥ አስፋ',

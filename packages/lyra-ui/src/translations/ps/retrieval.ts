@@ -111,6 +111,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'لاره',
   pathNodeStatus: '{label}، له {total} څخه غوټه {position}',
   pathRelationStatus: '{relation}، اړیکه',
+  pathRelationForward: 'راتلونکي نوډ ته ښوول شوی',
+  pathRelationReverse: 'تیر نوډ ته ښوول شوی',
   neighborListLabel: 'اړیکې',
   neighborRowLabel: '{label}، {relation}، {direction}',
   neighborExpand: '{label} په ګراف کې غځول',

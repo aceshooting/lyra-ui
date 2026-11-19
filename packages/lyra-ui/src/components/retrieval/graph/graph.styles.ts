@@ -30,7 +30,9 @@ export const styles = css`
   }
   .source-list [part="source-navigator"] { flex: 1 1 auto; }
   .source-toolbar { display: flex; flex-wrap: wrap; gap: var(--lr-space-s); }
-  .source-toolbar input { flex: 1 1 auto; min-inline-size: 0; }
+  .source-search { position: relative; flex: 1 1 auto; min-inline-size: var(--lr-icon-button-size); }
+  .source-search .native-search-input { padding-inline-end: var(--lr-icon-button-size); }
+  .source-toolbar option { color: var(--lr-color-text); background: var(--lr-color-surface); }
   .source-rows { list-style: none; padding: 0; margin-block: var(--lr-space-s); }
   .source-rows li { display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); margin-block: var(--lr-space-xs); }
   [part="source-navigator"] :where(button, input, select), [part="source-status"] button {
@@ -50,7 +52,7 @@ export const styles = css`
   [part~="source-row"] { flex: 1 1 auto; text-align: start; }
   [part~="source-row"]:where([aria-pressed="true"]) { --_lr-source-fill: var(--lr-color-brand-fill-quiet); }
   [part="source-navigator"] button, [part="source-status"] button { cursor: pointer; }
-  [part="source-navigator"] :where(button, input, select):hover, [part="source-status"] button:hover {
+  [part="source-navigator"] button:hover, [part="source-status"] button:hover {
     background: color-mix(in oklab, var(--_lr-source-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   [part="source-navigator"] button:active, [part="source-status"] button:active {
@@ -97,7 +99,7 @@ export const styles = css`
   }
   [part="spatial-control"]:hover:where(:not(:disabled)),
   [part="spatial-list-item"]:hover {
-    background: color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-graph-spatial-control-hover-fill, color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   [part="spatial-control"]:active:where(:not(:disabled)),
   [part="spatial-list-item"]:active {
@@ -416,5 +418,10 @@ export const styles = css`
     paint-order: stroke;
     stroke: var(--lr-graph-edge-label-halo, var(--lr-color-surface));
     stroke-width: var(--lr-border-width-thick);
+  }
+  @media (forced-colors: active) {
+    [part='node'] {
+      forced-color-adjust: none;
+    }
   }
 `;

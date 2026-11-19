@@ -11,7 +11,7 @@ import { deferredPlace as place } from '../../../internal/anchored-overlay-runti
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
-import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 
 import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
@@ -26,9 +26,11 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
 export interface ToolChipSelectDetail {
   name: string;
   callId: string;
+  invocationId: string;
 }
 
 export interface LyraToolCallChipEventMap {
+  'lr-tool-activate': CustomEvent<{ invocationId: string }>;
   'lr-tool-call-chip-select': CustomEvent<ToolChipSelectDetail>;
 }
 
@@ -86,8 +88,9 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES
  * participates in shared Escape ordering even while only hovered, deferring to a genuinely
  * topmost overlay opened on top of it.
  * @slot status-icon - Overrides the built-in status glyph entirely.
+ * @event lr-tool-activate - Activation with the invocationId for correlation.
  * @event lr-tool-call-chip-select - The chip was activated (click or
- * Enter/Space while focused). `detail: { name, callId }`. The `lr-tool-chip-select`
+ * Enter/Space while focused). `detail: { name, callId, invocationId }`. The `lr-tool-chip-select`
  * alias this event replaced was removed in 9.0.0.
  * @csspart base - The clickable pill (`<button>`).
  * @csspart icon - Wrapper around the status glyph / `status-icon` slot.
@@ -205,13 +208,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   @state() private tooltipOpen = false;
 
   private readonly tooltipId = nextId('tool-call-chip-tooltip');
-  /** Projects a host `aria-describedby` onto the internal `[part="base"]` role owner, merged with
-   *  whatever that element's own `aria-describedby` (the open tooltip's id, or nothing) currently
-   *  is -- IDREFs are scoped per shadow root, so the host's own attribute cannot reach across the
-   *  boundary on its own, and re-deriving the baseline on every update (rather than a one-shot
-   *  merge) keeps the tooltip id included as `tooltipOpen` toggles. Mirrors
-   *  `graph-query-builder.class.ts`'s identically-shaped `externalDescriptionLease`. */
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  private readonly description = new HostDescriptionController(this, () => this.baseEl ?? null);
   private cleanupPositioner?: () => void;
   private tooltipOverlay?: OverlayHandle;
   // Hover and focus are tracked as independent "keep it open" reasons --
@@ -240,29 +237,13 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     }
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
-  }
-
-  private syncExternalDescription(): void {
-    const target = this.isConnected ? (this.baseEl ?? null) : null;
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
-    }
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.description.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.syncExternalDescription();
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
@@ -300,7 +281,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseExternalDescription();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
     this.tooltipOverlay?.deactivate({ restoreFocus: false });
@@ -372,10 +352,13 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   };
 
   private onClick = (): void => {
+    const invocationId = this.callId;
     this.emit('lr-tool-call-chip-select', {
       name: this.name,
-      callId: this.callId,
+      callId: invocationId,
+      invocationId,
     });
+    this.emit('lr-tool-activate', { invocationId });
   };
 
   @query('[part="base"]') private baseEl?: HTMLButtonElement;
@@ -412,7 +395,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private get accessibleLabel(): string {
-    const parts = [this.shownName];
+    const parts = this.category ? [this.category, this.shownName] : [this.shownName];
     if (this.summary) parts.push(this.summary);
     parts.push(this.localize(TOOL_STATUS_LABEL_KEY[this.status]));
     const durationMs = this.safeDurationMs;
@@ -452,7 +435,9 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
+          ${hasCategory ? html`<span aria-hidden="true">·</span>` : nothing}
           <span part="name">${this.shownName}</span>
+          ${hasSummary ? html`<span aria-hidden="true">:</span>` : nothing}
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">

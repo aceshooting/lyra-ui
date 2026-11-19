@@ -47,7 +47,7 @@ export const Rtl: StoryObj = { render: () => html`<div dir="rtl"><lr-menubar lab
 export const Narrow: StoryObj = {
   render: () => html`<div style="inline-size:320px;max-inline-size:100%"><lr-menubar label="Application">${titles()}<lr-menubar-item>Window</lr-menubar-item><lr-menubar-item>A long application title that remains fully named</lr-menubar-item></lr-menubar></div>`,
 };
-export const Plain: StoryObj = { render: () => html`<lr-menubar label="Application" frame="plain">${titles()}</lr-menubar>` };
+export const Plain: StoryObj = { render: () => html`<lr-menubar .accessibleLabel=${'Application commands'} frame="plain">${titles()}</lr-menubar>` };
 export const Sizes: StoryObj = {
   render: () => html`<div style="display:grid;gap:var(--lr-space-l)">${(['s', 'm', 'l'] as LyraSize[]).map(size => html`<lr-menubar label=${`Application ${size}`} size=${size}>${titles()}</lr-menubar>`)}</div>`,
 };

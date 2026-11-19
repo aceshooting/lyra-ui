@@ -1,3 +1,5 @@
+import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -83,6 +85,7 @@ function patchDecorativeSeparator(source: Element, clone: Element): void {
  * @csspart base - Compatibility name for the navigation wrapper; use `breadcrumb`.
  * @csspart breadcrumb - The navigation wrapper. It is the same node as `base`.
  * @csspart list - The `role="list"` flex row wrapping the slotted items.
+ * @cssprop [--lr-breadcrumb-gap] - Gap override.
  * @status stable
  * @since 4.0.0
  */
@@ -96,6 +99,10 @@ export class LyraBreadcrumb extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
+  );
   /** Accessible-name override for the trail, mapped to the host's `aria-label` attribute the same
    *  way every other Lyra component spells this member. The `<nav>` landmark that owns the role
    *  lives in the shadow root and never inherits a host attribute automatically, so the value is
@@ -112,8 +119,7 @@ export class LyraBreadcrumb extends LyraElement {
   @property() label?: string;
 
   private generatedSeparators = new Map<Element, Array<{ source: Element; clone: Element }>>();
-  private separatorObserver?: MutationObserver;
-  private separatorObserverDocument?: Document;
+  private readonly separatorObserver = new OwnedMutationObserver(this, () => this.syncSeparators());
   private firstItem?: Element;
 
   override connectedCallback(): void {
@@ -123,9 +129,7 @@ export class LyraBreadcrumb extends LyraElement {
 
   override disconnectedCallback(): void {
     this.clearGeneratedSeparators();
-    this.separatorObserver?.disconnect();
-    this.separatorObserver = undefined;
-    this.separatorObserverDocument = undefined;
+    this.separatorObserver.clear();
     this.setFirstItem(undefined);
     super.disconnectedCallback();
   }
@@ -145,16 +149,7 @@ export class LyraBreadcrumb extends LyraElement {
   }
 
   private observeSeparatorSources(sources: Element[]): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.separatorObserver || this.separatorObserverDocument !== ownerDocument) {
-      this.separatorObserver?.disconnect();
-      const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-      if (!MutationObserverCtor) return;
-      this.separatorObserver = new MutationObserverCtor(this.syncSeparators);
-      this.separatorObserverDocument = ownerDocument;
-    } else {
-      this.separatorObserver.disconnect();
-    }
+    this.separatorObserver.clear();
     for (const source of sources) {
       this.separatorObserver.observe(source, {
         attributes: true,
@@ -208,11 +203,16 @@ export class LyraBreadcrumb extends LyraElement {
     }
     // Observe after distributing copies so the trail does not process its own writes again.
     for (const item of items) {
-      this.separatorObserver?.observe(item, {
+      this.separatorObserver.observe(item, {
         childList: true, subtree: true, attributeFilter: ['slot', 'hidden'],
       });
     }
   };
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   override render(): TemplateResult {
     // Attribute presence first, so an explicitly empty `aria-label=""` stays empty. When the

@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Жол',
   pathNodeStatus: '{label}, түйін {position}, барлығы {total}',
   pathRelationStatus: '{relation}, байланыс',
+  pathRelationForward: 'келесі түйінге бағытталған',
+  pathRelationReverse: 'алдыңғы түйінге бағытталған',
   neighborListLabel: 'Байланыстар',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Графта жаю: {label}',

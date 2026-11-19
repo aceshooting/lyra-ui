@@ -49,6 +49,8 @@ export interface LyraTabEventMap {
  * @csspart tab - The tab content wrapper. It is the same node as `base`.
  * @csspart close-button - The non-focusable visual close affordance shown when `closable` is true.
  * @csspart close-button__base - Compatibility alias on the same close affordance as `close-button`.
+ * @cssprop [--lr-tab-close-hover-bg] - Close hover background override.
+ * @cssprop [--lr-tab-close-active-bg] - Close active background override.
  * @status stable
  * @since 8.0.0
  */

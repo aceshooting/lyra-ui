@@ -73,3 +73,36 @@ for (const rejected of [false, true]) it(`restores the force surface when a pend
   expect(graph.getAttribute('aria-busy')).to.equal('false');
   expect(graph.shadowRoot!.querySelector('[part="node"]') !== null).to.equal(true);
 });
+
+it('resumes a layered layout load that a same-task move orphaned', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div><lr-graph .nodes=${[{ id: 'a' }, { id: 'b' }]} .edges=${[{ source: 'a', target: 'b' }]}></lr-graph></div>`);
+  const graph = host.querySelector<LyraGraph>('lr-graph')!;
+  await waitUntil(() => graph.getAttribute('aria-busy') === 'false', 'force library ready', { timeout: 10000 });
+  type LayeredModule = typeof import('../../../internal/layered-layout.js');
+  const settle: Array<(module: LayeredModule) => void> = [];
+  (graph as unknown as { loadLayeredLayout(): Promise<LayeredModule> }).loadLayeredLayout =
+    () => new Promise((done) => { settle.push(done); });
+  graph.layout = 'layered';
+  await Promise.resolve();
+  expect(graph.getAttribute('aria-busy')).to.equal('true');
+  graph.remove();
+  host.append(graph);
+  const module = await import('../../../internal/layered-layout.js');
+  settle.forEach((done) => done(module));
+  await waitUntil(() => graph.getAttribute('aria-busy') === 'false', 'layered load resumed after the move', { timeout: 10000 });
+  expect(graph.getNodePosition('b')).to.not.equal(undefined);
+});
+
+it('loads the pager when source navigation first needs it', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-graph']>(html`<lr-graph></lr-graph>`);
+  expect(customElements.get('lr-pagination') === undefined).to.equal(true);
+  el.view = 'list';
+  el.graphSource = { revision: 1, records: { revision: 1,
+    query: async () => ({rows: [], total: 0, summary: {nodes:0, edges:0}}), lookup: async () => [], locate: async () => null },
+    scene: async () => ({nodes:[], edges:[], total:{nodes:0, edges:0}, coverage:'complete', worldBounds:null}) };
+  await el.updateComplete;
+  await waitUntil(() => !!customElements.get('lr-pagination'), 'source pager registers');
+  const pager = el.shadowRoot!.querySelector('lr-pagination')!;
+  expect(pager.matches(':defined')).to.equal(true);
+  expect(pager.page).to.equal(1);
+});

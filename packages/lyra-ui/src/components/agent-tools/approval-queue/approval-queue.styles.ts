@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -75,8 +76,13 @@ export const styles = css`
      only the pseudo-class also tracks a <fieldset disabled> cascade; every interactive rule below
      excludes it likewise. Matches lr-chip and lr-button. */
   [part='request']:disabled {
-    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
+  }
+
+  /* Only the request description recedes; the decision badge is the row's remaining information
+     and keeps full strength. */
+  [part='request']:disabled [part='request-info'] {
+    opacity: var(--lr-opacity-disabled);
   }
 
   [part='request']:not(:disabled):hover {
@@ -105,6 +111,7 @@ export const styles = css`
 
   [part='tool-name'] {
     display: block;
+    unicode-bidi: isolate;
     max-inline-size: 100%;
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
@@ -112,6 +119,9 @@ export const styles = css`
 
   [part='request-id'] {
     display: block;
+    direction: ltr;
+    text-align: start;
+    unicode-bidi: isolate;
     max-inline-size: 100%;
     color: var(--lr-color-text-quiet);
     font-family: var(--lr-font-mono);
@@ -134,4 +144,5 @@ export const styles = css`
       grid-template-columns: 1fr;
     }
   }
+  ${forcedColorsPart('[part="request"][aria-current="true"]')}
 `;

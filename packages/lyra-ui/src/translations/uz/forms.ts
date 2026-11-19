@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Kamida bitta variantni tanlang.',
   tokenInputRequired: 'Kamida bitta qiymat kiriting.',
   tokenInputEditWithContext: '{label}ni tahrirlash',
+  tokenInputLabel: 'Tokenlar',
   iconButtonLabel: 'Tugma',
   codeEditorLabel: 'Kod muharriri',
   switchRequired: 'Buni yoqing.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Qalam pastda',
   signaturePadPenUp: 'Qalam tepada',
+  signaturePadDrawingLimit: 'Chizish chegarasiga yetildi.',
   localePickerInputLimit: 'Faqat dastlabki 512 ta til va hudud yozuvi mavjud.',
   emojiPickerInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim emoji maʼlumotlari tashlab ketildi.',
 };

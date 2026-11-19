@@ -1,4 +1,3 @@
-import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -15,8 +14,8 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
-import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
-import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
+import { TypeAheadBuffer, type TypeAheadMemo } from '../../../internal/type-ahead-buffer.js';
+import { isRovingTargetAvailable, isRepeatedActivationKey, shouldIgnoreNavigationKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { PopupController } from '../../../internal/popup-controller.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -101,7 +100,7 @@ export interface LyraMenuEventMap {
  * page, not once per menu. Module scope, never touched at import time: `menu.class.ts` is the
  * side-effect-free half of the tree-shaking split, so the call itself lives in
  * `connectedCallback()`. */
-let menuWidthScaleRegistered = false;
+const registeredMenuWidths = new WeakSet<Document>();
 
 /** Types `--_lr-menu-max-inline-size`, the private name `menu.styles.ts` reads the public width
  * ceiling through, as `<length-percentage>` with a `100%` initial value.
@@ -119,12 +118,12 @@ let menuWidthScaleRegistered = false;
  * parses and is then ignored, which is precisely the silently-inert CSS this library refuses to
  * ship. Registration is document-global, so `inherits: false` plus a per-surface assignment keeps
  * the fallback deterministic rather than inherited from an ancestor menu. */
-function registerMenuWidthScale(): void {
-  if (menuWidthScaleRegistered) return;
-  menuWidthScaleRegistered = true;
-  if (typeof CSS === 'undefined' || typeof CSS.registerProperty !== 'function') return;
+function registerMenuWidthScale(doc: Document): void {
+  const css = doc.defaultView?.CSS;
+  if (!css?.registerProperty || registeredMenuWidths.has(doc)) return;
+  registeredMenuWidths.add(doc);
   try {
-    CSS.registerProperty({
+    css.registerProperty({
       name: '--_lr-menu-max-inline-size',
       syntax: '<length-percentage>',
       inherits: false,
@@ -300,7 +299,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private cleanup?: DeferredOperationHandle;
   private presentationPositioned = false;
   private placedTopLayer?: boolean;
-  private itemStateObserver?: MutationObserver;
   private readonly popupController = new PopupController({ host: this, onPointer: (event) => this.onDocPointer(event) });
   private menubarAnchored = false;
   private pendingFocus: MenuFocusTarget = 'first';
@@ -313,16 +311,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     uncheckRadioGroup: (item, group) => this.uncheckRadioGroupSiblings(item, group),
   };
   private readonly typeBuffer = new TypeAheadBuffer(this);
-  private readonly typeAheadLabels = new WeakMap<LyraMenuItem, { label: string; locale: string; folded: string }>();
-
-  private foldedTypeAheadLabel(item: LyraMenuItem, locale: string): string {
-    const label = item.getTextLabel();
-    const previous = this.typeAheadLabels.get(item);
-    if (previous?.label === label && previous.locale === locale) return previous.folded;
-    const folded = label.toLocaleLowerCase(resolveIntlLocale(locale));
-    this.typeAheadLabels.set(item, { label, locale, folded });
-    return folded;
-  }
+  private readonly typeAheadLabels: TypeAheadMemo = new WeakMap();
 
   /** @internal Symbol-keyed so submenu overlay mechanics never become a second public menu API. */
   readonly [submenuPanelController] = this.createSubmenuController();
@@ -368,7 +357,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    registerMenuWidthScale();
+    registerMenuWidthScale(this.ownerDocument);
     if (this.hasUpdated) {
       const slot =
         this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
@@ -606,8 +595,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.presentationPositioned = false;
     this.resetTypeAhead();
     this.clearSubmenuTimers();
-    this.itemStateObserver?.disconnect();
-    this.itemStateObserver = undefined;
     this.popupController.unbindPointer();
     for (const item of this.items) this.releaseItemOwner(item);
     this._dropdownOpen = false;
@@ -706,7 +693,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       }
       return;
     }
-    this.itemStateObserver?.disconnect();
     const previousItems = this.items;
     // A bounds check can't survive membership changes: adding, removing or
     // reordering items while open shifts survivors to new indices, so an
@@ -764,24 +750,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private observeItems(): void {
     for (const item of this.items) this.acquireItemOwner(item);
     this.applyDropdownSize();
-    const MutationObserverCtor =
-      this.ownerDocument.defaultView?.MutationObserver;
-    if (MutationObserverCtor) {
-      const owner = this.ownerDocument;
-      let observer: MutationObserver;
-      observer = new MutationObserverCtor(() => {
-        if (this.itemStateObserver !== observer || this.ownerDocument !== owner)
-          return;
-        this.onItemStateChange();
-      });
-      this.itemStateObserver = observer;
-      for (const item of this.items) {
-        this.itemStateObserver.observe(item, {
-          attributes: true,
-          attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert'],
-        });
-      }
-    }
   }
 
   private acquireItemOwner(item: LyraMenuItem): void {
@@ -814,12 +782,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   /** `inert` counts alongside disabled/hidden because an inert element *refuses* focus: stepping
    *  onto one leaves `focus()` a silent no-op, so roving focus is stranded on whatever held it
-   *  (or on `<body>`) and every later key press dies. An inert ancestor up to and including this
-   *  menu inerts the item just as completely as the attribute on the item itself. The walk stops
-   *  at this menu: an owning dropdown keeps its popup hidden/inert until it is positioned, and
-   *  re-focuses the roving stop chosen here once the popup is shown. */
+   *  (or on `<body>`) and every later key press dies. `closest` covers an inert ancestor, which
+   *  inerts the item just as completely as the attribute on the item itself. */
   private isNavigable(item: LyraMenuItem): boolean {
-    return !item.interactionDisabled && isRovingTargetAvailable(item, this);
+    return !item.interactionDisabled && isRovingTargetAvailable(item);
   }
 
   private applyDropdownSize(): void {
@@ -827,14 +793,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     for (const item of this.items) item.size = this.dropdownSize;
   }
 
-  // `lr-menu-item-state-change` fires once per item, per disabled/loading/hidden change -- N
-  // items changing in the same tick each dispatch their own event, and an unbatched listener
-  // would re-scan `this.items` once per dispatch. Contain propagation immediately (this is
-  // private item-to-owner coordination, never a public bubbling event) but collapse the actual
-  // roving-focus reconciliation into one pass per microtask batch, mirroring the coalesced
-  // select/combobox option-metadata pattern. The sibling `itemStateObserver` MutationObserver
-  // already delivers one native batch per mutation-record set and calls `onItemStateChange()`
-  // directly -- untouched, since the platform already coalesces it.
   private itemStateChangeReconciliationPending = false;
 
   private onItemStateChangeEvent = (event: Event): void => {
@@ -1028,7 +986,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // Everything below is scoped to this menu's own level: a keydown from inside a nested submenu
     // is that submenu's to handle, and driving both menus from one keypress would move two roving
     // highlights (or close two menus) at once.
-    if (this.isForeignEvent(e) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing || e.keyCode === 229) return;
+    if (this.isForeignEvent(e) || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     const isItemTarget = isLyraMenuItemElement(e.target);
     if (e.key === 'Escape' && isItemTarget && !this.hasStandalonePresentation) {
       e.preventDefault();
@@ -1079,6 +1037,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // Mirrors lr-tree calling current.select() from its own delegated
         // keydown handler, rather than each row wiring its own keydown.
         e.preventDefault();
+        if (isRepeatedActivationKey(e)) break;
         // A submenu parent is a disclosure, not an action: activating it opens the submenu and
         // moves into it, exactly as the into-submenu arrow key does.
         if (current?.hasSubmenu) {
@@ -1259,12 +1218,14 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const current =
       this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentIndex = current ? navigable.indexOf(current) : -1;
-    const locale = resolveIntlLocale(this.effectiveLocale);
-    let match: number | null = null;
-    for (let step = 1; step <= navigable.length; step++) {
-      const candidate = ((currentIndex + step) % navigable.length + navigable.length) % navigable.length;
-      if (this.foldedTypeAheadLabel(navigable[candidate]!, locale).startsWith(this.typeBuffer.text)) { match = candidate; break; }
-    }
+    const match = this.typeBuffer.match(
+      navigable,
+      currentIndex,
+      (item) => item.getTextLabel(),
+      this.effectiveLocale,
+      undefined,
+      this.typeAheadLabels,
+    );
     if (match !== null) this.setActiveItem(navigable[match]!);
   }
 

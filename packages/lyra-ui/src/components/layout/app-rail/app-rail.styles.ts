@@ -26,10 +26,10 @@ export const styles = css`
     justify-content: center;
     font: inherit;
     ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-app-rail-toggle-border, var(--lr-border-width-thin) solid var(--lr-color-border));
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    background: var(--lr-app-rail-toggle-bg, var(--lr-color-surface));
+    color: var(--lr-app-rail-toggle-color, var(--lr-color-text));
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
@@ -84,6 +84,10 @@ export const styles = css`
   }
 
   [part="backdrop"] {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity var(--lr-transition-base), visibility var(--lr-transition-base);
     position: fixed;
     inset-block-start: var(--lr-app-rail-panel-inset-block-start, 0);
     inset-block-end: 0;
@@ -93,6 +97,12 @@ export const styles = css`
       --lr-app-rail-overlay-color,
       var(--_lr-app-rail-overlay-color)
     );
+  }
+
+  [part="backdrop"]:where([data-open]) {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
   }
 
   /* [part="base"] and [part="panel"] are the SAME element, promoted in place for the mobile
@@ -408,12 +418,13 @@ export const styles = css`
     border: 0;
     border-radius: var(--lr-radius);
     background: transparent;
-    color: var(--lr-color-text);
+    color: var(--lr-app-rail-pin-color, var(--lr-color-text));
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
   [part="pin-button"]:where([aria-pressed="true"]) {
-    color: var(--lr-color-brand);
+    color: var(--lr-app-rail-pin-pressed-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
+    background: var(--lr-app-rail-pin-pressed-bg, transparent);
   }
   [part="pin-button"]:hover {
     background: var(--lr-app-rail-pin-hover-bg, var(--lr-color-brand-quiet));
@@ -465,6 +476,7 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
+    [part="backdrop"] { transition: none; }
     [part="base"],
     [part="panel"],
     [part="collapse-toggle"],

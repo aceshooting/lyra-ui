@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'Copot navigasi',
   appRailItemCollapse: 'Ciutake {label}',
   appRailItemExpand: 'Bukak {label}',
+  appRailItemToggle: 'Tampilake utawa delikake {label}',
+  appRailGroupToggle: 'Klompok navigasi',
   resizeValuePercent: '{value} persen',
   commandPaletteLabel: 'Palet perintah',
   commandPalettePlaceholder: 'Telusuri perintah…',
@@ -62,6 +64,11 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} prentah',
   },
+  tabCloseAction: 'Tutup {label}',
+  stepperStateCompleted: 'Rampung',
+  stepperStateError: 'Kasalahan',
+  stepperStatePending: 'Durung diwiwiti',
+  stepperStateLocked: 'Dikunci',
   commandPaletteInputLimit: 'Sawetara prentah ora dilebokake amarga wates input wis tekan.',
 };
 

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Skemaer for værktøjsparametre understøtter højst {fields} felter og {options} valgmuligheder pr. felt.',
   testResultsLimit: 'Kun de første {count} testresultater vises.',
   toolTimelineLimit: 'Der vises højst {count} værktøjskald.',
+  toolTimelineLoadError: 'Værktøjsvisningen kunne ikke indlæses.',
   toolSelectLimit: 'Kun de første {count} værktøjer vises.',
   testResultsInputTooLarge: 'Detaljerne for testresultaterne overskrider visningsgrænsen.',
   toolCall: 'Værktøjskald',

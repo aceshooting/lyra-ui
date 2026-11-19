@@ -57,6 +57,21 @@ describe('lr-embedding-explorer engine and columns', () => {
     expect(creates).to.equal(0);
   });
 
+  for (const preference of ['builtin', 'webgl'] as const) {
+    it(`reuses unchanged page rows when focus moves in the ${preference} view`, async () => {
+      const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .engine=${preference} .pointColumns=${columns(32)}></lr-embedding-explorer>`);
+      await waitUntil(() => el.shadowRoot!.querySelectorAll(preference === 'webgl' ? '[part="row"]' : '[part="point"]').length === 32);
+      const api = el as unknown as { announceLabel(...args: unknown[]): string };
+      const label = api.announceLabel.bind(el);
+      let calls = 0;
+      api.announceLabel = (...args) => { calls++; return label(...args); };
+      el.shadowRoot!.querySelector('[data-index="0"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[tabindex="0"]')?.getAttribute('data-index')).to.equal('1');
+      expect(calls).to.be.at.most(2);
+    });
+  }
+
   it('pages all columns, gives columns precedence and reaches the last row by keyboard', async () => {
     const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .pointColumns=${columns(405)} .points=${[{ id: 'ignored', x: 0, y: 0 }]}></lr-embedding-explorer>`);
     expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(200);
@@ -305,7 +320,8 @@ describe('lr-embedding-explorer engine and columns', () => {
     expect(row.textContent?.replace(/\s+/g, ' ').trim()).to.equal('Alpha 1.234,5, -2,5, 3,5 Guides');
     expect(row.getAttribute('aria-label')).to.equal('Alpha 1.234,5, -2,5, 3,5 Guides; Punkt 1');
     expect(el.shadowRoot!.querySelector('[part="rows"]')?.getAttribute('aria-label')).to.equal('Chosen plot');
-    expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Chosen plot');
+    expect(el.shadowRoot!.querySelector('[part="base"]')?.hasAttribute('aria-label')).to.equal(false);
+    expect(el.getAttribute('aria-label')).to.equal('Chosen plot');
     expect(el.shadowRoot!.querySelector('[part="pagination"]')?.getAttribute('aria-label')).to.equal('Seitennavigation');
     expect(el.shadowRoot!.querySelector('[part="pagination"]')?.textContent).to.contain('Seite 1 von 1');
     await expect(el).to.be.accessible();
@@ -418,4 +434,14 @@ describe('lr-embedding-explorer engine and columns', () => {
     });
   }
 
+  it('paints the selected row and disabled pager from separate theme tokens', async () => {
+    const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer engine="webgl" .selectedPointId=${'x'}
+      style="--lr-embedding-explorer-row-selected-fill:rgb(7,48,68);--lr-embedding-explorer-page-disabled-fill:rgb(22,34,55)"
+      .points=${[{id:'x',x:1,y:1}]}></lr-embedding-explorer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="row"]') !== null);
+    const row = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]')!;
+    const button = el.shadowRoot!.querySelector('[part="page-button"]:disabled')!;
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgb(7, 48, 68)');
+    expect(getComputedStyle(button).backgroundColor).to.equal('rgb(22, 34, 55)');
+  });
 });

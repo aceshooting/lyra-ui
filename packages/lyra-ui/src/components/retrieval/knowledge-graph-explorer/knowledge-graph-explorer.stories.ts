@@ -298,3 +298,16 @@ export const WebglSpatial: Story = {
     .nodes=${[{ id: 'a', label: 'Alpha', position: { x: -60, y: 0, z: 30 } }, { id: 'b', label: 'Beta', position: { x: 60, y: 0, z: -30 } }]}
     .edges=${[{ source: 'a', target: 'b', directed: true }]}></lr-knowledge-graph-explorer>`,
 };
+
+export const KeepPeopleVisible: Story = {
+  parameters: { docs: { description: { story: 'The host keeps the Person type visible and allows other legend entries to toggle.' } } },
+  render: () => html`
+    <lr-knowledge-graph-explorer
+      .nodes=${nodes} .edges=${links} .nodeTypes=${nodeTypes}
+      @lr-hidden-types-change-request=${(event: CustomEvent<{ hiddenTypes: readonly string[] }>) => {
+        if (event.detail.hiddenTypes.includes('person')) event.preventDefault();
+      }}
+      style="height: 32rem;"
+    ></lr-knowledge-graph-explorer>
+  `,
+};

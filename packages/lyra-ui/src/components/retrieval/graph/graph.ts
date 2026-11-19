@@ -3,5 +3,4 @@ export * from './graph.class.js';
 import { LyraGraph } from './graph.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../overlays/skeleton/skeleton.js';
-import '../../data/pagination/pagination.js';
 defineElement('graph', LyraGraph);

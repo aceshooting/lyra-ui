@@ -17,6 +17,7 @@ import {
   resetMouse,
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
+import { expectLocaleFallback } from "../../../../test/expected-locale-fallbacks.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const loopErrors: string[] = [];
@@ -985,6 +986,7 @@ describe("lr-stepper", () => {
   });
 
   it("formats numbered step chips with the effective locale", async () => {
+    expectLocaleFallback("ar-EG", ["stepperStateCompleted", "stepperStatePending"]);
     const el = (await fixture(
       html`<lr-stepper locale="ar-EG" .steps=${steps()}></lr-stepper>`
     )) as LyraStepper;
@@ -1148,6 +1150,21 @@ describe("lr-stepper", () => {
       await elementUpdated(el);
       return { el, callbacks: spy.callbacks.slice(before) };
     }
+
+    it('reads the current allocation when an observer entry has no content box', async () => {
+      const spy = installResizeObserverSpy({ inert: true });
+      try {
+        const { el, callbacks } = await mount(spy, 400);
+        el.style.inlineSize = '200px';
+        for (const callback of callbacks) callback([], {} as ResizeObserver);
+        await waitUntil(() => el.effectiveOrientation === 'vertical');
+        el.style.inlineSize = '500px';
+        for (const callback of callbacks) callback([], {} as ResizeObserver);
+        await waitUntil(() => el.effectiveOrientation === 'horizontal');
+      } finally {
+        spy.restore();
+      }
+    });
 
     it("crosses at the same measured width for a rem breakpoint as for the equivalent px number", async () => {
       document.documentElement.style.fontSize = "16px";
@@ -2207,7 +2224,7 @@ describe("lr-stepper read-only mode", () => {
     expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
   });
 
-  it("releases a focused step when the strip becomes read-only mid-session", async () => {
+  it("moves focus to the list when the strip becomes read-only mid-session", async () => {
     const el = (await fixture(
       html`<lr-stepper .steps=${mixedSteps()}></lr-stepper>`
     )) as LyraStepper;
@@ -2220,10 +2237,7 @@ describe("lr-stepper read-only mode", () => {
     el.readonly = true;
     await el.updateComplete;
 
-    // Unavoidable and correct: the element that held focus stopped existing as a focusable
-    // control. What matters is that nothing is stranded -- no phantom tab stop is left behind for
-    // a keyboard user to land on.
-    expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("base");
     expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
   });
 

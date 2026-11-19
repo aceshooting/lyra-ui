@@ -114,6 +114,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Teekond',
   pathNodeStatus: '{label}, sõlm {position}/{total}',
   pathRelationStatus: '{relation}, seos',
+  pathRelationForward: 'suunatud järgmise sõlme poole',
+  pathRelationReverse: 'suunatud eelmise sõlme poole',
   neighborListLabel: 'Seosed',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Laienda {label} graafis',

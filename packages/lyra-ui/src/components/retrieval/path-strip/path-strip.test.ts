@@ -3,7 +3,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './path-strip.js';
 import type { LyraPathStrip, LyraPathElement } from './path-strip.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched,  resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const motionMatchMedia = (ownerWindow: Window, matches: boolean): typeof window.matchMedia => {
@@ -39,6 +39,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'scrollPrevious',
   'scrollNext',
   'pathNodeStatus',
+  'pathRelationForward',
 ]);
 it('defaults to an empty path and an unset label', async () => {
   const el = (await fixture(
@@ -260,7 +261,8 @@ it('draws directed-edge arrows as aria-hidden, logical (inline-end unless revers
   await el.updateComplete;
   const arrow = el.shadowRoot!.querySelector('[part="arrow"]')!;
   expect(arrow.getAttribute('aria-hidden')).to.equal('true');
-  expect(arrow.textContent).to.equal('→');
+  expect(arrow.querySelector('svg') !== null).to.equal(true);
+  expect(getComputedStyle(arrow).transform).to.equal('none');
 });
 
 it('mirrors the directed-edge arrow glyph and swaps ArrowLeft/ArrowRight semantics under dir="rtl"', async () => {
@@ -270,7 +272,7 @@ it('mirrors the directed-edge arrow glyph and swaps ArrowLeft/ArrowRight semanti
   await el.updateComplete;
 
   const arrow = el.shadowRoot!.querySelector('[part="arrow"]')!;
-  expect(arrow.textContent).to.equal('←');
+  expect(getComputedStyle(arrow).transform).to.equal('matrix(-1, 0, 0, 1, 0, 0)');
 
   const controls = () =>
     [
@@ -377,7 +379,7 @@ it('announces node focus through a .strings override for pathNodeStatus, interpo
   ).focus();
   await el.updateComplete;
 
-  const mirror = el.shadowRoot!.querySelector('.sr-only')!;
+  const mirror = el.shadowRoot!.querySelector('div.sr-only')!;
   expect(mirror.textContent).to.equal('Marie Curie, nœud 1 sur 3');
   expect(mirror.getAttribute('role')).to.equal(null);
   expect(mirror.getAttribute('aria-live')).to.equal(null);
@@ -571,8 +573,8 @@ it('mirrors a reverse directed edge in both logical directions', async () => {
   </div>`);
   const [ltr, rtl] = [...wrapper.querySelectorAll('lr-path-strip')] as LyraPathStrip[];
 
-  expect(ltr!.shadowRoot!.querySelector('[part="arrow"]')!.textContent).to.equal('←');
-  expect(rtl!.shadowRoot!.querySelector('[part="arrow"]')!.textContent).to.equal('→');
+  expect(getComputedStyle(ltr!.shadowRoot!.querySelector('[part="arrow"]')!).transform).to.equal('matrix(-1, 0, 0, 1, 0, 0)');
+  expect(getComputedStyle(rtl!.shadowRoot!.querySelector('[part="arrow"]')!).transform).to.equal('none');
 });
 
 it('announces an unlabeled node by its id', async () => {
@@ -622,4 +624,78 @@ it('rejects a click on a retired node when capture replaces its path', async () 
   await el.updateComplete;
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="relation"]')!.click();
   expect(events).to.deep.equal(['relation']);
+});
+
+describe('nested scroller keys and non-colour direction cue', () => {
+  it('leaves keys from the scroller controls and viewport to the scroller', async () => {
+    const el = await fixture<LyraPathStrip>(html`<lr-path-strip style="inline-size: 90px" .path=${path}></lr-path-strip>`);
+    const scroller = el.shadowRoot!.querySelector('lr-scroller')!;
+    await scroller.updateComplete;
+    await waitUntil(() => scroller.shadowRoot!.querySelector('[part~="control"]'));
+    const origins = [
+      scroller.shadowRoot!.querySelector<HTMLElement>('[part~="control"]')!,
+      scroller.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!,
+    ];
+    let selections = 0;
+    el.addEventListener('lr-entity-select', () => (selections += 1));
+    el.addEventListener('lr-relation-activate', () => (selections += 1));
+    for (const origin of origins) {
+      for (const key of ['Enter', ' ', 'ArrowRight', 'Home']) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });
+        origin.dispatchEvent(event);
+        expect(event.defaultPrevented, `${key} from ${origin.getAttribute('part')}`).to.equal(false);
+      }
+    }
+    expect(selections).to.equal(0);
+  });
+
+  it('ignores keyboard events dispatched on a non-control descendant', async () => {
+    const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+    const text = document.createTextNode('detail');
+    el.shadowRoot!.querySelector('[part="base"]')!.append(text);
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    text.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+  });
+
+  it('honors canceled keys on its own node', async () => {
+    const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+    const node = el.shadowRoot!.querySelector('[part="node"]')!;
+    let selections = 0;
+    el.addEventListener('lr-entity-select', () => { selections++; });
+    for (const key of ['Enter', 'ArrowRight']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      event.preventDefault();
+      node.dispatchEvent(event);
+    }
+    await el.updateComplete;
+    expect(selections).to.equal(0);
+    expect(node.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('names the direction of a directed relation in text, not only the aria-hidden arrow', async () => {
+    const reversed: LyraPathElement[] = [
+      { kind: 'node', node: { id: 'a', label: 'A' } },
+      { kind: 'edge', relation: 'cites', directed: true, reverse: true },
+      { kind: 'node', node: { id: 'b', label: 'B' } },
+      { kind: 'edge', relation: 'near' },
+    ];
+    const forward = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+    const backward = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${reversed}></lr-path-strip>`);
+    const text = (e: LyraPathStrip, i: number) =>
+      e.shadowRoot!.querySelectorAll<HTMLElement>('[part="relation"]')[i]!.textContent!.replace(/\s+/g, ' ').trim();
+    expect(text(forward, 0)).to.equal('discovered directed toward the next node');
+    expect(text(backward, 0)).to.equal('cites directed toward the previous node');
+    expect(text(backward, 1)).to.equal('near');
+    backward.strings = { pathRelationReverse: 'vers le nœud précédent' };
+    await backward.updateComplete;
+    expect(text(backward, 0)).to.equal('cites vers le nœud précédent');
+  });
+});
+
+it('paints the configured hover fill on its node', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-path-strip']>(html`<lr-path-strip .path=${path} style="--lr-path-strip-action-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-path-strip>`);
+  const button = el.shadowRoot!.querySelector('[part="node"]')!;
+  await hoverUntilMatched(button, 'hover the control');
+  await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });

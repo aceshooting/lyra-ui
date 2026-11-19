@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: '請至少選擇一個選項。',
   tokenInputRequired: '請至少輸入一個值。',
   tokenInputEditWithContext: '編輯{label}',
+  tokenInputLabel: '標籤',
   iconButtonLabel: '按鈕',
   codeEditorLabel: '程式碼編輯器',
   switchRequired: '請開啟此項。',
@@ -112,6 +113,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: '已落筆',
   signaturePadPenUp: '已抬筆',
+  signaturePadDrawingLimit: '已達繪製上限。',
   localePickerInputLimit: '僅提供前 512 個語言與地區項目。',
   emojiPickerInputLimit: '由於達到輸入限制，部分表情資料已被省略。',
 };

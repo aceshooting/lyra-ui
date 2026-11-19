@@ -939,13 +939,13 @@ it("the toggle button opens and closes the overlay, updating aria-expanded/aria-
     '[part="toggle"]'
   ) as HTMLButtonElement;
   expect(toggle.getAttribute("aria-expanded")).to.equal("false");
-  expect(toggle.getAttribute("aria-label")).to.equal("Open navigation");
+  expect(toggle.getAttribute("aria-label")).to.equal("Navigation");
 
   toggle.click();
   await el.updateComplete;
   expect(el.open).to.be.true;
   expect(toggle.getAttribute("aria-expanded")).to.equal("true");
-  expect(toggle.getAttribute("aria-label")).to.equal("Close navigation");
+  expect(toggle.getAttribute("aria-label")).to.equal("Navigation");
 
   toggle.click();
   await el.updateComplete;
@@ -1647,7 +1647,7 @@ it("is accessible with the mobile overlay open", async () => {
 // -- toggle button i18n --------------------------------------------------
 
 describe("toggle button i18n", () => {
-  it('uses the openNavigation message key (not a hardcoded "Open" + " navigation" concatenation) when closed', async () => {
+  it('uses the navigation name when closed', async () => {
     const el = (await fixture(
       html`<lr-app-rail></lr-app-rail>`
     )) as LyraAppRail;
@@ -1655,13 +1655,13 @@ describe("toggle button i18n", () => {
     await el.updateComplete;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
-    expect(toggle.getAttribute("aria-label")).to.equal("Open navigation");
+    expect(toggle.getAttribute("aria-label")).to.equal("Navigation");
   });
 
-  it("honors a strings override for openNavigation", async () => {
+  it("honors a strings override for the navigation toggle", async () => {
     const el = (await fixture(
       html`<lr-app-rail
-        .strings=${{ openNavigation: "Ouvrir la navigation" }}
+        .strings=${{ navigation: "Ouvrir la navigation" }}
       ></lr-app-rail>`
     )) as LyraAppRail;
     fireMobileChange(el, true);
@@ -3571,19 +3571,19 @@ it('honors a strings override for the collapse toggle name', async () => {
   const el = (await fixture(html`
     <lr-app-rail
       collapsible
-      .strings=${{ appRailCollapse: 'Replier la navigation', appRailExpand: 'Déplier la navigation' }}
+      .strings=${{ navigation: 'Navigation principale' }}
     >
       <button>a</button>
     </lr-app-rail>
   `)) as LyraAppRail;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
-  expect(toggle.getAttribute('aria-label')).to.equal('Replier la navigation');
+  expect(toggle.getAttribute('aria-label')).to.equal('Navigation principale');
 
   el.toggleCollapse();
   await el.updateComplete;
   const collapsed = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
-  expect(collapsed.getAttribute('aria-label')).to.equal('Déplier la navigation');
+  expect(collapsed.getAttribute('aria-label')).to.equal('Navigation principale');
 });
 
 it('activates the collapse toggle from the keyboard when it holds focus', async () => {
@@ -3850,7 +3850,7 @@ it('keeps a custom collapse glyph upright and the toggle named in RTL', async ()
   const slot = wrapper.querySelector('slot');
   expect(slot?.assignedElements().map(element => element.textContent)).to.deep.equal(['▣']);
   expect(wrapper.getAttribute('aria-hidden')).to.equal('true');
-  expect(button.getAttribute('aria-label')).to.equal('Collapse navigation');
+  expect(button.getAttribute('aria-label')).to.equal('Navigation');
   expect(getComputedStyle(wrapper).transform).to.equal('none');
   button.click();
   await rail.updateComplete;

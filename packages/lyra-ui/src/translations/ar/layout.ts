@@ -28,6 +28,8 @@ const strings: LyraLocaleStrings = {
   appRailUnpin: 'إلغاء تثبيت التنقل',
   appRailItemCollapse: 'طي {label}',
   appRailItemExpand: 'توسيع {label}',
+  appRailItemToggle: 'إظهار أو إخفاء {label}',
+  appRailGroupToggle: 'مجموعة التنقل',
   resizeValuePercent: '{value} بالمئة',
   commandPaletteLabel: 'لوحة الأوامر',
   commandPalettePlaceholder: 'ابحث في الأوامر…',
@@ -67,6 +69,11 @@ const strings: LyraLocaleStrings = {
     many: '{count} أمرًا',
     other: '{count} أمر',
   },
+  tabCloseAction: 'إغلاق {label}',
+  stepperStateCompleted: 'مكتمل',
+  stepperStateError: 'خطأ',
+  stepperStatePending: 'لم تبدأ',
+  stepperStateLocked: 'مقفل',
   commandPaletteInputLimit: 'حُذف بعض الأوامر لبلوغ حد الإدخال.',
 };
 

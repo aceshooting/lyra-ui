@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
@@ -341,6 +342,11 @@ it('ArrowDown from the search field moves real DOM focus to the first enabled it
   )) as LyraNodePalette;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  await focusByKeyboard(input);
+  const composing = new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 229, bubbles: true, cancelable: true });
+  input.dispatchEvent(composing);
+  expect(composing.defaultPrevented).to.equal(false);
+  expect(el.shadowRoot!.activeElement === input).to.equal(true);
   input.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'ArrowDown',
@@ -364,7 +370,7 @@ it('ArrowUp from the first item returns focus to the search field', async () => 
   const firstItem = el.shadowRoot!.querySelector(
     '[part="item"]'
   ) as HTMLElement;
-  firstItem.focus();
+  await focusByKeyboard(firstItem);
   firstItem.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'ArrowUp',
@@ -389,7 +395,7 @@ it('ArrowUp from a non-first item moves real focus to its predecessor, not the s
   // rovingIndex 1 -- "Transform", the second enabled row.
   const second =
     el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')[1]!;
-  second.focus();
+  await focusByKeyboard(second);
   second.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'ArrowUp',
@@ -486,7 +492,7 @@ it('steps over disabled rows when moving focus through the enabled roving list',
   )) as LyraNodePalette;
   const second =
     el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')[1]!;
-  second.focus();
+  await focusByKeyboard(second);
   second.dispatchEvent(
     new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
   );
@@ -562,7 +568,7 @@ it('ArrowDown from the search field is a no-op when an active filter matches not
   input.value = 'nonexistent';
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await el.updateComplete;
-  input.focus();
+  await focusByKeyboard(input);
   // Exercises the `lastRenderedRovingList.length === 0` early-return in onFieldKeyDown -- the
   // cached field must reflect the just-rendered (empty) filtered/categorized state, not a stale
   // pre-filter list.
@@ -590,7 +596,7 @@ it('assigns same-object duplicate entries distinct roving positions', async () =
     '-1',
   ]);
 
-  rows[0]!.focus();
+  await focusByKeyboard(rows[0]!);
   rows[0]!.dispatchEvent(
     new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
   );
@@ -614,7 +620,7 @@ it('keeps roving state and real focus on a surviving item across reorder, then t
   const initialRows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
   ];
-  initialRows[1]!.focus();
+  await focusByKeyboard(initialRows[1]!);
   await el.updateComplete;
   expect(initialRows.map((row) => row.getAttribute('tabindex'))).to.deep.equal([
     '-1',
@@ -653,7 +659,7 @@ it('preserves focus on the correct occurrence of a same-object duplicate across 
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
   ];
-  rows[1]!.focus(); // the *second* occurrence of dup
+  await focusByKeyboard(rows[1]!); // the *second* occurrence of dup
   await el.updateComplete;
 
   el.items = [other, dup, dup];
@@ -682,7 +688,7 @@ it('moves focus to the search field when items shrink to none while an item has 
   const firstItem = el.shadowRoot!.querySelector(
     '[part="item"]'
   ) as HTMLElement;
-  firstItem.focus();
+  await focusByKeyboard(firstItem);
   await el.updateComplete;
 
   el.items = [];
@@ -705,7 +711,7 @@ it('focuses the search field as an interim fallback when the preserved item cann
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
   ];
-  rows[1]!.focus(); // "Beta"
+  await focusByKeyboard(rows[1]!); // "Beta"
   await el.updateComplete;
 
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -1009,11 +1015,6 @@ it("adoptedCallback re-arms the announcer's timer host in the new owner window",
   try {
     el.remove();
     frameDocument.body.append(frameDocument.adoptNode(el));
-    // The reconnect re-arms isMounting (see disconnectedCallback), so this first post-reconnect
-    // update stays silent by design, matching the "never announce on mount" contract -- spend it
-    // before checking that the *next* change announces normally, which is what actually proves
-    // adoptedCallback re-armed the announcer's timer host in the new window rather than leaving
-    // it silently broken.
     el.items = [...items];
     await el.updateComplete;
 
@@ -1045,7 +1046,7 @@ it('renders the search focus ring', async () => {
   `);
   const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
   await sendKeys({ press: 'Tab' });
-  input.focus();
+  await focusByKeyboard(input);
   await waitUntil(() => {
     const computed = getComputedStyle(input);
     return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
@@ -1195,7 +1196,7 @@ describe('reorderable', () => {
     );
   }
 
-  it('is off by default: Ctrl+Arrow still just navigates and never emits lr-reorder', async () => {
+  it('leaves Ctrl+Arrow to the browser when reordering is disabled', async () => {
     const el = (await fixture(
       html`<lr-node-palette .items=${items}></lr-node-palette>`
     )) as LyraNodePalette;
@@ -1205,18 +1206,17 @@ describe('reorderable', () => {
     let requests = 0;
     el.addEventListener('lr-reorder', () => requests++);
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
-    first.focus();
-    pressReorder(first, 'ArrowDown');
+    await focusByKeyboard(first);
+    const chord = new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, cancelable: true, bubbles: true });
+    first.dispatchEvent(chord);
+    expect(chord.defaultPrevented).to.equal(false);
     await el.updateComplete;
 
     expect(requests, 'no request without the opt-in').to.equal(0);
     expect(itemLabels(el), 'and the rendered order is untouched').to.deep.equal(
       ['HTTP Request', 'Transform', 'Send Email', 'Webhook']
     );
-    expect(
-      el.shadowRoot!.activeElement?.textContent,
-      'Ctrl+ArrowDown still moved focus'
-    ).to.include('Transform');
+    expect(el.shadowRoot!.activeElement === first).to.equal(true);
   });
 
   it('requests a move past the next neighbour in the same category, indexed into items', async () => {
@@ -1225,7 +1225,7 @@ describe('reorderable', () => {
     )) as LyraNodePalette;
     await el.updateComplete;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
-    first.focus();
+    await focusByKeyboard(first);
 
     const pending = oneEvent(el, 'lr-reorder');
     pressReorder(first, 'ArrowDown');
@@ -1290,7 +1290,7 @@ describe('reorderable', () => {
     const webhook = Array.from(
       el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')
     ).find((row) => row.textContent?.includes('Webhook'))!;
-    webhook.focus();
+    await focusByKeyboard(webhook);
     const pending = oneEvent(el, 'lr-reorder');
     pressReorder(webhook, 'ArrowUp');
     const detail = (await pending)
@@ -1312,12 +1312,12 @@ describe('reorderable', () => {
     el.addEventListener('lr-reorder', () => requests++);
 
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
-    first.focus();
+    await focusByKeyboard(first);
     pressReorder(first, 'ArrowUp'); // already first in "Data"
     const last = Array.from(
       el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')
     ).find((row) => row.textContent?.includes('Webhook'))!;
-    last.focus();
+    await focusByKeyboard(last);
     pressReorder(last, 'ArrowDown'); // already last in "Actions"
     await el.updateComplete;
     expect(requests).to.equal(0);
@@ -1333,7 +1333,7 @@ describe('reorderable', () => {
     )) as LyraNodePalette;
     await el.updateComplete;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
-    first.focus();
+    await focusByKeyboard(first);
     const pending = oneEvent(el, 'lr-reorder');
     pressReorder(first, 'ArrowDown');
     const detail = (await pending)
@@ -1353,17 +1353,12 @@ describe('reorderable', () => {
     await el.updateComplete;
     const before = sinkTexts().length;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
-    first.focus();
+    await focusByKeyboard(first);
     pressReorder(first, 'ArrowDown');
     await el.updateComplete;
     expect(sinkTexts().length, 'the request alone announces nothing').to.equal(
       before
     );
-
-    // An unrelated items reassignment that does NOT apply the move must stay silent too.
-    el.items = [...items];
-    await el.updateComplete;
-    expect(sinkTexts().length).to.equal(before);
 
     el.items = [items[1]!, items[0]!, items[2]!, items[3]!];
     await el.updateComplete;
@@ -1377,13 +1372,28 @@ describe('reorderable', () => {
     ]);
   });
 
+  for (const boundary of ['replacement', 'reconnect']) {
+    it(`expires an unconfirmed reorder after ${boundary}`, async () => {
+      const el = await fixture<LyraNodePalette>(html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`);
+      const before = sinkTexts().length;
+      pressReorder(el.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!, 'ArrowDown');
+      if (boundary === 'replacement') el.items = [...items];
+      else { const parent = el.parentNode!; el.remove(); parent.appendChild(el); }
+      await el.updateComplete;
+      el.items = [items[1]!, items[0]!, items[2]!, items[3]!];
+      await el.updateComplete;
+      await Promise.resolve();
+      expect(sinkTexts().slice(before).some(text => text.includes('Moved'))).to.equal(false);
+    });
+  }
+
   it('ignores a reorder request from a row that the host already replaced', async () => {
     const el = (await fixture(
       html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
     )) as LyraNodePalette;
     await el.updateComplete;
     const stale = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
-    stale.focus();
+    await focusByKeyboard(stale);
     const requests: unknown[] = [];
     el.addEventListener('lr-reorder', (event) => requests.push((event as CustomEvent).detail));
 
@@ -1402,7 +1412,7 @@ describe('reorderable', () => {
     await el.updateComplete;
     const before = sinkTexts().length;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
-    first.focus();
+    await focusByKeyboard(first);
     pressReorder(first, 'ArrowDown');
     await el.updateComplete;
 
@@ -1422,7 +1432,7 @@ describe('reorderable', () => {
     await el.updateComplete;
     const before = sinkTexts().length;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
-    first.focus();
+    await focusByKeyboard(first);
     pressReorder(first, 'ArrowDown');
     await el.updateComplete;
 
@@ -1480,7 +1490,7 @@ describe('item admission and input boundaries', () => {
       html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
     );
     const first = el.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
-    first.focus();
+    await focusByKeyboard(first);
 
     const pending = oneEvent(el, 'lr-reorder');
     first.dispatchEvent(
@@ -1505,4 +1515,11 @@ describe('item admission and input boundaries', () => {
     expect(() => item.dispatchEvent(dragStart)).not.to.throw();
     expect(item.getAttribute('aria-disabled')).to.equal('false');
   });
+});
+
+it('paints the configured hover fill on its item', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-node-palette']>(html`<lr-node-palette .items=${items} style="--lr-node-palette-item-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-node-palette>`);
+  const button = el.shadowRoot!.querySelector('[part="item"]')!;
+  await hoverUntilMatched(button, 'hover the control');
+  await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });

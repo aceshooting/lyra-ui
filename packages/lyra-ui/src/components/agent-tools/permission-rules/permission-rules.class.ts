@@ -1,4 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { ltrIsolate } from '../../../internal/bidi.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -6,7 +8,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './permission-rules.styles.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_permissionRulesAllow, LYRA_DEFAULT_permissionRulesAsk, LYRA_DEFAULT_permissionRulesDecisionFor, LYRA_DEFAULT_permissionRulesEmpty, LYRA_DEFAULT_permissionRulesLabel, LYRA_DEFAULT_permissionRulesLimit, LYRA_DEFAULT_permissionRulesScope } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -25,7 +27,12 @@ export interface PermissionRule {
   decision: PermissionRuleDecision;
 }
 
+function admittedId(row: PermissionRule): string | undefined {
+  return typeof row.label === 'string' && typeof row.scope === 'string' && DECISIONS.includes(row.decision) ? row.id : undefined;
+}
+
 export interface LyraPermissionRulesEventMap {
+  'lr-permission-rule-change-request': CustomEvent<{ ruleId: string; decision: PermissionRuleDecision }>;
   'lr-permission-rule-change': CustomEvent<{ ruleId: string; decision: PermissionRuleDecision }>;
 }
 
@@ -38,7 +45,6 @@ const DECISION_LABEL_KEY: Record<PermissionRuleDecision, string> = {
   deny: 'deny',
 };
 
-const normalizedRuleCache = new WeakMap<object, PermissionRule[]>();
 
 /**
  * `<lr-permission-rules>` — a controlled list of host-defined permission rules with a native
@@ -48,9 +54,11 @@ const normalizedRuleCache = new WeakMap<object, PermissionRule[]>();
  * are omitted with the first valid occurrence winning, and at most 100 rows are rendered.
  *
  * @customElement lr-permission-rules
+ * @event lr-permission-rule-change-request - Cancelable before notifying the host of a proposed decision.
  * @event lr-permission-rule-change - A decision change was requested. `detail: { ruleId, decision }`.
  *   The collection remains controlled by the host; programmatic assignment is silent.
  * @csspart base - The fieldset and overall group.
+ * @cssprop --lr-decision-legend-font-size - Font size of the decision panel legend.
  * @csspart legend - The visible group label.
  * @csspart list - The rendered rule rows.
  * @csspart rule - One rule row.
@@ -104,25 +112,7 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
   @property({ type: Boolean, reflect: true }) readonly = false;
 
   private get normalizedRules(): PermissionRule[] {
-    const rules = Array.isArray(this.rules) ? this.rules : [];
-    const cached = normalizedRuleCache.get(rules);
-    if (cached) return cached;
-    const valid = rules.filter((rule): rule is PermissionRule => {
-      try {
-        return Boolean(
-          rule &&
-            typeof rule.label === 'string' &&
-            typeof rule.scope === 'string' &&
-            DECISIONS.includes(rule.decision),
-        );
-      } catch {
-        return false;
-      }
-    });
-    const normalized = firstByIdentity(valid, (rule) => rule.id);
-    // Only a frozen owned snapshot can never change.
-    if (Object.isFrozen(rules)) normalizedRuleCache.set(rules, normalized);
-    return normalized;
+    return firstByIdentityMemo(this.rules, admittedId);
   }
 
   private decisionDispatching = false;
@@ -137,7 +127,9 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
     }
     this.decisionDispatching = true;
     try {
-      this.emit('lr-permission-rule-change', { ruleId: rule.id, decision });
+      const detail = Object.freeze({ruleId: rule.id, decision});
+      const request = this.emit('lr-permission-rule-change-request', detail, {cancelable: true});
+      if (!request.defaultPrevented) this.emit('lr-permission-rule-change', detail);
     } finally {
       this.decisionDispatching = false;
       // A host may acknowledge synchronously while the native select still owns its changed value.
@@ -152,13 +144,13 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
         <div part="rule-copy">
           <span part="rule-label">${rule.label}</span>
           ${rule.description ? html`<span part="description">${rule.description}</span>` : nothing}
-          <span part="scope">${this.localize('permissionRulesScope', undefined, { scope: rule.scope })}</span>
+          <span part="scope">${this.localize('permissionRulesScope', undefined, { scope: ltrIsolate(rule.scope) })}</span>
         </div>
         <select
           part="decision"
-          aria-label=${this.localize('permissionRulesDecisionFor', undefined, { label: rule.label })}
+          aria-label=${this.localize('permissionRulesDecisionFor', undefined, { label: normalizeLabel(rule.label) ?? normalizeLabel(rule.scope) ?? rule.id })}
           aria-readonly=${this.readonly ? 'true' : nothing}
-          ?disabled=${this.disabled || this.readonly}
+          ?disabled=${this.disabled}
           .value=${rule.decision}
           @change=${(event: Event) => this.onDecisionChange(rule, event)}
         >

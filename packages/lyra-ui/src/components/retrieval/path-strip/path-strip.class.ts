@@ -1,3 +1,5 @@
+import { isElementNode } from '../../../internal/dom-guards.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -5,7 +7,6 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
@@ -22,7 +23,7 @@ import {
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationForward, LYRA_DEFAULT_pathRelationReverse, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -60,6 +61,7 @@ interface PathOccurrence {
  * targetNodeId?, occurrenceIndex }` — source/target resolved from the adjacent retained node
  * elements, `undefined` when the path is malformed at that position. `occurrenceIndex` is the
  * element's index in the supplied path, so deliberately repeated identities remain distinct.
+ * @cssprop --lr-path-strip-action-hover-fill - Background of the hovered control.
  * @csspart base - The root wrapper, hosting the delegated roving-tabindex keydown handler.
  * @csspart node - One `node`-kind element (a `<button>`).
  * @csspart relation - One `edge`-kind element's relation label (a `<button>`).
@@ -75,6 +77,8 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     ...super.defaultStrings,
     noData: LYRA_DEFAULT_noData,
     pathNodeStatus: LYRA_DEFAULT_pathNodeStatus,
+    pathRelationForward: LYRA_DEFAULT_pathRelationForward,
+    pathRelationReverse: LYRA_DEFAULT_pathRelationReverse,
     pathRelationStatus: LYRA_DEFAULT_pathRelationStatus,
     pathStripLabel: LYRA_DEFAULT_pathStripLabel,
   };
@@ -232,7 +236,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (shouldIgnoreNavigationKey(e)) return;
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
+    const target = e.target;
+    if (target !== e.currentTarget && (!isElementNode(target) || !target.matches('[part="node"], [part="relation"]'))) return;
     const count = this.pathOccurrences.length;
     if (count === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
@@ -240,7 +246,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       if (!e.repeat) this.activate(this.activeIndex);
       return;
     }
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next = this.activeIndex;
@@ -270,20 +276,8 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     index: number,
     activate: () => void,
   ): TemplateResult {
-    const rtl = isRtl(this);
-    const glyph = el.directed
-      ? el.reverse
-        ? rtl
-          ? '→'
-          : '←'
-        : rtl
-        ? '←'
-        : '→'
-      : '';
     return html`<span class="element-group">
-      ${glyph
-        ? html`<span part="arrow" aria-hidden="true">${glyph}</span>`
-        : nothing}
+      ${el.directed ? html`<span part="arrow" aria-hidden="true" ?data-reverse=${el.reverse}>${chevronIcon()}</span>` : nothing}
       <button
         part="relation"
         type="button"
@@ -291,7 +285,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         @click=${activate}
         @focus=${() => this.onElementFocus(index)}
       >
-        ${el.relation}
+        ${el.relation}${el.directed
+          ? html`<span class="sr-only"> ${this.localize(el.reverse ? 'pathRelationReverse' : 'pathRelationForward')}</span>`
+          : nothing}
       </button>
     </span>`;
   }

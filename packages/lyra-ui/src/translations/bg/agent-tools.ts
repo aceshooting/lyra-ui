@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   toolParamSchemaLimit: 'Схемите на параметрите на инструментите поддържат най-много {fields} полета и {options} възможности за избор на поле.',
   testResultsLimit: 'Показани са само първите {count} резултата от тестове.',
   toolTimelineLimit: 'Показани са най-много {count} извиквания на инструменти.',
+  toolTimelineLoadError: 'Изгледът на инструмента не можа да се зареди.',
   toolSelectLimit: 'Показани са само първите {count} инструмента.',
   testResultsInputTooLarge: 'Подробностите за резултатите от тестовете надвишават ограничението за показване.',
   toolCall: 'Извикване на инструмент',

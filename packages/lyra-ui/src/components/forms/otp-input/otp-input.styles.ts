@@ -1,25 +1,19 @@
+import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingText } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
+  ${formControlAppearance}
   :host {
     display: block;
     --_lr-otp-input-mask-char-default: '•';
-    --_lr-otp-input-segment-fill-default: var(--lr-color-surface);
-    --_lr-otp-input-segment-border-color-default: var(--lr-color-border);
+    --_lr-otp-input-segment-fill-default: var(--_lr-form-control-fill);
+    --_lr-otp-input-segment-border-color-default: var(--_lr-form-control-border-color);
     --_lr-otp-input-segment-radius-default: var(
       --segment-border-radius,
       var(--lr-form-control-radius, var(--lr-radius))
     );
-  }
-  :host([appearance='filled']) {
-    --_lr-otp-input-segment-fill-default: var(--lr-color-surface-raised);
-    --_lr-otp-input-segment-border-color-default: transparent;
-  }
-  :host([appearance='filled-outlined']) {
-    --_lr-otp-input-segment-fill-default: var(--lr-color-surface-raised);
-    --_lr-otp-input-segment-border-color-default: var(--lr-color-border);
   }
   :host([appearance='contained']) {
     --_lr-otp-input-segment-fill-default: transparent;
@@ -39,9 +33,7 @@ export const styles = css`
     margin-block-end: calc(var(--lr-space-xs) - var(--lr-space-2xs));
     overflow-wrap: anywhere;
   }
-  [part~='label'][hidden],
-  [part='hint'][hidden],
-  [part='error'][hidden] {
+  [part~='label'][hidden] {
     display: none;
   }
   ${formControlRequiredMarker}
@@ -144,19 +136,10 @@ export const styles = css`
   }
   /* An unentered glyph is a placeholder, so it sits quieter than an entered character. */
   [part~='placeholder-mask'] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-otp-input-placeholder-color, var(--lr-color-text-quiet));
   }
 
-  [part='hint'] {
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-    overflow-wrap: anywhere;
-  }
-  [part='error'] {
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-    overflow-wrap: anywhere;
-  }
+  ${formControlSupportingText}
 
   @media (prefers-reduced-motion: reduce) {
     [part~='segment'] {

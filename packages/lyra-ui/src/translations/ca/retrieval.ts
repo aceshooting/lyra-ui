@@ -116,6 +116,8 @@ const strings: LyraLocaleStrings = {
   pathStripLabel: 'Camí',
   pathNodeStatus: '{label}, node {position} de {total}',
   pathRelationStatus: '{relation}, relació',
+  pathRelationForward: 'dirigit cap al node següent',
+  pathRelationReverse: 'dirigit cap al node anterior',
   neighborListLabel: 'Relacions',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborExpand: 'Desplega {label} al graf',

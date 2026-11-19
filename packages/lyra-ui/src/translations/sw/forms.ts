@@ -13,6 +13,7 @@ const strings: LyraLocaleStrings = {
   checkboxGroupRequired: 'Chagua angalau chaguo moja.',
   tokenInputRequired: 'Weka angalau thamani moja.',
   tokenInputEditWithContext: 'Hariri {label}',
+  tokenInputLabel: 'Tokeni',
   iconButtonLabel: 'Kitufe',
   codeEditorLabel: 'Kihariri cha msimbo',
   switchRequired: 'Washa hii.',
@@ -115,6 +116,7 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Kalamu chini',
   signaturePadPenUp: 'Kalamu juu',
+  signaturePadDrawingLimit: 'Kikomo cha kuchora kimefikiwa.',
   localePickerInputLimit: 'Ni maingizo ya kwanza 512 ya lugha na eneo pekee yanayopatikana.',
   emojiPickerInputLimit: 'Baadhi ya data ya emoji imeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
 };
